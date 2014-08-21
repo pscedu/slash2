@@ -1,0 +1,940 @@
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 498
+mps1: mpssas_abort_complete: abort request on handle 0x57 SMID 498 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 485
+mps1: mpssas_abort_complete: abort request on handle 0x57 SMID 485 complete
+(da119:mps1:0:57:0): READ(10). CDB: 28 0 b6 37 2e f0 0 0 20 0 
+(da119:mps1:0:57:0): CAM status: SCSI Status Error
+(da119:mps1:0:57:0): SCSI status: Check Condition
+(da119:mps1:0:57:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da231:mps1:0:158:0): SCSI command timeout on device handle 0x00bb SMID 810
+(da231:mps1:0:158:0): SCSI command timeout on device handle 0x00bb SMID 406
+(da231:mps1:0:158:0): SCSI command timeout on device handle 0x00bb SMID 144
+(da231:mps1:0:158:0): SCSI command timeout on device handle 0x00bb SMID 583
+mps1: (7:158:0) terminated ioc 804b scsi 0 state c xfer 12800
+mps1: (7:158:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: (7:158:0) terminated ioc 804b scsi 0 state c xfer 12800
+mps1: mpssas_abort_complete: abort request on handle 0xbb SMID 810 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbb SMID 406
+mps1: mpssas_abort_complete: abort request on handle 0xbb SMID 406 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbb SMID 144
+mps1: mpssas_abort_complete: abort request on handle 0xbb SMID 144 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbb SMID 583
+mps1: mpssas_abort_complete: abort request on handle 0xbb SMID 583 complete
+(da231:mps1:0:158:0): READ(10). CDB: 28 0 cf e0 7e b0 0 0 19 0 
+(da231:mps1:0:158:0): CAM status: SCSI Status Error
+(da231:mps1:0:158:0): SCSI status: Check Condition
+(da231:mps1:0:158:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da71:mps1:0:246:0): SCSI command timeout on device handle 0x0108 SMID 683
+(da71:mps1:0:246:0): SCSI command timeout on device handle 0x0108 SMID 52
+(da71:mps1:0:246:0): SCSI command timeout on device handle 0x0108 SMID 957
+(da71:mps1:0:246:0): SCSI command timeout on device handle 0x0108 SMID 262
+mps1: (7:246:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0x108 SMID 683 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x108 SMID 52
+mps1: mpssas_abort_complete: abort request on handle 0x108 SMID 52 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x108 SMID 957
+mps1: mpssas_abort_complete: abort request on handle 0x108 SMID 957 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x108 SMID 262
+mps1: mpssas_abort_complete: abort request on handle 0x108 SMID 262 complete
+(da71:mps1:0:246:0): READ(10). CDB: 28 0 50 d6 1 44 0 0 19 0 
+(da71:mps1:0:246:0): CAM status: SCSI Status Error
+(da71:mps1:0:246:0): SCSI status: Check Condition
+(da71:mps1:0:246:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da71:mps1:0:246:0): READ(16). CDB: 88 0 0 0 0 1 4f 7a ec a1 0 0 0 80 0 0 
+(da71:mps1:0:246:0): CAM status: SCSI Status Error
+(da71:mps1:0:246:0): SCSI status: Check Condition
+(da71:mps1:0:246:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5120
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5120
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5120
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5120
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps1: (7:73:0) terminated ioc 804b scsi 0 state c xfer 65536
+(da79:mps1:0:73:0): WRITE(10). CDB: 2a 0 ee 8 2d aa 0 0 80 0 
+(da79:mps1:0:73:0): CAM status: SCSI Status Error
+(da79:mps1:0:73:0): SCSI status: Check Condition
+(da79:mps1:0:73:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:186:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:186:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:186:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da236:mps1:0:186:0): READ(10). CDB: 28 0 ed 98 ea ff 0 0 20 0 
+(da236:mps1:0:186:0): CAM status: SCSI Status Error
+(da236:mps1:0:186:0): SCSI status: Check Condition
+(da236:mps1:0:186:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:113:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:113:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:113:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:113:0) terminated ioc 804b scsi 0 state c xfer 49152
+(da159:mps1:0:113:0): READ(16). CDB: 88 0 0 0 0 1 53 f0 32 97 0 0 0 20 0 0 
+(da159:mps1:0:113:0): CAM status: SCSI Status Error
+(da159:mps1:0:113:0): SCSI status: Check Condition
+(da159:mps1:0:113:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:165:0) terminated ioc 804b scsi 0 state c xfer 25088
+mps1: (7:165:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:165:0) terminated ioc 804b scsi 0 state c xfer 60928
+(da29:mps1:0:165:0): READ(16). CDB: 88 0 0 0 0 1 41 64 e5 d3 0 0 0 18 0 0 
+(da29:mps1:0:165:0): CAM status: SCSI Status Error
+(da29:mps1:0:165:0): SCSI status: Check Condition
+(da29:mps1:0:165:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da141:mps1:0:90:0): SCSI command timeout on device handle 0x0077 SMID 265
+(da141:mps1:0:90:0): SCSI command timeout on device handle 0x0077 SMID 524
+(da141:mps1:0:90:0): SCSI command timeout on device handle 0x0077 SMID 816
+(da141:mps1:0:90:0): SCSI command timeout on device handle 0x0077 SMID 113
+mps1: (7:90:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:90:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:90:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0x77 SMID 265 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x77 SMID 524
+mps1: mpssas_abort_complete: abort request on handle 0x77 SMID 524 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x77 SMID 816
+mps1: mpssas_abort_complete: abort request on handle 0x77 SMID 816 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x77 SMID 113
+mps1: mpssas_abort_complete: abort request on handle 0x77 SMID 113 complete
+(da141:mps1:0:90:0): READ(10). CDB: 28 0 b3 68 e6 1f 0 0 20 0 
+(da141:mps1:0:90:0): CAM status: SCSI Status Error
+(da141:mps1:0:90:0): SCSI status: Check Condition
+(da141:mps1:0:90:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da141:mps1:0:90:0): READ(10). CDB: 28 0 b3 a5 2 67 0 0 20 0 
+(da141:mps1:0:90:0): CAM status: SCSI Status Error
+(da141:mps1:0:90:0): SCSI status: Check Condition
+(da141:mps1:0:90:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da240:mps1:0:3:0): WRITE(10). CDB: 2a 0 d4 2a a1 80 0 0 80 0 
+(da240:mps1:0:3:0): CAM status: SCSI Status Error
+(da240:mps1:0:3:0): SCSI status: Check Condition
+(da240:mps1:0:3:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 49152
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:3:0) terminated ioc 804b scsi 0 state c xfer 8704
+(da240:mps1:0:3:0): WRITE(16). CDB: 8a 0 0 0 0 1 3a a7 9 d8 0 0 0 80 0 0 
+(da240:mps1:0:3:0): CAM status: SCSI Status Error
+(da240:mps1:0:3:0): SCSI status: Check Condition
+(da240:mps1:0:3:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:154:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da47:mps1:0:154:0): WRITE(16). CDB: 8a 0 0 0 0 1 3b f4 4b 82 0 0 0 80 0 0 
+(da47:mps1:0:154:0): CAM status: SCSI Status Error
+(da47:mps1:0:154:0): SCSI status: Check Condition
+(da47:mps1:0:154:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da42:mps1:0:155:0): WRITE(10). CDB: 2a 0 ff b8 53 46 0 0 80 0 
+(da42:mps1:0:155:0): CAM status: SCSI Status Error
+(da42:mps1:0:155:0): SCSI status: Check Condition
+(da42:mps1:0:155:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 59904
+(da169:mps1:0:248:0): WRITE(16). CDB: 8a 0 0 0 0 1 3f 85 de 1f 0 0 0 80 0 0 
+(da169:mps1:0:248:0): CAM status: SCSI Status Error
+(da169:mps1:0:248:0): SCSI status: Check Condition
+(da169:mps1:0:248:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da106:mps1:0:71:0): SCSI command timeout on device handle 0x0064 SMID 482
+(da106:mps1:0:71:0): SCSI command timeout on device handle 0x0064 SMID 910
+(da106:mps1:0:71:0): SCSI command timeout on device handle 0x0064 SMID 887
+(da106:mps1:0:71:0): SCSI command timeout on device handle 0x0064 SMID 663
+mps1: (7:71:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:71:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:71:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0x64 SMID 482 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x64 SMID 910
+mps1: mpssas_abort_complete: abort request on handle 0x64 SMID 910 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x64 SMID 887
+mps1: mpssas_abort_complete: abort request on handle 0x64 SMID 887 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x64 SMID 663
+mps1: mpssas_abort_complete: abort request on handle 0x64 SMID 663 complete
+(da106:mps1:0:71:0): READ(10). CDB: 28 0 f7 9f fc 45 0 0 80 0 
+(da106:mps1:0:71:0): CAM status: SCSI Status Error
+(da106:mps1:0:71:0): SCSI status: Check Condition
+(da106:mps1:0:71:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:170:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:170:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:170:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da222:mps1:0:170:0): READ(10). CDB: 28 0 83 7e cd 45 0 0 20 0 
+(da222:mps1:0:170:0): CAM status: SCSI Status Error
+(da222:mps1:0:170:0): SCSI status: Check Condition
+(da222:mps1:0:170:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:250:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps1: (7:250:0) terminated ioc 804b scsi 0 state c xfer 1024
+(da110:mps1:0:250:0): WRITE(16). CDB: 8a 0 0 0 0 1 50 c3 9a be 0 0 0 1 0 0 
+(da110:mps1:0:250:0): CAM status: SCSI Status Error
+(da110:mps1:0:250:0): SCSI status: Check Condition
+(da110:mps1:0:250:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 659
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 152
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 485
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 398
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 659 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 152
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 152 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 485
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 485 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 398
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 398 complete
+(da221:mps1:0:198:0): READ(10). CDB: 28 0 43 98 3a c8 0 0 20 0 
+(da221:mps1:0:198:0): CAM status: SCSI Status Error
+(da221:mps1:0:198:0): SCSI status: Check Condition
+(da221:mps1:0:198:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:122:0) terminated ioc 804b scsi 0 state c xfer 10240
+mps1: (7:122:0) terminated ioc 804b scsi 0 state c xfer 10240
+mps1: (7:122:0) terminated ioc 804b scsi 0 state c xfer 10240
+mps1: (7:122:0) terminated ioc 804b scsi 0 state c xfer 56832
+mps1: (7:122:0) terminated ioc 804b scsi 0 state c xfer 10240
+(da166:mps1:0:122:0): READ(10). CDB: 28 0 84 8c f2 b2 0 0 28 0 
+(da166:mps1:0:122:0): CAM status: SCSI Status Error
+(da166:mps1:0:122:0): SCSI status: Check Condition
+(da166:mps1:0:122:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 1012
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 490
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 201
+(da221:mps1:0:198:0): SCSI command timeout on device handle 0x00e3 SMID 112
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:198:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 1012 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 490
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 490 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 201
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 201 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe3 SMID 112
+mps1: mpssas_abort_complete: abort request on handle 0xe3 SMID 112 complete
+(da221:mps1:0:198:0): READ(10). CDB: 28 0 d2 ba f9 37 0 0 20 0 
+(da221:mps1:0:198:0): CAM status: SCSI Status Error
+(da221:mps1:0:198:0): SCSI status: Check Condition
+(da221:mps1:0:198:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da221:mps1:0:198:0): READ(10). CDB: 28 0 d2 ed 81 12 0 0 20 0 
+(da221:mps1:0:198:0): CAM status: SCSI Status Error
+(da221:mps1:0:198:0): SCSI status: Check Condition
+(da221:mps1:0:198:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:224:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da143:mps1:0:224:0): WRITE(10). CDB: 2a 0 97 9d 4 e5 0 0 2 0 
+(da143:mps1:0:224:0): CAM status: SCSI Status Error
+(da143:mps1:0:224:0): SCSI status: Check Condition
+(da143:mps1:0:224:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da87:mps1:0:153:0): READ(10). CDB: 28 0 b0 79 cf da 0 0 20 0 
+(da87:mps1:0:153:0): CAM status: SCSI Status Error
+(da87:mps1:0:153:0): SCSI status: Check Condition
+(da87:mps1:0:153:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:181:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:181:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:181:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:181:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da84:mps1:0:181:0): READ(10). CDB: 28 0 12 c6 2 d9 0 0 20 0 
+(da84:mps1:0:181:0): CAM status: SCSI Status Error
+(da84:mps1:0:181:0): SCSI status: Check Condition
+(da84:mps1:0:181:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:104:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da133:mps1:0:104:0): READ(10). CDB: 28 0 26 57 c0 2e 0 0 80 0 
+(da133:mps1:0:104:0): CAM status: SCSI Status Error
+(da133:mps1:0:104:0): SCSI status: Check Condition
+(da133:mps1:0:104:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da148:mps1:0:214:0): SCSI command timeout on device handle 0x00e9 SMID 784
+(da148:mps1:0:214:0): SCSI command timeout on device handle 0x00e9 SMID 564
+(da148:mps1:0:214:0): SCSI command timeout on device handle 0x00e9 SMID 842
+(da148:mps1:0:214:0): SCSI command timeout on device handle 0x00e9 SMID 713
+mps1: (7:214:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:214:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:214:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xe9 SMID 784 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe9 SMID 564
+mps1: mpssas_abort_complete: abort request on handle 0xe9 SMID 564 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe9 SMID 842
+mps1: mpssas_abort_complete: abort request on handle 0xe9 SMID 842 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe9 SMID 713
+mps1: mpssas_abort_complete: abort request on handle 0xe9 SMID 713 complete
+(da148:mps1:0:214:0): READ(10). CDB: 28 0 5b 5c 55 72 0 0 20 0 
+(da148:mps1:0:214:0): CAM status: SCSI Status Error
+(da148:mps1:0:214:0): SCSI status: Check Condition
+(da148:mps1:0:214:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da18:mps1:0:65:0): WRITE(16). CDB: 8a 0 0 0 0 1 46 71 1c d 0 0 0 5 0 0 
+(da18:mps1:0:65:0): CAM status: SCSI Status Error
+(da18:mps1:0:65:0): SCSI status: Check Condition
+(da18:mps1:0:65:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da54:mps1:0:157:0): SCSI command timeout on device handle 0x00ba SMID 314
+(da54:mps1:0:157:0): SCSI command timeout on device handle 0x00ba SMID 92
+(da54:mps1:0:157:0): SCSI command timeout on device handle 0x00ba SMID 890
+(da54:mps1:0:157:0): SCSI command timeout on device handle 0x00ba SMID 916
+mps1: (7:157:0) terminated ioc 804b scsi 0 state c xfer 29696
+mps1: (7:157:0) terminated ioc 804b scsi 0 state c xfer 5120
+mps1: (7:157:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: mpssas_abort_complete: abort request on handle 0xba SMID 314 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xba SMID 92
+mps1: mpssas_abort_complete: abort request on handle 0xba SMID 92 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xba SMID 890
+mps1: mpssas_abort_complete: abort request on handle 0xba SMID 890 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xba SMID 916
+mps1: mpssas_abort_complete: abort request on handle 0xba SMID 916 complete
+(da54:mps1:0:157:0): READ(16). CDB: 88 0 0 0 0 1 57 90 fc 2 0 0 0 14 0 0 
+(da54:mps1:0:157:0): CAM status: SCSI Status Error
+(da54:mps1:0:157:0): SCSI status: Check Condition
+(da54:mps1:0:157:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:219:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da171:mps1:0:219:0): READ(10). CDB: 28 0 88 2c 1e 50 0 0 20 0 
+(da171:mps1:0:219:0): CAM status: SCSI Status Error
+(da171:mps1:0:219:0): SCSI status: Check Condition
+(da171:mps1:0:219:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da242:mps1:0:12:0): WRITE(10). CDB: 2a 0 c3 50 7d 7d 0 0 80 0 
+(da242:mps1:0:12:0): CAM status: SCSI Status Error
+(da242:mps1:0:12:0): SCSI status: Check Condition
+(da242:mps1:0:12:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da182:mps1:0:231:0): SCSI command timeout on device handle 0x00fa SMID 505
+(da182:mps1:0:231:0): SCSI command timeout on device handle 0x00fa SMID 668
+(da182:mps1:0:231:0): SCSI command timeout on device handle 0x00fa SMID 476
+(da182:mps1:0:231:0): SCSI command timeout on device handle 0x00fa SMID 107
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:231:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0xfa SMID 505 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfa SMID 668
+mps1: mpssas_abort_complete: abort request on handle 0xfa SMID 668 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfa SMID 476
+mps1: mpssas_abort_complete: abort request on handle 0xfa SMID 476 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfa SMID 107
+mps1: mpssas_abort_complete: abort request on handle 0xfa SMID 107 complete
+(da182:mps1:0:231:0): WRITE(16). CDB: 8a 0 0 0 0 1 2a b7 d2 62 0 0 0 1 0 0 
+(da182:mps1:0:231:0): CAM status: SCSI Status Error
+(da182:mps1:0:231:0): SCSI status: Check Condition
+(da182:mps1:0:231:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:65:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da18:mps1:0:65:0): WRITE(10). CDB: 2a 0 a2 dd d5 50 0 0 72 0 
+(da18:mps1:0:65:0): CAM status: SCSI Status Error
+(da18:mps1:0:65:0): SCSI status: Check Condition
+(da18:mps1:0:65:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:12:0) terminated ioc 804b scsi 0 state c xfer 8192
+(da242:mps1:0:12:0): WRITE(10). CDB: 2a 0 9c 89 6 6 0 0 6a 0 
+(da242:mps1:0:12:0): CAM status: SCSI Status Error
+(da242:mps1:0:12:0): SCSI status: Check Condition
+(da242:mps1:0:12:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:163:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:163:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:163:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:163:0) terminated ioc 804b scsi 0 state c xfer 9728
+(da224:mps1:0:163:0): WRITE(10). CDB: 2a 0 59 8c af e3 0 0 2 0 
+(da224:mps1:0:163:0): CAM status: SCSI Status Error
+(da224:mps1:0:163:0): SCSI status: Check Condition
+(da224:mps1:0:163:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 10752
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 10240
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:252:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da212:mps1:0:252:0): READ(10). CDB: 28 0 37 6e bb aa 0 0 40 0 
+(da212:mps1:0:252:0): CAM status: SCSI Status Error
+(da212:mps1:0:252:0): SCSI status: Check Condition
+(da212:mps1:0:252:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da65:mps1:0:117:0): SCSI command timeout on device handle 0x0092 SMID 612
+(da65:mps1:0:117:0): SCSI command timeout on device handle 0x0092 SMID 75
+(da65:mps1:0:117:0): SCSI command timeout on device handle 0x0092 SMID 666
+(da65:mps1:0:117:0): SCSI command timeout on device handle 0x0092 SMID 259
+mps1: (7:117:0) terminated ioc 804b scsi 0 state c xfer 13824
+mps1: (7:117:0) terminated ioc 804b scsi 0 state c xfer 13824
+mps1: (7:117:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: mpssas_abort_complete: abort request on handle 0x92 SMID 612 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x92 SMID 75
+mps1: mpssas_abort_complete: abort request on handle 0x92 SMID 75 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x92 SMID 666
+mps1: mpssas_abort_complete: abort request on handle 0x92 SMID 666 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x92 SMID 259
+mps1: mpssas_abort_complete: abort request on handle 0x92 SMID 259 complete
+(da65:mps1:0:117:0): READ(10). CDB: 28 0 ab 37 52 23 0 0 18 0 
+(da65:mps1:0:117:0): CAM status: SCSI Status Error
+(da65:mps1:0:117:0): SCSI status: Check Condition
+(da65:mps1:0:117:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:40:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:40:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:40:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:40:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:40:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da163:mps1:0:40:0): READ(10). CDB: 28 0 a cf f1 c6 0 0 2 0 
+(da163:mps1:0:40:0): CAM status: SCSI Status Error
+(da163:mps1:0:40:0): SCSI status: Check Condition
+(da163:mps1:0:40:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:193:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da186:mps1:0:193:0): READ(10). CDB: 28 0 ff 4b 60 62 0 0 80 0 
+(da186:mps1:0:193:0): CAM status: SCSI Status Error
+(da186:mps1:0:193:0): SCSI status: Check Condition
+(da186:mps1:0:193:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:155:0) terminated ioc 804b scsi 0 state c xfer 26112
+(da42:mps1:0:155:0): WRITE(16). CDB: 8a 0 0 0 0 1 43 82 8c b7 0 0 0 80 0 0 
+(da42:mps1:0:155:0): CAM status: SCSI Status Error
+(da42:mps1:0:155:0): SCSI status: Check Condition
+(da42:mps1:0:155:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 59904
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 49152
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 49152
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 65536
+(da230:mps1:0:240:0): WRITE(10). CDB: 2a 0 60 4a c3 be 0 0 80 0 
+(da230:mps1:0:240:0): CAM status: SCSI Status Error
+(da230:mps1:0:240:0): SCSI status: Check Condition
+(da230:mps1:0:240:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da25:mps1:0:196:0): SCSI command timeout on device handle 0x00e1 SMID 742
+(da25:mps1:0:196:0): SCSI command timeout on device handle 0x00e1 SMID 848
+(da25:mps1:0:196:0): SCSI command timeout on device handle 0x00e1 SMID 290
+(da25:mps1:0:196:0): SCSI command timeout on device handle 0x00e1 SMID 14
+mps1: (7:196:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:196:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:196:0) terminated ioc 804b scsi 0 state c xfer 14336
+mps1: mpssas_abort_complete: abort request on handle 0xe1 SMID 742 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe1 SMID 848
+mps1: mpssas_abort_complete: abort request on handle 0xe1 SMID 848 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe1 SMID 290
+mps1: mpssas_abort_complete: abort request on handle 0xe1 SMID 290 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe1 SMID 14
+mps1: mpssas_abort_complete: abort request on handle 0xe1 SMID 14 complete
+(da25:mps1:0:196:0): READ(10). CDB: 28 0 a2 c 58 26 0 0 1b 0 
+(da25:mps1:0:196:0): CAM status: SCSI Status Error
+(da25:mps1:0:196:0): SCSI status: Check Condition
+(da25:mps1:0:196:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 3072
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 32768
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 2048
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 62976
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:50:0) terminated ioc 804b scsi 0 state c xfer 65536
+(da37:mps1:0:50:0): WRITE(10). CDB: 2a 0 eb 46 f5 ee 0 0 80 0 
+(da37:mps1:0:50:0): CAM status: SCSI Status Error
+(da37:mps1:0:50:0): SCSI status: Check Condition
+(da37:mps1:0:50:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da243:mps1:0:283:0): SCSI command timeout on device handle 0x012c SMID 818
+(da243:mps1:0:283:0): SCSI command timeout on device handle 0x012c SMID 897
+(da243:mps1:0:283:0): SCSI command timeout on device handle 0x012c SMID 56
+(da243:mps1:0:283:0): SCSI command timeout on device handle 0x012c SMID 589
+mps1: (7:283:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:283:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:283:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0x12c SMID 818 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x12c SMID 897
+mps1: mpssas_abort_complete: abort request on handle 0x12c SMID 897 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x12c SMID 56
+mps1: mpssas_abort_complete: abort request on handle 0x12c SMID 56 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x12c SMID 589
+mps1: mpssas_abort_complete: abort request on handle 0x12c SMID 589 complete
+(da243:mps1:0:283:0): READ(10). CDB: 28 0 8b 9a 64 a0 0 0 20 0 
+(da243:mps1:0:283:0): CAM status: SCSI Status Error
+(da243:mps1:0:283:0): SCSI status: Check Condition
+(da243:mps1:0:283:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+MCA: Bank 8, Status 0x8c0000400001009f
+MCA: Global Cap 0x0000000000001c09, Status 0x0000000000000000
+MCA: Vendor "GenuineIntel", ID 0x206c2, APIC ID 0
+MCA: CPU 0 COR (1) RD channel ?? memory error
+MCA: Address 0x5d0c6440
+MCA: Misc 0x5511050100080181
+MCA: Bank 8, Status 0x8c0000400001009f
+MCA: Global Cap 0x0000000000001c09, Status 0x0000000000000000
+MCA: Vendor "GenuineIntel", ID 0x206c2, APIC ID 0
+MCA: CPU 0 COR (1) RD channel ?? memory error
+MCA: Address 0x5d0c6440
+MCA: Misc 0x5511050100081786
+MCA: Bank 8, Status 0x8c0000400001009f
+MCA: Global Cap 0x0000000000001c09, Status 0x0000000000000000
+MCA: Vendor "GenuineIntel", ID 0x206c2, APIC ID 0
+MCA: CPU 0 COR (1) RD channel ?? memory error
+MCA: Address 0x5d0c6440
+MCA: Misc 0x5511050100080083
+MCA: Bank 8, Status 0x8c0000400001009f
+MCA: Global Cap 0x0000000000001c09, Status 0x0000000000000000
+MCA: Vendor "GenuineIntel", ID 0x206c2, APIC ID 0
+MCA: CPU 0 COR (1) RD channel ?? memory error
+MCA: Address 0x5d0c6440
+MCA: Misc 0x5511050100086141
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 8704
+(da216:mps1:0:215:0): WRITE(10). CDB: 2a 0 c4 ea eb 67 0 0 80 0 
+(da216:mps1:0:215:0): CAM status: SCSI Status Error
+(da216:mps1:0:215:0): SCSI status: Check Condition
+(da216:mps1:0:215:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:247:0) terminated ioc 804b scsi 0 state c xfer 2048
+(da116:mps1:0:247:0): READ(16). CDB: 88 0 0 0 0 1 4a fe 2a a0 0 0 0 1 0 0 
+(da116:mps1:0:247:0): CAM status: SCSI Status Error
+(da116:mps1:0:247:0): SCSI status: Check Condition
+(da116:mps1:0:247:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da138:mps1:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 832
+(da138:mps1:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 783
+(da138:mps1:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 340
+(da138:mps1:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 938
+mps1: (7:147:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: (7:147:0) terminated ioc 804b scsi 0 state c xfer 13824
+mps1: (7:147:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: mpssas_abort_complete: abort request on handle 0xb0 SMID 832 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 783
+mps1: mpssas_abort_complete: abort request on handle 0xb0 SMID 783 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 340
+mps1: mpssas_abort_complete: abort request on handle 0xb0 SMID 340 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 938
+mps1: mpssas_abort_complete: abort request on handle 0xb0 SMID 938 complete
+(da138:mps1:0:147:0): READ(10). CDB: 28 0 67 76 a5 0 0 0 1a 0 
+(da138:mps1:0:147:0): CAM status: SCSI Status Error
+(da138:mps1:0:147:0): SCSI status: Check Condition
+(da138:mps1:0:147:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da9:mps1:0:174:0): SCSI command timeout on device handle 0x00cb SMID 390
+(da9:mps1:0:174:0): SCSI command timeout on device handle 0x00cb SMID 579
+(da9:mps1:0:174:0): SCSI command timeout on device handle 0x00cb SMID 53
+(da9:mps1:0:174:0): SCSI command timeout on device handle 0x00cb SMID 761
+mps1: (7:174:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:174:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:174:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xcb SMID 390 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcb SMID 579
+mps1: mpssas_abort_complete: abort request on handle 0xcb SMID 579 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcb SMID 53
+mps1: mpssas_abort_complete: abort request on handle 0xcb SMID 53 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcb SMID 761
+mps1: mpssas_abort_complete: abort request on handle 0xcb SMID 761 complete
+(da9:mps1:0:174:0): READ(10). CDB: 28 0 61 7f c8 be 0 0 20 0 
+(da9:mps1:0:174:0): CAM status: SCSI Status Error
+(da9:mps1:0:174:0): SCSI status: Check Condition
+(da9:mps1:0:174:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da139:mps1:0:233:0): SCSI command timeout on device handle 0x00fc SMID 305
+(da139:mps1:0:233:0): SCSI command timeout on device handle 0x00fc SMID 25
+(da139:mps1:0:233:0): SCSI command timeout on device handle 0x00fc SMID 130
+(da139:mps1:0:233:0): SCSI command timeout on device handle 0x00fc SMID 829
+mps1: (7:233:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:233:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:233:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xfc SMID 305 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfc SMID 25
+mps1: mpssas_abort_complete: abort request on handle 0xfc SMID 25 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfc SMID 130
+mps1: mpssas_abort_complete: abort request on handle 0xfc SMID 130 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xfc SMID 829
+mps1: mpssas_abort_complete: abort request on handle 0xfc SMID 829 complete
+(da139:mps1:0:233:0): READ(10). CDB: 28 0 ed cb b0 6 0 0 11 0 
+(da139:mps1:0:233:0): CAM status: SCSI Status Error
+(da139:mps1:0:233:0): SCSI status: Check Condition
+(da139:mps1:0:233:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da11:mps1:0:26:0): SCSI command timeout on device handle 0x0038 SMID 431
+(da11:mps1:0:26:0): SCSI command timeout on device handle 0x0038 SMID 709
+(da11:mps1:0:26:0): SCSI command timeout on device handle 0x0038 SMID 967
+(da11:mps1:0:26:0): SCSI command timeout on device handle 0x0038 SMID 704
+mps1: (7:26:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:26:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:26:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0x38 SMID 431 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x38 SMID 709
+mps1: mpssas_abort_complete: abort request on handle 0x38 SMID 709 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x38 SMID 967
+mps1: mpssas_abort_complete: abort request on handle 0x38 SMID 967 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x38 SMID 704
+mps1: mpssas_abort_complete: abort request on handle 0x38 SMID 704 complete
+(da11:mps1:0:26:0): READ(10). CDB: 28 0 46 19 db 99 0 0 20 0 
+(da11:mps1:0:26:0): CAM status: SCSI Status Error
+(da11:mps1:0:26:0): SCSI status: Check Condition
+(da11:mps1:0:26:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:32:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:32:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:32:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da12:mps1:0:32:0): WRITE(16). CDB: 8a 0 0 0 0 1 2d 5e b7 0 0 0 0 18 0 0 
+(da12:mps1:0:32:0): CAM status: SCSI Status Error
+(da12:mps1:0:32:0): SCSI status: Check Condition
+(da12:mps1:0:32:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 13824
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 13312
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:248:0) terminated ioc 804b scsi 0 state c xfer 13312
+(da169:mps1:0:248:0): WRITE(16). CDB: 8a 0 0 0 0 1 4 65 44 2c 0 0 0 20 0 0 
+(da169:mps1:0:248:0): CAM status: SCSI Status Error
+(da169:mps1:0:248:0): SCSI status: Check Condition
+(da169:mps1:0:248:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:23:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da190:mps1:0:23:0): READ(10). CDB: 28 0 cf 78 33 5a 0 0 20 0 
+(da190:mps1:0:23:0): CAM status: SCSI Status Error
+(da190:mps1:0:23:0): SCSI status: Check Condition
+(da190:mps1:0:23:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da23:mps1:0:172:0): SCSI command timeout on device handle 0x00c9 SMID 171
+(da23:mps1:0:172:0): SCSI command timeout on device handle 0x00c9 SMID 274
+(da23:mps1:0:172:0): SCSI command timeout on device handle 0x00c9 SMID 256
+(da23:mps1:0:172:0): SCSI command timeout on device handle 0x00c9 SMID 181
+mps1: (7:172:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:172:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps1: (7:172:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0xc9 SMID 171 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xc9 SMID 274
+mps1: mpssas_abort_complete: abort request on handle 0xc9 SMID 274 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xc9 SMID 256
+mps1: mpssas_abort_complete: abort request on handle 0xc9 SMID 256 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xc9 SMID 181
+mps1: mpssas_abort_complete: abort request on handle 0xc9 SMID 181 complete
+(da23:mps1:0:172:0): READ(10). CDB: 28 0 ea ae 90 d1 0 0 c 0 
+(da23:mps1:0:172:0): CAM status: SCSI Status Error
+(da23:mps1:0:172:0): SCSI status: Check Condition
+(da23:mps1:0:172:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:258:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:258:0) terminated ioc 804b scsi 0 state c xfer 8704
+(da194:mps1:0:258:0): READ(10). CDB: 28 0 f9 3c 7c c9 0 0 11 0 
+(da194:mps1:0:258:0): CAM status: SCSI Status Error
+(da194:mps1:0:258:0): SCSI status: Check Condition
+(da194:mps1:0:258:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:44:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:44:0) terminated ioc 804b scsi 0 state c xfer 3584
+mps1: (7:44:0) terminated ioc 804b scsi 0 state c xfer 3584
+mps1: (7:44:0) terminated ioc 804b scsi 0 state c xfer 3584
+(da82:mps1:0:44:0): READ(10). CDB: 28 0 2a e2 29 de 0 0 1 0 
+(da82:mps1:0:44:0): CAM status: SCSI Status Error
+(da82:mps1:0:44:0): SCSI status: Check Condition
+(da82:mps1:0:44:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 12288
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 11776
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 11776
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 12288
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 12288
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 11776
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 11776
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:162:0) terminated ioc 804b scsi 0 state c xfer 512
+(da225:mps1:0:160:0): WRITE(16). CDB: 8a 0 0 0 0 1 3 c1 90 a3 0 0 0 20 0 0 
+(da225:mps1:0:160:0): CAM status: SCSI Status Error
+(da225:mps1:0:160:0): SCSI status: Check Condition
+(da225:mps1:0:160:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da205:mps1:0:162:0): WRITE(16). CDB: 8a 0 0 0 0 1 4 5 bf 19 0 0 0 80 0 0 
+(da205:mps1:0:162:0): CAM status: SCSI Status Error
+(da205:mps1:0:162:0): SCSI status: Check Condition
+(da205:mps1:0:162:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:177:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:177:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:177:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: (7:177:0) terminated ioc 804b scsi 0 state c xfer 6656
+(da66:mps1:0:177:0): READ(10). CDB: 28 0 d2 ec c9 15 0 0 5 0 
+(da66:mps1:0:177:0): CAM status: SCSI Status Error
+(da66:mps1:0:177:0): SCSI status: Check Condition
+(da66:mps1:0:177:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da121:mps1:0:152:0): SCSI command timeout on device handle 0x00b5 SMID 72
+(da121:mps1:0:152:0): SCSI command timeout on device handle 0x00b5 SMID 331
+(da121:mps1:0:152:0): SCSI command timeout on device handle 0x00b5 SMID 590
+mps1: (7:152:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:152:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:152:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xb5 SMID 72 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb5 SMID 331
+mps1: mpssas_abort_complete: abort request on handle 0xb5 SMID 331 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb5 SMID 590
+mps1: mpssas_abort_complete: abort request on handle 0xb5 SMID 590 complete
+(da121:mps1:0:152:0): READ(10). CDB: 28 0 6c 5e b6 d1 0 0 20 0 
+(da121:mps1:0:152:0): CAM status: SCSI Status Error
+(da121:mps1:0:152:0): SCSI status: Check Condition
+(da121:mps1:0:152:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da127:mps1:0:239:0): SCSI command timeout on device handle 0x0101 SMID 251
+(da127:mps1:0:239:0): SCSI command timeout on device handle 0x0101 SMID 183
+(da127:mps1:0:239:0): SCSI command timeout on device handle 0x0101 SMID 931
+(da127:mps1:0:239:0): SCSI command timeout on device handle 0x0101 SMID 27
+mps1: (7:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0x101 SMID 251 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x101 SMID 183
+mps1: mpssas_abort_complete: abort request on handle 0x101 SMID 183 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x101 SMID 931
+mps1: mpssas_abort_complete: abort request on handle 0x101 SMID 931 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x101 SMID 27
+mps1: mpssas_abort_complete: abort request on handle 0x101 SMID 27 complete
+(da127:mps1:0:239:0): READ(16). CDB: 88 0 0 0 0 1 51 b3 e0 7d 0 0 0 b 0 0 
+(da127:mps1:0:239:0): CAM status: SCSI Status Error
+(da127:mps1:0:239:0): SCSI status: Check Condition
+(da127:mps1:0:239:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da127:mps1:0:239:0): READ(16). CDB: 88 0 0 0 0 1 54 88 2b fc 0 0 0 20 0 0 
+(da127:mps1:0:239:0): CAM status: SCSI Status Error
+(da127:mps1:0:239:0): SCSI status: Check Condition
+(da127:mps1:0:239:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:27:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da5:mps1:0:27:0): READ(10). CDB: 28 0 89 32 44 8b 0 0 1 0 
+(da5:mps1:0:27:0): CAM status: SCSI Status Error
+(da5:mps1:0:27:0): SCSI status: Check Condition
+(da5:mps1:0:27:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:81:0) terminated ioc 804b scsi 0 state c xfer 4608
+(da208:mps1:0:81:0): WRITE(10). CDB: 2a 0 fb 11 ab 74 0 0 2 0 
+(da208:mps1:0:81:0): CAM status: SCSI Status Error
+(da208:mps1:0:81:0): SCSI status: Check Condition
+(da208:mps1:0:81:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 65536
+(da258:mps1:0:265:0): READ(10). CDB: 28 0 c3 43 9a 95 0 0 20 0 
+(da258:mps1:0:265:0): CAM status: SCSI Status Error
+(da258:mps1:0:265:0): SCSI status: Check Condition
+(da258:mps1:0:265:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da216:mps1:0:215:0): SCSI command timeout on device handle 0x00ea SMID 917
+(da216:mps1:0:215:0): SCSI command timeout on device handle 0x00ea SMID 472
+(da216:mps1:0:215:0): SCSI command timeout on device handle 0x00ea SMID 624
+(da216:mps1:0:215:0): SCSI command timeout on device handle 0x00ea SMID 1001
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 6656
+mps1: (7:215:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps1: mpssas_abort_complete: abort request on handle 0xea SMID 917 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xea SMID 472
+mps1: mpssas_abort_complete: abort request on handle 0xea SMID 472 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xea SMID 624
+mps1: mpssas_abort_complete: abort request on handle 0xea SMID 624 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xea SMID 1001
+mps1: mpssas_abort_complete: abort request on handle 0xea SMID 1001 complete
+(da216:mps1:0:215:0): READ(16). CDB: 88 0 0 0 0 1 14 bb de 89 0 0 0 1 0 0 
+(da216:mps1:0:215:0): CAM status: SCSI Status Error
+(da216:mps1:0:215:0): SCSI status: Check Condition
+(da216:mps1:0:215:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 32768
+mps1: (7:240:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da230:mps1:0:240:0): READ(10). CDB: 28 0 a3 43 1d 14 0 0 20 0 
+(da230:mps1:0:240:0): CAM status: SCSI Status Error
+(da230:mps1:0:240:0): SCSI status: Check Condition
+(da230:mps1:0:240:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:66:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:66:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da26:mps1:0:66:0): WRITE(10). CDB: 2a 0 bf 91 33 81 0 0 20 0 
+(da26:mps1:0:66:0): CAM status: SCSI Status Error
+(da26:mps1:0:66:0): SCSI status: Check Condition
+(da26:mps1:0:66:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9216
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9216
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 59904
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 1536
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps1: (7:10:0) terminated ioc 804b scsi 0 state c xfer 9728
+(da210:mps1:0:10:0): WRITE(10). CDB: 2a 0 db 8c 4a 22 0 0 80 0 
+(da210:mps1:0:10:0): CAM status: SCSI Status Error
+(da210:mps1:0:10:0): SCSI status: Check Condition
+(da210:mps1:0:10:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:118:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da40:mps1:0:118:0): WRITE(10). CDB: 2a 0 ee a5 c8 86 0 0 80 0 
+(da40:mps1:0:118:0): CAM status: SCSI Status Error
+(da40:mps1:0:118:0): SCSI status: Check Condition
+(da40:mps1:0:118:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:266:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da262:mps1:0:266:0): READ(16). CDB: 88 0 0 0 0 1 b 16 fb af 0 0 0 40 0 0 
+(da262:mps1:0:266:0): CAM status: SCSI Status Error
+(da262:mps1:0:266:0): SCSI status: Check Condition
+(da262:mps1:0:266:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)

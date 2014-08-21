@@ -1,0 +1,1177 @@
+da86: 600.000MB/s transfers
+da86: Command Queueing enabled
+da86: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da45 at mps0 bus 0 scbus4 target 63 lun 0
+da45: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da45: 600.000MB/s transfers
+da45: Command Queueing enabled
+da45: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da87 at mps0 bus 0 scbus4 target 93 lun 0
+da87: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da87: 600.000MB/s transfers
+da87: Command Queueing enabled
+da87: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da92 at mps0 bus 0 scbus4 target 97 lun 0
+da92: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da92: 600.000MB/s transfers
+da92: Command Queueing enabled
+da92: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da48 at mps0 bus 0 scbus4 target 71 lun 0
+da48: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da48: 600.000MB/s transfers
+da48: Command Queueing enabled
+da48: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da10 at mps0 bus 0 scbus4 target 32 lun 0
+da10: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da10: 600.000MB/s transfers
+da10: Command Queueing enabled
+da10: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da103 at mps0 bus 0 scbus4 target 95 lun 0
+da103: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da103: 600.000MB/s transfers
+da103: Command Queueing enabled
+da103: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da104 at mps0 bus 0 scbus4 target 96 lun 0
+da104: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da104: 600.000MB/s transfers
+da104: Command Queueing enabled
+da104: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da8 at mps0 bus 0 scbus4 target 31 lun 0
+da8: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da8: 600.000MB/s transfers
+da8: Command Queueing enabled
+da8: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da83 at mps0 bus 0 scbus4 target 94 lun 0
+da83: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da83: 600.000MB/s transfers
+da83: Command Queueing enabled
+da83: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da53 at mps0 bus 0 scbus4 target 58 lun 0
+da53: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da53: 600.000MB/s transfers
+da53: Command Queueing enabled
+da53: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da74 at mps0 bus 0 scbus4 target 100 lun 0
+da74: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da74: 600.000MB/s transfers
+da74: Command Queueing enabled
+da74: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da101 at mps0 bus 0 scbus4 target 106 lun 0
+da101: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da101: 600.000MB/s transfers
+da101: Command Queueing enabled
+da101: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da94 at mps0 bus 0 scbus4 target 98 lun 0
+da94: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da94: 600.000MB/s transfers
+da94: Command Queueing enabled
+da94: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da112 at mps0 bus 0 scbus4 target 112 lun 0
+da112: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da112: 600.000MB/s transfers
+da112: Command Queueing enabled
+da112: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da84 at mps0 bus 0 scbus4 target 116 lun 0
+da84: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da84: 600.000MB/s transfers
+da84: Command Queueing enabled
+da84: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da73 at mps0 bus 0 scbus4 target 99 lun 0
+da73: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da73: 600.000MB/s transfers
+da73: Command Queueing enabled
+da73: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da97 at mps0 bus 0 scbus4 target 105 lun 0
+da97: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da97: 600.000MB/s transfers
+da97: Command Queueing enabled
+da97: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da113 at mps0 bus 0 scbus4 target 117 lun 0
+da113: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da113: 600.000MB/s transfers
+da113: Command Queueing enabled
+da113: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da100 at mps0 bus 0 scbus4 target 102 lun 0
+da100: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da100: 600.000MB/s transfers
+da100: Command Queueing enabled
+da100: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da85 at mps0 bus 0 scbus4 target 101 lun 0
+da85: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da85: 600.000MB/s transfers
+da85: Command Queueing enabled
+da85: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da105 at mps0 bus 0 scbus4 target 104 lun 0
+da105: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da105: 600.000MB/s transfers
+da105: Command Queueing enabled
+da105: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da108 at mps0 bus 0 scbus4 target 135 lun 0
+da108: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da108: 600.000MB/s transfers
+da108: Command Queueing enabled
+da108: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da107 at mps0 bus 0 scbus4 target 133 lun 0
+da107: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da107: 600.000MB/s transfers
+da107: Command Queueing enabled
+da107: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da115 at mps0 bus 0 scbus4 target 125 lun 0
+da115: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da115: 600.000MB/s transfers
+da115: Command Queueing enabled
+da115: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da110 at mps0 bus 0 scbus4 target 109 lun 0
+da110: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da110: 600.000MB/s transfers
+da110: Command Queueing enabled
+da110: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da114 at mps0 bus 0 scbus4 target 118 lun 0
+da114: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da114: 600.000MB/s transfers
+da114: Command Queueing enabled
+da114: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da98 at mps0 bus 0 scbus4 target 113 lun 0
+da98: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da98: 600.000MB/s transfers
+da98: Command Queueing enabled
+da98: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da95 at mps0 bus 0 scbus4 target 103 lun 0
+da95: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da95: 600.000MB/s transfers
+da95: Command Queueing enabled
+da95: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da109 at mps0 bus 0 scbus4 target 107 lun 0
+da109: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da109: 600.000MB/s transfers
+da109: Command Queueing enabled
+da109: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da111 at mps0 bus 0 scbus4 target 111 lun 0
+da111: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da111: 600.000MB/s transfers
+da111: Command Queueing enabled
+da111: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da106 at mps0 bus 0 scbus4 target 108 lun 0
+da106: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da106: 600.000MB/s transfers
+da106: Command Queueing enabled
+da106: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da116 at mps0 bus 0 scbus4 target 126 lun 0
+da116: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da116: 600.000MB/s transfers
+da116: Command Queueing enabled
+da116: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da93 at mps0 bus 0 scbus4 target 115 lun 0
+da93: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da93: 600.000MB/s transfers
+da93: Command Queueing enabled
+da93: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da91 at mps0 bus 0 scbus4 target 114 lun 0
+da91: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da91: 600.000MB/s transfers
+da91: Command Queueing enabled
+da91: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da119 at mps0 bus 0 scbus4 target 170 lun 0
+da119: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da119: 600.000MB/s transfers
+da119: Command Queueing enabled
+da119: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da120 at mps0 bus 0 scbus4 target 194 lun 0
+da120: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da120: 600.000MB/s transfers
+da120: Command Queueing enabled
+da120: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da121 at mps0 bus 0 scbus4 target 193 lun 0
+da121: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da121: 600.000MB/s transfers
+da121: Command Queueing enabled
+da121: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da117 at mps0 bus 0 scbus4 target 248 lun 0
+da117: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da117: 600.000MB/s transfers
+da117: Command Queueing enabled
+da117: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da122 at mps0 bus 0 scbus4 target 148 lun 0
+da122: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da122: 600.000MB/s transfers
+da122: Command Queueing enabled
+da122: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da134 at mps0 bus 0 scbus4 target 139 lun 0
+da134: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da134: 600.000MB/s transfers
+da134: Command Queueing enabled
+da134: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da118 at mps0 bus 0 scbus4 target 147 lun 0
+da118: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da118: 600.000MB/s transfers
+da118: Command Queueing enabled
+da118: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da138 at mps0 bus 0 scbus4 target 120 lun 0
+da138: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da138: 600.000MB/s transfers
+da138: Command Queueing enabled
+da138: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da137 at mps0 bus 0 scbus4 target 144 lun 0
+da137: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da137: 600.000MB/s transfers
+da137: Command Queueing enabled
+da137: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da151 at mps0 bus 0 scbus4 target 130 lun 0
+da151: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da151: 600.000MB/s transfers
+da151: Command Queueing enabled
+da151: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da131 at mps0 bus 0 scbus4 target 122 lun 0
+da131: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da131: 600.000MB/s transfers
+da131: Command Queueing enabled
+da131: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da146 at mps0 bus 0 scbus4 target 145 lun 0
+da146: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da146: 600.000MB/s transfers
+da146: Command Queueing enabled
+da146: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da133 at mps0 bus 0 scbus4 target 124 lun 0
+da133: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da133: 600.000MB/s transfers
+da133: Command Queueing enabled
+da133: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da135 at mps0 bus 0 scbus4 target 140 lun 0
+da135: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da135: 600.000MB/s transfers
+da135: Command Queueing enabled
+da135: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da165 at mps0 bus 0 scbus4 target 162 lun 0
+da165: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da165: 600.000MB/s transfers
+da165: Command Queueing enabled
+da165: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da152 at mps0 bus 0 scbus4 target 151 lun 0
+da152: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da152: 600.000MB/s transfers
+da152: Command Queueing enabled
+da152: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da167 at mps0 bus 0 scbus4 target 179 lun 0
+da167: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da167: 600.000MB/s transfers
+da167: Command Queueing enabled
+da167: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da162 at mps0 bus 0 scbus4 target 177 lun 0
+da162: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da162: 600.000MB/s transfers
+da162: Command Queueing enabled
+da162: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da176 at mps0 bus 0 scbus4 target 174 lun 0
+da176: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da176: 600.000MB/s transfers
+da176: Command Queueing enabled
+da176: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da141 at mps0 bus 0 scbus4 target 131 lun 0
+da141: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da141: 600.000MB/s transfers
+da141: Command Queueing enabled
+da141: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da124 at mps0 bus 0 scbus4 target 183 lun 0
+da124: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da124: 600.000MB/s transfers
+da124: Command Queueing enabled
+da124: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da123 at mps0 bus 0 scbus4 target 175 lun 0
+da123: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da123: 600.000MB/s transfers
+da123: Command Queueing enabled
+da123: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da203 at mps0 bus 0 scbus4 target 190 lun 0
+da203: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da203: 600.000MB/s transfers
+da203: Command Queueing enabled
+da203: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da144 at mps0 bus 0 scbus4 target 155 lun 0
+da144: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da144: 600.000MB/s transfers
+da144: Command Queueing enabled
+da144: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da143 at mps0 bus 0 scbus4 target 129 lun 0
+da143: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da143: 600.000MB/s transfers
+da143: Command Queueing enabled
+da143: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da129 at mps0 bus 0 scbus4 target 134 lun 0
+da129: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da129: 600.000MB/s transfers
+da129: Command Queueing enabled
+da129: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da194 at mps0 bus 0 scbus4 target 189 lun 0
+da194: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da194: 600.000MB/s transfers
+da194: Command Queueing enabled
+da194: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da174 at mps0 bus 0 scbus4 target 180 lun 0
+da174: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da174: 600.000MB/s transfers
+da174: Command Queueing enabled
+da174: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da149 at mps0 bus 0 scbus4 target 146 lun 0
+da149: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da149: 600.000MB/s transfers
+da149: Command Queueing enabled
+da149: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da173 at mps0 bus 0 scbus4 target 166 lun 0
+da173: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da173: 600.000MB/s transfers
+da173: Command Queueing enabled
+da173: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da217 at mps0 bus 0 scbus4 target 211 lun 0
+da217: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da217: 600.000MB/s transfers
+da217: Command Queueing enabled
+da217: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da130 at mps0 bus 0 scbus4 target 136 lun 0
+da130: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da130: 600.000MB/s transfers
+da130: Command Queueing enabled
+da130: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da189 at mps0 bus 0 scbus4 target 199 lun 0
+da189: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da189: 600.000MB/s transfers
+da189: Command Queueing enabled
+da189: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da193 at mps0 bus 0 scbus4 target 212 lun 0
+da193: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da193: 600.000MB/s transfers
+da193: Command Queueing enabled
+da193: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da145 at mps0 bus 0 scbus4 target 123 lun 0
+da145: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da145: 600.000MB/s transfers
+da145: Command Queueing enabled
+da145: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da207 at mps0 bus 0 scbus4 target 215 lun 0
+da207: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da207: 600.000MB/s transfers
+da207: Command Queueing enabled
+da207: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da125 at mps0 bus 0 scbus4 target 216 lun 0
+da125: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da125: 600.000MB/s transfers
+da125: Command Queueing enabled
+da125: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da190 at mps0 bus 0 scbus4 target 197 lun 0
+da190: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da190: 600.000MB/s transfers
+da190: Command Queueing enabled
+da190: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da139 at mps0 bus 0 scbus4 target 141 lun 0
+da139: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da139: 600.000MB/s transfers
+da139: Command Queueing enabled
+da139: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da161 at mps0 bus 0 scbus4 target 152 lun 0
+da161: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da161: 600.000MB/s transfers
+da161: Command Queueing enabled
+da161: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da200 at mps0 bus 0 scbus4 target 217 lun 0
+da200: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da200: 600.000MB/s transfers
+da200: Command Queueing enabled
+da200: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da142 at mps0 bus 0 scbus4 target 143 lun 0
+da142: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da142: 600.000MB/s transfers
+da142: Command Queueing enabled
+da142: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da158 at mps0 bus 0 scbus4 target 138 lun 0
+da158: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da158: 600.000MB/s transfers
+da158: Command Queueing enabled
+da158: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da181 at mps0 bus 0 scbus4 target 184 lun 0
+da181: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da181: 600.000MB/s transfers
+da181: Command Queueing enabled
+da181: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da157 at mps0 bus 0 scbus4 target 153 lun 0
+da157: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da157: 600.000MB/s transfers
+da157: Command Queueing enabled
+da157: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da126 at mps0 bus 0 scbus4 target 196 lun 0
+da126: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da126: 600.000MB/s transfers
+da126: Command Queueing enabled
+da126: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da166 at mps0 bus 0 scbus4 target 156 lun 0
+da166: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da166: 600.000MB/s transfers
+da166: Command Queueing enabled
+da166: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da168 at mps0 bus 0 scbus4 target 142 lun 0
+da168: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da168: 600.000MB/s transfers
+da168: Command Queueing enabled
+da168: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da140 at mps0 bus 0 scbus4 target 137 lun 0
+da140: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da140: 600.000MB/s transfers
+da140: Command Queueing enabled
+da140: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da148 at mps0 bus 0 scbus4 target 119 lun 0
+da148: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da148: 600.000MB/s transfers
+da148: Command Queueing enabled
+da148: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da170 at mps0 bus 0 scbus4 target 168 lun 0
+da170: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da170: 600.000MB/s transfers
+da170: Command Queueing enabled
+da170: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da132 at mps0 bus 0 scbus4 target 121 lun 0
+da132: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da132: 600.000MB/s transfers
+da132: Command Queueing enabled
+da132: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da147 at mps0 bus 0 scbus4 target 127 lun 0
+da147: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da147: 600.000MB/s transfers
+da147: Command Queueing enabled
+da147: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da160 at mps0 bus 0 scbus4 target 149 lun 0
+da160: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da160: 600.000MB/s transfers
+da160: Command Queueing enabled
+da160: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da136 at mps0 bus 0 scbus4 target 128 lun 0
+da136: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da136: 600.000MB/s transfers
+da136: Command Queueing enabled
+da136: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da150 at mps0 bus 0 scbus4 target 150 lun 0
+da150: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da150: 600.000MB/s transfers
+da150: Command Queueing enabled
+da150: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da199 at mps0 bus 0 scbus4 target 220 lun 0
+da199: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da199: 600.000MB/s transfers
+da199: Command Queueing enabled
+da199: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da163 at mps0 bus 0 scbus4 target 159 lun 0
+da163: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da163: 600.000MB/s transfers
+da163: Command Queueing enabled
+da163: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da187 at mps0 bus 0 scbus4 target 221 lun 0
+da187: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da187: 600.000MB/s transfers
+da187: Command Queueing enabled
+da187: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da183 at mps0 bus 0 scbus4 target 222 lun 0
+da183: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da183: 600.000MB/s transfers
+da183: Command Queueing enabled
+da183: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da204 at mps0 bus 0 scbus4 target 223 lun 0
+da204: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da204: 600.000MB/s transfers
+da204: Command Queueing enabled
+da204: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da196 at mps0 bus 0 scbus4 target 234 lun 0
+da196: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da196: 600.000MB/s transfers
+da196: Command Queueing enabled
+da196: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da198 at mps0 bus 0 scbus4 target 233 lun 0
+da198: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da198: 600.000MB/s transfers
+da198: Command Queueing enabled
+da198: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da212 at mps0 bus 0 scbus4 target 224 lun 0
+da212: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da212: 600.000MB/s transfers
+da212: Command Queueing enabled
+da212: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da206 at mps0 bus 0 scbus4 target 228 lun 0
+da206: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da206: 600.000MB/s transfers
+da206: Command Queueing enabled
+da206: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da219 at mps0 bus 0 scbus4 target 229 lun 0
+da219: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da219: 600.000MB/s transfers
+da219: Command Queueing enabled
+da219: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da213 at mps0 bus 0 scbus4 target 236 lun 0
+da213: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da213: 600.000MB/s transfers
+da213: Command Queueing enabled
+da213: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da172 at mps0 bus 0 scbus4 target 195 lun 0
+da172: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da172: 600.000MB/s transfers
+da172: Command Queueing enabled
+da172: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da227 at mps0 bus 0 scbus4 target 235 lun 0
+da227: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da227: 600.000MB/s transfers
+da227: Command Queueing enabled
+da227: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da223 at mps0 bus 0 scbus4 target 245 lun 0
+da223: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da223: 600.000MB/s transfers
+da223: Command Queueing enabled
+da223: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da201 at mps0 bus 0 scbus4 target 237 lun 0
+da201: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da201: 600.000MB/s transfers
+da201: Command Queueing enabled
+da201: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da224 at mps0 bus 0 scbus4 target 241 lun 0
+da224: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da224: 600.000MB/s transfers
+da224: Command Queueing enabled
+da224: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da216 at mps0 bus 0 scbus4 target 244 lun 0
+da216: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da216: 600.000MB/s transfers
+da216: Command Queueing enabled
+da216: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da211 at mps0 bus 0 scbus4 target 239 lun 0
+da211: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da211: 600.000MB/s transfers
+da211: Command Queueing enabled
+da211: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da222 at mps0 bus 0 scbus4 target 251 lun 0
+da222: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da222: 600.000MB/s transfers
+da222: Command Queueing enabled
+da222: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da153 at mps0 bus 0 scbus4 target 160 lun 0
+da153: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da153: 600.000MB/s transfers
+da153: Command Queueing enabled
+da153: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da156 at mps0 bus 0 scbus4 target 157 lun 0
+da156: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da156: 600.000MB/s transfers
+da156: Command Queueing enabled
+da156: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da164 at mps0 bus 0 scbus4 target 165 lun 0
+da164: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da164: 600.000MB/s transfers
+da164: Command Queueing enabled
+da164: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da177 at mps0 bus 0 scbus4 target 163 lun 0
+da177: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da177: 600.000MB/s transfers
+da177: Command Queueing enabled
+da177: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da185 at mps0 bus 0 scbus4 target 164 lun 0
+da185: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da185: 600.000MB/s transfers
+da185: Command Queueing enabled
+da185: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da218 at mps0 bus 0 scbus4 target 230 lun 0
+da218: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da218: 600.000MB/s transfers
+da218: Command Queueing enabled
+da218: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da225 at mps0 bus 0 scbus4 target 252 lun 0
+da225: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da225: 600.000MB/s transfers
+da225: Command Queueing enabled
+da225: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da159 at mps0 bus 0 scbus4 target 178 lun 0
+da159: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da159: 600.000MB/s transfers
+da159: Command Queueing enabled
+da159: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da154 at mps0 bus 0 scbus4 target 161 lun 0
+da154: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da154: 600.000MB/s transfers
+da154: Command Queueing enabled
+da154: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da182 at mps0 bus 0 scbus4 target 182 lun 0
+da182: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da182: 600.000MB/s transfers
+da182: Command Queueing enabled
+da182: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da195 at mps0 bus 0 scbus4 target 171 lun 0
+da195: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da195: 600.000MB/s transfers
+da195: Command Queueing enabled
+da195: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da188 at mps0 bus 0 scbus4 target 181 lun 0
+da188: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da188: 600.000MB/s transfers
+da188: Command Queueing enabled
+da188: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da155 at mps0 bus 0 scbus4 target 167 lun 0
+da155: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da155: 600.000MB/s transfers
+da155: Command Queueing enabled
+da155: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da186 at mps0 bus 0 scbus4 target 169 lun 0
+da186: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da186: 600.000MB/s transfers
+da186: Command Queueing enabled
+da186: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da180 at mps0 bus 0 scbus4 target 172 lun 0
+da180: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da180: 600.000MB/s transfers
+da180: Command Queueing enabled
+da180: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da191 at mps0 bus 0 scbus4 target 191 lun 0
+da191: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da191: 600.000MB/s transfers
+da191: Command Queueing enabled
+da191: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da192 at mps0 bus 0 scbus4 target 185 lun 0
+da192: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da192: 600.000MB/s transfers
+da192: Command Queueing enabled
+da192: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da169 at mps0 bus 0 scbus4 target 186 lun 0
+da169: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da169: 600.000MB/s transfers
+da169: Command Queueing enabled
+da169: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da208 at mps0 bus 0 scbus4 target 192 lun 0
+da208: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da208: 600.000MB/s transfers
+da208: Command Queueing enabled
+da208: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da175 at mps0 bus 0 scbus4 target 188 lun 0
+da175: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da175: 600.000MB/s transfers
+da175: Command Queueing enabled
+da175: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da171 at mps0 bus 0 scbus4 target 173 lun 0
+da171: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da171: 600.000MB/s transfers
+da171: Command Queueing enabled
+da171: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da197 at mps0 bus 0 scbus4 target 214 lun 0
+da197: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da197: 600.000MB/s transfers
+da197: Command Queueing enabled
+da197: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da209 at mps0 bus 0 scbus4 target 213 lun 0
+da209: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da209: 600.000MB/s transfers
+da209: Command Queueing enabled
+da209: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da178 at mps0 bus 0 scbus4 target 187 lun 0
+da178: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da178: 600.000MB/s transfers
+da178: Command Queueing enabled
+da178: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da184 at mps0 bus 0 scbus4 target 219 lun 0
+da184: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da184: 600.000MB/s transfers
+da184: Command Queueing enabled
+da184: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da214 at mps0 bus 0 scbus4 target 225 lun 0
+da214: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da214: 600.000MB/s transfers
+da214: Command Queueing enabled
+da214: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da202 at mps0 bus 0 scbus4 target 227 lun 0
+da202: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da202: 600.000MB/s transfers
+da202: Command Queueing enabled
+da202: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da226 at mps0 bus 0 scbus4 target 243 lun 0
+da226: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da226: 600.000MB/s transfers
+da226: Command Queueing enabled
+da226: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da215 at mps0 bus 0 scbus4 target 240 lun 0
+da215: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da215: 600.000MB/s transfers
+da215: Command Queueing enabled
+da215: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da210 at mps0 bus 0 scbus4 target 242 lun 0
+da210: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da210: 600.000MB/s transfers
+da210: Command Queueing enabled
+da210: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da205 at mps0 bus 0 scbus4 target 238 lun 0
+da205: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da205: 600.000MB/s transfers
+da205: Command Queueing enabled
+da205: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da128 at mps0 bus 0 scbus4 target 249 lun 0
+da128: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da128: 600.000MB/s transfers
+da128: Command Queueing enabled
+da128: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da179 at mps0 bus 0 scbus4 target 218 lun 0
+da179: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da179: 600.000MB/s transfers
+da179: Command Queueing enabled
+da179: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da127 at mps0 bus 0 scbus4 target 226 lun 0
+da127: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da127: 600.000MB/s transfers
+da127: Command Queueing enabled
+da127: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da229 at mps0 bus 0 scbus4 target 246 lun 0
+da229: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da229: 600.000MB/s transfers
+da229: Command Queueing enabled
+da229: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da220 at mps0 bus 0 scbus4 target 247 lun 0
+da220: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da220: 600.000MB/s transfers
+da220: Command Queueing enabled
+da220: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da221 at mps0 bus 0 scbus4 target 250 lun 0
+da221: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da221: 600.000MB/s transfers
+da221: Command Queueing enabled
+da221: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da228 at mps0 bus 0 scbus4 target 253 lun 0
+da228: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da228: 600.000MB/s transfers
+da228: Command Queueing enabled
+da228: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+da230 at mps0 bus 0 scbus4 target 158 lun 0
+da230: <ATA Hitachi HDS5C303 AA10> Fixed Direct Access SCSI-6 device 
+da230: 600.000MB/s transfers
+da230: Command Queueing enabled
+da230: 2861588MB (5860533168 512 byte sectors: 255H 63S/T 364801C)
+GEOM: da99: the primary GPT table is corrupt or invalid.
+GEOM: da99: using the secondary instead -- recovery strongly advised.
+ZFS filesystem version 5
+ZFS storage pool version 28
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 352
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 432
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 695
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 159
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 291
+(da20:mps0:0:53:0): SCSI command timeout on device handle 0x0053 SMID 22
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 352 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x53 SMID 432
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 432 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x53 SMID 695
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 695 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x53 SMID 159
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 159 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x53 SMID 291
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 291 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x53 SMID 22
+mps0: mpssas_abort_complete: abort request on handle 0x53 SMID 22 complete
+(da20:mps0:0:53:0): READ(10). CDB: 28 0 11 e ef 38 0 0 20 0 
+(da20:mps0:0:53:0): CAM status: SCSI Status Error
+(da20:mps0:0:53:0): SCSI status: Check Condition
+(da20:mps0:0:53:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+(da196:mps0:0:234:0): READ(10). CDB: 28 0 b cb f3 cf 0 0 20 0 
+(da196:mps0:0:234:0): CAM status: SCSI Status Error
+(da196:mps0:0:234:0): SCSI status: Check Condition
+(da196:mps0:0:234:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:177:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:177:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:177:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:177:0) terminated ioc 804b scsi 0 state c xfer 0
+(da162:mps0:0:177:0): READ(10). CDB: 28 0 e c2 d0 a7 0 0 20 0 
+(da162:mps0:0:177:0): CAM status: SCSI Status Error
+(da162:mps0:0:177:0): SCSI status: Check Condition
+(da162:mps0:0:177:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 4100
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:213:0) terminated ioc 804b scsi 0 state c xfer 0
+(da209:mps0:0:213:0): READ(10). CDB: 28 0 3 80 10 3f 0 0 80 0 
+(da209:mps0:0:213:0): CAM status: SCSI Status Error
+(da209:mps0:0:213:0): SCSI status: Check Condition
+(da209:mps0:0:213:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:11:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:11:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:11:0) terminated ioc 804b scsi 0 state c xfer 0
+(da3:mps0:0:11:0): READ(10). CDB: 28 0 10 2 81 d2 0 0 20 0 
+(da3:mps0:0:11:0): CAM status: SCSI Status Error
+(da3:mps0:0:11:0): SCSI status: Check Condition
+(da3:mps0:0:11:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:74:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:74:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:74:0) terminated ioc 804b scsi 0 state c xfer 4100
+mps0: (4:74:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:133:0) terminated ioc 804b scsi 0 state c xfer 0
+(da107:mps0:0:133:0): READ(10). CDB: 28 0 e c2 a8 87 0 0 40 0 
+(da107:mps0:0:133:0): CAM status: SCSI Status Error
+(da107:mps0:0:133:0): SCSI status: Check Condition
+(da107:mps0:0:133:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da62:mps0:0:74:0): READ(10). CDB: 28 0 11 30 bc 1 0 0 b 0 
+(da62:mps0:0:74:0): CAM status: SCSI Status Error
+(da62:mps0:0:74:0): SCSI status: Check Condition
+(da62:mps0:0:74:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da130:mps0:0:136:0): SCSI command timeout on device handle 0x00a5 SMID 418
+(da130:mps0:0:136:0): SCSI command timeout on device handle 0x00a5 SMID 903
+(da130:mps0:0:136:0): SCSI command timeout on device handle 0x00a5 SMID 349
+(da130:mps0:0:136:0): SCSI command timeout on device handle 0x00a5 SMID 472
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:136:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0xa5 SMID 418 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa5 SMID 903
+mps0: mpssas_abort_complete: abort request on handle 0xa5 SMID 903 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa5 SMID 349
+mps0: mpssas_abort_complete: abort request on handle 0xa5 SMID 349 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa5 SMID 472
+mps0: mpssas_abort_complete: abort request on handle 0xa5 SMID 472 complete
+(da130:mps0:0:136:0): READ(10). CDB: 28 0 3 82 77 1f 0 0 20 0 
+(da130:mps0:0:136:0): CAM status: SCSI Status Error
+(da130:mps0:0:136:0): SCSI status: Check Condition
+(da130:mps0:0:136:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:234:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 3076
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:46:0) terminated ioc 804b scsi 0 state c xfer 0
+(da27:mps0:0:46:0): READ(10). CDB: 28 0 e c7 7c 11 0 0 20 0 
+(da27:mps0:0:46:0): CAM status: SCSI Status Error
+(da27:mps0:0:46:0): SCSI status: Check Condition
+(da27:mps0:0:46:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da196:mps0:0:234:0): READ(10). CDB: 28 0 e c7 7b 30 0 0 80 0 
+(da196:mps0:0:234:0): CAM status: SCSI Status Error
+(da196:mps0:0:234:0): SCSI status: Check Condition
+(da196:mps0:0:234:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da83:mps0:0:94:0): SCSI command timeout on device handle 0x007b SMID 232
+(da83:mps0:0:94:0): SCSI command timeout on device handle 0x007b SMID 246
+(da83:mps0:0:94:0): SCSI command timeout on device handle 0x007b SMID 545
+(da83:mps0:0:94:0): SCSI command timeout on device handle 0x007b SMID 447
+(da83:mps0:0:94:0): SCSI command timeout on device handle 0x007b SMID 790
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:94:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x7b SMID 232 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x7b SMID 246
+mps0: mpssas_abort_complete: abort request on handle 0x7b SMID 246 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x7b SMID 545
+mps0: mpssas_abort_complete: abort request on handle 0x7b SMID 545 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x7b SMID 447
+mps0: mpssas_abort_complete: abort request on handle 0x7b SMID 447 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x7b SMID 790
+mps0: mpssas_abort_complete: abort request on handle 0x7b SMID 790 complete
+(da83:mps0:0:94:0): READ(10). CDB: 28 0 16 40 31 47 0 0 68 0 
+(da83:mps0:0:94:0): CAM status: SCSI Status Error
+(da83:mps0:0:94:0): SCSI status: Check Condition
+(da83:mps0:0:94:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 895
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 960
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 904
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 824
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 342
+(da45:mps0:0:63:0): SCSI command timeout on device handle 0x005d SMID 912
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 8192
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:63:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 895 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x5d SMID 960
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 960 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x5d SMID 904
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 904 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x5d SMID 824
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 824 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x5d SMID 342
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 342 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x5d SMID 912
+mps0: mpssas_abort_complete: abort request on handle 0x5d SMID 912 complete
+(da45:mps0:0:63:0): READ(10). CDB: 28 0 15 69 b4 2d 0 0 80 0 
+(da45:mps0:0:63:0): CAM status: SCSI Status Error
+(da45:mps0:0:63:0): SCSI status: Check Condition
+(da45:mps0:0:63:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:247:0) terminated ioc 804b scsi 0 state c xfer 0
+(da220:mps0:0:247:0): READ(10). CDB: 28 0 13 cc 36 8 0 0 20 0 
+(da220:mps0:0:247:0): CAM status: SCSI Status Error
+(da220:mps0:0:247:0): SCSI status: Check Condition
+(da220:mps0:0:247:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:84:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:84:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:84:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:84:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:84:0) terminated ioc 804b scsi 0 state c xfer 0
+(da80:mps0:0:84:0): READ(10). CDB: 28 0 3 61 b3 5d 0 0 80 0 
+(da80:mps0:0:84:0): CAM status: SCSI Status Error
+(da80:mps0:0:84:0): SCSI status: Check Condition
+(da80:mps0:0:84:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 49152
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:134:0) terminated ioc 804b scsi 0 state c xfer 0
+(da129:mps0:0:134:0): READ(10). CDB: 28 0 1a 31 4d 5e 0 0 60 0 
+(da129:mps0:0:134:0): CAM status: SCSI Status Error
+(da129:mps0:0:134:0): SCSI status: Check Condition
+(da129:mps0:0:134:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 664
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 159
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 907
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 950
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 697
+(da117:mps0:0:248:0): SCSI command timeout on device handle 0x0109 SMID 360
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:248:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 664 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x109 SMID 159
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 159 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x109 SMID 907
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 907 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x109 SMID 950
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 950 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x109 SMID 697
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 697 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x109 SMID 360
+mps0: mpssas_abort_complete: abort request on handle 0x109 SMID 360 complete
+(da117:mps0:0:248:0): READ(10). CDB: 28 0 19 c3 af 63 0 0 20 0 
+(da117:mps0:0:248:0): CAM status: SCSI Status Error
+(da117:mps0:0:248:0): SCSI status: Check Condition
+(da117:mps0:0:248:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da37:mps0:0:57:0): SCSI command timeout on device handle 0x0057 SMID 411
+(da37:mps0:0:57:0): SCSI command timeout on device handle 0x0057 SMID 976
+(da37:mps0:0:57:0): SCSI command timeout on device handle 0x0057 SMID 547
+(da37:mps0:0:57:0): SCSI command timeout on device handle 0x0057 SMID 87
+(da37:mps0:0:57:0): SCSI command timeout on device handle 0x0057 SMID 159
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:57:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x57 SMID 411 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 976
+mps0: mpssas_abort_complete: abort request on handle 0x57 SMID 976 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 547
+mps0: mpssas_abort_complete: abort request on handle 0x57 SMID 547 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 87
+mps0: mpssas_abort_complete: abort request on handle 0x57 SMID 87 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x57 SMID 159
+mps0: mpssas_abort_complete: abort request on handle 0x57 SMID 159 complete
+(da37:mps0:0:57:0): READ(10). CDB: 28 0 9 e7 a9 1c 0 0 40 0 
+(da37:mps0:0:57:0): CAM status: SCSI Status Error
+(da37:mps0:0:57:0): SCSI status: Check Condition
+(da37:mps0:0:57:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:19:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:19:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:19:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:19:0) terminated ioc 804b scsi 0 state c xfer 0
+(da43:mps0:0:19:0): READ(10). CDB: 28 0 13 53 8d 2a 0 0 20 0 
+(da43:mps0:0:19:0): CAM status: SCSI Status Error
+(da43:mps0:0:19:0): SCSI status: Check Condition
+(da43:mps0:0:19:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:196:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:196:0) terminated ioc 804b scsi 0 state c xfer 3076
+mps0: (4:196:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:196:0) terminated ioc 804b scsi 0 state c xfer 0
+(da126:mps0:0:196:0): READ(10). CDB: 28 0 13 53 8d 29 0 0 20 0 
+(da126:mps0:0:196:0): CAM status: SCSI Status Error
+(da126:mps0:0:196:0): SCSI status: Check Condition
+(da126:mps0:0:196:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 39
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 635
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 458
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 872
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 644
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 39 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 635
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 635 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 458
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 458 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 872
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 872 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 644
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 644 complete
+(da140:mps0:0:137:0): READ(10). CDB: 28 0 15 d6 78 58 0 0 20 0 
+(da140:mps0:0:137:0): CAM status: SCSI Status Error
+(da140:mps0:0:137:0): SCSI status: Check Condition
+(da140:mps0:0:137:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:219:0) terminated ioc 804b scsi 0 state c xfer 0
+(da184:mps0:0:219:0): READ(10). CDB: 28 0 f 4c 2 5e 0 0 80 0 
+(da184:mps0:0:219:0): CAM status: SCSI Status Error
+(da184:mps0:0:219:0): SCSI status: Check Condition
+(da184:mps0:0:219:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 4100
+mps0: (4:109:0) terminated ioc 804b scsi 0 state c xfer 0
+(da110:mps0:0:109:0): READ(10). CDB: 28 0 1e 9a 66 d9 0 0 80 0 
+(da110:mps0:0:109:0): CAM status: SCSI Status Error
+(da110:mps0:0:109:0): SCSI status: Check Condition
+(da110:mps0:0:109:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 191
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 282
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 479
+(da140:mps0:0:137:0): SCSI command timeout on device handle 0x00a6 SMID 845
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:137:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 191 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 282
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 282 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 479
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 479 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa6 SMID 845
+mps0: mpssas_abort_complete: abort request on handle 0xa6 SMID 845 complete
+(da140:mps0:0:137:0): READ(10). CDB: 28 0 11 ae 9f 21 0 0 1a 0 
+(da140:mps0:0:137:0): CAM status: SCSI Status Error
+(da140:mps0:0:137:0): SCSI status: Check Condition
+(da140:mps0:0:137:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da129:mps0:0:134:0): READ(10). CDB: 28 0 d 6d 2 12 0 0 20 0 
+(da129:mps0:0:134:0): CAM status: SCSI Status Error
+(da129:mps0:0:134:0): SCSI status: Check Condition
+(da129:mps0:0:134:0): SCSI sense: ABORTED COMMAND asc:0,0 (No additional sense information)
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:1:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:253:0) terminated ioc 804b scsi 0 state c xfer 0
+(da18:mps0:0:1:0): READ(10). CDB: 28 0 12 63 f7 ca 0 0 20 0 
+(da18:mps0:0:1:0): CAM status: SCSI Status Error
+(da18:mps0:0:1:0): SCSI status: Check Condition
+(da18:mps0:0:1:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da228:mps0:0:253:0): READ(10). CDB: 28 0 16 d4 55 96 0 0 40 0 
+(da228:mps0:0:253:0): CAM status: SCSI Status Error
+(da228:mps0:0:253:0): SCSI status: Check Condition
+(da228:mps0:0:253:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (4:44:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:44:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:44:0) terminated ioc 804b scsi 0 state c xfer 4100
+mps0: (4:44:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:44:0) terminated ioc 804b scsi 0 state c xfer 0
+(da70:mps0:0:44:0): READ(10). CDB: 28 0 c c4 d5 43 0 0 60 0 
+(da70:mps0:0:44:0): CAM status: SCSI Status Error
+(da70:mps0:0:44:0): SCSI status: Check Condition
+(da70:mps0:0:44:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da135:mps0:0:140:0): SCSI command timeout on device handle 0x00a9 SMID 173
+(da135:mps0:0:140:0): SCSI command timeout on device handle 0x00a9 SMID 995
+(da135:mps0:0:140:0): SCSI command timeout on device handle 0x00a9 SMID 440
+(da135:mps0:0:140:0): SCSI command timeout on device handle 0x00a9 SMID 823
+(da135:mps0:0:140:0): SCSI command timeout on device handle 0x00a9 SMID 248
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (4:140:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0xa9 SMID 173 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa9 SMID 995
+mps0: mpssas_abort_complete: abort request on handle 0xa9 SMID 995 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa9 SMID 440
+mps0: mpssas_abort_complete: abort request on handle 0xa9 SMID 440 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa9 SMID 823
+mps0: mpssas_abort_complete: abort request on handle 0xa9 SMID 823 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xa9 SMID 248
+mps0: mpssas_abort_complete: abort request on handle 0xa9 SMID 248 complete
+(da135:mps0:0:140:0): READ(10). CDB: 28 0 7 ce 95 fe 0 0 20 0 
+(da135:mps0:0:140:0): CAM status: SCSI Status Error
+(da135:mps0:0:140:0): SCSI status: Check Condition
+(da135:mps0:0:140:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)

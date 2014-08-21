@@ -1,0 +1,14 @@
+sense0:
+  sdiska0-front
+  sdiska1-front
+  ...
+  sdiska10-front (0..23)
+sense1:
+  sdiska0-rear
+  ...
+  sdiska10-rear (0..20)
+sense2: sdiskbx-front (0..23)
+sense3: sdiskbx-rear (0..23)
+
+
+sense0/1 -> sdiska[0-10] 0 -> front (0..23) 1 -> rear (0..21)

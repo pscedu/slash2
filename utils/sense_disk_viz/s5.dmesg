@@ -1,0 +1,965 @@
+mps0: (6:46:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:46:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da47:mps0:0:46:0): WRITE(10). CDB: 2a 0 c 0 a9 13 0 0 80 0 
+(da47:mps0:0:46:0): CAM status: SCSI Status Error
+(da47:mps0:0:46:0): SCSI status: Check Condition
+(da47:mps0:0:46:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(10). CDB: 28 0 2b 5b 53 c8 0 0 80 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 4a b9 fb f5 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 52 4e 4e 3 0 0 80 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 34 3d 1a 45 0 0 0 1c 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(16). CDB: 88 0 0 0 0 1 1c bb 56 31 0 0 0 20 0 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 58 ad 81 e8 0 0 0 80 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da28:mps0:0:28:0): READ(10). CDB: 28 0 81 3d 20 ff 0 0 20 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 19 40 1 6b 0 0 0 20 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(10). CDB: 28 0 cf f2 3b 58 0 0 20 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(16). CDB: 88 0 0 0 0 1 1c 65 cf 96 0 0 0 63 0 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 24 e5 70 12 0 0 0 11 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 8c bf b0 c8 0 0 9 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(10). CDB: 28 0 93 b4 5a 75 0 0 20 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(16). CDB: 88 0 0 0 0 1 2a 7 a7 45 0 0 0 12 0 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 a8 58 20 92 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 b7 fb a7 74 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 dc 9d 4 cc 0 0 11 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 dd 58 48 db 0 0 13 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da28:mps0:0:28:0): READ(10). CDB: 28 0 dd 8e 58 50 0 0 76 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(10). CDB: 28 0 e1 2 9b 20 0 0 27 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da28:mps0:0:28:0): READ(10). CDB: 28 0 e5 94 f 20 0 0 5e 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 ea b7 d0 41 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da228:mps0:0:222:0): SCSI command timeout on device handle 0x00f0 SMID 927
+(da228:mps0:0:222:0): SCSI command timeout on device handle 0x00f0 SMID 177
+(da228:mps0:0:222:0): SCSI command timeout on device handle 0x00f0 SMID 835
+(da228:mps0:0:222:0): SCSI command timeout on device handle 0x00f0 SMID 791
+(da228:mps0:0:222:0): SCSI command timeout on device handle 0x00f0 SMID 307
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:222:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0xf0 SMID 927 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf0 SMID 177
+mps0: mpssas_abort_complete: abort request on handle 0xf0 SMID 177 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf0 SMID 835
+mps0: mpssas_abort_complete: abort request on handle 0xf0 SMID 835 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf0 SMID 791
+mps0: mpssas_abort_complete: abort request on handle 0xf0 SMID 791 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf0 SMID 307
+mps0: mpssas_abort_complete: abort request on handle 0xf0 SMID 307 complete
+(da228:mps0:0:222:0): READ(10). CDB: 28 0 b6 ed 3e 63 0 0 7 0 
+(da228:mps0:0:222:0): CAM status: SCSI Status Error
+(da228:mps0:0:222:0): SCSI status: Check Condition
+(da228:mps0:0:222:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 4 15 ad 35 0 0 0 12 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:29:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 9c b7 69 83 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da162:mps0:0:239:0): SCSI command timeout on device handle 0x0100 SMID 601
+(da162:mps0:0:239:0): SCSI command timeout on device handle 0x0100 SMID 877
+(da162:mps0:0:239:0): SCSI command timeout on device handle 0x0100 SMID 20
+(da162:mps0:0:239:0): SCSI command timeout on device handle 0x0100 SMID 684
+mps0: (6:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:239:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x100 SMID 601 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 877
+mps0: mpssas_abort_complete: abort request on handle 0x100 SMID 877 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 20
+mps0: mpssas_abort_complete: abort request on handle 0x100 SMID 20 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 684
+mps0: mpssas_abort_complete: abort request on handle 0x100 SMID 684 complete
+(da162:mps0:0:239:0): READ(16). CDB: 88 0 0 0 0 1 1b 9b b2 b8 0 0 0 20 0 0 
+(da162:mps0:0:239:0): CAM status: SCSI Status Error
+(da162:mps0:0:239:0): SCSI status: Check Condition
+(da162:mps0:0:239:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 1a 6a dc 36 0 0 0 40 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 40 77 d5 5c 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(10). CDB: 28 0 7c 72 4a a 0 0 80 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 32768
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:165:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da158:mps0:0:165:0): WRITE(16). CDB: 8a 0 0 0 0 1 24 e5 7 68 0 0 0 80 0 0 
+(da158:mps0:0:165:0): CAM status: SCSI Status Error
+(da158:mps0:0:165:0): SCSI status: Check Condition
+(da158:mps0:0:165:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da81:mps0:0:29:0): READ(10). CDB: 28 0 35 43 ef 81 0 0 20 0 
+(da81:mps0:0:29:0): CAM status: SCSI Status Error
+(da81:mps0:0:29:0): SCSI status: Check Condition
+(da81:mps0:0:29:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 47 40 84 dd 0 0 0 4f 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(16). CDB: 88 0 0 0 0 1 22 5a 59 b7 0 0 0 46 0 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:28:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da28:mps0:0:28:0): READ(16). CDB: 88 0 0 0 0 1 c 4 73 ae 0 0 0 17 0 0 
+(da28:mps0:0:28:0): CAM status: SCSI Status Error
+(da28:mps0:0:28:0): SCSI status: Check Condition
+(da28:mps0:0:28:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:30:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da71:mps0:0:30:0): READ(10). CDB: 28 0 5f 2 98 3f 0 0 80 0 
+(da71:mps0:0:30:0): CAM status: SCSI Status Error
+(da71:mps0:0:30:0): SCSI status: Check Condition
+(da71:mps0:0:30:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 1e 44 2 6c 0 0 20 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 4 40 77 ec 0 0 80 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 6 14 a0 43 0 0 20 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 10 7b ce 45 0 0 20 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 28 e5 a0 9f 0 0 20 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 29 cd 52 b8 0 0 20 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 3a 47 dc 72 0 0 40 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 41 b 8 2e 0 0 20 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 b7 e5 6c 8e 0 0 20 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 65 b5 67 6 0 0 1b 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 67 bb 84 64 0 0 1b 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 73 d5 46 4 0 0 20 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 eb 7f 8d 71 0 0 80 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 6c 5c b4 14 0 0 17 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:178:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:178:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da151:mps0:0:178:0): WRITE(10). CDB: 2a 0 f1 e8 49 ad 0 0 80 0 
+(da151:mps0:0:178:0): CAM status: SCSI Status Error
+(da151:mps0:0:178:0): SCSI status: Check Condition
+(da151:mps0:0:178:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 58 b0 aa 40 0 0 16 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 c9 53 5e 5f 0 0 20 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(16). CDB: 88 0 0 0 0 1 4c 49 73 f3 0 0 0 73 0 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da61:mps0:0:31:0): SCSI command timeout on device handle 0x003d SMID 116
+(da61:mps0:0:31:0): SCSI command timeout on device handle 0x003d SMID 843
+(da61:mps0:0:31:0): SCSI command timeout on device handle 0x003d SMID 532
+(da61:mps0:0:31:0): SCSI command timeout on device handle 0x003d SMID 915
+mps0: (6:31:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x3d SMID 116 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x3d SMID 843
+mps0: mpssas_abort_complete: abort request on handle 0x3d SMID 843 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x3d SMID 532
+mps0: mpssas_abort_complete: abort request on handle 0x3d SMID 532 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x3d SMID 915
+mps0: mpssas_abort_complete: abort request on handle 0x3d SMID 915 complete
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 23 57 1d f5 0 0 0 1 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 55 4e 72 e4 0 0 0 20 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 7680
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 5632
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 12800
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:246:0) terminated ioc 804b scsi 0 state c xfer 0
+(da208:mps0:0:246:0): WRITE(10). CDB: 2a 0 54 89 21 88 0 0 60 0 
+(da208:mps0:0:246:0): CAM status: SCSI Status Error
+(da208:mps0:0:246:0): SCSI status: Check Condition
+(da208:mps0:0:246:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 78 17 9 14 0 0 18 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(16). CDB: 88 0 0 0 0 1 40 cc cb 85 0 0 0 20 0 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 84 1b 29 16 0 0 b 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 93 e7 34 e0 0 0 7e 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 a4 ee d9 55 0 0 40 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 1d 87 b4 e3 0 0 0 34 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:169:0) terminated ioc 804b scsi 0 state c xfer 0
+(da169:mps0:0:169:0): WRITE(10). CDB: 2a 0 1c c2 85 a8 0 0 80 0 
+(da169:mps0:0:169:0): CAM status: SCSI Status Error
+(da169:mps0:0:169:0): SCSI status: Check Condition
+(da169:mps0:0:169:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da169:mps0:0:169:0): WRITE(10). CDB: 2a 0 1a bf 8 66 0 0 20 0 
+(da169:mps0:0:169:0): CAM status: SCSI Status Error
+(da169:mps0:0:169:0): SCSI status: Check Condition
+(da169:mps0:0:169:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:179:0) terminated ioc 804b scsi 0 state c xfer 0
+(da147:mps0:0:179:0): WRITE(10). CDB: 2a 0 bc dc c7 c9 0 0 7c 0 
+(da147:mps0:0:179:0): CAM status: SCSI Status Error
+(da147:mps0:0:179:0): SCSI status: Check Condition
+(da147:mps0:0:179:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 c 7 1c 49 0 0 0 c 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(16). CDB: 88 0 0 0 0 1 2b 79 e4 80 0 0 0 14 0 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da227:mps0:0:244:0): SCSI command timeout on device handle 0x0105 SMID 24
+(da227:mps0:0:244:0): SCSI command timeout on device handle 0x0105 SMID 85
+(da227:mps0:0:244:0): SCSI command timeout on device handle 0x0105 SMID 43
+(da227:mps0:0:244:0): SCSI command timeout on device handle 0x0105 SMID 52
+mps0: (6:244:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps0: (6:244:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps0: (6:244:0) terminated ioc 804b scsi 0 state c xfer 9728
+mps0: mpssas_abort_complete: abort request on handle 0x105 SMID 24 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x105 SMID 85
+mps0: mpssas_abort_complete: abort request on handle 0x105 SMID 85 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x105 SMID 43
+mps0: mpssas_abort_complete: abort request on handle 0x105 SMID 43 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x105 SMID 52
+mps0: mpssas_abort_complete: abort request on handle 0x105 SMID 52 complete
+(da227:mps0:0:244:0): READ(10). CDB: 28 0 d6 26 95 44 0 0 d 0 
+(da227:mps0:0:244:0): CAM status: SCSI Status Error
+(da227:mps0:0:244:0): SCSI status: Check Condition
+(da227:mps0:0:244:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 e0 b1 a6 30 0 0 10 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 e3 25 f1 29 0 0 20 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da75:mps0:0:55:0): SCSI command timeout on device handle 0x0055 SMID 23
+(da75:mps0:0:55:0): SCSI command timeout on device handle 0x0055 SMID 41
+(da75:mps0:0:55:0): SCSI command timeout on device handle 0x0055 SMID 514
+(da75:mps0:0:55:0): SCSI command timeout on device handle 0x0055 SMID 481
+mps0: (6:55:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:55:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:55:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: mpssas_abort_complete: abort request on handle 0x55 SMID 23 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x55 SMID 41
+mps0: mpssas_abort_complete: abort request on handle 0x55 SMID 41 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x55 SMID 514
+mps0: mpssas_abort_complete: abort request on handle 0x55 SMID 514 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x55 SMID 481
+mps0: mpssas_abort_complete: abort request on handle 0x55 SMID 481 complete
+(da75:mps0:0:55:0): READ(16). CDB: 88 0 0 0 0 1 17 74 aa 5 0 0 0 20 0 0 
+(da75:mps0:0:55:0): CAM status: SCSI Status Error
+(da75:mps0:0:55:0): SCSI status: Check Condition
+(da75:mps0:0:55:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 c 9f b5 db 0 0 0 f 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(16). CDB: 88 0 0 0 0 1 12 fc 99 43 0 0 0 20 0 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:32:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da19:mps0:0:32:0): READ(16). CDB: 88 0 0 0 0 1 15 10 f3 af 0 0 0 13 0 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 d1 37 b1 71 0 0 80 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da49:mps0:0:99:0): SCSI command timeout on device handle 0x0080 SMID 993
+(da49:mps0:0:99:0): SCSI command timeout on device handle 0x0080 SMID 641
+(da49:mps0:0:99:0): SCSI command timeout on device handle 0x0080 SMID 839
+(da49:mps0:0:99:0): SCSI command timeout on device handle 0x0080 SMID 496
+mps0: (6:99:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:99:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:99:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x80 SMID 993 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x80 SMID 641
+mps0: mpssas_abort_complete: abort request on handle 0x80 SMID 641 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x80 SMID 839
+mps0: mpssas_abort_complete: abort request on handle 0x80 SMID 839 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x80 SMID 496
+mps0: mpssas_abort_complete: abort request on handle 0x80 SMID 496 complete
+(da49:mps0:0:99:0): READ(16). CDB: 88 0 0 0 0 1 1a cd 30 ed 0 0 0 10 0 0 
+(da49:mps0:0:99:0): CAM status: SCSI Status Error
+(da49:mps0:0:99:0): SCSI status: Check Condition
+(da49:mps0:0:99:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 bc 1d 64 a9 0 0 40 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:33:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 69 bd 15 18 0 0 80 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:31:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da61:mps0:0:31:0): READ(10). CDB: 28 0 db 6d 5a 3e 0 0 20 0 
+(da61:mps0:0:31:0): CAM status: SCSI Status Error
+(da61:mps0:0:31:0): SCSI status: Check Condition
+(da61:mps0:0:31:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(10). CDB: 28 0 db 1d 41 13 0 0 20 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(10). CDB: 28 0 dc fb a0 e0 0 0 18 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da19:mps0:0:32:0): READ(16). CDB: 88 0 0 0 0 1 14 66 ff ab 0 0 0 20 0 0 
+(da19:mps0:0:32:0): CAM status: SCSI Status Error
+(da19:mps0:0:32:0): SCSI status: Check Condition
+(da19:mps0:0:32:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da10:mps0:0:33:0): READ(16). CDB: 88 0 0 0 0 1 24 80 8a c1 0 0 0 20 0 0 
+(da10:mps0:0:33:0): CAM status: SCSI Status Error
+(da10:mps0:0:33:0): SCSI status: Check Condition
+(da10:mps0:0:33:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 34816
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 47104
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 8192
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 2048
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 57856
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 57856
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 512
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:174:0) terminated ioc 804b scsi 0 state c xfer 0
+(da155:mps0:0:174:0): WRITE(16). CDB: 8a 0 0 0 0 1 40 5f d9 53 0 0 0 80 0 0 
+(da155:mps0:0:174:0): CAM status: SCSI Status Error
+(da155:mps0:0:174:0): SCSI status: Check Condition
+(da155:mps0:0:174:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 82888 (sliod), uid 0: exited on signal 6 (core dumped)
+pid 83491 (sliod), uid 0: exited on signal 6 (core dumped)
+(da37:mps0:0:35:0): READ(10). CDB: 28 0 24 69 3e e2 0 0 1b 0 
+(da37:mps0:0:35:0): CAM status: SCSI Status Error
+(da37:mps0:0:35:0): SCSI status: Check Condition
+(da37:mps0:0:35:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 851
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 41
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 25
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 251
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 851 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 41
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 41 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 25
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 25 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 251
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 251 complete
+(da46:mps0:0:80:0): READ(10). CDB: 28 0 38 a2 1f c 0 0 20 0 
+(da46:mps0:0:80:0): CAM status: SCSI Status Error
+(da46:mps0:0:80:0): SCSI status: Check Condition
+(da46:mps0:0:80:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 859
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 240
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 793
+(da46:mps0:0:80:0): SCSI command timeout on device handle 0x006d SMID 909
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:80:0) terminated ioc 804b scsi 0 state c xfer 14336
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 859 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 240
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 240 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 793
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 793 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x6d SMID 909
+mps0: mpssas_abort_complete: abort request on handle 0x6d SMID 909 complete
+(da46:mps0:0:80:0): READ(10). CDB: 28 0 bc ab 46 c9 0 0 20 0 
+(da46:mps0:0:80:0): CAM status: SCSI Status Error
+(da46:mps0:0:80:0): SCSI status: Check Condition
+(da46:mps0:0:80:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da82:mps0:0:103:0): SCSI command timeout on device handle 0x0084 SMID 1023
+(da82:mps0:0:103:0): SCSI command timeout on device handle 0x0084 SMID 20
+(da82:mps0:0:103:0): SCSI command timeout on device handle 0x0084 SMID 153
+(da82:mps0:0:103:0): SCSI command timeout on device handle 0x0084 SMID 646
+mps0: (6:103:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:103:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:103:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x84 SMID 1023 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x84 SMID 20
+mps0: mpssas_abort_complete: abort request on handle 0x84 SMID 20 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x84 SMID 153
+mps0: mpssas_abort_complete: abort request on handle 0x84 SMID 153 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x84 SMID 646
+mps0: mpssas_abort_complete: abort request on handle 0x84 SMID 646 complete
+(da82:mps0:0:103:0): READ(16). CDB: 88 0 0 0 0 1 d e6 d0 3f 0 0 0 20 0 0 
+(da82:mps0:0:103:0): CAM status: SCSI Status Error
+(da82:mps0:0:103:0): SCSI status: Check Condition
+(da82:mps0:0:103:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da76:mps0:0:36:0): READ(10). CDB: 28 0 1b 24 33 b7 0 0 20 0 
+(da76:mps0:0:36:0): CAM status: SCSI Status Error
+(da76:mps0:0:36:0): SCSI status: Check Condition
+(da76:mps0:0:36:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da76:mps0:0:36:0): READ(10). CDB: 28 0 6d 6d 30 6c 0 0 80 0 
+(da76:mps0:0:36:0): CAM status: SCSI Status Error
+(da76:mps0:0:36:0): SCSI status: Check Condition
+(da76:mps0:0:36:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da6:mps0:0:34:0): READ(10). CDB: 28 0 fb bd 92 39 0 0 20 0 
+(da6:mps0:0:34:0): CAM status: SCSI Status Error
+(da6:mps0:0:34:0): SCSI status: Check Condition
+(da6:mps0:0:34:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da37:mps0:0:35:0): READ(10). CDB: 28 0 36 15 5d f0 0 0 60 0 
+(da37:mps0:0:35:0): CAM status: SCSI Status Error
+(da37:mps0:0:35:0): SCSI status: Check Condition
+(da37:mps0:0:35:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da6:mps0:0:34:0): READ(10). CDB: 28 0 81 18 e6 eb 0 0 60 0 
+(da6:mps0:0:34:0): CAM status: SCSI Status Error
+(da6:mps0:0:34:0): SCSI status: Check Condition
+(da6:mps0:0:34:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da37:mps0:0:35:0): READ(16). CDB: 88 0 0 0 0 1 a b0 3b b3 0 0 0 80 0 0 
+(da37:mps0:0:35:0): CAM status: SCSI Status Error
+(da37:mps0:0:35:0): SCSI status: Check Condition
+(da37:mps0:0:35:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:34:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da6:mps0:0:34:0): READ(16). CDB: 88 0 0 0 0 1 28 cc 10 62 0 0 0 80 0 0 
+(da6:mps0:0:34:0): CAM status: SCSI Status Error
+(da6:mps0:0:34:0): SCSI status: Check Condition
+(da6:mps0:0:34:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da6:mps0:0:34:0): READ(16). CDB: 88 0 0 0 0 1 42 34 50 23 0 0 0 12 0 0 
+(da6:mps0:0:34:0): CAM status: SCSI Status Error
+(da6:mps0:0:34:0): SCSI status: Check Condition
+(da6:mps0:0:34:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da44:mps0:0:101:0): SCSI command timeout on device handle 0x0082 SMID 984
+(da44:mps0:0:101:0): SCSI command timeout on device handle 0x0082 SMID 49
+(da44:mps0:0:101:0): SCSI command timeout on device handle 0x0082 SMID 923
+(da44:mps0:0:101:0): SCSI command timeout on device handle 0x0082 SMID 215
+mps0: (6:101:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:101:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:101:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x82 SMID 984 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x82 SMID 49
+mps0: mpssas_abort_complete: abort request on handle 0x82 SMID 49 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x82 SMID 923
+mps0: mpssas_abort_complete: abort request on handle 0x82 SMID 923 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x82 SMID 215
+mps0: mpssas_abort_complete: abort request on handle 0x82 SMID 215 complete
+(da44:mps0:0:101:0): READ(16). CDB: 88 0 0 0 0 1 47 e0 49 17 0 0 0 25 0 0 
+(da44:mps0:0:101:0): CAM status: SCSI Status Error
+(da44:mps0:0:101:0): SCSI status: Check Condition
+(da44:mps0:0:101:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps0: (6:35:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da37:mps0:0:35:0): READ(16). CDB: 88 0 0 0 0 1 53 3e a8 69 0 0 0 11 0 0 
+(da37:mps0:0:35:0): CAM status: SCSI Status Error
+(da37:mps0:0:35:0): SCSI status: Check Condition
+(da37:mps0:0:35:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da37:mps0:0:35:0): READ(10). CDB: 28 0 62 5a f3 13 0 0 13 0 
+(da37:mps0:0:35:0): CAM status: SCSI Status Error
+(da37:mps0:0:35:0): SCSI status: Check Condition
+(da37:mps0:0:35:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da76:mps0:0:36:0): READ(10). CDB: 28 0 b4 f7 3d fd 0 0 20 0 
+(da76:mps0:0:36:0): CAM status: SCSI Status Error
+(da76:mps0:0:36:0): SCSI status: Check Condition
+(da76:mps0:0:36:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 4096
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:53:0) terminated ioc 804b scsi 0 state c xfer 0
+(da57:mps0:0:53:0): WRITE(10). CDB: 2a 0 ff 69 5 8b 0 0 40 0 
+(da57:mps0:0:53:0): CAM status: SCSI Status Error
+(da57:mps0:0:53:0): SCSI status: Check Condition
+(da57:mps0:0:53:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da27:mps0:0:41:0): READ(10). CDB: 28 0 29 d 26 7b 0 0 20 0 
+(da27:mps0:0:41:0): CAM status: SCSI Status Error
+(da27:mps0:0:41:0): SCSI status: Check Condition
+(da27:mps0:0:41:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da99:mps0:0:108:0): SCSI command timeout on device handle 0x0089 SMID 986
+(da99:mps0:0:108:0): SCSI command timeout on device handle 0x0089 SMID 33
+(da99:mps0:0:108:0): SCSI command timeout on device handle 0x0089 SMID 679
+(da99:mps0:0:108:0): SCSI command timeout on device handle 0x0089 SMID 819
+mps0: (6:108:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:108:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:108:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x89 SMID 986 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x89 SMID 33
+mps0: mpssas_abort_complete: abort request on handle 0x89 SMID 33 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x89 SMID 679
+mps0: mpssas_abort_complete: abort request on handle 0x89 SMID 679 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x89 SMID 819
+mps0: mpssas_abort_complete: abort request on handle 0x89 SMID 819 complete
+(da99:mps0:0:108:0): READ(10). CDB: 28 0 2c 62 5b 53 0 0 20 0 
+(da99:mps0:0:108:0): CAM status: SCSI Status Error
+(da99:mps0:0:108:0): SCSI status: Check Condition
+(da99:mps0:0:108:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da27:mps0:0:41:0): READ(10). CDB: 28 0 32 24 cb a5 0 0 20 0 
+(da27:mps0:0:41:0): CAM status: SCSI Status Error
+(da27:mps0:0:41:0): SCSI status: Check Condition
+(da27:mps0:0:41:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da27:mps0:0:41:0): READ(10). CDB: 28 0 47 6a 9d 98 0 0 20 0 
+(da27:mps0:0:41:0): CAM status: SCSI Status Error
+(da27:mps0:0:41:0): SCSI status: Check Condition
+(da27:mps0:0:41:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da185:mps0:0:230:0): SCSI command timeout on device handle 0x00f8 SMID 887
+(da185:mps0:0:230:0): SCSI command timeout on device handle 0x00f8 SMID 573
+(da185:mps0:0:230:0): SCSI command timeout on device handle 0x00f8 SMID 22
+(da185:mps0:0:230:0): SCSI command timeout on device handle 0x00f8 SMID 598
+mps0: (6:230:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:230:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:230:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: mpssas_abort_complete: abort request on handle 0xf8 SMID 887 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf8 SMID 573
+mps0: mpssas_abort_complete: abort request on handle 0xf8 SMID 573 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf8 SMID 22
+mps0: mpssas_abort_complete: abort request on handle 0xf8 SMID 22 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xf8 SMID 598
+mps0: mpssas_abort_complete: abort request on handle 0xf8 SMID 598 complete
+(da185:mps0:0:230:0): READ(10). CDB: 28 0 63 72 62 31 0 0 20 0 
+(da185:mps0:0:230:0): CAM status: SCSI Status Error
+(da185:mps0:0:230:0): SCSI status: Check Condition
+(da185:mps0:0:230:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da138:mps0:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 279
+(da138:mps0:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 349
+(da138:mps0:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 917
+(da138:mps0:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 946
+(da138:mps0:0:147:0): SCSI command timeout on device handle 0x00b0 SMID 767
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: (6:147:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps0: mpssas_abort_complete: abort request on handle 0xb0 SMID 279 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 349
+mps0: mpssas_abort_complete: abort request on handle 0xb0 SMID 349 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 917
+mps0: mpssas_abort_complete: abort request on handle 0xb0 SMID 917 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 946
+mps0: mpssas_abort_complete: abort request on handle 0xb0 SMID 946 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xb0 SMID 767
+mps0: mpssas_abort_complete: abort request on handle 0xb0 SMID 767 complete
+(da138:mps0:0:147:0): WRITE(10). CDB: 2a 0 7a 2d c5 b0 0 0 60 0 
+(da138:mps0:0:147:0): CAM status: SCSI Status Error
+(da138:mps0:0:147:0): SCSI status: Check Condition
+(da138:mps0:0:147:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da1:mps0:0:42:0): READ(16). CDB: 88 0 0 0 0 1 5 d8 62 42 0 0 0 20 0 0 
+(da1:mps0:0:42:0): CAM status: SCSI Status Error
+(da1:mps0:0:42:0): SCSI status: Check Condition
+(da1:mps0:0:42:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps0: (6:42:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:42:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:42:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps0: (6:42:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da1:mps0:0:42:0): READ(16). CDB: 88 0 0 0 0 1 10 4d 9 6a 0 0 0 15 0 0 
+(da1:mps0:0:42:0): CAM status: SCSI Status Error
+(da1:mps0:0:42:0): SCSI status: Check Condition
+(da1:mps0:0:42:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 241
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 514
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 812
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 72
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 74
+(da76:mps0:0:36:0): SCSI command timeout on device handle 0x0042 SMID 947
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: (6:36:0) terminated ioc 804b scsi 0 state c xfer 0
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 241 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x42 SMID 514
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 514 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x42 SMID 812
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 812 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x42 SMID 72
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 72 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x42 SMID 74
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 74 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0x42 SMID 947
+mps0: mpssas_abort_complete: abort request on handle 0x42 SMID 947 complete
+(da76:mps0:0:36:0): READ(10). CDB: 28 0 ef bd 33 29 0 0 1 0 
+(da76:mps0:0:36:0): CAM status: SCSI Status Error
+(da76:mps0:0:36:0): SCSI status: Check Condition
+(da76:mps0:0:36:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da153:mps0:0:175:0): SCSI command timeout on device handle 0x00cc SMID 940
+(da153:mps0:0:175:0): SCSI command timeout on device handle 0x00cc SMID 924
+(da153:mps0:0:175:0): SCSI command timeout on device handle 0x00cc SMID 987
+(da153:mps0:0:175:0): SCSI command timeout on device handle 0x00cc SMID 412
+mps0: (6:175:0) terminated ioc 804b scsi 0 state c xfer 6144
+mps0: (6:175:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps0: (6:175:0) terminated ioc 804b scsi 0 state c xfer 3584
+mps0: mpssas_abort_complete: abort request on handle 0xcc SMID 940 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xcc SMID 924
+mps0: mpssas_abort_complete: abort request on handle 0xcc SMID 924 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xcc SMID 987
+mps0: mpssas_abort_complete: abort request on handle 0xcc SMID 987 complete
+mps0: mpssas_complete_tm_request: sending deferred task management request for handle 0xcc SMID 412
+mps0: mpssas_abort_complete: abort request on handle 0xcc SMID 412 complete
+(da153:mps0:0:175:0): READ(10). CDB: 28 0 c4 c5 fb 82 0 0 20 0 
+(da153:mps0:0:175:0): CAM status: SCSI Status Error
+(da153:mps0:0:175:0): SCSI status: Check Condition
+(da153:mps0:0:175:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da27:mps0:0:41:0): READ(10). CDB: 28 0 b1 d4 0 d3 0 0 13 0 
+(da27:mps0:0:41:0): CAM status: SCSI Status Error
+(da27:mps0:0:41:0): SCSI status: Check Condition
+(da27:mps0:0:41:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da25:mps0:0:40:0): READ(10). CDB: 28 0 c9 7d d0 c1 0 0 d 0 
+(da25:mps0:0:40:0): CAM status: SCSI Status Error
+(da25:mps0:0:40:0): SCSI status: Check Condition
+(da25:mps0:0:40:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)

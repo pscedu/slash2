@@ -1,0 +1,994 @@
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 4a 2 48 71 0 0 0 20 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 4a 6 9d 1d 0 0 0 20 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 4a 13 0 8c 0 0 0 80 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 49 b0 ba f0 0 0 0 20 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 49 c2 c 91 0 0 0 80 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 4a 9d a8 2 0 0 0 80 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 4a a6 92 a6 0 0 0 40 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da214:mps1:0:213:0): SCSI command timeout on device handle 0x00e8 SMID 907
+(da214:mps1:0:213:0): SCSI command timeout on device handle 0x00e8 SMID 636
+(da214:mps1:0:213:0): SCSI command timeout on device handle 0x00e8 SMID 712
+(da214:mps1:0:213:0): SCSI command timeout on device handle 0x00e8 SMID 646
+mps1: (7:213:0) terminated ioc 804b scsi 0 state c xfer 8192
+mps1: (7:213:0) terminated ioc 804b scsi 0 state c xfer 9216
+mps1: (7:213:0) terminated ioc 804b scsi 0 state c xfer 9216
+mps1: mpssas_abort_complete: abort request on handle 0xe8 SMID 907 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe8 SMID 636
+mps1: mpssas_abort_complete: abort request on handle 0xe8 SMID 636 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe8 SMID 712
+mps1: mpssas_abort_complete: abort request on handle 0xe8 SMID 712 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xe8 SMID 646
+mps1: mpssas_abort_complete: abort request on handle 0xe8 SMID 646 complete
+(da214:mps1:0:213:0): READ(10). CDB: 28 0 fe 33 2d 42 0 0 2 0 
+(da214:mps1:0:213:0): CAM status: SCSI Status Error
+(da214:mps1:0:213:0): SCSI status: Check Condition
+(da214:mps1:0:213:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 c3 9c 8d cd 0 0 77 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 b8 5b d ac 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 b7 74 a6 9f 0 0 12 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 b7 57 1a d6 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 57 46 a8 e1 0 0 1 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:6:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da2:mps1:0:6:0): READ(10). CDB: 28 0 81 e4 ba 91 0 0 18 0 
+(da2:mps1:0:6:0): CAM status: SCSI Status Error
+(da2:mps1:0:6:0): SCSI status: Check Condition
+(da2:mps1:0:6:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 fe 22 f4 de 0 0 12 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:194:0) terminated ioc 804b scsi 0 state c xfer 7168
+mps1: (7:194:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:194:0) terminated ioc 804b scsi 0 state c xfer 7168
+(da46:mps1:0:194:0): READ(10). CDB: 28 0 5 6c a8 99 0 0 36 0 
+(da46:mps1:0:194:0): CAM status: SCSI Status Error
+(da46:mps1:0:194:0): SCSI status: Check Condition
+(da46:mps1:0:194:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da255:mps1:0:265:0): SCSI command timeout on device handle 0x011a SMID 881
+(da255:mps1:0:265:0): SCSI command timeout on device handle 0x011a SMID 835
+(da255:mps1:0:265:0): SCSI command timeout on device handle 0x011a SMID 241
+(da255:mps1:0:265:0): SCSI command timeout on device handle 0x011a SMID 591
+(da255:mps1:0:265:0): SCSI command timeout on device handle 0x011a SMID 625
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:265:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0x11a SMID 881 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x11a SMID 835
+mps1: mpssas_abort_complete: abort request on handle 0x11a SMID 835 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x11a SMID 241
+mps1: mpssas_abort_complete: abort request on handle 0x11a SMID 241 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x11a SMID 591
+mps1: mpssas_abort_complete: abort request on handle 0x11a SMID 591 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x11a SMID 625
+mps1: mpssas_abort_complete: abort request on handle 0x11a SMID 625 complete
+(da255:mps1:0:265:0): READ(10). CDB: 28 0 78 a6 3d 10 0 0 20 0 
+(da255:mps1:0:265:0): CAM status: SCSI Status Error
+(da255:mps1:0:265:0): SCSI status: Check Condition
+(da255:mps1:0:265:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 c3 bc 79 90 0 0 72 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+(da165:mps1:0:127:0): SCSI command timeout on device handle 0x009c SMID 363
+(da165:mps1:0:127:0): SCSI command timeout on device handle 0x009c SMID 383
+(da165:mps1:0:127:0): SCSI command timeout on device handle 0x009c SMID 221
+(da165:mps1:0:127:0): SCSI command timeout on device handle 0x009c SMID 259
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0x9c SMID 363 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x9c SMID 383
+mps1: mpssas_abort_complete: abort request on handle 0x9c SMID 383 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x9c SMID 221
+mps1: mpssas_abort_complete: abort request on handle 0x9c SMID 221 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x9c SMID 259
+mps1: mpssas_abort_complete: abort request on handle 0x9c SMID 259 complete
+(da165:mps1:0:127:0): READ(10). CDB: 28 0 a7 83 e2 6d 0 0 20 0 
+(da165:mps1:0:127:0): CAM status: SCSI Status Error
+(da165:mps1:0:127:0): SCSI status: Check Condition
+(da165:mps1:0:127:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da165:mps1:0:127:0): READ(10). CDB: 28 0 a7 b3 18 3 0 0 6 0 
+(da165:mps1:0:127:0): CAM status: SCSI Status Error
+(da165:mps1:0:127:0): SCSI status: Check Condition
+(da165:mps1:0:127:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 32768
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 32768
+(da171:mps1:0:151:0): READ(16). CDB: 88 0 0 0 0 1 38 a5 9f 9c 0 0 0 20 0 0 
+(da171:mps1:0:151:0): CAM status: SCSI Status Error
+(da171:mps1:0:151:0): SCSI status: Check Condition
+(da171:mps1:0:151:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da199:mps1:0:144:0): SCSI command timeout on device handle 0x00ad SMID 831
+(da199:mps1:0:144:0): SCSI command timeout on device handle 0x00ad SMID 297
+(da199:mps1:0:144:0): SCSI command timeout on device handle 0x00ad SMID 1002
+(da199:mps1:0:144:0): SCSI command timeout on device handle 0x00ad SMID 40
+mps1: (7:144:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:144:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:144:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0xad SMID 831 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xad SMID 297
+mps1: mpssas_abort_complete: abort request on handle 0xad SMID 297 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xad SMID 1002
+mps1: mpssas_abort_complete: abort request on handle 0xad SMID 1002 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xad SMID 40
+mps1: mpssas_abort_complete: abort request on handle 0xad SMID 40 complete
+(da199:mps1:0:144:0): READ(16). CDB: 88 0 0 0 0 1 26 c3 6 1 0 0 0 20 0 0 
+(da199:mps1:0:144:0): CAM status: SCSI Status Error
+(da199:mps1:0:144:0): SCSI status: Check Condition
+(da199:mps1:0:144:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+mps1: (7:213:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:213:0) terminated ioc 804b scsi 0 state c xfer 11264
+(da214:mps1:0:213:0): READ(16). CDB: 88 0 0 0 0 1 5a 55 b 86 0 0 0 20 0 0 
+(da214:mps1:0:213:0): CAM status: SCSI Status Error
+(da214:mps1:0:213:0): SCSI status: Check Condition
+(da214:mps1:0:213:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 44815 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 49142 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 53425 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 55406 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 59789 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 64049 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 68385 (dd), uid 2 inumber 8509 on /var: filesystem full
+mps1: (7:126:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:126:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da151:mps1:0:126:0): READ(10). CDB: 28 0 bf d1 b 68 0 0 80 0 
+(da151:mps1:0:126:0): CAM status: SCSI Status Error
+(da151:mps1:0:126:0): SCSI status: Check Condition
+(da151:mps1:0:126:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 72664 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 77008 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 78997 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 83452 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 87785 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 92063 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 96390 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 844 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 2848 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 7255 (dd), uid 2 inumber 8494 on /var: filesystem full
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:25:0) terminated ioc 804b scsi 0 state c xfer 65536
+(da101:mps1:0:25:0): READ(10). CDB: 28 0 c4 77 d1 9f 0 0 80 0 
+(da101:mps1:0:25:0): CAM status: SCSI Status Error
+(da101:mps1:0:25:0): SCSI status: Check Condition
+(da101:mps1:0:25:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 11582 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 15874 (dd), uid 2 inumber 8496 on /var: filesystem full
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 1024
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:15:0) terminated ioc 804b scsi 0 state c xfer 1536
+(da94:mps1:0:15:0): WRITE(16). CDB: 8a 0 0 0 0 1 29 d4 e6 be 0 0 0 80 0 0 
+(da94:mps1:0:15:0): CAM status: SCSI Status Error
+(da94:mps1:0:15:0): SCSI status: Check Condition
+(da94:mps1:0:15:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 20206 (dd), uid 2 inumber 8497 on /var: filesystem full
+(da228:mps1:0:238:0): SCSI command timeout on device handle 0x0100 SMID 953
+(da228:mps1:0:238:0): SCSI command timeout on device handle 0x0100 SMID 867
+(da228:mps1:0:238:0): SCSI command timeout on device handle 0x0100 SMID 547
+(da228:mps1:0:238:0): SCSI command timeout on device handle 0x0100 SMID 263
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: mpssas_abort_complete: abort request on handle 0x100 SMID 953 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 867
+mps1: mpssas_abort_complete: abort request on handle 0x100 SMID 867 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 547
+mps1: mpssas_abort_complete: abort request on handle 0x100 SMID 547 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x100 SMID 263
+mps1: mpssas_abort_complete: abort request on handle 0x100 SMID 263 complete
+(da228:mps1:0:238:0): READ(10). CDB: 28 0 ee 9 ef bc 0 0 20 0 
+(da228:mps1:0:238:0): CAM status: SCSI Status Error
+(da228:mps1:0:238:0): SCSI status: Check Condition
+(da228:mps1:0:238:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 24472 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 26462 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 30846 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 35112 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 39449 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 43734 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 48083 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 50070 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 54392 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 58721 (dd), uid 2 inumber 8507 on /var: filesystem full
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 40 30 28 1e 0 0 0 1 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 62986 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 67321 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 71680 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 73606 (dd), uid 2 inumber 8495 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 6a 48 99 ae 0 0 1 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 77987 (dd), uid 2 inumber 8496 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 a a1 b 77 0 0 71 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 82330 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 86603 (dd), uid 2 inumber 8506 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 c9 39 c1 f 0 0 1 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 90941 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 95235 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 97218 (dd), uid 2 inumber 8487 on /var: filesystem full
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:102:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da159:mps1:0:102:0): READ(10). CDB: 28 0 dc f2 f6 5c 0 0 80 0 
+(da159:mps1:0:102:0): CAM status: SCSI Status Error
+(da159:mps1:0:102:0): SCSI status: Check Condition
+(da159:mps1:0:102:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 1711 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 6081 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 10424 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 14765 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 19050 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 21022 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 25410 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 29695 (dd), uid 2 inumber 8487 on /var: filesystem full
+(da171:mps1:0:151:0): SCSI command timeout on device handle 0x00b4 SMID 913
+(da171:mps1:0:151:0): SCSI command timeout on device handle 0x00b4 SMID 310
+(da171:mps1:0:151:0): SCSI command timeout on device handle 0x00b4 SMID 996
+(da171:mps1:0:151:0): SCSI command timeout on device handle 0x00b4 SMID 181
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:151:0) terminated ioc 804b scsi 0 state c xfer 12800
+mps1: mpssas_abort_complete: abort request on handle 0xb4 SMID 913 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb4 SMID 310
+mps1: mpssas_abort_complete: abort request on handle 0xb4 SMID 310 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb4 SMID 996
+mps1: mpssas_abort_complete: abort request on handle 0xb4 SMID 996 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xb4 SMID 181
+mps1: mpssas_abort_complete: abort request on handle 0xb4 SMID 181 complete
+(da171:mps1:0:151:0): READ(16). CDB: 88 0 0 0 0 1 1b 72 76 61 0 0 0 20 0 0 
+(da171:mps1:0:151:0): CAM status: SCSI Status Error
+(da171:mps1:0:151:0): SCSI status: Check Condition
+(da171:mps1:0:151:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 33974 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 38261 (dd), uid 2 inumber 8495 on /var: filesystem full
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:127:0) terminated ioc 804b scsi 0 state c xfer 49152
+(da165:mps1:0:127:0): READ(10). CDB: 28 0 75 ac c2 df 0 0 20 0 
+(da165:mps1:0:127:0): CAM status: SCSI Status Error
+(da165:mps1:0:127:0): SCSI status: Check Condition
+(da165:mps1:0:127:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 42618 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 44601 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 48970 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 53263 (dd), uid 2 inumber 8507 on /var: filesystem full
+(da180:mps1:0:178:0): SCSI command timeout on device handle 0x00cf SMID 574
+(da180:mps1:0:178:0): SCSI command timeout on device handle 0x00cf SMID 912
+(da180:mps1:0:178:0): SCSI command timeout on device handle 0x00cf SMID 95
+(da180:mps1:0:178:0): SCSI command timeout on device handle 0x00cf SMID 576
+mps1: (7:178:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:178:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:178:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: mpssas_abort_complete: abort request on handle 0xcf SMID 574 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcf SMID 912
+mps1: mpssas_abort_complete: abort request on handle 0xcf SMID 912 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcf SMID 95
+mps1: mpssas_abort_complete: abort request on handle 0xcf SMID 95 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xcf SMID 576
+mps1: mpssas_abort_complete: abort request on handle 0xcf SMID 576 complete
+(da180:mps1:0:178:0): READ(10). CDB: 28 0 f5 b2 3a d9 0 0 20 0 
+(da180:mps1:0:178:0): CAM status: SCSI Status Error
+(da180:mps1:0:178:0): SCSI status: Check Condition
+(da180:mps1:0:178:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+(da180:mps1:0:178:0): READ(10). CDB: 28 0 f4 d9 ff 24 0 0 20 0 
+(da180:mps1:0:178:0): CAM status: SCSI Status Error
+(da180:mps1:0:178:0): SCSI status: Check Condition
+(da180:mps1:0:178:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 57600 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 61876 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 66216 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 68203 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 72525 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 76855 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 81138 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 85462 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 88062 (sendmail), uid 25 inumber 15 on /var: filesystem full
+pid 89913 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 91900 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 96291 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 663 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 5101 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 9424 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 13720 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 15722 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 20106 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 24388 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 28720 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 32994 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 37343 (dd), uid 2 inumber 8496 on /var: filesystem full
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:238:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da228:mps1:0:238:0): READ(10). CDB: 28 0 fc 60 fa b1 0 0 20 0 
+(da228:mps1:0:238:0): CAM status: SCSI Status Error
+(da228:mps1:0:238:0): SCSI status: Check Condition
+(da228:mps1:0:238:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 39335 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 43650 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 47985 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 52261 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 56594 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 60946 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 62934 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 67257 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 71597 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 75870 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 80197 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 84477 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 86468 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 90849 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 95120 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 99454 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 3905 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 8261 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 10245 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 14583 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 18920 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 23194 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 27521 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 31868 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 33795 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 38179 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 42467 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 46787 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 51114 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 55400 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 57388 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 61780 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 66054 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 70402 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 74665 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 79011 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 80999 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 85320 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 89655 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 93923 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 98258 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 2784 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 4725 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 9115 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 13450 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 17732 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 22062 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 26347 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 28334 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 32717 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 36991 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 41320 (dd), uid 2 inumber 8509 on /var: filesystem full
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 8704
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 9216
+mps1: (7:153:0) terminated ioc 804b scsi 0 state c xfer 16384
+(da206:mps1:0:153:0): READ(16). CDB: 88 0 0 0 0 1 38 d2 4 92 0 0 0 12 0 0 
+(da206:mps1:0:153:0): CAM status: SCSI Status Error
+(da206:mps1:0:153:0): SCSI status: Check Condition
+(da206:mps1:0:153:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 45591 (dd), uid 2 inumber 8487 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 f9 68 85 ad 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 49944 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 51928 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 56260 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 60600 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 64932 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 69202 (dd), uid 2 inumber 8507 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 9a 7f 8e 4c 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 73537 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 75463 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 79923 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 84253 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 88531 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 92866 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 97152 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 99142 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 3786 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 8055 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 12394 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 16690 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 21029 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 23014 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 27336 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 31671 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 36005 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 40268 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 44615 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 46582 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 51062 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 55400 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 59672 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 64010 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 68311 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 70294 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 74687 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 78972 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 83300 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 87627 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 91910 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 93898 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 98287 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 2734 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 5965 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 8295 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 10693 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 11799 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 14242 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 16586 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 18982 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 21312 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 23718 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 24823 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 27259 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 29589 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 31985 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 34315 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 36721 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 37824 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 40270 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 42587 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 44983 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 47326 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 49732 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 50835 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 53281 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 55611 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 58005 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 60329 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 62735 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 63839 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 66284 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 68614 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 71018 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 73342 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 74981 (sendmail), uid 25 inumber 15 on /var: filesystem full
+pid 75903 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 77008 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 79452 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 81777 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 84173 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 86511 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 88909 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 90012 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 92458 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 94788 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 97184 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 99554 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 2028 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 3218 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 5660 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 7990 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 10386 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 12716 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 15136 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 16242 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 18640 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 21002 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 23398 (dd), uid 2 inumber 8509 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 21 2 13 86 0 0 0 44 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 3c 60 d6 19 0 0 0 10 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 cb 54 96 cd 0 0 64 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 25728 (dd), uid 2 inumber 8487 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 57 47 eb 43 0 0 0 80 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 3a b7 52 81 0 0 0 46 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 b7 60 da a9 0 0 28 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 21 2 37 36 0 0 0 80 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 28134 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 29239 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 31619 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 34005 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 36401 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 38731 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 41137 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 42239 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 44622 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 47016 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 49412 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 51734 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 54140 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 55246 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 57620 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 60014 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 62410 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 64740 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 67138 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 68244 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 70631 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 73025 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 75421 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 77751 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 80157 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 81263 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 83634 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 86028 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 88424 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 90754 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 93160 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 94265 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 96632 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 99026 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 1467 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 3945 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 6357 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 7460 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 9842 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 12228 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 14574 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 16968 (dd), uid 2 inumber 8495 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 3a 4c 5 ac 0 0 0 5 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 19386 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 20468 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 22871 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 25265 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 27589 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 29983 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 32389 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 33423 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 35869 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 38263 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 40595 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 42981 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 45387 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 46423 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 49114 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 53452 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 57730 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 62068 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 66347 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 68334 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 72795 (dd), uid 2 inumber 8509 on /var: filesystem full
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 40 cd e5 ed 0 0 0 1 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 77066 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 81408 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 85743 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 90021 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 92005 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 96393 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 762 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 5199 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 9470 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 13821 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 15813 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 20270 (dd), uid 2 inumber 8496 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(16). CDB: 88 0 0 0 0 1 40 ce 87 10 0 0 0 f 0 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 24602 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 28874 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 33215 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 37569 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 39504 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 43887 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 48223 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 52514 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 56858 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 61196 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 63134 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 67516 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 71865 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 76154 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 80492 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 84782 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 86772 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 91159 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 95436 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 99765 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 4296 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 8587 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 10578 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 14980 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 19259 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 23596 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 27865 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 32212 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 34200 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 38523 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 42861 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 47193 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 51466 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 55816 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 57807 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 62127 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 66462 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 70746 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 75076 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 79423 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 81344 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 85729 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 90070 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 94346 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 98673 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 3153 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 5143 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 5447 (sendmail), uid 25 inumber 15 on /var: filesystem full
+pid 9690 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 13964 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 18315 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 22586 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 26928 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 28917 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 33239 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 37577 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 41917 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 46191 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 50528 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 52514 (dd), uid 2 inumber 8507 on /var: filesystem full
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 146
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 589
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 748
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 891
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 85
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 122
+(da41:mps1:0:161:0): SCSI command timeout on device handle 0x00be SMID 529
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 49152
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: (7:161:0) terminated ioc 804b scsi 0 state c xfer 65536
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 146 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 589
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 589 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 748
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 748 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 891
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 891 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 85
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 85 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 122
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 122 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbe SMID 529
+mps1: mpssas_abort_complete: abort request on handle 0xbe SMID 529 complete
+(da41:mps1:0:161:0): READ(10). CDB: 28 0 b8 d2 3e b3 0 0 1 0 
+(da41:mps1:0:161:0): CAM status: SCSI Status Error
+(da41:mps1:0:161:0): SCSI status: Check Condition
+(da41:mps1:0:161:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 56841 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 61176 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 65449 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 69798 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 74141 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 76060 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 80448 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 84786 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 89062 (dd), uid 2 inumber 8509 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 98 1d c2 dc 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 93400 (dd), uid 2 inumber 8487 on /var: filesystem full
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+mps1: (7:251:0) terminated ioc 804b scsi 0 state 0 xfer 0
+(da87:mps1:0:251:0): READ(10). CDB: 28 0 99 be ab 7e 0 0 80 0 
+(da87:mps1:0:251:0): CAM status: SCSI Status Error
+(da87:mps1:0:251:0): SCSI status: Check Condition
+(da87:mps1:0:251:0): SCSI sense: ABORTED COMMAND asc:47,3 (Information unit iuCRC error detected)
+pid 97673 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 99659 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 4234 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 8511 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 12848 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 17136 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 21468 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 23454 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 27778 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 32113 (dd), uid 2 inumber 8495 on /var: filesystem full
+(da183:mps1:0:160:0): SCSI command timeout on device handle 0x00bd SMID 364
+(da183:mps1:0:160:0): SCSI command timeout on device handle 0x00bd SMID 953
+(da183:mps1:0:160:0): SCSI command timeout on device handle 0x00bd SMID 249
+(da183:mps1:0:160:0): SCSI command timeout on device handle 0x00bd SMID 262
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 0
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 512
+mps1: (7:160:0) terminated ioc 804b scsi 0 state c xfer 2048
+mps1: mpssas_abort_complete: abort request on handle 0xbd SMID 364 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbd SMID 953
+mps1: mpssas_abort_complete: abort request on handle 0xbd SMID 953 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbd SMID 249
+mps1: mpssas_abort_complete: abort request on handle 0xbd SMID 249 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0xbd SMID 262
+mps1: mpssas_abort_complete: abort request on handle 0xbd SMID 262 complete
+(da183:mps1:0:160:0): READ(16). CDB: 88 0 0 0 0 1 1d 96 41 12 0 0 0 1 0 0 
+(da183:mps1:0:160:0): CAM status: SCSI Status Error
+(da183:mps1:0:160:0): SCSI status: Check Condition
+(da183:mps1:0:160:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 36372 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 40707 (dd), uid 2 inumber 8497 on /var: filesystem full
+(da78:mps1:0:35:0): SCSI command timeout on device handle 0x0041 SMID 737
+(da78:mps1:0:35:0): SCSI command timeout on device handle 0x0041 SMID 123
+(da78:mps1:0:35:0): SCSI command timeout on device handle 0x0041 SMID 339
+(da78:mps1:0:35:0): SCSI command timeout on device handle 0x0041 SMID 73
+mps1: (7:35:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:35:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: (7:35:0) terminated ioc 804b scsi 0 state c xfer 16384
+mps1: mpssas_abort_complete: abort request on handle 0x41 SMID 737 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x41 SMID 123
+mps1: mpssas_abort_complete: abort request on handle 0x41 SMID 123 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x41 SMID 339
+mps1: mpssas_abort_complete: abort request on handle 0x41 SMID 339 complete
+mps1: mpssas_complete_tm_request: sending deferred task management request for handle 0x41 SMID 73
+mps1: mpssas_abort_complete: abort request on handle 0x41 SMID 73 complete
+(da78:mps1:0:35:0): READ(16). CDB: 88 0 0 0 0 1 a 28 8d c7 0 0 0 20 0 0 
+(da78:mps1:0:35:0): CAM status: SCSI Status Error
+(da78:mps1:0:35:0): SCSI status: Check Condition
+(da78:mps1:0:35:0): SCSI sense: UNIT ATTENTION asc:29,0 (Power on, reset, or bus device reset occurred)
+pid 45055 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 46966 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 51353 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 55635 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 59964 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 64299 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 68577 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 70575 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 74893 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 79207 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 83544 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 87804 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 92146 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 94061 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 98442 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 2905 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 7257 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 11592 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 15886 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 17867 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 22183 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 26515 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 30779 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 35111 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 39465 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 41391 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 45766 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 50095 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 54371 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 58700 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 62986 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 64966 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 69352 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 73623 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 77960 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 82228 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 86569 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 88485 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 92869 (dd), uid 2 inumber 8496 on /var: filesystem full
+pid 97198 (dd), uid 2 inumber 8497 on /var: filesystem full
+pid 1581 (dd), uid 2 inumber 8506 on /var: filesystem full
+pid 6011 (dd), uid 2 inumber 8507 on /var: filesystem full
+pid 10296 (dd), uid 2 inumber 8509 on /var: filesystem full
+pid 12285 (dd), uid 2 inumber 8487 on /var: filesystem full
+pid 16746 (dd), uid 2 inumber 8494 on /var: filesystem full
+pid 21014 (dd), uid 2 inumber 8495 on /var: filesystem full
+pid 25350 (dd), uid 2 inumber 8496 on /var: filesystem full

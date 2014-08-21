@@ -1,0 +1,1 @@
+./sense.py -f sense0.psc.edu:s0.dmesg -f sense1.psc.edu:s1.dmesg -f sense2.psc.edu:s2.dmesg -f sense3.psc.edu:s3.dmesg -f sense4.psc.edu:s4.dmesg -f sense5.psc.edu:s5.dmesg -f sense7.psc.edu:s7.dmesg -w willie.out -vv -o out.json
