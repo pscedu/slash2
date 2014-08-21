@@ -68,3 +68,9 @@ site @PSC {
 		ios	= sense51s0@PSC, sense51s1@PSC;
 	}
 }
+
+# link @PSCARCH @PITT 1G;
+#
+# link @PSC @TACC @NICS @NCSA 40G;
+#
+# link sense@PSC 10G;
