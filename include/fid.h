@@ -112,7 +112,7 @@ struct sl_fidgen {
 #define BPHXC			4
 
 #define SLPRI_FID		"%#018"PRIx64
-#define SLPRIxFID		"%"PRIx64
+#define SLPRIxFID		PRIx64
 #define SLPRI_FGEN		"%"PRIu64
 
 #define SLPRI_FG		SLPRI_FID":"SLPRI_FGEN
