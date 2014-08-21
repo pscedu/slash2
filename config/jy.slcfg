@@ -5,7 +5,7 @@
 # Global network config
 set port=1300;
 set net=tcp10;
-set pref_ios="citron@JY";
+set pref_ios="io@JY";
 set pref_mds="md@JY";
 set fsuuid="4c0fa37db6e31718";
 
