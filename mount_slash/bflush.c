@@ -746,7 +746,8 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	 * sliod basis using multiwait instead of a single global value.
 	 */
 	spinlock(&slc_bflush_lock);
-	while (atomic_read(&rmci->rmci_infl_rpcs) >= MAX_OUTSTANDING_RPCS) {
+	while (atomic_read(&rmci->rmci_infl_rpcs) >=
+	    MAX_OUTSTANDING_RPCS) {
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RPCWAIT);
@@ -764,7 +765,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 __static void
 msbmflwthr_main(struct psc_thread *thr)
 {
-	struct psc_dynarray bmaps = DYNARRAY_INIT_NOLOG;
+	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct bmapc_memb *b, *tmpb;
 	struct timespec ts;
 	int i;
@@ -973,7 +974,7 @@ msbmapflushrpcthr_main(struct psc_thread *thr)
 }
 
 void
-msbenchthr_main(struct psc_thread *thr)
+msbenchthr_main(__unusedx struct psc_thread *thr)
 {
 #if 0
 	struct bmap_pagecache_entry *e;
