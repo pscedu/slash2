@@ -166,7 +166,7 @@ sl_sprintf_fgen(slfgen_t fgen, char *buf, size_t len)
 	if (fgen == FGEN_ANY)
 		rc = snprintf(buf, len, "<FGEN_ANY>");
 	else
-		rc = snprintf(buf, len, "%"SLPRI_FGEN, fgen);
+		rc = snprintf(buf, len, SLPRI_FGEN, fgen);
 	return (rc);
 }
 
