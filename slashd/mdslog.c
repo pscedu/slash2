@@ -1515,8 +1515,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		psc_assert(total);
 
 		m = psc_dynarray_getpos(&res->res_members, 0);
-		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK |
-		    CSVCF_NORECON);
+		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 		if (csvc == NULL)
 			PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq, mp);
