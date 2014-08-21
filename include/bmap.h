@@ -39,11 +39,11 @@
 #include <inttypes.h>
 #include <time.h>
 
-#include "pfl/tree.h"
-#include "pfl/list.h"
 #include "pfl/atomic.h"
 #include "pfl/crc.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/tree.h"
 
 #include "cache_params.h"
 #include "fid.h"
