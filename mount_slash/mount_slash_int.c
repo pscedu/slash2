@@ -146,7 +146,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 		if (e->bmpce_flags & BMPCE_DATARDY) {
 			if (!checkonly)
 				psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
-			return 1;
+			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
@@ -155,9 +155,10 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 				psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
 				OPSTAT_INCR(SLC_OPST_READ_PART_VALID);
 			}
-			return 1;
-		} else
-			return 0;
+			return (1);
+		}
+
+		return (0);
 	}
 	psc_fatalx("biorq %p does not have page %d", r, idx);
 }
@@ -243,10 +244,22 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
-	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages))
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages)) {
+#if 0
+		/* Read ahead into next bmap. */
+		if (bmap lease for read &&) {
+			rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
+			    BMAPGETF_ASYNC, &b);
+			BMAP_LOCK(b);
+			e = bmpce_lookup_locked(b, bmpce_off,
+			    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
+			bmap_op_done(b);
+		}
+#endif
 		return;
+	}
 
-	psclog_diag("raoff = %d, rapages = %d\n", raoff, rapages);
+	psclog_diag("raoff=%d rapages=%d", raoff, rapages);
 
 	for (i = 0; i < rapages; i++) {
 		bmpce_off = raoff + (i * BMPC_BUFSZ);
@@ -344,8 +357,9 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	/* there is really no need to lock biorq from now on */
 	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 		/*
-		 * A request can be split into several RPCs, so we can't declare
-		 * it as complete until after its reference count drops to zero.
+		 * A request can be split into several RPCs, so we can't
+		 * declare it as complete until after its reference
+		 * count drops to zero.
 		 */
 		needflush = msl_biorq_complete_fsrq(r);
 		if (needflush) {
@@ -819,7 +833,8 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
+msl_dio_cb(struct pscrpc_request *rq, int rc,
+    struct pscrpc_async_args *args)
 {
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct msl_fsrqinfo *q;
@@ -1136,8 +1151,8 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (msl_readahead_cb(rq, rc, args));
 }
 void
-msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages,
-    struct bmap *b)
+msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
+    int npages, struct bmap *b)
 {
 	struct bmap_pagecache_entry *e, **bmpces_cbarg;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1195,7 +1210,8 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages,
 	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d", off, npages);
+	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d", off,
+	    npages);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
@@ -1249,7 +1265,8 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages,
  *	cached.
  */
 __static int
-msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces, int startpage, int npages)
+msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
+    int startpage, int npages)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct bmap_pagecache_entry *e;
@@ -1316,7 +1333,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces, int start
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
 	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG", start=%d, pages=%d, ios=%u",
-	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), startpage, npages, bmap_2_ios(r->biorq_bmap));
+	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), startpage, npages,
+	    bmap_2_ios(r->biorq_bmap));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
@@ -1402,7 +1420,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		if (i < r->biorq_npages)
 			npages++;
 		else
-			psc_iostats_intv_add(&msl_racache_stat, BMPC_BUFSZ);
+			psc_iostats_intv_add(&msl_racache_stat,
+			    BMPC_BUFSZ);
 
 		e->bmpce_flags |= BMPCE_FAULTING;
 		DEBUG_BMPCE(PLL_DIAG, e, "npages = %d, i = %d", npages, i);
@@ -1722,9 +1741,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 }
 
 /*
- * msl_getra(): Figure out the location and size of the next readahead based on a number
- *              of factors: original read size and offset, current block map size which
- *              can be smaller at the end of a file.
+ * Figure out the location and size of the next readahead based on a
+ * number of factors: original read size and offset, current block map
+ * size which can be smaller at the end of a file.
  */
 static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
