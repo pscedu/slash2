@@ -78,14 +78,16 @@ struct sl_resource {
 
 	sl_ios_id_t		 res_id;
 	int			 res_flags;
-	struct sl_site		*res_site;
 	enum sl_res_type	 res_type;
+	struct sl_site		*res_site;
 	struct psc_dynarray	 res_peers;
 	struct psc_dynarray	 res_members;
 	char			 res_name[RES_NAME_MAX];
 	char			 res_fsroot[PATH_MAX];
 	char			 res_jrnldev[PATH_MAX];
-	char			 res_selftest[BUFSIZ];
+	char			 res_prefios[RES_NAME_MAX];
+	size_t			 res_arc_max;
+	char			 res_selftest[LINE_MAX];
 	char			*res_desc;
 };
 

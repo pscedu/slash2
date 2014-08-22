@@ -140,11 +140,13 @@ struct slconf_symbol sym_table[] = {
 	TABENT_SIT	("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_SIT	("site_id",	SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 
+	TABENT_RES	("arc_max",	SL_TYPE_SIZET,	0,		res_arc_max,	NULL),
 	TABENT_RES	("desc",	SL_TYPE_STRP,	0,		res_desc,	NULL),
 	TABENT_RES	("flags",	SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
 	TABENT_RES_MBSIZ("fsroot",	SL_TYPE_STR,			res_fsroot,	NULL),
 	TABENT_RES	("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
 	TABENT_RES_MBSIZ("jrnldev",	SL_TYPE_STR,			res_jrnldev,	NULL),
+	TABENT_RES_MBSIZ("prefios",	SL_TYPE_STR,			res_prefios,	NULL),
 	TABENT_RES_MBSIZ("selftest",	SL_TYPE_STR,			res_selftest,	NULL),
 	TABENT_RES	("type",	SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 
@@ -854,8 +856,10 @@ slcfg_store_tok_val(const char *tok, char *val)
 		int j;
 
 		j = strlen(val);
-		if (j == 0)
+		if (j == 0) {
 			yyerror("invalid value");
+			break;
+		}
 		c = &val[j - 1];
 
 		switch (tolower(*c)) {
@@ -889,7 +893,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 			yyerror("field %s value too large", e->c_name);
 
 		psclog_debug("SL_TYPE_SIZET tok '%s' set to '%"PRIu64"'",
-			e->c_name, *(uint64_t *)ptr);
+		    e->c_name, *(uint64_t *)ptr);
 		break;
 	    }
 

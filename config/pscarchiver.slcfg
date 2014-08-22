@@ -46,6 +46,7 @@ site @PSCARCH {
 		id	= 1;
 		nids	= illusion-mds;
 		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
+		arc_max	= 8g;
 	}
 
 	# used IDs:
@@ -54,8 +55,8 @@ site @PSCARCH {
 	#	0x07	firehose3
 	#	0x08	firehose4
 	#	0x10	brashear
-	#	0x100	tahini-uo (4/2/14) 
-	#	0x101	tahini-ue (4/2/14) 
+	#	0x100	tahini-uo (4/2/14)
+	#	0x101	tahini-ue (4/2/14)
 	#	0x200	peel0
 	#	0x201	lime
 
