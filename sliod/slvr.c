@@ -103,7 +103,8 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-				    "CRC failure: slvr=%hu, crc=%"PSCPRIxCRC64,
+				    "CRC failure: slvr=%hu, crc="
+				    "%"PSCPRIxCRC64,
 				    s->slvr_num, slvr_2_crc(s));
 				return (SLERR_BADCRC);
 			}
@@ -691,9 +692,9 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 		goto out;
 
 	/*
-	 * Importing data into the sliver is now our
-	 * responsibility, other I/O into this region will block
-	 * until SLVR_FAULTING is released.
+	 * Importing data into the sliver is now our responsibility,
+	 * other I/O into this region will block until SLVR_FAULTING is
+	 * released.
 	 */
 	s->slvr_flags |= SLVR_FAULTING;
 	if (rw == SL_READ)
@@ -806,7 +807,8 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 }
 
 /*
- * slvr_rio_done - Called after a read on the given sliver has completed.
+ * slvr_rio_done - Called after a read on the given sliver has
+ * completed.
  */
 void
 slvr_rio_done(struct slvr *s)
@@ -815,16 +817,18 @@ slvr_rio_done(struct slvr *s)
 
 	s->slvr_pndgreads--;
 	DEBUG_SLVR(PLL_DIAG, s, "read decref");
-	if (slvr_lru_tryunpin_locked(s)) {
+	if (slvr_lru_tryunpin_locked(s))
 		DEBUG_SLVR(PLL_DIAG, s, "decref, unpinned");
-	} else
-		DEBUG_SLVR(PLL_DIAG, s, "decref, ops still pending or dirty");
+	else
+		DEBUG_SLVR(PLL_DIAG, s, "decref, ops still pending or "
+		    "dirty");
 
 	SLVR_ULOCK(s);
 }
 
 /**
- * slvr_wio_done - Called after a write on the given sliver has completed.
+ * slvr_wio_done - Called after a write on the given sliver has
+ * completed.
  */
 void
 slvr_wio_done(struct slvr *s, int repl)
