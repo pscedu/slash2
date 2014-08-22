@@ -67,9 +67,9 @@ struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have thei
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
-/**
- * slvr_do_crc - Take the CRC of the data contained within a sliver
- *	and add the update to a bcr.
+/*
+ * Take the CRC of the data contained within a sliver and add the update
+ * to a bcr.
  * @s: the sliver reference.
  * Notes:  Don't hold the lock while taking the CRC.
  * Returns: errno on failure, 0 on success, -1 on not applicable.
@@ -247,7 +247,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	mq->size = a->aiocbr_len;
 	mq->offset = a->aiocbr_off;
 	if (a->aiocbr_rw == SL_WRITE)
-		/* Notify the client that he may resubmit the write.
+		/*
+		 * Notify the client that he may resubmit the write.
 		 */
 		mq->op = SRMIOP_WR;
 	else {
@@ -587,8 +588,8 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 	return (rc < 0 ? -save_errno : 0);
 }
 
-/**
- * slvr_fsbytes_rio - Read in a sliver or a portion of it.
+/*
+ * Read in a sliver or a portion of it.
  * @s: the sliver.
  */
 ssize_t
@@ -624,8 +625,8 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
 	return (slvr_fsio(s, sblk * SLASH_SLVR_BLKSZ, size, SL_WRITE));
 }
 
-/**
- * slvr_repl_prep - Prepare a sliver as a replication target.
+/*
+ * Prepare a sliver as a replication target.
  */
 void
 slvr_repl_prep(struct slvr *s)
@@ -650,9 +651,9 @@ slvr_repl_prep(struct slvr *s)
 	SLVR_ULOCK(s);
 }
 
-/**
- * slvr_io_prep - Prepare a sliver for an incoming I/O.  This may entail
- *   faulting 32k aligned regions in from the underlying fs.
+/*
+ * Prepare a sliver for an incoming I/O.  This may entail faulting 32k
+ * aligned regions in from the underlying fs.
  * @s: the sliver
  * @off: offset into the slvr (not bmap or file object)
  * @len: len relative to the slvr
@@ -807,8 +808,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 }
 
 /*
- * slvr_rio_done - Called after a read on the given sliver has
- * completed.
+ * Called after a read on the given sliver has completed.
  */
 void
 slvr_rio_done(struct slvr *s)
@@ -826,9 +826,8 @@ slvr_rio_done(struct slvr *s)
 	SLVR_ULOCK(s);
 }
 
-/**
- * slvr_wio_done - Called after a write on the given sliver has
- * completed.
+/*
+ * Called after a write on the given sliver has completed.
  */
 void
 slvr_wio_done(struct slvr *s, int repl)
@@ -854,9 +853,9 @@ slvr_wio_done(struct slvr *s, int repl)
 	SLVR_ULOCK(s);
 }
 
-/**
- * slvr_lookup - Lookup or create a sliver reference, ignoring one that
- *	is being freed.
+/*
+ * Lookup or create a sliver reference, ignoring one that is being
+ * freed.
  */
 struct slvr *
 _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
@@ -950,9 +949,8 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 }
 
 /**
- * slvr_buffer_reap - The reclaim function for sl_bufs_pool.  Note that
- *	our caller psc_pool_get() ensures that we are called
- *	exclusively.
+ * The reclaim function for sl_bufs_pool.  Note that our caller
+ * psc_pool_get() ensures that we are called exclusively.
  */
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
