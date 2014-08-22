@@ -518,6 +518,7 @@ reimport
 - why aren't cursor and bmap.odt getting updated?
 - add TRIM support to our zfs-fuse
 - add LZ4 support to our zfs-fuse
+- DEBUG_BMAP() should do everything inside the shouldlog()
 
 - add crcalg=old option
 
