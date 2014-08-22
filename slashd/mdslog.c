@@ -811,11 +811,11 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0))
 		psclogs(PLL_INFO, SLMSS_INFO,
-		    "file data %s fid="SLPRI_FID" "
+		    "file data %s fg="SLPRI_FG" "
 		    "uid=%u gid=%u "
 		    "fsize=%zu op=%d",
 		    chg ? "changed" : "removed",
-		    sstb->sst_fid,
+		    SLPRI_FG_ARGS(&sstb->sst_fg),
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);
 
