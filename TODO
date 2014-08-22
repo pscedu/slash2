@@ -515,7 +515,9 @@ reimport
 - implement lz4 as compression in zfs
 - illusion2 can use more of its RAM
 - bmap.odtab, ptrunc.odt, op-* should not be on SSD
-- why are cursor and bmap.odt getting updated?
+- why aren't cursor and bmap.odt getting updated?
+- add TRIM support to our zfs-fuse
+- add LZ4 support to our zfs-fuse
 
 - add crcalg=old option
 
