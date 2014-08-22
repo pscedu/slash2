@@ -48,6 +48,7 @@ struct srt_bmapdesc;
  *   a point to our ION, a tree of our client's exports, a pointer to the
  *   on-disk structure, a receipt for the odtable, and a reqset for issuing
  *   callbacks (XXX is that really needed?).
+ *
  * Notes: both read and write clients are stored to bmi_exports, the ref
  *   counts are used to determine the number of both and hence the caching
  *   mode used at the clients.   bmi_wr_ion is a shortcut pointer used
@@ -55,7 +56,6 @@ struct srt_bmapdesc;
  *   directed to this ION once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-
 	struct bmap_core_state   bmi_corestate;
 #define bmi_crcstates		bmi_corestate.bcs_crcstates
 #define bmi_repls		bmi_corestate.bcs_repls
@@ -183,9 +183,9 @@ struct bmap_timeo_table {
 #define BTE_REATTACH		(1 << 2)
 
 #define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
-#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX /* Extend recovered leases
-						* after an MDS failure.
-						*/
+
+/* Extend recovered leases after an MDS failure. */
+#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX
 
 struct bmap_mds_lease {
 	 int32_t		  bml_refcnt;
