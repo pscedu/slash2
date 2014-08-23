@@ -518,8 +518,11 @@ main(int argc, char *argv[])
 		warnx("no ZFS pool specified");
 		usage();
 	}
-	if (nodeResm->resm_res->res_arc_max)
+	if (nodeResm->resm_res->res_arc_max) {
+		extern uint64_t zfs_arc_max;
+
 		zfs_arc_max = nodeResm->resm_res->res_arc_max;
+	}
 
 	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
 
