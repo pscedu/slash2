@@ -309,7 +309,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	}
 
  finish:
-	(void)FCMH_RLOCK(fcmh);
+	FCMH_LOCK(fcmh);
 	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
 		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
