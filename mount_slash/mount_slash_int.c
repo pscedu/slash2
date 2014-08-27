@@ -1769,7 +1769,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 
 	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
 	    psc_atomic32_read(&max_readahead));
-	rapages = MIN((bsize - (*raoff) + BMPC_BUFSZ - 1) / BMPC_BUFSZ,
+	rapages = MIN((bsize - (int)(*raoff) + BMPC_BUFSZ - 1) / BMPC_BUFSZ,
 	    rapages);
 
 	mfh->mfh_ra.mra_raoff = *raoff + rapages * BMPC_BUFSZ;
