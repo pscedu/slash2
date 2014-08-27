@@ -1510,9 +1510,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
 	bmi = bmap_2_bmi(bmap);
-	/* These better check out. */
-	psc_assert(bmap->bcm_fcmh == f);
-	psc_assert(bmi);
 
 	if (!bmi->bmi_wr_ion ||
 	    iosid != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
