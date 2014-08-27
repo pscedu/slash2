@@ -323,14 +323,15 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->rw != SL_WRITE)
-		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_READ);
-	else
-		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_WRITE);
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
 		mp->rc = -EINVAL;
 		return (0);
 	}
+
+	if (mq->rw == SL_WRITE)
+		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_WRITE);
+	else
+		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_READ);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
