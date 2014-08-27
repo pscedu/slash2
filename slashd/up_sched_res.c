@@ -308,7 +308,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	rc = batchrq_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), bsr,
-	    slm_batch_repl_cb, 30);
+	    slm_batch_repl_cb, 5);
 	if (rc)
 		PFL_GOTOERR(fail, rc);
 
