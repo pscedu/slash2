@@ -893,7 +893,7 @@ __static int
 msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
 	int i, op, n = 0, rc = 1, locked;
-	size_t len, nbytes, size = r->biorq_len;
+	size_t len, nbytes, size;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
@@ -905,11 +905,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	uint64_t *v8;
 
 	psc_assert(r->biorq_bmap);
-	psc_assert(size);
 
 	b = r->biorq_bmap;
 	bci = bmap_2_bci(b);
 
+	size = r->biorq_len;
 	n = howmany(size, LNET_MTU);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 
