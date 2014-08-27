@@ -78,7 +78,7 @@
 		If the same client is rerequesting a lease for the same bmap,
 		a "duplicate" lease is issued; this is necessary in the protocol for
 		situations when the client loses contact with the MDS but the MDS
-		hasn't discovered this situatoin until the reissued request comes
+		hasn't discovered this situation until the reissued request comes
 		in.
 	</oof:p>
 	<oof:p>
