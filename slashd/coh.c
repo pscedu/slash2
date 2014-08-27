@@ -48,7 +48,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-struct pscrpc_nbreqset	slm_bmap_cbset=
+struct pscrpc_nbreqset	slm_bmap_cbset =
     PSCRPC_NBREQSET_INIT(slm_bmap_cbset, NULL, mdscoh_cb);
 
 #define SLM_CBARG_SLOT_CSVC	0
