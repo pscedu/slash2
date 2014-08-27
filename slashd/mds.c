@@ -163,16 +163,18 @@ mds_bmap_directio_locked(struct bmap *b, enum rw rw, int want_dio,
 	 *
 	 *  (1) Our caller wants a DIO lease
 	 *  (2) There is already a write lease out there
-	 *  (3) We want to a write lease when there are read leases out there.
+	 *  (3) We want to a write lease when there are read leases out
+	 *	there.
 	 *
-	 * In addition, even if the current lease request does not trigger a
-	 * DIO by itself, it has to wait if there is a DIO downgrade already
-	 * in progress.
+	 * In addition, even if the current lease request does not
+	 * trigger a DIO by itself, it has to wait if there is a DIO
+	 * downgrade already in progress.
 	 */
 	if (!want_dio && (b->bcm_flags & BMAP_DIOCB))
 		want_dio = 1;
 
-	if (want_dio || bmi->bmi_writers || (rw == SL_WRITE && bmi->bmi_readers))
+	if (want_dio || bmi->bmi_writers ||
+	    (rw == SL_WRITE && bmi->bmi_readers))
 		check_leases = 1;
 
 	if (check_leases) {
@@ -180,8 +182,9 @@ mds_bmap_directio_locked(struct bmap *b, enum rw rw, int want_dio,
 			tmp = bml;
 			do {
 				/*
-				 * A client can have more than one lease in flight
-				 * even though it really uses one at any time.
+				 * A client can have more than one lease
+				 * in flight even though it really uses
+				 * one at any time.
 				 */
 				if (bml->bml_cli_nidpid.nid == np->nid &&
 				    bml->bml_cli_nidpid.pid == np->pid)
@@ -1046,7 +1049,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 		tail = tail->bml_chain;
 	psc_assert(tail->bml_chain == bml);
 
-	/* Manage the bml list and bml_bmds_lentry. */
+	/* Manage the bml list and bml_bmi_lentry. */
 	if (bml->bml_flags & BML_CHAIN) {
 		psc_assert(psclist_disjoint(&bml->bml_bmi_lentry));
 		psc_assert((wlease + rlease) > 1);
@@ -1187,7 +1190,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		}
 
 		/*
-		 * Bml's which have failed ion assignment shouldn't be
+		 * bml's which have failed ION assignment shouldn't be
 		 * relevant to any odtable entry.
 		 */
 		if (bml->bml_flags & BML_ASSFAIL)
@@ -1757,8 +1760,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		csvc = slm_getclcsvc(exp);
 		FCMH_LOCK(f);
 		if (csvc && (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)) {
-			psc_dynarray_add(&fcmh_2_fmi(f)->fmi_ptrunc_clients,
-			    csvc);
+			psc_dynarray_add(
+			    &fcmh_2_fmi(f)->fmi_ptrunc_clients, csvc);
 			FCMH_ULOCK(f);
 			return (SLERR_BMAP_IN_PTRUNC);
 		}
