@@ -518,11 +518,6 @@ main(int argc, char *argv[])
 		warnx("no ZFS pool specified");
 		usage();
 	}
-	if (nodeResm->resm_res->res_arc_max) {
-		extern uint64_t zfs_arc_max;
-
-		zfs_arc_max = nodeResm->resm_res->res_arc_max;
-	}
 
 	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
 
@@ -548,7 +543,15 @@ main(int argc, char *argv[])
 	sl_drop_privs(allow_root_uid);
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
+
+	/* startup meter */
 	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
+
+	if (nodeResm->resm_res->res_arc_max) {
+		extern uint64_t zfs_arc_max;
+
+		zfs_arc_max = nodeResm->resm_res->res_arc_max;
+	}
 
 	for (vfsid = 0; vfsid < mount_index; vfsid++)
 		psc_register_filesystem(vfsid);
