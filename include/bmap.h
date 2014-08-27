@@ -62,8 +62,8 @@ struct srt_bmapdesc;
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_core_state {
-	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
-	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
+	uint8_t	bcs_crcstates[SLASH_CRCS_PER_BMAP];  /* BMAP_SLVR_DATA, etc. */
+	uint8_t	bcs_repls[SL_REPLICA_NBYTES];	     /* BREPLST_INVALID, etc. */
 };
 
 #define BMAP_SEQLOG_FACTOR	100
