@@ -69,12 +69,10 @@ For example:
 .Bd -literal -offset indent
 # zpool create mypool sda		# single drive
 # zpool create mypool mirror sda sdb	# two mirrored drives
-.Ed
-.Pp
-To allow
-.Tn ZFS
-to load this file system, create a cache dump file:
-.Bd -literal -offset indent
+
+Other pool settings:
+# zfs set atime=off mypool
+# zfs set compression=lz4 mypool
 # zpool set cachefile=/mypool.zcf mypool
 .Ed
 .Pp
@@ -117,6 +115,8 @@ utility:
 .Bd -literal -offset indent
 # slmkjrnl -f -b /dev/disk0 -u $fsuuid
 .Ed
+Note that a battery backed NVRAM device is the ideal type of device for
+this purpose.
 .Pp
 The MDS server also maintains an
 .Tn SQLite
