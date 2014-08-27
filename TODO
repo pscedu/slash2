@@ -519,6 +519,10 @@ reimport
 - add TRIM support to our zfs-fuse
 - add LZ4 support to our zfs-fuse
 - DEBUG_BMAP() should do everything inside the shouldlog()
+- can errors be injected into our scheme circumventing authbuf?
+- if high priority work cannot be done in upsch, do some lower priority
+  work
+- resilvering is hung, 'zpool iostat' never updates...
 
 - add crcalg=old option
 
