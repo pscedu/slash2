@@ -363,18 +363,21 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
-	sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
-	    fcmh_2_repl_nblks(f, idx);
-	fl = SL_SETATTRF_NBLKS;
 
-	fcmh_set_repl_nblks(f, idx, crcup->nblks);
+	/* Only update the block usage when there is a real change */
+	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
+		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
+		    fcmh_2_repl_nblks(f, idx);
+		fl = SL_SETATTRF_NBLKS;
 
-	/* use nolog because mdslog_bmap_crc() will cover this */
-	rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
-	if (rc)
-		psclog_error("unable to setattr: rc=%d", rc);
+		fcmh_set_repl_nblks(f, idx, crcup->nblks);
 
-	FCMH_LOCK(f);
+		/* use nolog because mdslog_bmap_crc() will cover this */
+		rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
+		if (rc)
+			psclog_error("unable to setattr: rc=%d", rc);
+		FCMH_LOCK(f);
+	}
 
 	if (idx >= SL_DEF_REPLICAS)
 		mds_inox_write(vfsid, ih, NULL, NULL);
