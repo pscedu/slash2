@@ -892,7 +892,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 __static int
 msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
-	int i, op, n = 0, rc = 1, locked;
+	int i, op, n, rc, locked;
 	size_t len, nbytes, size;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
