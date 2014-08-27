@@ -26,15 +26,15 @@
 
 #include <string.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/lockedlist.h"
-#include "pfl/str.h"
-#include "pfl/types.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/lock.h"
+#include "pfl/lockedlist.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
+#include "pfl/str.h"
+#include "pfl/types.h"
 
 #include "mdsio.h"
 #include "odtable_mds.h"
@@ -110,8 +110,8 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz,
-	    &nb, h->odth_start + elem * h->odth_slotsz,
-	    odt->odt_handle, NULL, NULL);
+	    &nb, h->odth_start + elem * h->odth_slotsz, odt->odt_handle,
+	    NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
 	if (h->odth_options & ODTBL_OPT_SYNC)
@@ -194,9 +194,8 @@ mds_odtable_replaceitem(struct odtable *odt,
 	psc_assert(len <= h->odth_elemsz);
 
 	p = PSCALLOC(h->odth_slotsz);
-	rc = mdsio_read(current_vfsid, &rootcreds, p,
-	    h->odth_slotsz, &nb, h->odth_start +
-	    odtr->odtr_elem * h->odth_slotsz,
+	rc = mdsio_read(current_vfsid, &rootcreds, p, h->odth_slotsz,
+	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle);
 	psc_assert(!rc && nb == h->odth_slotsz);
 	OPSTAT_INCR(SLM_OPST_ODTABLE_REPLACE);
@@ -215,9 +214,8 @@ mds_odtable_replaceitem(struct odtable *odt,
 	    "elemcrc=%"PSCPRIxCRC64,
 	    odtr, odtr->odtr_elem, crc);
 
-	rc = mdsio_write(current_vfsid, &rootcreds, p,
-	    h->odth_slotsz, &nb, h->odth_start +
-	    odtr->odtr_elem * h->odth_slotsz,
+	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz,
+	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
