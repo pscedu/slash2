@@ -37,13 +37,13 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/hostname.h"
 #include "pfl/journal.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
+#include "pfl/pfl.h"
 #include "pfl/random.h"
+#include "pfl/str.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -86,54 +86,6 @@ slnewfs_create_int(const char *pdirnam, uint32_t curdepth,
 			slnewfs_create_int(subdirnam, curdepth + 1,
 			    maxdepth);
 	}
-}
-
-/**
- * slnewfs_create_odtable: Create an empty odtable in the ZFS pool.  We
- *	also maintain a separate utility to create/edit/show the odtable
- *	(use ZFS FUSE mount).
- */
-void
-slnewfs_create_odtable(const char *fn, int flags)
-{
-	struct odtable_entftr odtf;
-	struct odtable_hdr odth;
-	struct odtable odt;
-	size_t i;
-
-	odt.odt_fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (odt.odt_fd < 0)
-		psc_fatal("open %s", fn);
-
-	odth.odth_nelems = ODT_DEFAULT_TABLE_SIZE;
-	odth.odth_elemsz = ODT_DEFAULT_ITEM_SIZE;
-	odth.odth_slotsz = ODT_DEFAULT_ITEM_SIZE +
-	    sizeof(struct odtable_entftr);
-	odth.odth_magic = ODTBL_MAGIC;
-	odth.odth_version = ODTBL_VERS;
-	odth.odth_options = ODTBL_OPT_CRC | flags;
-	odth.odth_start = ODTBL_START;
-
-	odtf.odtf_crc = 0;
-	odtf.odtf_inuse = ODTBL_FREE;
-	odtf.odtf_slotno = 0;
-	odtf.odtf_magic = ODTBL_MAGIC;
-
-	odt.odt_hdr = &odth;
-
-	if (pwrite(odt.odt_fd, &odth, sizeof(odth), 0) != sizeof(odth))
-		psc_fatal("open %s", fn);
-
-	/* initialize the table by writing the footers of all entries */
-	for (i = 0; i < ODT_DEFAULT_TABLE_SIZE; i++) {
-		odtf.odtf_slotno = i;
-
-		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
-		    odtable_getitem_foff(&odt, i) + odth.odth_elemsz) !=
-		    sizeof(odtf))
-			psc_fatal("pwrite %s", fn);
-	}
-	close(odt.odt_fd);
 }
 
 void
@@ -259,10 +211,12 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fclose(fp);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	slnewfs_create_odtable(fn, 0);
+	odtable_create(fn, ODT_DEFAULT_TABLE_SIZE,
+	    ODT_DEFAULT_ITEM_SIZE, 0, ODTBL_OPT_CRC);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	slnewfs_create_odtable(fn, 0);
+	odtable_create(fn, ODT_DEFAULT_TABLE_SIZE,
+	    ODT_DEFAULT_ITEM_SIZE, 0, ODTBL_OPT_CRC);
 }
 
 void
