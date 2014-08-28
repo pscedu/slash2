@@ -1449,10 +1449,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		if (i && (e->bmpce_off != off || i >= npages)) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
 			if (rc)
-			    goto out;
+				goto out;
 
 			if (i >= npages)
-			    break;
+				break;
 
 			j = i;
 		}
@@ -1460,7 +1460,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		    i == psc_dynarray_len(&pages) - 1) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j + 1);
 			if (rc)
-			    goto out;
+				goto out;
 			j = i + 1;
 		}
 		off = e->bmpce_off + BMPC_BUFSZ;
