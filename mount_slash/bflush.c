@@ -102,10 +102,10 @@ bmap_free_all_locked(struct fidc_membh *f)
 		DEBUG_BMAP(PLL_DIAG, a, "mark bmap free");
 
 		/*
-		 * The MDS truncates the SLASH2 metafile on a full
+		 * The MDS truncates the SLASH2 metadata file on a full
 		 * truncate.  We need to throw away leases and request a
 		 * new lease later, so that the MDS has a chance to
-		 * update its metadate file on-disk.  Otherwise, we can
+		 * update its metadata file on-disk.  Otherwise, we can
 		 * use an existing lease to write the file and can not
 		 * update the metadata file even if the bmap is still
 		 * cached at the MDS because the generation # has been
@@ -113,7 +113,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		 *
 		 * Finally, a read comes in, we request a read bmap.  At
 		 * this point, all bmaps of the file have been freed at
-		 * both MDS and client.  And the MDS can not find a
+		 * both MDS and client.  And the MDS cannot find a
 		 * replica for a bmap in the metafile.
 		 */
 		BMAP_LOCK(a);
@@ -608,7 +608,8 @@ bmap_flushable(struct bmapc_memb *b)
 		/* assert: the bmap should a write bmap at this point */
 		PFL_GETTIMESPEC(&ts);
 		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-		if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+		if (secs < BMAP_CLI_EXTREQSECS ||
+		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 			OPSTAT_INCR(SLC_OPST_FLUSH_SKIP_EXPIRE);
 			flush = 0;
 		}
@@ -793,9 +794,8 @@ msbmflwthr_main(struct psc_thread *thr)
 			}
 			PFL_GETTIMESPEC(&ts);
 			if (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec <
-				BMAP_CLI_EXTREQSECS) {
+			    BMAP_CLI_EXTREQSECS)
 				psc_dynarray_add(&bmaps, b);
-			}
 			BMAP_ULOCK(b);
 		}
 		LIST_CACHE_ULOCK(&bmapFlushQ);
