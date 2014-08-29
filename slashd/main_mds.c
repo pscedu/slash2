@@ -548,9 +548,9 @@ main(int argc, char *argv[])
 	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
 
 	if (nodeResm->resm_res->res_arc_max) {
-		extern uint64_t zfs_arc_max;
+		void arc_set_maxsize(uint64_t);
 
-		zfs_arc_max = nodeResm->resm_res->res_arc_max;
+		arc_set_maxsize(nodeResm->resm_res->res_arc_max);
 	}
 
 	for (vfsid = 0; vfsid < mount_index; vfsid++)
