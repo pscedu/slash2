@@ -108,10 +108,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	pj.pj_hdr->pjh_timestamp = time(NULL);
 	pj.pj_hdr->pjh_fsuuid = uuid;
 
-	PSC_CRC64_INIT(&pj.pj_hdr->pjh_chksum);
+	psc_crc64_init(&pj.pj_hdr->pjh_chksum);
 	psc_crc64_add(&pj.pj_hdr->pjh_chksum, pj.pj_hdr,
 	    offsetof(struct psc_journal_hdr, pjh_chksum));
-	PSC_CRC64_FIN(&pj.pj_hdr->pjh_chksum);
+	psc_crc64_fini(&pj.pj_hdr->pjh_chksum);
 
 	nb = pwrite(pj.pj_fd, pj.pj_hdr, pj.pj_hdr->pjh_iolen, 0);
 	if ((size_t)nb != pj.pj_hdr->pjh_iolen)
@@ -127,12 +127,12 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		pje->pje_xid = PJE_XID_NONE;
 		pje->pje_len = 0;
 
-		PSC_CRC64_INIT(&pje->pje_chksum);
+		psc_crc64_init(&pje->pje_chksum);
 		psc_crc64_add(&pje->pje_chksum, pje,
 		    offsetof(struct psc_journal_enthdr, pje_chksum));
 		psc_crc64_add(&pje->pje_chksum, pje->pje_data,
 		    pje->pje_len);
-		PSC_CRC64_FIN(&pje->pje_chksum);
+		psc_crc64_fini(&pje->pje_chksum);
 	}
 
 	j = 0;
@@ -315,10 +315,10 @@ pjournal_dump(const char *fn, int verbose)
 		psc_fatalx("journal header has an invalid version "
 		    "number %d", pjh->pjh_version);
 
-	PSC_CRC64_INIT(&chksum);
+	psc_crc64_init(&chksum);
 	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr,
 	    pjh_chksum));
-	PSC_CRC64_FIN(&chksum);
+	psc_crc64_fini(&chksum);
 
 	if (pjh->pjh_chksum != chksum)
 		psc_fatalx("journal header has an invalid checksum "
@@ -381,12 +381,12 @@ pjournal_dump(const char *fn, int verbose)
 				goto done;
 			}
 
-			PSC_CRC64_INIT(&chksum);
+			psc_crc64_init(&chksum);
 			psc_crc64_add(&chksum, pje, offsetof(
 			    struct psc_journal_enthdr, pje_chksum));
 			psc_crc64_add(&chksum, pje->pje_data,
 			    pje->pje_len);
-			PSC_CRC64_FIN(&chksum);
+			psc_crc64_fini(&chksum);
 
 			if (pje->pje_chksum != chksum) {
 				nchksum++;

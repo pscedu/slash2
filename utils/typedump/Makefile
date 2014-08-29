@@ -5,7 +5,6 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		typedump
 SRCS+=		typedump.c
-SRCS+=		${PFL_BASE}/crc.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 
 # pthread is specified here to use correct struct sizes
