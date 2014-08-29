@@ -1744,6 +1744,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
  * Figure out the location and size of the next readahead based on a
  * number of factors: original read size and offset, current block map
  * size which can be smaller at the end of a file.
+ *
+ * Note: This function can be called twice for the same I/O request that
+ * span a bmap boundary.
  */
 static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
