@@ -1797,8 +1797,10 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	 */
 	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off)
 		mfh->mfh_ra.mra_nseq++;
-	else
+	else {
+		mfh->mfh_ra.mra_raoff = 0;
 		mfh->mfh_ra.mra_nseq = 0;
+	}
 
 	mfh->mfh_ra.mra_loff = off;
 	mfh->mfh_ra.mra_lsz = size;
