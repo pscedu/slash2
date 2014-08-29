@@ -3132,18 +3132,21 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msattrflushthr_spawn(void)
 {
+	int i;
 	struct msattrfl_thread *mattrft;
 	struct psc_thread *thr;
 
 	lc_reginit(&attrTimeoutQ, struct fcmh_cli_info,
 	    fci_lentry, "attrtimeout");
 
-	thr = pscthr_init(MSTHRT_ATTRFLSH, 0, msattrflushthr_main, NULL,
-	    sizeof(struct msattrfl_thread), "msattrflushthr");
-	mattrft = msattrflthr(thr);
-	psc_multiwait_init(&mattrft->maft_mw, "%s",
-	    thr->pscthr_name);
-	pscthr_setready(thr);
+	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
+		thr = pscthr_init(MSTHRT_ATTRFLSH, 0, msattrflushthr_main, NULL,
+		    sizeof(struct msattrfl_thread), "msattrflushthr%d", i);
+		mattrft = msattrflthr(thr);
+		psc_multiwait_init(&mattrft->maft_mw, "%s",
+		    thr->pscthr_name);
+		pscthr_setready(thr);
+	}
 }
 
 void
