@@ -8,7 +8,7 @@ SRCS+=		typedump.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 
 # pthread is specified here to use correct struct sizes
-MODULES+=	lnet-hdrs pthread gcrypt
+MODULES+=	lnet-hdrs pthread gcrypt pfl
 
 include ${SLASHMK}
 
