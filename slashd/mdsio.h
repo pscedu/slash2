@@ -118,6 +118,7 @@ struct mdsio_ops {
 	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, void *,
 			sl_log_write_t, void *);
 
+	int	(*mio_hasxattrs)(int, const struct slash_creds *, mdsio_fid_t);
 	int	(*mio_listxattr)(int, const struct slash_creds *, void *, size_t, size_t *, mdsio_fid_t);
 	int	(*mio_setxattr)(int, const struct slash_creds *, const char *, const char *, size_t, mdsio_fid_t);
 	int	(*mio_getxattr)(int, const struct slash_creds *, const char *, char *, size_t, size_t *, mdsio_fid_t);
@@ -166,6 +167,7 @@ struct mdsio_ops {
 #define mdsio_symlink		mdsio_ops.mio_symlink			/* zfsslash2_symlink() */
 #define mdsio_unlink		mdsio_ops.mio_unlink			/* zfsslash2_unlink() */
 #define mdsio_write		mdsio_ops.mio_write			/* zfsslash2_write() */
+#define mdsio_hasxattrs		mdsio_ops.mio_hasxattrs			/* zfsslash2_hasxattr() */
 #define mdsio_listxattr		mdsio_ops.mio_listxattr			/* zfsslash2_listxattr() */
 #define mdsio_setxattr		mdsio_ops.mio_setxattr			/* zfsslash2_setxattr() */
 #define mdsio_getxattr		mdsio_ops.mio_getxattr			/* zfsslash2_getxattr() */

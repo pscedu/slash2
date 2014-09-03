@@ -153,7 +153,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
 	size_t xlen;
-	int vfsid;
+	int rc, vfsid;
 
 	OPSTAT_INCR(SLM_OPST_GETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -164,16 +164,12 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	/*
-	 * XXX we can cut this out and just lie and return
-	 * xattrsize with a nonzero value.
-	 */
-	zfsslash2_listxattr(vfsid, &rootcreds, NULL, 0, &xlen,
-	    fcmh_2_mfid(f));
+	rc = mdsio_hasxattrs(vfsid, &rootcreds, fcmh_2_mfid(f));
 
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
-	mp->xattrsize = xlen;
+	if (rc == 0)
+		mp->xattrsize = 1;
 
  out:
 	if (f)
