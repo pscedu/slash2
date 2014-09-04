@@ -804,7 +804,11 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 
 	EXPORT_LOCK(exp);
 	PFL_GETTIMESPEC(&now);
-	mexpc = sl_exp_getpri_cli(exp);
+	mexpc = sl_exp_getpri_cli(exp, 0);
+	if (mexpc == NULL) {
+		EXPORT_ULOCK(exp);
+		return;
+	}
 	for (i = 0, cv = mexpc->mexpc_readdir_past;
 	    i < nitems(mexpc->mexpc_readdir_past) || (cv = NULL);
 	    i++, cv++) {
@@ -877,14 +881,16 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 
 	if (decr) {
 		EXPORT_LOCK(exp);
-		mexpc = sl_exp_getpri_cli(exp);
-		for (i = 0, crap = mexpc->mexpc_readdir_past;
-		    i < nitems(mexpc->mexpc_readdir_past); i++, crap++)
-			if (crap->crap_fid == mq->fg.fg_fid &&
-			    crap->crap_off == mq->offset) {
-				CRAP_CLR_ACTIVE(crap);
-				break;
-			}
+		mexpc = sl_exp_getpri_cli(exp, 0);
+		if (mexpc)
+			for (i = 0, crap = mexpc->mexpc_readdir_past;
+			    i < nitems(mexpc->mexpc_readdir_past);
+			    i++, crap++)
+				if (crap->crap_fid == mq->fg.fg_fid &&
+				    crap->crap_off == mq->offset) {
+					CRAP_CLR_ACTIVE(crap);
+					break;
+				}
 		EXPORT_ULOCK(exp);
 	}
 
@@ -1246,7 +1252,7 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 			csvc = slm_getclcsvc(rq->rq_export);
 			if (csvc)
 				psc_dynarray_add(&fcmh_2_fmi(f)->
-			    	    fmi_ptrunc_clients, csvc);
+				    fmi_ptrunc_clients, csvc);
 
 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 		}
