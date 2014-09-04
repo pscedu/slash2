@@ -652,7 +652,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &fci->fci_age, <)) {
-			DEBUG_FCMH(PLL_INFO, f,
+			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
 			return (0);
@@ -1417,7 +1417,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 		if (f) {
 			FCMH_LOCK(f);
-			slc_fcmh_setattrf(f, &e->sstb, FCMH_SETATTRF_SAVELOCAL |
+			slc_fcmh_setattrf(f, &e->sstb,
+			    FCMH_SETATTRF_SAVELOCAL |
 			    FCMH_SETATTRF_HAVELOCK);
 			fcmh_2_fci(f)->fci_xattrsize =
 			    e->xattrsize;
@@ -2867,6 +2868,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	if (size > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
+	if (strlen(name) > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	pscfs_getcreds(pfr, &pcr);
 	rc = msl_load_fcmh(pfr, inum, &f);
@@ -2880,12 +2883,11 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
-	mq->namelen = strlen(name) + 1;
 	mq->valuelen = size;
-	memcpy(mq->name, name, mq->namelen + 1);
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	iov.iov_base = (char *)value;
-	iov.iov_len = mq->valuelen;
+	iov.iov_len = size;
 
 	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
 	    1);
@@ -2932,6 +2934,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	OPSTAT_INCR(SLC_OPST_GETXATTR);
 
+	if (strlen(name) > sizeof(mq->name))
+		PFL_GOTOERR(out, rc = EINVAL);
+
 	iov.iov_base = NULL;
 
 	pscfs_getcreds(pfr, &pcr);
@@ -2948,7 +2953,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 		FCMH_LOCK(f);
 		if (timercmp(&now, &fci->fci_age, <) &&
 		    fci->fci_xattrsize == 0)
-			PFL_GOTOERR(out, rc = ENODATA);
+			PFL_GOTOERR(out, rc = ENODATA); // ENOATTR
 		FCMH_ULOCK(f);
 	}
 
@@ -2958,13 +2963,12 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
  retry:
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out, rc = -rc);
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
 	mq->size = size;
-	mq->namelen = strlen(name) + 1;
-	memcpy(mq->name, name, mq->namelen + 1);
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	if (size) {
 		iov.iov_base = buf;
@@ -2981,17 +2985,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 		rc = mp->rc;
 		retsz = mp->valuelen;
 	}
+	rc = -rc;
 
  out:
-	/*
-	 * If MDS does not support this, we return no attributes
-	 * successfully.
-	 */
-#if 0
-	if (rc == -PFLERR_NOSYS)
-		rc = 0;
-
-#endif
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 
 	if (f)
@@ -3020,6 +3016,9 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	OPSTAT_INCR(SLC_OPST_REMOVEXATTR);
 
+	if (strlen(name) > sizeof(mq->name))
+		PFL_GOTOERR(out, rc = EINVAL);
+
 	pscfs_getcreds(pfr, &pcr);
 
 	rc = msl_load_fcmh(pfr, inum, &f);
@@ -3033,8 +3032,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
-	mq->namelen = strlen(name) + 1;
-	memcpy(mq->name, name, mq->namelen + 1);
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))

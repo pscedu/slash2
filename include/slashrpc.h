@@ -885,8 +885,11 @@ struct srt_readdir_ent {  // XXX rename to srt_readdir_stpref
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
 	 int64_t		offset;
-	uint64_t		size;		/* XXX make 32-bit */
+	uint32_t		size;
+	uint32_t		flags;
 } __packed;
+
+#define SRM_READDIRF_XATTR	(1 << 0)	/* client wants to know xattr */
 
 #define srm_replrq_rep		srm_generic_rep
 
@@ -1000,32 +1003,34 @@ struct srm_unlink_rep {
 
 struct srm_listxattr_req {
 	struct slash_fidgen	fg;
-	 int32_t		size;
+	uint32_t		size;
 	 int32_t		_pad;
 } __packed;
 
 struct srm_listxattr_rep {
-	 int32_t		size;
+	uint32_t		size;
 	 int32_t		rc;
 } __packed;
 
 struct srm_getxattr_req {
 	struct slash_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
-	int32_t			namelen;
-	int32_t			size;
+	uint32_t		size;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getxattr_rep {
-	int32_t			rc;
-	int32_t			valuelen;
+	 int32_t		rc;
+	uint32_t		valuelen;
+/* XXX pack if can fit; otherwise value is in BULK */
 } __packed;
 
 struct srm_setxattr_req {
 	struct slash_fidgen	fg;
-	int32_t			namelen;
-	int32_t			valuelen;
 	char			name[SL_NAME_MAX + 1];
+	 int32_t		_pad;
+	uint32_t		valuelen;
+/* XXX BULK CLI -> MDS is value */
 } __packed;
 
 struct srm_setxattr_rep {
@@ -1036,8 +1041,6 @@ struct srm_setxattr_rep {
 struct srm_removexattr_req {
 	struct slash_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
-	int32_t			namelen;
-	int32_t			_pad;
 } __packed;
 
 struct srm_removexattr_rep {
