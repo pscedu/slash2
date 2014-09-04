@@ -1428,7 +1428,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	struct slash_creds cr;
 	struct iovec iov;
 	slfid_t fid = 0;
-	int vfsid;
+	int rc, vfsid;
 
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -1442,9 +1442,9 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
-	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, ptl, &iov, 1);
-	if (mp->rc)
-		return (mp->rc);
+	rc = slrpc_bulkserver(rq, BULK_GET_SINK, ptl, &iov, 1);
+	if (rc)
+		return (rc);
 
 	linkname[mq->linklen] = '\0';
 
