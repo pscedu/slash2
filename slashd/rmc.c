@@ -952,11 +952,16 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		    *nents * sizeof(struct srt_readdir_ent));
 	} else {
 		struct slm_wkdata_readdir *wk;
+		struct slashrpc_cservice *csvc;
+
+		csvc = slm_getclcsvc(exp);
+		if (csvc == NULL)
+			goto out;
 
 		wk = pfl_workq_getitem(slm_rcm_issue_readdir_wk,
 		    struct slm_wkdata_readdir);
 		wk->exp = pscrpc_export_get(exp);
-		wk->csvc = slm_getclcsvc(exp);
+		wk->csvc = csvc;
 		wk->fg = *fgp;
 		wk->off = off;
 		wk->size = *outsize;
@@ -1239,8 +1244,9 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 			f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 
 			csvc = slm_getclcsvc(rq->rq_export);
-			psc_dynarray_add(&fcmh_2_fmi(f)->
-			    fmi_ptrunc_clients, csvc);
+			if (csvc)
+				psc_dynarray_add(&fcmh_2_fmi(f)->
+			    	    fmi_ptrunc_clients, csvc);
 
 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 		}
@@ -1750,13 +1756,19 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	const struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
+	struct slashrpc_cservice *csvc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	csvc = slm_getclcsvc(rq->rq_export);
+	if (csvc == NULL)
+		return (0);
+
 	rsw = PSCALLOC(sizeof(*rsw));
 	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;
-	rsw->rsw_csvc = slm_getclcsvc(rq->rq_export);
+	rsw->rsw_csvc = csvc;
 	lc_add(&slm_replst_workq, rsw);
 	return (0);
 }
