@@ -22,6 +22,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Routines for handling RPC requests for CLI from ION.
+ */
+
 #include <errno.h>
 
 #include "pfl/ctlsvr.h"
@@ -32,10 +36,6 @@
 #include "pgcache.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
-
-/*
- * Routines for handling RPC requests for CLI from ION.
- */
 
 #define RCI_AIO_READ_WAIT_NS	1000000
 #define CAR_LOOKUP_MAX		10000
@@ -64,8 +64,6 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 				rpci->rpci_flags |= RPCIF_AVOID;
 				break;
 			}
-			break;
-		default:
 			break;
 		    }
 		}
@@ -100,14 +98,12 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (m == NULL) {
-		mp->rc = SLERR_ION_UNKNOWN;
-		goto out;
-	}
+	if (m == NULL)
+		PFL_GOTOERR(out, mp->rc = -SLERR_ION_UNKNOWN);
 
 	lc = &resm2rmci(m)->rmci_async_reqs;
 
-	while (!found && (tries++ < CAR_LOOKUP_MAX)) {
+	while (!found && tries++ < CAR_LOOKUP_MAX) {
 		LIST_CACHE_LOCK(lc);
 		LIST_CACHE_FOREACH(car, lc)
 			if (car->car_id == mq->id) {
@@ -139,11 +135,10 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_ASSIGN(SLC_OPST_READ_AIO_WAIT_MAX, nwait);
 
 	if (!found) {
-		psclog_warnx("could not find async req id=%"PRIx64,
+		psclog_warnx("could not find async req id=%#"PRIx64,
 		    mp->id);
 		OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
-		mp->rc = -ENOENT;
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
 	r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
@@ -155,7 +150,10 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLC_OPST_READ_CB);
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
-		/* MAX_BMAPS_REQ*SLASH_BMAP_SIZE/BMPC_BUFSZ is just too large */
+		/*
+		 * MAX_BMAPS_REQ * SLASH_BMAP_SIZE / BMPC_BUFSZ is just
+		 * too large.
+		 */
 		iovs = PSCALLOC(sizeof(struct iovec) * psc_dynarray_len(a));
 		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
@@ -180,17 +178,15 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		/* FixMe: Should wake up waiters regardless of results */
 		if (mq->rc)
-			goto out;
+			PFL_GOTOERR(out, mq->rc);
 
-		if (mq->op == SRMIOP_RD) {
-
+		if (mq->op == SRMIOP_RD) { 
 			iov.iov_base = r->biorq_buf;
 			iov.iov_len = r->biorq_len;
 
 			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);
-		}
-
+		} 
 	} else {
 		psc_fatalx("unknown callback");
 	}
@@ -201,7 +197,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 */
 	car->car_cbf(rq, mq->rc, &car->car_argv);
 
-	psclog_info("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
+	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
 
 	psc_pool_return(slc_async_req_pool, car);
