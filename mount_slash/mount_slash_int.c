@@ -1232,8 +1232,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	PSCFREE(iovs);
 	PSCFREE(bmpces_cbarg);
 
-	/* Deal with errored read ahead bmpce's.
-	 */
+	/* Deal with errored read ahead bmpce's. */
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
@@ -1584,8 +1583,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 }
 
 /**
- * msl_pages_copyin - Copy user pages into buffer cache and schedule the
- *	slabs to be sent to the ION backend.
+ * msl_pages_copyin - Copy user pages into buffer cache and schedule
+ *	them to be sent to the ION backend.
  * @r: array of request structs.
  */
 __static size_t
@@ -1966,7 +1965,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		PFL_GOTOERR(out, rc = 0);
 
  restart:
-
 	rc = 0;
 	tsize = size;
 
