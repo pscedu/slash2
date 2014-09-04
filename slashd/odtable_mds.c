@@ -331,8 +331,8 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	/*
 	 * We used to do mmap() to allow easy indexing.  However, we now
-	 * support auto growth of the bitmap.  Plus, ZFS fuse does NOT
-	 * like mmap() either.
+	 * support auto growth of the bitmap.  Plus, zfs-fuse does not
+	 * support mmap().
 	 */
 	odt->odt_bitmap = psc_vbitmap_newf(odth->odth_nelems,
 	    PVBF_AUTO);
