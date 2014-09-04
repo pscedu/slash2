@@ -173,7 +173,7 @@ static inline int
 mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
-	
+
 	mds_note_update(1);
 	rc = mdsio_read(current_vfsid, &rootcreds, buf, size, nb, off,
 	    h);
@@ -1258,7 +1258,7 @@ slmjcursorthr_main(struct psc_thread *thr)
 			cursor_update_inprog = 0;
 			psc_waitq_wait(&cursorWaitq, &cursorWaitLock);
 //			psc_waitq_waitrel_s(&cursorWaitq,
-//			    &cursorWaitLock, 30);
+//			    &cursorWaitLock, 5);
 		} else {
 			cursor_update_inprog = 1;
 			freelock(&cursorWaitLock);
