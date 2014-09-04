@@ -1257,7 +1257,7 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
  out:
 	if (f) {
 		(void)FCMH_RLOCK(f);
-		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
+		if (mp->rc == 0 || mp->rc == -SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = f->fcmh_sstb;
 		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
