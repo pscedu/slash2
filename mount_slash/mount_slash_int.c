@@ -1400,7 +1400,7 @@ __static int
 msl_launch_read_rpcs(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
-	struct psc_dynarray pages = DYNARRAY_INIT_NOLOG;
+	struct psc_dynarray pages = DYNARRAY_INIT;
 	int rc = 0, i, j, npages, needflush = 0;
 	uint32_t off = 0;
 
