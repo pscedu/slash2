@@ -227,8 +227,6 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	struct srm_io_rep *mp;
 	int rc, i;
 
-	OPSTAT_INCR(SLI_OPST_SLVR_AIO_REPLY);
-
 	if (!a->aiocbr_csvc)
 		goto out;
 
@@ -236,6 +234,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	    SRMT_WRITE : SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto out;
+
+	OPSTAT_INCR(SLI_OPST_SLVR_AIO_REPLY);
 
 	mq->rc = slvr_aio_chkslvrs(a);
 
