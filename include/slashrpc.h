@@ -224,6 +224,7 @@ struct srm_ctl_req {
 
 struct srt_ctlsetopt {
 	uint32_t		opt;		/* option */
+	 int32_t		_pad;
 	uint64_t		opv;		/* value */
 };
 
@@ -719,11 +720,10 @@ struct srt_replwk_repent {			/* batch arrangement success/failure IOS -> MDS */
 
 struct srm_repl_read_req {			/* data pull IOS -> IOS */
 	struct slash_fidgen	fg;
-	uint64_t		len;		/* #bytes in this message, to find #slivers */
+	uint32_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
 	 int32_t		slvrno;
 	 int32_t		rc;
-	int32_t			_pad;
 } __packed;
 
 #define srm_repl_read_rep	srm_io_rep
@@ -744,6 +744,7 @@ struct srm_set_bmapreplpol_req {
 	sl_bmapno_t		bmapno;
 	sl_bmapno_t		nbmaps;
 	 int32_t		pol;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_set_bmapreplpol_rep	srm_generic_rep
@@ -1059,6 +1060,7 @@ struct srm_import_req {
 struct srm_import_rep {
 	struct slash_fidgen	fg;
 	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 #endif /* _SLASHRPC_H_ */
