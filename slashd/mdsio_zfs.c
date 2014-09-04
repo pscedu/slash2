@@ -170,6 +170,7 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_unlink,
 	zfsslash2_write,
 
+	zfsslash2_hasxattrs,
 	zfsslash2_listxattr,
 	zfsslash2_setxattr,
 	zfsslash2_getxattr,
