@@ -176,7 +176,9 @@ _slm_getclcsvc(const struct pfl_callerinfo *pci,
 {
 	struct slm_exp_cli *mexpc;
 
-	mexpc = sl_exp_getpri_cli(exp);
+	mexpc = sl_exp_getpri_cli(exp, 0);
+	if (mexpc == NULL)
+		return (NULL);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
 	    SLCONNT_CLI, NULL));

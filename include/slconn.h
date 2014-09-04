@@ -281,7 +281,7 @@ int	 sl_csvc_useable(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
 
 void	 sl_exp_hldrop_resm(struct pscrpc_export *);
-void	*sl_exp_getpri_cli(struct pscrpc_export *);
+void	*sl_exp_getpri_cli(struct pscrpc_export *, int);
 
 void	 sl_resm_hldrop(struct sl_resm *);
 

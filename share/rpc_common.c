@@ -344,7 +344,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 */
 			DEBUG_REQ(PLL_WARN, rq,
 			    "duplicate connect msg detected");
-		expc = sl_exp_getpri_cli(e);
+		expc = sl_exp_getpri_cli(e, 1);
 		expc->stkvers = mq->stkvers;
 		break;
 	case SLCONNT_IOD:
@@ -1047,13 +1047,13 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
  * @exp: RPC export to CLI peer.
  */
 void *
-sl_exp_getpri_cli(struct pscrpc_export *exp)
+sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 {
 	int locked;
 	void *p;
 
 	locked = EXPORT_RLOCK(exp);
-	if (exp->exp_private == NULL) {
+	if (exp->exp_private == NULL && populate) {
 		sl_expcli_ops.secop_allocpri(exp);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}

@@ -397,10 +397,15 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
     uint32_t off, struct slvr **slvrs, int nslvrs, struct iovec *iovs,
     int niovs, enum rw rw)
 {
+	struct slashrpc_cservice *csvc;
+	struct sli_aiocb_reply *a;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct sli_aiocb_reply *a;
 	int i;
+
+	csvc = sli_getclcsvc(rq->rq_export);
+	if (csvc == NULL)
+		return (NULL);
 
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
@@ -423,7 +428,7 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
 	a->aiocbr_len = len;
 	a->aiocbr_off = off;
 	a->aiocbr_rw = rw;
-	a->aiocbr_csvc = sli_getclcsvc(rq->rq_export);
+	a->aiocbr_csvc = csvc;
 
 	a->aiocbr_flags = SLI_AIOCBSF_NONE;
 	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);

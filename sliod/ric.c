@@ -278,6 +278,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (needaio) {
 		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
+		if (aiocbr == NULL)
+			PFL_GOTOERR(out, 0);
 
 		/*
 		 * Now check for early completion.  If all slvrs are
@@ -487,7 +489,8 @@ sli_ric_handler(struct pscrpc_request *rq)
 			struct slashrpc_cservice *csvc;
 
 			csvc = sli_getclcsvc(rq->rq_export);
-			sli_rci_ctl_health_send(csvc);
+			if (csvc)
+				sli_rci_ctl_health_send(csvc);
 		}
 		break;
 	case SRMT_READ:

@@ -99,7 +99,9 @@ sli_getclcsvc(struct pscrpc_export *exp)
 {
 	struct sli_exp_cli *iexpc;
 
-	iexpc = sl_exp_getpri_cli(exp);
+	iexpc = sl_exp_getpri_cli(exp, 0);
+	if (iexpc == NULL)
+		return (NULL);
 	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, NULL,
 	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
 	    SLCONNT_CLI, NULL));
