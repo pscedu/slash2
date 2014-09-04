@@ -173,20 +173,24 @@ static inline int
 mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
+	
 	mds_note_update(1);
-	rc = mdsio_read(current_vfsid, &rootcreds, buf, size, nb, off, h);
+	rc = mdsio_read(current_vfsid, &rootcreds, buf, size, nb, off,
+	    h);
 	mds_note_update(-1);
-	return rc;
+	return (rc);
 }
 
 static inline int
 mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
+
 	mds_note_update(1);
-	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off, h, NULL, NULL);
+	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off,
+	    h, NULL, NULL);
 	mds_note_update(-1);
-	return rc;
+	return (rc);
 }
 
 static inline int
@@ -450,7 +454,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				    current_reclaim_batchno,
 				    slstrerror(rc));
 
-			reclaim_entryp = (struct srt_reclaim_entry *)reclaimbuf;
+			reclaim_entryp = reclaimbuf;
 			if (reclaim_entryp->xid != RECLAIM_MAGIC_VER ||
 			    reclaim_entryp->fg.fg_gen != RECLAIM_MAGIC_GEN ||
 			    reclaim_entryp->fg.fg_fid != RECLAIM_MAGIC_FID)
@@ -507,7 +511,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
 	rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
-	    sizeof(struct srt_reclaim_entry), &size, reclaim_logfile_offset);
+	    sizeof(struct srt_reclaim_entry), &size,
+	    reclaim_logfile_offset);
 	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
