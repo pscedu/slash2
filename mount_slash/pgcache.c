@@ -22,6 +22,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * pgcache - Client user data page cache routines.  read(2) and write(2)
+ * data is held in these buffers when the client is not in direct I/O
+ * (DIO) mode.
+ */
+
 #define PSC_SUBSYS SLSS_BMAP
 #include "slsubsys.h"
 
@@ -103,7 +109,8 @@ bmpce_destroy(void *p)
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off, struct psc_waitq *wq)
+bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
+    struct psc_waitq *wq)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
@@ -111,7 +118,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off, struct psc_waitq *wq)
 	bmpc = bmap_2_bmpc(b);
 	search.bmpce_off = off;
 
-	while (1) {
+	for (;;) {
 		e = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 		    &search);
 		if (e) {
@@ -329,7 +336,8 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		if (wait) {
 			spinlock(&bmpc->bmpc_lock);
-			psc_waitq_waitrel_s(&bmpc->bmpc_waitq, &bmpc->bmpc_lock, 1);
+			psc_waitq_waitrel_s(&bmpc->bmpc_waitq,
+			    &bmpc->bmpc_lock, 1);
 			goto retry;
 		}
 	}
@@ -466,7 +474,8 @@ bmpce_reap(struct psc_poolmgr *m)
 			nfreed += bmpc_lru_tryfree(bmpc, waiters);
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else
-			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
+			psclog_debug("skip bmpc=%p, nothing on lru",
+			    bmpc);
 
 		BMAP_ULOCK(b);
 		if (nfreed >= waiters)
