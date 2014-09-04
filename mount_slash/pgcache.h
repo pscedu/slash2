@@ -65,7 +65,7 @@ struct bmap_pagecache_entry {
 	uint32_t		 bmpce_start;	/* region where data are valid  */
 	uint32_t		 bmpce_len;
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
-	void			*bmpce_base;	/* base pointer from slb	*/
+	void			*bmpce_base;	/* statically allocated pg contents */
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct pfl_timespec	 bmpce_laccess;	/* last page access		*/
 	struct psc_lockedlist	 bmpce_pndgaios;
