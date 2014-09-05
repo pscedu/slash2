@@ -3060,12 +3060,12 @@ void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	int i, rc;
-	struct fcmh_cli_info *fci, *tmp_fci;
+	struct bmap *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
-	struct bmap *b;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e;
+	struct fcmh_cli_info *fci, *tmp_fci;
 
 	while (pscthr_run(thr)) {
 		lc_peekheadwait(&readAheadQ);
@@ -3099,10 +3099,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 			r->biorq_ref = 1;
 			r->biorq_bmap = b;
 			r->biorq_npages = 0;
-#if 0
-			r->biorq_off = fci->fci_raoff;
-			r->biorq_len = fci->fci_rapages * BMPC_BUFSZ;
-#endif
 			r->biorq_flags = BIORQ_READ;
 			r->biorq_last_sliod = IOS_ID_ANY;
 
