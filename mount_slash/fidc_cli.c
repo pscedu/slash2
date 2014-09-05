@@ -213,6 +213,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	fci = fcmh_get_pri(f);
 	slc_fcmh_refresh_age(f);
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
+	INIT_PSC_LISTENTRY(&fci->fci_readahead);
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
 	if (fcmh_2_fid(f) >= SLFID_MIN &&

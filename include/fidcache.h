@@ -252,7 +252,7 @@ struct fidc_membh {
 #define	FCMH_OPCNT_DIRTY_QUEUE		(1 << 6)	/* CLI: attribute flushing */
 #define	FCMH_OPCNT_UPSCH		(1 << 7)	/* MDS: temporarily held by upsch engine */
 #define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
-#define	FCMH_OPCNT_READAHEAD		(1 << 9)	/* IOD: readahead */
+#define	FCMH_OPCNT_READAHEAD		(1 << 9)	/* IOD/CLI: readahead */
 
 void	fidc_init(int, int);
 

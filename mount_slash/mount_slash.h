@@ -48,6 +48,7 @@ struct dircache_page;
 /* mount_slash thread types */
 enum {
 	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
+	MSTHRT_READAHEAD,		/* readahead thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
@@ -102,6 +103,10 @@ struct msattrfl_thread {
 	struct psc_multiwait		 maft_mw;
 };
 
+struct msreadahead_thread {
+	struct psc_multiwait		 maft_mw;
+};
+
 struct msbmflra_thread {
 	struct psc_multiwait		 mbfra_mw;
 };
@@ -116,6 +121,7 @@ PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
+PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
@@ -261,6 +267,7 @@ void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
 void	 slc_setprefios(sl_ios_id_t);
+int	 msl_pages_prefetch(struct bmpc_ioreq *);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)

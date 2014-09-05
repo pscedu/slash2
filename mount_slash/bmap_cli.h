@@ -40,6 +40,8 @@
 
 #define NUM_ATTR_FLUSH_THREADS		1
 
+#define NUM_READAHEAD_THREADS		1
+
 /**
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */

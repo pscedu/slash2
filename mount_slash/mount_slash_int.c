@@ -95,8 +95,10 @@ struct psc_iostats	msl_io_1m_stat;
 
 extern struct psc_listcache	attrTimeoutQ;
 
+extern struct psc_listcache	 readAheadQ;
+
 void msl_update_attributes(struct msl_fsrqinfo *);
-static int msl_getra(struct msl_fhent *, int, uint32_t, int, uint32_t *, int *);
+static int msl_getra(struct msl_fhent *, int, uint32_t, int, uint32_t *, int *, uint32_t *, int *);
 
 static void
 msl_update_iocounters(int len)
@@ -172,11 +174,13 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op, uint64_t fsz, int last)
 {
-	int i, bsize, npages, rapages;
+	struct fidc_membh *f;
+	int i, bsize, npages, rapages, rapages2, readahead;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
-	uint32_t aoff, alen, raoff, nbmaps, bmpce_off;
+	uint32_t aoff, alen, raoff, raoff2, nbmaps, bmpce_off;
+	struct fcmh_cli_info *fci;
 
 	/*
 	 * Align the offset and length to the start of a page. Note that
@@ -244,18 +248,19 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
-	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages)) {
-#if 0
-		/* Read ahead into next bmap. */
-		if (bmap lease for read &&) {
-			rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
-			    BMAPGETF_ASYNC, &b);
-			BMAP_LOCK(b);
-			e = bmpce_lookup_locked(b, bmpce_off,
-			    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
-			bmap_op_done(b);
-		}
-#endif
+	readahead = msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages, &raoff2, &rapages2);
+
+	f = mfh->mfh_fcmh;
+	fci = fcmh_2_fci(f);
+	if (!readahead) {
+		FCMH_LOCK(f);
+		if (f->fcmh_flags & FCMH_CLI_READA_QUEUE) {
+			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
+			lc_remove(&readAheadQ, fci);
+			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
+			return;
+		}   
+		FCMH_ULOCK(f);
 		return;
 	}
 
@@ -270,11 +275,24 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		BMAP_ULOCK(b);
 
 		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "bmpce_foff = %"PRIx64,
-		    r, e, i, npages,
-		    (off_t)(bmpce_off + bmap_foff(b)));
+		    "bmpce_foff = %d\n", r, e, i, npages, bmpce_off);
 
 		psc_dynarray_add(&r->biorq_pages, e);
+	}
+	if (rapages2 && b->bcm_bmapno < nbmaps - 1) {
+		FCMH_LOCK(f);
+		fci->fci_raoff = raoff2;
+		fci->fci_rapages = rapages2;
+		fci->fci_bmapno = b->bcm_bmapno + 1; 
+		if (!(f->fcmh_flags & FCMH_CLI_READA_QUEUE)) {
+			f->fcmh_flags |= FCMH_CLI_READA_QUEUE;
+			lc_addtail(&readAheadQ, fci);
+			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
+		}   
+		FCMH_ULOCK(f);
+		psclog_diag("bmapno = %d, raoff = %d, rapages = %d", 
+			fci->fci_bmapno, fci->fci_raoff, fci->fci_rapages);
+		return;
 	}
 }
 
@@ -636,6 +654,8 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	int i, rc, found = 0, needflush = 0;
 
 	q = r0->biorq_fsrqi;
+	if (q == NULL)
+		return (0);
 
 	/* Don't use me later */
 	r0->biorq_fsrqi = NULL;
@@ -1490,7 +1510,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
  *	read request or a read-before-write for a write request.  It is
  *	also used to wait for read-ahead pages to complete.
  */
-__static int
+int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
 	int i, rc = 0, aiowait = 0;
@@ -1746,9 +1766,10 @@ msl_pages_copyout(struct bmpc_ioreq *r)
  */
 static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
-    uint32_t *raoff, int *rasize)
+    uint32_t *raoff1, int *rasize1, uint32_t *raoff2, int *rasize2)
 {
 	int rapages;
+	uint32_t raoff;
 
 	MFH_LOCK(mfh);
 	if (!mfh->mfh_ra.mra_nseq) {
@@ -1762,20 +1783,30 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	}
 
 	if (!mfh->mfh_ra.mra_raoff)
-		*raoff = off + npages * BMPC_BUFSZ;
+		raoff = off + npages * BMPC_BUFSZ;
 	else
-		*raoff = mfh->mfh_ra.mra_raoff;
+		raoff = mfh->mfh_ra.mra_raoff;
 
 	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
 	    psc_atomic32_read(&max_readahead));
-	rapages = MIN((bsize - (int)(*raoff) + BMPC_BUFSZ - 1) / BMPC_BUFSZ,
-	    rapages);
 
-	mfh->mfh_ra.mra_raoff = *raoff + rapages * BMPC_BUFSZ;
-	if (mfh->mfh_ra.mra_raoff >= bsize)
-		mfh->mfh_ra.mra_raoff = 0;
+	/* the readahead can be split into two parts by the bmap boundary */
+	if ((int)raoff < bsize) {
+		*raoff1 = raoff;
+		*rasize1 = MIN((bsize - (int)raoff + BMPC_BUFSZ - 1) / 
+		    BMPC_BUFSZ, rapages);
 
-	*rasize = rapages;
+		*raoff2 = 0;
+		*rasize2 = rapages - *rasize1;
+	} else {
+		*raoff1 = 0;
+		*rasize1 = 0;
+
+		*raoff2 = (int)raoff - bsize;
+		*rasize2 = rapages;
+	}
+	mfh->mfh_ra.mra_raoff = raoff + rapages * BMPC_BUFSZ;
+
 	MFH_ULOCK(mfh);
 
 	return (1);
@@ -1784,6 +1815,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 static void
 msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 {
+	size_t prev, curr;
 	spinlock(&mfh->mfh_lock);
 
 	/*
@@ -1791,9 +1823,13 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	 * trigger a read-ahead.  This is because as part of the
 	 * msl_fhent structure, the fields are zeroed during allocation.
 	 */
-	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off)
+	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off) {
 		mfh->mfh_ra.mra_nseq++;
-	else {
+		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
+		curr = off / SLASH_BMAP_SIZE;
+		if (curr > prev)
+			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
+	} else {
 		mfh->mfh_ra.mra_raoff = 0;
 		mfh->mfh_ra.mra_nseq = 0;
 	}

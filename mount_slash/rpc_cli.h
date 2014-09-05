@@ -131,6 +131,8 @@ msl_getmw(void)
 		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_ATTRFLSH:
 		return (&msattrflthr(thr)->maft_mw);
+	case MSTHRT_READAHEAD:
+		return (&msreadaheadthr(thr)->maft_mw);
 	case MSTHRT_BMAPFLSHRLS:
 		return (&msbmflrlsthr(thr)->mbfrlst_mw);
 	case MSTHRT_BMAPFLSH:
