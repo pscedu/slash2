@@ -1939,7 +1939,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-			lc_addtail(&attrTimeoutQ, fci);
+			lc_addtail(&slc_attrtimeoutq, fci);
 			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		}
 	}
