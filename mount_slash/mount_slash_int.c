@@ -1787,7 +1787,7 @@ msl_pages_copyout(struct bmpc_ioreq *r)
  * @raoff2: offset where RA should start in following bmap.
  * @rasize2: length of RA in the following bmap.
  */
-static int
+__static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
     uint32_t *raoff1, int *rasize1, uint32_t *raoff2, int *rasize2)
 {
