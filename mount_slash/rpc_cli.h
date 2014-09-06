@@ -135,8 +135,6 @@ msl_getmw(void)
 		return (&msbmflrlsthr(thr)->mbfrlst_mw);
 	case MSTHRT_BMAPFLSHRPC:
 		return (&msbmflrpc(thr)->mbflrpc_mw);
-	case MSTHRT_BMAPREADAHEAD:
-		return (&msbmfrathr(thr)->mbfra_mw);
 	case MSTHRT_BMAPLSWATCHER:
 		return (&msbmflwthr(thr)->mbfwa_mw);
 	case MSTHRT_FS:

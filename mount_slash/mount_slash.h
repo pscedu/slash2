@@ -48,13 +48,11 @@ struct dircache_page;
 /* mount_slash thread types */
 enum {
 	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
-	MSTHRT_READAHEAD,		/* readahead thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
 	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
-	MSTHRT_BMAPREADAHEAD,		/* async thread for read ahead */
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
@@ -64,6 +62,7 @@ enum {
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
+	MSTHRT_READAHEAD,		/* readahead thread */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
@@ -107,10 +106,6 @@ struct msreadahead_thread {
 	struct psc_multiwait		 mrat_mw;
 };
 
-struct msbmflra_thread {
-	struct psc_multiwait		 mbfra_mw;
-};
-
 struct msbmflwatcher_thread {
 	struct psc_multiwait		 mbfwa_mw;
 };
@@ -119,7 +114,6 @@ PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
 PSCTHR_MKCAST(msbmflwthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
-PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
