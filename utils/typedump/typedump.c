@@ -181,7 +181,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct mio_rootnames);
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
-	PRTYPE(struct msbmflra_thread);
 	PRTYPE(struct msbmflrls_thread);
 	PRTYPE(struct msbmflrpc_thread);
 	PRTYPE(struct msbmflwatcher_thread);
@@ -199,6 +198,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
+	PRTYPE(struct msreadahead_thread);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
 	PRTYPE(struct resm_mds_info);
@@ -457,6 +457,7 @@ main(int argc, char *argv[])
 	PRVAL(NSLVR_READAHEAD_THRS);
 	PRVAL(NUM_ATTR_FLUSH_THREADS);
 	PRVAL(NUM_BMAP_FLUSH_THREADS);
+	PRVAL(NUM_READAHEAD_THREADS);
 	PRVAL(REPL_MAX_INFLIGHT_SLVRS);
 	PRVAL(RIC_MAX_SLVRS_PER_IO);
 	PRVAL(SITE_NAME_MAX);
@@ -615,7 +616,6 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);
 	PRVAL(MSTHRT_BMAPLSWATCHER);
-	PRVAL(MSTHRT_BMAPREADAHEAD);
 	PRVAL(MSTHRT_CONN);
 	PRVAL(MSTHRT_CTL);
 	PRVAL(MSTHRT_CTLAC);
@@ -625,6 +625,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_NBRQ);
 	PRVAL(MSTHRT_RCI);
 	PRVAL(MSTHRT_RCM);
+	PRVAL(MSTHRT_READAHEAD);
 	PRVAL(MSTHRT_TIOS);
 	PRVAL(MSTHRT_USKLNDPL);
 	PRVAL(MSTHRT_WORKER);
