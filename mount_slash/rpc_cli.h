@@ -127,26 +127,26 @@ msl_getmw(void)
 
 	thr = pscthr_get();
 	switch (thr->pscthr_type) {
-	case MSTHRT_FS:
-		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_ATTRFLSH:
 		return (&msattrflthr(thr)->maft_mw);
-	case MSTHRT_READAHEAD:
-		return (&msreadaheadthr(thr)->maft_mw);
-	case MSTHRT_BMAPFLSHRLS:
-		return (&msbmflrlsthr(thr)->mbfrlst_mw);
 	case MSTHRT_BMAPFLSH:
 		return (&msbmflthr(thr)->mbft_mw);
-	case MSTHRT_BMAPREADAHEAD:
-		return (&msbmfrathr(thr)->mbfra_mw);
+	case MSTHRT_BMAPFLSHRLS:
+		return (&msbmflrlsthr(thr)->mbfrlst_mw);
 	case MSTHRT_BMAPFLSHRPC:
 		return (&msbmflrpc(thr)->mbflrpc_mw);
+	case MSTHRT_BMAPREADAHEAD:
+		return (&msbmfrathr(thr)->mbfra_mw);
 	case MSTHRT_BMAPLSWATCHER:
 		return (&msbmflwthr(thr)->mbfwa_mw);
+	case MSTHRT_FS:
+		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_RCI:
 		return (&msrcithr(thr)->mrci_mw);
 	case MSTHRT_RCM:
 		return (&msrcmthr(thr)->mrcm_mw);
+	case MSTHRT_READAHEAD:
+		return (&msreadaheadthr(thr)->maft_mw);
 	case MSTHRT_CTL:
 		return (NULL);
 	case MSTHRT_WORKER:
