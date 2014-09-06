@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd July 30, 2014
+.Dd September 6, 2014
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -825,7 +825,6 @@ display additional information about each operation being performed.
 .\"		q{msbflushrpcthr}		=> qq{Bmap flusher asynchronous\n.Tn RPC\nreplier},
 .\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher},
 .\"		q{msbmlwthr}			=> qq{Bmap lease watcher},
-.\"		q{msbrathr}			=> qq{Bmap read-ahead queuer},
 .\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
 .\"		q{msconnthr}			=> qq{Peer resource connection monitor},
 .\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
@@ -836,6 +835,7 @@ display additional information about each operation being performed.
 .\"		q{msnbrqthr}			=> qq{Non-blocking\n.Tn RPC\nreply handler},
 .\"		q{msrcithr Ns Ar %02d}		=> qq{.Tn IO RPC\nrequest service},
 .\"		q{msrcmthr Ns Ar %02d}		=> qq{.Tn MDS RPC\nrequest service},
+.\"		q{msreadaheadthr}		=> qq{Bmap read-ahead queuer},
 .\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater},
 .\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll},
 .\"		q{mswkthr Ns Ar %d}		=> qq{Generic worker},
@@ -857,8 +857,6 @@ replier
 Bmap flusher
 .It Cm msbmlwthr
 Bmap lease watcher
-.It Cm msbrathr
-Bmap read-ahead queuer
 .It Cm msbrlsthr
 Bmap timed releaser
 .It Cm msconnthr
@@ -888,6 +886,8 @@ request service
 .It Cm msrcmthr Ns Ar %02d
 .Tn MDS RPC
 request service
+.It Cm msreadaheadthr
+Bmap read-ahead queuer
 .It Cm mstiosthr
 Timed
 .Tn I/O
