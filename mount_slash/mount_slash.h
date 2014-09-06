@@ -104,7 +104,7 @@ struct msattrfl_thread {
 };
 
 struct msreadahead_thread {
-	struct psc_multiwait		 maft_mw;
+	struct psc_multiwait		 mrat_mw;
 };
 
 struct msbmflra_thread {

@@ -3206,7 +3206,7 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreadaheadthr_spawn(void)
 {
-	struct msreadahead_thread *mreadaheadt;
+	struct msreadahead_thread *mrat;
 	struct psc_thread *thr;
 	int i;
 
@@ -3218,8 +3218,8 @@ msreadaheadthr_spawn(void)
 		    msreadaheadthr_main, NULL,
 		    sizeof(struct msreadahead_thread),
 		    "msreadaheadthr%d", i);
-		mreadaheadt = msreadaheadthr(thr);
-		psc_multiwait_init(&mreadaheadt->maft_mw, "%s",
+		mrat = msreadaheadthr(thr);
+		psc_multiwait_init(&mrat->mrat_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
@@ -3228,9 +3228,9 @@ msreadaheadthr_spawn(void)
 void
 msattrflushthr_spawn(void)
 {
-	int i;
-	struct msattrfl_thread *mattrft;
+	struct msattrfl_thread *maft;
 	struct psc_thread *thr;
+	int i;
 
 	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info,
 	    fci_lentry, "attrtimeout");
@@ -3240,8 +3240,8 @@ msattrflushthr_spawn(void)
 		    msattrflushthr_main, NULL,
 		    sizeof(struct msattrfl_thread),
 		    "msattrflushthr%d", i);
-		mattrft = msattrflthr(thr);
-		psc_multiwait_init(&mattrft->maft_mw, "%s",
+		maft = msattrflthr(thr);
+		psc_multiwait_init(&maft->maft_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
