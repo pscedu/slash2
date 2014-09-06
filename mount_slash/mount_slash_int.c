@@ -85,7 +85,7 @@ struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 psc_atomic32_t		slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
-struct pscrpc_nbreqset *slc_pndgreadareqs;
+struct pscrpc_nbreqset *slc_pndgreadarqs;
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
