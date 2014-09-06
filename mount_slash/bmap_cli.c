@@ -52,7 +52,7 @@ msl_bmap_free(void)
 {
 	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
 	/* XXX make BMAP_CACHE_MAX dynamic? */
-	while (lc_nitems(&bmapTimeoutQ) > BMAP_CACHE_MAX) {
+	while (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAX) {
 		spinlock(&bmapTimeoutLock);
 		psc_waitq_wakeall(&bmapTimeoutWaitq);
 		freelock(&bmapTimeoutLock);
@@ -346,7 +346,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
 	pscrpc_req_setcompl(rq, &slc_rpc_compl);
 
-	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+	rc = pscrpc_nbreqset_add(slc_pndgbmaplsrqs, rq);
 	if (!rc)
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
 
@@ -451,7 +451,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
 	pscrpc_req_setcompl(rq, &slc_rpc_compl);
 
-	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+	rc = pscrpc_nbreqset_add(slc_pndgbmaplsrqs, rq);
 	if (!rc)
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
 
@@ -697,7 +697,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
 	 */
-	lc_addtail(&bmapTimeoutQ, bci);
+	lc_addtail(&slc_bmaptimeoutq, bci);
 }
 
 int
@@ -759,7 +759,7 @@ msl_bmap_release(struct sl_resm *resm)
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	rc = pscrpc_nbreqset_add(pndgBmapRlsReqs, rq);
+	rc = pscrpc_nbreqset_add(slc_pndgbmaprlsrqs, rq);
 
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;
@@ -801,9 +801,9 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
 		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
-		LIST_CACHE_LOCK(&bmapTimeoutQ);
-		nitems = lc_nitems(&bmapTimeoutQ);
-		LIST_CACHE_FOREACH(bci, &bmapTimeoutQ) {
+		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
+		nitems = lc_nitems(&slc_bmaptimeoutq);
+		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -842,11 +842,11 @@ msbmaprlsthr_main(struct psc_thread *thr)
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
 		}
-		LIST_CACHE_ULOCK(&bmapTimeoutQ);
+		LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAP_TIMEOQ;
-			lc_remove(&bmapTimeoutQ, bci);
+			lc_remove(&slc_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAP_WR) {
 				/* Setup a msg to an ION. */

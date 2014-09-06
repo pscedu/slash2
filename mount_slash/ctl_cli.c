@@ -519,7 +519,7 @@ void
 msctlparam_readahead_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    psc_atomic32_read(&max_readahead));
+	    psc_atomic32_read(&slc_max_readahead));
 }
 
 int
@@ -532,7 +532,7 @@ msctlparam_readahead_set(const char *val)
 	if (*endp || endp == val ||
 	    value < 0 || value > 32 * 1024)
 		return (-1);
-	psc_atomic32_set(&max_readahead, value);
+	psc_atomic32_set(&slc_max_readahead, value);
 	return (0);
 }
 
@@ -540,7 +540,7 @@ void
 msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    psc_atomic32_read(&max_nretries));
+	    psc_atomic32_read(&slc_max_nretries));
 }
 
 int
@@ -553,7 +553,7 @@ msctlparam_offlinenretries_set(const char *val)
 	if (l < 1 || l > 1000 ||
 	    endp == val || *endp != '\0')
 		return (-1);
-	psc_atomic32_set(&max_nretries, l);
+	psc_atomic32_set(&slc_max_nretries, l);
 	return (0);
 }
 

@@ -67,14 +67,15 @@
 #include "slconn.h"
 #include "slerr.h"
 
-__static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 
-void mfsrq_seterr(struct msl_fsrqinfo *, int);
+__static void	mfsrq_seterr(struct msl_fsrqinfo *, int);
 
-void msl_update_attributes(struct msl_fsrqinfo *);
-static int msl_getra(struct msl_fhent *, int, uint32_t, int, uint32_t *, int *, uint32_t *, int *);
+__static void	msl_update_attributes(struct msl_fsrqinfo *);
+__static int	msl_getra(struct msl_fhent *, int, uint32_t, int,
+		    uint32_t *, int *, uint32_t *, int *);
 
 /* Flushing fs threads wait here for I/O completion. */
 struct psc_waitq	msl_fhent_aio_waitq = PSC_WAITQ_INIT;
@@ -82,9 +83,9 @@ struct psc_waitq	msl_fhent_aio_waitq = PSC_WAITQ_INIT;
 struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-psc_atomic32_t		max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
+psc_atomic32_t		slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
-struct pscrpc_nbreqset *pndgReadaReqs;
+struct pscrpc_nbreqset *slc_pndgreadareqs;
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
@@ -99,10 +100,6 @@ struct psc_iostats	msl_io_64k_stat;
 struct psc_iostats	msl_io_128k_stat;
 struct psc_iostats	msl_io_512k_stat;
 struct psc_iostats	msl_io_1m_stat;
-
-extern struct psc_listcache	attrTimeoutQ;
-
-extern struct psc_listcache	 readAheadQ;
 
 static void
 msl_update_iocounters(int len)
@@ -264,7 +261,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_CLI_READA_QUEUE) {
 			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
-			lc_remove(&readAheadQ, fci);
+			lc_remove(&slc_readaheadq, fci);
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
 			return;
 		}
@@ -294,7 +291,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		fci->fci_bmapno = b->bcm_bmapno + 1;
 		if (!(f->fcmh_flags & FCMH_CLI_READA_QUEUE)) {
 			f->fcmh_flags |= FCMH_CLI_READA_QUEUE;
-			lc_addtail(&readAheadQ, fci);
+			lc_addtail(&slc_readaheadq, fci);
 			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
 		}
 		FCMH_ULOCK(f);
@@ -330,8 +327,9 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		bmpc->bmpc_pndgwr--;
 		if (!bmpc->bmpc_pndgwr) {
 			b->bcm_flags &= ~BMAP_FLUSHQ;
-			lc_remove(&bmapFlushQ, b);
-			DEBUG_BMAP(PLL_DIAG, b, "remove from bmapFlushQ");
+			lc_remove(&slc_bmapflushq, b);
+			DEBUG_BMAP(PLL_DIAG, b,
+			    "remove from slc_bmapflushq");
 		}
 	}
 
@@ -418,7 +416,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
 
-	mfh = psc_pool_get(mfh_pool);
+	mfh = psc_pool_get(slc_mfh_pool);
 	memset(mfh, 0, sizeof(*mfh));
 	mfh->mfh_refcnt = 1;
 	mfh->mfh_fcmh = f;
@@ -1093,8 +1091,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	bmpc->bmpc_pndgwr++;
 	if (!(b->bcm_flags & BMAP_FLUSHQ)) {
 		b->bcm_flags |= BMAP_FLUSHQ;
-		lc_addtail(&bmapFlushQ, b);
-		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
+		lc_addtail(&slc_bmapflushq, b);
+		DEBUG_BMAP(PLL_DIAG, b, "add to slc_bmapflushq");
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA);
 
@@ -1253,7 +1251,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	rq->rq_interpret_reply = msl_readahead_cb0;
 	pscrpc_req_setcompl(rq, &slc_rpc_compl);
 
-	rc = pscrpc_nbreqset_add(pndgReadaReqs, rq);
+	rc = pscrpc_nbreqset_add(slc_pndgreadarqs, rq);
 	if (!rc)
 		return;
 
@@ -1813,7 +1811,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 		raoff = mfh->mfh_ra.mra_raoff;
 
 	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
-	    psc_atomic32_read(&max_readahead));
+	    psc_atomic32_read(&slc_max_readahead));
 
 	/*
 	 * The readahead can be split into two parts by the bmap

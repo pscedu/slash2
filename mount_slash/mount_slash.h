@@ -418,11 +418,8 @@ enum {
 
 extern const char		*ctlsockfn;
 extern sl_ios_id_t		 prefIOS;
-extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
 extern char			 mountpoint[];
-
-extern struct psc_waitq		 msl_fhent_flush_waitq;
 
 extern struct psc_iostats	 msl_diord_stat;
 extern struct psc_iostats	 msl_diowr_stat;
@@ -438,19 +435,21 @@ extern struct psc_iostats	 msl_io_128k_stat;
 extern struct psc_iostats	 msl_io_512k_stat;
 extern struct psc_iostats	 msl_io_1m_stat;
 
-extern struct psc_listcache	 bmapTimeoutQ;
-extern struct psc_waitq		 bmapFlushWaitq;
+extern struct psc_listcache	 slc_attrtimeoutq;
+extern struct psc_listcache	 slc_bmapflushq;
+extern struct psc_listcache	 slc_bmapreadaheadq;
+extern struct psc_listcache	 slc_bmaptimeoutq;
+extern struct psc_listcache	 slc_readaheadq;
 
-extern struct psc_listcache	 bmapReadAheadQ;
-extern struct pscrpc_nbreqset	*pndgReadaReqs;
-extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
-extern struct pscrpc_nbreqset	*pndgBmapRlsReqs;
+extern struct pscrpc_nbreqset	*slc_pndgreadarqs;
+extern struct pscrpc_nbreqset	*slc_pndgbmaplsrqs;
+extern struct pscrpc_nbreqset	*slc_pndgbmaprlsrqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
-extern struct psc_poolmgr	*mfh_pool;
+extern struct psc_poolmgr	*slc_mfh_pool;
 
-extern psc_atomic32_t		 max_nretries;
-extern psc_atomic32_t		 max_readahead;
+extern psc_atomic32_t		 slc_max_nretries;
+extern psc_atomic32_t		 slc_max_readahead;
 
 #endif /* _MOUNT_SLASH_H_ */

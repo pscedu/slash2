@@ -113,10 +113,7 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
 
 struct psc_listcache		 attrTimeoutQ;
-
-struct psc_waitq		 msl_readahead_q = PSC_WAITQ_INIT;
-psc_spinlock_t			 msl_readahead_qlock = SPINLOCK_INIT;
-struct psc_listcache		 readAheadQ;
+struct psc_listcache		 slc_readaheadq;
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -135,8 +132,8 @@ struct psc_poolmgr		*slc_async_req_pool;
 struct psc_poolmaster		 slc_biorq_poolmaster;
 struct psc_poolmgr		*slc_biorq_pool;
 
-struct psc_poolmaster		 mfh_poolmaster;
-struct psc_poolmgr		*mfh_pool;
+struct psc_poolmaster		 slc_mfh_poolmaster;
+struct psc_poolmgr		*slc_mfh_pool;
 
 struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
@@ -1826,7 +1823,7 @@ mfh_decref(struct msl_fhent *mfh)
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
-		psc_pool_return(mfh_pool, mfh);
+		psc_pool_return(slc_mfh_pool, mfh);
 	} else
 		MFH_ULOCK(mfh);
 }
@@ -3068,24 +3065,25 @@ msreadaheadthr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci, *tmp_fci;
 
 	while (pscthr_run(thr)) {
-		lc_peekheadwait(&readAheadQ);
-		LIST_CACHE_LOCK(&readAheadQ);
-		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &readAheadQ) {
+		lc_peekheadwait(&slc_readaheadq);
+		LIST_CACHE_LOCK(&slc_readaheadq);
+		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_readaheadq) {
 
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
 				continue;
 
-			lc_remove(&readAheadQ, fci);
+			lc_remove(&slc_readaheadq, fci);
 			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
 			FCMH_ULOCK(f);
 
-			LIST_CACHE_ULOCK(&readAheadQ);
+			LIST_CACHE_ULOCK(&slc_readaheadq);
 
 			rc = bmap_get(f, fci->fci_bmapno, SL_READ, &b);
 			if (rc) {
-				fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-				LIST_CACHE_LOCK(&readAheadQ);
+				fcmh_op_done_type(f,
+				    FCMH_OPCNT_READAHEAD);
+				LIST_CACHE_LOCK(&slc_readaheadq);
 				continue;
 			}
 			r = psc_pool_get(slc_biorq_pool);
@@ -3108,22 +3106,23 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 			bmap_op_done(b);
 
-		        for (i = 0; i < fci->fci_rapages; i++) {
+			for (i = 0; i < fci->fci_rapages; i++) {
 
-		                BMAP_LOCK(b);
-				e = bmpce_lookup_locked(b, fci->fci_raoff + i*BMPC_BUFSZ,
+				BMAP_LOCK(b);
+				e = bmpce_lookup_locked(b,
+				    fci->fci_raoff + i * BMPC_BUFSZ,
 				    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 				BMAP_ULOCK(b);
 
-                		psc_dynarray_add(&r->biorq_pages, e);
-			}    
+				psc_dynarray_add(&r->biorq_pages, e);
+			}
 			msl_pages_prefetch(r);
 			msl_biorq_destroy(r);
 
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			LIST_CACHE_LOCK(&readAheadQ);
+			LIST_CACHE_LOCK(&slc_readaheadq);
 		}
-		LIST_CACHE_ULOCK(&readAheadQ);
+		LIST_CACHE_ULOCK(&slc_readaheadq);
 	}
 }
 
@@ -3179,11 +3178,13 @@ msattrflushthr_main(struct psc_thread *thr)
 				f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
 				FCMH_UNBUSY(f);
 			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-				psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+				psc_assert(f->fcmh_flags &
+				    FCMH_CLI_DIRTY_QUEUE);
 				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 				lc_remove(&attrTimeoutQ, fci);
 				FCMH_UNBUSY(f);
-				fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+				fcmh_op_done_type(f,
+				    FCMH_OPCNT_DIRTY_QUEUE);
 			} else
 				FCMH_UNBUSY(f);
 
@@ -3205,16 +3206,18 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreadaheadthr_spawn(void)
 {
-	int i;
 	struct msreadahead_thread *mreadaheadt;
 	struct psc_thread *thr;
+	int i;
 
-	lc_reginit(&readAheadQ, struct fcmh_cli_info,
+	lc_reginit(&slc_readaheadq, struct fcmh_cli_info,
 	    fci_readahead, "readahead");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_READAHEAD, 0, msreadaheadthr_main, NULL,
-		    sizeof(struct msreadahead_thread), "msreadaheadthr%d", i);
+		thr = pscthr_init(MSTHRT_READAHEAD, 0,
+		    msreadaheadthr_main, NULL,
+		    sizeof(struct msreadahead_thread),
+		    "msreadaheadthr%d", i);
 		mreadaheadt = msreadaheadthr(thr);
 		psc_multiwait_init(&mreadaheadt->maft_mw, "%s",
 		    thr->pscthr_name);
@@ -3233,8 +3236,10 @@ msattrflushthr_spawn(void)
 	    fci_lentry, "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_ATTRFLSH, 0, msattrflushthr_main, NULL,
-		    sizeof(struct msattrfl_thread), "msattrflushthr%d", i);
+		thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
+		    msattrflushthr_main, NULL,
+		    sizeof(struct msattrfl_thread),
+		    "msattrflushthr%d", i);
 		mattrft = msattrflthr(thr);
 		psc_multiwait_init(&mattrft->maft_mw, "%s",
 		    thr->pscthr_name);
@@ -3308,12 +3313,12 @@ msl_init(void)
 	    NULL, NULL, "biorq");
 	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
 
-	psc_poolmaster_init(&mfh_poolmaster,
+	psc_poolmaster_init(&slc_mfh_poolmaster,
 	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "mfh");
-	mfh_pool = psc_poolmaster_getmgr(&mfh_poolmaster);
+	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
 
-	pndgReadaReqs = pscrpc_nbreqset_init(NULL, NULL);
+	slc_pndgreadarqs = pscrpc_nbreqset_init(NULL, NULL);
 
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");

@@ -55,14 +55,14 @@
 
 struct timespec			 bmapFlushWaitSecs = { 1, 0L };
 struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
-struct psc_listcache		 bmapFlushQ;
-struct psc_listcache		 bmapTimeoutQ;
+struct psc_listcache		 slc_bmapflushq;
+struct psc_listcache		 slc_bmaptimeoutq;
 struct psc_compl		 slc_rpc_compl = PSC_COMPL_INIT;
 
-struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
-struct pscrpc_nbreqset		*pndgBmapRlsReqs;	/* bmap release */
+struct pscrpc_nbreqset		*slc_pndgbmaplsrqs;	/* bmap lease */
+struct pscrpc_nbreqset		*slc_pndgbmaprlsreqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
-psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
+psc_atomic32_t			 slc_max_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
@@ -147,7 +147,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "nretries=%d, maxretries=%d (non-blocking=%d)",
-	    mfh->mfh_retries, psc_atomic32_read(&max_nretries),
+	    mfh->mfh_retries, psc_atomic32_read(&slc_max_nretries),
 	    mfh->mfh_oflags & O_NONBLOCK);
 
 	/* test for retryable error codes */
@@ -177,7 +177,8 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	// fcntl(2)
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		retry = 0;
-	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
+	else if (++mfh->mfh_retries >=
+	    psc_atomic32_read(&slc_max_nretries))
 		retry = 0;
 
 	if (retry) {
@@ -773,16 +774,16 @@ msbmflwthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-		lc_peekheadwait(&bmapFlushQ);
+		lc_peekheadwait(&slc_bmapflushq);
 
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		/*
-		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
-		 * It is taken off the bmapFlushQ after all its biorqs
-		 * are flushed if any.
+		 * A bmap can be on both slc_bmapflushq and
+		 * slc_bmaptimeoutq.  It is taken off the slc_bmapflushq
+		 * after all its biorqs are flushed if any.
 		 */
-		LIST_CACHE_LOCK(&bmapFlushQ);
-		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
+		LIST_CACHE_LOCK(&slc_bmapflushq);
+		LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			DEBUG_BMAP(PLL_DEBUG, b, "begin");
@@ -798,7 +799,7 @@ msbmflwthr_main(struct psc_thread *thr)
 				psc_dynarray_add(&bmaps, b);
 			BMAP_ULOCK(b);
 		}
-		LIST_CACHE_ULOCK(&bmapFlushQ);
+		LIST_CACHE_ULOCK(&slc_bmapflushq);
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			/*
@@ -832,8 +833,8 @@ bmap_flush(void)
 	struct sl_resm *m = NULL;
 	int i, j, didwork = 0;
 
-	LIST_CACHE_LOCK(&bmapFlushQ);
-	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
+	LIST_CACHE_LOCK(&slc_bmapflushq);
+	LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
 
 		DEBUG_BMAP(PLL_DIAG, b, "flushable?");
 
@@ -860,7 +861,7 @@ bmap_flush(void)
 		if (psc_dynarray_len(&bmaps) >= MAX_OUTSTANDING_RPCS)
 			break;
 	}
-	LIST_CACHE_ULOCK(&bmapFlushQ);
+	LIST_CACHE_ULOCK(&slc_bmapflushq);
 
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 		b = psc_dynarray_getpos(&bmaps, i);
@@ -931,7 +932,7 @@ msbmapflushthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 
-		lc_peekheadwait(&bmapFlushQ);
+		lc_peekheadwait(&slc_bmapflushq);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
 
@@ -967,9 +968,9 @@ msbmapflushrpcthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&slc_rpc_compl, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
-		pscrpc_nbreqset_reap(pndgReadaReqs);
-		pscrpc_nbreqset_reap(pndgBmaplsReqs);
-		pscrpc_nbreqset_reap(pndgBmapRlsReqs);
+		pscrpc_nbreqset_reap(slc_pndgreadarqs);
+		pscrpc_nbreqset_reap(slc_pndgbmaplsrqs);
+		pscrpc_nbreqset_reap(slc_pndgbmaprlsrqs);
 	}
 }
 
@@ -996,16 +997,17 @@ msbmapflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL, msl_bmap_release_cb);
-	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
+	slc_pndgbmaprlsrqs = pscrpc_nbreqset_init(NULL,
+	    msl_bmap_release_cb);
+	slc_pndgbmaplsrqs = pscrpc_nbreqset_init(NULL, NULL);
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, NULL);
 
 	psc_waitq_init(&slc_bflush_waitq);
 
-	lc_reginit(&bmapFlushQ, struct bmapc_memb,
+	lc_reginit(&slc_bmapflushq, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
 
-	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
+	lc_reginit(&slc_bmaptimeoutq, struct bmap_cli_info,
 	    bci_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
