@@ -60,7 +60,7 @@ struct psc_listcache		 slc_bmaptimeoutq;
 struct psc_compl		 slc_rpc_compl = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*slc_pndgbmaplsrqs;	/* bmap lease */
-struct pscrpc_nbreqset		*slc_pndgbmaprlsreqs;	/* bmap release */
+struct pscrpc_nbreqset		*slc_pndgbmaprlsrqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 psc_atomic32_t			 slc_max_nretries = PSC_ATOMIC32_INIT(256);
 

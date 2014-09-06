@@ -112,7 +112,7 @@ struct uid_mapping {
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
 
-struct psc_listcache		 attrTimeoutQ;
+struct psc_listcache		 slc_attrtimeoutq;
 struct psc_listcache		 slc_readaheadq;
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
@@ -1947,7 +1947,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		} else if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-			lc_remove(&attrTimeoutQ, fci);
+			lc_remove(&slc_attrtimeoutq, fci);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
 	}
@@ -2676,7 +2676,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 
 			fci = fcmh_2_fci(c);
-			lc_remove(&attrTimeoutQ, fci);
+			lc_remove(&slc_attrtimeoutq, fci);
 
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
@@ -3136,15 +3136,15 @@ msattrflushthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-		lc_peekheadwait(&attrTimeoutQ);
+		lc_peekheadwait(&slc_attrtimeoutq);
 
 		did_work = 0;
 		PFL_GETTIMESPEC(&ts);
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
-		LIST_CACHE_LOCK(&attrTimeoutQ);
-		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &attrTimeoutQ) {
+		LIST_CACHE_LOCK(&slc_attrtimeoutq);
+		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_attrtimeoutq) {
 
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
@@ -3167,7 +3167,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			f->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 			FCMH_ULOCK(f);
 
-			LIST_CACHE_ULOCK(&attrTimeoutQ);
+			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
 
 			OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
 
@@ -3181,7 +3181,7 @@ msattrflushthr_main(struct psc_thread *thr)
 				psc_assert(f->fcmh_flags &
 				    FCMH_CLI_DIRTY_QUEUE);
 				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&attrTimeoutQ, fci);
+				lc_remove(&slc_attrtimeoutq, fci);
 				FCMH_UNBUSY(f);
 				fcmh_op_done_type(f,
 				    FCMH_OPCNT_DIRTY_QUEUE);
@@ -3194,7 +3194,7 @@ msattrflushthr_main(struct psc_thread *thr)
 		if (did_work)
 			continue;
 		else
-			LIST_CACHE_ULOCK(&attrTimeoutQ);
+			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
 
 		OPSTAT_INCR(SLC_OPST_FLUSH_ATTR_WAIT);
 		spinlock(&msl_flush_attrqlock);
@@ -3232,7 +3232,7 @@ msattrflushthr_spawn(void)
 	struct msattrfl_thread *mattrft;
 	struct psc_thread *thr;
 
-	lc_reginit(&attrTimeoutQ, struct fcmh_cli_info,
+	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info,
 	    fci_lentry, "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
