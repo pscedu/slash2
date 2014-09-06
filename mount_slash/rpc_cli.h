@@ -144,7 +144,7 @@ msl_getmw(void)
 	case MSTHRT_RCM:
 		return (&msrcmthr(thr)->mrcm_mw);
 	case MSTHRT_READAHEAD:
-		return (&msreadaheadthr(thr)->maft_mw);
+		return (&msreadaheadthr(thr)->mrat_mw);
 	case MSTHRT_CTL:
 		return (NULL);
 	case MSTHRT_WORKER:
