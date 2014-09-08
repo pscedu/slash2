@@ -290,7 +290,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			DEBUG_FCMH(PLL_WARN, f, "error during "
 			    "getattr backing file rc=%d", rc);
 	}
-	if (rc == ENOENT) {
+	if (rc) {
 		f->fcmh_flags |= FCMH_IOD_NO_BACKFILE;
 		rc = 0;
 	}
