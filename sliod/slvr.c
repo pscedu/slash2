@@ -489,7 +489,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 	size_t foff;
 
 	f = slvr_2_fcmh(s);
-	if (f->fcmh_flags & FCMH_IOD_NO_BACKFILE) {
+	if (!(f->fcmh_flags & FCMH_IOD_BACKFILE)) {
 		psclog_warnx("no backing file: "SLPRI_FG" fd=%d",
 		    SLPRI_FG_ARGS(&f->fcmh_fg), slvr_2_fd(s));
 		return (-EBADF);
