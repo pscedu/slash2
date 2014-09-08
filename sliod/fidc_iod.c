@@ -232,6 +232,8 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		/* Notify upper layers that open() has failed. */
 		if (rc)
 			f->fcmh_flags |= FCMH_CTOR_FAILED;
+		else
+			f->fcmh_flags |= FCMH_IOD_BACKFILE;
 
 		/* Do some upfront garbage collection. */
 		sli_fg_makepath(&oldfg, fidfn);
