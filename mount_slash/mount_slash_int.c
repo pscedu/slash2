@@ -1779,9 +1779,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
  * between 'this' bmap and the following.
  *
  * @mfh: file handle.
- * @bsize: size of bmap (normally BMAP_SIZE unless it's the last bmap).
+ * @bsize: size of bmap (normally SLASH_BMAP_SIZE unless it's the last bmap).
  * @off: offset into bmap of this I/O.
- * @npages: number of pages to readahead.
+ * @npages: number of pages to read.
  * @raoff1: offset where RA should begin in this same bmap.
  * @rasize1: length of RA in this same bmap.
  * @raoff2: offset where RA should start in following bmap.
