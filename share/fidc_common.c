@@ -90,7 +90,7 @@ fidc_reap(struct psc_poolmgr *m)
 {
 #define FCMH_MAX_REAP 8
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
-	int i, waslocked = 0, nreap = 0;
+	int i, nreap = 0;
 
 	psc_assert(m == fidcPool);
 
@@ -104,7 +104,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (fcmh_2_fid(f) == 1)
 			continue;
 
-		if (!FCMH_TRYRLOCK(f, &waslocked))
+		if (!FCMH_TRYLOCK(f))
 			continue;
 
 		/* skip items in use */
@@ -127,7 +127,7 @@ fidc_reap(struct psc_poolmgr *m)
 		reap[nreap] = f;
 		nreap++;
  end:
-		FCMH_URLOCK(f, waslocked);
+		FCMH_ULOCK(f);
 	}
 	LIST_CACHE_ULOCK(&fidcIdleList);
 
