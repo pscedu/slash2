@@ -103,18 +103,18 @@ fidc_reap(int max)
 			continue;
 
 		/* skip items in use */
-		if (f->fcmh_refcnt)
-			goto end;
+		if (f->fcmh_refcnt) {
+			FCMH_ULOCK(f);
+			continue;
+		}
 
 		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
-
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
 		f->fcmh_flags |= FCMH_CAC_TOFREE;
 		lc_remove(&fidcIdleList, f);
 		reap[nreap] = f;
 		nreap++;
- end:
 		FCMH_ULOCK(f);
 	}
 	LIST_CACHE_ULOCK(&fidcIdleList);
