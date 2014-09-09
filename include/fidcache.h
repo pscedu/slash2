@@ -84,13 +84,12 @@ struct fidc_membh {
 #define	FCMH_CAC_INITING	(1 <<  3)	/* initializing */
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
-#define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
-#define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat(2) info */
-#define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat(2) info */
-#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define	FCMH_BUSY		(1 << 10)	/* fcmh being processed */
-#define	FCMH_DELETED		(1 << 11)	/* fcmh has been deleted */
-#define	_FCMH_FLGSHFT		(1 << 12)
+#define	FCMH_HAVE_ATTRS		(1 <<  6)	/* has valid stat(2) info */
+#define	FCMH_GETTING_ATTRS	(1 <<  7)	/* fetching stat(2) info */
+#define	FCMH_CTOR_FAILED	(1 <<  8)	/* constructor func failed */
+#define	FCMH_BUSY		(1 <<  9)	/* fcmh being processed */
+#define	FCMH_DELETED		(1 << 10)	/* fcmh has been deleted */
+#define	_FCMH_FLGSHFT		(1 << 11)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -222,7 +221,7 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
 	    "fcmh@%p f+g="SLPRI_FG" "					\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
@@ -232,7 +231,6 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\

@@ -473,7 +473,6 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_REAPED, flags, seq);
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
