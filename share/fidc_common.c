@@ -113,16 +113,9 @@ fidc_reap(struct psc_poolmgr *m)
 
 		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
 
-		/* already victimized */
-		if (f->fcmh_flags & FCMH_CAC_REAPED)
-			goto end;
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
-		/*
-		 * Consult the context-specific callback handler before
-		 * freeing.
-		 */
-		f->fcmh_flags |= FCMH_CAC_REAPED | FCMH_CAC_TOFREE;
+		f->fcmh_flags |= FCMH_CAC_TOFREE;
 		lc_remove(&fidcIdleList, f);
 		reap[nreap] = f;
 		nreap++;
