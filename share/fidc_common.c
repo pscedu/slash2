@@ -82,22 +82,17 @@ fcmh_destroy(struct fidc_membh *f)
 	fcmh_put(f);
 }
 
-/**
- * fidc_reap - Reap some fcmhs from the idle list.
- */
-int
-fidc_reap(struct psc_poolmgr *m)
-{
 #define FCMH_MAX_REAP 8
+
+int
+fidc_reap(int max)
+{
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
 	int i, nreap = 0;
 
-	psc_assert(m == fidcPool);
-
 	LIST_CACHE_LOCK(&fidcIdleList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
-		if (nreap == FCMH_MAX_REAP ||
-		    nreap > atomic_read(&m->ppm_nwaiters))
+		if (nreap >= max)
 			break;
 
 		/* skip the root right now, no need for locking */
@@ -130,6 +125,20 @@ fidc_reap(struct psc_poolmgr *m)
 		psc_hashent_remove(&fidcHtable, reap[i]);
 		fcmh_destroy(reap[i]);
 	}
+	return (i);
+}
+
+/**
+ * fidc_reaper - Reap some fcmhs from the idle list.
+ */
+int
+fidc_reaper(struct psc_poolmgr *m)
+{
+	int i, target;
+	psc_assert(m == fidcPool);
+
+	target = MIN(FCMH_MAX_REAP, atomic_read(&m->ppm_nwaiters));
+	i = fidc_reap(target);
 	return (i);
 }
 
@@ -333,7 +342,7 @@ fidc_init(int privsiz, int nobj)
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
 	    PPMF_AUTO, nobj, nobj, 0, NULL,
-	    NULL, fidc_reap, NULL, "fcmh");
+	    NULL, fidc_reaper, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcBusyList, struct fidc_membh,
