@@ -85,10 +85,14 @@ fcmh_destroy(struct fidc_membh *f)
 #define FCMH_MAX_REAP 8
 
 int
-fidc_reap(int max)
+fidc_reap(int max, int idle)
 {
+	struct timespec crtime;
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
 	int i, nreap = 0;
+
+	if (!max)
+		max = FCMH_MAX_REAP;
 
 	LIST_CACHE_LOCK(&fidcIdleList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
@@ -108,6 +112,14 @@ fidc_reap(int max)
 			continue;
 		}
 
+		if (idle) {
+			PFL_GETTIMESPEC(&crtime);
+			if (timespeccmp(&crtime, &f->fcmh_etime, <)) {
+				FCMH_ULOCK(f);
+				continue;
+			}
+		}
+	
 		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
@@ -138,7 +150,7 @@ fidc_reaper(struct psc_poolmgr *m)
 	psc_assert(m == fidcPool);
 
 	target = MIN(FCMH_MAX_REAP, atomic_read(&m->ppm_nwaiters));
-	i = fidc_reap(target);
+	i = fidc_reap(target, 0);
 	return (i);
 }
 
@@ -443,6 +455,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			f->fcmh_flags |= FCMH_CAC_IDLE;
 			lc_remove(&fidcBusyList, f);
 			lc_add(&fidcIdleList, f);
+			PFL_GETTIMESPEC(&f->fcmh_etime);
+			f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 		}
 	}
 	fcmh_wake_locked(f);

@@ -43,6 +43,8 @@
 #include "slashrpc.h"
 #include "slsubsys.h"
 
+#define	MAX_FCMH_LIFETIME	(60*5)
+
 struct fidc_membh;
 
 struct sl_fcmh_ops {
@@ -74,6 +76,7 @@ struct fidc_membh {
 	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
+	struct timespec		 fcmh_etime;	/* current expire time */
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
 };
 
@@ -260,6 +263,8 @@ void	fidc_init(int, int);
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
 #define FIDC_LOOKUP_NOLOG		(1 << 3)
+
+int	fidc_reap(int, int);
 
 int	_fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, 

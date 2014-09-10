@@ -322,6 +322,7 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();
+	slifcmhreapthr_spawn();
 
 	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);
 

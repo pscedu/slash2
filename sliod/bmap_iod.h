@@ -134,6 +134,7 @@ void		bcr_ready_add(struct bcrcupd *);
 void		bcr_ready_remove(struct bcrcupd *);
 
 void		slibmaprlsthr_spawn(void);
+void		slifcmhreapthr_spawn(void);
 
 extern struct psc_listcache	 bmapRlsQ;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
