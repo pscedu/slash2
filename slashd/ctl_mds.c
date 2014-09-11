@@ -366,11 +366,15 @@ __dead int
 slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
+	/* pfl_odt_close(ptrunc); */
+	/* pfl_odt_close(bml); */
+
 	mdsio_exit();
 	/* XXX journal_close */
 	pscthr_killall();
 	/* XXX wait */
 	pscrpc_exit_portals();
+
 	exit(0);
 }
 
@@ -658,7 +662,7 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
-	psc_ctlparam_register("log.points", psc_ctlparam_log_points); 
+	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
 	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
