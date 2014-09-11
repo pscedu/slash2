@@ -57,6 +57,7 @@ enum {
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_EQPOLL,			/* LNET event queue polling */
+	MSTHRT_FCMHREAP,		/* fcmh reap thread */
 	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
@@ -102,6 +103,10 @@ struct msattrfl_thread {
 	struct psc_multiwait		 maft_mw;
 };
 
+struct msfcmhreap_thread {
+	struct psc_multiwait		 mfrt_mw;
+};
+
 struct msreadahead_thread {
 	struct psc_multiwait		 mrat_mw;
 };
@@ -115,6 +120,7 @@ PSCTHR_MKCAST(msbmflwthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
+PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);

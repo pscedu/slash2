@@ -3054,6 +3054,15 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 }
 
 void
+msfcmhreapthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		while (fidc_reap(0, 1));
+		sleep(MAX_FCMH_LIFETIME);
+	}
+}
+
+void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	int i, rc;
@@ -3204,6 +3213,22 @@ msattrflushthr_main(struct psc_thread *thr)
 }
 
 void
+msfcmhreapthr_spawn(void)
+{
+	struct msfcmhreap_thread *mfrt;
+	struct psc_thread *thr;
+
+	thr = pscthr_init(MSTHRT_FCMHREAP, 0,
+	    msfcmhreapthr_main, NULL,
+	    sizeof(struct msfcmhreap_thread),
+	    "msfcmhreapthr%d", 0);
+	mfrt = msfcmhreapthr(thr);
+	psc_multiwait_init(&mfrt->mfrt_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
+}
+
+void
 msreadaheadthr_spawn(void)
 {
 	struct msreadahead_thread *mrat;
@@ -3348,6 +3373,7 @@ msl_init(void)
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
 
+	msfcmhreapthr_spawn();
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
 	msbmapflushthr_spawn();
