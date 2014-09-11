@@ -44,6 +44,9 @@ char *pfl_errstrs[] = {
 /*  5 */ "Function not implemented",
 /*  6 */ "Operation canceled",
 /*  7 */ "Stale file handle",
+/*  8 */ "Bad magic",
+/*  9 */ "Required key not available",
+/* 10 */ "Invalid checksum",
 	  NULL
 };
 
@@ -67,10 +70,10 @@ char *slash_errstrs[] = {
 /* 16 */ "Authorization buffer has a bad hash",
 /* 17 */ "Authorization buffer not provided",
 /* 18 */ "User account does not exist",
-/* 19 */ "Bad checksum",
+/* 19 */ "unknown code 19",
 /* 20 */ "File generation old",
 /* 21 */ "File generation invalid",
-/* 22 */ "CONNECT protocol message has not been transmitted",
+/* 22 */ "unknown code 22",
 /* 23 */ "Bmap is awaiting partial truncation resolution",
 /* 24 */ "Bmap has started partial truncation resolution",
 /* 25 */ "Asynchronous I/O would block",
@@ -79,12 +82,10 @@ char *slash_errstrs[] = {
 /* 28 */ "unknown code 28",
 /* 29 */ "unknown code 29",
 /* 30 */ "Peer resource is of wrong type",
-/* 31 */ "Activity already in progress",
+/* 31 */ "unknown code 31",
 /* 32 */ "unknown code 32",
 /* 33 */ "unknown code 33",
 /* 34 */ "CRC absent",
-/* 35 */ "Bad message",
-/* 36 */ "Key expired",
 	 NULL
 };
 
