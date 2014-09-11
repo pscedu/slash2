@@ -52,6 +52,7 @@ struct srt_stat;
 /* MDS thread types. */
 enum {
 	SLMTHRT_BATCHRQ,	/* batch RPC reaper */
+	SLMTHRT_FCMHREAPER,	/* fcmh reaper */
 	SLMTHRT_BKDB,		/* upsch database backup */
 	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
 	SLMTHRT_COH,		/* coherency thread */

@@ -714,6 +714,7 @@ main(int argc, char *argv[])
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
+	slmfcmhreapthr_spawn();
 
 	slmctlthr_main(sfn);
 	exit(0);

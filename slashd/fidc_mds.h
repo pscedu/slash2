@@ -190,4 +190,6 @@ inoh_2_fmi_const(const struct slash_inode_handle *ih)
 	return (PSC_AGP(ih, -offsetof(struct fcmh_mds_info, fmi_inodeh)));
 }
 
+void slmfchmreapthr_spawn(void);
+
 #endif /* _FIDC_MDS_H_ */
