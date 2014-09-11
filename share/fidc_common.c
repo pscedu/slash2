@@ -141,7 +141,7 @@ fidc_reap(int max, int idle)
 }
 
 /**
- * fidc_reaper - Reap some fcmhs from the idle list.
+ * fidc_reaper - Reap some fcmhs from the idle list due to memory pressure.
  */
 int
 fidc_reaper(struct psc_poolmgr *m)
