@@ -41,7 +41,7 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-void			*pfl_odt_zerobuf;
+void *slm_odt_zerobuf;
 
 void
 _slm_odt_zerobuf_ensurelen(size_t len)
@@ -49,123 +49,155 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
 	static size_t zerobuf_len;
 
-	if (len <= zerobuf_size)
+	if (len <= zerobuf_len)
 		return;
 
 	spinlock(&zerobuf_lock);
-	if (len > zerobuf_size) {
-		pfl_odt_zerobuf = psc_realloc(pfl_odt_zerobuf, len);
-		//
-		zerobuf_size = len;
+	if (len > zerobuf_len) {
+		slm_odt_zerobuf = psc_realloc(slm_odt_zerobuf, len, 0);
+		zerobuf_len = len;
 	}
 	freelock(&zerobuf_lock);
 }
 
-int
-slm_odt_write(struct pfl_odt *t, )
+void
+slm_odt_write(struct pfl_odt *t, const void *p,
+    struct pfl_odt_entftr *f, size_t elem)
 {
-	pad = h->odth_slotsz - h->odth_objsz - sizeof(odtf);
-	pfl_odt_zerobuf_ensurelen(pad);
+	struct pfl_odt_hdr *h;
+	struct iovec iov[3];
+	ssize_t rc, pad;
+	size_t nb;
 
-	iov[0].iov_base = data;
+	h = t->odt_hdr;
+	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
+	_slm_odt_zerobuf_ensurelen(pad);
+
+	iov[0].iov_base = (void *)p;
 	iov[0].iov_len = h->odth_objsz;
 
-	iov[1].iov_base = pfl_odt_zerobuf;
+	iov[1].iov_base = slm_odt_zerobuf;
 	iov[1].iov_len = pad;
 
-	iov[2].iov_base = &odtf;
-	iov[2].iov_len = sizeof(odtf);
+	iov[2].iov_base = f;
+	iov[2].iov_len = sizeof(*f);
 
-	rc = t->odt_ops.odtop_write(t,
-	    current_vfsid, &rootcreds,
-	    iov,
-	    nitems(iov), &nb, odtr->odtr_elem * h->odth_slotsz +
-	    h->odth_start, t->odt_handle, NULL, NULL);
+	rc = mdsio_pwritev(current_vfsid, &rootcreds, iov, nitems(iov),
+	    &nb, elem * h->odth_slotsz + h->odth_start, t->odt_mfh,
+	    NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
-	if (nb != h->odth_slotsz && !rc)
-		rc = EIO;
 }
 
-int
-slm_odt_read(struct pfl_odt *t, )
+void
+slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+    void *p, struct pfl_odt_entftr *f)
 {
-	pad = h->odth_slotsz - h->odth_objsz - sizeof(f);
-	pfl_odt_zerobuf_ensurelen(pad);
+	struct pfl_odt_hdr *h;
+	struct iovec iov[3];
+	ssize_t rc, pad;
+	size_t nb;
 
-	iov[0].iov_base = data;
+	h = t->odt_hdr;
+	pad = h->odth_slotsz - h->odth_objsz - sizeof(f);
+	_slm_odt_zerobuf_ensurelen(pad);
+
+	iov[0].iov_base = p;
 	iov[0].iov_len = h->odth_objsz;
 
-	iov[1].iov_base = pfl_odt_zerobuf;
+	iov[1].iov_base = slm_odt_zerobuf;
 	iov[1].iov_len = pad;
 
 	iov[2].iov_base = &f;
 	iov[2].iov_len = sizeof(f);
 
-	rc = mdsio_preadv(current_vfsid, &rootcreds, p, h->odth_slotsz,
+	rc = mdsio_preadv(current_vfsid, &rootcreds, iov, nitems(iov),
 	    &nb, h->odth_start + r->odtr_elem * h->odth_slotsz,
-	    t->odt_handle);
-	if (nb != h->odth_slotsz && !rc)
-		rc = EIO;
+	    t->odt_mfh);
+	psc_assert(!rc && nb == h->odth_slotsz);
 }
 
 void
-slm_odt_sync(struct pfl_odt *t, size_t elem)
+slm_odt_sync(struct pfl_odt *t, __unusedx size_t elem)
 {
-	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_handle);
+	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 }
 
 void
-slm_odt_release(struct pfl_odt *t)
+slm_odt_close(struct pfl_odt *t)
 {
-	mdsio_release(current_vfsid, &rootcreds, t->odt_handle);
+	mdsio_release(current_vfsid, &rootcreds, t->odt_mfh);
 }
 
 void
 slm_odt_resize(struct pfl_odt *t)
 {
-	/*
-	 * XXX either trust the bitmap or initialize the footer
-	 * of new items
-	 */
-	rc = mdsio_write(current_vfsid, &rootcreds, h,
-	    sizeof(*h), &nb, 0,
-	    t->odt_handle, NULL, NULL);
-	psc_assert(!rc && nb == sizeof(*h));
-}
-
-void
-pfl_odt_getfooter(const struct pfl_odt *t, size_t elem,
-    struct pfl_odt_entftr *f)
-{
 	struct pfl_odt_hdr *h;
 	size_t nb;
 	int rc;
 
+	/*
+	 * XXX either trust the bitmap or initialize the footer
+	 * of new items
+	 */
 	h = t->odt_hdr;
-
-	rc = mdsio_read(current_vfsid, &rootcreds, f, sizeof(*f),
-	    &nb, h->odth_start + elem * h->odth_slotsz + h->odth_elemsz,
-	    t->odt_handle);
-	psc_assert(rc == 0 && nb == sizeof(*f));
+	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
+	    0, t->odt_mfh, NULL, NULL);
+	psc_assert(!rc && nb == sizeof(*h));
 }
 
-
-slm_odt_open()
+void
+slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 {
+	struct pfl_odt_hdr *h;
+	mdsio_fid_t mf;
+	size_t nb;
+	int rc;
+
+	h = t->odt_hdr;
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
-	    NULL, NULL, NULL, &t->odt_handle, NULL, NULL, 0);
-	if (rc || !t->odt_handle)
+	    NULL, NULL, NULL, &t->odt_mfh, NULL, NULL, 0);
+	if (rc)
 		psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
 
-	rc = mdsio_read(current_vfsid, &rootcreds, h, sizeof(*h),
-	    &nb, 0, t->odt_handle);
-	t->odt_hdr = h;
+	rc = mdsio_read(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
+	    0, t->odt_mfh);
 	psc_assert(rc == 0 && nb == sizeof(*h));
 }
 
-struct pfl_odt_ops slm_odt_ops = {
+void
+slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
+{
+	struct pfl_odt_hdr *h;
+	mdsio_fid_t mf;
+	size_t nb;
+	int rc;
+
+	h = t->odt_hdr;
+	rc = mdsio_lookup(current_vfsid,
+	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
+	psc_assert(rc == 0);
+
+	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
+	    NULL, NULL, NULL, &t->odt_mfh, NULL, NULL, 0);
+	if (rc)
+		psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
+
+	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
+	    0, t->odt_mfh, NULL, NULL);
+	psc_assert(rc == 0 && nb == sizeof(*h));
+}
+
+struct pfl_odt_ops slm_odtops = {
+	slm_odt_close,
+	slm_odt_create,
+	NULL,
+	slm_odt_open,
+	slm_odt_read,
+	slm_odt_resize,
+	slm_odt_sync,
+	slm_odt_write
 };

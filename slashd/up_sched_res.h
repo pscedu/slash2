@@ -36,8 +36,6 @@
 
 #include <sqlite3.h>
 
-struct odtable_receipt;
-
 struct slm_update_data {
 	int				 upd_type:4;
 	int				 upd_flags;

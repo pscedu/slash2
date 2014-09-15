@@ -65,7 +65,7 @@ struct bmap_mds_info {
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
-	struct odtable_receipt	*bmi_assign;
+	struct pfl_odt_receipt	*bmi_assign;
 	uint64_t		 bmi_seq;		/* Largest write bml seq # */
 
 	/*
@@ -230,7 +230,6 @@ struct bmap_mds_lease {
 /**
  * bmap_ios_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.
- * Note: default odtable entry size is 128 bytes.
  * XXX is the generation number needed here? - pauln
  */
 struct bmap_ios_assign {
@@ -281,7 +280,7 @@ uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
 int64_t	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
 
-int	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *, void *);
+void	 mds_bia_odtable_startup_cb(void *, struct pfl_odt_receipt *, void *);
 
 extern struct psc_poolmaster	 slm_bml_poolmaster;
 extern struct psc_poolmgr	*slm_bml_pool;

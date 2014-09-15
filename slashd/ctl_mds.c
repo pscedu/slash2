@@ -36,7 +36,6 @@
 #include "ctl_mds.h"
 #include "ctlsvr.h"
 #include "mdsio.h"
-#include "odtable_mds.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
@@ -598,7 +597,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
 		scbl->scbl_seq = bml->bml_seq;
 		scbl->scbl_key = bmi->bmi_assign ?
-		    bmi->bmi_assign->odtr_key : BMAPSEQ_ANY;
+		    bmi->bmi_assign->odtr_crc : BMAPSEQ_ANY;
 		scbl->scbl_flags = bml->bml_flags;
 		scbl->scbl_start = bml->bml_start;
 		scbl->scbl_expire = bml->bml_expire;

@@ -51,7 +51,6 @@
 #include "fidcache.h"
 #include "mdscoh.h"
 #include "mdsio.h"
-#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -78,7 +77,7 @@ struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
 uint32_t		 sl_sys_upnonce;
 
-struct odtable		*slm_ptrunc_odt;
+struct pfl_odt		*slm_ptrunc_odt;
 
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 rootHtable;
@@ -603,8 +602,12 @@ main(int argc, char *argv[])
 
 	slm_opstate = SLM_OPSTATE_REPLAY;
 
-	mds_odtable_load(&slm_bia_odt, SL_FN_BMAP_ODTAB, "bmapassign");
-	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
+	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0,
+	    mds_bia_odtable_startup_cb, NULL, SL_FN_BMAP_ODTAB,
+	    "bmapassign");
+	pfl_odt_load(&slm_ptrunc_odt, &slm_odtops, 0,
+	    slm_ptrunc_odt_startup_cb, NULL, SL_FN_PTRUNC_ODTAB,
+	    "ptrunc");
 
 	mds_bmap_timeotbl_init();
 
@@ -700,10 +703,6 @@ main(int argc, char *argv[])
 
 	pscthr_init(SLMTHRT_BKDB, 0, slmbkdbthr_main, NULL, 0,
 	    "slmbkdbthr");
-
-	mds_odtable_scan(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
-	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb,
-	    NULL);
 
 	slm_opstate = SLM_OPSTATE_NORMAL;
 

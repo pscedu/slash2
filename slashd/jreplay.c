@@ -31,7 +31,6 @@
 #include "journal_mds.h"
 #include "mdsio.h"
 #include "namespace.h"
-#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slerr.h"
@@ -177,7 +176,7 @@ mds_replay_bmap(void *jent, int op)
 	    }
 	}
 
-	DEBUG_BMAPOD(PLL_INFO, b, "replayed bmap op=%d", op);
+	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
 	rc = mds_bmap_write(b, NULL, NULL);
 
@@ -331,54 +330,26 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 static int
 mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 {
-	struct slmds_jent_assign_rep *logentry;
+	struct slmds_jent_assign_rep *sjar;
 	struct slmds_jent_bmap_assign *sjba;
 	struct bmap_ios_assign *bia;
-	struct odtable_entftr *odtf;
-	struct odtable_hdr odth;
-	size_t nb, len, elem;
-	void *p, *handle;
-	mdsio_fid_t mf;
-	uint64_t crc;
-	int rc;
+	size_t elem;
 
-	logentry = PJE_DATA(pje);
-	elem = logentry->sjar_elem;
-	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-		psclog_info("free item %zd", elem);
-	else {
-		sjba = &logentry->sjar_bmap;
-		psclog_info("replay item %zd, fid="SLPRI_FID", flags=%d",
-		    elem, sjba->sjba_fid, logentry->sjar_flags);
-	}
-	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
-		mds_replay_ino(&logentry->sjar_ino, I_REPLAY_OP_REPLS);
-	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
-		mds_replay_bmap(&logentry->sjar_rep,
-		    B_REPLAY_OP_REPLS);
-	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid],
-	    SL_FN_BMAP_ODTAB, &mf, &rootcreds, NULL);
-	psc_assert(rc == 0);
+	sjar = PJE_DATA(pje);
+	elem = sjar->sjar_elem;
+	if (sjar->sjar_flags & SLJ_ASSIGN_REP_FREE)
+		psclog_diag("free item %zd", elem);
+	if (sjar->sjar_flags & SLJ_ASSIGN_REP_INO)
+		mds_replay_ino(&sjar->sjar_ino, I_REPLAY_OP_REPLS);
+	if (sjar->sjar_flags & SLJ_ASSIGN_REP_REP)
+		mds_replay_bmap(&sjar->sjar_rep, B_REPLAY_OP_REPLS);
 
-	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
-	    NULL, NULL, NULL, &handle, NULL, NULL, 0);
-	psc_assert(!rc && handle);
+	pfl_odt_mapitem(slm_bia_odt, elem, &bia);
 
-	rc = mdsio_read(current_vfsid, &rootcreds, &odth, sizeof(odth),
-	    &nb, 0, handle);
-	psc_assert(rc == 0 && nb == sizeof(odth));
-
-	psc_assert((odth.odth_magic == ODTBL_MAGIC) &&
-		   (odth.odth_version == ODTBL_VERS));
-
-	p = PSCALLOC(odth.odth_slotsz);
-	odtf = p + odth.odth_elemsz;
-	odtf->odtf_magic = ODTBL_MAGIC;
-	odtf->odtf_slotno = elem;
-
-	if (logentry->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
-		bia = p;
-		sjba = &logentry->sjar_bmap;
+	if (sjar->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
+		sjba = &sjar->sjar_bmap;
+		psclog_diag("replay item %zd, fid="SLPRI_FID", flags=%d",
+		    elem, sjba->sjba_fid, sjar->sjar_flags);
 		bia->bia_lastcli.pid = sjba->sjba_lastcli.pid;
 		bia->bia_lastcli.nid = sjba->sjba_lastcli.nid;
 		bia->bia_ios = sjba->sjba_ios;
@@ -387,26 +358,11 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		bia->bia_bmapno = sjba->sjba_bmapno;
 		bia->bia_start = sjba->sjba_start;
 		bia->bia_flags = sjba->sjba_flags;
-
-		/* I don't think memset() does any good, anyway... */
-		len = sizeof(struct bmap_ios_assign);
-		if (len < odth.odth_elemsz)
-			memset(p + len, 0, odth.odth_elemsz - len);
-		psc_crc64_calc(&crc, p, odth.odth_elemsz);
-
-		odtf->odtf_crc = crc;
-		odtf->odtf_inuse = ODTBL_INUSE;
 	}
-	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-		odtf->odtf_inuse = ODTBL_FREE;
 
-	rc = mdsio_write(current_vfsid, &rootcreds, p, odth.odth_slotsz,
-	    &nb, odth.odth_start + elem * odth.odth_slotsz, handle,
-	    NULL, NULL);
-	psc_assert(!rc && nb == odth.odth_slotsz);
+	pfl_odt_putitemf(slm_bia_odt, elem, bia,
+	    sjar->sjar_flags & SLJ_ASSIGN_REP_FREE ? 0 : 1);
 
-	PSCFREE(p);
-	mdsio_release(current_vfsid, &rootcreds, handle);
 	return (0);
 }
 

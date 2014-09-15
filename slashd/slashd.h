@@ -43,8 +43,6 @@
 #include "slconfig.h"
 #include "sltypes.h"
 
-struct odtable;
-
 struct fidc_membh;
 struct slm_sth;
 struct srt_stat;
@@ -86,10 +84,6 @@ enum {
 	SLM_OPST_COHERENT_CB,
 	SLM_OPST_COHERENT_REQ,
 	SLM_OPST_CREATE,
-	SLM_OPST_ODTABLE_EXTEND,
-	SLM_OPST_ODTABLE_FREE,
-	SLM_OPST_ODTABLE_FULL,
-	SLM_OPST_ODTABLE_REPLACE,
 	SLM_OPST_GETATTR,
 	SLM_OPST_GETXATTR,
 	SLM_OPST_GET_BMAP_LEASE_READ,
@@ -439,7 +433,7 @@ int		 slm_get_next_slashfid(slfid_t *);
 int		 slm_ptrunc_prepare(void *);
 void		 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
 int		 slm_ptrunc_wake_clients(void *);
-int		 slm_ptrunc_odt_startup_cb(void *, struct odtable_receipt *, void *);
+void		 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 void		 psc_scan_filesystems(void);
@@ -451,13 +445,15 @@ void		 _dbdo(const struct pfl_callerinfo *,
 			const char *, ...);
 
 extern struct slash_creds	 rootcreds;
-extern struct odtable		*slm_bia_odt;
-extern struct odtable		*slm_ptrunc_odt;
+extern struct pfl_odt		*slm_bia_odt;
+extern struct pfl_odt		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct psc_listcache	 slm_db_workq;
 
 extern struct psc_thread	*slmconnthr;
 
 extern int			 slm_opstate;
+
+extern struct pfl_odt_ops	 slm_odtops;
 
 #endif /* _SLASHD_H_ */

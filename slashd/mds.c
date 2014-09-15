@@ -47,7 +47,6 @@
 #include "mdscoh.h"
 #include "mdsio.h"
 #include "mkfn.h"
-#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -58,7 +57,7 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct odtable		*slm_bia_odt;
+struct pfl_odt		*slm_bia_odt;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -503,7 +502,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 __static int
 mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 {
-	struct slmds_jent_assign_rep *logentry;
+	struct slmds_jent_assign_rep *sjar;
 	struct slmds_jent_bmap_assign *sjba;
 	struct slash_inode_handle *ih;
 	struct fidc_membh *f;
@@ -534,22 +533,22 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		return (rc);
 	}
 	mds_reserve_slot(1);
-	logentry = pjournal_get_buf(slm_journal, sizeof(*logentry));
+	sjar = pjournal_get_buf(slm_journal, sizeof(*sjar));
 
-	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
+	sjar->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
-		mdslogfill_ino_repls(f, &logentry->sjar_ino);
-		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
+		mdslogfill_ino_repls(f, &sjar->sjar_ino);
+		sjar->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
-	mdslogfill_bmap_repls(b, &logentry->sjar_rep);
+	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
 
-	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
+	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
-	sjba = &logentry->sjar_bmap;
+	sjba = &sjar->sjar_bmap;
 	sjba->sjba_lastcli.nid = bia->bia_lastcli.nid;
 	sjba->sjba_lastcli.pid = bia->bia_lastcli.pid;
 	sjba->sjba_ios = bia->bia_ios;
@@ -558,12 +557,12 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_bmapno = bia->bia_bmapno;
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
-	logentry->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	logentry->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_elem;
+	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
+	sjar->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_elem;
 
-	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0,
-	    logentry, sizeof(*logentry));
-	pjournal_put_buf(slm_journal, logentry);
+	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
+	    sizeof(*sjar));
+	pjournal_put_buf(slm_journal, sjar);
 	mds_unreserve_slot(1);
 
 	return (0);
@@ -583,8 +582,9 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
-	struct bmap_ios_assign bia;
+	struct bmap_ios_assign *bia;
 	struct sl_resm *resm;
+	size_t elem;
 
 	psc_assert(!bmi->bmi_wr_ion);
 	psc_assert(!bmi->bmi_assign);
@@ -616,35 +616,40 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 * so that the assignment may be restored on reboot.
 	 */
-	memset(&bia, 0, sizeof(bia));
-	bia.bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
-	bia.bia_lastcli = bml->bml_cli_nidpid;
-	bia.bia_fid = fcmh_2_fid(b->bcm_fcmh);
-	bia.bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
-	bia.bia_bmapno = b->bcm_bmapno;
-	bia.bia_start = time(NULL);
-	bia.bia_flags = (b->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
-
-	bmi->bmi_assign = mds_odtable_putitem(slm_bia_odt, &bia,
-	    sizeof(bia));
+	elem = pfl_odt_allocslot(slm_bia_odt);
 
 	BMAP_LOCK(b);
-	if (!bmi->bmi_assign) {
+	if (elem == ODTBL_SLOT_INV) {
 		b->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
 
-		DEBUG_BMAP(PLL_ERROR, b, "failed odtable_putitem()");
-		// XXX fix me - don't leak the journal buf!
-		return (-SLERR_XACT_FAIL);
+		DEBUG_BMAP(PLL_ERROR, b, "failed pfl_odt_allocslot()");
+		return (-ENOMEM);
 	}
 	b->bcm_flags &= ~BMAP_MDS_NOION;
 	BMAP_ULOCK(b);
 
-	if (mds_bmap_add_repl(b, &bia))
-		return (-1); // errno
+	pfl_odt_mapitem(slm_bia_odt, elem, &bia);
 
-	bml->bml_seq = bia.bia_seq;
+	bia->bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
+	bia->bia_lastcli = bml->bml_cli_nidpid;
+	bia->bia_fid = fcmh_2_fid(b->bcm_fcmh);
+	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bia->bia_bmapno = b->bcm_bmapno;
+	bia->bia_start = time(NULL);
+	bia->bia_flags = (b->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
+
+	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, elem, bia);
+
+	if (mds_bmap_add_repl(b, bia)) {
+		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		// release odt ent?
+		return (-1); // errno
+	}
+	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+
+	bml->bml_seq = bia->bia_seq;
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, elem=%zd",
 	    bmi->bmi_assign->odtr_elem);
@@ -660,7 +665,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	struct bmap_ios_assign bia;
+	struct bmap_ios_assign *bia;
 	int rc, dio;
 
 	BMAP_LOCK(b);
@@ -668,33 +673,29 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	dio = b->bcm_flags & BMAP_DIO;
 	BMAP_ULOCK(b);
 
-	rc = mds_odtable_getitem(slm_bia_odt, bmi->bmi_assign, &bia,
-	    sizeof(bia));
-	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
-		return (rc); // negative errno
-	}
-	if (bia.bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
+	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
+	if (bia->bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
 		/* XXX release bia? */
 		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
-		   bia.bia_fid);
+		   bia->bia_fid);
+		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 		return (-1); // errno
 	}
 
-	psc_assert(bia.bia_seq == bmi->bmi_seq);
-	bia.bia_start = time(NULL);
-	bia.bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml,
+	psc_assert(bia->bia_seq == bmi->bmi_seq);
+	bia->bia_start = time(NULL);
+	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml,
 	    BTE_ADD);
-	bia.bia_lastcli = bml->bml_cli_nidpid;
-	bia.bia_flags = dio ? BIAF_DIO : 0;
+	bia->bia_lastcli = bml->bml_cli_nidpid;
+	bia->bia_flags = dio ? BIAF_DIO : 0;
 
-	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
-	    sizeof(bia));
+	pfl_odt_replaceitem(slm_bia_odt, bmi->bmi_assign, bia);
 
-	bml->bml_ios = bia.bia_ios;
-	bml->bml_seq = bia.bia_seq;
+	bml->bml_ios = bia->bia_ios;
+	bml->bml_seq = bia->bia_seq;
 
-	rc = mds_bmap_add_repl(b, &bia);
+	rc = mds_bmap_add_repl(b, bia);
+	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 	if (rc)
 		return (rc);
 
@@ -1107,8 +1108,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
-	struct slmds_jent_assign_rep *logentry;
-	struct odtable_receipt *odtr = NULL;
+	struct pfl_odt_receipt *odtr = NULL;
 	struct fidc_membh *f = b->bcm_fcmh;
 	size_t elem;
 	int rc = 0;
@@ -1197,12 +1197,15 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			goto out;
 
 		if (!(bml->bml_flags & BML_RECOVERFAIL)) {
-			struct bmap_ios_assign bia;
+			struct bmap_ios_assign *bia;
 
-			rc = mds_odtable_getitem(slm_bia_odt,
-			    bmi->bmi_assign, &bia, sizeof(bia));
-			psc_assert(!rc && bia.bia_seq == bmi->bmi_seq);
-			psc_assert(bia.bia_bmapno == b->bcm_bmapno);
+			pfl_odt_getitem(slm_bia_odt,
+			    bmi->bmi_assign, &bia);
+			psc_assert(bia->bia_seq == bmi->bmi_seq);
+			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+
+			pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+
 			/* End sanity checks. */
 			odtr = bmi->bmi_assign;
 			bmi->bmi_assign = NULL;
@@ -1262,27 +1265,28 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	psc_pool_return(slm_bml_pool, bml);
 
 	if (odtr) {
+		struct slmds_jent_assign_rep *sjar;
+
 		elem = odtr->odtr_elem;
 
 		mds_reserve_slot(1);
-		logentry = pjournal_get_buf(slm_journal,
-		    sizeof(*logentry));
-		logentry->sjar_elem = elem;
-		logentry->sjar_flags = SLJ_ASSIGN_REP_FREE;
+		sjar = pjournal_get_buf(slm_journal,
+		    sizeof(*sjar));
+		sjar->sjar_elem = elem;
+		sjar->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,
-		    0, logentry, sizeof(*logentry));
-		pjournal_put_buf(slm_journal, logentry);
+		    0, sjar, sizeof(*sjar));
+		pjournal_put_buf(slm_journal, sjar);
 		mds_unreserve_slot(1);
 
-		rc = mds_odtable_freeitem(slm_bia_odt, odtr);
+		pfl_odt_freeitem(slm_bia_odt, odtr);
 	}
 
 	return (rc);
 }
 
 /**
- * mds_handle_rls_bmap - Handle SRMT_RELEASEBMAP RPC from a client or an
- *	I/O server.
+ * Handle an SRMT_RELEASEBMAP RPC from a client or an I/O server.
  */
 int
 mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
@@ -1360,8 +1364,8 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 	return (bml);
 }
 
-int
-mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
+void
+mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
     __unusedx void *arg)
 {
 	struct bmap_ios_assign *bia = data;
@@ -1434,12 +1438,11 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 
  out:
 	if (rc)
-		mds_odtable_freeitem(slm_bia_odt, odtr);
+		pfl_odt_freeitem(slm_bia_odt, odtr);
 	if (b)
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-	return (0);
 }
 
 /**
@@ -1798,7 +1801,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	/* Stash the odtable key if this is a write lease. */
 	sbd->sbd_key = (rw == SL_WRITE) ?
-	    bml->bml_bmi->bmi_assign->odtr_key : BMAPSEQ_ANY;
+	    bml->bml_bmi->bmi_assign->odtr_crc : BMAPSEQ_ANY;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1829,11 +1832,11 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
     sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios,
     struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
-	struct bmap *b;
+	struct bmap_ios_assign *bia = NULL;
 	struct bmap_mds_lease *obml;
 	struct bmap_mds_info *bmi;
-	struct bmap_ios_assign bia;
 	struct sl_resm *resm;
+	struct bmap *b;
 	int rc;
 
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
@@ -1873,13 +1876,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	psc_assert(!(b->bcm_flags & BMAP_DIO));
 	BMAP_ULOCK(b);
 
-	rc = mds_odtable_getitem(slm_bia_odt, bmi->bmi_assign, &bia,
-	    sizeof(bia));
-	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
-		goto out1;
-	}
-	psc_assert(bia.bia_seq == bmi->bmi_seq);
+	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
+	psc_assert(bia->bia_seq == bmi->bmi_seq);
 
 	resm = slm_resm_select(b, pios, prev_ios, nprev_ios);
 	if (!resm)
@@ -1890,30 +1888,31 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
 	 * failure doesn't compromise the existing lease.
 	 */
-	bia.bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
-	bia.bia_lastcli = obml->bml_cli_nidpid;
-	bia.bia_ios = resm->resm_res_id;
-	bia.bia_start = time(NULL);
+	bia->bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
+	bia->bia_lastcli = obml->bml_cli_nidpid;
+	bia->bia_ios = resm->resm_res_id;
+	bia->bia_start = time(NULL);
 
-	rc = mds_bmap_add_repl(b, &bia);
+	rc = mds_bmap_add_repl(b, bia);
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
-	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
+	bmi->bmi_seq = obml->bml_seq = bia->bia_seq;
 	obml->bml_ios = resm->resm_res_id;
 
-	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
-	    sizeof(bia));
+	pfl_odt_replaceitem(slm_bia_odt, bmi->bmi_assign, bia);
 
 	/* Do some post setup on the modified lease. */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
-	sbd_out->sbd_key = obml->bml_bmi->bmi_assign->odtr_key;
+	sbd_out->sbd_key = obml->bml_bmi->bmi_assign->odtr_crc;
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
+	if (bia)
+		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 	b->bcm_flags &= ~BMAP_IONASSIGN;
@@ -1979,7 +1978,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		psc_assert(bmi->bmi_wr_ion);
 
-		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_key;
+		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_crc;
 		sbd_out->sbd_ios =
 		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
@@ -2516,8 +2515,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 	sqlite3_reset(sth->sth_sth);
 }
 
-int
-slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
+void
+slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
     __unusedx void *arg)
 {
 	struct {
@@ -2526,8 +2525,6 @@ slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	struct fidc_membh *f;
 //	sl_bmapno_t bno;
 	int rc;
-
-	PSCFREE(odtr);
 
 	rc = slm_fcmh_get(&pt->fg, &f);
 	if (rc == 0) {
@@ -2542,6 +2539,4 @@ slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 //	brepls_init(retifset, 0);
 //	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 //	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-
-	return (0);
 }
