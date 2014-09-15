@@ -67,7 +67,6 @@
 #include "slashd/mdscoh.h"
 #include "slashd/mdsio.h"
 #include "slashd/namespace.h"
-#include "slashd/odtable_mds.h"
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"
@@ -192,6 +191,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
+	PRTYPE(struct msfcmhreap_thread);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msl_fsrqinfo);
@@ -620,6 +620,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_CTL);
 	PRVAL(MSTHRT_CTLAC);
 	PRVAL(MSTHRT_EQPOLL);
+	PRVAL(MSTHRT_FCMHREAP);
 	PRVAL(MSTHRT_FS);
 	PRVAL(MSTHRT_FSMGR);
 	PRVAL(MSTHRT_NBRQ);
@@ -771,6 +772,7 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_CONN);
 	PRVAL(SLITHRT_CTL);
 	PRVAL(SLITHRT_CTLAC);
+	PRVAL(SLITHRT_FCMHREAP);
 	PRVAL(SLITHRT_HEALTH);
 	PRVAL(SLITHRT_LNETAC);
 	PRVAL(SLITHRT_NBRQ);
@@ -839,6 +841,7 @@ main(int argc, char *argv[])
 	PRVAL(SLMTHRT_CTLAC);
 	PRVAL(SLMTHRT_CURSOR);
 	PRVAL(SLMTHRT_DBWORKER);
+	PRVAL(SLMTHRT_FCMHREAPER);
 	PRVAL(SLMTHRT_JNAMESPACE);
 	PRVAL(SLMTHRT_JRECLAIM);
 	PRVAL(SLMTHRT_JRNL);
@@ -886,10 +889,6 @@ main(int argc, char *argv[])
 	PRVAL(SLM_OPST_MIN_SEQNO);
 	PRVAL(SLM_OPST_MKDIR);
 	PRVAL(SLM_OPST_MKNOD);
-	PRVAL(SLM_OPST_ODTABLE_EXTEND);
-	PRVAL(SLM_OPST_ODTABLE_FREE);
-	PRVAL(SLM_OPST_ODTABLE_FULL);
-	PRVAL(SLM_OPST_ODTABLE_REPLACE);
 	PRVAL(SLM_OPST_READDIR);
 	PRVAL(SLM_OPST_READLINK);
 	PRVAL(SLM_OPST_RECLAIM_BATCHNO);
