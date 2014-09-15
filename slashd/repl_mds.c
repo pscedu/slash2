@@ -54,7 +54,6 @@
 #include "inode.h"
 #include "journal_mds.h"
 #include "mdsio.h"
-#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"

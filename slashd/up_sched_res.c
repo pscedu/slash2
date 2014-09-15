@@ -55,7 +55,6 @@
 
 #include "bmap_mds.h"
 #include "mdsio.h"
-#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
