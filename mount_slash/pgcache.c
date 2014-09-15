@@ -336,8 +336,8 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		if (wait) {
 			spinlock(&bmpc->bmpc_lock);
-			psc_waitq_waitrel_s(&bmpc->bmpc_waitq,
-			    &bmpc->bmpc_lock, 1);
+			psc_waitq_waitrel_us(&bmpc->bmpc_waitq,
+			    &bmpc->bmpc_lock, 3000);
 			goto retry;
 		}
 	}
