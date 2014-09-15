@@ -113,6 +113,8 @@ int	_mds_fcmh_setattr(int, struct fidc_membh *, int, const struct srt_stat *, in
 
 int	_slm_fcmh_endow(int, struct fidc_membh *, struct fidc_membh *, int);
 
+void	slmfcmhreapthr_spawn(void);
+
 int	slfid_to_vfsid(slfid_t, int *);
 
 extern uint64_t		slm_next_fid;
@@ -189,7 +191,5 @@ inoh_2_fmi_const(const struct slash_inode_handle *ih)
 	psc_assert(ih);
 	return (PSC_AGP(ih, -offsetof(struct fcmh_mds_info, fmi_inodeh)));
 }
-
-void slmfchmreapthr_spawn(void);
 
 #endif /* _FIDC_MDS_H_ */
