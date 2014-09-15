@@ -227,7 +227,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	if (nb == BMAP_OD_SZ) {
 		psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
 		if (od_crc != crc)
-			rc = SLERR_BADCRC;
+			rc = PFLERR_BADCRC;
 	}
 
 	/*

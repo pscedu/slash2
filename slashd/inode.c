@@ -102,7 +102,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 				    nb, sizeof(ih->inoh_ino) +
 				    sizeof(od_crc));
 			else {
-				rc = SLERR_BADCRC;
+				rc = PFLERR_BADCRC;
 				DEBUG_INOH(PLL_WARN, ih, "CRC failed "
 				    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 				    od_crc, crc);
@@ -253,7 +253,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 			psclog_errorx("inox CRC fail (rc=%d) "
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
 			    rc, od_crc, crc);
-			rc = -SLERR_BADCRC;
+			rc = -PFLERR_BADCRC;
 		}
 	}
 	if (rc) {

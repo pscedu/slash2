@@ -106,7 +106,7 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 				    "CRC failure: slvr=%hu, crc="
 				    "%"PSCPRIxCRC64,
 				    s->slvr_num, slvr_2_crc(s));
-				return (SLERR_BADCRC);
+				return (PFLERR_BADCRC);
 			}
 		} else {
 			return (0);
@@ -533,7 +533,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s, NULL);
 			SLVR_ULOCK(s);
-			if (crc_rc == SLERR_BADCRC) {
+			if (crc_rc == PFLERR_BADCRC) {
 				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD);
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
