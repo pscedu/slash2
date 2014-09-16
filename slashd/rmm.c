@@ -52,7 +52,7 @@
 int
 slm_rmm_apply_update(__unusedx struct srt_update_entry *entryp)
 {
-	psc_fatal("obsolete code patch");
+	psc_fatal("obsolete code path");
 }
 
 /**

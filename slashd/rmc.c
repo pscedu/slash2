@@ -1240,25 +1240,25 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 		 * mio_fid.
 		 */
 		mp->rc = mds_fcmh_setattr(vfsid, f, to_set, &mq->attr);
-	}
-
-	if (mp->rc) {
-		if (unbump)
-			fcmh_2_gen(f)--;
-	} else {
-		if (tadj & PSCFS_SETATTRF_DATASIZE) {
-			f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
-
-			csvc = slm_getclcsvc(rq->rq_export);
-			if (csvc)
-				psc_dynarray_add(&fcmh_2_fmi(f)->
-				    fmi_ptrunc_clients, csvc);
-
-			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
+		if (mp->rc) {
+			if (unbump)
+				fcmh_2_gen(f)--;
+			goto out;
 		}
-
-		slm_setattr_core(f, &mq->attr, to_set | tadj);
 	}
+
+	if (tadj & PSCFS_SETATTRF_DATASIZE) {
+		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+
+		csvc = slm_getclcsvc(rq->rq_export);
+		if (csvc)
+			psc_dynarray_add(&fcmh_2_fmi(f)->
+			    fmi_ptrunc_clients, csvc);
+
+		mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
+	}
+
+	slm_setattr_core(f, &mq->attr, to_set | tadj);
 
  out:
 	if (f) {
