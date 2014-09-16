@@ -267,6 +267,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			psc_hashbkt_lock(b);
 			goto restart;
 		}
+		/* fall through if no one else has created the same fcmh */
 	} else {
 		/*
 		 * FIDC_LOOKUP_CREATE was not specified and the fcmh is
