@@ -1369,12 +1369,16 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
     __unusedx void *arg)
 {
 	struct bmap_ios_assign *bia = data;
+	struct pfl_odt_receipt *r = NULL;
 	struct fidc_membh *f = NULL;
-	struct bmap *b = NULL;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
+	struct bmap *b = NULL;
 	struct sl_resm *resm;
 	int rc;
+
+	r = PSCALLOC(sizeof(*r));
+	memcpy(r, odtr, sizeof(*r));
 
 	resm = libsl_ios2resm(bia->bia_ios);
 
@@ -1397,7 +1401,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
-		    odtr->odtr_elem, fg.fg_fid);
+		    r->odtr_elem, fg.fg_fid);
 		PFL_GOTOERR(out, rc);
 	}
 
@@ -1427,18 +1431,19 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		// XXX BMAP_LOCK(b)
 		b->bcm_flags |= BMAP_DIO;
 
-	bmap_2_bmi(b)->bmi_assign = odtr;
+	bmap_2_bmi(b)->bmi_assign = r;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	if (rc) {
 		bmap_2_bmi(b)->bmi_assign = NULL;
 		bml->bml_flags |= BML_FREEING | BML_RECOVERFAIL;
-	}
+	} else
+		r = NULL;
 	mds_bmap_bml_release(bml);
 
  out:
 	if (rc)
-		pfl_odt_freeitem(slm_bia_odt, odtr);
+		pfl_odt_freeitem(slm_bia_odt, r);
 	if (b)
 		bmap_op_done(b);
 	if (f)
