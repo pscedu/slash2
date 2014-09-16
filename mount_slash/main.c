@@ -1848,7 +1848,7 @@ msl_flush_attr(struct fidc_membh *f)
 	mq->attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	FCMH_ULOCK(f);
 
-	mq->to_set = PSCFS_SETATTRF_FLUSH | PSCFS_SETATTRF_MTIME |
+	mq->to_set = PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_DATASIZE;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2560,7 +2560,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	/* No need to do this on retry. */
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
 		flush_attrs = 1;
-		to_set |= PSCFS_SETATTRF_FLUSH;
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			to_set |= PSCFS_SETATTRF_MTIME;
 			PFL_STB_MTIME_SET(c->fcmh_sstb.sst_mtime,
