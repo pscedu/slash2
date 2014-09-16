@@ -50,40 +50,9 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int
-slm_rmm_apply_update(struct srt_update_entry *entryp)
+slm_rmm_apply_update(__unusedx struct srt_update_entry *entryp)
 {
-	struct sl_mds_peerinfo *localinfo;
-	struct slmds_jent_namespace sjnm;
-	int rc;
-
-	memset(&sjnm, 0, sizeof(sjnm));
-	sjnm.sjnm_op = entryp->op;
-	sjnm.sjnm_uid = entryp->uid;
-	sjnm.sjnm_gid = entryp->gid;
-	sjnm.sjnm_mask = entryp->mask;
-	sjnm.sjnm_mode = entryp->mode;
-	sjnm.sjnm_size = entryp->size;
-
-	sjnm.sjnm_atime = entryp->atime;
-	sjnm.sjnm_mtime = entryp->mtime;
-	sjnm.sjnm_ctime = entryp->ctime;
-	sjnm.sjnm_parent_fid = entryp->parent_fid;
-	sjnm.sjnm_target_fid = entryp->target_fid;
-
-	sjnm.sjnm_namelen = entryp->namelen;
-	sjnm.sjnm_namelen2 = entryp->namelen2;
-	memcpy(sjnm.sjnm_name, entryp->name,
-	    entryp->namelen + entryp->namelen2);
-
-	localinfo = res2rpmi(nodeResProf)->rpmi_info;
-	rc = mds_replay_namespace(&sjnm, 0);
-	if (rc)
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
-		    [sjnm.sjnm_op][NS_SUM_FAIL]);
-	else
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
-		    [sjnm.sjnm_op][NS_SUM_SUCC]);
-	return (rc);
+	psc_fatal("obsolete code patch");
 }
 
 /**
