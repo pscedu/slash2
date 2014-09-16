@@ -2021,7 +2021,7 @@ void
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int locked, deref = 0, rc = 0;
+	int locked, rc = 0;
 	struct slm_wkdata_ptrunc *wk;
 	struct fcmh_mds_info *fmi;
 
@@ -2034,8 +2034,6 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 				    sstb->sst_fid, slstrerror(rc));
 				return;
 			}
-
-			deref = 1;
 		}
 
 		locked = FCMH_RLOCK(f);
@@ -2050,7 +2048,7 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
 		pfl_workq_putitem(wk);
 
-		if (deref)
+		if (f)
 			fcmh_op_done(f);
 	}
 }
