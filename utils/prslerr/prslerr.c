@@ -59,6 +59,9 @@ main(int argc, char *argv[])
 	printf("%4d [PFLERR_NOSYS]: %s\n", PFLERR_NOSYS, slstrerror(PFLERR_NOSYS));
 	printf("%4d [PFLERR_CANCELED]: %s\n", PFLERR_CANCELED, slstrerror(PFLERR_CANCELED));
 	printf("%4d [PFLERR_STALE]: %s\n", PFLERR_STALE, slstrerror(PFLERR_STALE));
+	printf("%4d [PFLERR_BADMAGIC]: %s\n", PFLERR_BADMAGIC, slstrerror(PFLERR_BADMAGIC));
+	printf("%4d [PFLERR_NOKEY]: %s\n", PFLERR_NOKEY, slstrerror(PFLERR_NOKEY));
+	printf("%4d [PFLERR_BADCRC]: %s\n", PFLERR_BADCRC, slstrerror(PFLERR_BADCRC));
 	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
 	printf("%4d [SLERR_REPL_NOT_ACT]: %s\n", SLERR_REPL_NOT_ACT, slstrerror(SLERR_REPL_NOT_ACT));
 	printf("%4d [SLERR_RPCIO]: %s\n", SLERR_RPCIO, slstrerror(SLERR_RPCIO));
@@ -77,7 +80,6 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_AUTHBUF_BADHASH]: %s\n", SLERR_AUTHBUF_BADHASH, slstrerror(SLERR_AUTHBUF_BADHASH));
 	printf("%4d [SLERR_AUTHBUF_ABSENT]: %s\n", SLERR_AUTHBUF_ABSENT, slstrerror(SLERR_AUTHBUF_ABSENT));
 	printf("%4d [SLERR_USER_NOTFOUND]: %s\n", SLERR_USER_NOTFOUND, slstrerror(SLERR_USER_NOTFOUND));
-	printf("%4d [SLERR_BADCRC]: %s\n", SLERR_BADCRC, slstrerror(SLERR_BADCRC));
 	printf("%4d [SLERR_GEN_OLD]: %s\n", SLERR_GEN_OLD, slstrerror(SLERR_GEN_OLD));
 	printf("%4d [SLERR_GEN_INVALID]: %s\n", SLERR_GEN_INVALID, slstrerror(SLERR_GEN_INVALID));
 	printf("%4d [SLERR_BMAP_IN_PTRUNC]: %s\n", SLERR_BMAP_IN_PTRUNC, slstrerror(SLERR_BMAP_IN_PTRUNC));
