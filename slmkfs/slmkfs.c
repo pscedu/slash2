@@ -211,11 +211,11 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fclose(fp);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	pfl_odt_create(fn, 128 * 1024, 128 - 16, 0, 0x1000, 0,
+	pfl_odt_create(fn, 128 * 1024, 128 - 16, wipe, 0x1000, 0,
 	    ODTBL_OPT_CRC);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	pfl_odt_create(fn, 128 * 1024, 128 - 16, 0, 0x1000, 0,
+	pfl_odt_create(fn, 128 * 1024, 128 - 16, wipe, 0x1000, 0,
 	    ODTBL_OPT_CRC);
 }
 

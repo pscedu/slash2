@@ -69,6 +69,8 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	ssize_t rc, pad;
 	size_t nb;
 
+	memset(iov, 0, sizeof(iov));
+
 	h = t->odt_hdr;
 	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
@@ -96,19 +98,27 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	struct iovec iov[3];
 	ssize_t rc, pad;
 	size_t nb;
+	int nio = 0;
+
+	memset(iov, 0, sizeof(iov));
 
 	h = t->odt_hdr;
-	pad = h->odth_slotsz - h->odth_objsz - sizeof(f);
+	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	iov[0].iov_base = p;
-	iov[0].iov_len = h->odth_objsz;
+	iov[nio].iov_base = p;
+	iov[nio].iov_len = h->odth_objsz;
+	nio++;
 
-	iov[1].iov_base = slm_odt_zerobuf;
-	iov[1].iov_len = pad;
+	if (f) {
+		iov[nio].iov_base = slm_odt_zerobuf;
+		iov[nio].iov_len = pad;
+		nio++;
 
-	iov[2].iov_base = &f;
-	iov[2].iov_len = sizeof(f);
+		iov[nio].iov_base = f;
+		iov[nio].iov_len = sizeof(*f);
+		nio++;
+	}
 
 	rc = mdsio_preadv(current_vfsid, &rootcreds, iov, nitems(iov),
 	    &nb, h->odth_start + r->odtr_elem * h->odth_slotsz,

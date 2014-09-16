@@ -602,12 +602,10 @@ main(int argc, char *argv[])
 
 	slm_opstate = SLM_OPSTATE_REPLAY;
 
-	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0,
-	    mds_bia_odtable_startup_cb, NULL, SL_FN_BMAP_ODTAB,
+	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
 	pfl_odt_load(&slm_ptrunc_odt, &slm_odtops, 0,
-	    slm_ptrunc_odt_startup_cb, NULL, SL_FN_PTRUNC_ODTAB,
-	    "ptrunc");
+	    SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
 
@@ -703,6 +701,9 @@ main(int argc, char *argv[])
 
 	pscthr_init(SLMTHRT_BKDB, 0, slmbkdbthr_main, NULL, 0,
 	    "slmbkdbthr");
+
+	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
+	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
