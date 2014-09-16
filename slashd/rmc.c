@@ -1166,7 +1166,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int to_set, flush, tadj = 0, unbump = 0;
+	int to_set, tadj = 0, unbump = 0;
 	struct slashrpc_cservice *csvc;
 	struct fidc_membh *f = NULL;
 	struct srm_setattr_req *mq;
@@ -1186,7 +1186,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	FCMH_WAIT_BUSY(f);
 
-	flush = mq->to_set & PSCFS_SETATTRF_FLUSH;
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
@@ -1215,7 +1214,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				fcmh_set_repl_nblks(f, i, 0);
 			to_set |= SL_SETATTRF_GEN | SL_SETATTRF_NBLKS;
 			unbump = 1;
-		} else if (!flush) {
+		} else {
 PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			/* partial truncate */
@@ -1246,7 +1245,7 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 	if (mp->rc) {
 		if (unbump)
 			fcmh_2_gen(f)--;
-	} else if (!flush) {
+	} else {
 		if (tadj & PSCFS_SETATTRF_DATASIZE) {
 			f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 
