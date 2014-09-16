@@ -60,14 +60,24 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 	freelock(&zerobuf_lock);
 }
 
+#define PACK_IOV(p, len)						\
+	do {								\
+		iov[nio].iov_base = (void *)(p);			\
+		iov[nio].iov_len = (len);				\
+		expect += (len);					\
+		nio++;							\
+	} while (0)
+
 void
 slm_odt_write(struct pfl_odt *t, const void *p,
     struct pfl_odt_entftr *f, size_t elem)
 {
+	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
 	struct iovec iov[3];
 	ssize_t rc, pad;
-	size_t nb;
+	int nio = 0;
+	off_t off;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -75,30 +85,36 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	iov[0].iov_base = (void *)p;
-	iov[0].iov_len = h->odth_objsz;
+	off = elem * h->odth_slotsz + h->odth_start;
 
-	iov[1].iov_base = slm_odt_zerobuf;
-	iov[1].iov_len = pad;
+	if (p)
+		PACK_IOV(p, h->odth_objsz);
+	else
+		off += h->odth_objsz;
 
-	iov[2].iov_base = f;
-	iov[2].iov_len = sizeof(*f);
+	if (p && f)
+		PACK_IOV(slm_odt_zerobuf, pad);
+	else
+		off += pad;
 
-	rc = mdsio_pwritev(current_vfsid, &rootcreds, iov, nitems(iov),
-	    &nb, elem * h->odth_slotsz + h->odth_start, t->odt_mfh,
-	    NULL, NULL);
-	psc_assert(!rc && nb == h->odth_slotsz);
+	if (f)
+		PACK_IOV(f, sizeof(*f));
+
+	rc = mdsio_pwritev(current_vfsid, &rootcreds, iov, nio, &nb,
+	    off, t->odt_mfh, NULL, NULL);
+	psc_assert(!rc && nb == expect);
 }
 
 void
 slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
     void *p, struct pfl_odt_entftr *f)
 {
+	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
 	struct iovec iov[3];
 	ssize_t rc, pad;
-	size_t nb;
 	int nio = 0;
+	off_t off;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -106,24 +122,24 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	iov[nio].iov_base = p;
-	iov[nio].iov_len = h->odth_objsz;
-	nio++;
+	off = h->odth_start + r->odtr_elem * h->odth_slotsz;
 
-	if (f) {
-		iov[nio].iov_base = slm_odt_zerobuf;
-		iov[nio].iov_len = pad;
-		nio++;
+	if (p)
+		PACK_IOV(p, h->odth_objsz);
+	else
+		off += h->odth_objsz;
 
-		iov[nio].iov_base = f;
-		iov[nio].iov_len = sizeof(*f);
-		nio++;
-	}
+	if (p && f)
+		PACK_IOV(slm_odt_zerobuf, pad);
+	else
+		off += pad;
 
-	rc = mdsio_preadv(current_vfsid, &rootcreds, iov, nitems(iov),
-	    &nb, h->odth_start + r->odtr_elem * h->odth_slotsz,
+	if (f)
+		PACK_IOV(f, sizeof(*f));
+
+	rc = mdsio_preadv(current_vfsid, &rootcreds, iov, nio, &nb, off,
 	    t->odt_mfh);
-	psc_assert(!rc && nb == h->odth_slotsz);
+	psc_assert(!rc && nb == expect);
 }
 
 void
