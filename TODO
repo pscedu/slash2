@@ -522,7 +522,10 @@ reimport
 - can errors be injected into our scheme circumventing authbuf?
 - if high priority work cannot be done in upsch, do some lower priority
   work
-- resilvering is hung, 'zpool iostat' never updates...
+- bia odtable should move to /dev/shm
+
+- zfs snapshot
+   -> tie callback into something that COW's all odtables+journal
 
 - add crcalg=old option
 
