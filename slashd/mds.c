@@ -136,23 +136,21 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 }
 
 /**
- * mds_bmap_directio_locked - Called when a new read or write lease is
+ * mds_bmap_directio - Called when a new read or write lease is
  *	added to the bmap.  Maintains the DIO status of the bmap
  *	based on the numbers of readers and writers present.
- * @b: the bmap
+ * @b: the locked bmap
  * @rw: read / write op
  * @np: value-result target ION network + process ID.
  * Note: the new bml has yet to be added.
  */
 __static int
-mds_bmap_directio_locked(struct bmap *b, enum rw rw, int want_dio,
+mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
     lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_mds_lease *bml = NULL, *tmp;
 	int rc = 0, force_dio = 0, check_leases = 0;
-
-	BMAP_LOCK_ENSURE(b);
 
 	if (b->bcm_flags & BMAP_DIO)
 		return (0);
@@ -780,7 +778,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		goto out;
 	}
 
-	rc = mds_bmap_directio_locked(b, SL_WRITE, 0,
+	rc = mds_bmap_directio(b, SL_WRITE, 0,
 	    &bml->bml_cli_nidpid);
 	if (rc)
 		goto out;
@@ -899,7 +897,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
-	rc = mds_bmap_directio_locked(b, rw, bml->bml_flags & BML_DIO,
+	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
 		/* 'rc != 0' means that we're waiting on an async cb
