@@ -81,8 +81,7 @@ slmcoh_releasebml(void *p)
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	bml = mds_bmap_getbml_locked(b, wk->seq, wk->peer.nid,
-	    wk->peer.pid);
+	bml = mds_bmap_getbml(b, wk->seq, wk->peer.nid, wk->peer.pid);
 	if (!bml)
 		PFL_GOTOERR(out, rc = -ENOENT);
 

@@ -268,8 +268,8 @@ int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmapc_memb *);
-struct bmap_mds_lease *
-	 mds_bmap_getbml_locked(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
+
+struct bmap_mds_lease * mds_bmap_getbml(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);

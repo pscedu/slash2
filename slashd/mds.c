@@ -828,7 +828,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 }
 
 /**
- * mds_bmap_getbml_locked - Obtain the lease handle for a bmap denoted
+ * mds_bmap_getbml - Obtain the lease handle for a bmap denoted
  *	by the specified issued sequence number.
  * @b: locked bmap.
  * @cli_nid: client network ID.
@@ -836,15 +836,12 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml_locked(struct bmap *b, uint64_t seq, uint64_t nid,
-    uint32_t pid)
+mds_bmap_getbml(struct bmap *b, uint64_t seq, uint64_t nid, uint32_t pid)
 {
 	struct bmap_mds_lease *bml, *bml1, *bml2;
 	struct bmap_mds_info *bmi;
 
 	bml1 = NULL;
-	BMAP_LOCK_ENSURE(b);
-
 	bmi = bmap_2_bmi(b);
 	PLL_FOREACH(bml, &bmi->bmi_leases) {
 		if (bml->bml_cli_nidpid.nid != nid ||
@@ -1321,7 +1318,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 			goto next;
 
 		BMAP_LOCK(b);
-		bml = mds_bmap_getbml_locked(b, sbd->sbd_seq,
+		bml = mds_bmap_getbml(b, sbd->sbd_seq,
 		    sbd->sbd_nid, sbd->sbd_pid);
 
 		DEBUG_BMAP(bml ? PLL_DIAG : PLL_WARN, b,
@@ -1849,7 +1846,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		return (rc);
 
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq,
+	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 
 	if (!obml) {
@@ -1951,7 +1948,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	/* Lookup the original lease to ensure it actually exists. */
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq,
+	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 	BMAP_ULOCK(b);
 

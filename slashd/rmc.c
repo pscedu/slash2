@@ -203,7 +203,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml_locked(b, mq->sbd.sbd_seq,
+	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq,
 	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
 	if (bml == NULL)
