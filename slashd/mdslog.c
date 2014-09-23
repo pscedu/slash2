@@ -364,17 +364,14 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 
 
 void
-mds_write_logentry(struct psc_journal_enthdr *pje)
+mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 {
 	size_t size;
-	struct slmds_jent_namespace *sjnm = NULL;
 	void *reclaimbuf = NULL;
 	struct srt_stat sstb;
 	int rc, count, total;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 
-	sjnm = PJE_DATA(pje);
-	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
 	if (reclaim_logfile_handle == NULL) {
 
 		rc = mds_open_logfile(current_reclaim_batchno, 0, 0,
@@ -427,10 +424,10 @@ mds_write_logentry(struct psc_journal_enthdr *pje)
 			count = 0;
 			total = size / sizeof(struct srt_reclaim_entry);
 			while (count < total) {
-				if (reclaim_entryp->xid == pje->pje_xid) {
+				if (reclaim_entryp->xid == xid) {
 					psclog_warnx("Reclaim xid %"PRId64" "
 					    "already in use! batch = %"PRId64,
-					    pje->pje_xid, current_reclaim_batchno);
+					    xid, current_reclaim_batchno);
 				}
 				reclaim_entryp = PSC_AGP(reclaim_entryp,
 				    sizeof(struct srt_reclaim_entry));
@@ -455,9 +452,9 @@ mds_write_logentry(struct psc_journal_enthdr *pje)
 		}
 	}
 
-	reclaim_entry.xid = pje->pje_xid;
-	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
-	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
+	reclaim_entry.xid = xid;
+	reclaim_entry.fg.fg_fid = fid;
+	reclaim_entry.fg.fg_gen = gen;
 
 	rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry), &size,
@@ -467,7 +464,7 @@ mds_write_logentry(struct psc_journal_enthdr *pje)
 		    current_reclaim_batchno);
 
 	spinlock(&mds_distill_lock);
-	current_reclaim_xid = pje->pje_xid;
+	current_reclaim_xid = xid;
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, current_reclaim_xid);
 	freelock(&mds_distill_lock);
 
@@ -483,7 +480,7 @@ mds_write_logentry(struct psc_journal_enthdr *pje)
 		OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
 
 		spinlock(&mds_distill_lock);
-		sync_reclaim_xid = pje->pje_xid;
+		sync_reclaim_xid = xid;
 		freelock(&mds_distill_lock);
 
 		spinlock(&mds_reclaim_waitqlock);
@@ -564,7 +561,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
-	mds_write_logentry(pje);
+	mds_write_logentry(pje->pje_xid, sjnm->sjnm_target_fid, sjnm->sjnm_target_gen);
 
  check_update:
 
