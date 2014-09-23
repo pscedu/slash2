@@ -362,70 +362,19 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	return (rc);
 }
 
-/**
- * mds_distill_handler - Distill information from the system journal and
- *	write into namespace update or garbage reclaim logs.
- *
- *	Writing the information to secondary logs allows us to recycle
- *	the space in the main system log as quickly as possible.  The
- *	distill process is continuous in order to make room for system
- *	logs.  Once in a secondary log, we can process them as we see
- *	fit.  Sometimes these secondary log files can hang over a long
- *	time because a peer MDS or an IO server is down or slow.
- *
- *	We encode the cursor creation time and hostname into the log
- *	file names to minimize collisions.  If undetected, these
- *	collisions can lead to insidious bugs, especially when on-disk
- *	format changes.
- */
-int
-mds_distill_handler(struct psc_journal_enthdr *pje,
-    __unusedx uint64_t xid, int npeers, int action)
+
+void
+mds_write_logentry(struct psc_journal_enthdr *pje)
 {
-	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
-	struct srt_update_entry update_entry, *update_entryp;
-	struct slmds_jent_namespace *sjnm = NULL;
-	struct slmds_jent_bmap_crc *sjbc = NULL;
-	struct srt_stat sstb;
-	void *reclaimbuf = NULL;
-	int rc, count, total;
-	uint16_t type;
 	size_t size;
-
-	psc_assert(pje->pje_magic == PJE_MAGIC);
-
-	/*
-	 * The following can only be executed by the singleton distill
-	 * thread.
-	 */
-	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	if (type == MDS_LOG_BMAP_CRC) {
-		sjbc = PJE_DATA(pje);
-		goto check_update;
-	}
-
-	if (type != MDS_LOG_NAMESPACE)
-		return (0);
+	struct slmds_jent_namespace *sjnm = NULL;
+	void *reclaimbuf = NULL;
+	struct srt_stat sstb;
+	int rc, count, total;
+	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 
 	sjnm = PJE_DATA(pje);
 	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
-
-	/*
-	 * Note that we distill reclaim before update.  This is the same
-	 * order we use in recovery.
-	 *
-	 * If the namespace operation needs to reclaim disk space on I/O
-	 * servers, write the information into the reclaim log.
-	 */
-	if (!(sjnm->sjnm_flag & SJ_NAMESPACE_RECLAIM))
-		goto check_update;
-
-	psc_assert(
-	    sjnm->sjnm_op == NS_OP_RECLAIM ||
-	    sjnm->sjnm_op == NS_OP_SETATTR ||
-	    sjnm->sjnm_op == NS_OP_UNLINK ||
-	    sjnm->sjnm_op == NS_OP_SETSIZE);
-
 	if (reclaim_logfile_handle == NULL) {
 
 		rc = mds_open_logfile(current_reclaim_batchno, 0, 0,
@@ -551,6 +500,71 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	    "fg="SLPRI_FG,
 	    current_reclaim_xid, current_reclaim_batchno,
 	    SLPRI_FG_ARGS(&reclaim_entry.fg));
+
+}
+
+/**
+ * mds_distill_handler - Distill information from the system journal and
+ *	write into namespace update or garbage reclaim logs.
+ *
+ *	Writing the information to secondary logs allows us to recycle
+ *	the space in the main system log as quickly as possible.  The
+ *	distill process is continuous in order to make room for system
+ *	logs.  Once in a secondary log, we can process them as we see
+ *	fit.  Sometimes these secondary log files can hang over a long
+ *	time because a peer MDS or an IO server is down or slow.
+ *
+ *	We encode the cursor creation time and hostname into the log
+ *	file names to minimize collisions.  If undetected, these
+ *	collisions can lead to insidious bugs, especially when on-disk
+ *	format changes.
+ */
+int
+mds_distill_handler(struct psc_journal_enthdr *pje,
+    __unusedx uint64_t xid, int npeers, int action)
+{
+	struct srt_update_entry update_entry, *update_entryp;
+	struct slmds_jent_bmap_crc *sjbc = NULL;
+	int rc, count, total;
+	uint16_t type;
+	size_t size;
+	struct slmds_jent_namespace *sjnm = NULL;
+
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+
+	/*
+	 * The following can only be executed by the singleton distill
+	 * thread.
+	 */
+	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
+	if (type == MDS_LOG_BMAP_CRC) {
+		sjbc = PJE_DATA(pje);
+		goto check_update;
+	}
+
+	if (type != MDS_LOG_NAMESPACE)
+		return (0);
+
+	sjnm = PJE_DATA(pje);
+	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
+
+	/*
+	 * Note that we distill reclaim before update.  This is the same
+	 * order we use in recovery.
+	 *
+	 * If the namespace operation needs to reclaim disk space on I/O
+	 * servers, write the information into the reclaim log.
+	 */
+	if (!(sjnm->sjnm_flag & SJ_NAMESPACE_RECLAIM))
+		goto check_update;
+
+	psc_assert(
+	    sjnm->sjnm_op == NS_OP_RECLAIM ||
+	    sjnm->sjnm_op == NS_OP_SETATTR ||
+	    sjnm->sjnm_op == NS_OP_UNLINK ||
+	    sjnm->sjnm_op == NS_OP_SETSIZE);
+
+	mds_write_logentry(pje);
 
  check_update:
 
