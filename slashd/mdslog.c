@@ -372,6 +372,9 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 	int rc, count, total;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 
+	if (!xid)
+		xid = pjournal_next_xid(slm_journal);
+
 	if (reclaim_logfile_handle == NULL) {
 
 		rc = mds_open_logfile(current_reclaim_batchno, 0, 0,
