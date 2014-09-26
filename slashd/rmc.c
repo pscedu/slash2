@@ -1262,10 +1262,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			psc_dynarray_add(&fcmh_2_fmi(f)->
 			    fmi_ptrunc_clients, csvc);
 
+		slm_setattr_core(f, &mq->attr, to_set | tadj);
 		mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 	}
-
-	slm_setattr_core(f, &mq->attr, to_set | tadj);
 
  out:
 	if (f) {
