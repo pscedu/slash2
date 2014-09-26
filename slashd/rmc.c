@@ -1208,14 +1208,18 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * updates from the sliod may be pending for
 			 * this generation.
 			 */
+			OPSTAT_INCR(SLM_OPST_TRUNCATE_FULL);
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
 			mq->attr.sst_blocks = 0;
 			for (i = 0; i < fcmh_2_nrepls(f); i++)
 				fcmh_set_repl_nblks(f, i, 0);
 			to_set |= SL_SETATTRF_GEN | SL_SETATTRF_NBLKS;
 			unbump = 1;
-		} else {
-PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
+
+		} else if (mq->attr.sst_size < fcmh_2_fsz(f)) {
+
+			OPSTAT_INCR(SLM_OPST_TRUNCATE_SHRINK);
+			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			/* partial truncate */
 			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
@@ -1223,7 +1227,10 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 				    -SLERR_BMAP_IN_PTRUNC);
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
-		}
+		} else if (mq->attr.sst_size > fcmh_2_fsz(f))
+			OPSTAT_INCR(SLM_OPST_TRUNCATE_EXTEND);
+		else
+			OPSTAT_INCR(SLM_OPST_TRUNCATE_SAME);
 	}
 
 	if (to_set) {

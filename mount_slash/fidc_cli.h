@@ -119,9 +119,12 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_HAVEINODE	(_FCMH_FLGSHFT << 0)	/* file inode present */
 #define FCMH_CLI_INITDIRCACHE	(_FCMH_FLGSHFT << 1)	/* dircache initialized */
 #define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 2)	/* truncate in progress */
-#define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 3)	/* has dirty attributes */
-#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 4)	/* on dirty queue */
-#define FCMH_CLI_READA_QUEUE	(_FCMH_FLGSHFT << 5)	/* readahead into the next bmap */
+#define FCMH_CLI_DIRTY_DSIZE	(_FCMH_FLGSHFT << 3)	/* has dirty datesize */
+#define FCMH_CLI_DIRTY_MTIME	(_FCMH_FLGSHFT << 4)	/* has dirty mtime */
+#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */
+#define FCMH_CLI_READA_QUEUE	(_FCMH_FLGSHFT << 6)	/* readahead into the next bmap */
+
+#define FCMH_CLI_DIRTY_ATTRS	(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE		0

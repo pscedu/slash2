@@ -1925,23 +1925,22 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	PFL_GETTIMESPEC(&ts);
 	f->fcmh_sstb.sst_mtime = ts.tv_sec;
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
+	f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 	if (q->mfsrq_off + q->mfsrq_len > fcmh_2_fsz(f)) {
 		psclog_info("fid: "SLPRI_FID", "
 		    "size from %"PRId64" to %"PRId64,
 		    fcmh_2_fid(f), fcmh_2_fsz(f),
 		    q->mfsrq_off + q->mfsrq_len);
 		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
+		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 	}
-	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-		f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
 		fci->fci_etime.tv_sec = ts.tv_sec;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
-		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
-			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-			lc_addtail(&slc_attrtimeoutq, fci);
-			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-		}
+		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
+		lc_addtail(&slc_attrtimeoutq, fci);
+		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	}
 	FCMH_ULOCK(f);
 }
