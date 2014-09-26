@@ -2680,9 +2680,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 #endif
 
  out:
-	if (rc == -PFLERR_NOTSUP || rc == PFLERR_NOTSUP) 
-		psc_fatal("setattr not supported");
-		
 	if (c) {
 		(void)FCMH_RLOCK(c);
 		if (unset_trunc) {
