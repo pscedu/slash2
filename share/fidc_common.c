@@ -119,7 +119,7 @@ fidc_reap(int max, int idle)
 				continue;
 			}
 		}
-	
+
 		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
@@ -170,13 +170,15 @@ fidc_reaper(struct psc_poolmgr *m)
  */
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
-    const struct slash_fidgen *fgp, int flags, struct fidc_membh **fp, void *arg)
+    const struct slash_fidgen *fgp, int flags, struct fidc_membh **fp,
+    void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
 
-	psclog_debug("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
+	psclog_debug("fidc_lookup called for fid "SLPRI_FID,
+	    fgp->fg_fid);
 
 	*fp = NULL;
 	fcmh_new = NULL; /* gcc */
