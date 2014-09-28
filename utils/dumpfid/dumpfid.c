@@ -119,7 +119,7 @@ searchpaths(struct psc_lockedlist *pll, const char *fn)
 
 struct f {
 	char			*fn;
-	struct pfl_stat		 stb;
+	struct stat		 stb;
 	struct psc_listentry	 lentry;
 	int			 ftyp;
 };
@@ -328,7 +328,7 @@ fcmp0(const void *a, const void *b)
 }
 
 int
-queue(const char *fn, const struct pfl_stat *stb, int ftyp,
+queue(const char *fn, const struct stat *stb, int ftyp,
     __unusedx int level, __unusedx void *arg)
 {
 	static int cnt;

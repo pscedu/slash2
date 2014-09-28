@@ -266,7 +266,7 @@ packshow_bmpces(__unusedx char *spec)
 
 void
 parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
-    int (*packf)(const char *, const struct pfl_stat *, int, int, void *))
+    int (*packf)(const char *, const struct stat *, int, int, void *))
 {
 	char *sprio, *uprio, *bmapno, *next, *bend, *iosv, *ios;
 	char replrqspec[LINE_MAX], *endp, *bmapnos;
@@ -382,7 +382,7 @@ lookup(const char **tbl, int n, const char *name)
 
 int
 cmd_fattr1(const char *fn,
-    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx const struct stat *stb, __unusedx int info,
     __unusedx int level, void *arg)
 {
 	struct msctlmsg_fattr *mfa;
@@ -443,7 +443,7 @@ cmd_fattr(int ac, char **av)
 
 int
 cmd_bmap_repl_policy_one(const char *fn,
-    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx const struct stat *stb, __unusedx int info,
     __unusedx int level, void *arg)
 {
 	struct msctlmsg_bmapreplpol *mfbrp;
@@ -519,14 +519,14 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 int
-cmd_replrq_one(const char *fn, const struct pfl_stat *pst,
+cmd_replrq_one(const char *fn, const struct stat *stb,
     __unusedx int info, __unusedx int level, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
 	int n;
 
-	if (S_ISLNK(pst->st_mode)) {
+	if (S_ISLNK(stb->st_mode)) {
 		if (!recursive) {
 			errno = EINVAL;
 			warn("%s", fn);
@@ -567,7 +567,7 @@ cmd_replrq(int ac, char **av)
 }
 
 int
-cmd_replst_one(const char *fn, __unusedx const struct pfl_stat *pst,
+cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
     __unusedx int info, __unusedx int level, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;

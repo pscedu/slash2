@@ -41,7 +41,7 @@
 extern int ion;
 
 int
-wipefs_user(const char *fn, const struct pfl_stat *pst, int info,
+wipefs_user(const char *fn, const struct stat *stb, int info,
     int level, __unusedx void *arg)
 {
 	const char *p;
@@ -49,7 +49,7 @@ wipefs_user(const char *fn, const struct pfl_stat *pst, int info,
 
 	if (level < 1)
 		return (0);
-	if (S_ISDIR(pst->st_mode)) {
+	if (S_ISDIR(stb->st_mode)) {
 		/* skip SLASH internal metadata */
 		p = strrchr(fn, '/');
 		if (p)
@@ -66,14 +66,14 @@ wipefs_user(const char *fn, const struct pfl_stat *pst, int info,
 }
 
 int
-wipefs_fidns(const char *fn, const struct pfl_stat *pst, int info,
+wipefs_fidns(const char *fn, const struct stat *stb, int info,
     int level, __unusedx void *arg)
 {
 	int rc = 0, skiplevel = ion ? 7 : 6;
 
 	if (level < 1)
 		return (0);
-	if (S_ISDIR(pst->st_mode)) {
+	if (S_ISDIR(stb->st_mode)) {
 		if (info == PFWT_DP && rmdir(fn) == -1)
 			psc_fatal("rmdir %s", fn);
 		/*
