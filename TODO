@@ -523,6 +523,36 @@ reimport
 - if high priority work cannot be done in upsch, do some lower priority
   work
 - bia odtable should move to /dev/shm
+- PFLERR_OPNOTSUP is being returned back to FUSE somewhere in sl2 'make
+  build'
+- lots of time in fidlink() lookup
+  Thread 27 (Thread 0x7fef8b7cb700 (LWP 2221)):
+#0  0x00007ff229137ff4 in __lll_lock_wait () from /lib64/libpthread.so.0
+#1  0x00007ff229133328 in _L_lock_854 () from /lib64/libpthread.so.0
+#2  0x00007ff2291331f7 in pthread_mutex_lock () from /lib64/libpthread.so.0
+#3  0x00000000005c364d in mutex_enter ()
+#4  0x00000000005a2763 in zfs_zget ()
+#5  0x000000000054cd46 in zfs_dirent_lock ()
+#6  0x000000000054cfc1 in zfs_dirlook ()
+#7  0x000000000053d415 in zfs_lookup ()
+#8  0x00000000005cb0b5 in fop_lookup ()
+#9  0x0000000000543c52 in _zfsslash2_fidlink ()
+#10 0x0000000000546ff9 in zfsslash2_lookup_slfid ()
+#11 0x0000000000439f65 in slm_fcmh_ctor ()
+#12 0x00000000004380d6 in _fidc_lookup ()
+#13 0x00000000004c0065 in slm_rmc_handle_getattr ()
+#14 0x00000000004c4254 in slm_rmc_handler ()
+#15 0x00000000004f6f46 in pscrpcthr_main ()
+#16 0x0000000000528bfa in _pscthr_begin ()
+#17 0x00007ff2291317f1 in start_thread () from /lib64/libpthread.so.0
+#18 0x00007ff228e6e70d in clone () from /lib64/libc.so.6
+- merge authbuf bulkhash and hash into single buf
+- sessid from mount_slash 'file closed' info psclog is not correct
+- progname from mount_slash 'file closed' info psclog is not correct
+
+
+- remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
+
 
 - zfs snapshot
    -> tie callback into something that COW's all odtables+journal
