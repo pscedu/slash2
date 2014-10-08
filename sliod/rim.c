@@ -221,9 +221,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	timersub(&t1, &t0, &td);
 	if (td.tv_sec > 1)
-		psclogs_notice(PSS_TMP, "reclaim processing %d files "
-		    "took %ld.%01ld second(s)", mq->count,
-		    (long)td.tv_sec, (long)td.tv_usec / 1000);
+		psclogs_notice(PSS_TMP, "reclaim processing for "
+		    "batchno %"PRId64" %d files took %ld.%01ld "
+		    "second(s)", batchno, mq->count, (long)td.tv_sec,
+		    (long)td.tv_usec / 1000);
 
  out:
 	PSCFREE(iov.iov_base);
@@ -258,7 +259,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_BMAP_PTRUNC:
-		return (-PFLERR_NOTSUP);
+return (-PFLERR_NOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
 	case SRMT_BATCH_RQ:
