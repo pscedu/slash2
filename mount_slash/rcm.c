@@ -272,7 +272,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	/* Verify that the sequence number matches. */
 	bci = bmap_2_bci(b);
 	if (bci->bci_sbd.sbd_seq != mq->seq)
-		PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
+		PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);	/* 507 */
 
 	/* All new read and write I/O's will get BIORQ_DIO. */
 	b->bcm_flags |= BMAP_DIO;
