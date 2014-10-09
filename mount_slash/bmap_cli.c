@@ -882,7 +882,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 
-		if (i) {
+		if (!i) {
 			spinlock(&bmapTimeoutLock);
 			psc_waitq_waitrel(&bmapTimeoutWaitq,
 			    &bmapTimeoutLock, &nto);
