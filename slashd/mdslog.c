@@ -197,6 +197,7 @@ static inline int
 mds_release_file(void *handle)
 {
 	int rc;
+
 	mds_note_update(1);
 	rc = mdsio_release(current_vfsid, &rootcreds, handle);
 	mds_note_update(-1);
@@ -362,15 +363,14 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	return (rc);
 }
 
-
 void
 mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 {
-	size_t size;
 	void *reclaimbuf = NULL;
+	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct srt_stat sstb;
 	int rc, count, total;
-	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
+	size_t size;
 
 	if (!xid)
 		xid = pjournal_next_xid(slm_journal);
@@ -524,11 +524,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
     __unusedx uint64_t xid, int npeers, int action)
 {
 	struct srt_update_entry update_entry, *update_entryp;
+	struct slmds_jent_namespace *sjnm = NULL;
 	struct slmds_jent_bmap_crc *sjbc = NULL;
 	int rc, count, total;
 	uint16_t type;
 	size_t size;
-	struct slmds_jent_namespace *sjnm = NULL;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -564,7 +564,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
-	mds_write_logentry(pje->pje_xid, sjnm->sjnm_target_fid, sjnm->sjnm_target_gen);
+	mds_write_logentry(pje->pje_xid, sjnm->sjnm_target_fid,
+	    sjnm->sjnm_target_gen);
 
  check_update:
 
@@ -1060,8 +1061,8 @@ mds_send_batch_update(uint64_t batchno)
 			    batchno, slstrerror(rc));
 		return (didwork);
 	}
-	rc = mds_read_file(handle, updatebuf,
-	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
+	rc = mds_read_file(handle, updatebuf, SLM_UPDATE_BATCH *
+	    sizeof(struct srt_update_entry), &size, 0);
 	mds_release_file(handle);
 
 	if (size == 0)
@@ -1357,7 +1358,8 @@ mds_open_cursor(void)
 	psclog_info("SLFID prior to replay="SLPRI_FID,
 	    mds_cursor.pjc_fid);
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
+	    mds_cursor.pjc_seqno_lwm);
 
 	psclog_info("Last bmap sequence number LWM prior to replay is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
@@ -1513,10 +1515,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 		entryp = PSC_AGP(entryp, len);
 
 		/*
-		 * In a perfect world, iosinfo->si_xid <= xid is always true.
-		 * This is because batchno and xid are related.  But I was
-		 * met with cold reality and couldn't explain why it happened.
-		 * Anyway, resending requests is not the end of the world.
+		 * In a perfect world, iosinfo->si_xid <= xid is always
+		 * true.  This is because batchno and xid are related.
+		 * But I was met with cold reality and couldn't explain
+		 * why it happened.  Anyway, resending requests is not
+		 * the end of the world.
 		 */
 		if (iosinfo->si_xid <= xid) {
 			do {
@@ -1857,8 +1860,9 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
-	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
 	int i, ri, rc, max, nios, count, stale, total, index, npeers;
+	uint64_t last_update_xid = 0, last_distill_xid = 0;
+	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1980,8 +1984,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		RPMI_ULOCK(rpmi);
 	}
 	if (stale) {
-		rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
-		    size, &size, 0);
+		rc = mds_write_file(reclaim_progfile_handle,
+		    reclaim_prog_buf, size, &size, 0);
 		psc_assert(rc == 0);
 		psc_assert(size == count * sizeof(struct reclaim_prog_entry));
 		psclog_warnx("%d stale entry(s) have been zeroed from the "
