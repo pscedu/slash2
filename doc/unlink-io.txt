@@ -735,3 +735,222 @@ Index: slash_nara/share/fidc_common.c
  	if (rc == 1) {
  		psc_assert(!FCMH_HAS_BUSY(f));
  
+
+10/09/2014
+----------
+
+Add missing ZFS patch (now part of git):
+
+
+diff --git a/src/lib/libsolcompat/include/sys/file.h b/src/lib/libsolcompat/include/sys/file.h
+index d6c7f70..7785bfd 100644
+--- a/src/lib/libsolcompat/include/sys/file.h
++++ b/src/lib/libsolcompat/include/sys/file.h
+@@ -50,6 +50,7 @@
+ #define FKEEPPARENT	0x200000 /* don't update parent pointer */
+ /* 0x400000 is reserved for SLASH2_IGNORE_MTIME (sltypes.h) */
+ /* 0x800000 is reserved for SLASH2_IGNORE_CTIME (sltypes.h) */
++/* 0x0100000 is reserved for SLASH2_KEEP_STORAGE (sltypes.h) */	
+ 
+ #ifndef O_CLOEXEC
+ #define O_CLOEXEC 02000000
+diff --git a/src/zfs-fuse/zfs_operations_slash.c b/src/zfs-fuse/zfs_operations_slash.c
+index 9e3e558..7fd271a 100644
+--- a/src/zfs-fuse/zfs_operations_slash.c
++++ b/src/zfs-fuse/zfs_operations_slash.c
+@@ -1163,7 +1163,7 @@ _zfsslash2_fidlink(const struct pfl_callerinfo *_pfl_callerinfo,
+ 		    0, NULL);
+ 	else
+ 		error = VOP_REMOVE(dvp, id_name, &zrootcreds, NULL, 0,
+-		    NULL, NULL);
++		    NULL, NULL);    /* zfs_remove() */
+ 
+  out:
+ 	psclog_debug("id_name=%s parent=%#"PRIx64" fid="SLPRI_FID" "
+@@ -1824,12 +1824,14 @@ zfsslash2_setattr(int vfsid, mdsio_fid_t ino,
+ int
+ zfsslash2_unlink(int vfsid, mdsio_fid_t parent, struct slash_fidgen *fg,
+     const char *name, const struct slash_creds *slcrp,
+-    sl_log_update_t logfunc, void *arg)
++    sl_log_update_t logfunc, void *arg, int flag)
+ {
+ 	cred_t cred = ZFS_INIT_CREDS(slcrp);
+ 
+ 	struct vfs *vfs = zfsMount[vfsid].vfs;
+ 	zfsvfs_t *zfsvfs = vfs->vfs_data;
++	vnode_t *vp = NULL;
++	uint64_t zp_s2fid;
+ 
+ 	ZFS_ENTER(zfsvfs);
+ 
+@@ -1852,17 +1854,11 @@ zfsslash2_unlink(int vfsid, mdsio_fid_t parent, struct slash_fidgen *fg,
+ 	vnode_t *dvp = ZTOV(znode);
+ 	ASSERT(dvp);
+ 
+-	vnode_t *vp = NULL;
+ 	error = VOP_LOOKUP(dvp, (char *)name, &vp, NULL, 0, NULL, &cred,
+ 	    NULL, NULL, NULL);
+ 	if (error)
+ 		goto out;
+ 
+-	error = VOP_REMOVE(dvp, (char *)name, &cred, NULL, 0, logfunc,
+-	    arg);	/* zfs_remove() */
+-	if (error)
+-		goto out;
+-
+ 	vattr_t vattr;
+ 	memset(&vattr, 0, sizeof(vattr));
+ 	error = VOP_GETATTR(vp, &vattr, 0, &cred, NULL);
+@@ -1874,13 +1870,23 @@ zfsslash2_unlink(int vfsid, mdsio_fid_t parent, struct slash_fidgen *fg,
+ 		fg->fg_gen = VTOZ(vp)->z_phys->zp_s2gen;
+ 	}
+ 
++	zp_s2fid = VTOZ(vp)->z_phys->zp_s2fid;
++	VN_RELE(vp);
++	vp = NULL;
++
++	error = VOP_REMOVE(dvp, (char *)name, &cred, NULL, 
++		    flag == 1 ? SLASH2_KEEP_STORAGE : 0, 
++		    logfunc, arg);	/* zfs_remove() */
++	if (error)
++		goto out;
++
+ 	/*
+ 	 * The last remaining link is our FID namespace one, so remove
+ 	 * the file.
+ 	 */
+ 	if (vattr.va_nlink == 1)
+ 		error = zfsslash2_fidlink(vfsid,
+-		    VTOZ(vp)->z_phys->zp_s2fid, FIDLINK_REMOVE, NULL,
++		    zp_s2fid, FIDLINK_REMOVE, NULL,
+ 		    NULL);
+ 
+  out:
+diff --git a/src/zfs-fuse/zfs_slashlib.h b/src/zfs-fuse/zfs_slashlib.h
+index a376fd1..47844c7 100644
+--- a/src/zfs-fuse/zfs_slashlib.h
++++ b/src/zfs-fuse/zfs_slashlib.h
+@@ -70,7 +70,7 @@ int	zfsslash2_rmdir(int, mdsio_fid_t, struct slash_fidgen *, const char *, const
+ int	zfsslash2_setattr(int, mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
+ int	zfsslash2_statfs(int, struct statvfs *);
+ int	zfsslash2_symlink(int, const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
+-int	zfsslash2_unlink(int, mdsio_fid_t, struct slash_fidgen *, const char *, const struct slash_creds *, sl_log_update_t, void *);
++int	zfsslash2_unlink(int, mdsio_fid_t, struct slash_fidgen *, const char *, const struct slash_creds *, sl_log_update_t, void *, int);
+ int	zfsslash2_write(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, void *, sl_log_write_t, void *);
+ 
+ int	zfsslash2_getxattr(int, const struct slash_creds *, const char *, char *, size_t, size_t *, mdsio_fid_t);
+diff --git a/src/zfs-fuse/zfs_vnops.c b/src/zfs-fuse/zfs_vnops.c
+index 84b0363..88ded72 100644
+--- a/src/zfs-fuse/zfs_vnops.c
++++ b/src/zfs-fuse/zfs_vnops.c
+@@ -83,6 +83,9 @@
+ #include "slashrpc.h"
+ #include "sltypes.h"
+ 
++int create_good = 0;
++int remove_good = 0;
++
+ /*
+  * Programming rules.
+  *
+@@ -1465,7 +1468,7 @@ top:
+ 
+ 			logfunc(NS_OP_CREATE, txg,
+ 			    dzp->z_phys->zp_s2fid, 0, &sstb,
+-			    vap->va_mask, name, NULL, NULL);
++			    vap->va_mask, name, NULL, NULL, 0);
+ 		} else {
+ 			txtype = zfs_log_create_txtype(Z_FILE, vsecp, vap);
+ 			if (flag & FIGNORECASE)
+@@ -1535,6 +1538,9 @@ out:
+ 		error = specvp_check(vpp, cr);
+ 	}
+ 
++	if (!error && strcmp(name, "wc.db-journal") == 0)
++		create_good++;
++
+ 	ZFS_EXIT(zfsvfs);
+ 	return (error);
+ }
+@@ -1731,7 +1737,7 @@ top:
+ 		sstb.sst_nlink = zp->z_phys->zp_links;
+ 		sstb.sst_size = olds2siz;
+ 		logfunc(NS_OP_UNLINK, txg, dzp->z_phys->zp_s2fid, 0,
+-		    &sstb, 0, name, NULL, arg);
++		    &sstb, 0, name, NULL, arg, flags & SLASH2_KEEP_STORAGE);
+ 	} else {
+ 		txtype = TX_REMOVE;
+ 		if (flags & FIGNORECASE)
+@@ -1752,6 +1758,9 @@ out:
+ 		VN_RELE(ZTOV(xzp));
+ 	}
+ 
++	if (!error && strcmp(name, "wc.db-journal") == 0)
++		remove_good++;
++
+ 	ZFS_EXIT(zfsvfs);
+ 	return (error);
+ }
+@@ -1933,7 +1942,7 @@ top:
+ 
+ 		logfunc(NS_OP_MKDIR, txg, dzp->z_phys->zp_s2fid,
+ 		    zp->z_phys->zp_s2fid, &sstb, vap->va_mask, dirname,
+-		    NULL, NULL);
++		    NULL, NULL, 0);
+ 	} else {
+ 		txtype = zfs_log_create_txtype(Z_DIR, vsecp, vap);
+ 		if (flags & FIGNORECASE)
+@@ -2069,7 +2078,7 @@ top:
+ 			sstb.sst_fid = zp->z_phys->zp_s2fid;
+ 
+ 			logfunc(NS_OP_RMDIR, txg, dzp->z_phys->zp_s2fid,
+-			    0, &sstb, 0, name, NULL, NULL);
++			    0, &sstb, 0, name, NULL, NULL, 0);
+ 		} else { 
+ 			uint64_t txtype = TX_RMDIR;
+ 			if (flags & FIGNORECASE)
+@@ -3208,7 +3217,7 @@ top:
+ 			     AT_ATIME | AT_MTIME | AT_CTIME |
+ 			     AT_SLASH2NBLKS | AT_SIZE | AT_SLASH2ATIME |
+ 			     AT_SLASH2MTIME | AT_SLASH2SIZE |
+-			     AT_PTRUNCGEN), NULL, NULL, &oldsiz);
++			     AT_PTRUNCGEN), NULL, NULL, &oldsiz, 0);
+ 		} else
+ 			zfs_log_setattr(zilog, tx, TX_SETATTR, zp, vap,
+ 			    mask, fuidp);
+@@ -3658,7 +3667,7 @@ top:
+ 				logfunc(NS_OP_RENAME, txg,
+ 				    sdzp->z_phys->zp_s2fid,
+ 				    tdzp->z_phys->zp_s2fid, &sstb, 0,
+-				    snm, tnm, &aa);
++				    snm, tnm, &aa, 0);
+ 
+ 				if (tzp) {
+ 					memset(&sstb, 0, sizeof(sstb));
+@@ -3669,7 +3678,7 @@ top:
+ 					sstb.sst_size = tzp->z_phys->zp_s2size;
+ 					logfunc(NS_OP_RECLAIM, txg,
+ 					    tzp->z_phys->zp_s2fid, 0,
+-					    &sstb, 0, NULL, NULL, NULL);
++					    &sstb, 0, NULL, NULL, NULL, 0);
+ 				}
+ 			} else
+ 				zfs_log_rename(zilog, tx,
+@@ -3856,7 +3865,7 @@ top:
+ 
+ 			logfunc(NS_OP_SYMLINK, txg,
+ 			    dzp->z_phys->zp_s2fid, zp->z_phys->zp_s2fid,
+-			    &sstb, vap->va_mask, name, link, NULL);
++			    &sstb, vap->va_mask, name, link, NULL, 0);
+ 		} else {
+ 			uint64_t txtype = TX_SYMLINK;
+ 			if (flags & FIGNORECASE)
+@@ -4055,7 +4064,7 @@ top:
+ 			txg = dmu_tx_get_txg(tx);
+ 			sstb.sst_fid = szp->z_phys->zp_s2fid;
+ 			logfunc(NS_OP_LINK, txg, dzp->z_phys->zp_s2fid,
+-			    0, &sstb, 0, name, NULL, NULL);
++			    0, &sstb, 0, name, NULL, NULL, 0);
+ 		} else {
+ 			uint64_t txtype = TX_LINK;
+ 			if (flags & FIGNORECASE)
