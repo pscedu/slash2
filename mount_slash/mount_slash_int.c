@@ -1853,7 +1853,7 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 		mfh->mfh_ra.mra_nseq++;
 		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
 		curr = off / SLASH_BMAP_SIZE;
-		if (curr > prev)
+		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
 			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
 	} else {
 		mfh->mfh_ra.mra_raoff = 0;
