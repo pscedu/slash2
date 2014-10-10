@@ -819,8 +819,8 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 			/*
 			 * Evict bmaps that are not even expired if
-			 * #bmaps on timeoutq exceeds 25% of max allowed
-			 * before we start reaping.
+			 * # of bmaps on timeoutq exceeds 25% of max
+			 * allowed before we start reaping.
 			 */
 			PFL_GETTIMESPEC(&crtime);
 			if (nitems - psc_dynarray_len(&bcis) <=
