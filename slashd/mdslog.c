@@ -372,8 +372,11 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 	int rc, count, total;
 	size_t size;
 
-	if (!xid)
+	if (!xid) {
+		PJ_LOCK(slm_journal);
 		xid = pjournal_next_xid(slm_journal);
+		PJ_ULOCK(slm_journal);
+	}
 
 	if (reclaim_logfile_handle == NULL) {
 
