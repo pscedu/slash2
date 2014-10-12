@@ -44,6 +44,9 @@
 #include "slconfig.h"
 #include "slconn.h"
 
+#define CBARG_CSVC	0
+#define CBARG_STKVER	1
+
 struct pscrpc_nbreqset	*sl_nbrqset;
 
 struct psc_poolmaster	 sl_csvc_poolmaster;
@@ -180,8 +183,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	csvc = args->pointer_arg[0];
-	stkversp = args->pointer_arg[1];
+	csvc = args->pointer_arg[CBARG_CSVC];
+	stkversp = args->pointer_arg[CBARG_STKVER];
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	psc_atomic32_clearmask(&csvc->csvc_flags,
@@ -242,8 +245,8 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 		CSVC_ULOCK(csvc);
 
 		rq->rq_interpret_reply = slrpc_connect_cb;
-		rq->rq_async_args.pointer_arg[0] = csvc;
-		rq->rq_async_args.pointer_arg[1] = stkversp;
+		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
+		rq->rq_async_args.pointer_arg[CBARG_STKVER] = stkversp;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			pscrpc_req_finished(rq);
