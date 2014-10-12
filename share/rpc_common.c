@@ -631,7 +631,7 @@ csvc_cli_cmp(const void *a, const void *b)
  * @csvcp: value-result permanent storage for connection structures.
  * @flags: CSVCF_* flags the connection should take on, only used for
  *	csvc initialization.
- * @exp: RPC peer export.  This or @peernid is required.
+ * @exp: RPC peer export.  This or @peernids is required.
  * @peernids: RPC peer network address(es) (NID).  This or @exp is
  *	required.
  * @rqptl: request portal ID.
@@ -802,6 +802,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	} else if (csvc->csvc_lasterrno == 0 ||
 	    csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
 	    now.tv_sec) {
+		struct sl_resm_nid *nr;
+		lnet_process_id_t *pp;
+		int i, j;
 
 		psc_atomic32_setmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
@@ -811,9 +814,18 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			peernid = slrpc_getpeernid(exp, peernids);
 		if (stkversp == NULL)
 			stkversp = slrpc_getstkversp(csvc);
-		rc = slrpc_issue_connect(peernid, csvc, flags, mw,
-		    stkversp);
-
+		rc = ENETUNREACH;
+		DYNARRAY_FOREACH(nr, i, peernids)
+			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
+				if (LNET_NIDNET(nr->resmnid_nid) ==
+				    LNET_NIDNET(pp->nid)) {
+					rc = slrpc_issue_connect(
+					    nr->resmnid_nid, csvc,
+					    flags, mw, stkversp);
+					if (rc == 0)
+						goto proc_conn;
+				}
+ proc_conn:
 		CSVC_LOCK(csvc);
 
 		if (rc == EWOULDBLOCK) {
