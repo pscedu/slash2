@@ -2008,7 +2008,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/*
 	 * Get the start and end block regions from the input
 	 * parameters. We support at most 2 full block worth
-	 * of I/O requests that span at most one bock boundary.
+	 * of I/O requests that span at most one block boundary.
 	 */
 	start = off / SLASH_BMAP_SIZE;
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
