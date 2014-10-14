@@ -3197,10 +3197,8 @@ msreadaheadthr_main(struct psc_thread *thr)
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
 			break;
 		}
-		if (!did_work) {
+		if (!did_work)
 			LIST_CACHE_ULOCK(&slc_readaheadq);
-			pscthr_yield();
-		}
 	}
 }
 
