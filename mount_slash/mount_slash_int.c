@@ -1776,7 +1776,8 @@ msl_pages_copyout(struct bmpc_ioreq *r)
  *
  * Readahead (RA) may extend beyond the current bmap as I/O reaches
  * close to the bmap boundary, in which case RA activity is split
- * between 'this' bmap and the following.
+ * between 'this' bmap and the following (the caller checks if the
+ * next bmap actually exists or not).
  *
  * @mfh: file handle.
  * @bsize: size of bmap (normally SLASH_BMAP_SIZE unless it's the last bmap).
