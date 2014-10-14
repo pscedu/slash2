@@ -1036,7 +1036,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
 
-	DEBUG_BMAP(PLL_INFO, b, "start freeing");
+	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 
 	/* Mind lock ordering; remove from LRU first. */
 	if (b->bcm_flags & BMAP_DIO &&
@@ -1060,6 +1060,8 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
 
 	bmpc_freeall_locked(bmpc);
+
+	psc_waitq_destroy(&bmpc->bmpc_waitq);
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
