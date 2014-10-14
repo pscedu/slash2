@@ -3125,7 +3125,7 @@ msfcmhreapthr_main(struct psc_thread *thr)
 void
 msreadaheadthr_main(struct psc_thread *thr)
 {
-	int i, rc;
+	int i, rc, did_work;
 	struct bmap *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
@@ -3134,6 +3134,8 @@ msreadaheadthr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci, *tmp_fci;
 
 	while (pscthr_run(thr)) {
+
+		did_work = 0;
 		lc_peekheadwait(&slc_readaheadq);
 		LIST_CACHE_LOCK(&slc_readaheadq);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_readaheadq) {
@@ -3142,18 +3144,22 @@ msreadaheadthr_main(struct psc_thread *thr)
 			if (!FCMH_TRYLOCK(f))
 				continue;
 
+			if (!(f->fcmh_flags & FCMH_CLI_READA_QUEUE)) {
+				FCMH_ULOCK(f);
+				continue;
+			}
 			lc_remove(&slc_readaheadq, fci);
 			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
 			FCMH_ULOCK(f);
 
 			LIST_CACHE_ULOCK(&slc_readaheadq);
+			did_work = 1;
 
 			rc = bmap_get(f, fci->fci_bmapno, SL_READ, &b);
 			if (rc) {
 				fcmh_op_done_type(f,
 				    FCMH_OPCNT_READAHEAD);
-				LIST_CACHE_LOCK(&slc_readaheadq);
-				continue;
+				break;
 			}
 			r = psc_pool_get(slc_biorq_pool);
 			memset(r, 0, sizeof(*r));
@@ -3189,9 +3195,12 @@ msreadaheadthr_main(struct psc_thread *thr)
 			msl_biorq_destroy(r);
 
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			LIST_CACHE_LOCK(&slc_readaheadq);
+			break;
 		}
-		LIST_CACHE_ULOCK(&slc_readaheadq);
+		if (!did_work) {
+			LIST_CACHE_ULOCK(&slc_readaheadq);
+			pscthr_yield();
+		}
 	}
 }
 
