@@ -338,12 +338,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	if (rc) {
 		fcmh->fcmh_flags |= FCMH_CAC_TOFREE;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
 		*fp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	}
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	return (rc);
 }
 
