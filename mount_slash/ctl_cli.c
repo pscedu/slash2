@@ -266,6 +266,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	pll_remove(&msctl_replsts, &mrsq);
 	PLL_ULOCK(&msctl_replsts);
+	psc_waitq_destroy(&mrsq.mrsq_waitq);
 	added = 0;
 
 	rc = 1;
