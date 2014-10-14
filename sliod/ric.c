@@ -102,7 +102,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct sli_rdwrstats *rwst;
-	struct fcmh_iod_info *fii;
 	struct slash_fidgen *fgp;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
@@ -342,12 +341,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 #if 0
 	FCMH_LOCK(f);
-	fii = fcmh_2_fii(f);
 	if (fcmh_2_off(f) == mq->offset || mq->offset == 0) {
 		fcmh_2_nseq(f)++;
 		if (!(f->fcmh_flags & FCMH_IOD_READAHEAD)) {
 			f->fcmh_flags |= FCMH_IOD_READAHEAD;
-			lc_addtail(&sli_readaheadq, fii);
+			lc_addtail(&sli_readaheadq, fcmh_2_fii(f));
 			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
 		}
 	} else
