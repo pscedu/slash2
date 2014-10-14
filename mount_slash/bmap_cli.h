@@ -38,7 +38,7 @@
 /* number of bmap flush threads */
 #define NUM_BMAP_FLUSH_THREADS		2
 
-#define NUM_ATTR_FLUSH_THREADS		1
+#define NUM_ATTR_FLUSH_THREADS		2
 
 #define NUM_READAHEAD_THREADS		2
 
