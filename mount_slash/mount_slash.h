@@ -439,7 +439,6 @@ extern struct psc_iostats	 msl_io_1m_stat;
 
 extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;
-extern struct psc_listcache	 slc_bmapreadaheadq;
 extern struct psc_listcache	 slc_bmaptimeoutq;
 extern struct psc_listcache	 slc_readaheadq;
 
