@@ -69,7 +69,7 @@ psc_atomic32_t			 slc_max_nretries = PSC_ATOMIC32_INIT(256);
 
 struct psc_waitq		slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			slc_bflush_lock = SPINLOCK_INIT;
-int				slc_bflush_tmout_flags = 0;
+int				slc_bflush_tmout_flags;
 
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
@@ -547,7 +547,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	bmap_flush_coalesce_prep(bwc);
 
 	psclog_diag("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz,
-		     pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
+	    pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
 
 	psc_assert(!bwc->bwc_niovs);
 
