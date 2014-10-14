@@ -3134,10 +3134,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci, *tmp_fci;
 
 	while (pscthr_run(thr)) {
-
 		did_work = 0;
-		lc_peekheadwait(&slc_readaheadq);
 		LIST_CACHE_LOCK(&slc_readaheadq);
+		lc_peekheadwait(&slc_readaheadq);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_readaheadq) {
 
 			f = fci_2_fcmh(fci);
