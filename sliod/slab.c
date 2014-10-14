@@ -82,7 +82,7 @@ sl_buffer_cache_init(void)
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
 
 	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
-	    slb_mgmt_lentry, PPMF_AUTO, SLB_DEF, SLB_MIN, SLB_MAX,
+	    slb_mgmt_lentry, PPMF_AUTO, SLB_DEF, SLB_MIN, 0,
 	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
 	    NULL);
 	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);
