@@ -183,7 +183,7 @@ slvr_worker_push_crcups(void)
 
 		BII_ULOCK(bcr->bcr_bii);
 
-		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
+		DEBUG_BCR(PLL_DIAG, bcr, "scheduled nbcrs=%d total_bcrs=%d",
 		    psc_dynarray_len(bcrs), lc_nitems(&bcr_ready));
 
 		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
@@ -249,7 +249,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		bii = bcr->bcr_bii;
 
 		DEBUG_BCR(rq->rq_status || !mp || mp->rc ?
-		    PLL_ERROR : PLL_INFO, bcr, "rq_status=%d rc=%d%s",
+		    PLL_ERROR : PLL_DIAG, bcr, "rq_status=%d rc=%d%s",
 		    rq->rq_status, mp ? mp->rc : -4096,
 		    mp ? "" : " (unknown, no buf)");
 
