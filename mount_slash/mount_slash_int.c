@@ -1769,6 +1769,38 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 	return (tbytes);
 }
 
+static void
+msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
+{
+	size_t prev, curr;
+	spinlock(&mfh->mfh_lock);
+
+	/*
+	 * If the first read starts from offset 0, the following will
+	 * trigger a read-ahead.  This is because as part of the
+	 * msl_fhent structure, the fields are zeroed during allocation.
+	 */
+	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off) {
+		mfh->mfh_ra.mra_nseq++;
+		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
+		curr = off / SLASH_BMAP_SIZE;
+		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
+			/*
+			 * The raoff can go negative here. However, we can
+			 * catch the overrun and fix it later in msl_getra().
+			 */
+			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
+	} else {
+		mfh->mfh_ra.mra_raoff = 0;
+		mfh->mfh_ra.mra_nseq = 0;
+	}
+
+	mfh->mfh_ra.mra_loff = off;
+	mfh->mfh_ra.mra_lsz = size;
+
+	freelock(&mfh->mfh_lock);
+}
+
 /*
  * Figure out the location and size of the next readahead based on a
  * number of factors: original read size and offset, current block map
@@ -1841,38 +1873,6 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	MFH_ULOCK(mfh);
 
 	return (1);
-}
-
-static void
-msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
-{
-	size_t prev, curr;
-	spinlock(&mfh->mfh_lock);
-
-	/*
-	 * If the first read starts from offset 0, the following will
-	 * trigger a read-ahead.  This is because as part of the
-	 * msl_fhent structure, the fields are zeroed during allocation.
-	 */
-	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off) {
-		mfh->mfh_ra.mra_nseq++;
-		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
-		curr = off / SLASH_BMAP_SIZE;
-		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
-			/*
-			 * The raoff can go negative here. However, we can
-			 * catch the overrun and fix it later in msl_getra().
-			 */
-			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
-	} else {
-		mfh->mfh_ra.mra_raoff = 0;
-		mfh->mfh_ra.mra_nseq = 0;
-	}
-
-	mfh->mfh_ra.mra_loff = off;
-	mfh->mfh_ra.mra_lsz = size;
-
-	freelock(&mfh->mfh_lock);
 }
 
 void
