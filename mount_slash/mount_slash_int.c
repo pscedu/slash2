@@ -1193,6 +1193,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	psc_assert(npages > 0);
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
+	OPSTAT_INCR(SLC_OPST_READAHEAD_RPC_LAUNCH);
 	bmpces_cbarg = PSCALLOC((npages + 1) * sizeof(void *));
 
 	iovs = PSCALLOC(npages * sizeof(*iovs));
