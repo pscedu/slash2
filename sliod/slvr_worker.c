@@ -142,7 +142,7 @@ slvr_worker_push_crcups(void)
 	struct psc_dynarray *bcrs;
 	struct timespec now, diff;
 	struct bcrcupd *bcr;
-	int i
+	int i;
 
 	if (atomic_xchg(&busy, 1))
 		return;
