@@ -122,11 +122,10 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 
 #ifdef ADLERCRC32
 		// XXX not a running CRC?  double check for correctness
-		crc = adler32(crc, slvr_2_buf(s, 0) +
-		    soff, (int)(eoff - soff));
+		crc = adler32(crc, slvr_2_buf(s, 0) + soff,
+		    (int)(eoff - soff));
 #else
-		psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-		    SLASH_SLVR_SIZE);
+		psc_crc64_calc(&crc, slvr_2_buf(s, 0), SLASH_SLVR_SIZE);
 #endif
 
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
