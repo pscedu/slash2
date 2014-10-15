@@ -463,8 +463,7 @@ bmpce_reap(struct psc_poolmgr *m)
 		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
 		    waiters);
 
-		b = (struct bmap *)bmpc - 1;
-		psc_assert(bmap_2_bmpc(b) == bmpc);
+		b = bmpc_2_bmap(bmpc);
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
