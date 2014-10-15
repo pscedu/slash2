@@ -710,20 +710,16 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	uint32_t i;
 	int rc;
 
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
-//	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
-
-	rc = mp ? mp->rc : -ENOBUFS;
-
-	for (i = 0; i < mq->nbmaps; i++) {
-		psclog(rc ? PLL_ERROR : PLL_INFO,
+	for (i = 0; i < mq->nbmaps; i++)
+		psclog(rc ? PLL_ERROR : PLL_DIAG,
 		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
 		    mq->sbd[i].sbd_seq, rc);
-	}
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -855,7 +851,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
 
-				DEBUG_BMAP(PLL_INFO, b, "res(%s)",
+				DEBUG_BMAP(PLL_DIAG, b, "res(%s)",
 				    resm->resm_res->res_name);
 				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_WRITE);
 			} else {
