@@ -458,9 +458,10 @@ bmpce_reap(struct psc_poolmgr *m)
 
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_debug("bmpc=%p npages=%d age=(%ld:%ld) waiters=%d",
+		psclog_debug("bmpc=%p npages=%d age="PSCPRI_TIMESPEC" "
+		    "waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
-		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
+		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
 		    waiters);
 
 		b = bmpc_2_bmap(bmpc);
