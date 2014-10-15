@@ -151,7 +151,7 @@ int
 fidc_reaper(struct psc_poolmgr *m)
 {
 	return (fidc_reap(MIN(FCMH_MAX_REAP,
-	    atomic_read(&m->ppm_nwaiters)), 0));
+	    psc_atomic32_read(&m->ppm_nwaiters)), 0));
 }
 
 /**

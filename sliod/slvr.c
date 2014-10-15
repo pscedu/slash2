@@ -966,7 +966,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s,
 		    "considering for reap, nwaiters=%d",
-		    atomic_read(&m->ppm_nwaiters));
+		    psc_atomic32_read(&m->ppm_nwaiters));
 
 		/*
 		 * We are reaping so it is fine to back off on some
@@ -988,7 +988,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		SLVR_ULOCK(s);
 
 		if (psc_dynarray_len(&a) >=
-		    atomic_read(&m->ppm_nwaiters))
+		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
@@ -998,7 +998,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		slvr_remove(s);
 	psc_dynarray_free(&a);
 
-	if (!n || n < atomic_read(&m->ppm_nwaiters))
+	if (!n || n < psc_atomic32_read(&m->ppm_nwaiters))
 		psc_waitq_wakeone(&sli_slvr_waitq);
 
 	return (n);

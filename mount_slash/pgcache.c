@@ -462,7 +462,7 @@ bmpce_reap(struct psc_poolmgr *m)
 		    "waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
-		    atomic_read(&m->ppm_nwaiters));
+		    psc_atomic32_read(&m->ppm_nwaiters));
 
 		b = bmpc_2_bmap(bmpc);
 		if (!BMAP_TRYLOCK(b))
@@ -472,14 +472,14 @@ bmpce_reap(struct psc_poolmgr *m)
 		if (pll_nitems(&bmpc->bmpc_lru)) {
 			DEBUG_BMAP(PLL_DIAG, b, "try free");
 			nfreed += bmpc_lru_tryfree(bmpc,
-			    atomic_read(&m->ppm_nwaiters));
+			    psc_atomic32_read(&m->ppm_nwaiters));
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else
 			psclog_debug("skip bmpc=%p, nothing on lru",
 			    bmpc);
 
 		BMAP_ULOCK(b);
-		if (nfreed >= atomic_read(&m->ppm_nwaiters))
+		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
