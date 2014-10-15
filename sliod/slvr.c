@@ -960,7 +960,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	struct slvr *s, *dummy;
 	int i, n;
 
-	n = 0;
 	psc_dynarray_init(&a);
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
@@ -970,9 +969,9 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		    atomic_read(&m->ppm_nwaiters));
 
 		/*
-		 * We are reaping, so it is fine to back off on some
+		 * We are reaping so it is fine to back off on some
 		 * slivers.  We have to use a reqlock here because
-		 * slivers do not have private spinlocks, instead they
+		 * slivers do not have private spinlocks; instead they
 		 * use the lock of the bii.  So if this thread tries to
 		 * free a slvr from the same bii trylock will abort.
 		 */
@@ -988,16 +987,15 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		s->slvr_flags |= SLVR_FREEING;
 		SLVR_ULOCK(s);
 
-		if (n >= atomic_read(&m->ppm_nwaiters))
+		if (psc_dynarray_len(&a) >=
+		    atomic_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
 
-	for (i = 0; i < psc_dynarray_len(&a); i++) {
-		s = psc_dynarray_getpos(&a, i);
-
+	n = psc_dynarray_len(&a);
+	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
-	}
 	psc_dynarray_free(&a);
 
 	if (!n || n < atomic_read(&m->ppm_nwaiters))
