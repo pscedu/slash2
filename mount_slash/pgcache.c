@@ -485,7 +485,7 @@ bmpce_reap(struct psc_poolmgr *m)
 	LIST_CACHE_ULOCK(&bmpcLru);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
-	    atomic_read(&m->waiters));
+	    psc_atomic32_read(&m->ppm_nwaiters));
 
 	return (nfreed);
 }
