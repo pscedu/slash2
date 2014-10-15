@@ -406,17 +406,18 @@ slislvrthr_proc(struct slvr *s)
 void
 slislvrthr_main(struct psc_thread *thr)
 {
+	static struct pfl_mutex mtx = PSC_MUTEX_INIT;
+
 	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
-	struct pfl_mutex mtx = PSC_MUTEX_INIT;
 	struct timespec expire;
 	struct slvr *s, *dummy;
 	int i;
 
 	while (pscthr_run(thr)) {
-
 		psc_mutex_lock(&mtx);
 
 		LIST_CACHE_LOCK(&sli_crcqslvrs);
+		lc_peekheadwait(&sli_crcqslvrs);
 
 		PFL_GETTIMESPEC(&expire);
 		expire.tv_sec -= CRC_QUEUE_AGE;
