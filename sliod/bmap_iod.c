@@ -208,15 +208,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 }
 
 void
-slifcmhreapthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1));
-		sleep(MAX_FCMH_LIFETIME);
-	}
-}
-
-void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -320,13 +311,6 @@ slibmaprlsthr_spawn(void)
 
 	pscthr_init(SLITHRT_BMAPRLS, 0, slibmaprlsthr_main, NULL, 0,
 	    "slibmaprlsthr");
-}
-
-void
-slifcmhreapthr_spawn(void)
-{
-	pscthr_init(SLITHRT_FCMHREAP, 0, slifcmhreapthr_main, NULL, 0,
-	    "slifcmhreapthr");
 }
 
 void

@@ -76,4 +76,6 @@ int	sli_fcmh_lookup_fid(struct slashrpc_cservice *,
 	    const struct slash_fidgen *, const char *,
 	    struct slash_fidgen *, int *);
 
+void	slifcmhreapthr_main(struct psc_thread *);
+
 #endif /* _FIDC_IOD_H_ */

@@ -123,7 +123,7 @@ struct bmap_iod_info {
 #define BII_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
 #define BII_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define CRC_QUEUE_AGE		6	/* time wait on CRC queue in seconds */
+#define CRC_QUEUE_AGE		2	/* time wait on CRC queue in seconds */
 #define BCR_BATCH_AGE		12	/* time wait for BCR batching in seconds */
 
 uint64_t	bim_getcurseq(void);
@@ -134,7 +134,6 @@ void		bcr_ready_add(struct bcrcupd *);
 void		bcr_ready_remove(struct bcrcupd *);
 
 void		slibmaprlsthr_spawn(void);
-void		slifcmhreapthr_spawn(void);
 
 extern struct psc_listcache	 bmapRlsQ;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
