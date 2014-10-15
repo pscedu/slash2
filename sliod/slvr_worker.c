@@ -138,27 +138,25 @@ __static void
 slvr_worker_push_crcups(void)
 {
 	static atomic_t busy = ATOMIC_INIT(0);
-	struct bcrcupd *bcr;
+
 	struct psc_dynarray *bcrs;
 	struct timespec now, diff;
-	int i, rc, didwork = 0;
+	struct bcrcupd *bcr;
+	int i
 
 	if (atomic_xchg(&busy, 1))
 		return;
- again:
 
+ again:
 	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
 
 	pscrpc_nbreqset_reap(sl_nbrqset);
 
+	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
+
 	/*
 	 * Check if an earlier CRC update RPC, if any, has finished.  If
 	 * one is still inflight, we won't be able to initiate a new one.
-	 */
-	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
-	/*
-	 * Leave scheduled bcr's on the list so that in case of a
-	 * failure, ordering will be maintained.
 	 */
 	LIST_CACHE_LOCK(&bcr_ready);
 	PFL_GETTIMESPEC(&now);
@@ -168,6 +166,10 @@ slvr_worker_push_crcups(void)
 		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
+		/*
+		 * Leave scheduled bcr's on the list so that in case of
+		 * a failure, ordering will be maintained.
+		 */
 		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
 			BII_ULOCK(bcr->bcr_bii);
 			continue;
@@ -192,18 +194,14 @@ slvr_worker_push_crcups(void)
 	LIST_CACHE_ULOCK(&bcr_ready);
 
 	if (psc_dynarray_len(bcrs)) {
-		didwork = 1;
-		rc = slvr_worker_crcup_genrq(bcrs);
 		/*
 		 * If we fail to send an RPC, we must leave the
 		 * reference in the tree for future attempt(s).
 		 * Otherwise, the callback function (i.e.
 		 * slvr_nbreqset_cb()) should remove them from the tree.
 		 */
-		if (rc) {
-			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
-				bcr = psc_dynarray_getpos(bcrs, i);
-
+		if (slvr_worker_crcup_genrq(bcrs)) {
+			DYNARRAY_FOREACH(bcr, i, bcrs) {
 				BII_LOCK(bcr->bcr_bii);
 				bcr_2_bmap(bcr)->bcm_flags &=
 				    ~BMAP_IOD_INFLIGHT;
@@ -212,10 +210,6 @@ slvr_worker_push_crcups(void)
 			psc_dynarray_free(bcrs);
 			PSCFREE(bcrs);
 		}
-	}
-
-	if (didwork) {
-		didwork = 0;
 		goto again;
 	}
 
