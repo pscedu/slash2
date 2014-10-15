@@ -706,7 +706,6 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_bmap_release_req *mq;
-	struct srm_bmap_release_rep *mp;
 	uint32_t i;
 	int rc;
 
