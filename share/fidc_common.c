@@ -84,6 +84,10 @@ fcmh_destroy(struct fidc_membh *f)
 
 #define FCMH_MAX_REAP 8
 
+/*
+ * Reap some handles from the fidcache.
+ * @max: max number of objects to reap.
+ */
 int
 fidc_reap(int max, int idle)
 {
@@ -141,17 +145,13 @@ fidc_reap(int max, int idle)
 }
 
 /**
- * fidc_reaper - Reap some fcmhs from the idle list due to memory pressure.
+ * Reap some fcmhs from the idle list due to memory pressure.
  */
 int
 fidc_reaper(struct psc_poolmgr *m)
 {
-	int i, target;
-	psc_assert(m == fidcPool);
-
-	target = MIN(FCMH_MAX_REAP, atomic_read(&m->ppm_nwaiters));
-	i = fidc_reap(target, 0);
-	return (i);
+	return (fidc_reap(MIN(FCMH_MAX_REAP,
+	    atomic_read(&m->ppm_nwaiters)), 0));
 }
 
 /**
