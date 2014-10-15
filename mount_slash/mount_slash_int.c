@@ -1859,6 +1859,10 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
 		curr = off / SLASH_BMAP_SIZE;
 		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
+			/*
+			 * The raoff can go negative here. However, we can
+			 * catch the overrun and fix it later in msl_getra().
+			 */
 			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
 	} else {
 		mfh->mfh_ra.mra_raoff = 0;
