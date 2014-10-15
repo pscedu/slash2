@@ -101,7 +101,7 @@ struct bmap_pagecache_entry {
 			psc_waitq_wakeall((e)->bmpce_waitq);		\
 			DEBUG_BMPCE(PLL_DEBUG, (e), "wakeup");		\
 		} else							\
-			DEBUG_BMPCE(PLL_INFO, (e), "NULL bmpce_waitq");	\
+			DEBUG_BMPCE(PLL_DIAG, (e), "NULL bmpce_waitq");	\
 	} while (0)
 
 #define BMPCE_SETATTR(e, fl, ...)					\
@@ -110,7 +110,7 @@ struct bmap_pagecache_entry {
 									\
 		_locked = BMPCE_RLOCK(e);				\
 		(e)->bmpce_flags |= (fl);				\
-		DEBUG_BMPCE(PLL_INFO, (e), ##__VA_ARGS__);		\
+		DEBUG_BMPCE(PLL_DIAG, (e), ##__VA_ARGS__);		\
 		BMPCE_URLOCK((e), _locked);				\
 	} while (0)
 
@@ -240,10 +240,13 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 	struct psc_waitq		 bmpc_waitq;
 	psc_spinlock_t			 bmpc_lock;
+
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
 	 * requests are sorted based on their starting offsets to
 	 * facilitate write coalescing.
+	 *
+	 * The splay is protected by the bmap lock, not the bmpc_lock.
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
