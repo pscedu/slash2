@@ -452,9 +452,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
-	struct bmap *b;
 	struct bmap_pagecache *bmpc;
-	int nfreed = 0, waiters = atomic_read(&m->ppm_nwaiters);
+	struct bmap *b;
+	int nfreed = 0;
 
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
@@ -462,7 +462,7 @@ bmpce_reap(struct psc_poolmgr *m)
 		    "waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
-		    waiters);
+		    atomic_read(&m->ppm_nwaiters));
 
 		b = bmpc_2_bmap(bmpc);
 		if (!BMAP_TRYLOCK(b))
@@ -471,19 +471,21 @@ bmpce_reap(struct psc_poolmgr *m)
 		/* First check for LRU items. */
 		if (pll_nitems(&bmpc->bmpc_lru)) {
 			DEBUG_BMAP(PLL_DIAG, b, "try free");
-			nfreed += bmpc_lru_tryfree(bmpc, waiters);
+			nfreed += bmpc_lru_tryfree(bmpc,
+			    atomic_read(&m->ppm_nwaiters));
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else
 			psclog_debug("skip bmpc=%p, nothing on lru",
 			    bmpc);
 
 		BMAP_ULOCK(b);
-		if (nfreed >= waiters)
+		if (nfreed >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	psclog_diag("nfreed=%d, waiters=%d", nfreed, waiters);
+	psclog_diag("nfreed=%d, waiters=%d", nfreed,
+	    atomic_read(&m->waiters));
 
 	return (nfreed);
 }
