@@ -83,6 +83,8 @@ bmap_2_bci(struct bmap *b)
 #define bmap_2_sbd(b)		(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ios(b)		bmap_2_sbd(b)->sbd_ios
 
+#define bmpc_2_bmap(bmpc)	(((struct bmap *)bmpc) - 1)
+
 void	 msl_bmap_cache_rls(struct bmap *);
 int	 msl_bmap_lease_secs_remaining(struct bmap *);
 int	 msl_bmap_lease_tryext(struct bmap *, int);
