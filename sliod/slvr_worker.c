@@ -46,7 +46,6 @@
 #include "sliod.h"
 #include "slvr.h"
 
-
 int slvr_nbreqset_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 struct psc_poolmaster		 bmap_crcupd_poolmaster;
@@ -67,12 +66,12 @@ struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 __static int
 slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
+	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_bmap_crcwrt_rep *mp;
-	struct pscrpc_request *rq;
-	struct bcrcupd *bcr;
 	struct iovec *iovs = NULL;
+	struct bcrcupd *bcr;
 	size_t len;
 	uint32_t i;
 	int rc;
@@ -126,9 +125,11 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
   out:
 	PSCFREE(iovs);
 
-	if (rc)
+	if (rc) {
+		if (rq)
+			pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-	else
+	} else
 		OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
 	return (rc);
 }
