@@ -1220,7 +1220,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
-			int retifset[NBREPLST];
+			int qifset[NBREPLST];
 
 			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
@@ -1234,13 +1234,13 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			BMAP_WAIT_BUSY(b);
 			BMAPOD_RDLOCK(bmi);
 
-			brepls_init(retifset, 0);
-			retifset[BREPLST_REPL_QUEUED] = 1;
-			retifset[BREPLST_TRUNCPNDG] = 1;
+			brepls_init(qifset, 0);
+			qifset[BREPLST_REPL_QUEUED] = 1;
+			qifset[BREPLST_TRUNCPNDG] = 1;
 
 			upd = &bmi->bmi_upd;
 			UPD_WAIT(upd);
-			if (mds_repl_bmap_walk_all(b, NULL, retifset,
+			if (mds_repl_bmap_walk_all(b, NULL, qifset,
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
 			UPD_UNBUSY(upd);
@@ -2334,7 +2334,7 @@ slmbkdbthr_main(struct psc_thread *thr)
 
 void
 _dbdo(const struct pfl_callerinfo *pci,
-    int (*cb)(struct slm_sth *, void *), void *arg,
+    int (*cb)(struct slm_sth *, void *), void *cbarg,
     const char *fmt, ...)
 {
 	static int check;
@@ -2493,7 +2493,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	do {
 		rc = sqlite3_step(sth->sth_sth);
 		if (rc == SQLITE_ROW && cb)
-			cb(sth, arg);
+			cb(sth, cbarg);
 		if (rc != SQLITE_DONE)
 			pscthr_yield();
 		if (rc == SQLITE_LOCKED)
