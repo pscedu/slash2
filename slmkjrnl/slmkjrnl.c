@@ -270,7 +270,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
  * some of them may be from previous incarnations of the MDS.
  */
 void
-pjournal_dump(const char *fn, int verbose)
+pjournal_dump(const char *fn)
 {
 	int i, ntotal, nmagic, nchksum, nformat, ndump, first = 1;
 	uint32_t slot, highest_slot = -1, lowest_slot = -1;
@@ -506,7 +506,7 @@ main(int argc, char *argv[])
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
 	} else if (query)
-		pjournal_dump(fn, verbose);
+		pjournal_dump(fn);
 	else
 		usage();
 	exit(0);
