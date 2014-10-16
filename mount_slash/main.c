@@ -3205,23 +3205,22 @@ msreadaheadthr_main(struct psc_thread *thr)
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
+	int32_t to_set, flush_mtime, flush_size;
 	struct fcmh_cli_info *fci, *tmp_fci;
 	struct timespec ts, nexttimeo;
+	struct srt_stat	attr;
 	struct fidc_membh *f;
 	int rc, did_work;
-	struct srt_stat	attr;
-	int32_t to_set, flush_mtime, flush_size;
 
 	while (pscthr_run(thr)) {
-
-		lc_peekheadwait(&slc_attrtimeoutq);
-
 		did_work = 0;
-		PFL_GETTIMESPEC(&ts);
+
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
 		LIST_CACHE_LOCK(&slc_attrtimeoutq);
+		lc_peekheadwait(&slc_attrtimeoutq);
+		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_attrtimeoutq) {
 
 			f = fci_2_fcmh(fci);
@@ -3313,13 +3312,10 @@ msfcmhreapthr_spawn(void)
 	struct msfcmhreap_thread *mfrt;
 	struct psc_thread *thr;
 
-	thr = pscthr_init(MSTHRT_FCMHREAP, 0,
-	    msfcmhreapthr_main, NULL,
-	    sizeof(struct msfcmhreap_thread),
-	    "msfcmhreapthr%d", 0);
+	thr = pscthr_init(MSTHRT_FCMHREAP, 0, msfcmhreapthr_main, NULL,
+	    sizeof(struct msfcmhreap_thread), "msfcmhreapthr%d", 0);
 	mfrt = msfcmhreapthr(thr);
-	psc_multiwait_init(&mfrt->mfrt_mw, "%s",
-	    thr->pscthr_name);
+	psc_multiwait_init(&mfrt->mfrt_mw, "%s", thr->pscthr_name);
 	pscthr_setready(thr);
 }
 
@@ -3330,8 +3326,8 @@ msreadaheadthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	lc_reginit(&slc_readaheadq, struct fcmh_cli_info,
-	    fci_readahead, "readahead");
+	lc_reginit(&slc_readaheadq, struct fcmh_cli_info, fci_readahead,
+	    "readahead");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_READAHEAD, 0,
@@ -3352,8 +3348,8 @@ msattrflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info,
-	    fci_lentry, "attrtimeout");
+	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
+	    "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
