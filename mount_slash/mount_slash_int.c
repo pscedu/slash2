@@ -468,10 +468,12 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int allow_nonvalid,
 		    it.ri_rnd_idx);
 		*csvcp = slc_geticsvc_nb(m);
 		if (*csvcp) {
-#if 0
-			DEBUG_BMAP(PLL_ERROR, b, "bs_id=%d, fid="SLPRI_FID,
-				fci->fci_inode.reptbl[iosidx].bs_id, 
-				fcmh_2_fid(b->bcm_fcmh));
+#if 1
+			if (fcmh_2_fid(b->bcm_fcmh) == 0x48c00000001ceb4) {
+				DEBUG_BMAP(PLL_ERROR, b, "bs_id=%#x, fid="SLPRI_FID,
+				    fci->fci_inode.reptbl[iosidx].bs_id, 
+				    fcmh_2_fid(b->bcm_fcmh));
+			}
 #endif
 			return (0);
 		}
@@ -821,9 +823,9 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DYNARRAY_FOREACH(e, i, a) {
 
-#if 0
+#if 1
+		if (fcmh_2_fid(b->bcm_fcmh) == 0x48c00000001ceb4) {
 
-		{
 			int j;
 			unsigned char *ch;
 			ch = (unsigned char *)e->bmpce_base;
