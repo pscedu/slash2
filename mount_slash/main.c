@@ -912,7 +912,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
-	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", mode=%#o, name='%s', rc=%d",
+	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", "
+	    "mode=%#o, name='%s', rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
 	if (c)
@@ -987,8 +988,10 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	// XXX add to dircache
 
  out:
-	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' cfid="SLPRI_FID" rc=%d",
+	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
+	    "cfid="SLPRI_FID" rc=%d",
 	    pinum, name, m ? m->fcmh_sstb.sst_fid : FID_ANY, rc);
+
 	if (rc == 0 && fp)
 		*fp = m;
 	else if (m)
@@ -1286,8 +1289,10 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			OPSTAT_INCR(SLC_OPST_DELETE_SKIPPED);
 	}
 
-	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid = %d name='%s' isfile=%d rc=%d",
-	    pinum, SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name, isfile, rc);
+	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid=%d "
+	    "name='%s' isfile=%d rc=%d",
+	    pinum, SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name,
+	    isfile, rc);
 
  out:
 	if (c)
@@ -1863,7 +1868,8 @@ mfh_decref(struct msl_fhent *mfh)
 }
 
 int
-msl_flush_attr(struct fidc_membh *f, int32_t to_set, struct srt_stat *attr)
+msl_flush_attr(struct fidc_membh *f, int32_t to_set,
+    struct srt_stat *attr)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
