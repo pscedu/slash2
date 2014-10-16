@@ -467,8 +467,14 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int allow_nonvalid,
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
 		*csvcp = slc_geticsvc_nb(m);
-		if (*csvcp)
+		if (*csvcp) {
+#if 0
+			DEBUG_BMAP(PLL_ERROR, b, "bs_id=%d, fid="SLPRI_FID,
+				fci->fci_inode.reptbl[iosidx].bs_id, 
+				fcmh_2_fid(b->bcm_fcmh));
+#endif
 			return (0);
+		}
 	}
 	return (-1);
 }
@@ -815,7 +821,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DYNARRAY_FOREACH(e, i, a) {
 
-#ifdef ZERO_DATA_CORRUPTION
+#if 0
 
 		{
 			int j;
