@@ -179,7 +179,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int last)
 {
 	uint32_t aoff, alen, raoff, raoff2, nbmaps, bmpce_off;
-	int i, bsize, npages, rapages, rapages2, readahead;
+	int i, bsize, npages, rapages, rapages2, do_readahead;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct fcmh_cli_info *fci;
@@ -252,12 +252,12 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
-	readahead = msl_getra(mfh, bsize, aoff, npages, &raoff,
+	do_readahead = msl_getra(mfh, bsize, aoff, npages, &raoff,
 	    &rapages, &raoff2, &rapages2);
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
-	if (!readahead) {
+	if (!do_readahead) {
 		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_CLI_READA_QUEUE) {
 			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
