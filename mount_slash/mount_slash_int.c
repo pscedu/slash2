@@ -432,15 +432,15 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
  *
  * @b: bmap.
  * @iosidx: numeric index into file inode replica table for IOS to try.
- * @allow_nonvalid: as a hack, when READ is performed on a non-existent
- *	bmap, a lease is obtained for a newly created bmap with no VALID
- *	states.  So, we honor a flag to return a csvc to an IOS so the
- *	READ can no-op.
+ * @require_valid: when READ is performed on a new bmap, which will has
+ *	replicas marked VALID, set this flag to zero to acquire a
+ *	connection to any IOS.  This is a hack as no RPC should take
+ *	place at all...
  *	XXX This entire approach should be changed.
  * @csvcp: value-result service handle.
  */
 int
-msl_try_get_replica_res(struct bmap *b, int iosidx, int allow_nonvalid,
+msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
     struct slashrpc_cservice **csvcp)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
@@ -449,7 +449,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int allow_nonvalid,
 	struct rnd_iterator it;
 	struct sl_resm *m;
 
-	if (!allow_nonvalid && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
+	if (require_valid && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (-2);
 

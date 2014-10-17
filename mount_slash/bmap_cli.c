@@ -903,7 +903,7 @@ int
 msl_bmap_to_csvc(struct bmap *b, int exclusive,
     struct slashrpc_cservice **csvcp)
 {
-	int i, j, locked, rc, hasvalid, hasdataflag;
+	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct sl_resm *m;
@@ -914,6 +914,10 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	if (exclusive) {
+		/*
+		 * Write: lease is bound to a single IOS so it must be
+		 * used.
+		 */
 		locked = BMAP_RLOCK(b);
 		m = libsl_ios2resm(bmap_2_ios(b));
 		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
@@ -930,6 +934,9 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 
+	/*
+	 * Occassionally stir the order of replicas to distribute load.
+	 */
 	FCMH_LOCK(b->bcm_fcmh);
 	if (++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
 		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
@@ -938,27 +945,40 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	}
 	FCMH_ULOCK(b->bcm_fcmh);
 
+	/*
+	 * Now try two iterations:
+	 *
+	 *   (1) use any connections that are immediately available.
+	 *
+	 *   (2) if they aren't, the connection establishment is
+	 *	 non-blocking, so wait a short amount of time
+	 *	 (multiwait) until one wakes us up, after which we try
+	 *	 again and use that connection.
+	 */
+	has_residency = 0;
 	for (j = 0; j < 2; j++) {
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 
-		hasvalid = 0;
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
 			rc = msl_try_get_replica_res(b,
-			    fci->fcif_idxmap[i], j, csvcp);
-			if (rc == 0) {
+			    fci->fcif_idxmap[i], j ? has_residency : 1,
+			    csvcp);
+			switch (rc) {
+			case 0:
 				psc_multiwait_leavecritsect(mw);
 				return (0);
+			case -1: /* resident but offline */
+				has_residency = 1;
+				break;
+			case -2: /* not resident */
+				break;
 			}
-			if (rc == -1)
-				hasvalid = 1;
 		}
 
-		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
-		    SRM_LEASEBMAPF_DATA);
+//		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
+//		    SRM_LEASEBMAPF_DATA);
 		if (psc_dynarray_len(&mw->mw_conds)) {
-			if (exclusive)
-				psc_assert(hasvalid && hasdataflag);
 		} else {
 			/*
 			 * Residency scan revealed no VALID replicas.
@@ -966,8 +986,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 			 * iteration which will return the first IOS
 			 * online since any will suffice.
 			 */
-//			if (!exclusive)
-//				psc_assert(!hasvalid && !hasdataflag);
+//			psc_assert(!hasvalid && !hasdataflag);
 			continue;
 		}
 
