@@ -561,14 +561,16 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		    (i ? 0 : (r->biorq_off - bmpce->bmpce_off));
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
-		    (i ? BMPC_BUFSZ: BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off)));
+		    i ? BMPC_BUFSZ :
+		    BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off));
 
 		tot_reqsz -= bwc->bwc_iovs[i].iov_len;
 		bwc->bwc_niovs++;
 		OPSTAT_INCR(SLC_OPST_WRITE_COALESCE);
 	}
 	if (bwc->bwc_niovs > OPSTAT_CURR(SLC_OPST_WRITE_COALESCE_MAX))
-		OPSTAT_ASSIGN(SLC_OPST_WRITE_COALESCE_MAX, bwc->bwc_niovs);
+		OPSTAT_ASSIGN(SLC_OPST_WRITE_COALESCE_MAX,
+		    bwc->bwc_niovs);
 
 	psc_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
 	psc_assert(!tot_reqsz);
@@ -773,9 +775,6 @@ msbmflwthr_main(struct psc_thread *thr)
 	int i;
 
 	while (pscthr_run(thr)) {
-
-		lc_peekheadwait(&slc_bmapflushq);
-
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		/*
 		 * A bmap can be on both slc_bmapflushq and
@@ -783,6 +782,7 @@ msbmflwthr_main(struct psc_thread *thr)
 		 * after all its biorqs are flushed if any.
 		 */
 		LIST_CACHE_LOCK(&slc_bmapflushq);
+		lc_peekheadwait(&slc_bmapflushq);
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -937,7 +937,8 @@ msbmapflushthr_main(struct psc_thread *thr)
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
 
 		PFL_GETTIMESPEC(&tmp1);
-		while (bmap_flush());
+		while (bmap_flush())
+			;
 		PFL_GETTIMESPEC(&tmp2);
 
 		timespecsub(&tmp2, &tmp1, &work);
