@@ -334,7 +334,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	}
 
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
-		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
+	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
 	spinlock(&bmpc->bmpc_lock);
 	psc_waitq_wakeall(&bmpc->bmpc_waitq);
@@ -471,7 +471,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 #if 1
 			if (fcmh_2_fid(b->bcm_fcmh) == 0x48c00000001ceb4) {
 				DEBUG_BMAP(PLL_ERROR, b, "bs_id=%#x, fid="SLPRI_FID,
-				    fci->fci_inode.reptbl[iosidx].bs_id, 
+				    fci->fci_inode.reptbl[iosidx].bs_id,
 				    fcmh_2_fid(b->bcm_fcmh));
 			}
 #endif
@@ -556,7 +556,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 				e->bmpce_flags &= ~BMPCE_FAULTING;
 				e->bmpce_flags |= BMPCE_AIOWAIT;
 			}
-			DEBUG_BMPCE(PLL_INFO, e, "naio=%d", naio);
+			DEBUG_BMPCE(PLL_DIAG, e, "naio=%d", naio);
 			BMPCE_ULOCK(e);
 		}
 		/* Should have found at least one aio'd page. */
@@ -564,6 +564,9 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			psc_fatalx("biorq %p has no AIO pages", r);
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
+
+		// XXX leak psc_dynarray_free(a);
+		// XXX leak PSCFREE(a);
 
 	} else if (cbf == msl_dio_cb) {
 		OPSTAT_INCR(SLC_OPST_DIO_CB_ADD);
@@ -834,7 +837,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 					break;
 			}
 			if (j >= BMPC_BUFSZ)
-				DEBUG_BMAP(PLL_ERROR, b, "ios=%d, fid="SLPRI_FID, 
+				DEBUG_BMAP(PLL_ERROR, b, "ios=%d, fid="SLPRI_FID,
 					bmap_2_ios(b), fcmh_2_fid(b->bcm_fcmh));
 		}
 #endif
@@ -1295,7 +1298,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 		e->bmpce_flags |= BMPCE_EIO;
 		e->bmpce_flags &= ~BMPCE_FAULTING;
 		BMPCE_WAKE(e);
-		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
+		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 
 		bmpce_release_locked(e, bmap_2_bmpc(b));
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
@@ -1749,7 +1752,7 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 		tsize = r->biorq_len;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "tsize=%d biorq_len=%u biorq_off=%u",
-		    tsize, r->biorq_len, r->biorq_off);
+	    tsize, r->biorq_len, r->biorq_off);
 
 	if (!tsize || tsize < 0)
 		return (0);
@@ -1838,7 +1841,8 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
  * next bmap actually exists or not).
  *
  * @mfh: file handle.
- * @bsize: size of bmap (normally SLASH_BMAP_SIZE unless it's the last bmap).
+ * @bsize: size of bmap (normally SLASH_BMAP_SIZE unless it's the last
+ *	bmap).
  * @off: offset into bmap of this I/O.
  * @npages: number of pages to read.
  * @raoff1: offset where RA should begin in this same bmap.
@@ -2007,9 +2011,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
-	struct bmap *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
+	struct bmap *b;
 	uint64_t fsz;
 	int nr, i, j, rc;
 	off_t roff;
