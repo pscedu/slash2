@@ -69,9 +69,7 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_mutex_lock(&sl_bufs_pool->ppm_reclaim_mutex);
-		sl_bufs_pool->ppm_reclaimcb(sl_bufs_pool);
-		psc_mutex_unlock(&sl_bufs_pool->ppm_reclaim_mutex);
+		psc_pool_reap(sl_bufs_pool, 1);
 		sleep(10);
 	}
 }
