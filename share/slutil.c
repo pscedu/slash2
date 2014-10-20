@@ -162,9 +162,9 @@ statfs_2_statvfs(const struct statfs *sfb, struct statvfs *svfb)
 
 /**
  * checkcreds - Perform a classic UNIX-style permission access check.
- * @sstb: ownership info.
+ * @sstb: file ownership info.
  * @pcrp: credentials of access.
- * @accmode: type of access.
+ * @accmode: type of access (R_OK | W_OK | X_OK).
  * Returns zero on success, errno code on failure.
  */
 int
@@ -177,6 +177,7 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 #if PFL_DEBUG > 0
 	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
+
 	/* root can do anything, unless rootsquash is enabled */
 	if (!globalConfig.gconf_root_squash && pcrp->pcr_uid == 0)
 		return (0);
