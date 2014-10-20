@@ -1543,13 +1543,13 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 }
 
 /**
- * msl_pages_prefetch - Launch read RPCs for pages that are owned by the
+ * msl_pages_fetch - Launch read RPCs for pages that are owned by the
  *	given I/O request.  This function is called to perform a pure
  *	read request or a read-before-write for a write request.  It is
  *	also used to wait for read-ahead pages to complete.
  */
 int
-msl_pages_prefetch(struct bmpc_ioreq *r)
+msl_pages_fetch(struct bmpc_ioreq *r)
 {
 	int i, rc = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
@@ -2151,7 +2151,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
 		else
-			rc = msl_pages_prefetch(r);
+			rc = msl_pages_fetch(r);
 		if (rc)
 			break;
 	}

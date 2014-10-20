@@ -267,7 +267,7 @@ void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
 void	 slc_setprefios(sl_ios_id_t);
-int	 msl_pages_prefetch(struct bmpc_ioreq *);
+int	 msl_pages_fetch(struct bmpc_ioreq *);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
