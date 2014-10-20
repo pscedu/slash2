@@ -14,13 +14,14 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
 	size_t retsz = 0;
 	acl_t a;
 
-	rc = slc_getxattr(pfr, ACL_EA_ACCESS,
-	    trybuf, sizeof(trybuf), f, &retsz);
+	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf, sizeof(trybuf), f,
+	    &retsz);
 	if (rc == 0) {
 		buf = trybuf;
 	} else if (rc == -ERANGE) {
 		buf = PSCALLOC(retsz);
-		rc = slc_getxattr(pfr, ACL_EA_ACCESS, retsz, f, &retsz);
+		rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz, f,
+		    &retsz);
 	}
 
 	a = sl_acl_from_xattr(buf, rc);
