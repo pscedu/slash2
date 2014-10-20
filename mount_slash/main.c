@@ -3065,7 +3065,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	if (size)
 		buf = PSCALLOC(size);
-	rc = slc_getxattr(pfr, name, buf, size, finum, &retsz);
+	rc = slc_getxattr(pfr, name, buf, size, inum, &retsz);
 
  out:
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
