@@ -2980,36 +2980,24 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		sl_csvc_decref(csvc);
 }
 
-void
-mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
-    size_t size, pscfs_inum_t inum)
+ssize_t
+slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
+    size_t size, pscfs_inum_t inum, size_t *retsz)
 {
 	struct slashrpc_cservice *csvc = NULL;
-	struct srm_getxattr_rep *mp = NULL;
+	struct srm_getxattr_rep *mp;
 	struct srm_getxattr_req *mq;
 	struct pscrpc_request *rq = NULL;
 	struct fidc_membh *f = NULL;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
 	struct iovec iov;
-	char *buf = NULL;
-	size_t retsz = 0;
 	int rc;
-
-	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR(SLC_OPST_GETXATTR);
 
 	if (strlen(name) > sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
-	iov.iov_base = NULL;
-
 	pscfs_getcreds(pfr, &pcr);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		struct timeval now;
@@ -3022,9 +3010,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 			PFL_GOTOERR(out, rc = ENODATA); // ENOATTR
 		FCMH_ULOCK(f);
 	}
-
-	if (size)
-		buf = PSCALLOC(size);
 
  retry:
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
@@ -3049,20 +3034,43 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 		goto retry;
 	if (rc == 0) {
 		rc = mp->rc;
-		retsz = mp->valuelen;
+		*retsz = mp->valuelen;
 	}
 	rc = -rc;
 
  out:
-	pscfs_reply_getxattr(pfr, buf, retsz, rc);
-
-	if (f)
-		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	return (rc);
+}
 
+void
+mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
+    size_t size, pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	void *buf = NULL;
+	size_t retsz = 0;
+	int rc;
+
+	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_GETXATTR);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	if (size)
+		buf = PSCALLOC(size);
+	rc = slc_getxattr(pfr, name, buf, size, finum, &retsz);
+
+ out:
+	pscfs_reply_getxattr(pfr, buf, retsz, rc);
+	if (f)
+		fcmh_op_done(f);
 	PSCFREE(buf);
 }
 
