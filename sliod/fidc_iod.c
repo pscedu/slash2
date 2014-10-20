@@ -25,10 +25,10 @@
 #include <fcntl.h>
 #include <stddef.h>
 
-#include "pfl/rlimit.h"
-#include "pfl/str.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/log.h"
+#include "pfl/rlimit.h"
+#include "pfl/str.h"
 
 #include "fidc_iod.h"
 #include "fidcache.h"
