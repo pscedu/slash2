@@ -2155,8 +2155,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			if (rc)
 				PFL_GOTOERR(out, rc);
 		}
-		if (S_ISDIR(srcsstb.sst_mode))
-			rc = checkcreds(&srcsstb, &pcr, W_OK);
+		if (fcmh_isdir(child))
+			rc = fcmh_checkcreds(child, &pcr, W_OK);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
