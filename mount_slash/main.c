@@ -2982,13 +2982,12 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 ssize_t
 slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
-    size_t size, pscfs_inum_t inum, size_t *retsz)
+    size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_getxattr_rep *mp;
 	struct srm_getxattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *f = NULL;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
 	struct iovec iov;
@@ -3016,8 +3015,7 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	mq->size = size;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
