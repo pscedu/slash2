@@ -549,7 +549,22 @@ reimport
 - merge authbuf bulkhash and hash into single buf
 - sessid from mount_slash 'file closed' info psclog is not correct
 - progname from mount_slash 'file closed' info psclog is not correct
+- reclaim logs should be async as synchronous waiting doesnt scale with
+  large numbers of deletes
 
+- metadata constitutes almost as much as the data????
+MDS:
+peer-54321-128.182.99.27@tcp10-rcv          32.6M
+peer-54321-128.182.99.27@tcp10-snd          25.3M
+IOS:
+peer-54321-128.182.99.29@tcp10-rcv          17.8M
+peer-54321-128.182.99.29@tcp10-snd          46.1M
+
+- CLI should ensure connection to IOS is actually valid as the
+  connection is initiated in non-block mode, so CONNECT waits,
+  until it times out then EIO/ENOTCONN comes.  by this logic,
+  asynchronous FLUSH should be OK as long as connection is actually
+  established
 
 - remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
 
