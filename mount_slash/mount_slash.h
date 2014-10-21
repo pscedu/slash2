@@ -49,7 +49,10 @@ struct dircache_page;
 enum {
 	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
+
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
+	MSTHRT_BMAPFLSHREAPER,		/* bmap write data reaping thread */
+
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
 	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
@@ -100,6 +103,10 @@ struct msbmflrpc_thread {
 	struct psc_multiwait		 mbflrpc_mw;
 };
 
+struct msbmflreaper_thread {
+	struct psc_multiwait		 mbflreaper_mw;
+};
+
 struct msattrfl_thread {
 	struct psc_multiwait		 maft_mw;
 };
@@ -124,6 +131,7 @@ PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
 PSCTHR_MKCAST(msbmflwthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
+PSCTHR_MKCAST(msbmflreaperthr, msbmflreaper_thread, MSTHRT_BMAPFLSHREAPER);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);

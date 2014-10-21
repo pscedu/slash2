@@ -964,11 +964,19 @@ msbmapflushthr_main(struct psc_thread *thr)
 }
 
 void
-msbmapflushrpcthr_main(struct psc_thread *thr)
+msbmapflushreaperthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&slc_rpc_compl, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
+	}
+}
+
+void
+msbmapflushrpcthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		psc_compl_waitrel_s(&slc_rpc_compl, 1);
 		pscrpc_nbreqset_reap(slc_pndgbmaplsrqs);
 		pscrpc_nbreqset_reap(slc_pndgbmaprlsrqs);
 	}
@@ -1019,6 +1027,11 @@ msbmapflushthr_spawn(void)
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
+	thr = pscthr_init(MSTHRT_BMAPFLSHREAPER, 0, msbmapflushreaperthr_main,
+	  NULL, sizeof(struct msbmflreaper_thread), "msbflushreaperthr");
+	psc_multiwait_init(&msbmflreaperthr(thr)->mbflreaper_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, msbmflwthr_main,
 	  NULL, sizeof(struct msbmflwatcher_thread), "msbmflwthr");
