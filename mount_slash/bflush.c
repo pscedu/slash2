@@ -57,7 +57,8 @@ struct timespec			 bmapFlushWaitSecs = { 1, 0L };
 struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
-struct psc_compl		 slc_rpc_compl = PSC_COMPL_INIT;
+
+struct psc_compl		 slc_lease_rpc_compl = PSC_COMPL_INIT;
 struct psc_compl		 slc_flush_rpc_compl = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*slc_pndgbmaplsrqs;	/* bmap lease */
@@ -299,7 +300,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
-	pscrpc_req_setcompl(rq, &slc_flush_rpc_compl);
 
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
@@ -321,6 +321,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
+	pscrpc_req_setcompl(rq, &slc_flush_rpc_compl);
+
 	rc = pscrpc_nbreqset_add(pndgWrtReqs, rq);
 	if (rc) {
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
@@ -977,7 +979,7 @@ void
 msbmaplsreaper_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slc_rpc_compl, 1);
+		psc_compl_waitrel_s(&slc_lease_rpc_compl, 1);
 		pscrpc_nbreqset_reap(slc_pndgbmaplsrqs);
 		pscrpc_nbreqset_reap(slc_pndgbmaprlsrqs);
 	}
