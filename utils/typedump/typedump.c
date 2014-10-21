@@ -181,7 +181,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmleaserls_thread);
-	PRTYPE(struct msbmleaserpc_thread);
+	PRTYPE(struct msbmleasereaper_thread);
 	PRTYPE(struct msbmleasewatcher_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_biorq);

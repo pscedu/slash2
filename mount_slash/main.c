@@ -3494,10 +3494,10 @@ msl_init(void)
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
 
+	msbmapthr_spawn();
 	msfcmhreapthr_spawn();
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
-	msbmapflushthr_spawn();
 
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("SLASH_MDS_NID not specified");

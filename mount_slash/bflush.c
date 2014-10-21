@@ -974,7 +974,7 @@ msbmapflushreaperthr_main(struct psc_thread *thr)
 }
 
 void
-msbmapleaserpcthr_main(struct psc_thread *thr)
+msbmaplsreaper_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&slc_rpc_compl, 1);
@@ -1000,7 +1000,7 @@ msbenchthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-msbmapflushthr_spawn(void)
+msbmapthr_spawn(void)
 {
 	struct msbmfl_thread *mbft;
 	struct psc_thread *thr;
@@ -1046,9 +1046,9 @@ msbmapflushthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BMAPLEASEREAPER, 0, msbmapleaserpcthr_main,
-	  NULL, sizeof(struct msbmleaserpc_thread), "msbleaserpcthr");
-	psc_multiwait_init(&msbmleaserpc(thr)->mbleaserpc_mw, "%s",
+	thr = pscthr_init(MSTHRT_BMAPLEASEREAPER, 0, msbmaplsreaper_main,
+	  NULL, sizeof(struct msbmleasereaper_thread), "msblsreaperthr");
+	psc_multiwait_init(&msbmleasereaper(thr)->mblsreaper_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 

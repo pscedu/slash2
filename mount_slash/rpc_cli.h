@@ -140,7 +140,7 @@ msl_getmw(void)
 	case MSTHRT_BMAPLSWATCHER:
 		return (&msbmleasewthr(thr)->mbleasewt_mw);
 	case MSTHRT_BMAPLEASEREAPER:
-		return (&msbmleaserpc(thr)->mbleaserpc_mw);
+		return (&msbmleasereaper(thr)->mblsreaper_mw);
 
 	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);

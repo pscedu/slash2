@@ -96,16 +96,20 @@ struct msbmfl_thread {
 	struct psc_multiwait		 mbft_mw;
 };
 
+struct msbmflreaper_thread {
+	struct psc_multiwait		 mbflreaper_mw;
+};
+
+struct msbmleasewatcher_thread {
+	struct psc_multiwait		 mbleasewt_mw;
+};
+
 struct msbmleaserls_thread {
 	struct psc_multiwait		 mbleaserlst_mw;
 };
 
-struct msbmleaserpc_thread {
-	struct psc_multiwait		 mbleaserpc_mw;
-};
-
-struct msbmflreaper_thread {
-	struct psc_multiwait		 mbflreaper_mw;
+struct msbmleasereaper_thread {
+	struct psc_multiwait		 mblsreaper_mw;
 };
 
 struct msattrfl_thread {
@@ -124,13 +128,9 @@ struct msreadreaper_thread {
 	struct psc_multiwait		 mrrt_mw;
 };
 
-struct msbmleasewatcher_thread {
-	struct psc_multiwait		 mbleasewt_mw;
-};
-
 PSCTHR_MKCAST(msbmleasewthr, msbmleasewatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmleaserlsthr, msbmleaserls_thread, MSTHRT_BMAPLEASERLS);
-PSCTHR_MKCAST(msbmleaserpc, msbmleaserpc_thread, MSTHRT_BMAPLEASEREAPER);
+PSCTHR_MKCAST(msbmleasereaper, msbmleasereaper_thread, MSTHRT_BMAPLEASEREAPER);
 
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflreaperthr, msbmflreaper_thread, MSTHRT_BMAPFLSHREAPER);
@@ -273,7 +273,7 @@ int	 msl_try_get_replica_res(struct bmapc_memb *, int, int,
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	 msbmapflushthr_spawn(void);
+void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 
