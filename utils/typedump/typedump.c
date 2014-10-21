@@ -181,7 +181,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflrls_thread);
-	PRTYPE(struct msbmflrpc_thread);
+	PRTYPE(struct msbmleaserpc_thread);
 	PRTYPE(struct msbmflwatcher_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_biorq);
@@ -613,7 +613,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_BENCH);
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
-	PRVAL(MSTHRT_BMAPFLSHRPC);
+	PRVAL(MSTHRT_BMAPFLSHREAPER);
 	PRVAL(MSTHRT_BMAPLSWATCHER);
 	PRVAL(MSTHRT_CONN);
 	PRVAL(MSTHRT_CTL);
@@ -731,7 +731,7 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_OFFLINE_RETRY_CLEAR_ERR);
 	PRVAL(SLC_OPST_OPEN);
 	PRVAL(SLC_OPST_READ);
-	PRVAL(SLC_OPST_READAHEAD_PREFETCH);
+	PRVAL(SLC_OPST_READAHEAD_FETCH);
 	PRVAL(SLC_OPST_READAHEAD_RPC_LAUNCH);
 	PRVAL(SLC_OPST_READDIR);
 	PRVAL(SLC_OPST_READDIR_DROP);

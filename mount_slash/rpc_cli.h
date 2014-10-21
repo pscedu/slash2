@@ -133,8 +133,8 @@ msl_getmw(void)
 		return (&msbmflthr(thr)->mbft_mw);
 	case MSTHRT_BMAPFLSHRLS:
 		return (&msbmflrlsthr(thr)->mbfrlst_mw);
-	case MSTHRT_BMAPFLSHRPC:
-		return (&msbmflrpc(thr)->mbflrpc_mw);
+	case MSTHRT_BMAPLEASEREAPER:
+		return (&msbmleaserpc(thr)->mbleaserpc_mw);
 	case MSTHRT_BMAPLSWATCHER:
 		return (&msbmflwthr(thr)->mbfwa_mw);
 	case MSTHRT_FS:
