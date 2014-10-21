@@ -129,14 +129,19 @@ msl_getmw(void)
 	switch (thr->pscthr_type) {
 	case MSTHRT_ATTRFLSH:
 		return (&msattrflthr(thr)->maft_mw);
+
 	case MSTHRT_BMAPFLSH:
 		return (&msbmflthr(thr)->mbft_mw);
+	case MSTHRT_BMAPFLSHREAPER:
+		return (&msbmflreaperthr(thr)->mbflreaper_mw);
+
 	case MSTHRT_BMAPFLSHRLS:
 		return (&msbmflrlsthr(thr)->mbfrlst_mw);
-	case MSTHRT_BMAPLEASEREAPER:
-		return (&msbmleaserpc(thr)->mbleaserpc_mw);
 	case MSTHRT_BMAPLSWATCHER:
 		return (&msbmflwthr(thr)->mbfwa_mw);
+	case MSTHRT_BMAPLEASEREAPER:
+		return (&msbmleaserpc(thr)->mbleaserpc_mw);
+
 	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_RCI:
