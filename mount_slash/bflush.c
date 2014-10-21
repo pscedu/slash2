@@ -58,6 +58,7 @@ struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
 struct psc_compl		 slc_rpc_compl = PSC_COMPL_INIT;
+struct psc_compl		 slc_flush_rpc_compl = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*slc_pndgbmaplsrqs;	/* bmap lease */
 struct pscrpc_nbreqset		*slc_pndgbmaprlsrqs;	/* bmap release */
@@ -298,7 +299,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
-	pscrpc_req_setcompl(rq, &slc_rpc_compl);
+	pscrpc_req_setcompl(rq, &slc_flush_rpc_compl);
 
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
@@ -967,7 +968,7 @@ void
 msbmapflushreaperthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slc_rpc_compl, 1);
+		psc_compl_waitrel_s(&slc_flush_rpc_compl, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
 	}
 }
