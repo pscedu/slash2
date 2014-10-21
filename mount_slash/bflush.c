@@ -768,7 +768,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
  * msbmflwthr_main - Lease watcher thread.
  */
 __static void
-msbmflwthr_main(struct psc_thread *thr)
+msbmleasewthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct bmapc_memb *b, *tmpb;
@@ -1034,21 +1034,21 @@ msbmapflushthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, msbmflwthr_main,
-	  NULL, sizeof(struct msbmflwatcher_thread), "msbmflwthr");
-	psc_multiwait_init(&msbmflwthr(thr)->mbfwa_mw, "%s",
+	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, msbmleasewthr_main,
+	  NULL, sizeof(struct msbmleasewatcher_thread), "msbmleasewthr");
+	psc_multiwait_init(&msbmleasewthr(thr)->mbleasewt_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
+
+	thr = pscthr_init(MSTHRT_BMAPLEASERLS, 0, msbmapleaserlsthr_main,
+	    NULL, sizeof(struct msbmleaserls_thread), "msbleaserlsthr");
+	psc_multiwait_init(&msbmleaserlsthr(thr)->mbleaserlst_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BMAPLEASEREAPER, 0, msbmapleaserpcthr_main,
 	  NULL, sizeof(struct msbmleaserpc_thread), "msbleaserpcthr");
 	psc_multiwait_init(&msbmleaserpc(thr)->mbleaserpc_mw, "%s",
-	    thr->pscthr_name);
-	pscthr_setready(thr);
-
-	thr = pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
-	    NULL, sizeof(struct msbmflrls_thread), "msbrlsthr");
-	psc_multiwait_init(&msbmflrlsthr(thr)->mbfrlst_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 

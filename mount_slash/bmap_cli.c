@@ -777,7 +777,7 @@ msl_bmap_release(struct sl_resm *resm)
 }
 
 void
-msbmaprlsthr_main(struct psc_thread *thr)
+msbmapleaserlsthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;

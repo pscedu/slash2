@@ -94,7 +94,7 @@ int	 msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void	 bmap_biorq_expire(struct bmap *);
 
-void	 msbmaprlsthr_main(struct psc_thread *);
+void	 msbmapleaserlsthr_main(struct psc_thread *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;

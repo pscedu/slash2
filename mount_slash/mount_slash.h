@@ -53,7 +53,7 @@ enum {
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHREAPER,		/* bmap write data reaping thread */
 
-	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
+	MSTHRT_BMAPLEASERLS,		/* bmap lease releaser */
 	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
 	MSTHRT_BMAPLEASEREAPER,		/* lease RPC reaping thread */
  
@@ -96,8 +96,8 @@ struct msbmfl_thread {
 	struct psc_multiwait		 mbft_mw;
 };
 
-struct msbmflrls_thread {
-	struct psc_multiwait		 mbfrlst_mw;
+struct msbmleaserls_thread {
+	struct psc_multiwait		 mbleaserlst_mw;
 };
 
 struct msbmleaserpc_thread {
@@ -124,15 +124,17 @@ struct msreadreaper_thread {
 	struct psc_multiwait		 mrrt_mw;
 };
 
-struct msbmflwatcher_thread {
-	struct psc_multiwait		 mbfwa_mw;
+struct msbmleasewatcher_thread {
+	struct psc_multiwait		 mbleasewt_mw;
 };
 
-PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
-PSCTHR_MKCAST(msbmflwthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
-PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
+PSCTHR_MKCAST(msbmleasewthr, msbmleasewatcher_thread, MSTHRT_BMAPLSWATCHER);
+PSCTHR_MKCAST(msbmleaserlsthr, msbmleaserls_thread, MSTHRT_BMAPLEASERLS);
 PSCTHR_MKCAST(msbmleaserpc, msbmleaserpc_thread, MSTHRT_BMAPLEASEREAPER);
+
+PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflreaperthr, msbmflreaper_thread, MSTHRT_BMAPFLSHREAPER);
+
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
