@@ -3215,7 +3215,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 				psc_dynarray_add(&r->biorq_pages, e);
 			}
-			OPSTAT_INCR(SLC_OPST_READAHEAD_PREFETCH);
+			OPSTAT_INCR(SLC_OPST_READAHEAD_FETCH);
 			msl_pages_fetch(r);
 			msl_biorq_destroy(r);
 
