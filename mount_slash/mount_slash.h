@@ -64,6 +64,7 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
+	MSTHRT_READREAPER,		/* read RPC reaper thread */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
@@ -111,6 +112,10 @@ struct msreadahead_thread {
 	struct psc_multiwait		 mrat_mw;
 };
 
+struct msreadreaper_thread {
+	struct psc_multiwait		 mrrt_mw;
+};
+
 struct msbmflwatcher_thread {
 	struct psc_multiwait		 mbfwa_mw;
 };
@@ -122,6 +127,7 @@ PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
+PSCTHR_MKCAST(msreadreaperthr, msreadreaper_thread, MSTHRT_READREAPER);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);

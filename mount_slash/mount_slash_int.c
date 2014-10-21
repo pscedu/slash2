@@ -54,6 +54,7 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/treeutil.h"
+#include "pfl/completion.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -86,6 +87,7 @@ struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 psc_atomic32_t		slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
 struct pscrpc_nbreqset *slc_pndgreadarqs;
+struct psc_compl	slc_read_rpc_compl = PSC_COMPL_INIT;
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
@@ -1278,7 +1280,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = NULL;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	pscrpc_req_setcompl(rq, &slc_rpc_compl);
+	pscrpc_req_setcompl(rq, &slc_read_rpc_compl);
 
 	rc = pscrpc_nbreqset_add(slc_pndgreadarqs, rq);
 	if (!rc)

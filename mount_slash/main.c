@@ -63,6 +63,7 @@
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
 #include "pfl/workthr.h"
+#include "pfl/completion.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -144,6 +145,9 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
 int				 slc_posix_mkgrps;
+
+extern struct pscrpc_nbreqset	*slc_pndgreadarqs;
+extern struct psc_compl		 slc_read_rpc_compl;
 
 int
 uidmap_ext_cred(struct srt_creds *cr)
@@ -3135,6 +3139,15 @@ msfcmhreapthr_main(struct psc_thread *thr)
 }
 
 void
+msreadreaperthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		psc_compl_waitrel_s(&slc_read_rpc_compl, 1);
+		pscrpc_nbreqset_reap(slc_pndgreadarqs);
+	}
+}
+
+void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	int i, rc, did_work;
@@ -3351,6 +3364,11 @@ msreadaheadthr_spawn(void)
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
+	thr = pscthr_init(MSTHRT_READREAPER, 0, msreadreaperthr_main,
+	  NULL, sizeof(struct msreadreaper_thread), "msreadreapthr");
+	psc_multiwait_init(&msreadreaperthr(thr)->mrrt_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
 }
 
 void
