@@ -1400,19 +1400,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 
-	if (!r->biorq_rqset)
-		/*
-		 * XXX Using a set for any type of read may be overkill.
-		 */
-		r->biorq_rqset = pscrpc_prep_set();
-
 	rq->rq_interpret_reply = msl_read_cb0;
-	pscrpc_set_add_new_req(r->biorq_rqset, rq);
+	pscrpc_req_setcompl(rq, &slc_read_rpc_compl);
 
-	rc = pscrpc_push_req(rq);
+	rc = pscrpc_nbreqset_add(slc_pndgreadarqs, rq);
 	if (rc) {
 		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
-		pscrpc_set_remove_req(r->biorq_rqset, rq);
 		PFL_GOTOERR(out, rc);
 	}
 
@@ -1562,43 +1555,6 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 		rc = msl_launch_read_rpcs(r);
 		if (rc)
 			PFL_GOTOERR(out, rc);
-	}
-
-	/*
-	 * Wait for all read activities (include RBW) associated with
-	 * the bioreq to complete.
-	 *
-	 * This set wait makes sure that pages belong to the current
-	 * request are faulted in.
-	 */
-	if (r->biorq_rqset) {
-		/*
-		 * Note: This can trigger invocation of our read
-		 * callback in this same thread.
-		 */
-		rc = pscrpc_set_wait(r->biorq_rqset);
-
-		/*
-		 * The set cb is not being used; msl_read_cb() is called
-		 * on every RPC in the set.  This was causing the biorq
-		 * to have its flags mod'd in an incorrect fashion.  For
-		 * now, the following lines will be moved here.
-		 */
-		BIORQ_LOCK(r);
-
-		if (!rc)
-			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
-		BIORQ_ULOCK(r);
-
-		/* Destroy and cleanup the set now. */
-		pscrpc_set_destroy(r->biorq_rqset);
-		r->biorq_rqset = NULL;
-
-		if (rc && rc != -SLERR_AIOWAIT)
-			goto out;
-
-		/* Our caller expects a success in case of aiowait */
-		rc = 0;
 	}
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
