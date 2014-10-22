@@ -973,7 +973,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	v8 = (uint64_t *)r->biorq_buf;
 	DEBUG_BIORQ(PLL_DEBUG, r, "dio req v8(%"PRIx64")", *v8);
 
-	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
+	if (r->biorq_flags & BIORQ_WRITE) {
+		op = SRMT_WRITE;
+		OPSTAT_INCR(SLC_OPST_DIO_WRITE);
+	} else {
+		op = SRMT_READ;
+		OPSTAT_INCR(SLC_OPST_DIO_READ);
+	}
 
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &csvc);
 	if (rc)
