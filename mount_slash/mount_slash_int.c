@@ -960,6 +960,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct bmap *b;
 	struct iovec *iovs;
 	uint64_t *v8;
+	struct pscrpc_request_set * rqset;
 
 	psc_assert(r->biorq_bmap);
 
@@ -985,8 +986,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (r->biorq_rqset == NULL)
-		r->biorq_rqset = pscrpc_prep_set();
+	rqset = pscrpc_prep_set();
 
 	/*
 	 * This buffer hasn't been segmented into LNET_MTU sized chunks.
@@ -1019,11 +1019,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		pscrpc_set_add_new_req(r->biorq_rqset, rq);
+		pscrpc_set_add_new_req(rqset, rq);
 		rc = pscrpc_push_req(rq);
 		if (rc) {
 			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
-			pscrpc_set_remove_req(r->biorq_rqset, rq);
+			pscrpc_set_remove_req(rqset, rq);
 			PFL_GOTOERR(out, rc);
 		}
 		BIORQ_LOCK(r);
@@ -1037,9 +1037,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * blocking.
 	 */
 	psc_assert(nbytes == size);
-	rc = pscrpc_set_wait(r->biorq_rqset);
-	pscrpc_set_destroy(r->biorq_rqset);
-	r->biorq_rqset = NULL;
+	rc = pscrpc_set_wait(rqset);
+	pscrpc_set_destroy(rqset);
+	rqset = NULL;
 
 	/*
 	 * Async I/O registered by sliod; we must wait for a
@@ -1088,13 +1088,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_req_finished(rq);
 	}
 
-	if (r->biorq_rqset) {
-		spinlock(&r->biorq_rqset->set_lock);
-		if (psc_listhd_empty(&r->biorq_rqset->set_requests)) {
-			pscrpc_set_destroy(r->biorq_rqset);
-			r->biorq_rqset = NULL;
+	if (rqset) {
+		spinlock(&rqset->set_lock);
+		if (psc_listhd_empty(&rqset->set_requests)) {
+			pscrpc_set_destroy(rqset);
+			rqset = NULL;
 		} else
-			freelock(&r->biorq_rqset->set_lock);
+			freelock(&rqset->set_lock);
 	}
 
 	if (csvc)

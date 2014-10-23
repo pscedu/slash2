@@ -686,6 +686,8 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	}
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
+	psc_assert(b->bcm_flags & BMAP_DIO);
+
 	BMAP_URLOCK(b, locked);
 
 	DEBUG_BMAP(PLL_INFO, b,
