@@ -401,11 +401,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	psc_dynarray_free(&r->biorq_pages);
 
-	if (r->biorq_rqset) {
-		pscrpc_set_destroy(r->biorq_rqset);
-		r->biorq_rqset = NULL;
-	}
-
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 	psc_pool_return(slc_biorq_pool, r);
@@ -1554,8 +1549,6 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 {
 	int i, rc = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
-
-	psc_assert(!r->biorq_rqset);
 
 	if (r->biorq_flags & BIORQ_READ) {
 		rc = msl_launch_read_rpcs(r);

@@ -167,7 +167,6 @@ struct bmpc_ioreq {
 	struct psclist_head		 biorq_png_lentry;
 	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;	/* splay tree */
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
-	struct pscrpc_request_set	*biorq_rqset;
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
 
