@@ -234,12 +234,15 @@ struct sl_expcli_ops {
 			return ((mp)->rc);				\
 	} while (0)
 
-#define SL_NBRQSET_ADD(csvc, rq)					\
+#define SL_NBRQSETX_ADD(set, csvc, rq)					\
 	_PFL_RVSTART {							\
 		slrpc_req_out((csvc), (rq));				\
 		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
 		pscrpc_nbreqset_add(sl_nbrqset, (rq));			\
 	} _PFL_RVEND
+
+#define SL_NBRQSET_ADD(csvc, rq)					\
+	SL_NBRQSETX_ADD(sl_nbrqset, (csvc), (rq))
 
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
