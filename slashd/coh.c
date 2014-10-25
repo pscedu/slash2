@@ -191,8 +191,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	mq->seq = bml->bml_seq;
 	mq->dio = 1;
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	psc_assert(pscrpc_nbreqset_add(&slm_bmap_cbset, rq) == 0);
+	psc_assert(SL_NBRQSETX_ADD(&slm_bmap_cbset, csvc, rq) == 0);
 
 	OPSTAT_INCR(SLM_OPST_COHERENT_REQ);
 	return (0);
