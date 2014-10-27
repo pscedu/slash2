@@ -1,10 +1,10 @@
 /* $Id$ */
-/* %PSC_COPYRIGHT% */
+/* %PSCGPL_COPYRIGHT% */
 
 #include <acl/libacl.h>
 
-#include "pfl/cdefs.h"
 #include "pfl/acl.h"
+#include "pfl/cdefs.h"
 #include "pfl/fs.h"
 
 #include "fidcache.h"
