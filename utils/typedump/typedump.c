@@ -180,8 +180,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct mio_rootnames);
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
-	PRTYPE(struct msbmleaserls_thread);
+	PRTYPE(struct msbmflreaper_thread);
 	PRTYPE(struct msbmleasereaper_thread);
+	PRTYPE(struct msbmleaserls_thread);
 	PRTYPE(struct msbmleasewatcher_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_biorq);
@@ -199,6 +200,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct msreadahead_thread);
+	PRTYPE(struct msreadreaper_thread);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
 	PRTYPE(struct resm_mds_info);
@@ -612,8 +614,9 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_ATTRFLSH);
 	PRVAL(MSTHRT_BENCH);
 	PRVAL(MSTHRT_BMAPFLSH);
-	PRVAL(MSTHRT_BMAPLEASERLS);
 	PRVAL(MSTHRT_BMAPFLSHREAPER);
+	PRVAL(MSTHRT_BMAPLEASEREAPER);
+	PRVAL(MSTHRT_BMAPLEASERLS);
 	PRVAL(MSTHRT_BMAPLSWATCHER);
 	PRVAL(MSTHRT_CONN);
 	PRVAL(MSTHRT_CTL);
@@ -626,6 +629,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_RCI);
 	PRVAL(MSTHRT_RCM);
 	PRVAL(MSTHRT_READAHEAD);
+	PRVAL(MSTHRT_READREAPER);
 	PRVAL(MSTHRT_TIOS);
 	PRVAL(MSTHRT_USKLNDPL);
 	PRVAL(MSTHRT_WORKER);
@@ -700,6 +704,8 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_DIO_CB_ADD);
 	PRVAL(SLC_OPST_DIO_CB_READ);
 	PRVAL(SLC_OPST_DIO_CB_WRITE);
+	PRVAL(SLC_OPST_DIO_READ);
+	PRVAL(SLC_OPST_DIO_WRITE);
 	PRVAL(SLC_OPST_DIRCACHE_HIT);
 	PRVAL(SLC_OPST_DIRCACHE_HIT_EOF);
 	PRVAL(SLC_OPST_DIRCACHE_ISSUE);
@@ -731,6 +737,7 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_OFFLINE_RETRY_CLEAR_ERR);
 	PRVAL(SLC_OPST_OPEN);
 	PRVAL(SLC_OPST_READ);
+	PRVAL(SLC_OPST_READAHEAD_CB);
 	PRVAL(SLC_OPST_READAHEAD_FETCH);
 	PRVAL(SLC_OPST_READAHEAD_RPC_LAUNCH);
 	PRVAL(SLC_OPST_READDIR);
