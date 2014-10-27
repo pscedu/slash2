@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd February 27, 2014
+.Dd October 27, 2014
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -200,6 +200,21 @@ Examples:
 tcp1 3@ptl1
 tcp1 [2560,2563,2568,2571,2572,2575]@ptl0
 .Ed
+.It Ev PFL_SYSLOG_IDENT
+Set to a custom value to pass as the
+.Ar ident
+parameter to
+.Xr openlog 3
+.Po used when
+.Ev PFL_SYSLOG
+is enabled
+.Pc .
+The following tokens are replaced in the value specified:
+.Pp
+.Bl -tag -offset 3n -width 6n -compact
+.It Cm %n
+the program (binary) name
+.El
 .It Ev PFL_SYSLOG_PIPE
 Set to non-zero to launch a process that forwards all log messages
 to the given shell pipeline, usually
