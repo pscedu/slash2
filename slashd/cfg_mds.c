@@ -49,16 +49,12 @@ slcfg_init_res(struct sl_resource *r)
 		sp->sp_flags = SPF_NEED_JRNL_INIT;
 		psc_meter_init(&sp->sp_batchmeter, 0, "nsupd-%s",
 		    r->res_name);
-		sp->sp_batchmeter.pm_maxp = &current_update_batchno;
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
-		if (RES_ISFS(r)) {
+		if (RES_ISFS(r)) 
 			psc_meter_init(&si->si_batchmeter, 0,
 			    "reclaim-%s", r->res_name);
-			si->si_batchmeter.pm_maxp =
-			    &current_reclaim_batchno;
-		}
 		if (r->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_LEASE;
 	}
