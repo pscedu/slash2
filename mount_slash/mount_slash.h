@@ -56,7 +56,7 @@ enum {
 	MSTHRT_BMAPLEASERLS,		/* bmap lease releaser */
 	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
 	MSTHRT_BMAPLEASEREAPER,		/* lease RPC reaping thread */
- 
+
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
@@ -260,6 +260,9 @@ int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct psc_dynarray *, int, int, struct bmap *);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
+
+ssize_t	slc_getxattr(struct pscfs_req *, const char *, void *, size_t,
+	    struct fidc_membh *, size_t *);
 
 void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);
 void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,

@@ -204,7 +204,11 @@ fcmh_checkcreds(struct fidc_membh *f, const struct pscfs_creds *pcrp,
 	int rc, locked;
 
 	locked = FCMH_RLOCK(f);
+#ifdef SLOPT_POSIX_ACLS
+	rc = sl_fcmh_checkacls(f, pcrp, accmode);
+#else
 	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
+#endif
 	FCMH_URLOCK(f, locked);
 	return (rc);
 }

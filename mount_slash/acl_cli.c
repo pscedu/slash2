@@ -1,7 +1,16 @@
 /* $Id$ */
 /* %PSC_COPYRIGHT% */
 
+#include <acl/libacl.h>
+
+#include "pfl/cdefs.h"
 #include "pfl/acl.h"
+#include "pfl/fs.h"
+
+#include "fidcache.h"
+#include "mount_slash.h"
+
+#define ACL_EA_ACCESS "system.posix_acl_access"
 
 /*
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
@@ -9,9 +18,10 @@
 acl_t
 slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
 {
-	char name[24], trybuf[16];
 	void *buf = NULL;
 	size_t retsz = 0;
+	char trybuf[16];
+	ssize_t rc;
 	acl_t a;
 
 	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf, sizeof(trybuf), f,
@@ -24,9 +34,8 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
 		    &retsz);
 	}
 
-	a = sl_acl_from_xattr(buf, rc);
+	a = pfl_acl_from_xattr(buf, rc);
 
- out:
 	if (buf != trybuf)
 		PSCFREE(buf);
 	return (a);
@@ -38,22 +47,37 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
 		(prec) = (level);					\
 	}
 
-#define ACL_AUTH(e, mode)
+#define ACL_PERM(set, perm)	(acl_get_perm(set, perm) < 1)
+
+#define ACL_AUTH(e, mode)						\
+	_PFL_RVSTART {							\
+		acl_permset_t _set;					\
+		int _rv = EACCES;					\
+									\
+		if (acl_get_permset((e), &_set) == -1) {		\
+			psclog_error("acl_get_permset");		\
+		} else if (						\
+		    (((mode) & R_OK) && ACL_PERM(_set, ACL_READ)) ||	\
+		    (((mode) & W_OK) && ACL_PERM(_set, ACL_WRITE)) ||	\
+		    (((mode) & X_OK) && ACL_PERM(_set, ACL_EXECUTE))) {	\
+		} else							\
+			_rv = 0;					\
+		(_rv);							\
+	} _PFL_RVEND
 
 #define FOREACH_GROUP(g, i, pcrp)					\
 	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) ?		\
 	    (pcrp)->pcr_gid : (pcrp)->pcr_gidv[(i) - 1]) || 1); (i)++)
 
 int
-sl_checkacls(acl_t a, uid_t owner, gid_t group,
+sl_checkacls(acl_t a, struct srt_stat *sstb,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	int rv = EACCES, rc, prec = 6;
+	int wh, rv = EACCES, i, rc, prec = 6;
 	acl_entry_t e, authz = NULL, mask = NULL;
 	acl_tag_t tag;
+	gid_t *gp, g;
 	uid_t *up;
-	gid_t *gp;
-	acl_t a;
 
 	wh = ACL_FIRST_ENTRY;
 	while ((rc = acl_get_entry(a, wh, &e)) == 1) {
@@ -62,7 +86,7 @@ sl_checkacls(acl_t a, uid_t owner, gid_t group,
 		rc = acl_get_tag_type(e, &tag);
 		switch (tag) {
 		case ACL_USER_OBJ:
-			if (owner == pcrp->pcr_uid)
+			if (sstb->sst_uid == pcrp->pcr_uid)
 				ACL_SET_PRECEDENCE(1, prec, e, authz);
 			break;
 		case ACL_USER:
@@ -73,7 +97,8 @@ sl_checkacls(acl_t a, uid_t owner, gid_t group,
 
 		case ACL_GROUP_OBJ:
 			FOREACH_GROUP(g, i, pcrp)
-				if (g == group && ACL_AUTH(e, accmode)) {
+				if (g == sstb->sst_gid && ACL_AUTH(e,
+				    accmode)) {
 					ACL_SET_PRECEDENCE(3, prec, e,
 					    authz);
 					break;
@@ -110,20 +135,24 @@ sl_checkacls(acl_t a, uid_t owner, gid_t group,
 		    rv == 0 && mask)
 			rv = ACL_AUTH(mask, accmode);
 	}
+#ifdef SLOPT_POSIX_ACLS_REVERT
+	else
+		rv = checkcreds(sstb, pcrp, accmode);
+#endif
 	return (rv);
 }
 
 int
-sl_checkacls(struct fidc_membh *f, const struct pscfs_creds *pcrp,
+sl_fcmh_checkacls(struct fidc_membh *f, const struct pscfs_creds *pcrp,
     int accmode)
 {
+	acl_t a;
 	int rv;
 
-	a = slc_acl_get_fcmh(f);
+	a = slc_acl_get_fcmh(NULL, f);
 	if (a == NULL)
 		return (EACCES);
-	rv = sl_checkacls(a, f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
-	    pcrp, accmode);
+	rv = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
 	acl_free(a);
 	return (rv);
 }
