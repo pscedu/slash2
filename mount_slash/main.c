@@ -324,8 +324,6 @@ _msl_progallowed(struct pscfs_req *pfr)
 			psclog_warn("unable to check access on %s", fn);
 			return (0);
 		}
-		if (rc > 0)
-			rc--;
 		exe[rc] = '\0';
 		DYNARRAY_FOREACH(p, n, &allow_exe)
 		    if (strcmp(exe, p) == 0)
