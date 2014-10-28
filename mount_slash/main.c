@@ -1906,13 +1906,36 @@ msl_flush_attr(struct fidc_membh *f, int32_t to_set,
 }
 
 void
-slc_getprog(pid_t pid, char fn[])
+slc_getprog(pid_t pid, char prog[])
 {
-	char buf[PATH_MAX];
+	char fn[PATH_MAX];
+	int rc, fd;
 
-	fn[0] = '\0';
-	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-	(void)readlink(buf, fn, PATH_MAX);
+	snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+	prog[0] = '\0';
+	rc = readlink(fn, prog, PATH_MAX);
+	if (rc == -1)
+		rc = 0;
+	prog[rc] = '\0';
+
+	if (rc < PATH_MAX - 1 &&
+	    (strstr(prog, "bash") ||
+	     strstr(prog, "python") ||
+	     strstr(prog, "ksh"))) {
+		snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
+		fd = open(fn, O_RDONLY);
+		if (fd != -1) {
+			ssize_t sz;
+
+			sz = read(fd, prog + rc + 1, PATH_MAX - 2 - rc);
+			close(fd);
+
+			if (sz != -1)
+				prog[rc] = ' ';
+				prog[rc + 1 + sz] = '\0';
+			}
+		}
+	}
 }
 
 const char *
