@@ -6,7 +6,11 @@ include ${ROOTDIR}/Makefile.path
 PROG=		mount_slash
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
+
+ifneq ($(filter SLOPT_POSIX_ACLS,${DEFINES}),)
 SRCS+=		acl_cli.c
+endif
+
 SRCS+=		bflush.c
 SRCS+=		bmap_cli.c
 SRCS+=		cfg_cli.c
