@@ -307,8 +307,8 @@ _msl_progallowed(struct pscfs_req *pfr)
 	char fn[PATH_MAX], exe[PATH_MAX];
 	pid_t pid, ppid;
 	const char *p;
+	int n, rc;
 	FILE *fp;
-	int n;
 
 	ppid = pscfs_getclientctx(pfr)->pfcc_pid;
 	do {
@@ -319,10 +319,14 @@ _msl_progallowed(struct pscfs_req *pfr)
 			return (0);
 
 		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
-		if (readlink(fn, exe, sizeof(exe)) == -1) {
+		rc = readlink(fn, exe, sizeof(exe));
+		if (rc == -1) {
 			psclog_warn("unable to check access on %s", fn);
 			return (0);
 		}
+		if (rc > 0)
+			rc--;
+		exe[rc] = '\0';
 		DYNARRAY_FOREACH(p, n, &allow_exe)
 		    if (strcmp(exe, p) == 0)
 			    return (1);
@@ -3210,7 +3214,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 			bmap_op_done(b);
 
 			for (i = 0; i < fci->fci_rapages; i++) {
-
 				BMAP_LOCK(b);
 				e = bmpce_lookup_locked(b,
 				    fci->fci_raoff + i * BMPC_BUFSZ,
@@ -3304,6 +3307,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			FCMH_LOCK(f);
 			f->fcmh_flags &= ~FCMH_BUSY;
 			if (rc) {
+				/* XXX infinite loop */
 				if (flush_mtime)
 					f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 				if (flush_size)
