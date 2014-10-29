@@ -72,8 +72,8 @@ enum slm_fwd_op {
  * These two numbers were determined when the size of each entry was
  * 512 bytes.
  */
-#define SLM_UPDATE_BATCH		2048			/* namespace updates */
-#define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
+#define SLM_UPDATE_BATCH_NENTS		2048			/* namespace updates */
+#define SLM_RECLAIM_BATCH_NENTS		2048			/* garbage reclamation */
 
 /*
  * Bookmark what was recently sent to the client for avoiding redundant
