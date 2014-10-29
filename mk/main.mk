@@ -17,4 +17,10 @@ SLASH_MODULES?=		cli ion mds
 
 -include ${SLASH_BASE}/mk/local.mk
 
+ifneq ($(filter acl,${SLASH_OPTIONS}),)
+  DEFINES+=-DSLOPT_POSIX_ACLS
+  DEFINES+=-DSLOPT_POSIX_ACLS_REVERT
+  LDFLAGS+=-lacl
+endif
+
 include ${MAINMK}
