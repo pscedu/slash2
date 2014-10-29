@@ -1930,7 +1930,7 @@ slc_getprog(pid_t pid, char prog[])
 			sz = read(fd, prog + rc + 1, PATH_MAX - 2 - rc);
 			close(fd);
 
-			if (sz != -1)
+			if (sz != -1) {
 				prog[rc] = ' ';
 				prog[rc + 1 + sz] = '\0';
 			}
