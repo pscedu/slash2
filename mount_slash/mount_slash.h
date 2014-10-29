@@ -47,41 +47,46 @@ struct dircache_page;
 
 /* mount_slash thread types */
 enum {
-	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
+	MSTHRT_ATTR_FLUSH,		/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
-
-	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
-	MSTHRT_BMAPFLSHREAPER,		/* bmap write data reaping thread */
-
-	MSTHRT_BMAPLEASERLS,		/* bmap lease releaser */
-	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
-	MSTHRT_BMAPLEASEREAPER,		/* lease RPC reaping thread */
-
+	MSTHRT_BRELEASE,		/* bmap lease releaser */
+	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_EQPOLL,			/* LNET event queue polling */
 	MSTHRT_FCMHREAP,		/* fcmh reap thread */
+	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
-	MSTHRT_READREAPER,		/* read RPC reaper thread */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
 };
 
-struct msrcm_thread {
-	struct pscrpc_thread		 mrcm_prt;
-	struct psc_multiwait		 mrcm_mw;
+struct msattrflush_thread {
+	struct psc_multiwait		 maft_mw;
 };
 
-struct msrci_thread {
-	struct pscrpc_thread		 mrci_prt;
-	struct psc_multiwait		 mrci_mw;
+struct msbrelease_thread {
+	struct psc_multiwait		 mbrt_mw;
+};
+
+struct msbwatch_thread {
+	struct psc_multiwait		 mbwt_mw;
+};
+
+struct msfcmhreap_thread {
+	struct psc_multiwait		 mfrt_mw;
+};
+
+struct msflush_thread {
+	int				 mflt_failcnt;
+	struct psc_multiwait		 mflt_mw;
 };
 
 struct msfs_thread {
@@ -91,57 +96,29 @@ struct msfs_thread {
 	struct pscfs_req		*mft_pfr;
 };
 
-struct msbmfl_thread {
-	int				 mbft_failcnt;
-	struct psc_multiwait		 mbft_mw;
+struct msrci_thread {
+	struct pscrpc_thread		 mrci_prt;
+	struct psc_multiwait		 mrci_mw;
 };
 
-struct msbmflreaper_thread {
-	struct psc_multiwait		 mbflreaper_mw;
-};
-
-struct msbmleasewatcher_thread {
-	struct psc_multiwait		 mbleasewt_mw;
-};
-
-struct msbmleaserls_thread {
-	struct psc_multiwait		 mbleaserlst_mw;
-};
-
-struct msbmleasereaper_thread {
-	struct psc_multiwait		 mblsreaper_mw;
-};
-
-struct msattrfl_thread {
-	struct psc_multiwait		 maft_mw;
-};
-
-struct msfcmhreap_thread {
-	struct psc_multiwait		 mfrt_mw;
+struct msrcm_thread {
+	struct pscrpc_thread		 mrcm_prt;
+	struct psc_multiwait		 mrcm_mw;
 };
 
 struct msreadahead_thread {
 	struct psc_multiwait		 mrat_mw;
 };
 
-struct msreadreaper_thread {
-	struct psc_multiwait		 mrrt_mw;
-};
-
-PSCTHR_MKCAST(msbmleasewthr, msbmleasewatcher_thread, MSTHRT_BMAPLSWATCHER);
-PSCTHR_MKCAST(msbmleaserlsthr, msbmleaserls_thread, MSTHRT_BMAPLEASERLS);
-PSCTHR_MKCAST(msbmleasereaper, msbmleasereaper_thread, MSTHRT_BMAPLEASEREAPER);
-
-PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
-PSCTHR_MKCAST(msbmflreaperthr, msbmflreaper_thread, MSTHRT_BMAPFLSHREAPER);
-
-PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
+PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
+PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
+PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
+PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
 PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
-PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
-PSCTHR_MKCAST(msreadreaperthr, msreadreaper_thread, MSTHRT_READREAPER);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
+PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define MS_READAHEAD_MAXPGS		32
 
@@ -467,10 +444,6 @@ extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;
 extern struct psc_listcache	 slc_bmaptimeoutq;
 extern struct psc_listcache	 slc_readaheadq;
-
-extern struct pscrpc_nbreqset	*slc_pndgreadarqs;
-extern struct pscrpc_nbreqset	*slc_pndgbmaplsrqs;
-extern struct pscrpc_nbreqset	*slc_pndgbmaprlsrqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;

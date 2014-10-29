@@ -40,6 +40,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fault.h"
@@ -54,7 +55,6 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/treeutil.h"
-#include "pfl/completion.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -85,9 +85,6 @@ struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 psc_atomic32_t		slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
-
-struct pscrpc_nbreqset *slc_pndgreadarqs;
-struct psc_compl	slc_read_rpc_compl = PSC_COMPL_INIT;
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
@@ -464,16 +461,8 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
 		*csvcp = slc_geticsvc_nb(m);
-		if (*csvcp) {
-#if 1
-			if (fcmh_2_fid(b->bcm_fcmh) == 0x48c00000001ceb4) {
-				DEBUG_BMAP(PLL_ERROR, b, "bs_id=%#x, fid="SLPRI_FID,
-				    fci->fci_inode.reptbl[iosidx].bs_id,
-				    fcmh_2_fid(b->bcm_fcmh));
-			}
-#endif
+		if (*csvcp)
 			return (0);
-		}
 	}
 	return (-1);
 }
@@ -947,15 +936,15 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	int i, op, n, rc, locked;
 	size_t len, nbytes, size;
 	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_nbreqset *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct bmap *b;
 	struct iovec *iovs;
+	struct bmap *b;
 	uint64_t *v8;
-	struct pscrpc_request_set * rqset;
 
 	psc_assert(r->biorq_bmap);
 
@@ -981,7 +970,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	rqset = pscrpc_prep_set();
+	nbs = pscrpc_nbreqset_init(NULL);
 
 	/*
 	 * This buffer hasn't been segmented into LNET_MTU sized chunks.
@@ -990,6 +979,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, size - nbytes);
 
+		rq = NULL;
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -1013,12 +1003,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		pscrpc_set_add_new_req(rqset, rq);
-		rc = pscrpc_push_req(rq);
+		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
 			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
-			pscrpc_set_remove_req(rqset, rq);
 			PFL_GOTOERR(out, rc);
 		}
 		BIORQ_LOCK(r);
@@ -1032,9 +1019,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * blocking.
 	 */
 	psc_assert(nbytes == size);
-	rc = pscrpc_set_wait(rqset);
-	pscrpc_set_destroy(rqset);
-	rqset = NULL;
+
+	rc = pscrpc_nbreqset_flush(nbs);
 
 	/*
 	 * Async I/O registered by sliod; we must wait for a
@@ -1083,14 +1069,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_req_finished(rq);
 	}
 
-	if (rqset) {
-		spinlock(&rqset->set_lock);
-		if (psc_listhd_empty(&rqset->set_requests)) {
-			pscrpc_set_destroy(rqset);
-			rqset = NULL;
-		} else
-			freelock(&rqset->set_lock);
-	}
+	if (nbs)
+		pscrpc_nbreqset_destroy(nbs);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1272,8 +1252,6 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d", off,
 	    npages);
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-
 	rq->rq_timeout = 15;
 	rq->rq_bulk_abortable = 1;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
@@ -1281,9 +1259,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = NULL;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	pscrpc_req_setcompl(rq, &slc_read_rpc_compl);
-
-	rc = pscrpc_nbreqset_add(slc_pndgreadarqs, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		return;
 
@@ -1296,7 +1272,6 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
 		BMPCE_LOCK(e);
-
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
 		e->bmpce_flags &= ~BMPCE_FAULTING;
@@ -1394,17 +1369,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), startpage, npages,
 	    bmap_2_ios(r->biorq_bmap));
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-
 	/* Setup the callback, supplying the dynarray as an argument. */
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
-
 	rq->rq_interpret_reply = msl_read_cb0;
-	pscrpc_req_setcompl(rq, &slc_read_rpc_compl);
-
-	rc = pscrpc_nbreqset_add(slc_pndgreadarqs, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 		PFL_GOTOERR(out, rc);

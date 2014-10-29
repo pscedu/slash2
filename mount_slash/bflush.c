@@ -58,12 +58,6 @@ struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
 
-struct psc_compl		 slc_lease_rpc_compl = PSC_COMPL_INIT;
-struct psc_compl		 slc_flush_rpc_compl = PSC_COMPL_INIT;
-
-struct pscrpc_nbreqset		*slc_pndgbmaplsrqs;	/* bmap lease */
-struct pscrpc_nbreqset		*slc_pndgbmaprlsrqs;	/* bmap release */
-__static struct pscrpc_nbreqset	*pndgWrtReqs;
 psc_atomic32_t			 slc_max_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	128
@@ -297,10 +291,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto out;
 	}
 
-	rq->rq_interpret_reply = bmap_flush_rpc_cb;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
-
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
@@ -309,9 +299,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		mq->flags |= SRM_IOF_BENCH;
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	DEBUG_REQ(PLL_DIAG, rq, "fid="SLPRI_FG" off=%u sz=%u, ios=%u",
+	DEBUG_REQ(PLL_DIAG, rq, "fid="SLPRI_FG" off=%u sz=%u ios=%u",
 	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset, mq->size,
 	    bmap_2_ios(b));
 
@@ -320,10 +309,11 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	psclog_diag("Send write RPC to %d (infl: %d)",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
+	rq->rq_interpret_reply = bmap_flush_rpc_cb;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
-	pscrpc_req_setcompl(rq, &slc_flush_rpc_compl);
-
-	rc = pscrpc_nbreqset_add(pndgWrtReqs, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 		goto out;
@@ -334,7 +324,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
  out:
 	if (rq)
-		pscrpc_req_finished_locked(rq);
+		pscrpc_req_finished(rq);
 	return (rc);
 }
 
@@ -767,10 +757,10 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 }
 
 /**
- * msbmflwthr_main - Lease watcher thread.
+ * Lease watcher thread.
  */
 __static void
-msbmleasewthr_main(struct psc_thread *thr)
+msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct bmapc_memb *b, *tmpb;
@@ -928,12 +918,14 @@ bmap_flush(void)
 }
 
 void
-msbmapflushthr_main(struct psc_thread *thr)
+msflushthr_main(struct psc_thread *thr)
 {
 	struct timespec work, wait, tmp1, tmp2;
+	struct msflush_thread *mflt;
 
+	mflt = msflushthr(thr);
 	while (pscthr_run(thr)) {
-		msbmflthr(pscthr_get())->mbft_failcnt = 1;
+		mflt->mflt_failcnt = 1;
 
 		lc_peekheadwait(&slc_bmapflushq);
 
@@ -967,25 +959,6 @@ msbmapflushthr_main(struct psc_thread *thr)
 }
 
 void
-msbmapflushreaperthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slc_flush_rpc_compl, 1);
-		pscrpc_nbreqset_reap(pndgWrtReqs);
-	}
-}
-
-void
-msbmaplsreaper_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slc_lease_rpc_compl, 1);
-		pscrpc_nbreqset_reap(slc_pndgbmaplsrqs);
-		pscrpc_nbreqset_reap(slc_pndgbmaprlsrqs);
-	}
-}
-
-void
 msbenchthr_main(__unusedx struct psc_thread *thr)
 {
 #if 0
@@ -1004,53 +977,37 @@ msbenchthr_main(__unusedx struct psc_thread *thr)
 void
 msbmapthr_spawn(void)
 {
-	struct msbmfl_thread *mbft;
+	struct msflush_thread *mflt;
 	struct psc_thread *thr;
 	int i;
-
-	slc_pndgbmaprlsrqs = pscrpc_nbreqset_init(NULL,
-	    msl_bmap_release_cb);
-	slc_pndgbmaplsrqs = pscrpc_nbreqset_init(NULL, NULL);
-	pndgWrtReqs = pscrpc_nbreqset_init(NULL, NULL);
 
 	psc_waitq_init(&slc_bflush_waitq);
 
 	lc_reginit(&slc_bmapflushq, struct bmapc_memb,
-	    bcm_lentry, "bmapflush");
+	    bcm_lentry, "bmapflushq");
 
 	lc_reginit(&slc_bmaptimeoutq, struct bmap_cli_info,
 	    bci_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
-		    msbmapflushthr_main, NULL,
-		    sizeof(struct msbmfl_thread), "msbflushthr%d", i);
-		mbft = msbmflthr(thr);
-		psc_multiwait_init(&mbft->mbft_mw, "%s",
+		thr = pscthr_init(MSTHRT_FLUSH, 0, msflushthr_main,
+		    NULL, sizeof(struct msflush_thread), "msflushthr%d",
+		    i);
+		mflt = msflushthr(thr);
+		psc_multiwait_init(&mflt->mflt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
-	thr = pscthr_init(MSTHRT_BMAPFLSHREAPER, 0, msbmapflushreaperthr_main,
-	  NULL, sizeof(struct msbmflreaper_thread), "msbflushreaperthr");
-	psc_multiwait_init(&msbmflreaperthr(thr)->mbflreaper_mw, "%s",
+
+	thr = pscthr_init(MSTHRT_BWATCH, 0, msbwatchthr_main,
+	  NULL, sizeof(struct msbwatch_thread), "msbwatchthr");
+	psc_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, msbmleasewthr_main,
-	  NULL, sizeof(struct msbmleasewatcher_thread), "msbmleasewthr");
-	psc_multiwait_init(&msbmleasewthr(thr)->mbleasewt_mw, "%s",
-	    thr->pscthr_name);
-	pscthr_setready(thr);
-
-	thr = pscthr_init(MSTHRT_BMAPLEASERLS, 0, msbmapleaserlsthr_main,
-	    NULL, sizeof(struct msbmleaserls_thread), "msbleaserlsthr");
-	psc_multiwait_init(&msbmleaserlsthr(thr)->mbleaserlst_mw, "%s",
-	    thr->pscthr_name);
-	pscthr_setready(thr);
-
-	thr = pscthr_init(MSTHRT_BMAPLEASEREAPER, 0, msbmaplsreaper_main,
-	  NULL, sizeof(struct msbmleasereaper_thread), "msblsreaperthr");
-	psc_multiwait_init(&msbmleasereaper(thr)->mblsreaper_mw, "%s",
+	thr = pscthr_init(MSTHRT_BRELEASE, 0, msbreleasethr_main,
+	    NULL, sizeof(struct msbrelease_thread), "msbreleasethr");
+	psc_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 

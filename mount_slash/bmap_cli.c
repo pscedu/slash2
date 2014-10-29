@@ -339,14 +339,10 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	mq->nreassigns = bci->bci_nreassigns;
 	mq->pios = prefIOS;
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
-	pscrpc_req_setcompl(rq, &slc_lease_rpc_compl);
-
-	rc = pscrpc_nbreqset_add(slc_pndgbmaplsrqs, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
 
@@ -444,14 +440,11 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
 	    sizeof(struct srt_bmapdesc));
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
-	pscrpc_req_setcompl(rq, &slc_lease_rpc_compl);
-
-	rc = pscrpc_nbreqset_add(slc_pndgbmaplsrqs, rq);
+	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb; 
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
 
@@ -752,9 +745,10 @@ msl_bmap_release(struct sl_resm *resm)
 		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
+
+	rq->rq_interpret_reply = msl_bmap_release_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	rc = pscrpc_nbreqset_add(slc_pndgbmaprlsrqs, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;
@@ -777,7 +771,7 @@ msl_bmap_release(struct sl_resm *resm)
 }
 
 void
-msbmapleaserlsthr_main(struct psc_thread *thr)
+msbreleasethr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
@@ -1013,7 +1007,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
 	OPSTAT_INCR(SLC_OPST_BMAP_WAIT_EMPTY);
-	bmap_wait_locked(b, (atomic_read(&b->bcm_opcnt) > 2));
+	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));

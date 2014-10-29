@@ -42,6 +42,7 @@
 #include <gcrypt.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/eqpollthr.h"
@@ -63,7 +64,6 @@
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
 #include "pfl/workthr.h"
-#include "pfl/completion.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -145,9 +145,6 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
 int				 slc_posix_mkgrps;
-
-extern struct pscrpc_nbreqset	*slc_pndgreadarqs;
-extern struct psc_compl		 slc_read_rpc_compl;
 
 int
 uidmap_ext_cred(struct srt_creds *cr)
@@ -3168,15 +3165,6 @@ msfcmhreapthr_main(struct psc_thread *thr)
 }
 
 void
-msreadreaperthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slc_read_rpc_compl, 1);
-		pscrpc_nbreqset_reap(slc_pndgreadarqs);
-	}
-}
-
-void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	int i, rc, did_work;
@@ -3393,17 +3381,12 @@ msreadaheadthr_spawn(void)
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
-	thr = pscthr_init(MSTHRT_READREAPER, 0, msreadreaperthr_main,
-	  NULL, sizeof(struct msreadreaper_thread), "msreadreapthr");
-	psc_multiwait_init(&msreadreaperthr(thr)->mrrt_mw, "%s",
-	    thr->pscthr_name);
-	pscthr_setready(thr);
 }
 
 void
 msattrflushthr_spawn(void)
 {
-	struct msattrfl_thread *maft;
+	struct msattrflush_thread *maft;
 	struct psc_thread *thr;
 	int i;
 
@@ -3411,11 +3394,11 @@ msattrflushthr_spawn(void)
 	    "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
+		thr = pscthr_init(MSTHRT_ATTR_FLUSH, 0,
 		    msattrflushthr_main, NULL,
-		    sizeof(struct msattrfl_thread),
+		    sizeof(struct msattrflush_thread),
 		    "msattrflushthr%d", i);
-		maft = msattrflthr(thr);
+		maft = msattrflushthr(thr);
 		psc_multiwait_init(&maft->maft_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
@@ -3493,8 +3476,6 @@ msl_init(void)
 	    NULL, NULL, "mfh");
 	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
 
-	slc_pndgreadarqs = pscrpc_nbreqset_init(NULL, NULL);
-
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
 
@@ -3520,8 +3501,9 @@ msl_init(void)
 	psc_iostats_initf(&msl_io_512k_stat, PISTF_BASE10, "iosz:512k-1m");
 	psc_iostats_initf(&msl_io_1m_stat, PISTF_BASE10, "iosz:1m-");
 
-	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
+	sl_nbrqset = pscrpc_nbreqset_init(NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
+	    "msnbrqthr%d");
 
 	msbmapthr_spawn();
 	msfcmhreapthr_spawn();

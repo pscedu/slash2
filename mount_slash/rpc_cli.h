@@ -118,8 +118,6 @@ int	slc_rmc_setmds(const char *);
 int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
 
-extern struct psc_compl slc_lease_rpc_compl;
-
 static __inline struct psc_multiwait *
 msl_getmw(void)
 {
@@ -127,21 +125,14 @@ msl_getmw(void)
 
 	thr = pscthr_get();
 	switch (thr->pscthr_type) {
-	case MSTHRT_ATTRFLSH:
-		return (&msattrflthr(thr)->maft_mw);
-
-	case MSTHRT_BMAPFLSH:
-		return (&msbmflthr(thr)->mbft_mw);
-	case MSTHRT_BMAPFLSHREAPER:
-		return (&msbmflreaperthr(thr)->mbflreaper_mw);
-
-	case MSTHRT_BMAPLEASERLS:
-		return (&msbmleaserlsthr(thr)->mbleaserlst_mw);
-	case MSTHRT_BMAPLSWATCHER:
-		return (&msbmleasewthr(thr)->mbleasewt_mw);
-	case MSTHRT_BMAPLEASEREAPER:
-		return (&msbmleasereaper(thr)->mblsreaper_mw);
-
+	case MSTHRT_ATTR_FLUSH:
+		return (&msattrflushthr(thr)->maft_mw);
+	case MSTHRT_BRELEASE:
+		return (&msbreleasethr(thr)->mbrt_mw);
+	case MSTHRT_BWATCH:
+		return (&msbwatchthr(thr)->mbwt_mw);
+	case MSTHRT_FLUSH:
+		return (&msflushthr(thr)->mflt_mw);
 	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_RCI:
@@ -151,7 +142,6 @@ msl_getmw(void)
 	case MSTHRT_READAHEAD:
 		return (&msreadaheadthr(thr)->mrat_mw);
 	case MSTHRT_CTL:
-		return (NULL);
 	case MSTHRT_WORKER:
 		return (NULL);
 	}
