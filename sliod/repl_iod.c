@@ -143,7 +143,7 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 			BMAP_ULOCK(w->srw_bcm);
 		}
 	}
-	psclog_info("fid="SLPRI_FG" bmap=%d #slivers=%d",
+	psclog_diag("fid="SLPRI_FG" bmap=%d #slivers=%d",
 	    SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
 
  out:
