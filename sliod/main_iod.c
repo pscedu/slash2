@@ -269,7 +269,7 @@ main(int argc, char *argv[])
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
 	bim_init();
-	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	slvr_cache_init();
 
 	sli_rdwrstats[0].size =        1024;
@@ -317,7 +317,7 @@ main(int argc, char *argv[])
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
 
-	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr");
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, 1, "slinbrqthr");
 
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
