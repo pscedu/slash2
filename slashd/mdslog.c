@@ -1477,7 +1477,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	INIT_SPINLOCK(&rarg.lock);
 	rarg.count = size / R_ENTSZ;
 
-	nbset = pscrpc_nbreqset_init(NULL, NULL);
+	nbset = pscrpc_nbreqset_init(NULL);
 
 	/* Find the xid associated with the last log entry. */
 	r = PSC_AGP(reclaim_prg.log_buf, (rarg.count - 1) * R_ENTSZ);
