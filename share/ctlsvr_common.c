@@ -331,5 +331,5 @@ void
 slctlparam_nbrq_outstanding_get(char *val)
 {
 	snprintf(val, PCP_VALUE_MAX, "%d",
-	    &sl_nbrqset->nb_reqset->set_remaining);
+	    sl_nbrqset->nb_reqset->set_remaining);
 }
