@@ -48,12 +48,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-struct pscrpc_nbreqset	slm_bmap_cbset =
-    PSCRPC_NBREQSET_INIT(slm_bmap_cbset, NULL, mdscoh_cb);
-
 #define SLM_CBARG_SLOT_CSVC	0
-
-struct psc_compl slm_coh_compl = PSC_COMPL_INIT;
 
 struct slm_wkdata_coh_releasebml {
 	slfid_t			fid;
@@ -183,32 +178,15 @@ mdscoh_req(struct bmap_mds_lease *bml)
 		return (rc);
 	}
 
-	rq->rq_compl = &slm_coh_compl;
-	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
-
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
 	mq->seq = bml->bml_seq;
 	mq->dio = 1;
 
-	psc_assert(SL_NBRQSETX_ADD(&slm_bmap_cbset, csvc, rq) == 0);
+	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
+	rq->rq_interpret_reply = mdscoh_cb;
+	psc_assert(SL_NBRQSET_ADD(csvc, rq) == 0);
 
 	OPSTAT_INCR(SLM_OPST_COHERENT_REQ);
 	return (0);
-}
-
-void
-slmcohthr_begin(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&slm_coh_compl, 1);
-		pscrpc_nbreqset_reap(&slm_bmap_cbset);
-	}
-}
-
-void
-slmcohthr_spawn(void)
-{
-	pscthr_init(SLMTHRT_COH, 0, slmcohthr_begin, NULL, 0,
-	    "slmcohthr");
 }

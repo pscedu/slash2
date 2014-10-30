@@ -597,8 +597,8 @@ main(int argc, char *argv[])
 	    256, 0, NULL, NULL, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
-	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
+	sl_nbrqset = pscrpc_nbreqset_init(NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 1, "slmnbrqthr");
 
 	slm_opstate = SLM_OPSTATE_REPLAY;
 
@@ -707,7 +707,6 @@ main(int argc, char *argv[])
 
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
-	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
 	slmtimerthr_spawn();
 	slmconnthr_spawn();
