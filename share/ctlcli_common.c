@@ -28,6 +28,7 @@
 #include <arpa/inet.h>
 
 #include <ctype.h>
+#include <curses.h>
 #include <netdb.h>
 #include <string.h>
 
@@ -96,6 +97,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	char *p, *site, nid[NI_MAXHOST], *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
+	int col;
 
 	stype = slconn_restypes[scc->scc_type];
 
