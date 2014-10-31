@@ -37,6 +37,9 @@ struct slctlmsg_conn {
 	uint32_t		scc_stkvers;
 };
 
+#define CSVCF_CTL_OLDER		(CSVCF_LASTFLAG << 1)
+#define CSVCF_CTL_NEWER		(CSVCF_LASTFLAG << 2)
+
 #define SLCTL_REST_CLI		0
 
 struct slctlmsg_fcmh {

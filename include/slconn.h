@@ -106,6 +106,7 @@ struct slrpc_cservice {
 #define CSVCF_ABANDON		(1 << 2)		/* conn should be dropped */
 #define CSVCF_WANTFREE		(1 << 3)		/* csvc mem resources need freed */
 #define CSVCF_PING		(1 << 4)		/* send keepalives */
+#define CSVCF_LASTFLAG		CSVCF_PING
 
 /* sl_csvc_get() flags, shared in numerical space */
 #define CSVCF_NONBLOCK		(1 << 5)		/* don't timeout waiting for new establishment */

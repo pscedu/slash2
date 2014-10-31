@@ -100,6 +100,10 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
 		    sizeof(scc->scc_addrbuf));
 		scc->scc_stkvers = resm->resm_stkvers;
+		if (scc->scc_stkvers < SL_STK_VERSION)
+			scc->scc_flags |= CSVCF_CTL_OLDER;
+		else if (scc->scc_stkvers > SL_STK_VERSION)
+			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = resm->resm_type;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
@@ -125,6 +129,10 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(scc->scc_addrbuf));
 		expc = (void *)csvc->csvc_params.scp_csvcp;
 		scc->scc_stkvers = expc->stkvers;
+		if (scc->scc_stkvers < SL_STK_VERSION)
+			scc->scc_flags |= CSVCF_CTL_OLDER;
+		else if (scc->scc_stkvers > SL_STK_VERSION)
+			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = SLCTL_REST_CLI;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);

@@ -142,14 +142,26 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-11s %35.35s %-8s %c%c%c%c%c %5d %4d %4d\n",
+	printf("  %-11s %35.35s %-8s %c%c%c%c%c ",
 	    res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
 	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
-	    scc->scc_flags & CSVCF_PING			? 'P' : '-',
-	    scc->scc_stkvers, scc->scc_txcr, scc->scc_refcnt);
+	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
+
+	if (scc->scc_flags & CSVCF_CTL_OLDER)
+		col = COLOR_RED;
+	else if (scc->scc_flags & CSVCF_CTL_NEWER)
+		col = COLOR_BLUE;
+	else
+		col = COLOR_GREEN;
+
+	setcolor(col);
+	printf("%5d ", scc->scc_stkvers);
+	uncolor();
+
+	printf("%4d %4d\n", scc->scc_txcr, scc->scc_refcnt);
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
