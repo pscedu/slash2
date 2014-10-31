@@ -1903,36 +1903,48 @@ msl_flush_attr(struct fidc_membh *f, int32_t to_set,
 }
 
 void
-slc_getprog(pid_t pid, char prog[])
+slc_getprog(pid_t pid, char *prog, size_t len)
 {
-	char fn[PATH_MAX];
+	char *p, fn[128], buf[128];
+	ssize_t sz;
 	int rc, fd;
 
-	snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+	rc = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+	if (rc == -1)
+		return;
 	prog[0] = '\0';
-	rc = readlink(fn, prog, PATH_MAX);
+	rc = readlink(fn, prog, len - 1);
 	if (rc == -1)
 		rc = 0;
 	prog[rc] = '\0';
 
-	if (rc < PATH_MAX - 1 &&
-	    (strstr(prog, "bash") ||
-	     strstr(prog, "python") ||
-	     strstr(prog, "ksh"))) {
-		snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
-		fd = open(fn, O_RDONLY);
-		if (fd != -1) {
-			ssize_t sz;
+	/* no space to append script name */
+	if ((size_t)rc >= len)
+		return;
 
-			sz = read(fd, prog + rc + 1, PATH_MAX - 2 - rc);
-			close(fd);
+	if (strstr(prog, "/bash") == NULL &&
+	    strstr(prog, "/python") == NULL &&
+	    strstr(prog, "/perl") == NULL &&
+	     strstr(prog, "/ksh") == NULL)
+		return;
 
-			if (sz != -1) {
-				prog[rc] = ' ';
-				prog[rc + 1 + sz] = '\0';
-			}
-		}
-	}
+	snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
+	fd = open(fn, O_RDONLY);
+	if (fd == -1)
+		return;
+
+	sz = read(fd, buf, sizeof(buf) - 1);
+	close(fd);
+
+	if (sz == -1)
+		return;
+
+	buf[sz] = '\0';
+	p = strchr(buf, '\0');
+	if (p != buf + sz)
+		snprintf(prog + strlen(prog), len - strlen(prog),
+		    " %s", p + 1);
+
 }
 
 const char *
@@ -1964,7 +1976,7 @@ pscthr_log_get_uprog(struct psc_thread *thr)
 		} else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
-		slc_getprog(pid, mft->mft_uprog);
+		slc_getprog(pid, mft->mft_uprog, sizeof(mft->mft_uprog));
 	}
 
 	return (pld->pld_uprog = mft->mft_uprog);
@@ -2040,10 +2052,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	}
 
 	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd ||
-	    mfh->mfh_nbytes_wr)) {
-		char fn[PATH_MAX];
-
-		slc_getprog(mfh->mfh_pid, fn);
+	    mfh->mfh_nbytes_wr))
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
@@ -2057,10 +2066,10 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    c->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
 		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
-		    getsid(mfh->mfh_pid),
+		    mfh->mfh_sid,
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr, fn);
-	}
+		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
+		    mfh->mfh_uprog);
 
 	pscfs_reply_close(pfr, rc);
 
