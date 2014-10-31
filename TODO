@@ -565,6 +565,7 @@ peer-54321-128.182.99.29@tcp10-snd          46.1M
   until it times out then EIO/ENOTCONN comes.  by this logic,
   asynchronous FLUSH should be OK as long as connection is actually
   established
+- add 'msctl softstop' that exits when all procs are done
 
 - remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
 
