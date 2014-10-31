@@ -92,7 +92,7 @@ struct msflush_thread {
 struct msfs_thread {
 	size_t				 mft_uniqid;
 	struct psc_multiwait		 mft_mw;
-	char				 mft_uprog[PATH_MAX];
+	char				 mft_uprog[256];
 	struct pscfs_req		*mft_pfr;
 };
 
@@ -155,6 +155,7 @@ struct msl_fhent {
 	int				 mfh_flags;
 	int				 mfh_refcnt;
 	pid_t				 mfh_pid;
+	pid_t				 mfh_sid;
 
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
@@ -165,6 +166,7 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
+	char				 mfh_uprog[256];
 };
 
 #define MSL_FHENT_CLOSING		(1 << 0)
@@ -263,6 +265,7 @@ void	 mstimerthr_spawn(void);
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
+void	 slc_getprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
