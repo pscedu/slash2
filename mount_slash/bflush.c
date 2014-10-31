@@ -193,6 +193,35 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 }
 
 void
+bwc_pin_pages(struct bmpc_write_coalescer *bwc)
+{
+	struct bmap_pagecache_entry *pg;
+	int i;
+
+	for (i = 0; i < bwc->bwc_nbmpces; i++) {
+		pg = bwc->bwc_bmpces[i];
+		BMPCE_LOCK(pg);
+		pg->bmpce_flags |= BMPCE_PINNED;
+		BMPCE_ULOCK(pg);
+	}
+}
+
+void
+bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
+{
+	struct bmap_pagecache_entry *pg;
+	int i;
+
+	for (i = 0; i < bwc->bwc_nbmpces; i++) {
+		pg = bwc->bwc_bmpces[i];
+		BMPCE_LOCK(pg);
+		pg->bmpce_flags &= ~BMPCE_PINNED;
+		BMPCE_WAKE(pg);
+		BMPCE_ULOCK(pg);
+	}
+}
+
+void
 _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 {
 	int wake = 0;
@@ -229,6 +258,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	OPSTAT_INCR(SLC_OPST_SRMT_WRITE_CALLBACK);
+
+	bwc_unpin_pages(bwc);
 
 	if (!rc) {
 		for (i = 0; i < bwc->bwc_nbmpces; i++)  {
@@ -300,14 +331,20 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 
-	DEBUG_REQ(PLL_DIAG, rq, "fid="SLPRI_FG" off=%u sz=%u ios=%u",
-	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset, mq->size,
-	    bmap_2_ios(b));
+	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
+	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
+	    m->resm_res_id, SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset,
+	    mq->size, bmap_2_ios(b),
+	    psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
-	psclog_diag("Send write RPC to %d (infl: %d)",
-	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
+
+	/*
+	 * XXX we should use a copy-on-write strategy here to not hold
+	 * up the application.
+	 */
+	bwc_pin_pages(bwc);
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
@@ -315,6 +352,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
+		bwc_unpin_pages(bwc);
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 		goto out;
 	}
@@ -547,11 +585,11 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	r = pll_peekhead(&bwc->bwc_pll);
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
-	for (i = 0, bmpce = bwc->bwc_bmpces[0]; i < bwc->bwc_nbmpces;
-	     i++, bmpce = bwc->bwc_bmpces[i]) {
+	for (i = 0; i < bwc->bwc_nbmpces; i++) {
+		bmpce = bwc->bwc_bmpces[i];
 
 		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
-		    (i ? 0 : (r->biorq_off - bmpce->bmpce_off));
+		    (i ? 0 : r->biorq_off - bmpce->bmpce_off);
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
 		    i ? BMPC_BUFSZ :
@@ -739,8 +777,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 
 	rmci = resm2rmci(m);
 	/*
-	 * XXX this should really be held in the import/resm on a per
-	 * sliod basis using multiwait instead of a single global value.
+	 * XXX use resm multiwait?
 	 */
 	spinlock(&slc_bflush_lock);
 	while (atomic_read(&rmci->rmci_infl_rpcs) >=

@@ -83,18 +83,18 @@ struct bmap_pagecache_entry {
 #define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
 #define BMPCE_DISCARD		(1 <<  7)	/* don't cache after I/O */
 #define BMPCE_DIRTY		(1 <<  8)	/* dirty cache */
+#define BMPCE_PINNED		(1 <<  9)	/* do not modify */
 
-#define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
-#define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
-#define BMPCE_RLOCK(b)		reqlock(&(b)->bmpce_lock)
-#define BMPCE_TRYLOCK(b)	trylock(&(b)->bmpce_lock)
-#define BMPCE_URLOCK(b, lk)	ureqlock(&(b)->bmpce_lock, (lk))
-#define BMPCE_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bmpce_lock)
+#define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
+#define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
+#define BMPCE_RLOCK(e)		reqlock(&(e)->bmpce_lock)
+#define BMPCE_TRYLOCK(e)	trylock(&(e)->bmpce_lock)
+#define BMPCE_URLOCK(e, lk)	ureqlock(&(e)->bmpce_lock, (lk))
+#define BMPCE_LOCK_ENSURE(e)	LOCK_ENSURE(&(e)->bmpce_lock)
 
-#define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
+#define BMPCE_WAIT(e)		psc_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
 
-/* introduce a flag to avoid unconditional wakeup */
-
+/* XXX: introduce a flag to avoid unconditional wakeup */
 #define BMPCE_WAKE(e)							\
 	do {								\
 		if ((e)->bmpce_waitq) {					\
