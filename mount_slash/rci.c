@@ -78,8 +78,8 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 }
 
 /**
- * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
- *	ION.
+ * slc_rci_handle_io - Handle a READ or WRITE completion to CLI from
+ *	ION (only used for async I/O).
  * @rq: request.
  */
 int
@@ -203,13 +203,13 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		if (mq->rc)
 			PFL_GOTOERR(out, mq->rc);
 
-		if (mq->op == SRMIOP_RD) { 
+		if (mq->op == SRMIOP_RD) {
 			iov.iov_base = r->biorq_buf;
 			iov.iov_len = r->biorq_len;
 
 			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);
-		} 
+		}
 	} else {
 		psc_fatalx("unknown callback");
 	}
