@@ -1943,6 +1943,7 @@ pscthr_log_get_uprog(struct psc_thread *thr)
 	struct pscfs_req *pfr;
 
 	pld = psclog_getdata();
+// || mft->mft_lastp != p
 	if (pld->pld_uprog)
 		return (pld->pld_uprog);
 
@@ -1951,15 +1952,16 @@ pscthr_log_get_uprog(struct psc_thread *thr)
 
 	mft = msfsthr(thr);
 
-	if (mft->mft_uprog[0] == '\0') {
-		struct msl_fhent *mfh;
+	if (mft->mft_uprog[0] == '\0' && mft->mft_pfr) {
 		pid_t pid;
 
 		pfr = mft->mft_pfr; /* set by GETPFR() */
-		mfh = (void *)pfr->pfr_fuse_fi->fh; // XXX protocol violation
-		if (mfh)
+		if (pfr && pfr->pfr_fuse_fi) {
+			struct msl_fhent *mfh;
+
+			mfh = (void *)pfr->pfr_fuse_fi->fh; // XXX protocol violation
 			pid = mfh->mfh_pid;
-		else
+		} else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
 		slc_getprog(pid, mft->mft_uprog);
