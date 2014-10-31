@@ -67,6 +67,7 @@
 #include "slconfig.h"
 #include "slconn.h"
 #include "slerr.h"
+#include "subsys_cli.h"
 
 __static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
@@ -415,8 +416,19 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_refcnt = 1;
 	mfh->mfh_fcmh = f;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
+	mfh->mfh_sid = getsid(mfh->mfh_pid);
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
+
+	if (!fcmh_isdir(f)) {
+		struct pfl_callerinfo pci;
+
+		pci.pci_subsys = SLCSS_INFO;
+		if (psc_log_shouldlog(&pci, PLL_INFO))
+			slc_getprog(mfh->mfh_pid, mfh->mfh_uprog,
+			    sizeof(mfh->mfh_uprog));
+	}
+
 	return (mfh);
 }
 
