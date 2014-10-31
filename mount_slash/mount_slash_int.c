@@ -1604,6 +1604,11 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		psc_assert(tsize);
 
 		BMPCE_LOCK(e);
+		while (e->bmpce_flags & BMPCE_PINNED) {
+			BMPCE_WAIT(e);
+			BMPCE_LOCK(e);
+		}
+
 		/*
 		 * Re-check RBW sanity.  The waitq pointer within the
 		 * bmpce must still be valid in order for this check to
