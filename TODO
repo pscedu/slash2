@@ -566,6 +566,7 @@ peer-54321-128.182.99.29@tcp10-snd          46.1M
   asynchronous FLUSH should be OK as long as connection is actually
   established
 - add 'msctl softstop' that exits when all procs are done
+- add tunables ctlparam - similar to opstats
 
 - remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
 
