@@ -319,9 +319,9 @@ main(int argc, char *argv[])
 
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, 1, "slinbrqthr");
 
+	slibmaprlsthr_spawn();
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
-	slibmaprlsthr_spawn();
 	pscthr_init(SLITHRT_FCMHREAP, 0, slifcmhreapthr_main, NULL, 0,
 	    "slifcmhreapthr");
 
