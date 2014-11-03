@@ -67,17 +67,6 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 	return (0);
 }
 
-struct fidc_membh *
-iod_inode_lookup(const struct slash_fidgen *fg)
-{
-	struct fidc_membh *f;
-	int rc;
-
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE, &f);
-	psc_assert(rc == 0);
-	return (f);
-}
-
 /**
  * sli_fid_makepath - Build the pathname in the FID object root that
  *	corresponds to a FID, allowing easily lookup of file metadata
