@@ -859,6 +859,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 					trc = slrpc_issue_connect(
 					    pp->nid, nr->resmnid_nid,
 					    csvc, flags, mw, stkversp);
+					if (trc == 0) {
+						rc = 0;
+						goto proc_conn;
+					}
 					if (trc == EWOULDBLOCK)
 						rc = trc;
 				}
