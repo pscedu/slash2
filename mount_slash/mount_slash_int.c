@@ -563,9 +563,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
-		// XXX leak psc_dynarray_free(a);
-		// XXX leak PSCFREE(a);
-
 	} else if (cbf == msl_dio_cb) {
 		OPSTAT_INCR(SLC_OPST_DIO_CB_ADD);
 		if (r->biorq_flags & BIORQ_WRITE)
