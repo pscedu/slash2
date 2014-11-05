@@ -1015,8 +1015,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	nbs = pscrpc_nbreqset_init(NULL);
 
 	/*
-	 * This buffer hasn't been segmented into LNET_MTU sized chunks.
-	 * Set up buffers into LNET_MTU chunks or smaller.
+	 * The buffer associated with the request hasn't been segmented into 
+	 * LNET_MTU sized chunks. Do it now.
 	 */
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, size - nbytes);
