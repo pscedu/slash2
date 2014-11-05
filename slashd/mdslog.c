@@ -1409,6 +1409,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resource *res;
 	struct reclaim_arg rarg;
 	struct srt_stat sstb;
+	struct sl_site *s;
 	struct sl_resm *m;
 	struct iovec iov;
 	void *handle;
@@ -1486,7 +1487,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	size -= R_ENTSZ;
 
 	nios = 0;
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		nios++;
