@@ -805,7 +805,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("readahead_pgs",
 	    msctlparam_readahead_get, msctlparam_readahead_set);
 
-	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
+	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
 	pscthr_setready(thr);
 }

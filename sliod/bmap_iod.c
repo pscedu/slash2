@@ -309,7 +309,7 @@ slibmaprlsthr_spawn(void)
 	lc_reginit(&bmapRlsQ, struct bmap_iod_info, bii_lentry,
 	    "bmaprlsq");
 
-	pscthr_init(SLITHRT_BMAPRLS, 0, slibmaprlsthr_main, NULL, 0,
+	pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
 	    "slibmaprlsthr");
 }
 

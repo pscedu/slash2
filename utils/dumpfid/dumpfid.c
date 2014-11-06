@@ -559,7 +559,7 @@ main(int argc, char *argv[])
 	lc_init(&files, struct f, lentry);
 	thrv = PSCALLOC(nthr * sizeof(*tid));
 	for (n = 0; n < nthr; n++) {
-		thrv[n] = pscthr_init(0, 0, thrmain, NULL,
+		thrv[n] = pscthr_init(0, thrmain, NULL,
 		    sizeof(struct thr), "thr%d", n);
 		pscthr_setready(thrv[n]);
 	}

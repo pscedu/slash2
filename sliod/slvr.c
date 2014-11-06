@@ -1122,16 +1122,16 @@ slvr_cache_init(void)
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,
 		    "iocbpndg");
 
-		pscthr_init(SLITHRT_ASYNC_IO, 0, sliaiothr_main, NULL,
-		    0, "sliaiothr");
+		pscthr_init(SLITHRT_ASYNC_IO, sliaiothr_main, NULL, 0,
+		    "sliaiothr");
 	}
 
 	lc_reginit(&sli_readaheadq, struct fcmh_iod_info,
 	    fii_lentry, "readahead");
 
 	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
-		pscthr_init(SLITHRT_READ_AHEAD, 0, slireadahead_main,
-		    NULL, 0, "slireadahead%d", i);
+		pscthr_init(SLITHRT_READ_AHEAD, slireadahead_main, NULL,
+		    0, "slireadahead%d", i);
 
 	sl_buffer_cache_init();
 

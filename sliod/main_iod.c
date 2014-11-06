@@ -253,8 +253,8 @@ main(int argc, char *argv[])
 	sigaddset(&signal_set, SIGIO);
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
-	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
-	    sizeof(struct psc_ctlthr), "slictlthr0");
+	pscthr_init(SLITHRT_CTL, NULL, NULL, sizeof(struct psc_ctlthr),
+	    "slictlthr0");
 
 	sl_sys_upnonce = psc_random32();
 
@@ -293,12 +293,12 @@ main(int argc, char *argv[])
 	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
 
 	sli_repl_init();
-	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
+	pscthr_init(SLITHRT_STATFS, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
 	if (nodeResm->resm_res->res_selftest[0])
-		pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL,
-		    0, "slihealththr");
+		pscthr_init(SLITHRT_HEALTH, slihealththr_main, NULL, 0,
+		    "slihealththr");
 
 	slrpc_initcli();
 
@@ -322,7 +322,7 @@ main(int argc, char *argv[])
 	slibmaprlsthr_spawn();
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
-	pscthr_init(SLITHRT_FCMHREAP, 0, slifcmhreapthr_main, NULL, 0,
+	pscthr_init(SLITHRT_FCMHREAP, slifcmhreapthr_main, NULL, 0,
 	    "slifcmhreapthr");
 
 	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);

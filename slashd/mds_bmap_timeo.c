@@ -263,6 +263,6 @@ slmbmaptimeothr_spawn(void)
 {
 	OPSTAT_INCR(SLM_OPST_MIN_SEQNO);
 	OPSTAT_INCR(SLM_OPST_MAX_SEQNO);
-	pscthr_init(SLMTHRT_BMAPTIMEO, 0, slmbmaptimeothr_begin,
-	    NULL, 0, "slmbmaptimeothr");
+	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, NULL, 0,
+	    "slmbmaptimeothr");
 }

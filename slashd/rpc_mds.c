@@ -103,8 +103,8 @@ slm_rpc_initsvc(void)
 	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 
-	thr = pscthr_init(SLMTHRT_RCM, 0, slmrcmthr_main,
-	    NULL, sizeof(*srcm), "slmrcmthr");
+	thr = pscthr_init(SLMTHRT_RCM, slmrcmthr_main, NULL,
+	    sizeof(*srcm), "slmrcmthr");
 	srcm = thr->pscthr_private;
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	pscthr_setready(thr);
@@ -538,7 +538,7 @@ slmbchrqthr_spawn(void)
 	lc_reginit(&batchrqs_wait, struct batchrq, br_lentry_ml,
 	    "bchrqwait");
 
-	pscthr_init(SLMTHRT_BATCHRQ, 0, slmbchrqthr_main, NULL, 0,
+	pscthr_init(SLMTHRT_BATCHRQ, slmbchrqthr_main, NULL, 0,
 	    "slmbchrqthr");
 }
 

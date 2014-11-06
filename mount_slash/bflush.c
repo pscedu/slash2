@@ -1027,27 +1027,26 @@ msbmapthr_spawn(void)
 	    bci_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_FLUSH, 0, msflushthr_main,
-		    NULL, sizeof(struct msflush_thread), "msflushthr%d",
-		    i);
+		thr = pscthr_init(MSTHRT_FLUSH, msflushthr_main, NULL,
+		    sizeof(struct msflush_thread), "msflushthr%d", i);
 		mflt = msflushthr(thr);
 		psc_multiwait_init(&mflt->mflt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
 
-	thr = pscthr_init(MSTHRT_BWATCH, 0, msbwatchthr_main,
-	  NULL, sizeof(struct msbwatch_thread), "msbwatchthr");
+	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, NULL,
+	    sizeof(struct msbwatch_thread), "msbwatchthr");
 	psc_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BRELEASE, 0, msbreleasethr_main,
-	    NULL, sizeof(struct msbrelease_thread), "msbreleasethr");
+	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main, NULL,
+	    sizeof(struct msbrelease_thread), "msbreleasethr");
 	psc_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	pscthr_init(MSTHRT_BENCH, 0, msbenchthr_main, NULL, 0,
-	    "msbenchthr");
+//	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
+//	    "msbenchthr");
 }

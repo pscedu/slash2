@@ -461,6 +461,6 @@ slvr_worker_init(void)
 	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
 
 	for (i = 0; i < NSLVRCRC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_CRC, 0, slislvrthr_main, NULL,
-		    0, "slislvrthr%d", i);
+		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, NULL, 0,
+		    "slislvrthr%d", i);
 }

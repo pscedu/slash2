@@ -235,9 +235,8 @@ msfsthr_ensure(struct pscfs_req *pfr)
 			psc_fatal("psc_vbitmap_next");
 		freelock(&msfsthr_uniqidmap_lock);
 
-		thr = pscthr_init(MSTHRT_FS, 0, NULL,
-		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu",
-		    id);
+		thr = pscthr_init(MSTHRT_FS, NULL, msfsthr_teardown,
+		    sizeof(*mft), "msfsthr%02zu", id);
 		mft = thr->pscthr_private;
 		psc_multiwait_init(&mft->mft_mw, "%s",
 		    thr->pscthr_name);
@@ -3365,8 +3364,8 @@ msfcmhreapthr_spawn(void)
 	struct msfcmhreap_thread *mfrt;
 	struct psc_thread *thr;
 
-	thr = pscthr_init(MSTHRT_FCMHREAP, 0, msfcmhreapthr_main, NULL,
-	    sizeof(struct msfcmhreap_thread), "msfcmhreapthr%d", 0);
+	thr = pscthr_init(MSTHRT_FCMHREAP, msfcmhreapthr_main, NULL,
+	    sizeof(*mfrt), "msfcmhreapthr%d", 0);
 	mfrt = msfcmhreapthr(thr);
 	psc_multiwait_init(&mfrt->mfrt_mw, "%s", thr->pscthr_name);
 	pscthr_setready(thr);
@@ -3383,10 +3382,8 @@ msreadaheadthr_spawn(void)
 	    "readahead");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_READAHEAD, 0,
-		    msreadaheadthr_main, NULL,
-		    sizeof(struct msreadahead_thread),
-		    "msreadaheadthr%d", i);
+		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
+		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);
 		psc_multiwait_init(&mrat->mrat_mw, "%s",
 		    thr->pscthr_name);
@@ -3405,9 +3402,8 @@ msattrflushthr_spawn(void)
 	    "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_ATTR_FLUSH, 0,
-		    msattrflushthr_main, NULL,
-		    sizeof(struct msattrflush_thread),
+		thr = pscthr_init(MSTHRT_ATTR_FLUSH,
+		    msattrflushthr_main, NULL, sizeof(*maft),
 		    "msattrflushthr%d", i);
 		maft = msattrflushthr(thr);
 		psc_multiwait_init(&maft->maft_mw, "%s",
@@ -3805,7 +3801,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
+	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "msfsmgrthr");
 
 	sl_sys_upnonce = psc_random32();
 

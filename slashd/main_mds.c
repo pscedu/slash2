@@ -498,7 +498,7 @@ main(int argc, char *argv[])
 	if (argc != 1 && argc != 0)
 		usage();
 
-	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
+	pscthr_init(SLMTHRT_CTL, NULL, NULL,
 	    sizeof(struct psc_ctlthr) +
 	    sizeof(struct slmctl_thread), "slmctlthr0");
 
@@ -681,7 +681,7 @@ main(int argc, char *argv[])
 	lc_reginit(&slm_db_workq, struct pfl_workrq, wkrq_lentry,
 	    "dbworkq");
 	LIST_CACHE_LOCK(&slm_db_workq);
-	thr = pscthr_init(SLMTHRT_DBWORKER, 0, pfl_wkthr_main, NULL,
+	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main, NULL,
 	    sizeof(struct slmdbwk_thread), "slmdbwkthr");
 	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_workq;
 	pscthr_setready(thr);
@@ -699,7 +699,7 @@ main(int argc, char *argv[])
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
 
-	pscthr_init(SLMTHRT_BKDB, 0, slmbkdbthr_main, NULL, 0,
+	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, NULL, 0,
 	    "slmbkdbthr");
 
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);

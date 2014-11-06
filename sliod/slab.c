@@ -85,6 +85,6 @@ sl_buffer_cache_init(void)
 	    NULL);
 	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);
 
-	pscthr_init(SLITHRT_BREAP, 0, slibreapthr_main, NULL, 0,
+	pscthr_init(SLITHRT_BREAP, slibreapthr_main, NULL, 0,
 	    "slibreapthr");
 }
