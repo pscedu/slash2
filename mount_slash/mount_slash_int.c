@@ -1103,6 +1103,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 	}
 
+	pscrpc_nbreqset_destroy(nbs);
 	return (rc);
 
  out:
