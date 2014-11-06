@@ -937,16 +937,16 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* ATTRFLSH	*/ NULL,
+/* ATTR_FLUSH	*/ NULL,
 /* BENCH	*/ NULL,
-/* BMAPFLSH	*/ NULL,
-/* BMAPFLSHRLS	*/ NULL,
-/* BMAPFLSHRPC	*/ NULL,
-/* BMAPLSWATCHER*/ NULL,
+/* BRELEASE	*/ NULL,
+/* BWATCH	*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
 /* EQPOLL	*/ NULL,
+/* FCMHREAP	*/ NULL,
+/* FLUSH	*/ NULL,
 /* FS		*/ NULL,
 /* FSMGR	*/ NULL,
 /* NBRQ		*/ NULL,
