@@ -101,6 +101,7 @@ struct slrpc_cservice;
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
+#define slc_geticsvcf(resm, fl)		slc_geticsvcxf((resm), (fl), NULL)
 #define slc_geticsvc_nb(resm)		slc_geticsvcxf((resm), CSVCF_NONBLOCK, NULL)
 #define slc_getmcsvc(resm)		slc_getmcsvcx((resm), 0, NULL)
 #define slc_getmcsvc_nb(resm)		slc_getmcsvcx((resm), CSVC_NONBLOCK, NULL)
