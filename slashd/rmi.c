@@ -118,6 +118,8 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->ncrc_updates > MAX_BMAP_NCRC_UPDATES) {
+		psclog_errorx("ncrc_updates=%u is > %d",
+		    mq->ncrc_updates, MAX_BMAP_NCRC_UPDATES); 
 		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
