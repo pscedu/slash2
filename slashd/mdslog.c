@@ -2006,6 +2006,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		si->si_index = i;
 		if (si->si_batchno > batchno)
 			batchno = si->si_batchno;
+		si->si_batchmeter.pm_maxp = &reclaim_prg.cur_batchno;
 		RPMI_ULOCK(rpmi);
 	}
 	if (stale) {
