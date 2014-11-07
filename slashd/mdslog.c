@@ -1394,10 +1394,22 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
+/*
+ * Send a batch of RECLAIM messages to IOS nodes.  A RECLAIM message
+ * contains a list of FIDs which are no longer active in the file system
+ * and may be deleted on the IOS backend.
+ *
+ * The FIDs are bunched into a batch group with an associated number
+ * @batchno.  On entry, this batch group is sent to each online IOS.
+ * On exit, the value-result pointer is set to the next batch group
+ * considering which IOS nodes are online and which batch they are
+ * currently "on".
+ */
 int
-mds_send_batch_reclaim(uint64_t batchno)
+mds_send_batch_reclaim(uint64_t *pbatchno)
 {
 	int i, ri, rc, total, nios;
+	uint64_t batchno, next_batchno;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_nbreqset *nbset;
 	struct resprof_mds_info *rpmi;
@@ -1414,6 +1426,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct iovec iov;
 	void *handle;
 	size_t size;
+
+	batchno = (*pbatchno)++;
 
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_CURSOR, batchno);
 
@@ -1486,6 +1500,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	size -= R_ENTSZ;
 
+	next_batchno = UINT64_MAX;
+
 	nios = 0;
 	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
@@ -1493,14 +1509,30 @@ mds_send_batch_reclaim(uint64_t batchno)
 		nios++;
 		rpmi = res2rpmi(res);
 		si = rpmi->rpmi_info;
+		m = psc_dynarray_getpos(&res->res_members, 0);
+
+		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 
 		RPMI_LOCK(rpmi);
+
 		/*
 		 * We won't need this if the IOS is actually down.
 		 * But we need to shortcut it for testing purposes.
 		 */
-		if (si->si_flags & SIF_DISABLE_GC ||
-		    si->si_batchno < batchno) {
+		if (si->si_flags & SIF_DISABLE_GC) {
+			RPMI_ULOCK(rpmi);
+			if (csvc)
+				sl_csvc_decref(csvc);
+			continue;
+		}
+
+		if (csvc) {
+			next_batchno = MIN(next_batchno,
+			    si->si_batchno);
+			sl_csvc_decref(csvc);
+		}
+
+		if (si->si_batchno < batchno) {
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
@@ -1560,7 +1592,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		psc_assert(total);
 
 		rq = NULL;
-		m = psc_dynarray_getpos(&res->res_members, 0);
 		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 		if (csvc == NULL)
 			PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
@@ -1624,6 +1655,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 	    batchno >= 1)
 		mds_remove_logfile(batchno - 1, 0, 0);
 
+	if (next_batchno != UINT64_MAX &&
+	    next_batchno != batchno)
+		*pbatchno = next_batchno;
+
 	return (rarg.ndone);
 }
 
@@ -1655,8 +1690,7 @@ slmjreclaimthr_main(struct psc_thread *thr)
 				break;
 			}
 			freelock(&mds_distill_lock);
-			didwork = mds_send_batch_reclaim(batchno);
-			batchno++;
+			didwork = mds_send_batch_reclaim(&batchno);
 		} while (didwork && mds_reclaim_hwm(1) >= batchno);
 
 		spinlock(&reclaim_prg.lock);
@@ -2015,7 +2049,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		psc_assert(rc == 0);
 		psc_assert(size == count * RP_ENTSZ);
 		psclog_warnx("%d stale entry(s) have been zeroed from the "
-			"reclaim progress file", stale);
+		    "reclaim progress file", stale);
 	}
 
 	rc = ENOENT;
