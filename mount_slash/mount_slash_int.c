@@ -1072,7 +1072,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		psc_iostats_intv_add(op == SRMT_WRITE ?
 		    &msl_diowr_stat : &msl_diord_stat, size);
 
+	PSCFREE(iovs);
+	sl_csvc_decref(csvc);
+
 	if (rc == -SLERR_AIOWAIT) {
+		DEBUG_BIORQ(PLL_DIAG, r, "aio op=%d", op);
 		rc = 0;
 		if (op == SRMT_WRITE) {
 			q = r->biorq_fsrqi;
@@ -1099,9 +1103,14 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 	}
 
+	pscrpc_nbreqset_destroy(nbs);
+	return (rc);
+
  out:
-	if (rq)
+	if (rq) {
+		DEBUG_REQ(PLL_ERROR, rq, "req failed");
 		pscrpc_req_finished(rq);
+	}
 
 	if (nbs)
 		pscrpc_nbreqset_destroy(nbs);
@@ -1110,8 +1119,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		sl_csvc_decref(csvc);
 
 	PSCFREE(iovs);
-
-	DEBUG_BIORQ(PLL_DIAG, r, "rc=%d", rc);
 	return (rc);
 }
 
