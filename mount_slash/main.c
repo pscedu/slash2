@@ -67,6 +67,7 @@
 
 #include "bmap_cli.h"
 #include "cache_params.h"
+#include "creds.h"
 #include "ctl_cli.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
@@ -1943,7 +1944,6 @@ slc_getprog(pid_t pid, char *prog, size_t len)
 	if (p != buf + sz)
 		snprintf(prog + strlen(prog), len - strlen(prog),
 		    " %s", p + 1);
-
 }
 
 const char *

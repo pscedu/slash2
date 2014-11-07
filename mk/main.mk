@@ -17,10 +17,13 @@ SLASH_MODULES?=		cli ion mds
 
 -include ${SLASH_BASE}/mk/local.mk
 
-ifneq ($(filter acl,${SLASH_OPTIONS}),)
-  DEFINES+=-DSLOPT_POSIX_ACLS
-  DEFINES+=-DSLOPT_POSIX_ACLS_REVERT
-  LDFLAGS+=-lacl
+ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
+ ifneq ($(filter acl,${SLASH_OPTIONS}),)
+  SRCS+=		${SLASH_BASE}/mount_slash/acl_cli.c
+  DEFINES+=		-DSLOPT_POSIX_ACLS
+  DEFINES+=		-DSLOPT_POSIX_ACLS_REVERT
+  LDFLAGS+=		-lacl
+ endif
 endif
 
 include ${MAINMK}
