@@ -843,10 +843,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		psc_atomic32_setmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
-		if (flags & CSVCF_NONBLOCK && csvc->csvc_import) {
-			pscrpc_import_put(csvc->csvc_import);
-			csvc->csvc_import = NULL;
-		}
+		if (flags & CSVCF_NONBLOCK) {
+			if (csvc->csvc_import) {
+				pscrpc_import_put(csvc->csvc_import);
+				csvc->csvc_import = NULL;
+			}
+		} else if (csvc->csvc_import == NULL)
+			csvc->csvc_import = slrpc_new_import(
+			    csvc->csvc_rqptl, csvc->csvc_rpptl);
 		CSVC_ULOCK(csvc);
 
 		if (stkversp == NULL)
