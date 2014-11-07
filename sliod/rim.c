@@ -220,11 +220,11 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	PFL_GETTIMEVAL(&t1);
 
 	timersub(&t1, &t0, &td);
-	if (td.tv_sec > 1)
-		psclogs_notice(PSS_TMP, "reclaim processing for "
-		    "batchno %"PRId64" %d files took %ld.%01ld "
-		    "second(s)", batchno, mq->count, (long)td.tv_sec,
-		    (long)td.tv_usec / 1000);
+	psclog(td.tv_sec >= 1 ? PLL_NOTICE : PLL_DIAG,
+	    "reclaim processing for "
+	    "batchno %"PRId64" %d files took %ld.%01ld "
+	    "second(s)", batchno, mq->count, (long)td.tv_sec,
+	    (long)td.tv_usec / 1000);
 
  out:
 	PSCFREE(iov.iov_base);
