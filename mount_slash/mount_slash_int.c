@@ -1018,7 +1018,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, size - nbytes);
 
-		rq = NULL;
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -1047,9 +1046,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
 			biorq_unpin_pages(r);
-			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
+			OPSTAT_INCR(SLC_OPST_DIO_ADD_REQ_FAIL);
 			PFL_GOTOERR(out, rc);
 		}
+		rq = NULL;
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
 		DEBUG_BIORQ(PLL_DIAG, r, "dio launch");
@@ -1098,7 +1098,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			rc = -EAGAIN;
 		}
 	}
-	rq = NULL;
 
  out:
 	if (rq)
@@ -1412,7 +1411,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_interpret_reply = msl_read_cb0;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
+		OPSTAT_INCR(SLC_OPST_READ_ADD_REQ_FAIL);
 		PFL_GOTOERR(out, rc);
 	}
 
