@@ -719,8 +719,46 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+int
+mslctl_resfieldi_connected(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *m;
+	char nbuf[8];
+
+	m = res_getmemb(r);
+	if (set) {
+		if (strcmp(pcp->pcp_value, "0") == 0) {
+			csvc = slc_geticsvc_nb(m);
+			if (csvc) {
+				sl_csvc_disconnect(csvc);
+				sl_csvc_decref(csvc);
+			}
+		} else if (strcmp(pcp->pcp_value, "1") == 0) {
+			csvc = slc_geticsvc_nb(m);
+			if (csvc)
+				sl_csvc_decref(csvc);
+		} else
+			return (psc_ctlsenderr(fd, mh,
+			    "connected: invalid value"));
+		return (1);
+	}
+	csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
 const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
-const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
+
+const struct slctl_res_field slctl_resios_fields[] = {
+	{ "connected",		mslctl_resfieldi_connected },
+	{ NULL, NULL }
+};
 
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS
@@ -804,6 +842,7 @@ msctlthr_spawn(void)
 	    msctlparam_offlinenretries_set);
 	psc_ctlparam_register_simple("readahead_pgs",
 	    msctlparam_readahead_get, msctlparam_readahead_set);
+	psc_ctlparam_register("resources", slctlparam_resources);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
