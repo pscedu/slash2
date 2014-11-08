@@ -1012,8 +1012,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	nbs = pscrpc_nbreqset_init(NULL);
 
 	/*
-	 * The buffer associated with the request hasn't been segmented into 
-	 * LNET_MTU sized chunks. Do it now.
+	 * The buffer associated with the request hasn't been segmented
+	 * into LNET_MTU sized chunks.  Do it now.
 	 */
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, size - nbytes);
@@ -1024,9 +1024,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rq->rq_bulk_abortable = 1;
 		rq->rq_interpret_reply = msl_dio_cb0;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 		iovs[i].iov_base = r->biorq_buf + nbytes;
-		iovs[i].iov_len  = len;
+		iovs[i].iov_len = len;
 
 		rc = slrpc_bulkclient(rq, (op == SRMT_WRITE ?
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
@@ -1050,6 +1051,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			PFL_GOTOERR(out, rc);
 		}
 		rq = NULL;
+		csvc = NULL;
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
 		DEBUG_BIORQ(PLL_DIAG, r, "dio launch");
