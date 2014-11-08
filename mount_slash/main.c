@@ -196,19 +196,35 @@ uidmap_int_stat(struct srt_stat *sstb)
 }
 
 int
-fcmh_checkcreds(struct fidc_membh *f, const struct pscfs_creds *pcrp,
+fcmh_checkcreds_ctx(struct fidc_membh *f,
+    const struct pscfs_clientctx *pfcc, const struct pscfs_creds *pcrp,
     int accmode)
 {
 	int rc, locked;
 
-	locked = FCMH_RLOCK(f);
 #ifdef SLOPT_POSIX_ACLS
-	rc = sl_fcmh_checkacls(f, pcrp, accmode);
+	rc = sl_fcmh_checkacls(f, pfcc, pcrp, accmode);
+	(void)locked;
 #else
+	locked = FCMH_RLOCK(f);
 	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
-#endif
 	FCMH_URLOCK(f, locked);
+#endif
 	return (rc);
+}
+
+int
+fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
+    const struct pscfs_creds *pcrp, int accmode)
+{
+	struct pscfs_clientctx *pfcc;
+
+#ifdef SLOPT_POSIX_ACLS
+	pfcc = pscfs_getclientctx(pfr);
+#else
+	pfcc = NULL;
+#endif
+	return (fcmh_checkcreds_ctx(f, pfcc, pcrp, accmode));
 }
 
 __static void
@@ -274,10 +290,11 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 
 	OPSTAT_INCR(SLC_OPST_ACCESS);
 
-	pscfs_getcreds(pfr, &pcr);
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	pscfs_getcreds(pfr, &pcr);
 
 	rc = 0;
 	FCMH_LOCK(c);
@@ -286,7 +303,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 		    (c->fcmh_sstb.sst_mode & _S_IXUGO) == 0)
 			rc = EACCES;
 	} else
-		rc = fcmh_checkcreds(c, &pcr, accmode);
+		rc = fcmh_checkcreds(c, pfr, &pcr, accmode);
 	FCMH_ULOCK(c);
 
  out:
@@ -396,7 +413,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	pscfs_getcreds(pfr, &pcr);
-	rc = fcmh_checkcreds(p, &pcr, W_OK);
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -539,12 +556,12 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		PFL_GOTOERR(out, rc);
 
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
-		rc = fcmh_checkcreds(c, &pcr, R_OK);
+		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
 	if (oflags & (O_WRONLY | O_RDWR)) {
-		rc = fcmh_checkcreds(c, &pcr, W_OK);
+		rc = fcmh_checkcreds(c, pfr, &pcr, W_OK);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
@@ -789,7 +806,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
-	rc = fcmh_checkcreds(p, &pcr, W_OK);
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1123,13 +1140,13 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	FCMH_LOCK(p);
-	rc = fcmh_checkcreds(p, pcrp, X_OK);
+	rc = fcmh_checkcreds(p, pfr, pcrp, X_OK);
 	if (rc) {
 		fcmh_op_done(p);
 		PFL_GOTOERR(out, rc);
 	}
 
+	FCMH_LOCK(p);
 	cfid = dircache_lookup(p, name, &nextoff);
 	FCMH_ULOCK(p);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
@@ -1223,7 +1240,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		} else
 			FCMH_ULOCK(p);
 	} else {
-		rc = fcmh_checkcreds(p, &pcr, W_OK);
+		rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 		FCMH_ULOCK(p);
 	}
 	if (rc)
@@ -1248,7 +1265,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		} else
 			FCMH_ULOCK(p);
 	} else {
-		rc = fcmh_checkcreds(p, &pcr, W_OK);
+		rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 		FCMH_ULOCK(p);
 	}
 	if (rc)
@@ -1365,7 +1382,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(p, &pcr, W_OK);
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1597,7 +1614,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(d, &pcr, R_OK);
+	rc = fcmh_checkcreds(d, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1752,7 +1769,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(c, &pcr, R_OK);
+	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2134,7 +2151,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			if (op->fcmh_sstb.sst_uid == pcr.pcr_uid)
 				sticky = 0;
 		} else
-			rc = fcmh_checkcreds(op, &pcr, W_OK); // X_OK?
+			rc = fcmh_checkcreds(op, pfr, &pcr, W_OK); // X_OK?
 		FCMH_ULOCK(op);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -2167,7 +2184,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				if (np->fcmh_sstb.sst_uid == pcr.pcr_uid)
 					sticky = 0;
 			} else
-				rc = fcmh_checkcreds(np, &pcr, W_OK); // X_OK
+				rc = fcmh_checkcreds(np, pfr, &pcr, W_OK); // X_OK
 			FCMH_ULOCK(np);
 			if (rc)
 				PFL_GOTOERR(out, rc);
@@ -2196,7 +2213,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				PFL_GOTOERR(out, rc);
 		}
 		if (fcmh_isdir(child))
-			rc = fcmh_checkcreds(child, &pcr, W_OK);
+			rc = fcmh_checkcreds(child, pfr, &pcr, W_OK);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
@@ -2518,7 +2535,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			stb->st_mode &= ~S_ISGID;
 	}
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		rc = fcmh_checkcreds(c, &pcr, W_OK);
+		rc = fcmh_checkcreds(c, pfr, &pcr, W_OK);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
@@ -2748,16 +2765,14 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	DEBUG_SSTB(PLL_DIAG, &c->fcmh_sstb, "fcmh %p post setattr", c);
 
-#if 0
 	if (fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
 		mdie.mdie_pfr = pfr;
 		mdie.mdie_pinum = fcmh_2_fid(c);
 		/* XXX this currently crashes fuse.ko but needs to happen */
-		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
+		dircache_walk(c, msl_dc_inv_entry, &mdie);
 	}
-#endif
 
  out:
 	if (c) {
@@ -2910,6 +2925,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	pscfs_getcreds(pfr, &pcr);
 
+	// checkcreds
+
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2978,6 +2995,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	pscfs_getcreds(pfr, &pcr);
+
+	// checkcreds
+
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3021,37 +3041,45 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 }
 
 ssize_t
-slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
+slc_getxattr(const struct pscfs_clientctx *pfcc,
+    const struct pscfs_creds *pcrp, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
+	int rc = 0, locked = 0;
 	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_getxattr_rep *mp;
 	struct srm_getxattr_req *mq;
-	struct pscrpc_request *rq = NULL;
 	struct fcmh_cli_info *fci;
-	struct pscfs_creds pcr;
 	struct iovec iov;
-	int rc;
 
 	if (strlen(name) > sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
-	pscfs_getcreds(pfr, &pcr);
+	// checkcreds
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
 		fci = fcmh_2_fci(f);
-		FCMH_LOCK(f);
+		locked = FCMH_RLOCK(f);
 		if (timercmp(&now, &fci->fci_age, <) &&
 		    fci->fci_xattrsize == 0)
-			PFL_GOTOERR(out, rc = ENODATA); // ENOATTR
-		FCMH_ULOCK(f);
+			rc = ENODATA; // ENOATTR
+		FCMH_URLOCK(f, locked);
+		locked = 0;
+		if (rc)
+			PFL_GOTOERR(out, rc);
 	}
 
+	locked = FCMH_HAS_LOCK(f);
+	if (locked)
+		FCMH_ULOCK(f);
+
  retry:
-	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, SRMT_GETXATTR, rq, mq, mp,
+	    rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
 
@@ -3068,7 +3096,7 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
 		goto retry;
 	if (rc == 0) {
 		rc = mp->rc;
@@ -3081,6 +3109,8 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	if (locked)
+		FCMH_LOCK(f);
 	return (rc);
 }
 
@@ -3088,9 +3118,11 @@ void
 mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
     size_t size, pscfs_inum_t inum)
 {
+	struct pscfs_clientctx *pfcc;
 	struct fidc_membh *f = NULL;
-	void *buf = NULL;
+	struct pscfs_creds pcr;
 	size_t retsz = 0;
+	void *buf = NULL;
 	int rc;
 
 	msfsthr_ensure(pfr);
@@ -3103,7 +3135,11 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	if (size)
 		buf = PSCALLOC(size);
-	rc = slc_getxattr(pfr, name, buf, size, f, &retsz);
+
+	pfcc = pscfs_getclientctx(pfr);
+	pscfs_getcreds(pfr, &pcr);
+
+	rc = slc_getxattr(pfcc, &pcr, name, buf, size, f, &retsz);
 
  out:
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
@@ -3132,6 +3168,8 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	pscfs_getcreds(pfr, &pcr);
+
+	// XXX checkcredS
 
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)

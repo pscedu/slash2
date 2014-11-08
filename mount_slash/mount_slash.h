@@ -240,7 +240,8 @@ void	 msl_reada_rpc_launch(struct psc_dynarray *, int, int, struct bmap *);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 
-ssize_t	slc_getxattr(struct pscfs_req *, const char *, void *, size_t,
+ssize_t	slc_getxattr(const struct pscfs_clientctx *,
+	    const struct pscfs_creds *, const char *, void *, size_t,
 	    struct fidc_membh *, size_t *);
 
 void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);

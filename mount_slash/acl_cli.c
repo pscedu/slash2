@@ -37,7 +37,8 @@
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
  */
 acl_t
-slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
+slc_acl_get_fcmh(const struct pscfs_clientctx *pfcc,
+    const struct pscfs_creds *pcr, struct fidc_membh *f)
 {
 	void *buf = NULL;
 	size_t retsz = 0;
@@ -45,15 +46,16 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, struct fidc_membh *f)
 	ssize_t rc;
 	acl_t a;
 
-	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf, sizeof(trybuf), f,
-	    &retsz);
+	rc = slc_getxattr(pfcc, pcr, ACL_EA_ACCESS, trybuf,
+	    sizeof(trybuf), f, &retsz);
 	if (rc == 0) {
 		buf = trybuf;
-	} else if (rc == -ERANGE) {
+	} else if (rc == ERANGE) {
 		buf = PSCALLOC(retsz);
-		rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz, f,
-		    &retsz);
-	}
+		rc = slc_getxattr(pfcc, pcr, ACL_EA_ACCESS, buf, retsz,
+		    f, &retsz);
+	} else
+		return (NULL);
 
 	a = pfl_acl_from_xattr(buf, rc);
 
@@ -164,16 +166,29 @@ sl_checkacls(acl_t a, struct srt_stat *sstb,
 }
 
 int
-sl_fcmh_checkacls(struct fidc_membh *f, const struct pscfs_creds *pcrp,
+sl_fcmh_checkacls(struct fidc_membh *f,
+    const struct pscfs_clientctx *pfcc, const struct pscfs_creds *pcrp,
     int accmode)
 {
+	int locked, rv;
 	acl_t a;
-	int rv;
 
-	a = slc_acl_get_fcmh(NULL, f);
-	if (a == NULL)
-		return (EACCES);
+	a = slc_acl_get_fcmh(pfcc, pcrp, f);
+	if (a == NULL) {
+		int rc;
+
+#ifdef SLOPT_POSIX_ACLS_REVERT
+		locked = FCMH_RLOCK(f);
+		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
+		FCMH_URLOCK(f, locked);
+#else
+		rc = EACCES;
+#endif
+		return (rc);
+	}
+	locked = FCMH_RLOCK(f);
 	rv = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
+	FCMH_URLOCK(f, locked);
 	acl_free(a);
 	return (rv);
 }

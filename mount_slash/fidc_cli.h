@@ -136,7 +136,11 @@ void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 #define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
 #define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
 
-int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
+int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
+    	    const struct pscfs_creds *, int);
+int	fcmh_checkcreds_ctx(struct fidc_membh *,
+    	    const struct pscfs_clientctx *, const struct pscfs_creds *,
+	    int);
 
 int	slc_fcmh_fetch_inode(struct fidc_membh *);
 void	slc_fcmh_load_inode(struct fidc_membh *, struct srt_inode *);

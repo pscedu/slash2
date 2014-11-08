@@ -108,10 +108,10 @@ struct slrpc_cservice;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getcsvc(struct pscfs_clientctx *, struct sl_resm *,
+int	slc_rmc_getcsvc(const struct pscfs_clientctx *, struct sl_resm *,
 	    struct slrpc_cservice **);
 int	slc_rmc_getcsvc1(struct slrpc_cservice **, struct sl_resm *);
-int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
+int	slc_rmc_retry_pfcc(const struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
 
 #define slc_rmc_retry(pfr, rcp)		slc_rmc_retry_pfcc(pscfs_getclientctx(pfr), (rcp))
