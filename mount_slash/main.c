@@ -209,6 +209,7 @@ fcmh_checkcreds_ctx(struct fidc_membh *f,
 	locked = FCMH_RLOCK(f);
 	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
 	FCMH_URLOCK(f, locked);
+	(void)pfcc;
 #endif
 	return (rc);
 }
@@ -223,6 +224,7 @@ fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
 	pfcc = pscfs_getclientctx(pfr);
 #else
 	pfcc = NULL;
+	(void)pfr;
 #endif
 	return (fcmh_checkcreds_ctx(f, pfcc, pcrp, accmode));
 }
