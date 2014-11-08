@@ -84,7 +84,7 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
     struct sl_mds_nsstats *st, int d_val, int o_val, int s_val)
 {
 	int d_start, o_start, s_start, i_d, i_o, i_s;
-	char nbuf[15];
+	char nbuf[16];
 
 	if (mh->mh_type == PCMT_SETPARAM)
 		return (psc_ctlsenderr(fd, mh,
@@ -202,7 +202,7 @@ slmctl_resfieldm_xid(int fd, struct psc_ctlmsghdr *mh,
     struct sl_resource *r)
 {
 	struct sl_mds_peerinfo *sp;
-	char nbuf[20];
+	char nbuf[24];
 
 	sp = res2mdsinfo(r);
 	if (set)
@@ -219,7 +219,7 @@ slmctl_resfieldi_xid(int fd, struct psc_ctlmsghdr *mh,
     struct sl_resource *r)
 {
 	struct sl_mds_iosinfo *si;
-	char nbuf[20];
+	char nbuf[24];
 
 	si = res2iosinfo(r);
 	if (set)
@@ -237,7 +237,7 @@ slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
     struct sl_resource *r)
 {
 	struct sl_mds_iosinfo *si;
-	char nbuf[20];
+	char nbuf[24];
 
 	si = res2iosinfo(r);
 	if (set)
@@ -255,7 +255,7 @@ slmctl_resfieldi_disable_lease(int fd, struct psc_ctlmsghdr *mh,
 {
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
-	char nbuf[20];
+	char nbuf[8];
 
 	si = res2iosinfo(r);
 	if (set) {
@@ -284,7 +284,7 @@ slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
 {
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
-	char nbuf[20];
+	char nbuf[8];
 
 	si = res2iosinfo(r);
 	if (set) {
@@ -312,7 +312,7 @@ slmctl_resfieldi_preclaim(int fd, struct psc_ctlmsghdr *mh,
     struct sl_resource *r)
 {
 	struct sl_mds_iosinfo *si;
-	char nbuf[20];
+	char nbuf[8];
 
 	si = res2iosinfo(r);
 	if (set)
@@ -330,7 +330,7 @@ slmctl_resfieldi_upschq(int fd, struct psc_ctlmsghdr *mh,
     struct sl_resource *r)
 {
 	struct resprof_mds_info *rpmi;
-	char nbuf[20];
+	char nbuf[16];
 
 	if (set)
 		return (psc_ctlsenderr(fd, mh,
