@@ -526,13 +526,19 @@ void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
+	struct pscrpc_import *imp;
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	csvc->csvc_lasterrno = 0;
+	imp = csvc->csvc_import;
+	pscrpc_abort_inflight(imp);
+	pscrpc_drop_conns(&imp->imp_connection->c_peer);
+	pscrpc_import_put(imp);
+	csvc->csvc_import = slrpc_new_import(csvc->csvc_rqptl,
+	    csvc->csvc_rpptl);
 	CSVC_WAKE(csvc);
-	pscrpc_abort_inflight(csvc->csvc_import);
 	CSVC_URLOCK(csvc, locked);
 }
 
