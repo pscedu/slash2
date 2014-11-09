@@ -819,25 +819,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
-	DYNARRAY_FOREACH(e, i, a) {
-
-#if 1
-		if (fcmh_2_fid(b->bcm_fcmh) == 0x48c00000001ceb4) {
-
-			int j;
-			unsigned char *ch;
-			ch = (unsigned char *)e->bmpce_base;
-			for (j = 0; j < BMPC_BUFSZ; j++) {
-				if (ch[j])
-					break;
-			}
-			if (j >= BMPC_BUFSZ)
-				DEBUG_BMAP(PLL_ERROR, b, "ios=%d, fid="SLPRI_FID,
-					bmap_2_ios(b), fcmh_2_fid(b->bcm_fcmh));
-		}
-#endif
+	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
-	}
 
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
