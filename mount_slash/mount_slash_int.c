@@ -187,8 +187,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	struct fidc_membh *f;
 
 	/*
-	 * Align the offset and length to the start of a page. Note that
-	 * roff is already made relative to the start of the given bmap.
+	 * Align the offset and length to the start of a page.  Note
+	 * that roff is already made relative to the start of the given
+	 * bmap.
 	 */
 	aoff = roff & ~BMPC_BUFMASK;
 	alen = len + (roff & BMPC_BUFMASK);
@@ -967,7 +968,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	/*
 	 * The buffer associated with the request hasn't been segmented
-	 * into LNET_MTU sized chunks.  Do it now.
+	 * into LNET_MTU-sized chunks.  Do it now.
 	 */
 	for (i = 0, off = 0; i < n; i++, off += len) {
 		len = MIN(LNET_MTU, size - off);
@@ -1176,6 +1177,7 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	return (msl_readahead_cb(rq, rc, args));
 }
+
 void
 msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
     int npages, struct bmap *b)
@@ -1966,8 +1968,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	/*
 	 * Get the start and end block regions from the input
-	 * parameters. We support at most 2 full block worth
-	 * of I/O requests that span at most one block boundary.
+	 * parameters.  We support at most 2 full block worth of I/O
+	 * requests that span at most one block boundary.
 	 */
 	start = off / SLASH_BMAP_SIZE;
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
