@@ -966,8 +966,14 @@ msflushthr_main(struct psc_thread *thr)
 
 	mflt = msflushthr(thr);
 	while (pscthr_run(thr)) {
+		/*
+		 * Reset deep counter incremented during successive RPC
+		 * failure used to track when to give up (hard retry
+		 * count).
+		 */
 		mflt->mflt_failcnt = 1;
 
+		/* wait until some work appears */
 		lc_peekheadwait(&slc_bmapflushq);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
