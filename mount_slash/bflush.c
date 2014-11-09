@@ -201,6 +201,10 @@ bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		pg = bwc->bwc_bmpces[i];
 		BMPCE_LOCK(pg);
+		while (pg->bmpce_flags & BMPCE_PINNED) {
+			BMPCE_WAIT(pg);
+			BMPCE_LOCK(pg);
+		}
 		pg->bmpce_flags |= BMPCE_PINNED;
 		BMPCE_ULOCK(pg);
 	}
