@@ -926,8 +926,8 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 __static int
 msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
+	size_t len, off, size;
 	int i, op, n, rc, locked;
-	size_t len, nbytes, size;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_nbreqset *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -969,8 +969,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * The buffer associated with the request hasn't been segmented
 	 * into LNET_MTU sized chunks.  Do it now.
 	 */
-	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
-		len = MIN(LNET_MTU, size - nbytes);
+	for (i = 0, off = 0; i < n; i++, off += len) {
+		len = MIN(LNET_MTU, size - off);
 
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
@@ -980,7 +980,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
-		iovs[i].iov_base = r->biorq_buf + nbytes;
+		iovs[i].iov_base = r->biorq_buf + off;
 		iovs[i].iov_len = len;
 
 		rc = slrpc_bulkclient(rq, (op == SRMT_WRITE ?
@@ -989,7 +989,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 
-		mq->offset = r->biorq_off + nbytes;
+		mq->offset = r->biorq_off + off;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
 		mq->flags |= SRM_IOF_DIO;
@@ -1013,7 +1013,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * Should be no need for a callback since this call is fully
 	 * blocking.
 	 */
-	psc_assert(nbytes == size);
+	psc_assert(off == size);
 
 	rc = pscrpc_nbreqset_flush(nbs);
 
