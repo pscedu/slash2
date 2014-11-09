@@ -524,7 +524,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc)
+    struct slashrpc_cservice *csvc, int highlevel)
 {
 	struct pscrpc_import *imp;
 	int locked;
@@ -534,7 +534,8 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
 	pscrpc_abort_inflight(imp);
-	pscrpc_drop_conns(&imp->imp_connection->c_peer);
+	if (highlevel)
+		pscrpc_drop_conns(&imp->imp_connection->c_peer);
 	pscrpc_import_put(imp);
 	csvc->csvc_import = slrpc_new_import(csvc->csvc_rqptl,
 	    csvc->csvc_rpptl);
@@ -546,7 +547,7 @@ void
 sl_imp_hldrop_cli(void *csvc)
 {
 	sl_csvc_markfree(csvc);
-	sl_csvc_disconnect(csvc);
+	sl_csvc_disconnect_ll(csvc);
 	sl_csvc_decref(csvc);
 }
 
@@ -555,7 +556,7 @@ sl_imp_hldrop_resm(void *arg)
 {
 	struct sl_resm *resm = arg;
 
-	sl_csvc_disconnect(resm->resm_csvc);
+	sl_csvc_disconnect_ll(resm->resm_csvc);
 }
 
 /**
@@ -1079,7 +1080,7 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
 	if (resm) {
-		sl_csvc_disconnect(resm->resm_csvc);
+		sl_csvc_disconnect_ll(resm->resm_csvc);
 		sl_resm_hldrop(resm);
 	} else {
 		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
@@ -1104,7 +1105,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 		sl_expcli_ops.secop_destroy(exp->exp_private);
 	(void)CSVC_RLOCK(*csvcp);
 	sl_csvc_markfree(*csvcp);
-	sl_csvc_disconnect(*csvcp);
+	sl_csvc_disconnect_ll(*csvcp);
 	sl_csvc_decref(*csvcp);
 	PSCFREE(exp->exp_private);
 }

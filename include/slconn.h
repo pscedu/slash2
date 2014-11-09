@@ -144,7 +144,8 @@ struct sl_expcli_ops {
 	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 1)
+#define sl_csvc_disconnect_ll(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 0)
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	_PFL_RVSTART {							\
@@ -273,12 +274,13 @@ struct sl_expcli_ops {
 	} while (0)
 
 struct slashrpc_cservice *
-	 _sl_csvc_get(const struct pfl_callerinfo *,
-	     struct slrpc_cservice **, int, struct pscrpc_export *,
-	     struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
-	     uint32_t, enum slconn_type, struct psc_multiwait *);
+	_sl_csvc_get(const struct pfl_callerinfo *,
+	    struct slrpc_cservice **, int, struct pscrpc_export *,
+	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
+	    uint32_t, enum slconn_type, struct psc_multiwait *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
-void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slashrpc_cservice *);
+void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
+	    struct slashrpc_cservice *, int);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
