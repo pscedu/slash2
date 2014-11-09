@@ -202,7 +202,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	    "adding req for (off=%u) (size=%u)", roff, len);
 
 	psc_assert(len);
-	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
+	psc_assert(roff + len <= SLASH_BMAP_SIZE);
 
 	msl_update_iocounters(len);
 
@@ -977,15 +977,15 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 
-		rq->rq_bulk_abortable = 1;
+		rq->rq_bulk_abortable = 1; // for aio?
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 		iovs[i].iov_base = r->biorq_buf + off;
 		iovs[i].iov_len = len;
 
-		rc = slrpc_bulkclient(rq, (op == SRMT_WRITE ?
-		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
+		rc = slrpc_bulkclient(rq, op == SRMT_WRITE ?
+		    BULK_GET_SOURCE : BULK_PUT_SINK, SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
 			PFL_GOTOERR(out, rc);
