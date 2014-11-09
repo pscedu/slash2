@@ -865,33 +865,6 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (msl_read_cb(rq, rc, args));
 }
 
-void
-biorq_pin_pages(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache_entry *pg;
-	int i;
-
-	DYNARRAY_FOREACH(pg, i, &r->biorq_pages) {
-		BMPCE_LOCK(pg);
-		pg->bmpce_flags |= BMPCE_PINNED;
-		BMPCE_ULOCK(pg);
-	}
-}
-
-void
-biorq_unpin_pages(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache_entry *pg;
-	int i;
-
-	DYNARRAY_FOREACH(pg, i, &r->biorq_pages) {
-		BMPCE_LOCK(pg);
-		pg->bmpce_flags &= ~BMPCE_PINNED;
-		BMPCE_WAKE(pg);
-		BMPCE_ULOCK(pg);
-	}
-}
-
 int
 msl_dio_cb(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
@@ -943,8 +916,6 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	OPSTAT_INCR(SLC_OPST_DIO_CB0);
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
-
-	biorq_unpin_pages(r);
 
 	if (rc == -SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_dio_cb, args));
@@ -1025,11 +996,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
-		biorq_pin_pages(r);
-
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
-			biorq_unpin_pages(r);
 			OPSTAT_INCR(SLC_OPST_DIO_ADD_REQ_FAIL);
 			PFL_GOTOERR(out, rc);
 		}
