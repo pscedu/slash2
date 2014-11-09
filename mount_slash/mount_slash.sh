@@ -28,6 +28,7 @@ xargs=
 apply_host_prefs "$@"
 
 : ${mp:=/$prof}
+umount -l -f $mp 2>/dev/null
 [ -d $mp ] || mkdir -p $mp
 base=$dir/$prof.s2
 # Initialization/configuration
