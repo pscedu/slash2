@@ -59,7 +59,7 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
     const struct srt_stat *, int, const char *, const char *, void *);
 
 /* predefined mdsio layer "fids" */
-#define MDSIO_FID_ROOT		3		/* XXX FUSE_ROOT_ID? */
+#define MDSIO_FID_ROOT		3
 
 /* opencreatef() flags */
 #define MDSIO_OPENCRF_NOLINK	(1 << 0)	/* do not create links in FID namespace */
@@ -84,6 +84,7 @@ struct mdsio_ops {
 	uint	(*mio_slflags_2_setattrmask)(int);
 	mdsio_fid_t
 		(*mio_getfidlinkdir)(slfid_t);
+	int	(*mio_write_cursor)(int, void *, size_t, void *, sl_log_write_t);
 
 	/* low-level file system interface */
 	int	(*mio_access)(int, mdsio_fid_t, int, const struct slash_creds *);
@@ -103,7 +104,7 @@ struct mdsio_ops {
 	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, void *,
 			sl_log_write_t, void *);
 	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
-	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, int *, struct iovec *, int *, off_t *, void *); 
+	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, int *, struct iovec *, int *, off_t *, void *);
 	int	(*mio_readlink)(int, mdsio_fid_t, char *, const struct slash_creds *);
 	int	(*mio_release)(int, const struct slash_creds *, void *);
 	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *,

@@ -145,6 +145,7 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_setattrmask_2_slflags,
 	zfsslash2_slflags_2_setattrmask,
 	zfsslash2_getfidlinkdir,
+	zfsslash2_write_cursor,
 
 	zfsslash2_access,
 	zfsslash2_fsync,
@@ -188,10 +189,3 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_setxattr,
 	zfsslash2_replay_removexattr
 };
-
-int
-mdsio_write_cursor(int vfsid, void *buf, size_t size, void *finfo,
-    sl_log_write_t funcp)
-{
-	return (zfsslash2_write_cursor(vfsid, buf, size, finfo, funcp));
-}
