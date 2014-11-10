@@ -1966,7 +1966,7 @@ slc_getprog(pid_t pid, char *prog, size_t len)
 }
 
 const char *
-pscthr_log_get_uprog(struct psc_thread *thr)
+slc_log_get_fsctx_uprog(struct psc_thread *thr)
 {
 	struct psclog_data *pld;
 	struct msfs_thread *mft;
@@ -1998,6 +1998,39 @@ pscthr_log_get_uprog(struct psc_thread *thr)
 	}
 
 	return (pld->pld_uprog = mft->mft_uprog);
+}
+
+pid_t
+slc_log_get_fsctx_pid(void)
+{
+	struct msfs_thread *mft;
+	struct pscfs_req *pfr;
+
+	if (thr->pscthr_type != MSTHRT_FS)
+		return (-1);
+
+	mft = msfsthr(thr);
+	if (mft->mft_pfr)
+		return (pscfs_getclientctx(pfr)->pfcc_pid);
+	return (-1);
+}
+
+uid_t
+slc_log_get_fsctx_uid(void)
+{
+	struct msfs_thread *mft;
+	struct pscfs_creds pcr;
+	struct pscfs_req *pfr;
+
+	if (thr->pscthr_type != MSTHRT_FS)
+		return (-1);
+
+	mft = msfsthr(thr);
+	if (mft->mft_pfr) {
+		pscfs_getcreds(pfr, &pcr);
+		return (pcr.pcr_uid);
+	}
+	return (-1);
 }
 
 /**
@@ -3852,6 +3885,10 @@ main(int argc, char *argv[])
 	/* canonicalize mount path */
 	if (realpath(noncanon_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", noncanon_mp);
+
+	pflog_get_fsctx_uprog = slc_log_get_fsctx_uid;
+	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
+	pflog_get_fsctx_gid = slc_log_get_fsctx_gid;
 
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
