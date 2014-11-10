@@ -240,7 +240,7 @@ struct sl_expcli_ops {
 	_PFL_RVSTART {							\
 		slrpc_req_out((csvc), (rq));				\
 		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
-		pscrpc_nbreqset_add(sl_nbrqset, (rq));			\
+		pscrpc_nbreqset_add(set, (rq));			\
 	} _PFL_RVEND
 
 #define SL_NBRQSET_ADD(csvc, rq)					\
