@@ -111,22 +111,22 @@ site @PSCARCH {
 	resource sense5s5 { desc = "disk-based archiver unit 5 sliod 5"; type = standalone_fs; id = 0x1505; nids = sense5-sliod5; selftest = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
 	resource sense5s6 { desc = "disk-based archiver unit 5 sliod 6"; type = standalone_fs; id = 0x1506; nids = sense5-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
 
-	resource sense6s0 { desc = "disk-based archiver unit 6 sliod 0"; type = standalone_fs; id = 0x1600; nids = sense6-sliod0; selftest = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense6s1 { desc = "disk-based archiver unit 6 sliod 1"; type = standalone_fs; id = 0x1601; nids = sense6-sliod1; selftest = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense6s2 { desc = "disk-based archiver unit 6 sliod 2"; type = standalone_fs; id = 0x1602; nids = sense6-sliod2; selftest = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense6s3 { desc = "disk-based archiver unit 6 sliod 3"; type = standalone_fs; id = 0x1603; nids = sense6-sliod3; selftest = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense6s4 { desc = "disk-based archiver unit 6 sliod 4"; type = standalone_fs; id = 0x1604; nids = sense6-sliod4; selftest = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense6s5 { desc = "disk-based archiver unit 6 sliod 5"; type = standalone_fs; id = 0x1605; nids = sense6-sliod5; selftest = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense6s6 { desc = "disk-based archiver unit 6 sliod 6"; type = standalone_fs; id = 0x1606; nids = sense6-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
-	resource sense6s7 { desc = "disk-based archiver unit 6 sliod 7"; type = standalone_fs; id = 0x1607; nids = sense6-sliod7; selftest = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; }
+	resource sense6s0 { desc = "disk-based archiver unit 6 sliod 0"; type = standalone_fs; id = 0x1600; nids = sense6-sliod0; selftest = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
+	resource sense6s1 { desc = "disk-based archiver unit 6 sliod 1"; type = standalone_fs; id = 0x1601; nids = sense6-sliod1; selftest = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
+	resource sense6s2 { desc = "disk-based archiver unit 6 sliod 2"; type = standalone_fs; id = 0x1602; nids = sense6-sliod2; selftest = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
+	resource sense6s3 { desc = "disk-based archiver unit 6 sliod 3"; type = standalone_fs; id = 0x1603; nids = sense6-sliod3; selftest = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
+	resource sense6s4 { desc = "disk-based archiver unit 6 sliod 4"; type = standalone_fs; id = 0x1604; nids = sense6-sliod4; selftest = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
+	resource sense6s5 { desc = "disk-based archiver unit 6 sliod 5"; type = standalone_fs; id = 0x1605; nids = sense6-sliod5; selftest = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
+	resource sense6s6 { desc = "disk-based archiver unit 6 sliod 6"; type = standalone_fs; id = 0x1606; nids = sense6-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
+	resource sense6s7 { desc = "disk-based archiver unit 6 sliod 7"; type = standalone_fs; id = 0x1607; nids = sense6-sliod7; selftest = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; flags = "disable_bia"; }
 
-	resource sense7s0 { desc = "disk-based archiver unit 7 sliod 0"; type = standalone_fs; id = 0x1700; nids = sense7-sliod0; selftest = "/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense7s1 { desc = "disk-based archiver unit 7 sliod 1"; type = standalone_fs; id = 0x1701; nids = sense7-sliod1; selftest = "/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense7s2 { desc = "disk-based archiver unit 7 sliod 2"; type = standalone_fs; id = 0x1702; nids = sense7-sliod2; selftest = "/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense7s3 { desc = "disk-based archiver unit 7 sliod 3"; type = standalone_fs; id = 0x1703; nids = sense7-sliod3; selftest = "/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense7s4 { desc = "disk-based archiver unit 7 sliod 4"; type = standalone_fs; id = 0x1704; nids = sense7-sliod4; selftest = "/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense7s5 { desc = "disk-based archiver unit 7 sliod 5"; type = standalone_fs; id = 0x1705; nids = sense7-sliod5; selftest = "/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense7s6 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; selftest = "/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
+	resource sense7s0 { desc = "disk-based archiver unit 7 sliod 0"; type = standalone_fs; id = 0x1700; nids = sense7-sliod0; selftest = "/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
+	resource sense7s1 { desc = "disk-based archiver unit 7 sliod 1"; type = standalone_fs; id = 0x1701; nids = sense7-sliod1; selftest = "/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
+	resource sense7s2 { desc = "disk-based archiver unit 7 sliod 2"; type = standalone_fs; id = 0x1702; nids = sense7-sliod2; selftest = "/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
+	resource sense7s3 { desc = "disk-based archiver unit 7 sliod 3"; type = standalone_fs; id = 0x1703; nids = sense7-sliod3; selftest = "/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
+	resource sense7s4 { desc = "disk-based archiver unit 7 sliod 4"; type = standalone_fs; id = 0x1704; nids = sense7-sliod4; selftest = "/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
+	resource sense7s5 { desc = "disk-based archiver unit 7 sliod 5"; type = standalone_fs; id = 0x1705; nids = sense7-sliod5; selftest = "/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
+	resource sense7s6 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; selftest = "/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
 
 	resource sense0 {
 		desc	= "sense0 sliods";
