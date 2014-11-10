@@ -224,11 +224,12 @@ mds_record_reclaim_prog(void)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *res;
+	struct sl_site *s;
 	size_t size;
 
 	rbase = reclaim_prg.prg_buf;
 
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	SITE_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -847,9 +848,10 @@ mds_reclaim_lwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *res;
+	struct sl_site *s;
 	int ri;
 
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	SITE_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -883,10 +885,11 @@ mds_reclaim_hwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *res;
+	struct sl_site *s;
 	uint64_t value = 0;
 	int ri;
 
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	SITE_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -971,11 +974,12 @@ mds_skip_reclaim_batch(uint64_t batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *res;
+	struct sl_site *s;
 
 	if (batchno >= reclaim_prg.cur_batchno)
 		return;
 
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	SITE_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		nios++;
@@ -1925,6 +1929,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	struct srt_stat	sstb;
+	struct sl_site *s;
 	size_t size;
 
 	OPSTAT_INCR(SLM_OPST_RECLAIM_CURSOR);
@@ -1934,7 +1939,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
-	SITE_FOREACH_RES(nodeSite, res, ri)
+	SITE_FOREACH_RES(s, res, ri) {
 		if (RES_ISFS(res))
 			nios++;
 	if (!nios)
@@ -2126,7 +2131,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	mds_release_file(handle);
 
 	/* search for newly-added I/O servers */
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
