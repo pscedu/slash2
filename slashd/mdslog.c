@@ -229,7 +229,7 @@ mds_record_reclaim_prog(void)
 
 	rbase = reclaim_prg.prg_buf;
 
-	SITE_FOREACH_RES(s, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -851,7 +851,7 @@ mds_reclaim_lwm(int batchno)
 	struct sl_site *s;
 	int ri;
 
-	SITE_FOREACH_RES(s, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -889,7 +889,7 @@ mds_reclaim_hwm(int batchno)
 	uint64_t value = 0;
 	int ri;
 
-	SITE_FOREACH_RES(s, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
@@ -979,7 +979,7 @@ mds_skip_reclaim_batch(uint64_t batchno)
 	if (batchno >= reclaim_prg.cur_batchno)
 		return;
 
-	SITE_FOREACH_RES(s, res, ri) {
+	CONF_FOREACH_RES(s, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		nios++;
@@ -1939,7 +1939,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
-	SITE_FOREACH_RES(s, res, ri) {
+	CONF_FOREACH_RES(s, res, ri)
 		if (RES_ISFS(res))
 			nios++;
 	if (!nios)
