@@ -72,7 +72,6 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 
 /* high-level interface */
 int	mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
-int	mdsio_write_cursor(int, void *, size_t, void *, sl_log_write_t);
 
 struct mdsio_ops {
 	/* control interface */
@@ -145,6 +144,7 @@ struct mdsio_ops {
 #define mdsio_setattrmask_2_slflags mdsio_ops.mio_setattrmask_2_slflags	/* zfsslash2_setattrmask_2_slflags() */
 #define mdsio_slflags_2_setattrmask mdsio_ops.mio_slflags_2_setattrmask	/* zfsslash2_slflags_2_setattrmask() */
 #define mdsio_getfidlinkdir	    mdsio_ops.mio_getfidlinkdir		/* zfsslash2_getfidlinkdir() */
+#define mdsio_write_cursor	    mdsio_ops.mio_write_cursor		/* zfsslash2_write_cursor() */
 
 #define mdsio_fsync		mdsio_ops.mio_fsync			/* zfsslash2_fsync() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
