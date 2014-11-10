@@ -912,7 +912,6 @@ int
 msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	int rc;
 
 	OPSTAT_INCR(SLC_OPST_DIO_CB0);
