@@ -579,8 +579,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		}
 		BIORQ_ULOCK(r);
 
-	} else
-		psc_fatalx("unknown callback");
+	}
 
 	psclog_diag("get car=%p car_id=%"PRIx64" q=%p, r=%p",
 	    car, car->car_id, car->car_fsrqinfo, r);
