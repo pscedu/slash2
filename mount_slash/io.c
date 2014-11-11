@@ -504,7 +504,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
     int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
     struct pscrpc_async_args *av)
 {
-	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
+	struct bmpc_ioreq *r;
 	struct psc_dynarray *a = av->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmap_pagecache_entry *e, **bmpces;
 	struct slc_async_req *car;
@@ -529,10 +529,11 @@ msl_req_aio_add(struct pscrpc_request *rq,
 
 	if (cbf == msl_readahead_cb) {
 		/* readahead's are not associated with any biorq. */
-		psc_assert(!r);
 		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_ADD);
 
+		r = av->pointer_arg[MSL_CBARG_BIORQ];
+		psc_assert(!r);
 		for (i = 0; ; i++) {
 			e = bmpces[i];
 			if (!e)
@@ -548,6 +549,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		int naio = 0;
 
 		OPSTAT_INCR(SLC_OPST_READ_CB_ADD);
+		r = av->pointer_arg[MSL_CBARG_BIORQ];
 		DYNARRAY_FOREACH(e, i, a) {
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_FAULTING) {
@@ -565,7 +567,14 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
 	} else if (cbf == msl_dio_cb) {
+
+		struct bmpc_ioreq_dio *ioreq_dio;
+
 		OPSTAT_INCR(SLC_OPST_DIO_CB_ADD);
+
+		ioreq_dio = av->pointer_arg[MSL_CBARG_BIORQ];
+		r = ioreq_dio->ioreq;
+
 		if (r->biorq_flags & BIORQ_WRITE)
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
@@ -869,11 +878,13 @@ int
 msl_dio_cb(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
-	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct bmpc_ioreq_dio *ioreq_dio = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct bmpc_ioreq *r = ioreq_dio->ioreq;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	int op, locked;
 
+	PSCFREE(ioreq_dio);
 	/* rq is NULL it we are called from sl_resm_hldrop() */
 	if (rq) {
 		DEBUG_REQ(PLL_DIAG, rq, "cb");
@@ -937,6 +948,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct iovec *iovs;
 	struct bmap *b;
 	uint64_t *v8;
+	struct bmpc_ioreq_dio *ioreq_dio[SLASH_BMAP_SIZE/LNET_MTU];
 
 	psc_assert(r->biorq_bmap);
 
@@ -946,6 +958,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	size = r->biorq_len;
 	n = howmany(size, LNET_MTU);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
+
+	for (i = 0; i < n; i++)
+		ioreq_dio[i] = PSCALLOC(sizeof(struct bmpc_ioreq_dio));
 
 	v8 = (uint64_t *)r->biorq_buf;
 	DEBUG_BIORQ(PLL_DEBUG, r, "dio req v8(%"PRIx64")", *v8);
@@ -978,7 +993,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rq->rq_bulk_abortable = 1; // for aio?
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = ioreq_dio[i];
 		iovs[i].iov_base = r->biorq_buf + off;
 		iovs[i].iov_len = len;
 
@@ -993,6 +1008,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
 		mq->flags |= SRM_IOF_DIO;
 
+		ioreq_dio[i]->ioreq = r;
+		ioreq_dio[i]->offset = off;
+		ioreq_dio[i]->length = len;
+
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
@@ -1002,6 +1021,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		rq = NULL;
 		csvc = NULL;
+		ioreq_dio[i] = NULL;
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
 		DEBUG_BIORQ(PLL_DIAG, r, "dio launch");
@@ -1062,6 +1082,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		sl_csvc_decref(csvc);
 
 	PSCFREE(iovs);
+	for (i = 0; i < n; i++) {
+		if (ioreq_dio[i])
+			PSCFREE(ioreq_dio[i]);
+	}
 
 	DEBUG_BIORQ(PLL_DIAG, r, "rc=%d", rc);
 	return (rc);

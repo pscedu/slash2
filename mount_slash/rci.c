@@ -141,13 +141,13 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
-	r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 	if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
 		    car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 		int i;
 
 		OPSTAT_INCR(SLC_OPST_READAHEAD_CB);
+		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 		for (i = 0;; i++) {
 			e = bmpces[i];
 			if (!e)
@@ -171,6 +171,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		int i;
 
 		OPSTAT_INCR(SLC_OPST_READ_CB);
+
+		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
 		/*
@@ -193,6 +195,12 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_dio_cb) {
+	
+		struct bmpc_ioreq_dio *ioreq_dio;
+
+		/* abuse the naming BIORQ a bit */
+		ioreq_dio = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
+		r = ioreq_dio->ioreq;
 
 		if (mq->op == SRMIOP_RD)
 			OPSTAT_INCR(SLC_OPST_DIO_CB_READ);
@@ -204,8 +212,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mq->rc);
 
 		if (mq->op == SRMIOP_RD) {
-			iov.iov_base = r->biorq_buf;
-			iov.iov_len = r->biorq_len;
+			iov.iov_base = r->biorq_buf + ioreq_dio->offset;
+			iov.iov_len = ioreq_dio->length;
 
 			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);
