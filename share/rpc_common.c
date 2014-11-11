@@ -490,9 +490,9 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		 * This should only apply to mount_slash clients
 		 * the MDS stops communication with.
 		 */
-		pscrpc_import_put(csvc->csvc_import);
 		if (csvc->csvc_peertype == SLCONNT_CLI)
 			pll_remove(&sl_clients, csvc);
+		pscrpc_import_put(csvc->csvc_import);
 		DEBUG_CSVC(PLL_DIAG, csvc, "freed");
 		// XXX assert(mutex.nwaiters == 0)
 		psc_mutex_unlock(&csvc->csvc_mutex);
@@ -659,6 +659,10 @@ int
 csvc_cli_cmp(const void *a, const void *b)
 {
 	const struct slashrpc_cservice *ca = a, *cb = b;
+
+	if (ca->csvc_import->imp_connection == NULL ||
+	    cb->csvc_import->imp_connection == NULL)
+		return (CMP(ca, cb));
 
 	return (CMP(ca->csvc_import->imp_connection->c_peer.nid,
 	    cb->csvc_import->imp_connection->c_peer.nid));
