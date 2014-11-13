@@ -389,7 +389,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-	struct fidc_membh *p = NULL;
+	struct fidc_membh *f = NULL;
 	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_LOOKUP);
@@ -397,15 +397,15 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (fcmh_2_mfid(p) == SLFID_ROOT &&
+	if (fcmh_2_mfid(f) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
-	mp->rc = mdsio_lookup(vfsid, fcmh_2_mfid(p), mq->name,
+	mp->rc = mdsio_lookup(vfsid, fcmh_2_mfid(f), mq->name,
 	    NULL, &rootcreds, &mp->attr);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -436,8 +436,8 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	}
 
  out:
-	if (p)
-		fcmh_op_done(p);
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
