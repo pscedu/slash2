@@ -166,7 +166,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmpc_ioreq);
-	PRTYPE(struct bmpc_ioreq_dio);
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct dircache_ent);
 	PRTYPE(struct dircache_expire);
