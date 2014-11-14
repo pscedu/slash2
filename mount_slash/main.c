@@ -1782,15 +1782,12 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	mq->fg = c->fcmh_fg;
 
-	memset(buf, 0, sizeof(buf));
-
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf) - 1;
 	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
@@ -1799,8 +1796,9 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		// XXX sanity check len
 		iov.iov_len = mp->len;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
-		buf[mp->len] = '\0';
 	}
+	if (!rc)
+		buf[mp->len] = '\0';
 
  out:
 	if (c)
