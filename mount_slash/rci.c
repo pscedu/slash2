@@ -198,9 +198,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	
 		struct bmpc_ioreq_dio *ioreq_dio;
 
-		/* abuse the naming BIORQ a bit */
-		ioreq_dio = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
-		r = ioreq_dio->ioreq;
+		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 		if (mq->op == SRMIOP_RD)
 			OPSTAT_INCR(SLC_OPST_DIO_CB_READ);
@@ -211,13 +209,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		if (mq->rc)
 			PFL_GOTOERR(out, mq->rc);
 
-		if (mq->op == SRMIOP_RD) {
-			iov.iov_base = r->biorq_buf + ioreq_dio->offset;
-			iov.iov_len = ioreq_dio->length;
-
-			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
-			    SRCI_BULK_PORTAL, &iov, 1);
-		}
 	} else {
 		psc_fatalx("unknown callback");
 	}
@@ -228,7 +219,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 */
 	car->car_cbf(rq, mq->rc, &car->car_argv);
 
-	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
+	if (mq->rc)
+	psclog_warn("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
 
 	psc_pool_return(slc_async_req_pool, car);

@@ -170,12 +170,6 @@ struct bmpc_ioreq {
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
 
-struct bmpc_ioreq_dio {
-	struct bmpc_ioreq		*ioreq;
-	size_t				 offset;
-	size_t				 length;
-};
-
 #define	BIORQ_READ		(1 <<  0)
 #define	BIORQ_WRITE		(1 <<  1)
 #define	BIORQ_SCHED		(1 <<  2)	/* flush in progress, don't clear unless retry happen */
