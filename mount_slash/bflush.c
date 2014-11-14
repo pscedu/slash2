@@ -250,8 +250,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	    args->pointer_arg[MSL_CBARG_BIORQS];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct resm_cli_info *rmci = resm2rmci(m);
-	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *e;
+	struct bmpc_ioreq *r;
 	int i, rc;
 
 	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
