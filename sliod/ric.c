@@ -279,7 +279,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    slvr, nslvrs, iovs, nslvrs, rw);
 		if (aiocbr == NULL)
 			PFL_GOTOERR(out, 0);
-
+		if (mq->flags & SRM_IOF_DIO)
+			aiocbr->aiocbr_flags |= SLI_AIOCBSF_DIO;
 		/*
 		 * Now check for early completion.  If all slvrs are
 		 * ready, then we must reply with the data now.

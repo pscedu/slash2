@@ -165,6 +165,7 @@ struct sli_aiocb_reply {
 
 #define SLI_AIOCBSF_NONE	(0 << 0)
 #define SLI_AIOCBSF_REPL	(1 << 0)
+#define SLI_AIOCBSF_DIO		(1 << 1)
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;

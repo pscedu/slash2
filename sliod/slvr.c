@@ -252,7 +252,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		if (mq->rc)
 			pscrpc_msg_add_flags(rq->rq_reqmsg,
 			    MSG_ABORT_BULK);
-		else
+		else if (!(a->aiocbr_flags & SLI_AIOCBSF_DIO))
 			mq->rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 			    SRCI_BULK_PORTAL, a->aiocbr_iovs,
 			    a->aiocbr_niov);
