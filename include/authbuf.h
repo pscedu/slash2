@@ -41,7 +41,7 @@ struct pscrpc_request;
 #define AUTHBUF_ALGLEN		32
 #define AUTHBUF_KEYSIZE		1024
 
-int	authbuf_check(struct pscrpc_request *, int);
+int	authbuf_check(struct pscrpc_request *, int, int);
 void	authbuf_sign(struct pscrpc_request *, int);
 
 void	authbuf_checkkey(const char *, struct stat *);

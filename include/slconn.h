@@ -206,15 +206,18 @@ struct sl_expcli_ops {
 		}							\
 	} while (0)
 
+#define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
+
 #define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
 	slrpc_newreq((csvc), (op), &(rq), sizeof(*(mq)), sizeof(*(mp)),	\
 	    &(mq))
 
-#define SL_RSX_WAITREP(csvc, rq, mp)					\
+#define SL_RSX_WAITREPF(csvc, rq, mp, flags)				\
 	_PFL_RVSTART {							\
 		int _rc;						\
 									\
-		_rc = slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp));\
+		_rc = slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp),	\
+		    (flags));						\
 		/*							\
 		 * XXX this horrible hack.  if one side thinks there's	\
 		 * no connection, how can the other side not?		\
@@ -223,6 +226,8 @@ struct sl_expcli_ops {
 			sl_csvc_disconnect(csvc);			\
 		_rc;							\
 	} _PFL_RVEND
+
+#define SL_RSX_WAITREP(csvc, rq, mp)	SL_RSX_WAITREPF((csvc), (rq), (mp), 0)
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
@@ -256,7 +261,7 @@ struct sl_expcli_ops {
 			(error) = SLERR_RPCIO;				\
 		if ((error) == 0)					\
 			(error) = authbuf_check((rq),			\
-			    PSCRPC_MSG_REPLY);				\
+			    PSCRPC_MSG_REPLY, 0);			\
 		if ((error) == 0) {					\
 			(mp) = pscrpc_msg_buf((rq)->rq_repmsg, 0,	\
 			    sizeof(*(mp)));				\
@@ -306,7 +311,7 @@ int	 slrpc_newreq(struct slashrpc_cservice *, int,
 		struct pscrpc_request **, int, int, void *);
 
 int	 slrpc_waitrep(struct slashrpc_cservice *,
-		struct pscrpc_request *, int, void *);
+		struct pscrpc_request *, int, void *, int);
 
 int	 slrpc_allocrepn(struct pscrpc_request *, void *, int, void *,
 		int, const int *, int);
@@ -324,6 +329,7 @@ int	 slrpc_bulkserver(struct pscrpc_request *, int, int, struct iovec *, int);
 
 void	 slrpc_bulk_sign(struct pscrpc_request *, void *, struct iovec *, int);
 int	 slrpc_bulk_check(struct pscrpc_request *, const void *, struct iovec *, int);
+int	 slrpc_bulk_checkmsg(struct pscrpc_request *, struct pscrpc_msg *, struct iovec *, int);
 
 extern struct psc_dynarray	 sl_lnet_prids;
 extern struct psc_lockedlist	 sl_clients;

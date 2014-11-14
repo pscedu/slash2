@@ -95,7 +95,7 @@ slrpc_req_in(__unusedx struct pscrpc_request *rq)
 
 int
 slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq, int plen, void *mpp)
+    struct pscrpc_request *rq, int plen, void *mpp, int flags)
 {
 	int rc;
 
@@ -103,7 +103,7 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pfl_rsx_waitrep(rq, plen, mpp);
 	if (rc == 0) {
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
 		if (rc == 0)
 			slrpc_rep_in(csvc, rq);
 	}
@@ -119,7 +119,7 @@ slrpc_allocrepn(struct pscrpc_request *rq, void *mq0p, int q0len,
 	RSX_ALLOCREPNRC(rq, *(void **)mq0p, q0len, *(void **)mp0p, np,
 	    plens, rcoff);
 	rcp = PSC_AGP(*(void **)mp0p, rcoff);
-	*rcp = authbuf_check(rq, PSCRPC_MSG_REQUEST);
+	*rcp = authbuf_check(rq, PSCRPC_MSG_REQUEST, 0);
 	if (*rcp == 0)
 		slrpc_req_in(rq);
 	return (*rcp);
@@ -315,7 +315,7 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 	int rc = 0;
 
 	if (!rq->rq_status) {
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, 0);
 		if (rc == 0)
 			rc = rq->rq_status;
 		if (rc == 0) {
@@ -1173,6 +1173,21 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 	}
 
 	return (rc);
+}
+
+int
+slrpc_bulk_checkmsg(struct pscrpc_request *rq, struct pscrpc_msg *m,
+    struct iovec *iov, int n)
+{
+	struct srt_authbuf_footer *saf;
+
+	/*
+	 * XXX can this flag be arbitrarily spoofed to ignore this check?
+	 */
+	if (m->flags & MSG_ABORT_BULK)
+		return (0);
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+	return (slrpc_bulk_check(rq, saf->saf_bulkhash, iov, n));
 }
 
 /**

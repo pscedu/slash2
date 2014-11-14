@@ -32,9 +32,9 @@
 
 #include <gcrypt.h>
 
-#include "pfl/rpc.h"
 #include "pfl/atomic.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
 
 #include "lnet/lib-lnet.h"
 
@@ -119,7 +119,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
  * @msgtype: request or reply to check.
  */
 int
-authbuf_check(struct pscrpc_request *rq, int msgtype)
+authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 {
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
@@ -182,6 +182,10 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	bd = rq->rq_bulk;
 	if (bd && bd->bd_type == BULK_PUT_SINK &&
 	    msgtype == PSCRPC_MSG_REPLY &&
+	    (flags & SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK) == 0 &&
+	    /*
+	     * XXX can this flag be arbitrarily spoofed to ignore this check?
+	     */
 	    (m->flags & MSG_ABORT_BULK) == 0)
 		rc = slrpc_bulk_check(rq, saf->saf_bulkhash, bd->bd_iov,
 		    bd->bd_iov_count);

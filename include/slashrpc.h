@@ -797,7 +797,7 @@ struct srm_getattr_req {
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
-	 int64_t		xattrsize;
+	 int64_t		xattrsize; // 32
 	 int32_t		rc;
 	 int32_t		_pad;
 } __packed;
@@ -921,8 +921,8 @@ struct srm_readlink_req {
 
 struct srm_readlink_rep {
 	 int32_t		rc;
-	 int32_t		_pad;
-/* buf is in bulk of size SL_PATH_MAX */
+	 int32_t		len;
+/* buf is in bulk */
 } __packed;
 
 struct srm_rename_req {
@@ -1010,6 +1010,7 @@ struct srm_listxattr_req {
 struct srm_listxattr_rep {
 	uint32_t		size;
 	 int32_t		rc;
+/* XXX pack if can fit; otherwise value is in BULK */
 } __packed;
 
 struct srm_getxattr_req {

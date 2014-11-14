@@ -90,7 +90,7 @@ struct mdsio_ops {
 	int	(*mio_fsync)(int, const struct slash_creds *, int, void *);
 	int	(*mio_getattr)(int, mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
 	int	(*mio_link)(int, mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
-	int	(*mio_lookup)(int, mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
+	int	(*mio_lookup)(int, mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *, int64_t *);
 	int	(*mio_lookup_slfid)(int, slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
 	int	(*mio_mkdir)(int, mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *,
 			sl_log_update_t, sl_getslfid_cb_t, slfid_t);
@@ -104,7 +104,7 @@ struct mdsio_ops {
 			sl_log_write_t, void *);
 	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
 	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, int *, struct iovec *, int *, off_t *, void *);
-	int	(*mio_readlink)(int, mdsio_fid_t, char *, const struct slash_creds *);
+	int	(*mio_readlink)(int, mdsio_fid_t, char *, size_t *, const struct slash_creds *);
 	int	(*mio_release)(int, const struct slash_creds *, void *);
 	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *,
 			sl_log_update_t, void *);
@@ -138,6 +138,9 @@ struct mdsio_ops {
 	int	(*mio_redo_removexattr)(int, slfid_t, const char *);
 };
 
+#define mdsio_lookup(vfsid, mfid, name, mfp, cr, stb)			\
+	mdsio_lookupx((vfsid), (mfid), (name), (mfp), (cr), (stb), NULL)
+
 #define mdsio_init		mdsio_ops.mio_init			/* zfsslash2_init() */
 #define mdsio_exit		mdsio_ops.mio_exit			/* libzfs_exit() */
 
@@ -149,7 +152,7 @@ struct mdsio_ops {
 #define mdsio_fsync		mdsio_ops.mio_fsync			/* zfsslash2_fsync() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
 #define mdsio_link		mdsio_ops.mio_link			/* zfsslash2_link() */
-#define mdsio_lookup		mdsio_ops.mio_lookup			/* zfsslash2_lookup() */
+#define mdsio_lookupx		mdsio_ops.mio_lookup			/* zfsslash2_lookup() */
 #define mdsio_lookup_slfid	mdsio_ops.mio_lookup_slfid		/* zfsslash2_lookup_slfid() */
 #define mdsio_mkdir		mdsio_ops.mio_mkdir			/* zfsslash2_mkdir() */
 #define mdsio_mknod		mdsio_ops.mio_mknod			/* zfsslash2_mknod() */
