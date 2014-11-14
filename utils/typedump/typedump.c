@@ -166,6 +166,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmpc_ioreq);
+	PRTYPE(struct bmpc_ioreq_dio);
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct dircache_ent);
 	PRTYPE(struct dircache_expire);
@@ -885,6 +886,7 @@ main(int argc, char *argv[])
 	PRVAL(SLM_OPST_LEASE_RENEW);
 	PRVAL(SLM_OPST_LEASE_RENEW_ENOENT);
 	PRVAL(SLM_OPST_LINK);
+	PRVAL(SLM_OPST_LISTXATTR);
 	PRVAL(SLM_OPST_LOGFILE_CREATE);
 	PRVAL(SLM_OPST_LOGFILE_REMOVE);
 	PRVAL(SLM_OPST_LOOKUP);
@@ -899,6 +901,7 @@ main(int argc, char *argv[])
 	PRVAL(SLM_OPST_RECLAIM_RPC_FAIL);
 	PRVAL(SLM_OPST_RECLAIM_RPC_SEND);
 	PRVAL(SLM_OPST_RECLAIM_XID);
+	PRVAL(SLM_OPST_REMOVEXATTR);
 	PRVAL(SLM_OPST_RENAME);
 	PRVAL(SLM_OPST_REPL_SCHEDWK);
 	PRVAL(SLM_OPST_REPL_SCHEDWK_FAIL);
