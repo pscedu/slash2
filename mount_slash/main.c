@@ -964,7 +964,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *m = NULL;
+	struct fidc_membh *f = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc;
@@ -997,18 +997,18 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * visible in the cache.
 	 */
 	uidmap_int_stat(&mp->attr);
-	rc = msl_create_fcmh(pfr, &mp->attr.sst_fg, &m);
+	rc = msl_create_fcmh(pfr, &mp->attr.sst_fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattrf(m, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
+	slc_fcmh_setattrf(f, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
 	if (sstb) {
-		FCMH_LOCK(m);
-		*sstb = m->fcmh_sstb;
-		FCMH_ULOCK(m);
+		FCMH_LOCK(f);
+		*sstb = f->fcmh_sstb;
+		FCMH_ULOCK(f);
 	}
 
 	// XXX add to dircache
@@ -1016,12 +1016,12 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
  out:
 	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
-	    pinum, name, m ? m->fcmh_sstb.sst_fid : FID_ANY, rc);
+	    pinum, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
 	if (rc == 0 && fp)
-		*fp = m;
-	else if (m)
-		fcmh_op_done(m);
+		*fp = f;
+	else if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
