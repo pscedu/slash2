@@ -271,14 +271,12 @@ msfsthr_ensure(struct pscfs_req *pfr)
 /**
  * msl_create_fcmh - Create a FID cache member handle based on the
  *	statbuf provided.
- * @sstb: file stat info.
- * @setattrflags: flags to slc_fcmh_setattrf().
- * @name: base name of file.
- * @lookupflags: FID cache lookup flags.
+ * @pfr: pscfs request.
+ * @fg: FID + generation of file.
  * @fp: value-result fcmh.
  */
-#define msl_create_fcmh(pfr, fg, fp)			\
-	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), fg,	\
+#define msl_create_fcmh(pfr, fg, fp)					\
+	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), fg,			\
 	    FIDC_LOOKUP_CREATE, (fp), pscfs_getclientctx(pfr))
 
 void
@@ -1001,15 +999,16 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattrf(f, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
-	if (sstb) {
-		FCMH_LOCK(f);
+	FCMH_LOCK(f);
+	slc_fcmh_setattrf(f, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
+	    FCMH_SETATTRF_HAVELOCK);
+	fcmh_2_fci(f)->fci_xattrsize = mp->xattrsize;
+
+	if (sstb)
 		*sstb = f->fcmh_sstb;
-		FCMH_ULOCK(f);
-	}
 
 	// XXX add to dircache
 
@@ -1018,9 +1017,10 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "cfid="SLPRI_FID" rc=%d",
 	    pinum, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
-	if (rc == 0 && fp)
+	if (rc == 0 && fp) {
 		*fp = f;
-	else if (f)
+		FCMH_ULOCK(f);
+	} else if (f)
 		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -1785,16 +1785,22 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	memset(buf, 0, sizeof(buf));
 
 	iov.iov_base = buf;
-	iov.iov_len = sizeof(buf);
+	iov.iov_len = sizeof(buf) - 1;
 	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
+	rc = SL_RSX_WAITREPF(csvc, rq, mp,
+	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	if (rc == 0)
+	if (!rc)
 		rc = mp->rc;
-
-	buf[sizeof(buf) - 1] = '\0';
+	if (!rc) {
+		// XXX sanity check len
+		iov.iov_len = mp->len;
+		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		buf[mp->len] = '\0';
+	}
 
  out:
 	if (c)
@@ -2448,7 +2454,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
+	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2942,8 +2949,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 void
 mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 {
-	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct slashrpc_cservice *csvc = NULL;
 	struct srm_listxattr_rep *mp = NULL;
 	struct srm_listxattr_req *mq;
 	struct fidc_membh *f = NULL;
@@ -2956,11 +2963,16 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	OPSTAT_INCR(SLC_OPST_LISTXATTR);
 
-	pscfs_getcreds(pfr, &pcr);
-
-	// checkcreds
+	if (size > LNET_MTU)
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	pscfs_getcreds(pfr, &pcr);
+
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2974,30 +2986,38 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
-	mq->size = size;
 
 	if (size) {
+		mq->size = size - 1;
 		iov.iov_base = buf;
-		iov.iov_len = size;
+		iov.iov_len = size - 1;
+		rq->rq_bulk_abortable = 1;
 		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
 		    &iov, 1);
-		rq->rq_bulk_abortable = 1;
 	}
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	rc = SL_RSX_WAITREPF(csvc, rq, mp,
+	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	if (rc == 0) {
+	if (!rc)
 		rc = mp->rc;
+	if (!rc && size) {
+		// XXX sanity check mp->size
+		iov.iov_len = mp->size;
+		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+	}
+	if (!rc) {
 		FCMH_LOCK(f);
 		fcmh_2_fci(f)->fci_xattrsize = mp->size;
 	}
 
  out:
-	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
-
 	if (f)
 		fcmh_op_done(f);
+
+	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -3027,11 +3047,13 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
 
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	pscfs_getcreds(pfr, &pcr);
 
-	// checkcreds
-
-	rc = msl_load_fcmh(pfr, inum, &f);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3054,19 +3076,20 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-
-	if (rc == 0) {
+	if (!rc)
 		rc = mp->rc;
+	if (!rc) {
 		FCMH_LOCK(f);
 		// XXX we should just load the new attr in
 		fcmh_2_fci(f)->fci_xattrsize = 1;
 	}
 
  out:
-	pscfs_reply_setxattr(pfr, rc);
-
 	if (f)
 		fcmh_op_done(f);
+
+	pscfs_reply_setxattr(pfr, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -3089,7 +3112,9 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	if (strlen(name) > sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
-	// checkcreds
+//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
+//	if (rc)
+//		PFL_GOTOERR(out, rc);
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		struct timeval now;
@@ -3128,13 +3153,18 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 		rq->rq_bulk_abortable = 1;
 	}
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	rc = SL_RSX_WAITREPF(csvc, rq, mp,
+	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
 		goto retry;
-	if (rc == 0) {
+	if (!rc)
 		rc = mp->rc;
-		*retsz = mp->valuelen;
+	if (!rc && size) {
+		iov.iov_len = mp->valuelen;
+		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 	}
+	if (!rc)
+		*retsz = mp->valuelen;
 	rc = -rc;
 
  out:
@@ -3148,8 +3178,8 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 }
 
 void
-mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
-    size_t size, pscfs_inum_t inum)
+mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
+    pscfs_inum_t inum)
 {
 	struct pscfs_clientctx *pfcc;
 	struct fidc_membh *f = NULL;
@@ -3161,6 +3191,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_GETXATTR);
+
+	if (size > LNET_MTU)
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
@@ -3175,9 +3208,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	rc = slc_getxattr(pfcc, &pcr, name, buf, size, f, &retsz);
 
  out:
-	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	if (f)
 		fcmh_op_done(f);
+	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	PSCFREE(buf);
 }
 
@@ -3200,11 +3233,13 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (strlen(name) > sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	pscfs_getcreds(pfr, &pcr);
 
-	// XXX checkcredS
-
-	rc = msl_load_fcmh(pfr, inum, &f);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3225,10 +3260,11 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		rc = mp->rc;
 
  out:
-	pscfs_reply_removexattr(pfr, rc);
-
 	if (f)
 		fcmh_op_done(f);
+
+	pscfs_reply_removexattr(pfr, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
