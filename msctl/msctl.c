@@ -568,9 +568,13 @@ cmd_replrq(int ac, char **av)
 
 int
 cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
-    __unusedx int info, __unusedx int level, __unusedx void *arg)
+    int info, __unusedx int level, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
+
+	if (info != PFWT_F &&
+	    info != PFWT_D)
+		return (0);
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
 	if (fn[0])
