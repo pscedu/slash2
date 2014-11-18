@@ -1023,7 +1023,6 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	struct iovec iov;
 	char buf[SL_PATH_MAX];
 	int rc = 0, vfsid;
-	size_t len;
 
 	OPSTAT_INCR(SLM_OPST_READLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1036,15 +1035,13 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	memset(buf, 0, sizeof(buf));
-	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &len,
+	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf,
 	    &rootcreds);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->len = len;
-
 	iov.iov_base = buf;
-	iov.iov_len = len;
+	iov.iov_len = mp->len = strlen(buf) + 1;
 	rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 
