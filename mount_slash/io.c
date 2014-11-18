@@ -1033,6 +1033,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
 		pscrpc_nbreqset_destroy(nbs);
+		OPSTAT_INCR(SLC_OPST_BIORQ_RESTART);
 		goto retry;
 	}
 
@@ -2059,10 +2060,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = msl_pages_fetch(r);
 		if (rc)
 			break;
-	}
-	if (r->biorq_flags & BIORQ_DIO && rc == -EAGAIN) {
-		OPSTAT_INCR(SLC_OPST_BIORQ_RESTART);
-		goto restart;
 	}
 
  out:
