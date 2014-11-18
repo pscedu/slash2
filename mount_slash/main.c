@@ -3441,6 +3441,16 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 
+				/*
+				 * XXX: If an UNLINK occurs on an open
+				 * file descriptor then it is receives
+				 * WRITEs, we will try to SETATTR the
+				 * FID which will result in ENOENT.
+				 * The proper fix is to honor open file
+				 * descriptors and only UNLINK the
+				 * backend file after they are all
+				 * closed.
+				 */
 				if (rc)
 					DEBUG_FCMH(PLL_ERROR, f,
 					    "setattr: rc=%d", rc);
