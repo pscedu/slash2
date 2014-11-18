@@ -874,7 +874,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
-	int op, locked;
+	int op;
 
 	/* rq is NULL it we are called from sl_resm_hldrop() */
 	if (rq) {
