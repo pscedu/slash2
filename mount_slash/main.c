@@ -2041,11 +2041,11 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
+	int rc = 0, flush_size = 0, flush_mtime = 0;
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
 	struct srt_stat attr;
-	int rc = 0, flush_size = 0, flush_mtime = 0;
 	int32_t to_set = 0;
 
 	msfsthr_ensure(pfr);
@@ -3430,15 +3430,21 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			FCMH_LOCK(f);
 			f->fcmh_flags &= ~FCMH_BUSY;
-			if (rc) {
-				/* XXX infinite loop */
+			if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
+
 				if (flush_mtime)
 					f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 				if (flush_size)
 					f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 				fcmh_wake_locked(f);
 				FCMH_ULOCK(f);
+
 			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+
+				if (rc)
+					DEBUG_FCMH(PLL_ERROR, f,
+					    "setattr: rc=%d", rc);
+
 				psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 				lc_remove(&slc_attrtimeoutq, fci);
