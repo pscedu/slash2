@@ -533,10 +533,12 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
-	pscrpc_abort_inflight(imp);
-	if (highlevel)
-		pscrpc_drop_conns(&imp->imp_connection->c_peer);
-	pscrpc_import_put(imp);
+	if (imp) {
+		pscrpc_abort_inflight(imp);
+		if (highlevel)
+			pscrpc_drop_conns(&imp->imp_connection->c_peer);
+		pscrpc_import_put(imp);
+	}
 	csvc->csvc_import = slrpc_new_import(csvc->csvc_rqptl,
 	    csvc->csvc_rpptl);
 	CSVC_WAKE(csvc);
