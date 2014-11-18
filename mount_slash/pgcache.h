@@ -177,7 +177,6 @@ struct bmpc_ioreq {
 #define	BIORQ_FORCE_EXPIRE	(1 <<  4)
 #define	BIORQ_DESTROY		(1 <<  5)
 #define	BIORQ_FLUSHRDY		(1 <<  6)
-#define BIORQ_AIOWAIT		(1 <<  7)
 #define BIORQ_SPLAY		(1 <<  8)
 #define BIORQ_WAIT		(1 <<  9)
 
@@ -192,7 +191,7 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s%s%s "					\
+	    "%s%s%s%s%s%s%s%s%s "					\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -205,7 +204,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
-	    (b)->biorq_flags & BIORQ_AIOWAIT		? "A" : "",	\
 	    (b)->biorq_flags & BIORQ_SPLAY		? "S" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\

@@ -556,8 +556,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 				naio++;
 				e->bmpce_flags &= ~BMPCE_FAULTING;
 				e->bmpce_flags |= BMPCE_AIOWAIT;
+				DEBUG_BMPCE(PLL_DIAG, e, "naio=%d", naio);
 			}
-			DEBUG_BMPCE(PLL_DIAG, e, "naio=%d", naio);
 			BMPCE_ULOCK(e);
 		}
 		/* Should have found at least one aio'd page. */
@@ -576,11 +576,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
-		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_AIOWAIT;
-		DEBUG_BIORQ(PLL_DIAG, r, "aiowait mark, q=%p",
-		    car->car_fsrqinfo);
-		BIORQ_ULOCK(r);
 	}
 
 	psclog_diag("get car=%p car_id=%"PRIx64" q=%p, r=%p",
@@ -777,6 +772,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	} else {
 		e->bmpce_flags |= BMPCE_DATARDY;
 	}
+
 	/* AIOWAIT is removed no matter what. */
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 	e->bmpce_flags &= ~BMPCE_FAULTING;
@@ -890,10 +886,6 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 		    "dio complete (op=%d) off=%u sz=%u rc=%d",
 		    op, mq->offset, mq->size, rc);
 	}
-
-	BIORQ_LOCK(r);
-	r->biorq_flags &= ~BIORQ_AIOWAIT;
-	BIORQ_ULOCK(r);
 
 	msl_biorq_destroy(r);
 
