@@ -205,10 +205,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		else
 			OPSTAT_INCR(SLC_OPST_DIO_CB_WRITE);
 
-		/* FixMe: Should wake up waiters regardless of results */
-		if (mq->rc)
-			PFL_GOTOERR(out, mq->rc);
-
 	} else {
 		psc_fatalx("unknown callback");
 	}
@@ -219,8 +215,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 */
 	car->car_cbf(rq, mq->rc, &car->car_argv);
 
-	if (mq->rc)
-	psclog_warn("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
+	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
 
 	psc_pool_return(slc_async_req_pool, car);
