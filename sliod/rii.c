@@ -96,7 +96,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	}
 
 	SLVR_LOCK(s);
-	s->slvr_flags &= ~SLVR_FAULTING;
+	s->slvr_flags &= ~(SLVR_FAULTING | SLVR_AIOWAIT);
 	if (rc) {
 		s->slvr_err = rc;
 		s->slvr_flags |= SLVR_DATAERR;
