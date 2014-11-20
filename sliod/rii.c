@@ -66,8 +66,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	s = w->srw_slvr[slvridx];
 
-	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread rc=%d", rc);
-
 	if (rc == -SLERR_AIOWAIT) {
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_AIOWAIT;
@@ -80,7 +78,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~SLVR_REPLWIRE;
 
-		DEBUG_SLVR(PLL_INFO, s, "write decref");
+		DEBUG_SLVR(PLL_DIAG, s, "aio wait");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 		return (rc);
@@ -104,6 +102,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		s->slvr_flags |= SLVR_DATAERR;
 	} else
 		s->slvr_flags |= SLVR_DATARDY;
+	DEBUG_SLVR(PLL_DIAG, s, "aio return");
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
