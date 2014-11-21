@@ -42,6 +42,5 @@ export CONFIG_FILE=$base/slcfg
 preproc
 $filter $prog -D $base/var
 postproc $?
-
-sleep 10
+vsleep $start
 exec $0 "${bkav[@]}"
