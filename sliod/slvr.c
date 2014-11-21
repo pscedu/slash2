@@ -678,13 +678,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
-	if (s->slvr_flags & SLVR_AIOWAIT) {
-		SLVR_ULOCK(s);
-		psc_assert(globalConfig.gconf_async_io);
-
-		return (-SLERR_AIOWAIT);
-	}
-
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = s->slvr_err;
 		goto out;
