@@ -4,20 +4,20 @@
 prog=mount_slash
 ctl=msctl
 
-. ${0%/*}/pfl_daemon.sh
+. $(dirname $0)/pfl_daemon.sh
 
 usage()
 {
-	echo "usage: $0 [-P profile] [-gsv]" >&2
+	echo "usage: $0 [-F filter] [-P profile] [-gv]" >&2
 	exit 1
 }
 
 bkav=("$@")
-while getopts "gP:sv" c; do
+while getopts "F:gP:v" c; do
 	case $c in
-	g) mygdb='mygdb'	;;
+	F) filter=$OPTARG	;;
+	g) filter=mygdb		;;
 	P) prof=$OPTARG		;;
-	s) mystrace='strace'	;;
 	v) verbose=1		;;
 	*) usage		;;
 	esac
@@ -45,8 +45,7 @@ export CONFIG_FILE=$base/slcfg
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
 preproc
-$mystrace $mygdb $prog -D $base/var -U $xargs $mp
+$filter $prog -D $base/var -U $xargs $mp
 postproc $?
-
-sleep 10
+vsleep $start
 exec $0 "${bkav[@]}"
