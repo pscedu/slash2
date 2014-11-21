@@ -301,7 +301,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 * client later.
 				 */
 				slvr[i]->slvr_aioreply = aiocbr;
-				psc_assert(slvr[i]->slvr_flags & SLVR_AIOWAIT);
+				psc_assert(slvr[i]->slvr_flags & SLVR_FAULTING);
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				SLVR_ULOCK(slvr[i]);
 				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");

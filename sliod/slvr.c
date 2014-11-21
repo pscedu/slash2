@@ -281,7 +281,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_AIOWAIT) {
+		if (s->slvr_flags & SLVR_FAULTING) {
 			SLVR_ULOCK(s);
 			return;
 		}
@@ -314,11 +314,10 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	SLVR_LOCK(s);
 	psc_assert(iocb == s->slvr_iocb);
 	psc_assert(s->slvr_flags & SLVR_FAULTING);
-	psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 	psc_assert(!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
 
 	/* Prevent additions from new requests. */
-	s->slvr_flags &= ~(SLVR_AIOWAIT | SLVR_FAULTING);
+	s->slvr_flags &= ~SLVR_FAULTING;
 
 	slvr_iocb_release(s->slvr_iocb);
 	s->slvr_iocb = NULL;
@@ -445,7 +444,7 @@ sli_aio_register(struct slvr *s)
 	iocb = sli_aio_iocb_new(s);
 
 	SLVR_LOCK(s);
-	s->slvr_flags |= SLVR_AIOWAIT;
+	s->slvr_flags |= SLVR_FAULTING;
 	s->slvr_iocb = iocb;
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
