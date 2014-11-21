@@ -73,7 +73,7 @@ struct slvr {
 #define SLVR_LRU		(1 <<  4)	/* cached but not dirty */
 #define SLVR_CRCDIRTY		(1 <<  5)	/* CRC does not match cached buffer */
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
-#define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO (for both local and remote) */
+#define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO in repldst */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
