@@ -1751,6 +1751,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 void
 mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
+	char buf[SL_PATH_MAX], *retbuf = buf;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_readlink_req *mq;
@@ -1758,7 +1759,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct fidc_membh *c = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
-	char buf[SL_PATH_MAX];
 	int rc;
 
 	msfsthr_ensure(pfr);
@@ -1784,6 +1784,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf) - 1;
+	rq->rq_bulk_abortable = 1;
 	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
@@ -1793,18 +1794,24 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (!rc)
 		rc = mp->rc;
 	if (!rc) {
-		// XXX sanity check len
-		iov.iov_len = mp->len;
-		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (mp->len > LNET_MTU) {
+			rc = EINVAL;
+		} else if (mp->len < sizeof(mp->buf)) {
+			retbuf = mp->buf;
+		} else {
+			iov.iov_len = mp->len;
+			rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
+			    &iov, 1);
+		}
 	}
 	if (!rc)
-		buf[mp->len] = '\0';
+		retbuf[mp->len] = '\0';
 
  out:
 	if (c)
 		fcmh_op_done(c);
 
-	pscfs_reply_readlink(pfr, buf, rc);
+	pscfs_reply_readlink(pfr, retbuf, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -3002,9 +3009,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	OPSTAT_INCR(SLC_OPST_SETXATTR);
 
-	if (size > SL_NAME_MAX)
-		PFL_GOTOERR(out, rc = EINVAL);
-	if (strlen(name) > SL_NAME_MAX)
+	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	rc = msl_load_fcmh(pfr, inum, &f);
@@ -3069,7 +3074,7 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
 
-	if (strlen(name) > sizeof(mq->name))
+	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
 //	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
@@ -3190,7 +3195,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	OPSTAT_INCR(SLC_OPST_REMOVEXATTR);
 
-	if (strlen(name) > sizeof(mq->name))
+	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	rc = msl_load_fcmh(pfr, inum, &f);

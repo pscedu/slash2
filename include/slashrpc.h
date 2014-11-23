@@ -921,7 +921,8 @@ struct srm_readlink_req {
 
 struct srm_readlink_rep {
 	 int32_t		rc;
-	 int32_t		len;
+	uint32_t		len;
+	unsigned char		buf[832];
 /* buf is in bulk */
 } __packed;
 
@@ -1010,7 +1011,8 @@ struct srm_listxattr_req {
 struct srm_listxattr_rep {
 	uint32_t		size;
 	 int32_t		rc;
-/* XXX pack if can fit; otherwise value is in BULK */
+	unsigned char		buf[832];
+/* in buf if it can fit; otherwise in BULK */
 } __packed;
 
 struct srm_getxattr_req {
@@ -1023,7 +1025,8 @@ struct srm_getxattr_req {
 struct srm_getxattr_rep {
 	 int32_t		rc;
 	uint32_t		valuelen;
-/* XXX pack if can fit; otherwise value is in BULK */
+	unsigned char		buf[832];
+/* in buf if it can fit; otherwise in BULK */
 } __packed;
 
 struct srm_setxattr_req {

@@ -1042,10 +1042,15 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	mp->len = len;
 
-	iov.iov_base = buf;
-	iov.iov_len = len;
-	rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
-	    &iov, 1);
+	if (len < sizeof(mp->buf)) {
+		memcpy(mp->buf, buf, len);
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	} else {
+		iov.iov_base = buf;
+		iov.iov_len = len;
+		rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, &iov, 1);
+	}
 
  out:
 	if (f)
