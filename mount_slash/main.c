@@ -2041,68 +2041,28 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
-	int rc = 0, flush_size = 0, flush_mtime = 0;
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
-	struct srt_stat attr;
-	int32_t to_set = 0;
+	int rc = 0;
 
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_CLOSE);
 
 	c = mfh->mfh_fcmh;
+	fci = fcmh_2_fci(c);
 
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 
 	rc = msl_flush_int_locked(mfh, 1);
 
-	/*
-	 * Perhaps this checking should only be done on the mfh, with
-	 * which we have modified the attributes.
-	 */
 	FCMH_LOCK(c);
-	fcmh_wait_locked(c, (c->fcmh_flags & FCMH_BUSY));
-	c->fcmh_flags |= FCMH_BUSY;
-
-	attr.sst_fg = c->fcmh_fg;
-	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
-		flush_size = 1;
-		c->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-		to_set |= PSCFS_SETATTRF_DATASIZE;
-		attr.sst_size = c->fcmh_sstb.sst_size;
-	}
-	if (c->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
-		flush_mtime = 1;
-		c->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-		to_set |= PSCFS_SETATTRF_MTIME;
-		attr.sst_mtim = c->fcmh_sstb.sst_mtim;
-	}
+	PFL_GETTIMESPEC(&fci->fci_etime);
+	fci->fci_etime.tv_sec--;
 	FCMH_ULOCK(c);
-
-	if (to_set) {
-		rc = msl_flush_attr(c, to_set, &attr);
-		FCMH_LOCK(c);
-		fcmh_wake_locked(c);
-		if (!rc) {
-			if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-				fci = fcmh_2_fci(c);
-				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
-				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&slc_attrtimeoutq, fci);
-				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-			} else
-				FCMH_ULOCK(c);
-		} else {
-			if (flush_mtime)
-				c->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
-			if (flush_size)
-				c->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-			FCMH_ULOCK(c);
-		}
-	}
+	psc_waitq_wakeall(&msl_flush_attrq);
 
 	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd ||
 	    mfh->mfh_nbytes_wr))
@@ -2125,11 +2085,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    mfh->mfh_uprog);
 
 	pscfs_reply_close(pfr, rc);
-
-	FCMH_LOCK(c);
-	c->fcmh_flags &= ~FCMH_BUSY;
-	fcmh_wake_locked(c);
-	FCMH_ULOCK(c);
 
 	mfh_decref(mfh);
 }
