@@ -383,11 +383,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_create_req *mq;
 	struct msl_fhent *mfh = NULL;
 	struct fcmh_cli_info *fci;
+	struct bmap_cli_info *bci;
 	struct pscfs_creds pcr;
 	struct bmapc_memb *b;
 	struct stat stb;
 	int rc = 0;
-	struct bmap_cli_info *bci;
 
 	msfsthr_ensure(pfr);
 
@@ -1820,11 +1820,10 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 __static int
 msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 {
+	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	int i, rc = 0;
-	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_cli_info *bci;
 
 	f = mfh->mfh_fcmh;
 
@@ -1842,10 +1841,8 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 	DYNARRAY_FOREACH(b, i, &a) {
 		bmpc_biorqs_flush(b, wait);
 		BMAP_LOCK(b);
-		if (!rc) {
-			bci = bmap_2_bci(b);
-			rc = bci->bci_flush_rc;
-		}
+		if (!rc)
+			rc = bmap_2_bci(b)->bci_flush_rc;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 	psc_dynarray_free(&a);
@@ -1853,6 +1850,9 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 	return (rc);
 }
 
+/*
+ * Note: this is not invoked from an application issued fsync(2).
+ */
 void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
@@ -1865,6 +1865,16 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
+	/*
+	 * XXX FUSE will occassionally invoke FLUSH via this routine to
+	 * push data, and in those circumstances no waiting is
+	 * necessary.
+	 *
+	 * However, an application issued close(2) will also invoke this
+	 * path and a synchronous wait should occur in those
+	 * circumstances in order to return a proper return code to the
+	 * close(2).
+	 */
 	spinlock(&mfh->mfh_lock);
 	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
