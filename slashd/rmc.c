@@ -152,7 +152,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
-	int rc, vfsid;
+	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_GETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1035,7 +1035,6 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	memset(buf, 0, sizeof(buf));
 	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &len,
 	    &rootcreds);
 	if (mp->rc)
