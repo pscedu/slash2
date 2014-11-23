@@ -2043,8 +2043,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
-	struct fidc_membh *c;
-	int rc = 0;
+	struct fidc_membh *f;
 
 	msfsthr_ensure(pfr);
 
@@ -2052,19 +2051,19 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	pscfs_reply_close(pfr, 0);
 
-	c = mfh->mfh_fcmh;
-	fci = fcmh_2_fci(c);
+	f = mfh->mfh_fcmh;
+	fci = fcmh_2_fci(f);
 
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 
-	FCMH_LOCK(c);
+	FCMH_LOCK(f);
 	PFL_GETTIMESPEC(&fci->fci_etime);
 	fci->fci_etime.tv_sec--;
-	FCMH_ULOCK(c);
+	FCMH_ULOCK(f);
 	psc_waitq_wakeall(&msl_flush_attrq);
 
-	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd ||
+	if (!fcmh_isdir(f) && (mfh->mfh_nbytes_rd ||
 	    mfh->mfh_nbytes_wr))
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
@@ -2074,11 +2073,11 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
-		    fcmh_2_fid(c),
-		    c->fcmh_sstb.sst_uid, c->fcmh_sstb.sst_gid,
-		    c->fcmh_sstb.sst_size,
+		    fcmh_2_fid(f),
+		    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
+		    f->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
-		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
+		    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
 		    mfh->mfh_sid,
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
