@@ -2056,8 +2056,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 
-	rc = msl_flush_int_locked(mfh, 1);
-
 	FCMH_LOCK(c);
 	PFL_GETTIMESPEC(&fci->fci_etime);
 	fci->fci_etime.tv_sec--;
