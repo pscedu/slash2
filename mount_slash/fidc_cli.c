@@ -122,9 +122,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 
 /*
  * XXX check client attributes when generation number changes
- *
  */
-
 void
 slc_fcmh_refresh_age(struct fidc_membh *f)
 {
