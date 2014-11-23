@@ -2063,8 +2063,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	FCMH_ULOCK(f);
 	psc_waitq_wakeall(&msl_flush_attrq);
 
-	if (!fcmh_isdir(f) && (mfh->mfh_nbytes_rd ||
-	    mfh->mfh_nbytes_wr))
+	if (!fcmh_isdir(f) &&
+	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr))
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
