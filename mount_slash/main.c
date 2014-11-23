@@ -2050,6 +2050,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	OPSTAT_INCR(SLC_OPST_CLOSE);
 
+	pscfs_reply_close(pfr, 0);
+
 	c = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(c);
 
@@ -2081,8 +2083,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 		    mfh->mfh_uprog);
-
-	pscfs_reply_close(pfr, rc);
 
 	mfh_decref(mfh);
 }
