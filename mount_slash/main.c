@@ -2052,11 +2052,8 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 	return (-1);
 }
 
-/**
- * mslfsop_close - This is not the same as close(2).
- */
 void
-mslfsop_close(struct pscfs_req *pfr, void *data)
+mslfsop_release(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
@@ -2066,7 +2063,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	OPSTAT_INCR(SLC_OPST_CLOSE);
 
-	pscfs_reply_close(pfr, 0);
+	pscfs_reply_release(pfr, 0);
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -3627,8 +3624,8 @@ msl_init(void)
 
 struct pscfs pscfs = {
 	mslfsop_access,
-	mslfsop_close,
-	mslfsop_close,		/* closedir */
+	mslfsop_release,
+	mslfsop_release,	/* releasedir */
 	mslfsop_create,
 	mslfsop_flush,
 	mslfsop_fsync,
