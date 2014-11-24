@@ -2882,19 +2882,22 @@ void
 mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 {
 	struct msl_fhent *mfh;
-	int rc;
+	struct fidc_membh *f;
+	int rc = 0;
 
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_FSYNC);
 
 	mfh = data;
+	f = mfh->mfh_fcmh;
+	if (!fcmh_isdir(f)) {
+		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
 
-	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
-
-	spinlock(&mfh->mfh_lock);
-	rc = msl_flush_int_locked(mfh, 1);
-	freelock(&mfh->mfh_lock);
+		spinlock(&mfh->mfh_lock);
+		rc = msl_flush_int_locked(mfh, 1);
+		freelock(&mfh->mfh_lock);
+	}
 
 	pscfs_reply_fsync(pfr, rc);
 }
