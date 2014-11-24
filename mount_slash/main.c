@@ -2073,12 +2073,12 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	FCMH_ULOCK(f);
 	psc_waitq_wakeall(&msl_flush_attrq);
 
-	if (!fcmh_isdir(f)) {
-		OPSTAT_INCR(SLC_OPST_RELEASE);
-		pscfs_reply_release(pfr, 0);
-	} else {
+	if (fcmh_isdir(f)) {
 		OPSTAT_INCR(SLC_OPST_RELEASEDIR);
 		pscfs_reply_releasedir(pfr, 0);
+	} else {
+		OPSTAT_INCR(SLC_OPST_RELEASE);
+		pscfs_reply_release(pfr, 0);
 	}
 
 	if (!fcmh_isdir(f) &&
@@ -3633,7 +3633,7 @@ struct pscfs pscfs = {
 	mslfsop_create,
 	mslfsop_flush,
 	mslfsop_fsync,
-	mslfsop_fsync,
+	mslfsop_fsync,		/* fsyncdir */
 	mslfsop_getattr,
 	NULL,			/* ioctl */
 	mslfsop_link,
