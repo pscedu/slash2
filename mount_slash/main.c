@@ -2841,7 +2841,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 }
 
 void
-mslfsop_umount(void)
+mslfsop_destroy(void)
 {
 	pscthr_killall();
 	/* XXX wait */
@@ -3651,7 +3651,7 @@ struct pscfs pscfs = {
 	mslfsop_statfs,
 	mslfsop_symlink,
 	mslfsop_unlink,
-	mslfsop_umount,
+	mslfsop_destroy,
 	mslfsop_write,
 	mslfsop_listxattr,
 	mslfsop_getxattr,
