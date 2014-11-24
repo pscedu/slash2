@@ -1857,6 +1857,34 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 	return (rc);
 }
 
+int
+msl_flush_attr(struct fidc_membh *f, int32_t to_set,
+    struct srt_stat *attr)
+{
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_setattr_req *mq;
+	struct srm_setattr_rep *mp;
+	int rc;
+
+	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp,
+	    rc);
+	if (rc)
+		return (rc);
+
+	mq->attr = *attr;
+	mq->to_set = to_set;
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	DEBUG_SSTB(PLL_DIAG, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
+	    mq->to_set, rc);
+	pscrpc_req_finished(rq);
+	sl_csvc_decref(csvc);
+	return (rc);
+}
+
 /*
  * Note: this is not invoked from an application issued fsync(2).
  */
@@ -1864,7 +1892,11 @@ void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
-	int rc;
+	struct fidc_membh *c;
+	int32_t to_set = 0;
+	struct srt_stat attr;
+	struct fcmh_cli_info *fci;
+	int rc, tmprc = 0, flush_size = 0, flush_mtime = 0;
 
 	msfsthr_ensure(pfr);
 
@@ -1885,6 +1917,61 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	spinlock(&mfh->mfh_lock);
 	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
+
+	c = mfh->mfh_fcmh;
+	fci = fcmh_2_fci(c);
+	/*
+	 * Perhaps this checking should only be done on the mfh, with
+	 * which we have modified the attributes.
+	 */
+	FCMH_LOCK(c);
+	fcmh_wait_locked(c, (c->fcmh_flags & FCMH_BUSY));
+	c->fcmh_flags |= FCMH_BUSY;
+
+	attr.sst_fg = c->fcmh_fg;
+	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
+		flush_size = 1;
+		c->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
+		to_set |= PSCFS_SETATTRF_DATASIZE;
+		attr.sst_size = c->fcmh_sstb.sst_size;
+	}
+	if (c->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
+		flush_mtime = 1;
+		c->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
+		to_set |= PSCFS_SETATTRF_MTIME;
+		attr.sst_mtim = c->fcmh_sstb.sst_mtim;
+	}
+	FCMH_ULOCK(c);
+
+	if (to_set) {
+		tmprc = msl_flush_attr(c, to_set, &attr);
+		FCMH_LOCK(c);
+		fcmh_wake_locked(c);
+		if (!tmprc) {
+			if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+				fci = fcmh_2_fci(c);
+				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+				lc_remove(&slc_attrtimeoutq, fci);
+				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
+			} else
+				FCMH_ULOCK(c);
+		} else {
+			if (flush_mtime)
+				c->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
+			if (flush_size)
+				c->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
+			FCMH_ULOCK(c);
+		}
+	}
+
+	FCMH_LOCK(c);
+	c->fcmh_flags &= ~FCMH_BUSY;
+	fcmh_wake_locked(c);
+	FCMH_ULOCK(c);
+
+	if (!rc)
+	    rc = tmprc;
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
@@ -1912,34 +1999,6 @@ mfh_decref(struct msl_fhent *mfh)
 		psc_pool_return(slc_mfh_pool, mfh);
 	} else
 		MFH_ULOCK(mfh);
-}
-
-int
-msl_flush_attr(struct fidc_membh *f, int32_t to_set,
-    struct srt_stat *attr)
-{
-	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_request *rq = NULL;
-	struct srm_setattr_req *mq;
-	struct srm_setattr_rep *mp;
-	int rc;
-
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp,
-	    rc);
-	if (rc)
-		return (rc);
-
-	mq->attr = *attr;
-	mq->to_set = to_set;
-
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-	DEBUG_SSTB(PLL_DIAG, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
-	    mq->to_set, rc);
-	pscrpc_req_finished(rq);
-	sl_csvc_decref(csvc);
-	return (rc);
 }
 
 void
