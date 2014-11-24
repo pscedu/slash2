@@ -1751,7 +1751,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 void
 mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
-	char buf[SL_PATH_MAX], *retbuf = buf;
+	unsigned char buf[SL_PATH_MAX], *retbuf = buf;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_readlink_req *mq;
