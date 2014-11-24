@@ -44,28 +44,35 @@ site @PSC {
 	site_id		= 1;
 
 	resource sense51s0 {
-		desc	= "";
 		type	= standalone_fs;
 		id	= 10;
 		nids	= sense51-66.psc.edu;
 		fsroot	= /sense51_pool0/slio;
-#		selftest = "/local/sbin/st /local/samfs_slio";
+#		selftest = "/local/sbin/st /sense51_pool0";
 	}
 
 	resource sense51s1 {
-		desc	= "";
 		type	= standalone_fs;
 		id	= 11;
 		nids	= sense51-66-io1.psc.edu;
 		fsroot	= /sense51_pool1/slio;
-#		selftest = "/local/sbin/st /local/samfs_slio";
+#		selftest = "/local/sbin/st /sense51_pool1";
+	}
+
+	resource sense51s2 {
+		type	= standalone_fs;
+		id	= 12;
+		nids	= sense51-66-io2.psc.edu;
+		fsroot	= /sense51_pool2/slio;
+#		selftest = "/local/sbin/st /sense51_pool2";
 	}
 
 	resource sense51 {
-		desc	= "";
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0@PSC, sense51s1@PSC;
+		ios	= sense51s0@PSC,
+			  sense51s1@PSC,
+			  sense51s2@PSC;
 	}
 }
 
