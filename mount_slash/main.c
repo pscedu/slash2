@@ -2887,17 +2887,17 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR(SLC_OPST_FSYNC);
-
 	mfh = data;
 	f = mfh->mfh_fcmh;
 	if (!fcmh_isdir(f)) {
+		OPSTAT_INCR(SLC_OPST_FSYNC);
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
 
 		spinlock(&mfh->mfh_lock);
 		rc = msl_flush_int_locked(mfh, 1);
 		freelock(&mfh->mfh_lock);
-	}
+	} else
+		OPSTAT_INCR(SLC_OPST_FSYNCDIR);
 
 	pscfs_reply_fsync(pfr, rc);
 }
