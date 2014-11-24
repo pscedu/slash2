@@ -93,7 +93,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
-	struct iovec iov;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -196,8 +195,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 	} else if (car->car_cbf == msl_dio_cb) {
 	
-		struct bmpc_ioreq_dio *ioreq_dio;
-
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 		if (mq->op == SRMIOP_RD)
