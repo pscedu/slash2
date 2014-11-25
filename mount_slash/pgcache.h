@@ -82,8 +82,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_READA		(1 <<  5)	/* brought in by readahead logic */
 #define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
 #define BMPCE_DISCARD		(1 <<  7)	/* don't cache after I/O */
-#define BMPCE_DIRTY		(1 <<  8)	/* dirty cache */
-#define BMPCE_PINNED		(1 <<  9)	/* do not modify */
+#define BMPCE_PINNED		(1 <<  8)	/* do not modify */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
