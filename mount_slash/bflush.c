@@ -495,7 +495,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t reqsz, tlen;
 	off_t off, loff;
-	int i;
+	int j;
 
 	psc_assert(!bwc->bwc_nbmpces);
 
@@ -516,16 +516,16 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 		loff = off = r->biorq_off;
 		reqsz = r->biorq_len;
 
-		DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
+		DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
 			DEBUG_BMPCE(PLL_DIAG, bmpce,
 			    "adding if DNE nbmpces=%d (i=%d) "
-			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, i,
+			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, j,
 			    off);
 
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
-			    !i ? (r->biorq_off & ~BMPC_BUFMASK) : off);
+			    !j ? (r->biorq_off & ~BMPC_BUFMASK) : off);
 
-			tlen = MIN(reqsz, !i ? BMPC_BUFSZ -
+			tlen = MIN(reqsz, !j ? BMPC_BUFSZ -
 			    (off - bmpce->bmpce_off) : BMPC_BUFSZ);
 
 			off += tlen;
