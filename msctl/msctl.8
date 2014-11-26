@@ -22,12 +22,12 @@
 .\" %PFL_MODULES ctl fuse rpc %
 .Dd October 29, 2014
 .Dt MSCTL 8
-.ds volume PSC \- SLASH Administrator's Manual
+.ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm msctl
 .Nd
-.Tn SLASH
+.Tn SLASH2
 file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
@@ -433,7 +433,7 @@ lookups for network addresses.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	log_xr => "in\n.Xr mount_slash 8\n",
 .\"	params => {
-.\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH\nfile system is mounted.",
+.\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH2\nfile system is mounted.",
 .\"		pref_ios	=> "Preferred I/O system.",
 .\"		readahead_pgs	=> "Number of pages to read ahead when read I/O is performed.",
 .\"		offline_nretries=> "Number of times to retry remote peer connection\n" .
@@ -513,7 +513,7 @@ in
 for recognized log level values.
 .It Cm mountpoint
 File hierarchy node where
-.Tn SLASH
+.Tn SLASH2
 file system is mounted.
 .It Cm offline_nretries
 Number of times to retry remote peer connection
@@ -601,7 +601,7 @@ The default is
 .\"		biorqs		=> qq{I/O requests.},
 .\"		bmaps		=> qq{In-memory bmaps},
 .\"		bmpces		=> qq{Page cache entries.},
-.\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network.},
+.\"		connections	=> qq{Status of\n.Tn SLASH2\npeers on network.},
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
 .\"	},
 .\"	hashtables => {
@@ -643,7 +643,7 @@ In-memory bmaps
 Page cache entries.
 .It Cm connections
 Status of
-.Tn SLASH
+.Tn SLASH2
 peers on network.
 .It Cm fidcache
 .Tn FID
