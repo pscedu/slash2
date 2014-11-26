@@ -67,12 +67,44 @@ site @PSC {
 #		selftest = "/local/sbin/st /sense51_pool2";
 	}
 
+	resource sense51s3 {
+		type	= standalone_fs;
+		id	= 13;
+		nids	= sense51-66-io3.psc.edu;
+		fsroot	= /sense51_pool3/slio;
+#		selftest = "/local/sbin/st /sense51_pool3";
+	}
+
+	resource sense51s4 {
+		type	= standalone_fs;
+		id	= 14;
+		nids	= sense51-66-io4.psc.edu;
+		fsroot	= /sense51_pool4/slio;
+#		selftest = "/local/sbin/st /sense51_pool4";
+	}
+
+	resource sense51s5 {
+		type	= standalone_fs;
+		id	= 15;
+		nids	= sense51-66-io5.psc.edu;
+		fsroot	= /sense51_pool5/slio;
+#		selftest = "/local/sbin/st /sense51_pool5";
+	}
+
+	resource sense51s6 {
+		type	= standalone_fs;
+		id	= 16;
+		nids	= sense51-66-io6.psc.edu;
+		fsroot	= /sense51_pool6/slio;
+#		selftest = "/local/sbin/st /sense51_pool6";
+	}
+
 	resource sense51 {
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0@PSC,
-			  sense51s1@PSC,
-			  sense51s2@PSC;
+		ios	= sense51s0@PSC, sense51s1@PSC, sense51s2@PSC,
+			  sense51s3@PSC, sense51s4@PSC, sense51s5@PSC,
+			  sense51s6@PSC;
 	}
 }
 
