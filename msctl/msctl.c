@@ -138,7 +138,7 @@ fn2fid(const char *fn)
 	struct stat stb;
 	slfid_t fid;
 
-	if (stat(fn, &stb) == -1)
+	if (lstat(fn, &stb) == -1)
 		err(1, "stat %s", fn);
 	if (statvfs(fn, &sfb) == -1)
 		err(1, "statvfs %s", fn);
