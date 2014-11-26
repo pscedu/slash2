@@ -264,8 +264,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	bwc_unpin_pages(bwc);
 
-	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
-		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
@@ -461,8 +460,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
-	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
-		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		psc_assert(b == r->biorq_bmap);
 		r->biorq_last_sliod = bmap_2_ios(b);
 	}
@@ -475,8 +473,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		return;
 
  out:
-	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
-		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		bmap_flush_resched(r, rc);
 	}
 
@@ -503,8 +500,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 
 	psc_assert(!bwc->bwc_nbmpces);
 
-	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
-		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		if (!e)
 			e = r;
 		else {
@@ -657,8 +653,7 @@ bwc_desched(struct bmpc_write_coalescer *bwc)
 	int i;
 	struct bmpc_ioreq *r;
 
-	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
-		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		BIORQ_LOCK(r);
 		r->biorq_flags &= ~BIORQ_SCHED;
 		BIORQ_ULOCK(r);
