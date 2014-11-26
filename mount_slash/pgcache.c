@@ -229,7 +229,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r = psc_pool_get(slc_biorq_pool);
 	memset(r, 0, sizeof(*r));
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
-	INIT_PSC_LISTENTRY(&r->biorq_bwc_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
 	INIT_SPINLOCK(&r->biorq_lock);
 

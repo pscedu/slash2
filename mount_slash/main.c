@@ -3350,7 +3350,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 			memset(r, 0, sizeof(*r));
 
 			INIT_PSC_LISTENTRY(&r->biorq_lentry);
-			INIT_PSC_LISTENTRY(&r->biorq_bwc_lentry);
 			INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
 			INIT_SPINLOCK(&r->biorq_lock);
 
