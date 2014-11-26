@@ -66,16 +66,14 @@ bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 
 	memset(bwc, 0, sizeof(*bwc));
 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
-	pll_init(&bwc->bwc_pll, struct bmpc_ioreq, biorq_bwc_lentry,
-	    NULL);
 	return (0);
 }
 
 void
 bwc_release(struct bmpc_write_coalescer *bwc)
 {
-	psc_assert(pll_empty(&bwc->bwc_pll));
 	bwc_init(bwc_pool, bwc);
+	psc_dynarray_free(&bwc->bwc_biorqs);
 	psc_pool_return(bwc_pool, bwc);
 }
 

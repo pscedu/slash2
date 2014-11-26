@@ -251,7 +251,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct resm_cli_info *rmci = resm2rmci(m);
 	struct bmpc_ioreq *r;
-	int rc;
+	int i, rc;
 
 	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 
@@ -264,7 +264,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	bwc_unpin_pages(bwc);
 
-	while ((r = pll_get(&bwc->bwc_pll))) {
+	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
+		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
@@ -449,9 +450,9 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct slashrpc_cservice *csvc;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	int rc;
+	int i, rc;
 
-	r = pll_peekhead(&bwc->bwc_pll);
+	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
 	rc = msl_bmap_to_csvc(r->biorq_bmap, 1, &csvc);
 	if (rc)
@@ -460,21 +461,24 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
-	PLL_FOREACH(r, &bwc->bwc_pll) {
+	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
+		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
 		psc_assert(b == r->biorq_bmap);
 		r->biorq_last_sliod = bmap_2_ios(b);
 	}
 
 	psclog_diag("bwc cb arg (%p) size=%zu nbiorqs=%d",
-	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
+	    bwc, bwc->bwc_size, psc_dynarray_len(&bwc->bwc_biorqs));
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (!rc)
 		return;
 
  out:
-	while ((r = pll_get(&bwc->bwc_pll)))
+	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
+		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
 		bmap_flush_resched(r, rc);
+	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -495,11 +499,12 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t reqsz, tlen;
 	off_t off, loff;
-	int j;
+	int i, j;
 
 	psc_assert(!bwc->bwc_nbmpces);
 
-	PLL_FOREACH(r, &bwc->bwc_pll) {
+	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
+		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
 		if (!e)
 			e = r;
 		else {
@@ -548,7 +553,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 		}
 		psc_assert(!reqsz);
 	}
-	r = pll_peekhead(&bwc->bwc_pll);
+	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
 	psc_assert(bwc->bwc_size ==
 	    (e->biorq_off - r->biorq_off) + e->biorq_len);
@@ -572,11 +577,11 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	bmap_flush_coalesce_prep(bwc);
 
 	psclog_diag("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz,
-	    pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
+	    psc_dynarray_len(&bwc->bwc_biorqs), bwc->bwc_nbmpces);
 
 	psc_assert(!bwc->bwc_niovs);
 
-	r = pll_peekhead(&bwc->bwc_pll);
+	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
@@ -649,13 +654,16 @@ bmap_flushable(struct bmapc_memb *b)
 static void
 bwc_desched(struct bmpc_write_coalescer *bwc)
 {
+	int i;
 	struct bmpc_ioreq *r;
 
-	while ((r = pll_get(&bwc->bwc_pll))) {
+	for (i = 0; i < psc_dynarray_len(&bwc->bwc_biorqs); i++) {
+		r = psc_dynarray_getpos(&bwc->bwc_biorqs, i);
 		BIORQ_LOCK(r);
 		r->biorq_flags &= ~BIORQ_SCHED;
 		BIORQ_ULOCK(r);
 	}
+	psc_dynarray_reset(&bwc->bwc_biorqs);
 	bwc->bwc_soff = bwc->bwc_size = 0;
 }
 
@@ -696,7 +704,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		else {
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
-			pll_addtail(&bwc->bwc_pll, curr);
+			psc_dynarray_add(&bwc->bwc_biorqs, curr);
 			continue;
 		}
 
@@ -724,7 +732,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * All subsequent requests that do not extend our range
 			 * should be collapsed here.
 			 */
-			pll_addtail(&bwc->bwc_pll, curr);
+			psc_dynarray_add(&bwc->bwc_biorqs, curr);
 
 			/* keep the old last if we didn't extend */
 			if (sz < 0)
@@ -747,7 +755,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc_desched(bwc);
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
-			pll_add(&bwc->bwc_pll, curr);
+			psc_dynarray_add(&bwc->bwc_biorqs, curr);
 			OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_RESTART);
 		}
 	}

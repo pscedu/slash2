@@ -251,9 +251,9 @@ struct bmap_pagecache {
 };
 
 struct bmpc_write_coalescer {
-	struct psc_lockedlist		 bwc_pll;
 	size_t				 bwc_size;
 	off_t				 bwc_soff;
+	struct psc_dynarray		 bwc_biorqs;
 	struct iovec			 bwc_iovs[BMPC_COALESCE_MAX_IOV];
 	struct bmap_pagecache_entry	*bwc_bmpces[BMPC_COALESCE_MAX_IOV];
 	int				 bwc_niovs;
