@@ -256,7 +256,7 @@ struct srt_authbuf_footer {
 } __packed;
 
 struct srt_bmapdesc {
-	struct slash_fidgen	sbd_fg;
+	struct sl_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
 	uint64_t		sbd_key;
 
@@ -270,7 +270,7 @@ struct srt_bmapdesc {
 
 /* SLASH RPC transportably safe structures. */
 struct srt_stat {
-	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
+	struct sl_fidgen	sst_fg;		/* file ID + truncate generation */
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
 	uint32_t		sst_utimgen;	/* utimes generation number */
@@ -419,8 +419,8 @@ struct srm_forward_req {
 	 int32_t		to_set;		/* SETATTR field flags */
 	 int32_t		_pad;
 	struct srt_creds	creds;		/* st_uid owner for new dir/file */
-	struct slash_fidgen	fg;		/* parent dir or target */
-	struct slash_fidgen	nfg;		/* new parent dir or target */
+	struct sl_fidgen	fg;		/* parent dir or target */
+	struct sl_fidgen	nfg;		/* new parent dir or target */
 	union {
 		struct srt_stat	sstb;
 		char		name[PSC_ALIGN(SL_TWO_NAME_MAX + 2, 8)];
@@ -438,7 +438,7 @@ struct srm_forward_rep {
 #define NPREFIOS		1
 
 struct srm_leasebmap_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_ios_id_t		prefios[NPREFIOS];/* client's preferred IOS ID */
 	sl_bmapno_t		bmapno;		/* Starting bmap index number */
 	 int32_t		rw;		/* 'enum rw' value for access */
@@ -482,7 +482,7 @@ struct srm_reassignbmap_req {
  * ION requesting CRC table from the MDS.
  */
 struct srm_getbmap_full_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	 int32_t		rw;
 } __packed;
@@ -527,7 +527,7 @@ struct srt_bmap_crcwire {
 #define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srm_bmap_crcup */
 
 struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
 	uint64_t		nblks;		/* st_blocks for us */
 	uint32_t		blkno;		/* bmap block number */
@@ -581,7 +581,7 @@ struct srm_getbmapminseq_rep {
 } __packed;
 
 struct srm_bmap_ptrunc_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 	 int32_t		offset;		/* relative to in this bmap */
@@ -591,7 +591,7 @@ struct srm_bmap_ptrunc_req {
 #define srm_bmap_ptrunc_rep	srm_generic_rep
 
 struct srm_bmap_wake_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	 int32_t		_pad;
 } __packed;
@@ -602,7 +602,7 @@ struct srm_bmap_wake_req {
 
 struct srt_preclaim_reqent {
 	uint64_t		xid;
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
 } __packed;
@@ -633,7 +633,7 @@ struct srm_reclaim_rep {
 
 struct srt_reclaim_entry {
 	uint64_t		xid;
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 } __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
@@ -664,7 +664,7 @@ struct srm_ping_req {
 
 /* for a REPL_GETST about a replication request */
 struct srm_replst_master_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	 int32_t		id;		/* user-provided passback value */
 	 int32_t		rc;		/* or EOF */
@@ -680,7 +680,7 @@ struct srm_replst_master_req {
  * fit in srm_replst_master_req.data
  */
 struct srm_replst_slave_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	 int32_t		id;		/* user-provided passback value */
 	 int32_t		len;		/* of bulk data */
 	 int32_t		rc;
@@ -705,7 +705,7 @@ struct srt_replst_bhdr {
 #define srm_replst_slave_rep	srm_replst_slave_req
 
 struct srt_replwk_reqent {			/* batch arrangement request MDS -> IOS */
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
 	sl_ios_id_t		src_resid;
@@ -719,7 +719,7 @@ struct srt_replwk_repent {			/* batch arrangement success/failure IOS -> MDS */
 } __packed;
 
 struct srm_repl_read_req {			/* data pull IOS -> IOS */
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	uint32_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
 	 int32_t		slvrno;
@@ -729,7 +729,7 @@ struct srm_repl_read_req {			/* data pull IOS -> IOS */
 #define srm_repl_read_rep	srm_io_rep
 
 struct srm_set_fattr_req {			/* set non-POSIX file attribute CLI -> MDS */
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	 int32_t		attrid;
 	 int32_t		val;
 } __packed;
@@ -740,7 +740,7 @@ struct srm_set_fattr_req {			/* set non-POSIX file attribute CLI -> MDS */
 #define srm_set_fattr_rep	srm_generic_rep
 
 struct srm_set_bmapreplpol_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapno_t		nbmaps;
 	 int32_t		pol;
@@ -750,7 +750,7 @@ struct srm_set_bmapreplpol_req {
 #define srm_set_bmapreplpol_rep	srm_generic_rep
 
 struct srm_get_inode_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 };
 
 struct srm_get_inode_rep {
@@ -762,7 +762,7 @@ struct srm_get_inode_rep {
 /* ----------------------- BEGIN FILE SYSTEM MESSAGES ----------------------- */
 
 struct srm_create_req {
-	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
+	struct sl_fidgen	pfg;		/* parent dir's file ID + generation */
 	struct pfl_timespec	time;		/* time of request */
 	struct srt_creds	creds;		/* st_uid owner for new file */
 	char			name[SL_NAME_MAX + 1];
@@ -790,7 +790,7 @@ struct srm_destroy_req {
 } __packed;
 
 struct srm_getattr_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_ios_id_t		iosid;
 	 int32_t		_pad;
 } __packed;
@@ -839,22 +839,22 @@ struct srm_io_rep {
 } __packed;
 
 struct srm_link_req {
-	struct slash_fidgen	pfg;		/* parent dir */
-	struct slash_fidgen	fg;
+	struct sl_fidgen	pfg;		/* parent dir */
+	struct sl_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 #define srm_link_rep		srm_getattr2_rep
 
 struct srm_lookup_req {
-	struct slash_fidgen	pfg;		/* parent dir */
+	struct sl_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 #define srm_lookup_rep		srm_getattr_rep
 
 struct srm_mkdir_req {
-	struct slash_fidgen	pfg;		/* parent dir */
+	struct sl_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 	struct srt_stat		sstb;		/* owner/etc. */
 	uint32_t		to_set;
@@ -866,7 +866,7 @@ struct srm_mkdir_req {
 struct srm_mknod_req {
 	struct srt_creds	creds;		/* st_uid owner for new file */
 	char			name[SL_NAME_MAX + 1];
-	struct slash_fidgen	pfg;		/* parent dir */
+	struct sl_fidgen	pfg;		/* parent dir */
 	uint32_t		mode;
 	uint32_t		rdev;
 } __packed;
@@ -883,7 +883,7 @@ struct srt_readdir_ent {  // XXX rename to srt_readdir_stpref
 	(sizeof(struct srt_readdir_ent) * (nents) + (siz))
 
 struct srm_readdir_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	 int64_t		offset;
 	uint32_t		size;
 	uint32_t		flags;
@@ -904,7 +904,7 @@ struct srm_readdir_rep {
 } __packed;
 
 struct srm_readdir_ra_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	 int64_t		offset;		// XXX rename cookie
 	uint32_t		size;
 	uint32_t		eof:1;		/* flag: directory read EOF */
@@ -916,7 +916,7 @@ struct srm_readdir_ra_req {
 #define srm_readdir_ra_rep	srm_generic_rep
 
 struct srm_readlink_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 } __packed;
 
 struct srm_readlink_rep {
@@ -927,8 +927,8 @@ struct srm_readlink_rep {
 } __packed;
 
 struct srm_rename_req {
-	struct slash_fidgen	npfg;		/* new parent dir */
-	struct slash_fidgen	opfg;		/* old parent dir */
+	struct sl_fidgen	npfg;		/* new parent dir */
+	struct sl_fidgen	opfg;		/* old parent dir */
 	uint32_t		fromlen;	/* NUL not transmitted */
 	uint32_t		tolen;		/* NUL not transmitted */
 #define SRM_RENAME_NAMEMAX	448
@@ -949,7 +949,7 @@ struct srm_rename_rep {
 } __packed;
 
 struct srm_replrq_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	uint32_t		nrepls;
 	uint32_t		usr_prio;
@@ -981,7 +981,7 @@ struct srm_statfs_rep {
 
 struct srm_symlink_req {
 	struct srt_stat		sstb;		/* owner/etc. */
-	struct slash_fidgen	pfg;		/* parent dir */
+	struct sl_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		linklen;	/* NUL not transmitted */
 	 int32_t		_pad;
@@ -1003,7 +1003,7 @@ struct srm_unlink_rep {
 } __packed;
 
 struct srm_listxattr_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	uint32_t		size;
 	 int32_t		_pad;
 } __packed;
@@ -1016,7 +1016,7 @@ struct srm_listxattr_rep {
 } __packed;
 
 struct srm_getxattr_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		size;
 	 int32_t		_pad;
@@ -1030,7 +1030,7 @@ struct srm_getxattr_rep {
 } __packed;
 
 struct srm_setxattr_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
 	 int32_t		_pad;
 	uint32_t		valuelen;
@@ -1043,7 +1043,7 @@ struct srm_setxattr_rep {
 } __packed;
 
 struct srm_removexattr_req {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
@@ -1055,7 +1055,7 @@ struct srm_removexattr_rep {
 /* ---------------------- BEGIN IMPORT/EXPORT MESSAGES ---------------------- */
 
 struct srm_import_req {
-	struct slash_fidgen	pfg;		/* destination parent dir */
+	struct sl_fidgen	pfg;		/* destination parent dir */
 	char			cpn[SL_NAME_MAX + 1];
 	struct srt_stat		sstb;
 	 int32_t		flags;
@@ -1065,7 +1065,7 @@ struct srm_import_req {
 #define SRM_IMPORTF_XREPL	(1 << 0)	/* register additional replica */
 
 struct srm_import_rep {
-	struct slash_fidgen	fg;
+	struct sl_fidgen	fg;
 	 int32_t		rc;
 	 int32_t		_pad;
 } __packed;
