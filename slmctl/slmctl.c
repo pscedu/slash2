@@ -163,7 +163,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slmctlmsg_statfs *scsf = m;
 	const struct srt_statfs *b = &scsf->scsf_ssfb;
 	char cbuf[PSCFMT_RATIO_BUFSIZ];
-	char *p, name[RES_NAME_MAX];
+	char name[RES_NAME_MAX];
 	int j, col = 0;
 
 	if (b->sf_blocks)
@@ -174,9 +174,6 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 				break;
 			}
 	strlcpy(name, scsf->scsf_resname, sizeof(name));
-	p = strchr(name, '@');
-	if (p)
-		*p = '\0';
 	printf("%-27s %c%c ", name,
 	    scsf->scsf_flags & (SIF_DISABLE_LEASE |
 	      SIF_DISABLE_ADVLEASE)		? 'W' : '-',
