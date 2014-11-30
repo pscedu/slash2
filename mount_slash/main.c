@@ -112,7 +112,6 @@ struct uid_mapping {
 };
 
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
-psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
 struct psc_listcache		 slc_readaheadq;
@@ -1859,7 +1858,8 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 
 int
 msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
-    int32_t to_set, struct srt_stat *attr)
+    int32_t to_set, const struct srt_stat *sstb,
+    const struct sl_fidgen *fgp, const struct stat *stb)
 {
 	int rc, ptrunc_started = 0, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1876,7 +1876,7 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 		mq->attr = *sstb;
 	else {
 		sl_externalize_stat(stb, &mq->attr);
-		mq->attr.sst_fg = c->fcmh_fg;
+		mq->attr.sst_fg = *fgp;
 	}
 	mq->to_set = to_set;
 
@@ -1919,12 +1919,12 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 }
 
 int
-msl_flush_ioattrs(struct fidc_membh *f)
+msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 {
 	int rc, to_set = 0, flush_size = 0, flush_mtime = 0;
 	struct srt_stat attr;
 
-	locked = FCMH_RLOCK(f);
+	FCMH_LOCK_ENSURE(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
 
 	attr.sst_fg = f->fcmh_fg;
@@ -1947,14 +1947,16 @@ msl_flush_ioattrs(struct fidc_membh *f)
 		to_set |= PSCFS_SETATTRF_MTIME;
 		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
-	if (!to_set)
+	if (!to_set) {
+		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
 		return (0);
+	}
 
 	FCMH_ULOCK(f);
 
 	OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
 
-	rc = msl_setattr(f, to_set, &attr);
+	rc = msl_setattr(pfcc, f, to_set, &attr, NULL, NULL);
 
 	FCMH_LOCK(f);
 	if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
@@ -1964,7 +1966,6 @@ msl_flush_ioattrs(struct fidc_membh *f)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 		f->fcmh_flags &= ~FCMH_BUSY;
 		fcmh_wake_locked(f);
-		FCMH_ULOCK(f);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -1976,14 +1977,14 @@ msl_flush_ioattrs(struct fidc_membh *f)
 		 * closed.
 		 */
 		if (rc)
-			DEBUG_FCMH(PLL_ERROR, f,
-			    "setattr: rc=%d", rc);
+			DEBUG_FCMH(PLL_ERROR, f, "setattr: rc=%d", rc);
 
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 		// XXX locking order violation
 		lc_remove(&slc_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+		FCMH_LOCK(f);
 	}
 
 	return (rc);
@@ -1997,7 +1998,7 @@ void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *c;
+	struct pscfs_clientctx *pfcc;
 	int rc, rc2;
 
 	msfsthr_ensure(pfr);
@@ -2006,19 +2007,12 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
-	/*
-	 * XXX FUSE will occassionally invoke FLUSH via this routine to
-	 * push data, and in those circumstances no waiting is
-	 * necessary.
-	 *
-	 * However, an application issued close(2) will also invoke this
-	 * path and a synchronous wait should occur in those
-	 * circumstances in order to return a proper return code to the
-	 * close(2).
-	 */
+	pfcc = pscfs_getclientctx(pfr);
+
 	spinlock(&mfh->mfh_lock);
 	rc = msl_flush_int_locked(mfh, 1);
-	rc2 = msl_flush_ioattrs(mfh->mfh_fcmh);
+	rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
+	//if (rc && slc_rmc_retry(pfr, &rc))
 	if (!rc)
 		rc = rc2;
 
@@ -2607,10 +2601,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	int flush_mtime = 0, flush_size = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
-	struct srm_setattr_req *mq;
-	struct srm_setattr_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
 	struct timespec ts;
@@ -2806,6 +2799,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	FCMH_ULOCK(c);
 
+	pfcc = pscfs_getclientctx(pfr);
  retry:
 	rc = msl_setattr(pfcc, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2877,6 +2871,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 void
 mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 {
+	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 	int rc = 0;
@@ -2897,7 +2892,9 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 		if (!datasync_only) {
 			int rc2;
 
-			rc2 = msl_flush_ioattrs(mfh->mfh_fcmh);
+			pfcc = pscfs_getclientctx(pfr);
+			rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
+			//if (rc && slc_rmc_retry(pfr, &rc))
 			if (!rc)
 				rc = rc2;
 		}
@@ -3394,45 +3391,28 @@ msreadaheadthr_main(struct psc_thread *thr)
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
-	int32_t to_set, flush_mtime, flush_size;
-	struct fcmh_cli_info *fci, *tmp_fci;
 	struct timespec ts, nexttimeo;
-	struct srt_stat	attr;
+	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
-	int rc, did_work;
 
 	while (pscthr_run(thr)) {
-		did_work = 0;
-
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
 		LIST_CACHE_LOCK(&slc_attrtimeoutq);
 		lc_peekheadwait(&slc_attrtimeoutq);
 		PFL_GETTIMESPEC(&ts);
-		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_attrtimeoutq) {
-
+		LIST_CACHE_FOREACH(fci, &slc_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
 				continue;
-
-#if 0
-			if (f->fcmh_flags & FCMH_DELETED) {
-				lc_remove(&slc_attrtimeoutq, fci);
-				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-				continue;
-			}
-#endif
 
 			if (f->fcmh_flags & FCMH_BUSY) {
 				FCMH_ULOCK(f);
 				continue;
 			}
 
-			if (fci->fci_etime.tv_sec > ts.tv_sec ||
-			   (fci->fci_etime.tv_sec == ts.tv_sec &&
-			    fci->fci_etime.tv_nsec > ts.tv_nsec)) {
+			if (timespeccmp(&fci->fci_etime, &ts, >)) {
 				timespecsub(&fci->fci_etime, &ts,
 				    &nexttimeo);
 				FCMH_ULOCK(f);
@@ -3441,20 +3421,14 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
 
-			msl_flush_ioattrs(f);
-
-			did_work = 1;
+			msl_flush_ioattrs(NULL, f);
 			break;
 		}
-		if (did_work)
-			continue;
-		else
-			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
-
-		OPSTAT_INCR(SLC_OPST_FLUSH_ATTR_WAIT);
-		spinlock(&msl_flush_attrqlock);
-		psc_waitq_waitrel(&msl_flush_attrq,
-		    &msl_flush_attrqlock, &nexttimeo);
+		if (fci == NULL) {
+			OPSTAT_INCR(SLC_OPST_FLUSH_ATTR_WAIT);
+			psc_waitq_waitrel(&msl_flush_attrq,
+			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
+		}
 	}
 }
 
