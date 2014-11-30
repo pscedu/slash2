@@ -134,19 +134,22 @@ slfid_t
 fn2fid(const char *fn)
 {
 	struct fnfidpair *ffp;
-	struct statvfs sfb;
 	struct stat stb;
 	slfid_t fid;
 
 	if (lstat(fn, &stb) == -1)
 		err(1, "stat %s", fn);
-	if (statvfs(fn, &sfb) == -1)
-		err(1, "statvfs %s", fn);
 
 #ifndef HAVE_NO_FUSE_FSID
-	if (sfb.f_fsid != SLASH_FSID && sfb.f_fsid)
-		errx(1, "%s: file is not in a SLASH file system (fsid=%lx)",
-		    fn, sfb.f_fsid);
+	{
+		struct statvfs sfb;
+
+		if (statvfs(fn, &sfb) == -1)
+			err(1, "statvfs %s", fn);
+		if (sfb.f_fsid != SLASH_FSID && sfb.f_fsid)
+			errx(1, "%s: not in a SLASH2 file system "
+			    "(fsid=%lx)", fn, sfb.f_fsid);
+	}
 #endif
 
 	fid = stb.st_ino;
