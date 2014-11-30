@@ -1921,10 +1921,10 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 int
 msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 {
-	int rc, to_set = 0, flush_size = 0, flush_mtime = 0;
+	int rc, waslocked, to_set = 0, flush_size = 0, flush_mtime = 0;
 	struct srt_stat attr;
 
-	FCMH_LOCK_ENSURE(f);
+	waslocked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
 
 	attr.sst_fg = f->fcmh_fg;
@@ -1949,6 +1949,7 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 	}
 	if (!to_set) {
 		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
+		FCMH_URLOCK(f, waslocked);
 		return (0);
 	}
 
@@ -1959,13 +1960,14 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 	rc = msl_setattr(pfcc, f, to_set, &attr, NULL, NULL);
 
 	FCMH_LOCK(f);
+	f->fcmh_flags &= ~FCMH_BUSY;
 	if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-		f->fcmh_flags &= ~FCMH_BUSY;
 		fcmh_wake_locked(f);
+		FCMH_URLOCK(f, waslocked);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -1984,7 +1986,8 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 		// XXX locking order violation
 		lc_remove(&slc_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-		FCMH_LOCK(f);
+		if (waslocked == PSLRV_WASLOCKED)
+			FCMH_LOCK(f);
 	}
 
 	return (rc);
@@ -3422,6 +3425,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
 
 			msl_flush_ioattrs(NULL, f);
+			FCMH_ULOCK(f);
 			break;
 		}
 		if (fci == NULL) {
