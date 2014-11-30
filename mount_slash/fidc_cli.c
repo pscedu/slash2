@@ -50,7 +50,6 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
-
 /**
  * fcmh_setattrf - Update the high-level app stat(2)-like attribute
  *	buffer for a FID cache member.
