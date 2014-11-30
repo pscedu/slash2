@@ -1858,45 +1858,147 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 }
 
 int
-msl_flush_attr(struct fidc_membh *f, int32_t to_set,
-    struct srt_stat *attr)
+msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
+    int32_t to_set, struct srt_stat *attr)
 {
+	int rc, ptrunc_started = 0, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	int rc;
 
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp,
+	MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, SRMT_SETATTR, rq, mq, mp,
 	    rc);
 	if (rc)
 		return (rc);
 
-	mq->attr = *attr;
+	if (sstb)
+		mq->attr = *sstb;
+	else {
+		sl_externalize_stat(stb, &mq->attr);
+		mq->attr.sst_fg = c->fcmh_fg;
+	}
 	mq->to_set = to_set;
+
+	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
+		rc = uidmap_ext_stat(&mq->attr);
+		if (rc)
+			PFL_GOTOERR(out, rc);
+	}
+
+	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x", to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	DEBUG_SSTB(PLL_DIAG, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
-	    mq->to_set, rc);
-	pscrpc_req_finished(rq);
-	sl_csvc_decref(csvc);
+	if (rc == -SLERR_BMAP_PTRUNC_STARTED) {
+		ptrunc_started = 1;
+		rc = 0;
+	}
+	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
+	    "attr flush; set=%x rc=%d", to_set, rc);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	uidmap_int_stat(&mp->attr);
+
+	if ((to_set & (PSCFS_SETATTRF_MTIME |
+	    PSCFS_SETATTRF_DATASIZE)) == 0)
+		flags |= FCMH_SETATTRF_SAVELOCAL;
+
+	slc_fcmh_setattrf(f, &mp->attr, flags);
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	if (ptrunc_started)
+		return (-SLERR_BMAP_PTRUNC_STARTED);
+	return (rc);
+}
+
+int
+msl_flush_ioattrs(struct fidc_membh *f)
+{
+	int rc, to_set = 0, flush_size = 0, flush_mtime = 0;
+	struct srt_stat attr;
+
+	locked = FCMH_RLOCK(f);
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
+
+	attr.sst_fg = f->fcmh_fg;
+
+	/*
+	 * Perhaps this checking should only be done on the mfh, with
+	 * which we have modified the attributes.
+	 */
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
+		flush_size = 1;
+		f->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
+		f->fcmh_flags |= FCMH_BUSY;
+		to_set |= PSCFS_SETATTRF_DATASIZE;
+		attr.sst_size = f->fcmh_sstb.sst_size;
+	}
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
+		flush_mtime = 1;
+		f->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
+		f->fcmh_flags |= FCMH_BUSY;
+		to_set |= PSCFS_SETATTRF_MTIME;
+		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
+	}
+	if (!to_set)
+		return (0);
+
+	FCMH_ULOCK(f);
+
+	OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
+
+	rc = msl_setattr(f, to_set, &attr);
+
+	FCMH_LOCK(f);
+	if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
+		if (flush_mtime)
+			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
+		if (flush_size)
+			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
+		f->fcmh_flags &= ~FCMH_BUSY;
+		fcmh_wake_locked(f);
+		FCMH_ULOCK(f);
+	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+		/*
+		 * XXX: If an UNLINK occurs on an open file descriptor
+		 * then it is receives WRITEs, we will try to SETATTR
+		 * the FID which will result in ENOENT.
+		 *
+		 * The proper fix is to honor open file descriptors and
+		 * only UNLINK the backend file after they are all
+		 * closed.
+		 */
+		if (rc)
+			DEBUG_FCMH(PLL_ERROR, f,
+			    "setattr: rc=%d", rc);
+
+		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+		// XXX locking order violation
+		lc_remove(&slc_attrtimeoutq, fcmh_2_fci(f));
+		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+	}
+
 	return (rc);
 }
 
 /*
  * Note: this is not invoked from an application issued fsync(2).
+ * This is called upon each close(2) of a file descriptor to this file.
  */
 void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c;
-	int32_t to_set = 0;
-	struct srt_stat attr;
-	struct fcmh_cli_info *fci;
-	int rc, tmprc = 0, flush_size = 0, flush_mtime = 0;
+	int rc, rc2;
 
 	msfsthr_ensure(pfr);
 
@@ -1915,66 +2017,15 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	 * close(2).
 	 */
 	spinlock(&mfh->mfh_lock);
-	rc = msl_flush_int_locked(mfh, 0);
-	freelock(&mfh->mfh_lock);
-
-	c = mfh->mfh_fcmh;
-	fci = fcmh_2_fci(c);
-	/*
-	 * Perhaps this checking should only be done on the mfh, with
-	 * which we have modified the attributes.
-	 */
-	FCMH_LOCK(c);
-	fcmh_wait_locked(c, (c->fcmh_flags & FCMH_BUSY));
-	c->fcmh_flags |= FCMH_BUSY;
-
-	attr.sst_fg = c->fcmh_fg;
-	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
-		flush_size = 1;
-		c->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-		to_set |= PSCFS_SETATTRF_DATASIZE;
-		attr.sst_size = c->fcmh_sstb.sst_size;
-	}
-	if (c->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
-		flush_mtime = 1;
-		c->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-		to_set |= PSCFS_SETATTRF_MTIME;
-		attr.sst_mtim = c->fcmh_sstb.sst_mtim;
-	}
-	FCMH_ULOCK(c);
-
-	if (to_set) {
-		tmprc = msl_flush_attr(c, to_set, &attr);
-		FCMH_LOCK(c);
-		fcmh_wake_locked(c);
-		if (!tmprc) {
-			if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-				fci = fcmh_2_fci(c);
-				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
-				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&slc_attrtimeoutq, fci);
-				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-			} else
-				FCMH_ULOCK(c);
-		} else {
-			if (flush_mtime)
-				c->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
-			if (flush_size)
-				c->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-			FCMH_ULOCK(c);
-		}
-	}
-
-	FCMH_LOCK(c);
-	c->fcmh_flags &= ~FCMH_BUSY;
-	fcmh_wake_locked(c);
-	FCMH_ULOCK(c);
-
+	rc = msl_flush_int_locked(mfh, 1);
+	rc2 = msl_flush_ioattrs(mfh->mfh_fcmh);
 	if (!rc)
-	    rc = tmprc;
+		rc = rc2;
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
+
+	freelock(&mfh->mfh_lock);
 
 	pscfs_reply_flush(pfr, rc);
 }
@@ -2756,82 +2807,27 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	FCMH_ULOCK(c);
 
  retry:
-
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_SETATTR, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	mq->attr.sst_fg = c->fcmh_fg;
-	mq->to_set = to_set;
-	sl_externalize_stat(stb, &mq->attr);
-	uidmap_ext_stat(&mq->attr);
-
-	DEBUG_SSTB(PLL_DIAG, &c->fcmh_sstb,
-	    "fcmh %p pre setattr, set = %#x", c, to_set);
-
-	psclog_debug("fcmh %p setattr%s%s%s%s%s%s%s", c,
-	    to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
-	    to_set & PSCFS_SETATTRF_UID ? " uid" : "",
-	    to_set & PSCFS_SETATTRF_GID ? " gid" : "",
-	    to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
-	    to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
-	    to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
-	    to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
-
-
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	rc = msl_setattr(pfcc, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	if (rc == 0) {
-		switch (mp->rc) {
-		case -SLERR_BMAP_IN_PTRUNC:
-			if (getting_attrs) {
-				getting_attrs = 0;
-				FCMH_LOCK(c);
-				c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-			}
-			goto wait_trunc_res;
-		case -SLERR_BMAP_PTRUNC_STARTED:
-			unset_trunc = 0;
-			rc = 0;
-			break;
-		default:
-			rc = -mp->rc;
-			break;
+	switch (rc) {
+	case -SLERR_BMAP_IN_PTRUNC:
+		if (getting_attrs) {
+			getting_attrs = 0;
+			FCMH_LOCK(c);
+			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 		}
+		rc = 0;
+		goto wait_trunc_res;
+	case -SLERR_BMAP_PTRUNC_STARTED:
+		unset_trunc = 0;
+		rc = 0;
+		break;
 	}
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(c);
-
-	/*
-	 * If we are setting mtime or size, we told the MDS what we
-	 * wanted it to be and must now blindly accept what he returns
-	 * to us; otherwise, we SAVELOCAL any updates we've made.
-	 */
-	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE)) {
-		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
-		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
-	}
-
-	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		if (c->fcmh_sstb.sst_size != mp->attr.sst_size)
-			psclog_info("fid: "SLPRI_FID", size change "
-			    "from %"PRId64" to %"PRId64,
-			    fcmh_2_fid(c), c->fcmh_sstb.sst_size,
-			    mp->attr.sst_size);
-		c->fcmh_sstb.sst_size = mp->attr.sst_size;
-		c->fcmh_sstb.sst_ctime = mp->attr.sst_ctime;
-		c->fcmh_sstb.sst_ctime_ns = mp->attr.sst_ctime_ns;
-	}
-
-	uidmap_int_stat(&mp->attr);
-	slc_fcmh_setattrf(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
-	    FCMH_SETATTRF_HAVELOCK);
-
-	DEBUG_SSTB(PLL_DIAG, &c->fcmh_sstb, "fcmh %p post setattr", c);
-
 	if (fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
@@ -2879,7 +2875,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 }
 
 void
-mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
+mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 {
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
@@ -2889,15 +2885,24 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 
 	mfh = data;
 	f = mfh->mfh_fcmh;
-	if (!fcmh_isdir(f)) {
+	if (fcmh_isdir(f)) {
+		OPSTAT_INCR(SLC_OPST_FSYNCDIR);
+		// XXX flush all fcmh attrs under dir
+	} else {
 		OPSTAT_INCR(SLC_OPST_FSYNC);
-		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
+		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
 		spinlock(&mfh->mfh_lock);
 		rc = msl_flush_int_locked(mfh, 1);
+		if (!datasync_only) {
+			int rc2;
+
+			rc2 = msl_flush_ioattrs(mfh->mfh_fcmh);
+			if (!rc)
+				rc = rc2;
+		}
 		freelock(&mfh->mfh_lock);
-	} else
-		OPSTAT_INCR(SLC_OPST_FSYNCDIR);
+	}
 
 	pscfs_reply_fsync(pfr, rc);
 }
@@ -3433,64 +3438,10 @@ msattrflushthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				continue;
 			}
-			f->fcmh_flags |= FCMH_BUSY;
-			attr.sst_fg = f->fcmh_fg;
-			to_set = flush_mtime = flush_size = 0;
-			if (f->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
-				flush_size = 1;
-				f->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-				to_set |= PSCFS_SETATTRF_DATASIZE;
-				attr.sst_size = f->fcmh_sstb.sst_size;
-			}
-			if (f->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
-				flush_mtime = 1;
-				f->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-				to_set |= PSCFS_SETATTRF_MTIME;
-				attr.sst_mtim = f->fcmh_sstb.sst_mtim;
-			}
-			FCMH_ULOCK(f);
 
 			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
 
-			OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
-
-			rc = msl_flush_attr(f, to_set, &attr);
-
-			FCMH_LOCK(f);
-			f->fcmh_flags &= ~FCMH_BUSY;
-			if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
-
-				if (flush_mtime)
-					f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
-				if (flush_size)
-					f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-				fcmh_wake_locked(f);
-				FCMH_ULOCK(f);
-
-			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-
-				/*
-				 * XXX: If an UNLINK occurs on an open
-				 * file descriptor then it is receives
-				 * WRITEs, we will try to SETATTR the
-				 * FID which will result in ENOENT.
-				 * The proper fix is to honor open file
-				 * descriptors and only UNLINK the
-				 * backend file after they are all
-				 * closed.
-				 */
-				if (rc)
-					DEBUG_FCMH(PLL_ERROR, f,
-					    "setattr: rc=%d", rc);
-
-				psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
-				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&slc_attrtimeoutq, fci);
-				fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-			} else {
-				fcmh_wake_locked(f);
-				FCMH_ULOCK(f);
-			}
+			msl_flush_ioattrs(f);
 
 			did_work = 1;
 			break;
