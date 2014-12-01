@@ -76,6 +76,7 @@
 #define SL_FN_CURSOR		"cursor"
 #define SL_FN_FSUUID		"fsuuid"
 #define SL_FN_SITEID		"siteid"
+#define SL_FN_RESID		"resid"
 
 extern const char *sl_datadir;
 
