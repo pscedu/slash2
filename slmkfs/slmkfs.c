@@ -59,6 +59,7 @@ int		 ion;
 struct passwd	*pw;
 uint64_t         siteid;
 uint64_t         fsuuid;
+sl_ios_id_t	 resid;
 const char      *datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
@@ -106,7 +107,7 @@ slnewfs_touchfile(const char *fmt, ...)
 }
 
 /**
- * slnewfs_create - Create an SLASH2 metadata or user data directory
+ * slnewfs_create - Create a SLASH2 metadata or user data directory
  *	structure.
  */
 void
@@ -139,6 +140,14 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 
 	/* create immutable namespace subdirectories */
 	slnewfs_create_int(fn, 1, depth);
+
+	/* create the RESID file */
+	xmkfn(fn, "%s/%s", metadir, SL_FN_RESID);
+	fp = fopen(fn, "w");
+	if (fp == NULL)
+		psc_fatal("open %s", fn);
+	fprintf(fp, "%#x\n", resid);
+	fclose(fp);
 
 	if (ion)
 		return;
@@ -255,7 +264,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-iW] [-c conf] [-D datadir] [-I siteid] [-u fsuuid] fsroot\n",
+	    "usage: %s [-iW] [-c conf] [-D datadir] [-I siteid]\n"
+	    "\t[-R resid] [-u fsuuid] fsroot\n",
 	    progname);
 	exit(1);
 }
@@ -265,25 +275,17 @@ main(int argc, char *argv[])
 {
 	char *cfgfn = NULL, *endp;
 	int c, specsid = 0;
+	long l;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "c:D:iI:Wu:")) != -1)
+	while ((c = getopt(argc, argv, "c:D:I:iR:u:W")) != -1)
 		switch (c) {
 		case 'c':
 			cfgfn = optarg;
 			break;
 		case 'D':
 			datadir = optarg;
-			break;
-		case 'i':
-			ion = 1;
-			break;
-		case 'u':
-			endp = NULL;
-			fsuuid = strtoull(optarg, &endp, 16);
-			if (endp == optarg || *endp)
-				errx(1, "%s: invalid FSUUID", optarg);
 			break;
 		case 'I':
 			endp = NULL;
@@ -294,6 +296,29 @@ main(int argc, char *argv[])
 				errx(1, "%"PRIu64": SITEID too big",
 				    siteid);
 			specsid = 1;
+			break;
+		case 'i':
+			ion = 1;
+			break;
+		case 'R':
+			if (strncmp(optarg, "0x", 2))
+				errx(1, "%s: RESID must be in "
+				    "hexadecimal format", optarg);
+			endp = NULL;
+			l = strtoul(optarg, &endp, 16);
+			if (endp == optarg || *endp ||
+			    l == IOS_ID_ANY || l > UINT32_MAX)
+				errx(1, "%s: invalid RESID", optarg);
+			resid = l;
+			break;
+		case 'u':
+			if (strncmp(optarg, "0x", 2))
+				errx(1, "%s: FSUUID must be in "
+				    "hexadecimal format", optarg);
+			endp = NULL;
+			fsuuid = strtoull(optarg, &endp, 16);
+			if (endp == optarg || *endp)
+				errx(1, "%s: invalid FSUUID", optarg);
 			break;
 		case 'W':
 			wipe = 1;

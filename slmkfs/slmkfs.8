@@ -19,7 +19,7 @@
 .\" Pittsburgh, PA 15213			web: http://www.psc.edu/
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd August 14, 2012
+.Dd November 30, 2014
 .Dt SLMKFS 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -34,6 +34,7 @@ backing store file system
 .Op Fl c Ar conf
 .Op Fl D Ar datadir
 .Op Fl I Ar siteid
+.Op Fl R Ar resid
 .Op Fl u Ar fsuuid
 .Pa fsroot
 .Sh DESCRIPTION
@@ -74,12 +75,24 @@ nodes.
 The default is to format the file system for use with an
 .Tn MDS
 server.
+.It Fl R Ar resid
+Specify resource ID, which must correspond to the
+.Ic id
+field from the analogous
+.Xr slcfg 5
+resource definition.
+Must be in hexadecimal format
+.Po i.e. Sq 0x
+.No prefix Pc .
 .It Fl u
 Specify file system
 .Tn UUID
 .Po for
 .Tn I/O nodes only
 .Pc .
+Must be in hexadecimal format
+.Po i.e. Sq 0x
+.No prefix Pc .
 .It Fl W
 Completely wipe all existing data on the destination file system before
 initializing the internal structure.
@@ -90,7 +103,7 @@ initializing the internal structure.
 block map assignments
 .It Ar fsroot Ns Pa /.slmd/cursor
 journal cursor
-.It Ar fsroot Ns Pa /.slmd/fidns
+.It Ar fsroot Ns Pa /.slmd/fidns/
 immutable namespace
 .It Ar fsroot Ns Pa /.slmd/fsuuid
 file system universally unique ID
@@ -98,10 +111,8 @@ file system universally unique ID
 various operation logs
 .It Ar fsroot Ns Pa /.slmd/ptrunc.odt
 partial truncation resolutions
-.It Ar fsroot Ns Pa /.slmd/repl.odt
-replication queue
-.It Ar fsroot Ns Pa /.slmd/repls
-replication queue
+.It Ar fsroot Ns Pa /.slmd/resid
+resource identifier
 .It Ar fsroot Ns Pa /.slmd/timestamp
 file system creation date
 .It Ar fsroot Ns Pa /.slmd/tmp
