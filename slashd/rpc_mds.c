@@ -529,7 +529,7 @@ void
 slmbchrqthr_spawn(void)
 {
 	psc_poolmaster_init(&batchrq_pool_master,
-	    struct batchrq, br_lentry_ml, PPMF_AUTO, 8, 8, 0,
+	    struct batchrq, br_lentry_ml, PPMF_AUTO, 8, 8, 16,
 	    NULL, NULL, NULL, "bchrq");
 	batchrq_pool = psc_poolmaster_getmgr(&batchrq_pool_master);
 
