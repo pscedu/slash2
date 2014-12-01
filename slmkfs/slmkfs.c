@@ -59,7 +59,7 @@ int		 ion;
 struct passwd	*pw;
 uint64_t         siteid;
 uint64_t         fsuuid;
-sl_ios_id_t	 resid;
+sl_ios_id_t	 resid = IOS_ID_ANY;
 const char      *datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
@@ -161,14 +161,12 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fp = fopen(fn, "w");
 	if (fp == NULL)
 		psc_fatal("open %s", fn);
-
 	if (!fsuuid)
 		fsuuid = psc_random64();
 	fprintf(fp, "%#18"PRIx64"\n", fsuuid);
 	if (!ion)
 		printf("The UUID of the file system is %#18"PRIx64"\n",
 		    fsuuid);
-
 	fclose(fp);
 
 	/* create the SITEID file */
@@ -180,7 +178,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (!ion)
 		printf("The SITEID of the file system is %#"PRIx64"\n",
 		    siteid);
-
 	fclose(fp);
 
 	/* create the journal cursor file */
@@ -338,6 +335,8 @@ main(int argc, char *argv[])
 	if (ion && !fsuuid)
 		errx(1, "fsuuid must be specified for I/O servers");
 	if (!ion && !specsid)
+		errx(1, "site ID must be specified for MDS servers");
+	if (resid == IOS_ID_ANY)
 		errx(1, "site ID must be specified for MDS servers");
 
 	sl_getuserpwent(&pw);
