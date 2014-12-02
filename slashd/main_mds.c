@@ -500,8 +500,6 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
-
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
