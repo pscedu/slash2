@@ -141,7 +141,7 @@ our @cli = (
 	{
 		host => "adamantium",
 		env => {
-			SLASH_MDS_NID => "mds0\@tsuite",
+			MDS	 => "mds0\@tsuite",
 			PREF_IOS => "io1\@tsuite"
 		}
 	},

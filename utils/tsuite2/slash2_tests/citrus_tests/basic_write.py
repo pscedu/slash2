@@ -5,8 +5,8 @@ test_file = ""
 test_env = {
     host:"adamantium",
     env: {
-	"SLASH_MDS_NID": "mds0@tsuite",
-	"PREF_IOS" : "io1@tsuite"
+	"MDS":		"mds0@tsuite",
+	"PREF_IOS":	"io1@tsuite"
     }
 }
 

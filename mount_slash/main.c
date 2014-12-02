@@ -3574,8 +3574,9 @@ msl_init(void)
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
 
-	if ((name = getenv("SLASH_MDS_NID")) == NULL)
-		psc_fatalx("SLASH_MDS_NID not specified");
+	name = getenv("MDS");
+	if (name == NULL)
+		psc_fatalx("environment variable MDS not specified");
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
