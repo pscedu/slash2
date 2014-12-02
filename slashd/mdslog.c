@@ -1915,7 +1915,7 @@ void
 mds_journal_init(uint64_t fsuuid)
 {
 	void *handle, *reclaimbuf;
-	char *jrnldev, fn[PATH_MAX];
+	char *journalfn, fn[PATH_MAX];
 	int i, ri, rc, max, nios, count, stale, total, index, npeers;
 	uint64_t last_update_xid = 0, last_distill_xid = 0;
 	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0;
@@ -1959,15 +1959,17 @@ mds_journal_init(uint64_t fsuuid)
 		    "exceeds %d", npeers,
 		    MAX_UPDATE_PROG_ENTRY);
 
-	res = nodeResm->resm_res;
-	if (res->res_jrnldev[0] == '\0')
-		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir,
-		    SL_FN_OPJOURNAL);
+	journalfn = globalConfig.gconf_journal;
+	if (journalfn == '\0') {
+		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+		journalfn = fn;
+	}
+	psclog_info("Journal device is %s", journalfn);
 
-	slm_journal = pjournal_open(res->res_jrnldev);
+	slm_journal = pjournal_open(journalfn);
 	if (slm_journal == NULL)
 		psc_fatalx("failed to open log file %s",
-		    res->res_jrnldev);
+		    journalfn);
 
 #if 0
 	/*
@@ -1980,7 +1982,6 @@ mds_journal_init(uint64_t fsuuid)
 		  fsuuid, slm_journal->pj_hdr->pjh_fsuuid);
 #endif
 
-	jrnldev = res->res_jrnldev;
 	mds_open_cursor();
 
 	/*
@@ -2250,7 +2251,6 @@ mds_journal_init(uint64_t fsuuid)
 	slm_journal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	slm_journal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
-	psclog_info("Journal device is %s", jrnldev);
 	psclog_info("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_info("Last synced ZFS transaction group number is %"PRId64,
 	    slm_journal->pj_commit_txg);
