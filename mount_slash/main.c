@@ -3571,7 +3571,7 @@ msl_init(void)
 	    "msnbrqthr%d");
 
 	msbmapthr_spawn();
-	msfcmhreapthr_spawn();
+	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
 
