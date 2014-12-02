@@ -3307,16 +3307,6 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 }
 
 void
-msfcmhreapthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1))
-			;
-		sleep(MAX_FCMH_LIFETIME);
-	}
-}
-
-void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	int i, rc, did_work;
@@ -3437,19 +3427,6 @@ msattrflushthr_main(struct psc_thread *thr)
 			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
 		}
 	}
-}
-
-void
-msfcmhreapthr_spawn(void)
-{
-	struct msfcmhreap_thread *mfrt;
-	struct psc_thread *thr;
-
-	thr = pscthr_init(MSTHRT_FCMHREAP, msfcmhreapthr_main, NULL,
-	    sizeof(*mfrt), "msfcmhreapthr%d", 0);
-	mfrt = msfcmhreapthr(thr);
-	psc_multiwait_init(&mfrt->mfrt_mw, "%s", thr->pscthr_name);
-	pscthr_setready(thr);
 }
 
 void

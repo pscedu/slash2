@@ -41,12 +41,12 @@ struct fidc_membh;
 enum {
 	SLITHRT_ASYNC_IO,	/* asynchronous I/O handlers */
 	SLITHRT_BMAPRLS,	/* notify MDS of completed write bmaps */
-	SLITHRT_BREAP,
-	SLITHRT_FCMHREAP,
+	SLITHRT_BREAP,		/* bmap reaper */
+	SLITHRT_FREAP,		/* file reaper */
 	SLITHRT_CONN,		/* connection monitor */
 	SLITHRT_CTL,		/* control processor */
 	SLITHRT_CTLAC,		/* control acceptor */
-	SLITHRT_HEALTH,
+	SLITHRT_HEALTH,		/* underlying file system health checker */
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_NBRQ,		/* non blocking RPC request processor */
 	SLITHRT_REPLPND,	/* process enqueued replication work */

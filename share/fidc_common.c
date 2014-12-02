@@ -465,6 +465,22 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	FCMH_ULOCK(f);
 }
 
+void
+sl_freapthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		while (fidc_reap(0, 1))
+			;
+		sleep(MAX_FCMH_LIFETIME);
+	}
+}
+
+void
+sl_freapthr_spawn(const char *name, int thrtype)
+{
+	pscthr_init(thrtype, sl_freapthr_main, NULL, 0, name);
+}
+
 #if PFL_DEBUG > 0
 void
 dump_fcmh(struct fidc_membh *f)

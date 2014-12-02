@@ -326,23 +326,6 @@ dump_fcmh_flags(int flags)
 }
 #endif
 
-
-void
-slmfcmhreapthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1));
-		sleep(MAX_FCMH_LIFETIME);
-	}
-}
-
-void
-slmfcmhreapthr_spawn(void)
-{
-	pscthr_init(SLMTHRT_FCMHREAPER, slmfcmhreapthr_main, NULL, 0,
-	    "slmfcmhreapthr");
-}
-
 struct sl_fcmh_ops sl_fcmh_ops = {
 	slm_fcmh_ctor,		/* sfop_ctor */
 	slm_fcmh_dtor,		/* sfop_dtor */

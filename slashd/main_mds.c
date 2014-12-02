@@ -713,7 +713,7 @@ main(int argc, char *argv[])
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
-	slmfcmhreapthr_spawn();
+	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	slmctlthr_main(sfn);
 	exit(0);

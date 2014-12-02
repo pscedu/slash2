@@ -55,7 +55,7 @@ enum {
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_EQPOLL,			/* LNET event queue polling */
-	MSTHRT_FCMHREAP,		/* fcmh reap thread */
+	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
@@ -78,10 +78,6 @@ struct msbrelease_thread {
 
 struct msbwatch_thread {
 	struct psc_multiwait		 mbwt_mw;
-};
-
-struct msfcmhreap_thread {
-	struct psc_multiwait		 mfrt_mw;
 };
 
 struct msflush_thread {
@@ -114,7 +110,6 @@ PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
-PSCTHR_MKCAST(msfcmhreapthr, msfcmhreap_thread, MSTHRT_FCMHREAP);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
@@ -221,7 +216,7 @@ resm2rmci(struct sl_resm *resm)
 }
 
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
-#define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (char *)(buf), (size), (off), SL_WRITE)
+#define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
 
 #define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 

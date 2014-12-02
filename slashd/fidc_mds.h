@@ -113,8 +113,6 @@ int	_mds_fcmh_setattr(int, struct fidc_membh *, int, const struct srt_stat *, in
 
 int	_slm_fcmh_endow(int, struct fidc_membh *, struct fidc_membh *, int);
 
-void	slmfcmhreapthr_spawn(void);
-
 int	slfid_to_vfsid(slfid_t, int *);
 
 extern uint64_t		slm_next_fid;

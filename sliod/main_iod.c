@@ -322,8 +322,7 @@ main(int argc, char *argv[])
 	slibmaprlsthr_spawn();
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
-	pscthr_init(SLITHRT_FCMHREAP, slifcmhreapthr_main, NULL, 0,
-	    "slifcmhreapthr");
+	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
 	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);
 

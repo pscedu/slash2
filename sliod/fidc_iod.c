@@ -308,13 +308,3 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 	NULL,			/* sfop_postsetattr */
 	sli_fcmh_reopen		/* sfop_modify */
 };
-
-void
-slifcmhreapthr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1))
-			;
-		sleep(MAX_FCMH_LIFETIME);
-	}
-}
