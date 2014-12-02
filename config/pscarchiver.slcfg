@@ -26,6 +26,7 @@ site @PSCARCH {
 		nids		= illusion-mds;
 		journal		= /dev/disk/by-id/scsi-35000c50033f6faa7;
 		arc_max		= 8g;
+		fidcachesz	= 128k;
 		zpool_name	= "arc_s2ssd_prod";
 	}
 
