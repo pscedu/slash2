@@ -521,9 +521,9 @@ main(int argc, char *argv[])
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
 
-	sl_drop_privs(1);
-
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
+
+	sl_drop_privs(1);
 
 	/* startup meter */
 	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
