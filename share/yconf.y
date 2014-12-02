@@ -72,20 +72,20 @@ enum slconf_sym_type {
 
 enum slconf_sym_struct {
 	SL_STRUCT_NONE,
-	SL_STRUCT_VAR,
+	SL_STRUCT_GLOBAL,
+	SL_STRUCT_LOCAL,
 	SL_STRUCT_RES,
-	SL_STRUCT_SITE
+	SL_STRUCT_SITE,
 };
 
-typedef int (*cfg_sym_handler_t)(const char *);
-
 struct slconf_symbol {
-	char			*c_name;
-	enum slconf_sym_struct	 c_struct;
-	enum slconf_sym_type	 c_type;
-	uint64_t		 c_max;
-	int			 c_offset;
-	cfg_sym_handler_t	 c_handler;
+	char			 *c_name;
+	enum slconf_sym_struct	  c_struct;
+	enum slconf_sym_type	  c_type;
+	uint64_t		  c_max;
+	int			  c_fieldsize;
+	int			  c_offset;
+	int			(*c_handler)(const char *);
 };
 
 struct cfg_file {
@@ -103,52 +103,40 @@ void		 slcfg_store_tok_val(const char *, char *);
 int		 yylex(void);
 int		 yyparse(void);
 
-#define TABENT_VAR(name, type, max, field, handler)				\
-	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_config, field), handler }
+#define SYMBOL(str, strtype, name, vtype, max, memb, handler)		\
+	{ name, strtype, vtype, max, sizeof(((str *)NULL)->memb),	\
+	  offsetof(type, memb), handler }
 
-#define TABENT_VAR_MBSIZ(name, type, field, handler)				\
-	TABENT_VAR(name, type, sizeof(((struct sl_config *)NULL)->field), field, handler)
-
-#define TABENT_SIT(name, type, max, field, handler)				\
-	{ name, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
-
-#define TABENT_SIT_MBSIZ(name, type, field, handler)				\
-	TABENT_SIT(name, type, sizeof(((struct sl_site *)NULL)->field), field, handler)
-
-#define TABENT_RES(name, type, max, field, handler)				\
-	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
-
-#define TABENT_RES_MBSIZ(name, type, field, handler)				\
-	TABENT_RES(name, type, sizeof(((struct sl_resource *)NULL)->field), field, handler)
+#define SYM_GLOBAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
+#define SYM_LOCAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
+#define SYM_RES(n, ...)		SYMBOL(struct sl_resource, SL_STRUCT_RES, n, ##__VA_ARGS__)
+#define SYM_SITE(n, ...)	SYMBOL(struct sl_site, SL_STRUCT_SITE, n, ##__VA_ARGS__)
 
 struct slconf_symbol sym_table[] = {
-	TABENT_VAR_MBSIZ("crcalg",	SL_TYPE_STR,			gconf_crcalg,	NULL),
-	TABENT_VAR_MBSIZ("allow_exec",	SL_TYPE_STR,			gconf_allowexe,	NULL),
-	TABENT_VAR	("fidns_depth",	SL_TYPE_INT,	32,		gconf_fidnsdepth,NULL),
-	TABENT_VAR_MBSIZ("fs_root",	SL_TYPE_STR,			gconf_fsroot,	NULL),
-	TABENT_VAR	("fsuuid",	SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
-	TABENT_VAR_MBSIZ("journal",	SL_TYPE_STR,			gconf_journal,	NULL),
-	TABENT_VAR_MBSIZ("net",		SL_TYPE_STR,			gconf_lnets,	NULL),
-	TABENT_VAR_MBSIZ("nets",	SL_TYPE_STR,			gconf_lnets,	NULL),
-	TABENT_VAR	("port",	SL_TYPE_INT,	0,		gconf_port,	NULL),
-	TABENT_VAR_MBSIZ("pref_ios",	SL_TYPE_STR,			gconf_prefios,	NULL),
-	TABENT_VAR_MBSIZ("pref_mds",	SL_TYPE_STR,			gconf_prefmds,	NULL),
-	TABENT_VAR_MBSIZ("routes",	SL_TYPE_STR,			gconf_routes,	NULL),
-	TABENT_VAR_MBSIZ("zpool_cache",	SL_TYPE_STR,			gconf_zpcachefn,NULL),
-	TABENT_VAR_MBSIZ("zpool_name",	SL_TYPE_STR,			gconf_zpname,	NULL),
+	SYM_GLOBAL("fsuuid",	SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
+	SYM_GLOBAL("net",	SL_TYPE_STR,	0,		gconf_lnets,	NULL),
+	SYM_GLOBAL("nets",	SL_TYPE_STR,	0,		gconf_lnets,	NULL),
+	SYM_GLOBAL("port",	SL_TYPE_INT,	0,		gconf_port,	NULL),
+	SYM_GLOBAL("routes",	SL_TYPE_STR,	0,		gconf_routes,	NULL),
 
-	TABENT_SIT	("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
-	TABENT_SIT	("site_id",	SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
+	SYM_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
+	SYM_SITE("site_id",	SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 
-	TABENT_RES	("arc_max",	SL_TYPE_SIZET,	0,		res_arc_max,	NULL),
-	TABENT_RES	("desc",	SL_TYPE_STRP,	0,		res_desc,	NULL),
-	TABENT_RES	("flags",	SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
-	TABENT_RES_MBSIZ("fsroot",	SL_TYPE_STR,			res_fsroot,	NULL),
-	TABENT_RES	("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
-	TABENT_RES_MBSIZ("jrnldev",	SL_TYPE_STR,			res_jrnldev,	NULL),
-	TABENT_RES_MBSIZ("prefios",	SL_TYPE_STR,			res_prefios,	NULL),
-	TABENT_RES_MBSIZ("selftest",	SL_TYPE_STR,			res_selftest,	NULL),
-	TABENT_RES	("type",	SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
+	SYM_RES("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
+	SYM_RES("flags",	SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
+	SYM_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
+	SYM_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
+
+	SYM_LOCAL("allow_exec",	SL_TYPE_STRP,	0,		gconf_allowexe,	NULL),
+	SYM_LOCAL("arc_max",	SL_TYPE_SIZET,	0,		gconf_arc_max,	NULL),
+	SYM_LOCAL("fidcachesz",	SL_TYPE_SIZET,	0,		gconf_fidcache,	NULL),
+	SYM_LOCAL("fsroot",	SL_TYPE_STRP,	0,		gconf_fsroot,	NULL),
+	SYM_LOCAL("journal",	SL_TYPE_STRP,	0,		gconf_journal,	NULL),
+	SYM_LOCAL("pref_ios",	SL_TYPE_STR,	0,		gconf_prefios,	NULL),
+	SYM_LOCAL("pref_mds",	SL_TYPE_STR,	0,		gconf_prefmds,	NULL),
+	SYM_LOCAL("self_test",	SL_TYPE_STRP,	0,		gconf_selftest,	NULL),
+	SYM_LOCAL("zpool_cache",SL_TYPE_STRP,	0,		gconf_zpcachefn,NULL),
+	SYM_LOCAL("zpool_name",	SL_TYPE_STR,	0,		gconf_zpname,	NULL),
 
 	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, NULL }
 };

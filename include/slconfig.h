@@ -79,15 +79,11 @@ struct sl_resource {
 	sl_ios_id_t		 res_id;
 	int			 res_flags;
 	enum sl_res_type	 res_type;
+	uint32_t		 res_stkvers;	/* peer SLASH2 stack version */
 	struct sl_site		*res_site;
 	struct psc_dynarray	 res_peers;
 	struct psc_dynarray	 res_members;
 	char			 res_name[RES_NAME_MAX];
-	char			 res_fsroot[PATH_MAX];
-	char			 res_jrnldev[PATH_MAX];
-	char			 res_prefios[RES_NAME_MAX];
-	size_t			 res_arc_max;
-	char			 res_selftest[LINE_MAX];
 	char			*res_desc;
 };
 
@@ -112,12 +108,21 @@ struct sl_resm_nid {
 	lnet_nid_t		 resmnid_nid;
 };
 
-/* Resource member (a machine in an I/O system) */
+/*
+ * Resource member (a machine in an I/O system)
+ *
+ * This structure is used in two ways:
+ *	- a CLUSTER-type resource has multiple members each consitituent
+ *	  of which is itself a slcfg resource, so only resm_res is used
+ *	  in these scenarios and no other fields.
+ *	- an FS-type resource, for which this structure contains the
+ *	  connection details, as well as a backpointer to the actual
+ *	  resource profile.
+ */
 struct sl_resm {
 	struct slrpc_cservice	*resm_csvc;	/* client RPC service - must be first */
 	struct psc_dynarray	 resm_nids;	/* network interfaces */
 	struct sl_resource	*resm_res;
-	uint32_t		 resm_stkvers;	/* peer SLASH2 stack version */
 	struct pfl_mutex	 resm_mutex;
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
@@ -173,18 +178,19 @@ struct lnetif_pair {
 #define LPF_SKIP		(1 << 1)
 
 struct sl_config {
-	char			 gconf_crcalg[NAME_MAX];
-	char			 gconf_allowexe[BUFSIZ];
-	char			 gconf_routes[NAME_MAX];
+	char			*gconf_journal;
+	char			*gconf_zpcachefn;
+	char			*gconf_allowexe;
+	char			 gconf_routes[256];
 	char			 gconf_lnets[LNETS_MAX];
-	char			 gconf_fsroot[PATH_MAX];
-	int			 gconf_port;
-	int			 gconf_fidnsdepth;
+	char			*gconf_fsroot;
 	char			 gconf_prefmds[RES_NAME_MAX];
 	char			 gconf_prefios[RES_NAME_MAX];
-	char			 gconf_journal[PATH_MAX];
-	char			 gconf_zpcachefn[PATH_MAX];
-	char			 gconf_zpname[NAME_MAX];
+	char			 gconf_zpname[NAME_MAX + 1];
+	char			*gconf_selftest;
+	size_t			 gconf_arc_max;
+	size_t			 gconf_fidcache;
+	int			 gconf_port;
 	int			 gconf_async_io:1;
 	int			 gconf_root_squash:1;
 
@@ -192,7 +198,7 @@ struct sl_config {
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
 	uint64_t		 gconf_fsuuid;
-	struct psc_hashtbl	 gconf_reshtable;		/* sl_resource hashtable */
+	struct psc_hashtbl	 gconf_res_hashtbl;
 };
 
 #define INIT_GCONF(cf)							\
