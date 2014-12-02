@@ -2936,7 +2936,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	if (fcmh_isdir(f))
 		PFL_GOTOERR(out, rc = EISDIR);
 
-	rc = msl_write(pfr, mfh, buf, size, off);
+	rc = msl_write(pfr, mfh, (void *)buf, size, off);
 
  out:
 	if (rc) {
@@ -3519,7 +3519,7 @@ msl_init(void)
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init(2 * (SLM_RCI_NBUFS + SLM_RCM_NBUFS));
+	libsl_init(2 * (SRCI_NBUFS + SRCM_NBUFS));
 	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));

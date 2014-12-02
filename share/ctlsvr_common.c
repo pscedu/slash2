@@ -99,7 +99,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		mn = psc_dynarray_getpos(&resm->resm_nids, 0);
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
 		    sizeof(scc->scc_addrbuf));
-		scc->scc_stkvers = resm->resm_stkvers;
+		scc->scc_stkvers = r->res_stkvers;
 		if (scc->scc_stkvers < SL_STK_VERSION)
 			scc->scc_flags |= CSVCF_CTL_OLDER;
 		else if (scc->scc_stkvers > SL_STK_VERSION)

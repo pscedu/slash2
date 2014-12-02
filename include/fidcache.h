@@ -255,7 +255,7 @@ struct fidc_membh {
 #define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
 #define	FCMH_OPCNT_READAHEAD		(1 << 9)	/* IOD/CLI: readahead */
 
-void	fidc_init(int, int);
+void	fidc_init(int);
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
@@ -266,8 +266,10 @@ void	fidc_init(int, int);
 
 int	fidc_reap(int, int);
 
+void	sl_freapthr_spawn(int, const char *);
+
 int	_fidc_lookup(const struct pfl_callerinfo *,
-	    const struct slash_fidgen *, int, 
+	    const struct slash_fidgen *, int,
 	    struct fidc_membh **, void *);
 
 #define fidc_lookup(fgp, lkfl, fcmhp)			\

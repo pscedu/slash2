@@ -44,6 +44,7 @@
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "slconfig.h"
 #include "slutil.h"
 
 struct psc_poolmaster	  fidcPoolMaster;
@@ -480,7 +481,7 @@ sl_freapthr_main(struct psc_thread *thr)
 }
 
 void
-sl_freapthr_spawn(const char *name, int thrtype)
+sl_freapthr_spawn(int thrtype, const char *name)
 {
 	pscthr_init(thrtype, sl_freapthr_main, NULL, 0, name);
 }

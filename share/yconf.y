@@ -105,7 +105,7 @@ int		 yyparse(void);
 
 #define SYMBOL(str, strtype, name, vtype, max, memb, handler)		\
 	{ name, strtype, vtype, max, sizeof(((str *)NULL)->memb),	\
-	  offsetof(type, memb), handler }
+	  offsetof(str, memb), handler }
 
 #define SYM_GLOBAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
 #define SYM_LOCAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
@@ -129,7 +129,7 @@ struct slconf_symbol sym_table[] = {
 
 	SYM_LOCAL("allow_exec",	SL_TYPE_STRP,	0,		gconf_allowexe,	NULL),
 	SYM_LOCAL("arc_max",	SL_TYPE_SIZET,	0,		gconf_arc_max,	NULL),
-	SYM_LOCAL("fidcachesz",	SL_TYPE_SIZET,	0,		gconf_fidcache,	NULL),
+	SYM_LOCAL("fidcachesz",	SL_TYPE_SIZET,	0,		gconf_fidcachesz,NULL),
 	SYM_LOCAL("fsroot",	SL_TYPE_STRP,	0,		gconf_fsroot,	NULL),
 	SYM_LOCAL("journal",	SL_TYPE_STRP,	0,		gconf_journal,	NULL),
 	SYM_LOCAL("pref_ios",	SL_TYPE_STR,	0,		gconf_prefios,	NULL),
@@ -138,7 +138,7 @@ struct slconf_symbol sym_table[] = {
 	SYM_LOCAL("zpool_cache",SL_TYPE_STRP,	0,		gconf_zpcachefn,NULL),
 	SYM_LOCAL("zpool_name",	SL_TYPE_STR,	0,		gconf_zpname,	NULL),
 
-	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, NULL }
+	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, 0, NULL }
 };
 
 struct sl_config	   globalConfig;
@@ -299,7 +299,7 @@ site_resource	: resource_start resource_def '}' {
 					    currentSite->site_name);
 
 			currentRes->res_hashkey = currentRes->res_id;
-			psc_hashtbl_add_item(&globalConfig.gconf_reshtable,
+			psc_hashtbl_add_item(&globalConfig.gconf_res_hashtbl,
 			    currentRes);
 
 			slcfg_init_res(currentRes);
@@ -315,7 +315,7 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 			currentRes->res_site = currentSite;
 			currentResm = NULL;
 
-			psc_hashent_init(&globalConfig.gconf_reshtable,
+			psc_hashent_init(&globalConfig.gconf_res_hashtbl,
 			    currentRes);
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
@@ -743,9 +743,9 @@ slcfg_get_symbol(const char *name)
 void
 slcfg_store_tok_val(const char *tok, char *val)
 {
+	void *ptr, *gcfg = &globalConfig;
 	struct slconf_symbol *e;
 	char *endp;
-	void *ptr;
 
 	psclog_debug("tok %s val: %s", val, tok);
 
@@ -762,14 +762,15 @@ slcfg_store_tok_val(const char *tok, char *val)
 	 * offsetof().
 	 */
 	switch (e->c_struct) {
-	case SL_STRUCT_VAR:
-		ptr = e->c_offset + (char *)&globalConfig;
+	case SL_STRUCT_GLOBAL:
+	case SL_STRUCT_LOCAL:
+		ptr = PSC_AGP(gcfg, e->c_offset);
 		break;
 	case SL_STRUCT_SITE:
-		ptr = e->c_offset + (char *)currentSite;
+		ptr = PSC_AGP(currentSite, e->c_offset);
 		break;
 	case SL_STRUCT_RES:
-		ptr = e->c_offset + (char *)currentRes;
+		ptr = PSC_AGP(currentRes, e->c_offset);
 		break;
 	default:
 		psc_fatalx("invalid structure type %u", e->c_struct);

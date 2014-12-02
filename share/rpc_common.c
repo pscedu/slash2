@@ -400,7 +400,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		}
 		if (!RES_ISFS(m->resm_res))
 			mp->rc = -SLERR_RES_BADTYPE;
-		m->resm_stkvers = mq->stkvers;
+		m->resm_res->res_stkvers = mq->stkvers;
 		break;
 	case SLCONNT_MDS:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -410,7 +410,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		}
 		if (m->resm_type != SLREST_MDS)
 			mp->rc = -SLERR_RES_BADTYPE;
-		m->resm_stkvers = mq->stkvers;
+		m->resm_res->res_stkvers = mq->stkvers;
 		break;
 	default:
 		psc_fatal("choke");
@@ -650,7 +650,7 @@ slrpc_getstkversp(struct slashrpc_cservice *csvc)
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
 		m = (void *)csvc->csvc_params.scp_csvcp;
-		return (&m->resm_stkvers);
+		return (&m->resm_res->res_stkvers);
 	default:
 		psc_fatalx("%d: bad peer connection type",
 		    csvc->csvc_peertype);
@@ -760,7 +760,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				psc_multiwaitcond_init(&csvc->csvc_mwc,
 				    csvc, PMWCF_WAKEALL, "res-%s",
 				    resm->resm_name);
-				stkversp = &resm->resm_stkvers;
+				stkversp = &resm->resm_res->res_stkvers;
 				break;
 			    }
 			case SLCONNT_MDS: {
@@ -779,7 +779,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				psc_multiwaitcond_init(&csvc->csvc_mwc,
 				    csvc, PMWCF_WAKEALL, "res-%s",
 				    resm->resm_name);
-				stkversp = &resm->resm_stkvers;
+				stkversp = &resm->resm_res->res_stkvers;
 				break;
 			    }
 			default:

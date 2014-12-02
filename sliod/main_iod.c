@@ -147,7 +147,7 @@ slihealththr_main(struct psc_thread *thr)
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
-		rc = system(nodeResm->resm_res->res_selftest);
+		rc = system(globalConfig.gconf_selftest);
 
 		/*
 		 * Code		Description
@@ -293,14 +293,14 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
-	if (nodeResm->resm_res->res_selftest[0])
+	if (globalConfig.gconf_selftest[0])
 		pscthr_init(SLITHRT_HEALTH, slihealththr_main, NULL, 0,
 		    "slihealththr");
 
 	slrpc_initcli();
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    nodeResm->resm_res->res_selftest[0] ?
+	    globalConfig.gconf_selftest[0] ?
 	    slirmiconnthr_upcall : NULL, NULL);
 
 	prefmds = globalConfig.gconf_prefmds;

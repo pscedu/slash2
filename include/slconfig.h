@@ -189,7 +189,7 @@ struct sl_config {
 	char			 gconf_zpname[NAME_MAX + 1];
 	char			*gconf_selftest;
 	size_t			 gconf_arc_max;
-	size_t			 gconf_fidcache;
+	size_t			 gconf_fidcachesz;
 	int			 gconf_port;
 	int			 gconf_async_io:1;
 	int			 gconf_root_squash:1;
@@ -207,7 +207,7 @@ struct sl_config {
 		INIT_SPINLOCK(&(cf)->gconf_lock);			\
 		pll_init(&(cf)->gconf_sites, struct sl_site,		\
 		    site_lentry, &(cf)->gconf_lock);			\
-		psc_hashtbl_init(&(cf)->gconf_reshtable, 0,		\
+		psc_hashtbl_init(&(cf)->gconf_res_hashtbl, 0,		\
 		    struct sl_resource, res_hashkey, res_hentry, 191,	\
 		    NULL, "res");					\
 	} while (0)
