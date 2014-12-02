@@ -121,7 +121,6 @@ const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 use_mapfile;
-int				 allow_root_uid = 1;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
@@ -3814,7 +3813,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfg = p;
 
-	while ((c = getopt(argc, argv, "D:df:I:M:o:QS:UVX")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:QS:UV")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -3848,9 +3847,6 @@ main(int argc, char *argv[])
 			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
-		case 'X':
-			allow_root_uid = 1;
-			break;
 		default:
 			usage();
 		}
@@ -3878,7 +3874,7 @@ main(int argc, char *argv[])
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
 
-	sl_drop_privs(allow_root_uid);
+	sl_drop_privs(1);
 
 	slcfg_parse(cfg);
 	parse_allowexe();

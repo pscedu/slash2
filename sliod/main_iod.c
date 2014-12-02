@@ -71,7 +71,6 @@ psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
-int			 allow_root_uid = 1;
 const char		*progname;
 
 struct sli_rdwrstats	 sli_rdwrstats[8];
@@ -225,7 +224,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	while ((c = getopt(argc, argv, "D:f:S:VX")) != -1)
+	while ((c = getopt(argc, argv, "D:f:S:V")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -238,9 +237,6 @@ main(int argc, char *argv[])
 			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
-		case 'X':
-			allow_root_uid = 1;
-			break;
 		default:
 			usage();
 		}
@@ -264,7 +260,7 @@ main(int argc, char *argv[])
 
 	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
-	sl_drop_privs(allow_root_uid);
+	sl_drop_privs(1);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);

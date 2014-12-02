@@ -65,7 +65,6 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-int			 allow_root_uid = 1;
 int			 disable_propagation = 0;
 
 int			 current_vfsid;
@@ -467,7 +466,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	while ((c = getopt(argc, argv, "D:f:p:S:VX:Y")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:VY")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -483,9 +482,6 @@ main(int argc, char *argv[])
 			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
-		case 'X': /* undocumented, developer only */
-			allow_root_uid = 1;
-			break;
 		case 'Y': /* undocumented, developer only */
 			disable_propagation = 1;
 			break;
@@ -539,7 +535,7 @@ main(int argc, char *argv[])
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
 
-	sl_drop_privs(allow_root_uid);
+	sl_drop_privs(1);
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
 
