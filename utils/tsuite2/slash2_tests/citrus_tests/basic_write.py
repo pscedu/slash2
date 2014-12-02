@@ -6,7 +6,7 @@ test_env = {
     host:"adamantium",
     env: {
 	"SLASH_MDS_NID": "mds0@tsuite",
-	"SLASH2_PIOS_ID" : "io1@tsuite"
+	"PREF_IOS" : "io1@tsuite"
     }
 }
 

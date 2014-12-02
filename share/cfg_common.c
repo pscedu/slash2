@@ -289,8 +289,8 @@ libsl_init(int nmsgs)
 	pscrpc_getlocalprids(&sl_lnet_prids);
 
 #ifdef _SLASH_CLIENT
-	setenv("SLASH2_PIOS_ID", globalConfig.gconf_prefios, 0);
-	setenv("SLASH_MDS_NID", globalConfig.gconf_prefmds, 0);
+	setenv("PREF_IOS", globalConfig.gconf_prefios, 0);
+	setenv("MDS", globalConfig.gconf_prefmds, 0);
 	return;
 #endif
 

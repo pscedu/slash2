@@ -3581,13 +3581,13 @@ msl_init(void)
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", name, slstrerror(rc));
 
-	name = getenv("SLASH2_PIOS_ID");
+	name = getenv("PREF_IOS");
 	if (name) {
 		struct sl_resource *r;
 
 		r = libsl_str2res(name);
 		if (r == NULL)
-			psclog_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
+			psclog_warnx("PREF_IOS (%s) does not resolve to "
 			    "a valid IOS; defaulting to IOS_ID_ANY", name);
 		else
 			slc_setprefios(r->res_id);
@@ -3825,10 +3825,10 @@ main(int argc, char *argv[])
 			cfg = optarg;
 			break;
 		case 'I':
-			setenv("SLASH2_PIOS_ID", optarg, 1);
+			setenv("PREF_IOS", optarg, 1);
 			break;
 		case 'M':
-			setenv("SLASH_MDS_NID", optarg, 1);
+			setenv("MDS", optarg, 1);
 			break;
 		case 'o':
 			if (!opt_lookup(optarg)) {
