@@ -35,10 +35,6 @@
 #define SLASH_SLVR_SIZE		(1024 * (off_t)1024)
 #define SLASH_SLVR_BLKSZ	(32 * 1024)
 
-/* sliod slab cache */
-#define SLB_DEF			64
-#define SLB_MIN			64
-
 /* XXX make it 4 so that status bits of a replica do not straddle a byte boundary */
 #define SL_BITS_PER_REPLICA	3
 
