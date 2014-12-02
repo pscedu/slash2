@@ -3519,8 +3519,8 @@ msl_init(void)
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init(4096);
-	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
+	libsl_init(2 * (SLM_RCI_NBUFS + SLM_RCM_NBUFS));
+	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_mgr_init();
@@ -3876,6 +3876,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
+	globalConfig.gconf_fidcachesz = 1024;
 	slcfg_parse(cfg);
 	parse_allowexe();
 	if (use_mapfile) {

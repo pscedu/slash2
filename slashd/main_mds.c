@@ -222,7 +222,6 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 
 	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], fn, &mf,
 	    &rootcreds, NULL);
-
 	if (rc) {
 		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
 		    fn, slstrerror(rc));
@@ -486,6 +485,7 @@ main(int argc, char *argv[])
 
 	sl_sys_upnonce = psc_random32();
 
+	globalConfig.gconf_fidcachesz = 65536;
 	slcfg_parse(cfn);
 
 	/* override global defaults with cfg settings */
@@ -500,7 +500,7 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
+	fidc_init(sizeof(struct fcmh_mds_info));
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
 	/* Start up ZFS threads and import the MDS zpool. */

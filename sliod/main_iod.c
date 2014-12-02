@@ -254,6 +254,7 @@ main(int argc, char *argv[])
 
 	sl_sys_upnonce = psc_random32();
 
+	globalConfig.gconf_fidcachesz = 4096;
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
@@ -263,7 +264,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
-	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
+	fidc_init(sizeof(struct fcmh_iod_info));
 	bim_init();
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	slvr_cache_init();

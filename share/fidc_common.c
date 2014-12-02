@@ -350,8 +350,12 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(int privsiz, int nobj)
+fidc_init(int privsiz)
 {
+	int nobj;
+
+	nobj = globalConfig.gconf_fidcachesz;
+
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
@@ -359,13 +363,13 @@ fidc_init(int privsiz, int nobj)
 	    NULL, fidc_reaper, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
-	lc_reginit(&fidcBusyList, struct fidc_membh,
-	    fcmh_lentry, "fcmhbusy");
-	lc_reginit(&fidcIdleList, struct fidc_membh,
-	    fcmh_lentry, "fcmhidle");
+	lc_reginit(&fidcBusyList, struct fidc_membh, fcmh_lentry,
+	    "fcmhbusy");
+	lc_reginit(&fidcIdleList, struct fidc_membh, fcmh_lentry,
+	    "fcmhidle");
 
-	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
-	    fcmh_fg, fcmh_hentry, nobj, NULL, "fidc");
+	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh, fcmh_fg,
+	    fcmh_hentry, 3 * nobj - 1, NULL, "fidc");
 }
 
 ssize_t
