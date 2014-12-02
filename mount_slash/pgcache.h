@@ -234,7 +234,6 @@ struct bmap_pagecache {
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 	struct psc_waitq		 bmpc_waitq;
-	psc_spinlock_t			 bmpc_lock;
 
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
@@ -325,7 +324,6 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    biorq_lentry, NULL);
 
 	psc_waitq_init(&bmpc->bmpc_waitq);
-	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
 

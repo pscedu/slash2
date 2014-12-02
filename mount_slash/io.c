@@ -337,9 +337,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
-	spinlock(&bmpc->bmpc_lock);
 	psc_waitq_wakeall(&bmpc->bmpc_waitq);
-	freelock(&bmpc->bmpc_lock);
 
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }

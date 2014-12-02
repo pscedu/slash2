@@ -326,16 +326,15 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 		expired++;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 	}
-	BMAP_ULOCK(b);
 	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		if (wait) {
-			spinlock(&bmpc->bmpc_lock);
 			psc_waitq_waitrel_us(&bmpc->bmpc_waitq,
-			    &bmpc->bmpc_lock, 3000);
+			    &b->bcm_lock, 3000);
 			goto retry;
 		}
 	}
+	BMAP_ULOCK(b);
 }
 
 void
