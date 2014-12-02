@@ -85,14 +85,15 @@ fcmh_destroy(struct fidc_membh *f)
 #define FCMH_MAX_REAP 8
 
 /*
- * Reap some handles from the fidcache.
+ * Reap some files from the fidcache.
  * @max: max number of objects to reap.
+ * @only_expired: whether to restrict reaping to only expired files.
  */
 int
-fidc_reap(int max, int idle)
+fidc_reap(int max, int only_expired)
 {
-	struct timespec crtime;
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
+	struct timespec crtime;
 	int i, nreap = 0;
 
 	if (!max)
@@ -100,11 +101,8 @@ fidc_reap(int max, int idle)
 
 	LIST_CACHE_LOCK(&fidcIdleList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
-		if (nreap >= max)
-			break;
-
-		/* skip the root right now, no need for locking */
-		if (fcmh_2_fid(f) == 1)
+		/* never reap root (/) */
+		if (fcmh_2_fid(f) == SLFID_ROOT)
 			continue;
 
 		if (!FCMH_TRYLOCK(f))
@@ -116,7 +114,7 @@ fidc_reap(int max, int idle)
 			continue;
 		}
 
-		if (idle) {
+		if (only_expired) {
 			PFL_GETTIMESPEC(&crtime);
 			if (timespeccmp(&crtime, &f->fcmh_etime, <)) {
 				FCMH_ULOCK(f);
@@ -129,13 +127,15 @@ fidc_reap(int max, int idle)
 
 		f->fcmh_flags |= FCMH_CAC_TOFREE;
 		lc_remove(&fidcIdleList, f);
-		reap[nreap] = f;
-		nreap++;
+		reap[nreap++] = f;
 		FCMH_ULOCK(f);
+
+		if (nreap >= max)
+			break;
 	}
 	LIST_CACHE_ULOCK(&fidcIdleList);
 
-	psclog_debug("reaped %d fcmhs", nreap);
+	psclog_debug("reaping %d files from fidcache", nreap);
 
 	for (i = 0; i < nreap; i++) {
 		psc_hashent_remove(&fidcHtable, reap[i]);
