@@ -293,14 +293,14 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
-	if (globalConfig.gconf_selftest[0])
+	if (globalConfig.gconf_selftest)
 		pscthr_init(SLITHRT_HEALTH, slihealththr_main, NULL, 0,
 		    "slihealththr");
 
 	slrpc_initcli();
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    globalConfig.gconf_selftest[0] ?
+	    globalConfig.gconf_selftest ?
 	    slirmiconnthr_upcall : NULL, NULL);
 
 	prefmds = globalConfig.gconf_prefmds;

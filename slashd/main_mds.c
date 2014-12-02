@@ -489,11 +489,11 @@ main(int argc, char *argv[])
 	slcfg_parse(cfn);
 
 	/* override global defaults with cfg settings */
-	if (zpcachefn == NULL && globalConfig.gconf_zpcachefn[0])
+	if (zpcachefn == NULL && globalConfig.gconf_zpcachefn)
 		zpcachefn = globalConfig.gconf_zpcachefn;
 	if (argc)
 		zpname = argv[0];
-	else if (globalConfig.gconf_zpname[0])
+	else if (globalConfig.gconf_zpname)
 		zpname = globalConfig.gconf_zpname;
 	else {
 		warnx("no ZFS pool specified");
