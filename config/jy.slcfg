@@ -19,7 +19,7 @@ site @JY {
 		type	= mds;
 		id	= 101;
 		nids	= lime;
-		jrnldev	= /dev/sdl;
+		journal	= /dev/sdl;
 	}
 
 #	resource io {
@@ -61,7 +61,6 @@ site @JY {
 	}
 
 	resource io {
-		desc	= "sliods";
 		type	= cluster_noshare_lfs;
 		id	= 1000;
 		ios	= lemon@JY, orange@JY, citron@JY;
