@@ -110,8 +110,8 @@ libsl_id2res(sl_ios_id_t id)
 {
 	uint64_t resid = id;
 
-	return (psc_hashtbl_search(&globalConfig.gconf_reshtable, NULL,
-	    NULL, &resid));
+	return (psc_hashtbl_search(&globalConfig.gconf_res_hashtbl,
+	    NULL, NULL, &resid));
 }
 
 struct sl_resm *
@@ -297,16 +297,6 @@ libsl_init(int nmsgs)
 	nodeResm = libsl_resm_lookup();
 	if (nodeResm == NULL)
 		psc_fatalx("no resource member found for this node");
-
-	if (nodeResm->resm_res->res_fsroot[0] != '\0')
-		strlcpy(globalConfig.gconf_fsroot,
-		    nodeResm->resm_res->res_fsroot,
-		    sizeof(globalConfig.gconf_fsroot));
-
-	if (nodeResm->resm_res->res_jrnldev[0] != '\0')
-		strlcpy(globalConfig.gconf_journal,
-		    nodeResm->resm_res->res_jrnldev,
-		    sizeof(globalConfig.gconf_journal));
 
 	if (nodeResm->resm_type == SLREST_ARCHIVAL_FS) {
 #ifndef HAVE_AIO
