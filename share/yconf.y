@@ -780,7 +780,8 @@ slcfg_store_tok_val(const char *tok, char *val)
 
 	switch (e->c_type) {
 	case SL_TYPE_STR:
-		if (strlcpy(ptr, val, e->c_max) >= e->c_max)
+		if (strlcpy(ptr, val, e->c_fieldsize) >=
+		    (size_t)e->c_fieldsize)
 			yyerror("field %s value too large", e->c_name);
 		psclog_debug("SL_TYPE_STR tok '%s' set to '%s'",
 		    e->c_name, (char *)ptr);
