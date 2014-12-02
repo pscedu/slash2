@@ -1912,7 +1912,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 }
 
 void
-mds_journal_init(int disable_propagation, uint64_t fsuuid)
+mds_journal_init(uint64_t fsuuid)
 {
 	void *handle, *reclaimbuf;
 	char *jrnldev, fn[PATH_MAX];
@@ -1952,14 +1952,12 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
-	if (!disable_propagation) {
-		SL_MDS_WALK(resm, npeers++);
-		npeers--;
-		if (npeers > MAX_UPDATE_PROG_ENTRY)
-			psc_fatalx("number of metadata servers (%d) "
-			    "exceeds %d", npeers,
-			    MAX_UPDATE_PROG_ENTRY);
-	}
+	SL_MDS_WALK(resm, npeers++);
+	npeers--;
+	if (npeers > MAX_UPDATE_PROG_ENTRY)
+		psc_fatalx("number of metadata servers (%d) "
+		    "exceeds %d", npeers,
+		    MAX_UPDATE_PROG_ENTRY);
 
 	res = nodeResm->resm_res;
 	if (res->res_jrnldev[0] == '\0')

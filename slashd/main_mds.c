@@ -65,8 +65,6 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-int			 disable_propagation = 0;
-
 int			 current_vfsid;
 
 const char		*progname;
@@ -466,7 +464,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	while ((c = getopt(argc, argv, "D:f:p:S:VY")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:V")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -482,9 +480,6 @@ main(int argc, char *argv[])
 			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
-		case 'Y': /* undocumented, developer only */
-			disable_propagation = 1;
-			break;
 		default:
 			usage();
 		}
@@ -665,8 +660,7 @@ main(int argc, char *argv[])
 	slrpc_initcli();
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
-	mds_journal_init(disable_propagation,
-	    zfsMount[current_vfsid].uuid);
+	mds_journal_init(zfsMount[current_vfsid].uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
 	pfl_workq_lock();
