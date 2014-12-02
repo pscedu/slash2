@@ -223,15 +223,6 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], fn, &mf,
 	    &rootcreds, NULL);
 
-	/*
-	 * backward compatibility: assuming one default file system in
-	 * the pool
-	 */
-	if (rc == ENOENT && !strcmp(fn, SL_FN_SITEID)) {
-		*id = nodeSite->site_id;
-		return (0);
-	}
-
 	if (rc) {
 		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
 		    fn, slstrerror(rc));
