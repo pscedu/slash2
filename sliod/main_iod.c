@@ -260,12 +260,10 @@ main(int argc, char *argv[])
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
-		psc_fatal("%s", slcfg_local->cfg_fsroot);
-
 	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
-	sl_drop_privs(1);
+	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
+		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info));
@@ -302,6 +300,8 @@ main(int argc, char *argv[])
 		    "slihealththr");
 
 	slrpc_initcli();
+
+	sl_drop_privs(1);
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
 	    slcfg_local->cfg_selftest ?
