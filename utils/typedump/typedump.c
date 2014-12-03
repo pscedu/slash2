@@ -222,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slc_wkdata_readdir);
+	PRTYPE(struct slcfg_local);
 	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctl_res_field);
