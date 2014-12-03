@@ -29,13 +29,13 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/getopt.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 #include "pfl/fmt.h"
+#include "pfl/getopt.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
 
 #include "sliod/ctl_iod.h"
 #include "ctl.h"
