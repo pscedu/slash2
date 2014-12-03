@@ -115,6 +115,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fgp = &mq->sbd.sbd_fg;
 	bmapno = mq->sbd.sbd_bmapno;
 
+	if (mq->flags & SRM_IOF_DIO)
+		OPSTAT_INCR(SLI_OPST_HANDLE_DIO);
+
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
