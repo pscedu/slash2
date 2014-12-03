@@ -207,8 +207,9 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 				    "reopen/close errno=%d", errno);
 			} else {
 				OPSTAT_INCR(SLI_OPST_CLOSE_SUCCEED);
-				psc_rlim_adj(RLIMIT_NOFILE, -1);
 			}
+			fcmh_2_fd(f) = -1;
+			psc_rlim_adj(RLIMIT_NOFILE, -1);
 			f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 		}
 
