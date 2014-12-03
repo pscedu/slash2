@@ -303,7 +303,7 @@ main(int argc, char *argv[])
 	    globalConfig.gconf_selftest ?
 	    slirmiconnthr_upcall : NULL, NULL);
 
-	prefmds = globalConfig.gconf_prefmds;
+	prefmds = slcfg_local->cfg_prefmds;
 	if (argc)
 		prefmds = argv[0];
 	rc = sli_rmi_setmds(prefmds);

@@ -1959,7 +1959,7 @@ mds_journal_init(uint64_t fsuuid)
 		    "exceeds %d", npeers,
 		    MAX_UPDATE_PROG_ENTRY);
 
-	journalfn = globalConfig.gconf_journal;
+	journalfn = slcfg_local->cfg_journal;
 	if (journalfn == '\0') {
 		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 		journalfn = fn;

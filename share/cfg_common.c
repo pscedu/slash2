@@ -224,10 +224,12 @@ libsl_profile_dump(void)
 void
 libsl_init(int nmsgs)
 {
+	int ri, mode = PSCNET_SERVER, rc, k, i;
 	char netbuf[PSCRPC_NIDSTR_SIZE], ltmp[LNETS_MAX];
-	char lnetstr[LNETS_MAX], pbuf[6];
+	char lnetstr[LNETS_MAX], pbuf[6], *p, *t;
 	struct lnetif_pair *lp, *lpnext;
-	int mode = PSCNET_SERVER, rc, k;
+	struct sl_resource *r;
+	struct sl_site *s;
 
 	rc = snprintf(pbuf, sizeof(pbuf), "%d",
 	    globalConfig.gconf_port);
@@ -289,26 +291,40 @@ libsl_init(int nmsgs)
 	pscrpc_getlocalprids(&sl_lnet_prids);
 
 #ifdef _SLASH_CLIENT
-	setenv("PREF_IOS", globalConfig.gconf_prefios, 0);
-	setenv("MDS", globalConfig.gconf_prefmds, 0);
-	return;
+	setenv("PREF_IOS", slcfg_local->cfg_prefios, 0);
+	setenv("MDS", slcfg_local->cfg_prefmds, 0);
+	goto out;
 #endif
 
 	nodeResm = libsl_resm_lookup();
 	if (nodeResm == NULL)
 		psc_fatalx("no resource member found for this node");
 
+	/*
+	 * Merge resource-specific settings into our local
+	 * configuration.
+	 */
+	for (i = 0, p = (void *)slcfg_local,
+	    t = (void *)nodeResProf->res_localcfg;
+	    i < sizeof(*slcfg_local); p++, t++, i++)
+		if (*t)
+			*p = *t;
+
 	if (nodeResm->resm_type == SLREST_ARCHIVAL_FS) {
 #ifndef HAVE_AIO
 		psc_fatalx("asynchronous I/O not supported on "
 		    "this platform");
 #endif
-		globalConfig.gconf_async_io = 1;
+		slcfg_local->cfg_async_io = 1;
 	}
 
-	psclog_info("node is a member of resource '%s'",
+	psclog_diag("node is a member of resource '%s'",
 	    nodeResm->resm_res->res_name);
 	libsl_profile_dump();
+
+ out:
+	CONF_FOREACH_RES(s, r, ri)
+		PSCFREE(r->res_localcfg);
 }
 
 int

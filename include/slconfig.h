@@ -85,6 +85,7 @@ struct sl_resource {
 	struct psc_dynarray	 res_members;
 	char			 res_name[RES_NAME_MAX];
 	char			*res_desc;
+	struct slcfg_local	*res_localcfg;
 };
 
 /* res_flags */
@@ -177,23 +178,25 @@ struct lnetif_pair {
 #define LPF_NOACCEPTOR		(1 << 0)
 #define LPF_SKIP		(1 << 1)
 
+struct slcfg_local {
+	char			*cfg_journal;
+	char			*cfg_zpcachefn;
+	char			*cfg_allowexe;
+	size_t			 cfg_arc_max;
+	size_t			 cfg_fidcachesz;
+	char			*cfg_fsroot;
+	char			 cfg_prefmds[RES_NAME_MAX];
+	char			 cfg_prefios[RES_NAME_MAX];
+	char			 cfg_zpname[NAME_MAX + 1];
+	char			*cfg_selftest;
+	int			 cfg_async_io:1;
+	int			 cfg_root_squash:1;
+};
+
 struct sl_config {
-	char			*gconf_journal;
-	char			*gconf_zpcachefn;
-	char			*gconf_allowexe;
 	char			 gconf_routes[256];
 	char			 gconf_lnets[LNETS_MAX];
-	char			*gconf_fsroot;
-	char			 gconf_prefmds[RES_NAME_MAX];
-	char			 gconf_prefios[RES_NAME_MAX];
-	char			 gconf_zpname[NAME_MAX + 1];
-	char			*gconf_selftest;
-	size_t			 gconf_arc_max;
-	size_t			 gconf_fidcachesz;
 	int			 gconf_port;
-	int			 gconf_async_io:1;
-	int			 gconf_root_squash:1;
-
 	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
@@ -303,6 +306,7 @@ extern struct sl_resm	*nodeResm;
 #define nodeSite	nodeResm->resm_site
 #define nodeResProf	nodeResm->resm_res
 
+extern struct slcfg_local *slcfg_local;
 extern struct sl_config	 globalConfig;
 
 extern int		 cfg_site_pri_sz;

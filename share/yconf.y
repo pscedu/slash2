@@ -108,7 +108,7 @@ int		 yyparse(void);
 	  offsetof(str, memb), handler }
 
 #define SYM_GLOBAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
-#define SYM_LOCAL(n, ...)	SYMBOL(struct sl_config, SL_STRUCT_GLOBAL, n, ##__VA_ARGS__)
+#define SYM_LOCAL(n, ...)	SYMBOL(struct slcfg_local, SL_STRUCT_LOCAL, n, ##__VA_ARGS__)
 #define SYM_RES(n, ...)		SYMBOL(struct sl_resource, SL_STRUCT_RES, n, ##__VA_ARGS__)
 #define SYM_SITE(n, ...)	SYMBOL(struct sl_site, SL_STRUCT_SITE, n, ##__VA_ARGS__)
 
@@ -127,16 +127,16 @@ struct slconf_symbol sym_table[] = {
 	SYM_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
 	SYM_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 
-	SYM_LOCAL("allow_exec",	SL_TYPE_STRP,	0,		gconf_allowexe,	NULL),
-	SYM_LOCAL("arc_max",	SL_TYPE_SIZET,	0,		gconf_arc_max,	NULL),
-	SYM_LOCAL("fidcachesz",	SL_TYPE_SIZET,	0,		gconf_fidcachesz,NULL),
-	SYM_LOCAL("fsroot",	SL_TYPE_STRP,	0,		gconf_fsroot,	NULL),
-	SYM_LOCAL("journal",	SL_TYPE_STRP,	0,		gconf_journal,	NULL),
-	SYM_LOCAL("pref_ios",	SL_TYPE_STR,	0,		gconf_prefios,	NULL),
-	SYM_LOCAL("pref_mds",	SL_TYPE_STR,	0,		gconf_prefmds,	NULL),
-	SYM_LOCAL("self_test",	SL_TYPE_STRP,	0,		gconf_selftest,	NULL),
-	SYM_LOCAL("zpool_cache",SL_TYPE_STRP,	0,		gconf_zpcachefn,NULL),
-	SYM_LOCAL("zpool_name",	SL_TYPE_STR,	0,		gconf_zpname,	NULL),
+	SYM_LOCAL("allow_exec",	SL_TYPE_STRP,	0,		cfg_allowexe,	NULL),
+	SYM_LOCAL("arc_max",	SL_TYPE_SIZET,	0,		cfg_arc_max,	NULL),
+	SYM_LOCAL("fidcachesz",	SL_TYPE_SIZET,	0,		cfg_fidcachesz,	NULL),
+	SYM_LOCAL("fsroot",	SL_TYPE_STRP,	0,		cfg_fsroot,	NULL),
+	SYM_LOCAL("journal",	SL_TYPE_STRP,	0,		cfg_journal,	NULL),
+	SYM_LOCAL("pref_ios",	SL_TYPE_STR,	0,		cfg_prefios,	NULL),
+	SYM_LOCAL("pref_mds",	SL_TYPE_STR,	0,		cfg_prefmds,	NULL),
+	SYM_LOCAL("self_test",	SL_TYPE_STRP,	0,		cfg_selftest,	NULL),
+	SYM_LOCAL("zpool_cache",SL_TYPE_STRP,	0,		cfg_zpcachefn,	NULL),
+	SYM_LOCAL("zpool_name",	SL_TYPE_STR,	0,		cfg_zpname,	NULL),
 
 	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, 0, NULL }
 };
@@ -154,6 +154,8 @@ PSCLIST_HEAD(cfg_lnetif_pairs);
 struct sl_site		  *currentSite;
 struct sl_resource	  *currentRes;
 struct sl_resm		  *currentResm;
+struct slcfg_local	   slcfg_local_data;
+struct slcfg_local	  *slcfg_local = &slcfg_local_data;
 %}
 
 %start config
@@ -312,6 +314,8 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 
 			currentRes = PSCALLOC(sizeof(*currentRes) +
 			    cfg_res_pri_sz);
+			currentRes->res_localcfg = PSCALLOC(sizeof(
+			    *currentRes->res_localcfg));
 			currentRes->res_site = currentSite;
 			currentResm = NULL;
 
@@ -762,8 +766,10 @@ slcfg_store_tok_val(const char *tok, char *val)
 	 * offsetof().
 	 */
 	switch (e->c_struct) {
-	case SL_STRUCT_GLOBAL:
 	case SL_STRUCT_LOCAL:
+		ptr = PSC_AGP(slcfg_local, e->c_offset);
+		break;
+	case SL_STRUCT_GLOBAL:
 		ptr = PSC_AGP(gcfg, e->c_offset);
 		break;
 	case SL_STRUCT_SITE:
@@ -993,6 +999,12 @@ slcfg_parse(const char *config_file)
 		}
 	}
 	CONF_ULOCK();
+
+	/*
+	 * Reset this pointer back to the main storage.  libsl_init()
+	 * will merge resource-specific settings with the data here.
+	 */
+	slcfg_local = &slcfg_local_data;
 }
 
 void
