@@ -149,13 +149,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fprintf(fp, "%#x\n", resid);
 	fclose(fp);
 
-	if (ion)
-		return;
-
-	/* create temporary processing directory */
-	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
-	slnewfs_mkdir(fn);
-
 	/* create the FSUUID file */
 	xmkfn(fn, "%s/%s", metadir, SL_FN_FSUUID);
 	fp = fopen(fn, "w");
@@ -168,6 +161,13 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 		printf("The UUID of the file system is %#18"PRIx64"\n",
 		    fsuuid);
 	fclose(fp);
+
+	if (ion)
+		return;
+
+	/* create temporary processing directory */
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
+	slnewfs_mkdir(fn);
 
 	/* create the SITEID file */
 	xmkfn(fn, "%s/%s", metadir, SL_FN_SITEID);
