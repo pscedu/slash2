@@ -220,8 +220,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
 		nslvrs++;
 
-	for (i = 0; i < nslvrs; i++)
+	/* Panaroid: clear more than necessary */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
 		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
 
 	/*
 	 * This loop assumes that nslvrs is always no larger than
