@@ -314,8 +314,8 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 
 			currentRes = PSCALLOC(sizeof(*currentRes) +
 			    cfg_res_pri_sz);
-			currentRes->res_localcfg = PSCALLOC(sizeof(
-			    *currentRes->res_localcfg));
+			slcfg_local = currentRes->res_localcfg =
+			    PSCALLOC(sizeof(*currentRes->res_localcfg));
 			currentRes->res_site = currentSite;
 			currentResm = NULL;
 
