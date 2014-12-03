@@ -885,8 +885,6 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 		    op, mq->offset, mq->size, rc);
 	}
 
-	msl_biorq_destroy(r);
-
 	q = r->biorq_fsrqi;
 	MFH_LOCK(q->mfsrq_mfh);
 	mfsrq_seterr(q, rc);
@@ -894,6 +892,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	MFH_ULOCK(q->mfsrq_mfh);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup, q=%p", q);
+
+	msl_biorq_destroy(r);
 
 	return (rc);
 }
