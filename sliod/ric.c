@@ -110,8 +110,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint64_t seqno;
 	ssize_t rv;
 
-	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
-
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	fgp = &mq->sbd.sbd_fg;
@@ -493,9 +491,11 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 		break;
 	case SRMT_READ:
+		OPSTAT_INCR(SLI_OPST_HANDLE_READ);
 		rc = sli_ric_handle_read(rq);
 		break;
 	case SRMT_WRITE:
+		OPSTAT_INCR(SLI_OPST_HANDLE_WRITE);
 		rc = sli_ric_handle_write(rq);
 		break;
 	case SRMT_RELEASEBMAP:
