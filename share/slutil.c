@@ -179,7 +179,7 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 #endif
 
 	/* root can do anything, unless rootsquash is enabled */
-	if (!globalConfig.gconf_root_squash && pcrp->pcr_uid == 0)
+	if (!slcfg_local->cfg_root_squash && pcrp->pcr_uid == 0)
 		return (0);
 
 	if (sstb->sst_uid == pcrp->pcr_uid)

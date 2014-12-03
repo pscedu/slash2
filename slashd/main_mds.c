@@ -485,16 +485,16 @@ main(int argc, char *argv[])
 
 	sl_sys_upnonce = psc_random32();
 
-	globalConfig.gconf_fidcachesz = 65536;
+	slcfg_local->cfg_fidcachesz = 65536;
 	slcfg_parse(cfn);
 
 	/* override global defaults with cfg settings */
-	if (zpcachefn == NULL && globalConfig.gconf_zpcachefn)
-		zpcachefn = globalConfig.gconf_zpcachefn;
+	if (zpcachefn == NULL && slcfg_local->cfg_zpcachefn)
+		zpcachefn = slcfg_local->cfg_zpcachefn;
 	if (argc)
 		zpname = argv[0];
-	else if (globalConfig.gconf_zpname)
-		zpname = globalConfig.gconf_zpname;
+	else if (slcfg_local->cfg_zpname)
+		zpname = slcfg_local->cfg_zpname;
 	else {
 		warnx("no ZFS pool specified");
 		usage();
@@ -526,10 +526,10 @@ main(int argc, char *argv[])
 	/* startup meter */
 	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
 
-	if (globalConfig.gconf_arc_max) {
+	if (slcfg_local->cfg_arc_max) {
 		void arc_set_maxsize(uint64_t);
 
-		arc_set_maxsize(globalConfig.gconf_arc_max);
+		arc_set_maxsize(slcfg_local->cfg_arc_max);
 	}
 
 	for (vfsid = 0; vfsid < mount_index; vfsid++)

@@ -3653,7 +3653,7 @@ parse_allowexe(void)
 	char *p, *s, *t;
 	struct stat stb;
 
-	s = globalConfig.gconf_allowexe;
+	s = slcfg_local->cfg_allowexe;
 	while (s) {
 		p = s;
 		while (isspace(*p))
@@ -3838,7 +3838,7 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'Q':
-			globalConfig.gconf_root_squash = 1;
+			slcfg_local->cfg_root_squash = 1;
 			break;
 		case 'S':
 			ctlsockfn = optarg;
@@ -3877,7 +3877,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
-	globalConfig.gconf_fidcachesz = 1024;
+	slcfg_local->cfg_fidcachesz = 1024;
 	slcfg_parse(cfg);
 	parse_allowexe();
 	if (use_mapfile) {

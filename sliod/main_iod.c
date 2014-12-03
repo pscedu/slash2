@@ -104,16 +104,16 @@ slistatfsthr_main(struct psc_thread *thr)
 #ifdef HAVE_STATFS_FSTYPE
 		struct statfs b;
 
-		rc = statfs(globalConfig.gconf_fsroot, &b);
+		rc = statfs(slcfg_local->cfg_fsroot, &b);
 		if (rc == -1)
 			psclog_error("statfs %s",
-			    globalConfig.gconf_fsroot);
+			    slcfg_local->cfg_fsroot);
 		statfs_2_statvfs(&b, &sfb);
 #else
-		rc = statvfs(globalConfig.gconf_fsroot, &sfb);
+		rc = statvfs(slcfg_local->cfg_fsroot, &sfb);
 		if (rc == -1)
 			psclog_error("statvfs %s",
-			    globalConfig.gconf_fsroot);
+			    slcfg_local->cfg_fsroot);
 #endif
 
 		if (rc == 0) {
@@ -147,7 +147,7 @@ slihealththr_main(struct psc_thread *thr)
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
-		rc = system(globalConfig.gconf_selftest);
+		rc = system(slcfg_local->cfg_selftest);
 
 		/*
 		 * Code		Description
@@ -254,7 +254,7 @@ main(int argc, char *argv[])
 
 	sl_sys_upnonce = psc_random32();
 
-	globalConfig.gconf_fidcachesz = 4096;
+	slcfg_local->cfg_fidcachesz = 4096;
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
@@ -293,14 +293,14 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
-	if (globalConfig.gconf_selftest)
+	if (slcfg_local->cfg_selftest)
 		pscthr_init(SLITHRT_HEALTH, slihealththr_main, NULL, 0,
 		    "slihealththr");
 
 	slrpc_initcli();
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    globalConfig.gconf_selftest ?
+	    slcfg_local->cfg_selftest ?
 	    slirmiconnthr_upcall : NULL, NULL);
 
 	prefmds = slcfg_local->cfg_prefmds;

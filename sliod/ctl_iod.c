@@ -419,7 +419,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 * cause an infinite loop.
 	 */
 
-	if (stat(globalConfig.gconf_fsroot, &sb1) == -1)
+	if (stat(slcfg_local->cfg_fsroot, &sb1) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
@@ -436,7 +436,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 * This is not bullet-proof but avoid false negatives.
 	 */
 	if (S_ISREG(sb2.st_mode)) {
-		if (statvfs(globalConfig.gconf_fsroot, &vfssb1) == -1)
+		if (statvfs(slcfg_local->cfg_fsroot, &vfssb1) == -1)
 			return (psc_ctlsenderr(fd, mh, "%s: %s",
 			    sfop->sfop_fn, slstrerror(errno)));
 

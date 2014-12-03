@@ -355,7 +355,7 @@ fidc_init(int privsiz)
 {
 	int nobj;
 
-	nobj = globalConfig.gconf_fidcachesz;
+	nobj = slcfg_local->cfg_fidcachesz;
 
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,

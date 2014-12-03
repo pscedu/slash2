@@ -89,7 +89,7 @@ sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 	*p = '\0';
 
 	xmkfn(fid_path, "%s/%s/%"PRIx64"/%s/%s%016"PRIx64"_%"PRIx64,
-	    globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+	    slcfg_local->cfg_fsroot, SL_RPATH_META_DIR,
 	    globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
 	    str, fg->fg_fid, fg->fg_gen);
 

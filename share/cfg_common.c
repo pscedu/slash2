@@ -306,7 +306,7 @@ libsl_init(int nmsgs)
 	 */
 	for (i = 0, p = (void *)slcfg_local,
 	    t = (void *)nodeResProf->res_localcfg;
-	    i < sizeof(*slcfg_local); p++, t++, i++)
+	    i < (int)sizeof(*slcfg_local); p++, t++, i++)
 		if (*t)
 			*p = *t;
 
@@ -322,7 +322,9 @@ libsl_init(int nmsgs)
 	    nodeResm->resm_res->res_name);
 	libsl_profile_dump();
 
+#ifdef _SLASH_CLIENT
  out:
+#endif
 	CONF_FOREACH_RES(s, r, ri)
 		PSCFREE(r->res_localcfg);
 }

@@ -497,7 +497,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 
-		if (globalConfig.gconf_async_io)
+		if (slcfg_local->cfg_async_io)
 			return (sli_aio_register(s));
 
 		/*
@@ -1100,7 +1100,7 @@ slvr_cache_init(void)
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
-	if (globalConfig.gconf_async_io) {
+	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
 		    1024, NULL, NULL, NULL, "iocb");
