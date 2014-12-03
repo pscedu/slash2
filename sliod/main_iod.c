@@ -199,6 +199,7 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
 	int sz, nsz, i, rc, c;
+	struct stat stb;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -258,6 +259,9 @@ main(int argc, char *argv[])
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
+
+	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
+		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
 	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
