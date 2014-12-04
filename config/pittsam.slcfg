@@ -48,7 +48,7 @@ site @PSC {
 		id	= 10;
 		nids	= sense51-66.psc.edu;
 		fsroot	= /sense51_pool0/slio;
-#		selftest = "/local/sbin/st /sense51_pool0";
+		selftest = "/local/sbin/st /sense51_pool0";
 	}
 
 	resource sense51s1 {
@@ -56,7 +56,7 @@ site @PSC {
 		id	= 11;
 		nids	= sense51-66-io1.psc.edu;
 		fsroot	= /sense51_pool1/slio;
-#		selftest = "/local/sbin/st /sense51_pool1";
+		selftest = "/local/sbin/st /sense51_pool1";
 	}
 
 	resource sense51s2 {
@@ -64,7 +64,7 @@ site @PSC {
 		id	= 12;
 		nids	= sense51-66-io2.psc.edu;
 		fsroot	= /sense51_pool2/slio;
-#		selftest = "/local/sbin/st /sense51_pool2";
+		selftest = "/local/sbin/st /sense51_pool2";
 	}
 
 	resource sense51s3 {
@@ -72,7 +72,7 @@ site @PSC {
 		id	= 13;
 		nids	= sense51-66-io3.psc.edu;
 		fsroot	= /sense51_pool3/slio;
-#		selftest = "/local/sbin/st /sense51_pool3";
+		selftest = "/local/sbin/st /sense51_pool3";
 	}
 
 	resource sense51s4 {
@@ -80,7 +80,7 @@ site @PSC {
 		id	= 14;
 		nids	= sense51-66-io4.psc.edu;
 		fsroot	= /sense51_pool4/slio;
-#		selftest = "/local/sbin/st /sense51_pool4";
+		selftest = "/local/sbin/st /sense51_pool4";
 	}
 
 	resource sense51s5 {
@@ -88,7 +88,7 @@ site @PSC {
 		id	= 15;
 		nids	= sense51-66-io5.psc.edu;
 		fsroot	= /sense51_pool5/slio;
-#		selftest = "/local/sbin/st /sense51_pool5";
+		selftest = "/local/sbin/st /sense51_pool5";
 	}
 
 	resource sense51s6 {
@@ -96,7 +96,7 @@ site @PSC {
 		id	= 16;
 		nids	= sense51-66-io6.psc.edu;
 		fsroot	= /sense51_pool6/slio;
-#		selftest = "/local/sbin/st /sense51_pool6";
+		selftest = "/local/sbin/st /sense51_pool6";
 	}
 
 	resource sense51 {
