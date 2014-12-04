@@ -1189,7 +1189,8 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage,
 			off = e->bmpce_off;
 
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCE_FAULTING | BMPCE_READA;
+		e->bmpce_flags |= BMPCE_READA;
+		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 		psc_atomic32_inc(&e->bmpce_ref);
 		BMPCE_ULOCK(e);
@@ -1297,7 +1298,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCE_FAULTING;
+		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 
