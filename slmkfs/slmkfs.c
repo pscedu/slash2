@@ -131,12 +131,9 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 		slnewfs_mkdir(fn);
 
 		strlcpy(metadir, fn, sizeof(metadir));
-		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
-		slnewfs_mkdir(fn);
-	} else {
-		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
-		slnewfs_mkdir(fn);
 	}
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
+	slnewfs_mkdir(fn);
 
 	/* create immutable namespace subdirectories */
 	slnewfs_create_int(fn, 1, depth);
