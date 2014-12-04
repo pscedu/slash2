@@ -1990,7 +1990,8 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		if (waslocked == PSLRV_WASLOCKED)
 			FCMH_LOCK(f);
-	}
+	} else
+		FCMH_URLOCK(f, waslocked);
 
 	return (rc);
 }
