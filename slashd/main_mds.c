@@ -488,12 +488,14 @@ main(int argc, char *argv[])
 	slcfg_local->cfg_fidcachesz = 65536;
 	slcfg_parse(cfn);
 
+	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
+
 	/* override global defaults with cfg settings */
 	if (zpcachefn == NULL && slcfg_local->cfg_zpcachefn)
 		zpcachefn = slcfg_local->cfg_zpcachefn;
 	if (argc)
 		zpname = argv[0];
-	else if (slcfg_local->cfg_zpname)
+	else if (slcfg_local->cfg_zpname[0])
 		zpname = slcfg_local->cfg_zpname;
 	else {
 		warnx("no ZFS pool specified");
@@ -518,8 +520,6 @@ main(int argc, char *argv[])
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
-
-	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
 
 	sl_drop_privs(1);
 
