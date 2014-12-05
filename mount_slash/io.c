@@ -1008,14 +1008,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	rc = pscrpc_nbreqset_flush(nbs);
 
-	/*
-	 * Async I/O registered by sliod; we must wait for a
-	 * notification from him when it is ready.
-	 */
-	if (rc == 0)
-		psc_iostats_intv_add(op == SRMT_WRITE ?
-		    &msl_diowr_stat : &msl_diord_stat, size);
-
 	if (rc == -SLERR_AIOWAIT) {
 		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
@@ -1035,6 +1027,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		goto retry;
 	}
 
+	/*
+	 * Async I/O registered by sliod; we must wait for a
+	 * notification from him when it is ready.
+	 */
+	if (rc == 0)
+		psc_iostats_intv_add(op == SRMT_WRITE ?
+		    &msl_diowr_stat : &msl_diord_stat, size);
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
