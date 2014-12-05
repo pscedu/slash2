@@ -277,11 +277,10 @@ dircache_hasoff(struct dircache_page *p, off_t off)
 	struct dircache_ent q, *dce;
 	int n;
 
-	if (p->dcp_rc)
-		return (0);
-
 	if (off == p->dcp_off)
 		return (1);
+	if (p->dcp_rc)
+		return (0);
 	if (off == p->dcp_nextoff)
 		return (0);
 
