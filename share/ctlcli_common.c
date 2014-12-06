@@ -144,10 +144,19 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-11s %35.35s %-8s %c%c%c%c%c ",
+	printf("  %-11s %35.35s %-8s %c",
 	    res, nid, stype,
-	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
-	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
+	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-');
+
+	if (scc->scc_flags & CSVCF_CONNECTED) {
+		setcolor(COLOR_GREEN);
+		printf("O");
+		uncolor();
+	} else {
+		printf("-");
+	}
+
+	printf("%c%c%c ",
 	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
 	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
@@ -159,9 +168,11 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	else
 		col = COLOR_GREEN;
 
-	setcolor(col);
+	if (scc->scc_stkvers)
+		setcolor(col);
 	printf("%5d ", scc->scc_stkvers);
-	uncolor();
+	if (scc->scc_stkvers)
+		uncolor();
 
 	printf("%4d %4d\n", scc->scc_txcr, scc->scc_refcnt);
 
