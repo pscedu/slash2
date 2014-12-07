@@ -99,7 +99,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slictlmsg_replwkst *srws = m;
 
 	psc_fmt_ratio(rbuf, srws->srws_data_cur, srws->srws_data_tot);
-	printf("%016"SLPRIxFID" %6d %28s %4d",
+	printf("%016"SLPRIxFID" %6d %28s %4d ",
 	    srws->srws_fg.fg_fid, srws->srws_bmapno,
 	    srws->srws_peer_addr, srws->srws_refcnt);
 	if (psc_ctl_inhuman)
