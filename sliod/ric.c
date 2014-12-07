@@ -288,6 +288,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			OPSTAT_INCR(SLI_OPST_AIO_DIO);
 			aiocbr->aiocbr_flags |= SLI_AIOCBSF_DIO;
 		}
+
 		/*
 		 * Now check for early completion.  If all slvrs are
 		 * ready, then we must reply with the data now.
@@ -328,7 +329,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
 	rc = mp->rc = slrpc_bulkserver(rq,
-	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
+	    rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE,
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc=%d",
