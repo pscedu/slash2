@@ -84,7 +84,7 @@ struct slvr {
 #define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
 #define SLVR_TRYRLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
 
-#define SLVR_WAKEUP(b)							\
+#define SLVR_WAKEUP(s)							\
 	do {								\
 		SLVR_LOCK_ENSURE(s);					\
 		psc_waitq_wakeall(&slvr_2_fcmh(s)->fcmh_waitq);		\
