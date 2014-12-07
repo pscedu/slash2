@@ -220,7 +220,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
 		nslvrs++;
 
-	/* Panaroid: clear more than necessary */
+	/* Paranoid: clear more than necessary. */
 	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
 		slvr[i] = NULL;
 		iovs[i].iov_len = 0;
