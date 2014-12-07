@@ -217,7 +217,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	nslvrs = 1;
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
+	if (mq->offset + mq->size - 1 / SLASH_SLVR_SIZE > slvrno)
 		nslvrs++;
 
 	/* Paranoid: clear more than necessary. */
