@@ -244,7 +244,6 @@ struct bmap_pagecache {
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
-	int				 bmpc_pndgwr;		/* # pending wr req */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
