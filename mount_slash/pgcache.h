@@ -240,7 +240,7 @@ struct bmap_pagecache {
 	 * requests are sorted based on their starting offsets to
 	 * facilitate write coalescing.
 	 *
-	 * The splay is protected by the bmap lock, not the bmpc_lock.
+	 * The splay is protected by the bmap lock.
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
