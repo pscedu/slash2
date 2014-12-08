@@ -167,8 +167,6 @@ void
 bmpce_free(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
-	DEBUG_BMPCE(PLL_DIAG, e, "freeing");
-
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
