@@ -1090,7 +1090,6 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-	struct psc_waitq *wq = NULL;
 	int i;
 
 	if (rq)
@@ -1131,9 +1130,6 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
-
-	if (wq)
-		psc_waitq_wakeall(wq);
 
 	sl_csvc_decref(csvc);
 
