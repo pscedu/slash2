@@ -73,17 +73,18 @@ const char *progname;
 #define	K_BMAPS		(1 <<  0)
 #define	K_BSZ		(1 <<  1)
 #define	K_CRC		(1 <<  2)
-#define	K_FID		(1 <<  3)
-#define	K_FLAGS		(1 <<  4)
-#define	K_FSIZE		(1 <<  5)
-#define	K_NBLKS		(1 <<  6)
-#define	K_NREPLS	(1 <<  7)
-#define	K_REPLBLKS	(1 <<  8)
-#define	K_REPLPOL	(1 <<  9)
-#define	K_REPLS		(1 << 10)
-#define	K_UID		(1 << 11)
-#define	K_VERSION	(1 << 12)
-#define	K_XCRC		(1 << 13)
+#define	K_FGEN		(1 <<  3)
+#define	K_FID		(1 <<  4)
+#define	K_FLAGS		(1 <<  5)
+#define	K_FSIZE		(1 <<  6)
+#define	K_NBLKS		(1 <<  7)
+#define	K_NREPLS	(1 <<  8)
+#define	K_REPLBLKS	(1 <<  9)
+#define	K_REPLPOL	(1 << 10)
+#define	K_REPLS		(1 << 11)
+#define	K_UID		(1 << 12)
+#define	K_VERSION	(1 << 13)
+#define	K_XCRC		(1 << 14)
 #define	K_DEF		((~0) & ~K_BMAPS)
 
 const char *show_keywords[] = {
@@ -219,6 +220,15 @@ dumpfid(struct f *f)
 		else {
 			tbuf[rc] = '\0';
 			fprintf(fp, "  fid %s\n", tbuf);
+		}
+	}
+	if (show & K_FGEN) {
+		rc = fgetxattr(fd, SLXAT_FGEN, tbuf, sizeof(tbuf) - 1);
+		if (rc == -1)
+			warn("%s: getxattr %s", f->fn, SLXAT_FGEN);
+		else {
+			tbuf[rc] = '\0';
+			fprintf(fp, "  fgen %s\n", tbuf);
 		}
 	}
 	if (show & K_UID)
