@@ -398,7 +398,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_dynarray_free(&r->biorq_pages);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 	psc_pool_return(slc_biorq_pool, r);
 }
 
