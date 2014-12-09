@@ -147,6 +147,7 @@ slc_fcmh_load_inode(struct fidc_membh *f, struct srt_inode *ino)
 	int i;
 
 	fci = fcmh_2_fci(f);
+	FCMH_LOCK_ENSURE(f);
 
 //	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0) {
 	fci->fci_inode = *ino;
