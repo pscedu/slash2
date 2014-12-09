@@ -3033,6 +3033,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		    &iov, 1);
 	}
 
+	OPSTAT_INCR(SLC_OPST_LISTXATTR_RPC);
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -3188,6 +3189,7 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 		rq->rq_bulk_abortable = 1;
 	}
 
+	OPSTAT_INCR(SLC_OPST_GETXATTR_RPC);
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
