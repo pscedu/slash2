@@ -188,6 +188,7 @@ struct mdsio_ops {
 #define mdsio_redo_setxattr	mdsio_ops.mio_redo_setxattr		/* zfsslash2_replay_setxattr() */
 #define mdsio_redo_removexattr	mdsio_ops.mio_redo_removexattr		/* zfsslash2_replay_removexattr() */
 
+#define SLXAT_FGEN		".sl2-fgen"
 #define SLXAT_FID		".sl2-fid"
 #define SLXAT_FSIZE		".sl2-fsize"
 #define SLXAT_NBLKS		".sl2-nblks"
