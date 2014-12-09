@@ -2942,7 +2942,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
  out:
 	if (rc) {
 		pscfs_reply_write(pfr, size, rc);
-		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
+		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_ERR);
 	}
 	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
@@ -2978,7 +2978,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 		iov.iov_base = buf;
 		pscfs_reply_read(pfr, &iov, 1, rc);
-		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
+		OPSTAT_INCR(SLC_OPST_FSRQ_READ_ERR);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (end): buf=%p rc=%d sz=%zu "

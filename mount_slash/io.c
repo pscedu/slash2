@@ -644,13 +644,18 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 
 		iov.iov_base = q->mfsrq_buf;
 		iov.iov_len = q->mfsrq_len;
+		if (q->mfsrq_err)
+			OPSTAT_INCR(SLC_OPST_FSRQ_READ_ERR);
+		else
+			OPSTAT_INCR(SLC_OPST_FSRQ_READ_OK);
 		pscfs_reply_read(pfr, &iov, 1, abs(q->mfsrq_err));
-		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	} else {
 		msl_update_attributes(q);
-		pscfs_reply_write(pfr,
-		    q->mfsrq_len, abs(q->mfsrq_err));
-		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
+		if (q->mfsrq_err)
+			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_ER);
+		else
+			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_OK);
+		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
 	}
 }
 
