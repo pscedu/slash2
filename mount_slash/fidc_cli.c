@@ -176,10 +176,7 @@ slc_fcmh_fetch_inode(struct fidc_membh *f)
 	if (rc)
 		goto out;
 
-	FCMH_LOCK(f);
 	mq->fg = f->fcmh_fg;
-	FCMH_ULOCK(f);
-
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
