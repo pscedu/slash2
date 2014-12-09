@@ -2974,7 +2974,10 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
  out:
 	if (rc) {
-		pscfs_reply_read(pfr, NULL, 0, rc);
+		struct iovec iov;
+
+		iov.iov_base = buf;
+		pscfs_reply_read(pfr, &iov, 1, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	}
 
