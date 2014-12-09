@@ -2954,7 +2954,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
 	void *buf = pfr->pfr_buf;
-	ssize_t len = 0;
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
@@ -2964,7 +2963,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	f = mfh->mfh_fcmh;
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (start): buf=%p rc=%d sz=%zu "
-	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 
 	if (fcmh_isdir(f)) {
 //		psclog_errorx("regular file is a directory");
@@ -2975,12 +2974,12 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
  out:
 	if (rc) {
-		pscfs_reply_read(pfr, buf, len, rc);
+		pscfs_reply_read(pfr, buf, 0, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (end): buf=%p rc=%d sz=%zu "
-	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 }
 
 void
