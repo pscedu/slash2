@@ -2966,7 +2966,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 
 	if (fcmh_isdir(f)) {
-//		psclog_errorx("regular file is a directory");
+		OPSTAT_INCR(SLC_OPST_FSRQ_READ_NOREG);
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
