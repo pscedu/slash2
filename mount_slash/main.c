@@ -2974,7 +2974,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
  out:
 	if (rc) {
-		pscfs_reply_read(pfr, buf, 0, rc);
+		pscfs_reply_read(pfr, NULL, 0, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	}
 
