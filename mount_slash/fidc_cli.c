@@ -148,14 +148,12 @@ slc_fcmh_load_inode(struct fidc_membh *f, struct srt_inode *ino)
 
 	fci = fcmh_2_fci(f);
 
-	FCMH_LOCK(f);
 //	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0) {
 	fci->fci_inode = *ino;
 	for (i = 0; i < fci->fci_inode.nrepls; i++)
 		fci->fcif_idxmap[i] = i;
 	fci->fcif_mapstircnt = MAPSTIR_THRESH;
 	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
-	FCMH_ULOCK(f);
 }
 
 int
@@ -183,7 +181,9 @@ slc_fcmh_fetch_inode(struct fidc_membh *f)
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(f);
 	slc_fcmh_load_inode(f, &mp->ino);
+	FCMH_ULOCK(f);
 
  out:
 	if (rq)
