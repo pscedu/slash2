@@ -316,6 +316,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
 	}
+	psc_dynarray_free(&r->biorq_pages);
 
 	if (r->biorq_flags & BIORQ_SPLAY) {
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
@@ -395,8 +396,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	r->biorq_flags |= BIORQ_DESTROY;
 
 	msl_biorq_del(r);
-
-	psc_dynarray_free(&r->biorq_pages);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	psc_pool_return(slc_biorq_pool, r);
