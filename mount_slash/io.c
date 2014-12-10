@@ -325,7 +325,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		if (SPLAY_EMPTY(&bmpc->bmpc_new_biorqs)) {
+		if ((b->bcm_flags & BMAP_FLUSHQ) &&
+		    SPLAY_EMPTY(&bmpc->bmpc_new_biorqs)) {
 			b->bcm_flags &= ~BMAP_FLUSHQ;
 			lc_remove(&slc_bmapflushq, b);
 			DEBUG_BMAP(PLL_DIAG, b,
