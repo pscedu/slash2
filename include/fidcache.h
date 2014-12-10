@@ -32,10 +32,10 @@
 #define _SL_FIDCACHE_H_
 
 #include "pfl/hashtbl.h"
-#include "pfl/time.h"
-#include "pfl/tree.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
+#include "pfl/time.h"
+#include "pfl/tree.h"
 
 #include "bmap.h"
 #include "cache_params.h"
@@ -43,7 +43,7 @@
 #include "slashrpc.h"
 #include "slsubsys.h"
 
-#define	MAX_FCMH_LIFETIME	(60*5)
+#define	MAX_FCMH_LIFETIME	(60 * 5)
 
 struct fidc_membh;
 
