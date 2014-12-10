@@ -187,6 +187,8 @@ struct msl_fsrqinfo {
 #define MFSRQ_READ			(1 << 0)
 #define MFSRQ_AIOWAIT			(1 << 1)
 
+#define mfsrq2pfr(q)			((struct pscfs_req *)(q) - 1)
+
 void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 struct resprof_cli_info {
