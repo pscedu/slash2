@@ -652,7 +652,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	} else {
 		msl_update_attributes(q);
 		if (q->mfsrq_err)
-			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_ER);
+			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_ERR);
 		else
 			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_OK);
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
