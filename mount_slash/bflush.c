@@ -612,7 +612,7 @@ bmap_flushable(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
-	int secs, flush = 0;
+	int secs, samples = 0, flush = 0;
 	struct timespec ts;
 
 	bmpc = bmap_2_bmpc(b);
@@ -621,6 +621,22 @@ bmap_flushable(struct bmapc_memb *b)
 	    r = tmp) {
 		tmp = SPLAY_NEXT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
+
+		/*
+		 * If the first request is scheduled, all other requests
+		 * that were eligible to be flushed during the last scan
+		 * must be scheduled as well.  However, newly eligible
+		 * requests can appear.  To find them for sure, we need
+		 * to scan the entire tree.
+		 *
+		 * Let us take our chances by looking at only 3 requests.
+		 * We will scan the tree again once scheduled requests
+		 * are flushed out and removed.  Yes, the flush callback
+		 * will wake us up.
+		 */
+		samples++;
+		if (samples > 3)
+			break;
 
 		BIORQ_LOCK(r);
 		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
