@@ -200,11 +200,12 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
 	if (rc) {
 		csvc->csvc_lasterrno = rc;
+		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
 		*stkversp = mp->stkvers;
+		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
 	}
-	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_WAKE(csvc);
 	sl_csvc_decref(csvc);
 	return (0);
@@ -313,7 +314,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		*stkversp = mp->stkvers;
 	}
 	pscrpc_req_finished(rq);
-	slrpc_connect_finish(csvc, imp, oimp, rc);
+	slrpc_connect_finish(csvc, imp, NULL, rc == 0);
 	return (rc);
 }
 
