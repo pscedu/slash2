@@ -368,7 +368,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 	struct bmap_cli_info *bci;
 	int delta;
 
@@ -427,12 +426,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		delta = 32 * 20;
 
 	r->biorq_expire.tv_sec += delta;
-
-	if (!(r->biorq_flags & BIORQ_SPLAY)) {
-		r->biorq_flags |= BIORQ_SPLAY;
-		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs, r);
-	}
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(r->biorq_bmap);
