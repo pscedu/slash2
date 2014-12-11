@@ -106,12 +106,13 @@ struct slrpc_cservice {
 #define CSVCF_ABANDON		(1 << 2)		/* conn should be dropped */
 #define CSVCF_WANTFREE		(1 << 3)		/* csvc mem resources need freed */
 #define CSVCF_PING		(1 << 4)		/* send keepalives */
+#define CSVCF_BUSY		(1 << 5)		/* send keepalives */
 
 /* sl_csvc_get() flags, shared in numerical space */
-#define CSVCF_NONBLOCK		(1 << 5)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 6)		/* do not attempt reconnection if down */
+#define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
+#define CSVCF_NORECON		(1 << 7)		/* do not attempt reconnection if down */
 
-#define CSVCF_LASTFLAG		(1 << 7)
+#define CSVCF_LASTFLAG		(1 << 8)
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 #define CSVC_PING_INTV		60			/* seconds */
@@ -187,6 +188,7 @@ struct sl_expcli_ops {
 #define CSVC_LOCK_ENSURE(csvc)		psc_mutex_ensure_locked(&(csvc)->csvc_mutex)
 
 #define CSVC_WAKE(csvc)			psc_multiwaitcond_wakeup(&(csvc)->csvc_mwc)
+#define CSVC_WAIT(csvc)			psc_multiwaitcond_wait(&(csvc)->csvc_mwc, &(csvc)->csvc_mutex)
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
