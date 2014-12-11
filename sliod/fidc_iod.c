@@ -41,7 +41,7 @@
 #include "slutil.h"
 
 int
-iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
+iod_inode_getinfo(struct sl_fidgen *fg, uint64_t *size,
     uint64_t *nblks, uint32_t *utimgen)
 {
 	struct fidc_membh *f;
@@ -73,7 +73,7 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
  *	via FIDs.
  */
 void
-sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
+sli_fg_makepath(const struct sl_fidgen *fg, char *fid_path)
 {
 	char *p, str[(FID_PATH_DEPTH * 2) + 1];
 	uint64_t shift;
@@ -136,8 +136,8 @@ sli_fcmh_getattr(struct fidc_membh *f)
 
 int
 sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
-    const struct slash_fidgen *pfg, const char *cpn,
-    struct slash_fidgen *cfg, int *isdir)
+    const struct sl_fidgen *pfg, const char *cpn,
+    struct sl_fidgen *cfg, int *isdir)
 {
 	struct pscrpc_request *rq = NULL;
 	struct srm_lookup_req *mq;
@@ -170,7 +170,7 @@ sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
  *	attach it to the fcmh.
  */
 int
-sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
+sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 {
 	int rc = 0;
 
@@ -191,7 +191,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * agnostic (such as rlsbmap).
 		 */
 	} else if (fg->fg_gen > fcmh_2_gen(f)) {
-		struct slash_fidgen oldfg;
+		struct sl_fidgen oldfg;
 		char fidfn[PATH_MAX];
 
 		DEBUG_FCMH(PLL_INFO, f, "reopening new backing file");
