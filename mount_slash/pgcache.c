@@ -364,10 +364,8 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 			BIORQ_ULOCK(r);
 			continue;
 		}
-
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-		r->biorq_flags &= ~BIORQ_SPLAY;
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}
