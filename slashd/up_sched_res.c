@@ -82,6 +82,9 @@ struct psc_multiwait	 slm_upsch_mw;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
+struct psc_iostats	 slm_repl_sched_iostats;
+struct psc_iostats	 slm_repl_compl_iostats;
+
 void (*upd_proctab[])(struct slm_update_data *);
 
 void
@@ -165,6 +168,9 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 			tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 			retifset[BREPLST_REPL_SCHED] = 1;
 			retifset[BREPLST_REPL_QUEUED] = 1;
+
+			psc_iostats_intv_add(&slm_repl_compl_iostats,
+			    bsr->bsr_amt);
 		} else {
 			tract[BREPLST_REPL_QUEUED] =
 			    BREPLST_REPL_QUEUED;
@@ -311,7 +317,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc)
 		PFL_GOTOERR(fail, rc);
 
-	psc_iostats_intv_add(&slm_repl_iostats, amt);
+	psc_iostats_intv_add(&slm_repl_sched_iostats, amt);
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
@@ -1117,7 +1123,8 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slm_upsch_init(void)
 {
-	psc_iostats_init(&slm_repl_iostats, "repl");
+	psc_iostats_init(&slm_repl_sched_iostats, "replsched");
+	psc_iostats_init(&slm_repl_compl_iostats, "replcompl");
 
 	psc_poolmaster_init(&slm_upgen_poolmaster,
 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
