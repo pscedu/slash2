@@ -257,18 +257,10 @@ struct bmpc_write_coalescer {
 };
 
 static __inline void
-bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
+bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op, uint32_t off)
 {
-	int locked;
-
-	locked = reqlock(&bmpce->bmpce_lock);
-
-	DEBUG_BMPCE(PLL_DEBUG, bmpce, "op=%d off=%u", op, off);
-
 	psc_assert(psc_atomic32_read(&bmpce->bmpce_ref) > 0);
-
 	psc_assert(bmpce->bmpce_off == off);
-	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
 #define biorq_getaligned_off(r, nbmpce)					\
