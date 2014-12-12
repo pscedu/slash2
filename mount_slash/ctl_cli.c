@@ -753,10 +753,31 @@ mslctl_resfieldi_connected(int fd, struct psc_ctlmsghdr *mh,
 	    levels, nlevels, nbuf));
 }
 
+int
+mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct resm_cli_info *rmci;
+	struct sl_resm *m;
+	char nbuf[16];
+
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "infl_rpcs: field is read-only"));
+	m = res_getmemb(r);
+	rmci = resm2rmci(m);
+	snprintf(nbuf, sizeof(nbuf), "%d",
+	    atomic_read(&rmci->rmci_infl_rpcs));
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
 const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "connected",		mslctl_resfieldi_connected },
+	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
 	{ NULL, NULL }
 };
 
