@@ -311,6 +311,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc)
 		PFL_GOTOERR(fail, rc);
 
+	psc_iostats_intv_add(&slm_repl_iostats, amt);
+
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
 	    " SET	status = 'S'"
@@ -1115,6 +1117,8 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slm_upsch_init(void)
 {
+	psc_iostats_init(&slm_repl_iostats, "repl");
+
 	psc_poolmaster_init(&slm_upgen_poolmaster,
 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "upgen");
