@@ -183,8 +183,8 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %6s %-12s %4s %18s %7s\n",
-	    "fid", "bmapno", "flags", "ref", "ios", "seqno");
+	printf("%-16s %6s %-12s %5s %18s %7s\n",
+	    "fid", "bmapno", "flags", "refs", "ios", "seqno");
 }
 
 void
@@ -194,7 +194,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%4u %18s %7"PRIu64"\n",
+	    "%5u %18s %7"PRIu64"\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAP_RD		? 'R' : '-',
 	    scb->scb_flags & BMAP_WR		? 'W' : '-',
