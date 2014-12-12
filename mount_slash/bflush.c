@@ -848,7 +848,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			msl_bmap_lease_tryext(b, 0);
 		}
 		if (!psc_dynarray_len(&bmaps))
-			usleep(1000000);
+			usleep(1000);
 		else
 			psc_dynarray_reset(&bmaps);
 	}
