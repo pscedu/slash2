@@ -260,7 +260,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	psclog_diag("Reply to write RPC from %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
-	OPSTAT_INCR(SLC_OPST_SRMT_WRITE_CALLBACK);
+	OPSTAT_INCR(SLC_OPST_WRITE_CALLBACK);
 
 	bwc_unpin_pages(bwc);
 
@@ -351,7 +351,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto out;
 	}
 
-	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
+	OPSTAT_INCR(SLC_OPST_WRITE_RPC);
 	return (0);
 
  out:
