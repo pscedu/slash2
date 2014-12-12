@@ -566,8 +566,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
-	//if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0)
-		mq->flags |= SRM_LEASEBMAPF_GETINODE;
+	mq->flags |= SRM_LEASEBMAPF_GETINODE;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    bmap->bcm_bmapno, rw == SL_READ ? "read" : "write");
@@ -583,8 +582,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	if (mq->flags & SRM_LEASEBMAPF_GETINODE)
-		slc_fcmh_load_inode(f, &mp->ino);
+	slc_fcmh_load_inode(f, &mp->ino);
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
 	    rw, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);

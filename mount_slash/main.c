@@ -489,7 +489,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fci->fci_inode.nrepls = 1;
 	// XXX bug fci->fci_inode.flags inherited?
 	// XXX bug fci->fci_inode.newreplpol inherited?
-	c->fcmh_flags |= FCMH_CLI_HAVEINODE;
 	FCMH_ULOCK(c);
 
 	/* XXX this load should be nonblocking so we can reply quickly */
