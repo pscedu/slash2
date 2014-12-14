@@ -181,6 +181,8 @@ struct msl_fsrqinfo {
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
+	int				 mfsrq_niov;
+	struct iovec 			*mfsrq_iovs;
 };
 
 #define MFSRQ_NONE			(0 << 0)
@@ -245,7 +247,7 @@ void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);
 void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,
 	    int, int, struct iovec *);
 
-size_t	 msl_pages_copyout(struct bmpc_ioreq *);
+size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
 int	 msl_try_get_replica_res(struct bmapc_memb *, int, int,

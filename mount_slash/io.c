@@ -367,7 +367,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
 	r->biorq_ref--;
-	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
+	DEBUG_BIORQ(PLL_DIAG, r, "bmpc_ioreq: destroying");
 	if (r->biorq_ref) {
 		BIORQ_ULOCK(r);
 		return;
@@ -375,7 +375,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_ULOCK(r);
 
 	/* there is really no need to lock biorq from now on */
-	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+	if (!(r->biorq_flags & BIORQ_FLUSHRDY) && r->biorq_fsrqi != NULL) {
 		/*
 		 * A request can be split into several RPCs, so we can't
 		 * declare it as complete until after its reference
@@ -386,15 +386,18 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 			msl_pages_schedflush(r);
 			return;
 		}
+		/* r could be gone at this point */
+
+	} else {
+
+		psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+		r->biorq_flags |= BIORQ_DESTROY;
+
+		msl_biorq_del(r);
+
+		OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+		psc_pool_return(slc_biorq_pool, r);
 	}
-
-	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
-	r->biorq_flags |= BIORQ_DESTROY;
-
-	msl_biorq_del(r);
-
-	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-	psc_pool_return(slc_biorq_pool, r);
 }
 
 struct msl_fhent *
@@ -609,6 +612,8 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 __static void
 msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 {
+	int i;
+	struct bmpc_ioreq *r;
 	struct pscfs_req *pfr;
 
 	pfr = PSC_AGP(q, -sizeof(*pfr));
@@ -623,6 +628,9 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 			q->mfsrq_mfh->mfh_nbytes_wr += len;
 	}
 
+	psclog_diag("msl_fsrqinfo: q=%p ref=%d len=%zd error=%d pfr=%p",
+	    q, q->mfsrq_ref, q->mfsrq_len, q->mfsrq_err, pfr);
+
 	q->mfsrq_ref--;
 	if (q->mfsrq_ref) {
 		MFH_ULOCK(q->mfsrq_mfh);
@@ -630,21 +638,28 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	}
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	psclog_diag("q=%p len=%zd error=%d pfr=%p",
-	    q, q->mfsrq_len, q->mfsrq_err, pfr);
-
 	mfh_decref(q->mfsrq_mfh);
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
+
 		struct iovec iov;
 
-		iov.iov_base = q->mfsrq_buf;
-		iov.iov_len = q->mfsrq_len;
 		if (q->mfsrq_err)
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_ERR);
 		else
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_OK);
-		pscfs_reply_read(pfr, &iov, 1, abs(q->mfsrq_err));
+
+		if (!q->mfsrq_iovs) {
+			iov.iov_base = q->mfsrq_buf;
+			iov.iov_len = q->mfsrq_len;
+			q->mfsrq_iovs = &iov;
+			q->mfsrq_niov = 1;
+		}
+		pscfs_reply_read(pfr, q->mfsrq_iovs, q->mfsrq_niov, 
+			abs(q->mfsrq_err));
+
+		if (q->mfsrq_iovs != &iov)
+			PSCFREE(q->mfsrq_iovs);
 	} else {
 		msl_update_attributes(q);
 		if (q->mfsrq_err)
@@ -652,6 +667,23 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 		else
 			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_OK);
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
+	}
+
+	for (i = 0; i < MAX_BMAPS_REQ; i++) {
+
+		r = q->mfsrq_biorq[i];
+		if (!r)
+			continue;
+		if (r->biorq_flags & BIORQ_FLUSHRDY)
+			continue;
+
+		psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+		r->biorq_flags |= BIORQ_DESTROY;
+
+		msl_biorq_del(r);
+
+		OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+		psc_pool_return(slc_biorq_pool, r);
 	}
 }
 
@@ -664,17 +696,12 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	int i, rc, found = 0, needflush = 0;
 
 	q = r0->biorq_fsrqi;
-	if (q == NULL)
-		return (0);
-
-	/* Don't use me later */
-	r0->biorq_fsrqi = NULL;
 
 	MFH_LOCK(q->mfsrq_mfh);
 	rc = q->mfsrq_err;
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	psclog_diag("biorq=%p fsrq=%p pfr=%p", r0, q,
+	psclog_diag("complete_fsrq: biorq=%p fsrq=%p pfr=%p", r0, q,
 	    (char *)q - sizeof(struct pscfs_req));
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
@@ -697,9 +724,11 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 			 */
 			len = r->biorq_len;
 		} else {
-			if (q->mfsrq_flags & MFSRQ_READ)
-				len = msl_pages_copyout(r);
-			else {
+			if (q->mfsrq_flags & MFSRQ_READ) {
+				MFH_LOCK(q->mfsrq_mfh);
+				len = msl_pages_copyout(r, q);
+				MFH_ULOCK(q->mfsrq_mfh);
+			} else {
 				len = msl_pages_copyin(r);
 				needflush = 1;
 			}
@@ -1631,7 +1660,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
  * msl_pages_copyout - Copy pages to the user application buffer.
  */
 size_t
-msl_pages_copyout(struct bmpc_ioreq *r)
+msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 {
 	struct bmap_pagecache_entry *e;
 	size_t nbytes, tbytes = 0, rflen;
@@ -1659,6 +1688,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 
 	npages = psc_dynarray_len(&r->biorq_pages);
 
+	q->mfsrq_iovs = PSC_REALLOC(q->mfsrq_iovs, 
+		sizeof(struct iovec) * (q->mfsrq_niov + npages));
+
 	/*
 	 * Due to page prefetching, the pages contained in biorq_pages
 	 * may exceed the requested len.
@@ -1684,7 +1716,12 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r,
 		    i));
 
+		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
+		q->mfsrq_iovs[q->mfsrq_niov].iov_base = src;
+		q->mfsrq_niov++;
+#if 0
 		memcpy(dest, src, nbytes);
+#endif
 
 		BMPCE_ULOCK(e);
 
@@ -1834,6 +1871,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q->mfsrq_err = 0;
 	q->mfsrq_ref = 1;
 	q->mfsrq_flags = (rw == SL_READ) ? MFSRQ_READ : MFSRQ_NONE;
+	q->mfsrq_niov = 0;
+	q->mfsrq_iovs = NULL;
 
 	mfh_incref(q->mfsrq_mfh);
 
