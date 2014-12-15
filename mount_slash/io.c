@@ -359,6 +359,18 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 }
 
 void
+msl_biorq_destroy(struct bmpc_ioreq *r)
+{
+	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+	r->biorq_flags |= BIORQ_DESTROY;
+
+	msl_biorq_del(r);
+
+	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+	psc_pool_return(slc_biorq_pool, r);
+}
+
+void
 _msl_biorq_release(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
@@ -387,17 +399,10 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 			return;
 		}
 		/* r could be gone at this point */
+		return;
 
-	} else {
-
-		psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
-		r->biorq_flags |= BIORQ_DESTROY;
-
-		msl_biorq_del(r);
-
-		OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-		psc_pool_return(slc_biorq_pool, r);
 	}
+	msl_biorq_destroy(r);
 }
 
 struct msl_fhent *
@@ -677,13 +682,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 		if (r->biorq_flags & BIORQ_FLUSHRDY)
 			continue;
 
-		psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
-		r->biorq_flags |= BIORQ_DESTROY;
-
-		msl_biorq_del(r);
-
-		OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-		psc_pool_return(slc_biorq_pool, r);
+		msl_biorq_destroy(r);
 	}
 }
 
