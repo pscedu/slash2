@@ -191,7 +191,10 @@ struct mdsio_ops {
 #define SLXAT_FGEN		".sl2-fgen"
 #define SLXAT_FID		".sl2-fid"
 #define SLXAT_FSIZE		".sl2-fsize"
+#define SLXAT_INOSTAT		".sl2-inostat"
+#define SLXAT_INOXSTAT		".sl2-inoxstat"
 #define SLXAT_NBLKS		".sl2-nblks"
+#define SLXAT_STAT		".sl2-stat"
 
 extern struct mdsio_ops		mdsio_ops;
 extern mdsio_fid_t		mds_metadir_inum[];
