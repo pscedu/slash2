@@ -41,70 +41,69 @@
 #include "pfl/thread.h"
 #include "pfl/walk.h"
 
+#include "slashrpc.h"
+
 #include "slashd/inode.h"
 #include "slashd/mdsio.h"
 
 struct path {
-	const char		*fn;
-	struct psc_listentry	 lentry;
+	const char		*p_fn;
+	struct psc_listentry	 p_lentry;
+};
+
+struct host {
+	const char		*h_hostname;
+	const char		*h_path;
+	struct psc_listentry	 h_lentry;
 };
 
 struct thr {
-	FILE			*fp;
-	char			 lastfn[PATH_MAX];
+	FILE			*t_fp;
+	struct host		*t_host;
+	char			 t_buf[512 * 1024];
 };
 
-int			 resume;
-int			 setid;
-int			 setsize = 1;
-int			 show;
-int			 recurse;
-int			 headers = 1;
-pthread_barrier_t	 barrier;
-struct psc_dynarray	 checkpoints;
-struct psc_lockedlist	 excludes = PLL_INIT(&excludes, struct path, lentry);
-struct psc_listcache	 files;
-const char		*outfn;
+#define STAT_SZ		(8 + sizeof(struct srt_stat))
+#define INOSTAT_SZ	(STAT_SZ + sizeof(struct slash_inode_od) + 8)
+#define INOXSTAT_SZ	(INOSTAT_SZ + sizeof(struct slash_inode_extras_od) + 8)
 
-const char *progname;
-
-#define KEYW(w)
-
-#define	K_BMAPS		(1 <<  0)
-#define	K_BSZ		(1 <<  1)
-#define	K_CRC		(1 <<  2)
-#define	K_FGEN		(1 <<  3)
-#define	K_FID		(1 <<  4)
-#define	K_FLAGS		(1 <<  5)
-#define	K_FSIZE		(1 <<  6)
-#define	K_NBLKS		(1 <<  7)
-#define	K_NREPLS	(1 <<  8)
-#define	K_REPLBLKS	(1 <<  9)
-#define	K_REPLPOL	(1 << 10)
-#define	K_REPLS		(1 << 11)
-#define	K_UID		(1 << 12)
-#define	K_VERSION	(1 << 13)
-#define	K_XCRC		(1 << 14)
-#define	K_DEF		((~0) & ~K_BMAPS)
-
-const char *show_keywords[] = {
-	"bmaps",
-	"bsz",
-	"crc",
-	"fid",
-	"flags",
-	"fsize",
-	"nblks",
-	"nrepls",
-	"replblks",
-	"replpol",
-	"repls",
-	"uid",
-	"version",
-	"xcrc"
+struct file {
+	char			*f_fn;
+	struct psc_listentry	 f_lentry;
+	int			 f_fd;
+	uint32_t		 f_nrepls;
+	uint64_t		 f_ino_mem_crc;
+	uint64_t		 f_inox_mem_crc;
+	struct {
+		uint64_t			 metasize;
+		struct srt_stat			 sstb;
+		struct slash_inode_od		 ino;
+		uint64_t			 ino_crc;
+		struct slash_inode_extras_od	 inox;
+		uint64_t			 inox_crc;
+	} f_data;
+#define f_metasize	f_data.metasize
+#define f_sstb		f_data.sstb
+#define f_ino		f_data.ino
+#define f_ino_od_crc	f_data.ino_crc
+#define f_inox		f_data.inox
+#define f_inox_od_crc	f_data.inox_crc
 };
 
-const char *repl_states = "-sq+tpgx";
+struct psc_lockedlist		 hosts = PLL_INIT(&hosts, struct host, h_lentry);
+int				 recurse;
+pthread_barrier_t		 barrier;
+struct psc_lockedlist		 excludes = PLL_INIT(&excludes, struct path, p_lentry);
+const char			*outfn;
+const char			*fmt;
+
+struct psc_listcache		 files;
+struct psc_poolmaster		 files_poolmaster;
+struct psc_poolmgr		*files_pool;
+
+const char			*progname;
+
+const char			*repl_states = "-sq+tpgx";
 
 struct path *
 searchpaths(struct psc_lockedlist *pll, const char *fn)
@@ -113,237 +112,99 @@ searchpaths(struct psc_lockedlist *pll, const char *fn)
 
 	/* XXX use bsearch */
 	PLL_FOREACH(p, pll)
-		if (strcmp(p->fn, fn) == 0)
+		if (strcmp(p->p_fn, fn) == 0)
 			return (p);
 	return (NULL);
 }
 
-struct f {
-	char			*fn;
-	struct stat		 stb;
-	struct psc_listentry	 lentry;
-	int			 ftyp;
-};
+void
+pr_repls(FILE *outfp, struct file *f)
+{
+	uint32_t i;
+
+	for (i = 0; i < f->f_nrepls; i++)
+		fprintf(outfp, "%s%u", i ? "," : "",
+		    i < SL_DEF_REPLICAS ?
+		    f->f_ino.ino_repls[i].bs_id :
+		    f->f_inox.inox_repls[i - SL_DEF_REPLICAS].bs_id);
+}
 
 void
-display(FILE *fp, const char *label, const char *fmt, ...)
+pr_repl_blks(FILE *outfp, struct file *f)
 {
-	va_list ap;
+	uint32_t i;
 
-	if (headers && label)
-		fprintf(fp, "  %s ", label);
-	va_start(ap, fmt);
-	vfprintf(fp, fmt, ap);
-	va_end(ap);
-	fprintf(fp, "\n");
+	for (i = 0; i < f->f_nrepls; i++)
+		fprintf(outfp, "%s%"PRIu64, i ? "," : "",
+		    i < SL_DEF_REPLICAS ?
+		    f->f_ino.ino_repl_nblks[i] :
+		    f->f_inox.inox_repl_nblks[i - SL_DEF_REPLICAS]);
 }
 
-int
-dumpfid(struct f *f)
+void
+pr_bmaps(struct thr *t, FILE *outfp, struct file *f)
 {
+	struct {
+		struct bmap_ondisk bod;
+		uint64_t crc;
+	} bd;
 	sl_bmapno_t bno;
-	struct psc_thread *thr = pscthr_get();
-	struct slash_inode_extras_od inox;
-	struct slash_inode_od ino;
-	struct iovec iovs[2];
-	struct thr *t;
-	uint64_t crc, od_crc;
-	uint32_t nr, j;
-	char tbuf[32];
-	int fd = -1;
-	ssize_t rc;
+	int fd, off;
+	uint32_t i;
+	size_t rc;
 	FILE *fp;
 
-	t = thr->pscthr_private;
-	fp = t->fp;
+	if (f->f_metasize <= SL_BMAP_START_OFF)
+		return;
 
-	fd = open(f->fn, O_RDONLY);
+	if (lseek(f->f_fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
+		warn("seek");
+	fd = dup(f->f_fd);
 	if (fd == -1) {
-		warn("%s", f->fn);
-		goto out;
+		warn("dup");
+		return;
 	}
-
-	iovs[0].iov_base = &ino;
-	iovs[0].iov_len = sizeof(ino);
-	iovs[1].iov_base = &od_crc;
-	iovs[1].iov_len = sizeof(od_crc);
-	rc = readv(fd, iovs, nitems(iovs));
-	if (rc == -1) {
-		warn("%s", f->fn);
-		goto out;
-	}
-	if (rc != sizeof(ino) + sizeof(od_crc)) {
-		warnx("%s: short I/O, want %zd got %zd",
-		    f->fn, sizeof(ino) + sizeof(od_crc), rc);
-		goto out;
-	}
-
-	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	if (headers)
-		display(fp, NULL, "%s:", f->fn);
-	if (show & K_CRC)
-		display(fp, "crc", "%s %"PSCPRIxCRC64" "
-		    "%"PSCPRIxCRC64, crc == od_crc ? "OK" : "BAD",
-		    crc, od_crc);
-	if (show & K_VERSION)
-		display(fp, "version", "%u", ino.ino_version);
-	if (show & K_FLAGS)
-		fprintf(fp, "  flags %#x\n", ino.ino_flags);
-	if (show & K_BSZ)
-		fprintf(fp, "  bsz %u\n", ino.ino_bsz);
-	if (show & K_NREPLS)
-		fprintf(fp, "  nrepls %u\n", ino.ino_nrepls);
-	if (show & K_REPLPOL)
-		fprintf(fp, "  replpol %u\n", ino.ino_replpol);
-	if (show & K_FSIZE && rc > 0) {
-		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf) - 1);
-		if (rc == -1)
-			warn("%s: getxattr %s", f->fn, SLXAT_FSIZE);
-		else {
-			tbuf[rc] = '\0';
-			fprintf(fp, "  fsize %s\n", tbuf);
-		}
-	}
-	if (show & K_NBLKS && rc > 0) {
-		rc = fgetxattr(fd, SLXAT_NBLKS, tbuf, sizeof(tbuf) - 1);
-		if (rc == -1)
-			warn("%s: getxattr %s", f->fn, SLXAT_NBLKS);
-		else {
-			tbuf[rc] = '\0';
-			display(fp, "nblks", "%s", tbuf);
-		}
-	}
-	if (show & K_FID) {
-		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf) - 1);
-		if (rc == -1)
-			warn("%s: getxattr %s", f->fn, SLXAT_FID);
-		else {
-			tbuf[rc] = '\0';
-			fprintf(fp, "  fid %s\n", tbuf);
-		}
-	}
-	if (show & K_FGEN) {
-		rc = fgetxattr(fd, SLXAT_FGEN, tbuf, sizeof(tbuf) - 1);
-		if (rc == -1)
-			warn("%s: getxattr %s", f->fn, SLXAT_FGEN);
-		else {
-			tbuf[rc] = '\0';
-			fprintf(fp, "  fgen %s\n", tbuf);
-		}
-	}
-	if (show & K_UID)
-		fprintf(fp, "  usr %d\n", f->stb.st_uid);
-
-	nr = ino.ino_nrepls;
-	if (nr > SL_DEF_REPLICAS) {
-		if (nr > SL_MAX_REPLICAS)
-			nr = SL_MAX_REPLICAS;
-		lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
-		iovs[0].iov_base = &inox;
-		iovs[0].iov_len = sizeof(inox);
-		iovs[1].iov_base = &od_crc;
-		iovs[1].iov_len = sizeof(od_crc);
-		rc = readv(fd, iovs, nitems(iovs));
-		if (rc == -1) {
-			warn("%s", f->fn);
-			goto out;
-		}
-		if (rc != sizeof(inox) + sizeof(od_crc)) {
-			warnx("%s: short I/O, want %zd got %zd",
-			    f->fn, sizeof(inox) + sizeof(od_crc), rc);
-			goto out;
-		}
-		psc_crc64_calc(&crc, &inox, sizeof(inox));
-		if (show & K_XCRC)
-			fprintf(fp, "  inox crc: %s %"PSCPRIxCRC64" %"PSCPRIxCRC64"\n",
-			    crc == od_crc ? "OK" : "BAD", crc, od_crc);
-	}
-	if (show & K_REPLS) {
-		fprintf(fp, "  repls ");
-		for (j = 0; j < nr; j++)
-			fprintf(fp, "%s%u", j ? "," : "",
-			    j < SL_DEF_REPLICAS ?
-			    ino.ino_repls[j].bs_id :
-			    inox.inox_repls[j - SL_DEF_REPLICAS].bs_id);
-		fprintf(fp, "\n");
-	}
-	if (show & K_REPLBLKS) {
-		fprintf(fp, "  replblks ");
-		for (j = 0; j < nr; j++)
-			fprintf(fp, "%s%"PRIu64, j ? "," : "",
-			    j < SL_DEF_REPLICAS ?
-			    ino.ino_repl_nblks[j] :
-			    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
-		fprintf(fp, "\n");
-	}
-	if (show & K_BMAPS &&
-	    f->stb.st_size > SL_BMAP_START_OFF) {
-		fprintf(fp, "  bmaps %"PSCPRIdOFFT"\n",
-		    (f->stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
-		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
-			warn("seek");
-		for (bno = 0; ; bno++) {
-			struct {
-				struct bmap_ondisk bod;
-				uint64_t crc;
-			} bd;
-			int off;
-
-			rc = read(fd, &bd, sizeof(bd));
-			if (rc == 0)
-				break;
-			if (rc != sizeof(bd)) {
-				warn("read");
-				break;
-			}
-			fprintf(fp, "   %5u: gen %5u pol %u res ",
-			    bno, bd.bod.bod_gen, bd.bod.bod_replpol);
-
-			for (j = 0, off = 0; j < nr;
-			    j++, off += SL_BITS_PER_REPLICA)
-				fprintf(fp, "%c", repl_states[
-				    SL_REPL_GET_BMAP_IOS_STAT(
-				    bd.bod.bod_repls, off)]);
-
-//			nslvr = SLASH_SLVRS_PER_BMAP;
-//			for (j = 0; j < nr; j++)
-//				fprintf(fp, "%s%s", j ? "," : "", );
-
-			fprintf(fp, "\n");
-		}
-	}
-
- out:
-	if (fd != -1)
+	fp = fdopen(fd, "r");
+	if (fp == NULL) {
+		warn("fdopen");
 		close(fd);
-	PSCFREE(f->fn);
-	PSCFREE(f);
+		return;
+	}
+	setbuffer(fp, t->t_buf, sizeof(t->t_buf));
 
-	return (0);
+	for (bno = 0; ; bno++) {
+		rc = fread(&bd, 1, sizeof(bd), fp);
+		if (rc == 0)
+			break;
+		if (rc != sizeof(bd)) {
+			warn("read");
+			break;
+		}
+
+		fprintf(outfp, "   %5u: gen %5u pol %u res ",
+		    bno, bd.bod.bod_gen, bd.bod.bod_replpol);
+
+		for (i = 0, off = 0; i < f->f_nrepls;
+		    i++, off += SL_BITS_PER_REPLICA)
+			fprintf(outfp, "%c", repl_states[
+			    SL_REPL_GET_BMAP_IOS_STAT(
+			    bd.bod.bod_repls, off)]);
+
+		fprintf(outfp, "\n");
+	}
+
+	if (ferror(fp))
+		warn("%s: read", f->f_fn);
+
+	fclose(fp);
 }
 
 int
-fcmp(const void *a, const void *b)
-{
-	char * const *fa = a;
-	char * const *fb = b;
-
-	return (strcmp(*fa, *fb));
-}
-
-int
-fcmp0(const void *a, const void *b)
-{
-	return (strcmp(a, b));
-}
-
-int
-queue(const char *fn, const struct stat *stb, int ftyp,
+queue(const char *fn, __unusedx const struct stat *stb, int ftyp,
     __unusedx int level, __unusedx void *arg)
 {
-	static int cnt;
 	struct path *p;
-	struct f *f;
+	struct file *f;
 
 	p = searchpaths(&excludes, fn);
 	if (p) {
@@ -355,57 +216,12 @@ queue(const char *fn, const struct stat *stb, int ftyp,
 	if (ftyp != PFWT_F)
 		return (0);
 
-	if (cnt >= setsize)
-		cnt = 0;
-	if (cnt++ != setid)
-		return (0);
-
-	if (psc_dynarray_len(&checkpoints)) {
-		static struct psc_spinlock lock = SPINLOCK_INIT;
-		char *t;
-		int n;
-
-		spinlock(&lock);
-		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp0);
-		if (n >= 0 && n < psc_dynarray_len(&checkpoints)) {
-			t = psc_dynarray_getpos(&checkpoints, n);
-			if (strcmp(fn, t) == 0) {
-				// XXX leak paths
-				DYNARRAY_FOREACH(t, n, &checkpoints)
-					PSCFREE(t);
-				psc_dynarray_reset(&checkpoints);
-			}
-		}
-		freelock(&lock);
-
-		if (psc_dynarray_len(&checkpoints))
-			return (0);
-	}
-
-	f = PSCALLOC(sizeof(*f));
-	INIT_PSC_LISTENTRY(&f->lentry);
-	f->fn = pfl_strdup(fn);
-	f->stb = *stb;
-	f->ftyp = ftyp;
-	while (lc_nitems(&files) > 256)
-		usleep(1000);
+	f = psc_pool_get(files_pool);
+	memset(f, 0, sizeof(*f));
+	INIT_PSC_LISTENTRY(&f->f_lentry);
+	f->f_fn = pfl_strdup(fn);
 	lc_add(&files, f);
 	return (0);
-}
-
-void
-lookupshow(const char *flg)
-{
-	const char **p;
-	int i;
-
-	for (i = 0, p = show_keywords;
-	    i < nitems(show_keywords); i++, p++)
-		if (strcmp(flg, *p) == 0) {
-			show |= 1 << i;
-			return;
-		}
-	errx(1, "unknown show field: %s", flg);
 }
 
 void
@@ -414,80 +230,154 @@ addexclude(const char *fn)
 	struct path *p;
 
 	p = PSCALLOC(sizeof(*p));
-	INIT_PSC_LISTENTRY(&p->lentry);
-	p->fn = fn;
+	INIT_PSC_LISTENTRY(&p->p_lentry);
+	p->p_fn = fn;
 	pll_add(&excludes, p);
+}
+
+int
+load_data_fd(struct file *f, char *buf)
+{
+	f->f_fd = open(f->f_fn, O_RDONLY);
+	if (f->f_fd == -1)
+		return (0);
+	if (fgetxattr(f->f_fd, SLXAT_INOXSTAT, buf, INOX_SZ) != INOX_SZ)
+		return (0);
+	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
+	psc_crc64_calc(&f->f_inox_mem_crc, &f->f_inox,
+	    sizeof(f->f_inox));
+	return (1);
+}
+
+int
+load_data_inox(struct file *f, char *buf)
+{
+	if (getxattr(f->fn, SLXAT_INOXSTAT, buf, INOX_SZ) != INOX_SZ)
+		return (0);
+	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
+	psc_crc64_calc(&f->f_inox_mem_crc, &f->f_inox,
+	    sizeof(f->f_inox));
+	return (1);
+}
+
+int
+load_data_ino(struct file *f, char *buf)
+{
+	if (getxattr(f->fn, SLXAT_INOSTAT, buf, INO_SZ) != INO_SZ)
+		return (0);
+	psc_crc64_calc(&f->ino_mem_crc, &ino, sizeof(ino));
+	return (1);
+}
+
+int
+load_data_stat(struct file *f, char *buf)
+{
+	if (getxattr(f->fn, SLXAT_STAT, buf, STAT_SZ) != STAT_SZ)
+		return (0);
+	return (1);
 }
 
 void
 thrmain(struct psc_thread *thr)
 {
+	struct file *f;
 	struct thr *t;
-	struct f *f;
 
 	t = thr->pscthr_private;
-	if (outfn) {
-		char fn[PATH_MAX];
-
-		(void)FMTSTR(fn, sizeof(fn), outfn,
-		    FMTSTRCASE('n', "s", thr->pscthr_name +
-			strcspn(thr->pscthr_name, "012345679"))
-		);
-		t->fp = fopen(fn, resume ? "r+" : "w");
-		if (t->fp == NULL)
-			err(1, "%s", fn);
-
-		if (resume) {
-			char *p, *s, *end;
-			struct stat stb;
-			size_t len;
-
-			if (fstat(fileno(t->fp), &stb) == -1)
-				err(1, "%s", fn);
-
-			if (stb.st_size == 0)
-				goto ready;
-
-			/* find last position */
-			p = mmap(NULL, stb.st_size, PROT_READ,
-			    MAP_PRIVATE, fileno(t->fp), 0);
-			if (p == MAP_FAILED)
-				err(1, "%s", fn);
-			end = p + stb.st_size - 1;
-
-			for (s = end; s >= p; s--) {
-				if (*s == '\n' && s < end &&
-				    s[1] != ' ') {
-					for (len = 1; s + len < end &&
-					    s[len] != '\n'; len++)
-						;
-					if (s[len] != '\n')
-						goto next;
-					psc_dynarray_add(&checkpoints,
-					    pfl_strndup(s + 1, len - 1));
-					break;
-				}
- next:
-				;
-			}
-
-			munmap(p, stb.st_size);
+	if (t->host) {
+#if 0
+		switch (fork()) {
+		case -1:
+			break;
+		case 0:
+			execve();
+			err();
+		default:
+			break;
 		}
-	} else
-		t->fp = stdout;
+#endif
+	} else {
+		if (outfn) {
+			char fn[PATH_MAX];
 
- ready:
+			(void)FMTSTR(fn, sizeof(fn), outfn,
+			    FMTSTRCASE('n', "s", thr->pscthr_name +
+				strcspn(thr->pscthr_name, "012345679"))
+			);
+			t->fp = fopen(fn, "w");
+			if (t->fp == NULL)
+				err(1, "%s", fn);
+		} else
+			t->fp = stdout;
+	}
+
 	pthread_barrier_wait(&barrier);
-	while ((f = lc_getwait(&files)))
-		dumpfid(f);
+	while ((f = lc_getwait(&files))) {
+		if (load_data(f, tbuf)) {
+			warn("%s", f->fn);
+			goto next;
+		}
+		(void)PRFMTSTR(fp, fmt,
+		    PRFMTSTRCASE('B', NULL, pr_repl_blks(fp, f))
+		    PRFMTSTRCASE('b', PRIu64, sstb->sst_blocks)
+		    PRFMTSTRCASE('c', PSCPRIxCRC64, t->ino_od_crc)
+		    PRFMTSTRCASE('C', PSCPRIxCRC64, t->ino_mem_crc)
+		    PRFMTSTRCASE('d', "s",
+			t->ino_od_crc == t->ino_mem_crc ? "OK" : "BAD")
+		    PRFMTSTRCASE('F', PRIx64, sstb->sst_fg.fg_fid)
+		    PRFMTSTRCASE('f', "#x", ino->ino_flags)
+		    PRFMTSTRCASE('G', PRIu64, sstb->sst_fg.fg_gen)
+		    PRFMTSTRCASE('g', "u", sstb->sst_gid)
+		    PRFMTSTRCASE('M', NULL, pr_bmaps(fp, f))
+		    PRFMTSTRCASE('N', PSCPRIdOFFT,
+			(f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
+		    PRFMTSTRCASE('n', "u", ino->ino_nrepls)
+		    PRFMTSTRCASE('R', NULL, pr_repls(fp, f))
+		    PRFMTSTRCASE('s', PRIu64, sstb->sst_size)
+		    PRFMTSTRCASE('u', "u", sstb->sst_uid)
+		    PRFMTSTRCASE('v', "u", ino->ino_version)
+		    PRFMTSTRCASE('x', PSCPRIxCRC64, t->inox_od_crc)
+		    PRFMTSTRCASE('X', PSCPRIxCRC64, t->inox_mem_crc)
+		    PRFMTSTRCASE('y', PSCPRIxCRC64,
+			t->inox_mem_crc == t->inox_od_crc ? "OK" : "BAD")
+		);
+
+ next:
+		if (f->fd != -1)
+			close(f->fd);
+		PSCFREE(f->fn);
+		psc_pool_return(files_pool, f);
+	}
+}
+
+void
+addhost(char *s)
+{
+	char *next, *path;
+	struct host *h;
+
+	for (; s; s = next) {
+		next = strchr(s, ';');
+		if (next)
+			*next++ = '\0';
+		path = strchr(s, ':');
+		if (path)
+			*path++ = '\0';
+
+		h = PSCALLOC(sizeof(*h));
+		INIT_LISTENTRY(&h->h_lentry);
+		h->h_hostname = s;
+		h->h_path = path;
+		pll_add(&hosts, h);
+	}
 }
 
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HPR] [-O file] [-o keys] [-S id:size] "
-	    "[-t nthr] [-x exclude] file ...\n",
+	    "usage: %s [-R] [-C hosts] [-F fmt] [-O file]\n"
+	    "\t[-t nthr] [-x exclude] file ...\n",
 	    progname);
 	exit(1);
 }
@@ -495,52 +385,27 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	extern void *cmpf;
-	int walkflags = PFL_FILEWALKF_RELPATH, c, n, nthr = 1;
+	int walkflags = PFL_FILEWALKF_RELPATH, c, i, nthr = 1;
 	struct psc_thread **thrv;
-	char *endp, *p, *id;
-	pthread_t *tid;
+	struct thr *t;
+	char *endp;
 	long l;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "HO:o:PRS:t:x:")) != -1) {
+	while ((c = getopt(argc, argv, "C:F:O:Rt:x:")) != -1) {
 		switch (c) {
-		case 'H':
-			headers = 0;
+		case 'C':
+			addhost(optarg);
+			break;
+		case 'F':
+			fmt = optarg;
 			break;
 		case 'O':
 			outfn = optarg;
 			break;
-		case 'o':
-			lookupshow(optarg);
-			break;
-		case 'P':
-			resume = 1;
-			break;
 		case 'R':
 			walkflags |= PFL_FILEWALKF_RECURSIVE;
-			break;
-		case 'S':
-			id = optarg;
-			p = strchr(optarg, ':');
-			if (p == NULL)
-				errx(1, "invalid -S format: %s",
-				    optarg);
-			*p++ = '\0';
-
-			l = strtol(id, &endp, 10);
-			if (l < 0 || l > 256 ||
-			    id == endp || *endp)
-				errx(1, "invalid -S id: %s", id);
-			setid = l;
-
-			l = strtol(p, &endp, 10);
-			if (l < 1 || l > 256 ||
-			    p == endp || *endp)
-				errx(1, "invalid -S setsize: %s", p);
-			setsize = l;
-
 			break;
 		case 't':
 			l = strtol(optarg, &endp, 10);
@@ -560,25 +425,55 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (!argc)
 		usage();
-	if (!show)
-		show = K_DEF;
-	if (resume && outfn == NULL)
-		errx(1, "resume specified but not output file to restore state from");
+
+	(void)PRFMTSTR(stdout, fmt,
+	    PRFMTSTRCASE('B', NULL, pr_repl_blks(fp, f))
+	    PRFMTSTRCASE('b', NULL, sstb->sst_blocks)
+	    PRFMTSTRCASE('c', NULL, t->ino_od_crc)
+	    PRFMTSTRCASE('C', NULL, t->ino_mem_crc)
+	    PRFMTSTRCASE('d', NULL, t->ino_od_crc == t->ino_mem_crc ? "OK" : "BAD")
+	    PRFMTSTRCASE('F', NULL, sstb->sst_fg.fg_fid)
+	    PRFMTSTRCASE('f', NULL, ino->ino_flags)
+	    PRFMTSTRCASE('G', NULL, sstb->sst_fg.fg_gen)
+	    PRFMTSTRCASE('g', NULL, need_stat = 1)
+	    PRFMTSTRCASE('M', NULL, pr_bmaps(fp, f))
+	    PRFMTSTRCASE('N', NULL, (f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
+	    PRFMTSTRCASE('n', NULL, need_ino = 1)
+	    PRFMTSTRCASE('R', NULL, pr_repls(fp, f))
+	    PRFMTSTRCASE('s', NULL, need_stat = 1)
+	    PRFMTSTRCASE('u', NULL, need_stat = 1)
+	    PRFMTSTRCASE('v', NULL, need_ino = 1)
+	    PRFMTSTRCASE('x', NULL, need_inox = 1)
+	    PRFMTSTRCASE('X', NULL, need_inox = 1)
+	    PRFMTSTRCASE('y', NULL, need_inox = 1)
+	);
+
+	ssh -o 'Compression yes' host
+
+	psc_poolmaster_init(&files_poolmaster, );
+	files_pool = psc_poolmaster_getmgr();
+	while (lc_nitems(&files) > 256)
+		usleep(1000);
 
 	pthread_barrier_init(&barrier, NULL, nthr + 1);
-	lc_init(&files, struct f, lentry);
-	thrv = PSCALLOC(nthr * sizeof(*tid));
-	for (n = 0; n < nthr; n++) {
-		thrv[n] = pscthr_init(0, thrmain, NULL,
-		    sizeof(struct thr), "thr%d", n);
-		pscthr_setready(thrv[n]);
+	lc_init(&files, struct file, f_lentry);
+	thrv = PSCALLOC((nthr + pll_nitems(&hosts)) * sizeof(*thrv));
+	for (i = 0; i < nthr; i++) {
+		t = thrv[i] = pscthr_init(0, thrmain, NULL, sizeof(*t),
+		    "thr%d", i);
+		pscthr_setready(t);
+	}
+	PLL_FOREACH(h, &hosts) {
+		t = thrv[i++] = pscthr_init(0, thrmain, NULL,
+		    sizeof(*t), "thr-%s", h->h_hostname);
+		t->t_host = h;
+		pscthr_setready(t);
 	}
 	pthread_barrier_wait(&barrier);
-	psc_dynarray_sort(&checkpoints, qsort, fcmp);
 	for (; *argv; argv++)
-		pfl_filewalk(*argv, walkflags, cmpf, queue, NULL);
+		pfl_filewalk(*argv, walkflags, NULL, queue, NULL);
 	lc_kill(&files);
-	for (n = 0; n < nthr; n++)
-		pthread_join(thrv[n]->pscthr_pthread, NULL);
+	for (i = 0; i < nthr + pll_nitems(&hosts); i++)
+		pthread_join(thrv[i]->pscthr_pthread, NULL);
 	exit(0);
 }
