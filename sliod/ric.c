@@ -92,6 +92,49 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 	return (rc);
 }
 
+void
+slvrs_wrunlock(struct slvr **slvrs, int nslvrs)
+{
+	struct slvr *s;
+	int i;
+
+	for (i = 0; i < nslvrs; i++) {
+		s = slvrs[i];
+		SLVR_LOCK(s);
+		s->slvr_flags &= ~SLVR_WRLOCK;
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+	}
+}
+
+void
+slvrs_wrlock(struct slvr **slvrs, int nslvrs)
+{
+	struct slvr *s;
+	int i;
+
+ restart:
+	for (i = 0; i < nslvrs; i++) {
+		s = slvrs[i];
+		SLVR_LOCK(s);
+		if (s->slvr_flags & SLVR_WRLOCK) {
+			/*
+			 * Drat!  One of our slivers is locked by
+			 * another thread.  Release all wrlocks on
+			 * slivers acquired so far and retry from the
+			 * beginning to avoid deadlock.  Slivers should
+			 * always be ordered in file space to avoid
+			 * dining philosophers starvation.
+			 */
+			SLVR_ULOCK(s);
+			slvrs_wrunlock(slvrs, i);
+			goto restart;
+		}
+		s->slvr_flags |= SLVR_WRLOCK;
+		SLVR_ULOCK(s);
+	}
+}
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
@@ -328,9 +371,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * We must return an error code to the RPC itself if we don't
 	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
+	slvrs_wrlock(slvr, nslvrs);
 	rc = mp->rc = slrpc_bulkserver(rq,
 	    rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE,
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
+	slvrs_wrunlock(slvr, nslvrs);
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc=%d",
 		    rw == SL_WRITE ? "write" : "read", rc);

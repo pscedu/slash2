@@ -75,6 +75,7 @@ struct slvr {
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO in repldst */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
+#define SLVR_WRLOCK		(1 <<  9)	/* exclusive locking for concurrent writing */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
