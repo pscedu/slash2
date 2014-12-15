@@ -31,14 +31,9 @@
 #ifndef _SL_BUFFER_H_
 #define _SL_BUFFER_H_
 
-#include "pfl/atomic.h"
 #include "pfl/cdefs.h"
 #include "pfl/list.h"
-#include "pfl/listcache.h"
-#include "pfl/lock.h"
 #include "pfl/pool.h"
-
-#include "cache_params.h"
 
 /**
  * sl_buffer - Used for both read caching and write
