@@ -359,7 +359,7 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 }
 
 void
-_msl_biorq_destroy(const struct pfl_callerinfo *pci,
+_msl_biorq_release(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
 	int needflush;
@@ -781,7 +781,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			BMPCE_ULOCK(e);
 		}
 		DEBUG_BIORQ(PLL_NOTICE, r, "unblocked by (bmpce@%p)", e);
-		msl_biorq_destroy(r);
+		msl_biorq_release(r);
 	}
 }
 
@@ -858,7 +858,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		mfsrq_seterr(r->biorq_fsrqi, rc);
 	}
 
-	msl_biorq_destroy(r);
+	msl_biorq_release(r);
 
 	/*
 	 * Free the dynarray which was allocated in
@@ -924,7 +924,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup, q=%p", q);
 
-	msl_biorq_destroy(r);
+	msl_biorq_release(r);
 
 	return (rc);
 }
@@ -2122,7 +2122,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
-			msl_biorq_destroy(r);
+			msl_biorq_release(r);
 	}
 
 	/*

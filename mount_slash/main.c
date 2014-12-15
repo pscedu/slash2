@@ -3377,7 +3377,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 			}
 			OPSTAT_INCR(SLC_OPST_READAHEAD_FETCH);
 			msl_pages_fetch(r);
-			msl_biorq_destroy(r);
+			msl_biorq_release(r);
 
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
 			break;

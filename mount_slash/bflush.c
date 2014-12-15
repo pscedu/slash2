@@ -268,7 +268,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
-			msl_biorq_destroy(r);
+			msl_biorq_release(r);
 		}
 	}
 
@@ -386,7 +386,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		BMAP_ULOCK(r->biorq_bmap);
 
 		msl_bmpces_fail(r, rc);
-		msl_biorq_destroy(r);
+		msl_biorq_release(r);
 		return;
 	}
 	OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RESCHED);

@@ -373,7 +373,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 
 	DYNARRAY_FOREACH(r, i, &a) {
 		msl_bmpces_fail(r, rc);
-		msl_biorq_destroy(r);
+		msl_biorq_release(r);
 	}
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY_BATCH);
 	psc_dynarray_free(&a);

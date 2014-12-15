@@ -222,12 +222,12 @@ resm2rmci(struct sl_resm *resm)
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
 
-#define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
+#define msl_biorq_release(r)	_msl_biorq_release(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
-void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
