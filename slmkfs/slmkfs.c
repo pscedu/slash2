@@ -334,7 +334,7 @@ main(int argc, char *argv[])
 	if (!ion && !specsid)
 		errx(1, "site ID must be specified for MDS servers");
 	if (resid == IOS_ID_ANY)
-		errx(1, "site ID must be specified for MDS servers");
+		errx(1, "resource ID must be specified for I/O servers");
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
