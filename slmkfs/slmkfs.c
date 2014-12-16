@@ -333,7 +333,7 @@ main(int argc, char *argv[])
 		errx(1, "fsuuid must be specified for I/O servers");
 	if (!ion && !specsid)
 		errx(1, "site ID must be specified for MDS servers");
-	if (resid == IOS_ID_ANY)
+	if (ion && resid == IOS_ID_ANY)
 		errx(1, "resource ID must be specified for I/O servers");
 
 	sl_getuserpwent(&pw);
