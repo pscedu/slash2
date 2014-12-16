@@ -2462,9 +2462,6 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-	sfb.f_blocks = sfb.f_blocks * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
-	sfb.f_bfree = sfb.f_bfree * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
-	sfb.f_bavail = sfb.f_bavail * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
 
