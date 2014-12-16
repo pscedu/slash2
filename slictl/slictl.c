@@ -239,6 +239,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
+/* CRUD		*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* REPLPND	*/ NULL,

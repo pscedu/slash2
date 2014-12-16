@@ -46,6 +46,7 @@ enum {
 	SLITHRT_CONN,		/* connection monitor */
 	SLITHRT_CTL,		/* control processor */
 	SLITHRT_CTLAC,		/* control acceptor */
+	SLITHRT_CRUD,		/* CRC update sender */
 	SLITHRT_HEALTH,		/* underlying file system health checker */
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_NBRQ,		/* non blocking RPC request processor */

@@ -100,7 +100,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		rc = iod_inode_getinfo(&bcr->bcr_crcup.fg,
 		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.nblks,
 		    &bcr->bcr_crcup.utimgen);
-
 		if (rc)
 			goto out;
 
@@ -134,87 +133,86 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	return (rc);
 }
 
-__static void
-slvr_worker_push_crcups(void)
+void
+slicrudthr_main(struct psc_thread *thr)
 {
-	static atomic_t busy = ATOMIC_INIT(0);
-
 	struct psc_dynarray *bcrs;
 	struct timespec now, diff;
 	struct bcrcupd *bcr;
-	int i;
+	int i, rc;
 
-	if (atomic_xchg(&busy, 1))
-		return;
+	bcrs = PSCALLOC(sizeof(*bcrs));
 
- again:
-	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
+	while (pscthr_run(thr)) {
+		pscrpc_nbreqset_reap(sl_nbrqset);
 
-	pscrpc_nbreqset_reap(sl_nbrqset);
+		LIST_CACHE_LOCK(&bcr_ready);
+		PFL_GETTIMESPEC(&now);
+		LIST_CACHE_FOREACH(bcr, &bcr_ready) {
+			psc_assert(bcr->bcr_crcup.nups > 0);
 
-	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
+			if (!BII_TRYLOCK(bcr->bcr_bii))
+				continue;
 
-	/*
-	 * Check if an earlier CRC update RPC, if any, has finished.  If
-	 * one is still inflight, we won't be able to initiate a new one.
-	 */
-	LIST_CACHE_LOCK(&bcr_ready);
-	PFL_GETTIMESPEC(&now);
-	LIST_CACHE_FOREACH(bcr, &bcr_ready) {
-		psc_assert(bcr->bcr_crcup.nups > 0);
+			/*
+			 * Leave scheduled bcr's on the list so that in
+			 * case of a failure, ordering will be
+			 * maintained.
+			 */
+			if (bcr_2_bmap(bcr)->bcm_flags &
+			    BMAP_IOD_INFLIGHT) {
+				BII_ULOCK(bcr->bcr_bii);
+				continue;
+			}
 
-		if (!BII_TRYLOCK(bcr->bcr_bii))
-			continue;
+			timespecsub(&now, &bcr->bcr_age, &diff);
+			if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS ||
+			    diff.tv_sec >= BCR_BATCH_AGE) {
+				psc_dynarray_add(bcrs, bcr);
+				bcr->bcr_bii->bii_bcr = NULL;
+				bcr_2_bmap(bcr)->bcm_flags |=
+				    BMAP_IOD_INFLIGHT;
+			}
 
-		/*
-		 * Leave scheduled bcr's on the list so that in case of
-		 * a failure, ordering will be maintained.
-		 */
-		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
 			BII_ULOCK(bcr->bcr_bii);
+
+			DEBUG_BCR(PLL_DIAG, bcr,
+			    "scheduled nbcrs=%d total_bcrs=%d",
+			    psc_dynarray_len(bcrs),
+			    lc_nitems(&bcr_ready));
+
+			if (psc_dynarray_len(bcrs) ==
+			    MAX_BMAP_NCRC_UPDATES)
+				break;
+		}
+		LIST_CACHE_ULOCK(&bcr_ready);
+
+		if (!psc_dynarray_len(bcrs))
 			continue;
-		}
 
-		timespecsub(&now, &bcr->bcr_age, &diff);
-		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS ||
-		    diff.tv_sec >= BCR_BATCH_AGE) {
-			psc_dynarray_add(bcrs, bcr);
-			bcr->bcr_bii->bii_bcr = NULL;
-			bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
-		}
+		OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
 
-		BII_ULOCK(bcr->bcr_bii);
-
-		DEBUG_BCR(PLL_DIAG, bcr, "scheduled nbcrs=%d total_bcrs=%d",
-		    psc_dynarray_len(bcrs), lc_nitems(&bcr_ready));
-
-		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
-			break;
-	}
-	LIST_CACHE_ULOCK(&bcr_ready);
-
-	if (psc_dynarray_len(bcrs)) {
 		/*
 		 * If we fail to send an RPC, we must leave the
 		 * reference in the tree for future attempt(s).
 		 * Otherwise, the callback function (i.e.
-		 * slvr_nbreqset_cb()) should remove them from the tree.
+		 * slvr_nbreqset_cb()) should remove them from
+		 * the tree.
 		 */
-		if (slvr_worker_crcup_genrq(bcrs)) {
+		rc = slvr_worker_crcup_genrq(bcrs);
+		if (rc) {
 			DYNARRAY_FOREACH(bcr, i, bcrs) {
 				BII_LOCK(bcr->bcr_bii);
 				bcr_2_bmap(bcr)->bcm_flags &=
 				    ~BMAP_IOD_INFLIGHT;
+				//bcr->bcr_bii->bii_bcr = NULL;
 				BII_ULOCK(bcr->bcr_bii);
 			}
-			psc_dynarray_free(bcrs);
-			PSCFREE(bcrs);
+			psc_dynarray_reset(bcrs);
+		} else {
+			bcrs = PSCALLOC(sizeof(*bcrs));
 		}
-		goto again;
 	}
-
-	PSCFREE(bcrs);
-	atomic_set(&busy, 0);
 }
 
 int
@@ -435,7 +433,6 @@ slislvrthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(s, i, &ss)
 			slislvrthr_proc(s);
-		slvr_worker_push_crcups();
 
 		PFL_GETTIMESPEC(&expire);
 		expire.tv_sec += CRC_QUEUE_AGE;
@@ -463,4 +460,7 @@ slvr_worker_init(void)
 	for (i = 0; i < NSLVRCRC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, NULL, 0,
 		    "slislvrthr%d", i);
+
+	pscthr_init(SLITHRT_CRUD, slicrudthr_main, NULL, 0,
+	    "slicrudthr");
 }

@@ -563,6 +563,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
+/* CRUD		*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* REPLPND	*/ NULL,
