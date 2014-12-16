@@ -75,12 +75,12 @@ struct file {
 	uint64_t		 f_ino_mem_crc;
 	uint64_t		 f_inox_mem_crc;
 	struct {
-		uint64_t			 metasize;
-		struct srt_stat			 sstb;
-		struct slash_inode_od		 ino;
-		uint64_t			 ino_crc;
-		struct slash_inode_extras_od	 inox;
-		uint64_t			 inox_crc;
+		uint64_t		 metasize;
+		struct srt_stat		 sstb;
+		struct slm_ino_od	 ino;
+		uint64_t		 ino_crc;
+		struct slm_inox_od	 inox;
+		uint64_t		 inox_crc;
 	} f_data;
 #define f_metasize	f_data.metasize
 #define f_sstb		f_data.sstb
@@ -95,7 +95,22 @@ int				 recurse;
 pthread_barrier_t		 barrier;
 struct psc_lockedlist		 excludes = PLL_INIT(&excludes, struct path, p_lentry);
 const char			*outfn;
-const char			*fmt;
+const char			*fmt =
+    "%f:\n"
+    "  crc %d mem %C od %c\n"
+    "  version %v\n"
+    "  flags %L\n"
+    "  nrepls %n\n"
+    "  fsize %s\n"
+    "  fid %F\n"
+    "  fgen %G\n"
+    "  uid %u\n"
+    "  gid %g\n"
+    "  repls %R\n"
+    "  replblks %B\n"
+    "  xcrc %y mem %X od %x\n"
+    "  bmaps %N\n%M";
+// bmaps
 
 struct psc_listcache		 files;
 struct psc_poolmaster		 files_poolmaster;
@@ -236,12 +251,13 @@ addexclude(const char *fn)
 }
 
 int
-load_data_fd(struct file *f, char *buf)
+load_data_fd(struct file *f, void *buf)
 {
 	f->f_fd = open(f->f_fn, O_RDONLY);
 	if (f->f_fd == -1)
 		return (0);
-	if (fgetxattr(f->f_fd, SLXAT_INOXSTAT, buf, INOX_SZ) != INOX_SZ)
+	if (fgetxattr(f->f_fd, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
+	    INOXSTAT_SZ)
 		return (0);
 	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
 	psc_crc64_calc(&f->f_inox_mem_crc, &f->f_inox,
@@ -250,9 +266,10 @@ load_data_fd(struct file *f, char *buf)
 }
 
 int
-load_data_inox(struct file *f, char *buf)
+load_data_inox(struct file *f, void *buf)
 {
-	if (getxattr(f->fn, SLXAT_INOXSTAT, buf, INOX_SZ) != INOX_SZ)
+	if (getxattr(f->f_fn, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
+	    INOXSTAT_SZ)
 		return (0);
 	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
 	psc_crc64_calc(&f->f_inox_mem_crc, &f->f_inox,
@@ -261,35 +278,41 @@ load_data_inox(struct file *f, char *buf)
 }
 
 int
-load_data_ino(struct file *f, char *buf)
+load_data_ino(struct file *f, void *buf)
 {
-	if (getxattr(f->fn, SLXAT_INOSTAT, buf, INO_SZ) != INO_SZ)
+	if (getxattr(f->f_fn, SLXAT_INOSTAT, buf, INOSTAT_SZ) !=
+	    INOSTAT_SZ)
 		return (0);
-	psc_crc64_calc(&f->ino_mem_crc, &ino, sizeof(ino));
+	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
 	return (1);
 }
 
 int
-load_data_stat(struct file *f, char *buf)
+load_data_stat(struct file *f, void *buf)
 {
-	if (getxattr(f->fn, SLXAT_STAT, buf, STAT_SZ) != STAT_SZ)
+	if (getxattr(f->f_fn, SLXAT_STAT, buf, STAT_SZ))
 		return (0);
 	return (1);
 }
+
+int (*load_data)(struct file *f, void *) = load_data_stat;
 
 void
 thrmain(struct psc_thread *thr)
 {
+	struct slm_ino_od *ino;
+	struct srt_stat *sstb;
 	struct file *f;
 	struct thr *t;
 
 	t = thr->pscthr_private;
-	if (t->host) {
+	if (t->t_host) {
 #if 0
 		switch (fork()) {
 		case -1:
 			break;
 		case 0:
+			//ssh -o 'Compression yes' host
 			execve();
 			err();
 		default:
@@ -304,48 +327,52 @@ thrmain(struct psc_thread *thr)
 			    FMTSTRCASE('n', "s", thr->pscthr_name +
 				strcspn(thr->pscthr_name, "012345679"))
 			);
-			t->fp = fopen(fn, "w");
-			if (t->fp == NULL)
+			t->t_fp = fopen(fn, "w");
+			if (t->t_fp == NULL)
 				err(1, "%s", fn);
 		} else
-			t->fp = stdout;
+			t->t_fp = stdout;
 	}
 
 	pthread_barrier_wait(&barrier);
 	while ((f = lc_getwait(&files))) {
-		if (load_data(f, tbuf)) {
-			warn("%s", f->fn);
+		if (!load_data(f, &f->f_data)) {
+			warn("%s", f->f_fn);
 			goto next;
 		}
-		(void)PRFMTSTR(fp, fmt,
-		    PRFMTSTRCASE('B', NULL, pr_repl_blks(fp, f))
+		sstb = &f->f_sstb;
+		ino = &f->f_ino;
+		f->f_nrepls = MIN(SL_MAX_REPLICAS, ino->ino_nrepls);
+		(void)PRFMTSTR(t->t_fp, fmt,
+		    PRFMTSTRCASEV('B', pr_repl_blks(_fp, f))
 		    PRFMTSTRCASE('b', PRIu64, sstb->sst_blocks)
-		    PRFMTSTRCASE('c', PSCPRIxCRC64, t->ino_od_crc)
-		    PRFMTSTRCASE('C', PSCPRIxCRC64, t->ino_mem_crc)
+		    PRFMTSTRCASE('C', PSCPRIxCRC64, f->f_ino_mem_crc)
+		    PRFMTSTRCASE('c', PSCPRIxCRC64, f->f_ino_od_crc)
 		    PRFMTSTRCASE('d', "s",
-			t->ino_od_crc == t->ino_mem_crc ? "OK" : "BAD")
+			f->f_ino_od_crc == f->f_ino_mem_crc ? "OK" : "BAD")
 		    PRFMTSTRCASE('F', PRIx64, sstb->sst_fg.fg_fid)
-		    PRFMTSTRCASE('f', "#x", ino->ino_flags)
+		    PRFMTSTRCASE('f', "s", f->f_fn)
 		    PRFMTSTRCASE('G', PRIu64, sstb->sst_fg.fg_gen)
 		    PRFMTSTRCASE('g', "u", sstb->sst_gid)
-		    PRFMTSTRCASE('M', NULL, pr_bmaps(fp, f))
+		    PRFMTSTRCASE('L', "#x", ino->ino_flags)
+		    PRFMTSTRCASEV('M', pr_bmaps(t, _fp, f))
 		    PRFMTSTRCASE('N', PSCPRIdOFFT,
 			(f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
 		    PRFMTSTRCASE('n', "u", ino->ino_nrepls)
-		    PRFMTSTRCASE('R', NULL, pr_repls(fp, f))
+		    PRFMTSTRCASEV('R', pr_repls(_fp, f))
 		    PRFMTSTRCASE('s', PRIu64, sstb->sst_size)
 		    PRFMTSTRCASE('u', "u", sstb->sst_uid)
 		    PRFMTSTRCASE('v', "u", ino->ino_version)
-		    PRFMTSTRCASE('x', PSCPRIxCRC64, t->inox_od_crc)
-		    PRFMTSTRCASE('X', PSCPRIxCRC64, t->inox_mem_crc)
-		    PRFMTSTRCASE('y', PSCPRIxCRC64,
-			t->inox_mem_crc == t->inox_od_crc ? "OK" : "BAD")
+		    PRFMTSTRCASE('X', PSCPRIxCRC64, f->f_inox_mem_crc)
+		    PRFMTSTRCASE('x', PSCPRIxCRC64, f->f_inox_od_crc)
+		    PRFMTSTRCASE('y', "s",
+			f->f_inox_mem_crc == f->f_inox_od_crc ? "OK" : "BAD")
 		);
 
  next:
-		if (f->fd != -1)
-			close(f->fd);
-		PSCFREE(f->fn);
+		if (f->f_fd != -1)
+			close(f->f_fd);
+		PSCFREE(f->f_fn);
 		psc_pool_return(files_pool, f);
 	}
 }
@@ -382,13 +409,19 @@ usage(void)
 	exit(1);
 }
 
+#define NEED_INO	(1 << 0)
+#define NEED_INOX	(1 << 1)
+#define NEED_FD		(1 << 2)
+
 int
 main(int argc, char *argv[])
 {
-	int walkflags = PFL_FILEWALKF_RELPATH, c, i, nthr = 1;
-	struct psc_thread **thrv;
+	int walkflags = PFL_FILEWALKF_RELPATH, c, i, nthr = 1, need = 0;
+	struct psc_thread **thrv, *it;
+	struct host *h;
 	struct thr *t;
 	char *endp;
+	FILE *fp;
 	long l;
 
 	pfl_init();
@@ -426,48 +459,58 @@ main(int argc, char *argv[])
 	if (!argc)
 		usage();
 
-	(void)PRFMTSTR(stdout, fmt,
-	    PRFMTSTRCASE('B', NULL, pr_repl_blks(fp, f))
-	    PRFMTSTRCASE('b', NULL, sstb->sst_blocks)
-	    PRFMTSTRCASE('c', NULL, t->ino_od_crc)
-	    PRFMTSTRCASE('C', NULL, t->ino_mem_crc)
-	    PRFMTSTRCASE('d', NULL, t->ino_od_crc == t->ino_mem_crc ? "OK" : "BAD")
-	    PRFMTSTRCASE('F', NULL, sstb->sst_fg.fg_fid)
-	    PRFMTSTRCASE('f', NULL, ino->ino_flags)
-	    PRFMTSTRCASE('G', NULL, sstb->sst_fg.fg_gen)
-	    PRFMTSTRCASE('g', NULL, need_stat = 1)
-	    PRFMTSTRCASE('M', NULL, pr_bmaps(fp, f))
-	    PRFMTSTRCASE('N', NULL, (f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
-	    PRFMTSTRCASE('n', NULL, need_ino = 1)
-	    PRFMTSTRCASE('R', NULL, pr_repls(fp, f))
-	    PRFMTSTRCASE('s', NULL, need_stat = 1)
-	    PRFMTSTRCASE('u', NULL, need_stat = 1)
-	    PRFMTSTRCASE('v', NULL, need_ino = 1)
-	    PRFMTSTRCASE('x', NULL, need_inox = 1)
-	    PRFMTSTRCASE('X', NULL, need_inox = 1)
-	    PRFMTSTRCASE('y', NULL, need_inox = 1)
+	fp = fopen("/dev/null", "w");
+	if (fp == NULL)
+		err(1, "/dev/null");
+	(void)PRFMTSTR(fp, fmt,
+	    PRFMTSTRCASEV('B', need |= NEED_INOX)
+	    PRFMTSTRCASEV('b', )
+	    PRFMTSTRCASEV('C', need |= NEED_INO)
+	    PRFMTSTRCASEV('c', need |= NEED_INO)
+	    PRFMTSTRCASEV('d', need |= NEED_INO)
+	    PRFMTSTRCASEV('F', )
+	    PRFMTSTRCASEV('f', )
+	    PRFMTSTRCASEV('G', )
+	    PRFMTSTRCASEV('g', )
+	    PRFMTSTRCASEV('L', need |= NEED_INO)
+	    PRFMTSTRCASEV('M', need |= NEED_FD)
+	    PRFMTSTRCASEV('N', )
+	    PRFMTSTRCASEV('n', need |= NEED_INO)
+	    PRFMTSTRCASEV('R', need |= NEED_INOX)
+	    PRFMTSTRCASEV('s', )
+	    PRFMTSTRCASEV('u', )
+	    PRFMTSTRCASEV('v', need |= NEED_INO)
+	    PRFMTSTRCASEV('X', need |= NEED_INOX)
+	    PRFMTSTRCASEV('x', need |= NEED_INOX)
+	    PRFMTSTRCASEV('y', need |= NEED_INOX)
 	);
+	fclose(fp);
 
-	ssh -o 'Compression yes' host
+	if (need & NEED_FD)
+		load_data = load_data_fd;
+	else if (need & NEED_INOX)
+		load_data = load_data_inox;
+	else if (need & NEED_INO)
+		load_data = load_data_ino;
 
-	psc_poolmaster_init(&files_poolmaster, );
-	files_pool = psc_poolmaster_getmgr();
-	while (lc_nitems(&files) > 256)
-		usleep(1000);
+	psc_poolmaster_init(&files_poolmaster, struct file, f_lentry, 0,
+	    256, 256, 256, NULL, NULL, NULL, "files", NULL);
+	files_pool = psc_poolmaster_getmgr(&files_poolmaster);
 
 	pthread_barrier_init(&barrier, NULL, nthr + 1);
 	lc_init(&files, struct file, f_lentry);
 	thrv = PSCALLOC((nthr + pll_nitems(&hosts)) * sizeof(*thrv));
 	for (i = 0; i < nthr; i++) {
-		t = thrv[i] = pscthr_init(0, thrmain, NULL, sizeof(*t),
+		it = thrv[i] = pscthr_init(0, thrmain, NULL, sizeof(*t),
 		    "thr%d", i);
-		pscthr_setready(t);
+		pscthr_setready(it);
 	}
 	PLL_FOREACH(h, &hosts) {
-		t = thrv[i++] = pscthr_init(0, thrmain, NULL,
+		it = thrv[i++] = pscthr_init(0, thrmain, NULL,
 		    sizeof(*t), "thr-%s", h->h_hostname);
+		t = it->pscthr_private;
 		t->t_host = h;
-		pscthr_setready(t);
+		pscthr_setready(it);
 	}
 	pthread_barrier_wait(&barrier);
 	for (; *argv; argv++)
@@ -477,3 +520,4 @@ main(int argc, char *argv[])
 		pthread_join(thrv[i]->pscthr_pthread, NULL);
 	exit(0);
 }
+// sort and use setsize id to scan
