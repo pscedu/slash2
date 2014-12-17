@@ -401,6 +401,8 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	psclog_info("lookup: pfid="SLPRI_FID" name=%s.", fcmh_2_mfid(p), mq->name);
+
 	if (fcmh_2_mfid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
