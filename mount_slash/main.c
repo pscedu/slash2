@@ -2949,7 +2949,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	void *buf = pfr->pfr_buf;
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
@@ -2958,27 +2957,24 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (start): buf=%p rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
+	DEBUG_FCMH(PLL_DIAG, f, "read (start): rc=%d sz=%zu "
+	    "off=%"PSCPRIdOFFT, rc, size, off);
 
 	if (fcmh_isdir(f)) {
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_NOREG);
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
-	rc = msl_read(pfr, mfh, buf, size, off);
+	rc = msl_read(pfr, mfh, NULL, size, off);
 
  out:
 	if (rc) {
-		struct iovec iov;
-
-		iov.iov_base = buf;
-		pscfs_reply_read(pfr, &iov, 1, rc);
+		pscfs_reply_read(pfr, NULL, 0, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_ERR);
 	}
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (end): buf=%p rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
+	DEBUG_FCMH(PLL_DIAG, f, "read (end): rc=%d sz=%zu "
+	    "off=%"PSCPRIdOFFT, rc, size, off);
 }
 
 void

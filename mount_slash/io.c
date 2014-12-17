@@ -362,6 +362,9 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
+	if (r->biorq_flags & BIORQ_FREEBUF)
+		PSCFREE(r->biorq_buf);
+
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
@@ -646,25 +649,32 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	mfh_decref(q->mfsrq_mfh);
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
-
-		struct iovec iov;
-
-		if (q->mfsrq_err)
+		if (q->mfsrq_err) {
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_ERR);
-		else
+			pscfs_reply_read(pfr, NULL, 0,
+			    abs(q->mfsrq_err));
+		} else {
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_OK);
 
-		if (!q->mfsrq_iovs) {
-			iov.iov_base = q->mfsrq_buf;
-			iov.iov_len = q->mfsrq_len;
-			q->mfsrq_iovs = &iov;
-			q->mfsrq_niov = 1;
-		}
-		pscfs_reply_read(pfr, q->mfsrq_iovs, q->mfsrq_niov,
-		    abs(q->mfsrq_err));
+			if (q->mfsrq_iovs) {
+				pscfs_reply_read(pfr, q->mfsrq_iovs,
+				    q->mfsrq_niov, 0);
+				PSCFREE(q->mfsrq_iovs);
+			} else {
+				struct iovec iov[MAX_BMAPS_REQ];
+				int nio = 0;
 
-		if (q->mfsrq_iovs != &iov)
-			PSCFREE(q->mfsrq_iovs);
+				for (i = 0; i < MAX_BMAPS_REQ; i++) {
+					r = q->mfsrq_biorq[i];
+					if (!r)
+						continue;
+					iov[nio].iov_base = r->biorq_buf;
+					iov[nio].iov_len = r->biorq_len;
+					nio++;
+				}
+				pscfs_reply_read(pfr, iov, nio, 0);
+			}
+		}
 	} else {
 		msl_update_attributes(q);
 		if (q->mfsrq_err)
@@ -1931,7 +1941,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
  *	activity.
  * @mfh: file handle structure passed to us by pscfs which contains the
  *	pointer to our fcmh.
- * @buf: the application source/dest buffer.
+ * @buf: the application destination buffer (only used for WRITEs).
  * @size: size of buffer.
  * @off: file logical offset similar to pwrite().
  * @rw: the operation type (SL_READ or SL_WRITE).
@@ -1946,10 +1956,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
-	uint64_t fsz;
 	int nr, i, j, rc;
+	uint64_t fsz;
 	off_t roff;
-	char *bufp;
 
 	f = mfh->mfh_fcmh;
 
@@ -2014,7 +2023,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * For each block range, get its bmap and make a request into
 	 * its page cache.  This first loop retrieves all the pages.
 	 */
-	for (i = 0, bufp = buf; i < nr; i++) {
+	for (i = 0; i < nr; i++) {
 
 		DEBUG_FCMH(PLL_DIAG, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
@@ -2058,7 +2067,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 * roff - (i * SLASH_BMAP_SIZE) should be zero
 			 * if i == 1.
 			 */
-			msl_biorq_build(q, b, bufp, i,
+			msl_biorq_build(q, b, buf, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE,
 			    fsz, nr - 1);
@@ -2067,8 +2076,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bmap_op_done(b);
 		roff += tlen;
 		tsize -= tlen;
-		bufp += tlen;
-		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
+		if (buf)
+			buf += tlen;
+		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
 	/*
