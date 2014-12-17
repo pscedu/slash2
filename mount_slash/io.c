@@ -621,7 +621,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	struct bmpc_ioreq *r;
 	struct pscfs_req *pfr;
 
-	pfr = PSC_AGP(q, -sizeof(*pfr));
+	pfr = mfsrq_2_pfr(q);
 
 	MFH_LOCK(q->mfsrq_mfh);
 	if (!q->mfsrq_err) {
@@ -701,7 +701,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	MFH_ULOCK(q->mfsrq_mfh);
 
 	psclog_diag("complete_fsrq: biorq=%p fsrq=%p pfr=%p", r0, q,
-	    (char *)q - sizeof(struct pscfs_req));
+	    mfsrq_2_pfr(q));
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];

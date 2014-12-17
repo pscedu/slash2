@@ -182,14 +182,14 @@ struct msl_fsrqinfo {
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
 	int				 mfsrq_niov;
-	struct iovec 			*mfsrq_iovs;
+	struct iovec			*mfsrq_iovs;
 };
 
 #define MFSRQ_NONE			(0 << 0)
 #define MFSRQ_READ			(1 << 0)
 #define MFSRQ_AIOWAIT			(1 << 1)
 
-#define mfsrq2pfr(q)			((struct pscfs_req *)(q) - 1)
+#define mfsrq_2_pfr(q)			((struct pscfs_req *)(q) - 1)
 
 void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
