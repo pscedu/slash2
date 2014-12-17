@@ -348,10 +348,6 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	if (rc && !bci->bci_flush_rc)
 		bci->bci_flush_rc = rc;
 
-	/*
-	 * Inflight biorqs are off the splay tree.  So we shouldn't race
-	 * to destroy the same biorq.
-	 */
 	bmpc = bmap_2_bmpc(b);
 	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
