@@ -321,7 +321,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
 		if ((b->bcm_flags & BMAP_FLUSHQ) &&
 		    RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
 			b->bcm_flags &= ~BMAP_FLUSHQ;
@@ -575,7 +576,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
-
 	}
 
 	psclog_diag("get car=%p car_id=%"PRIx64" q=%p, r=%p",

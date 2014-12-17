@@ -53,8 +53,7 @@ struct psc_listcache	 bmpcLru;
 
 SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
-RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry,
-    bmpc_biorq_cmp)
+RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 /**
  * bwc_init - Initialize write coalescer pool entry.
@@ -351,7 +350,6 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	bmpc = bmap_2_bmpc(b);
 	for (r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
-
 		tmp = RB_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
 
@@ -465,6 +463,7 @@ bmpce_reap(struct psc_poolmgr *m)
 			    bmpc);
 
 		BMAP_ULOCK(b);
+
 		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
