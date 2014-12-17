@@ -281,7 +281,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		BMAP_ULOCK(b);
 
 		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "bmpce_foff = %d\n", r, e, i, npages, bmpce_off);
+		    "bmpce_foff = %d", r, e, i, npages, bmpce_off);
 
 		psc_dynarray_add(&r->biorq_pages, e);
 	}
@@ -660,8 +660,8 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 			q->mfsrq_iovs = &iov;
 			q->mfsrq_niov = 1;
 		}
-		pscfs_reply_read(pfr, q->mfsrq_iovs, q->mfsrq_niov, 
-			abs(q->mfsrq_err));
+		pscfs_reply_read(pfr, q->mfsrq_iovs, q->mfsrq_niov,
+		    abs(q->mfsrq_err));
 
 		if (q->mfsrq_iovs != &iov)
 			PSCFREE(q->mfsrq_iovs);
@@ -1687,8 +1687,8 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 
 	npages = psc_dynarray_len(&r->biorq_pages);
 
-	q->mfsrq_iovs = PSC_REALLOC(q->mfsrq_iovs, 
-		sizeof(struct iovec) * (q->mfsrq_niov + npages));
+	q->mfsrq_iovs = PSC_REALLOC(q->mfsrq_iovs,
+	    sizeof(struct iovec) * (q->mfsrq_niov + npages));
 
 	/*
 	 * Due to page prefetching, the pages contained in biorq_pages
