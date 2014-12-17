@@ -603,18 +603,14 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 __static int
 bmap_flushable(struct bmapc_memb *b)
 {
-	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r, *tmp;
 	int secs, samples = 0, flush = 0;
+	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r;
 	struct timespec ts;
 
 	bmpc = bmap_2_bmpc(b);
 
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
-	    r = tmp) {
-		tmp = SPLAY_NEXT(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs, r);
-
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		/*
 		 * If the first request is scheduled, all other requests
 		 * that were eligible to be flushed during the last scan
@@ -627,8 +623,7 @@ bmap_flushable(struct bmapc_memb *b)
 		 * are flushed out and removed.  Yes, the flush callback
 		 * will wake us up.
 		 */
-		samples++;
-		if (samples > 3)
+		if (++samples > 3)
 			break;
 
 		BIORQ_LOCK(r);
@@ -864,7 +859,7 @@ bmap_flush(void)
 	    bmaps = DYNARRAY_INIT;
 	struct bmpc_write_coalescer *bwc;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r, *tmp;
+	struct bmpc_ioreq *r;
 	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m = NULL;
 	int i, j, didwork = 0;
@@ -918,11 +913,7 @@ bmap_flush(void)
 		m = libsl_ios2resm(bmap_2_ios(b));
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 
-		for (r = SPLAY_MIN(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs); r; r = tmp) {
-			tmp = SPLAY_NEXT(bmpc_biorq_tree,
-			    &bmpc->bmpc_new_biorqs, r);
-
+		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 			BIORQ_LOCK(r);
 
 			if (r->biorq_flags & BIORQ_SCHED) {

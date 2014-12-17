@@ -303,7 +303,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
-	    SPLAY_EMPTY(&bmpc->bmpc_new_biorqs)   ||
+	    RB_EMPTY(&bmpc->bmpc_new_biorqs)   ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
@@ -1008,7 +1008,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 	BMAP_ULOCK(b);
 }
 
@@ -1042,7 +1042,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
 	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 

@@ -146,26 +146,26 @@ SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp)
 
 struct bmpc_ioreq {
-	char				*biorq_buf;
-	int32_t				 biorq_ref;
+	char			*biorq_buf;
+	int32_t			 biorq_ref;
 	/*
 	 * Note that a request may fall somewhere within a bmap.  It
 	 * might be not page aligned.
 	 */
-	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
-	uint32_t			 biorq_len;	/* length of the original req	*/
-	uint32_t			 biorq_flags;	/* state and op type bits	*/
-	uint32_t			 biorq_retries;	/* dirty data flush retries	*/
-	sl_ios_id_t			 biorq_last_sliod;
-	psc_spinlock_t			 biorq_lock;
-	struct timespec			 biorq_expire;
-	int				 biorq_npages;
-	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
-	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
-	struct psclist_head		 biorq_png_lentry;
-	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;	/* splay tree */
-	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
-	struct msl_fsrqinfo		*biorq_fsrqi;
+	uint32_t		 biorq_off;	/* filewise, bmap relative	*/
+	uint32_t		 biorq_len;	/* length of the original req	*/
+	uint32_t		 biorq_flags;	/* state and op type bits	*/
+	uint32_t		 biorq_retries;	/* dirty data flush retries	*/
+	sl_ios_id_t		 biorq_last_sliod;
+	psc_spinlock_t		 biorq_lock;
+	struct timespec		 biorq_expire;
+	int			 biorq_npages;	/* does not include readaheads */
+	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
+	struct psclist_head	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
+	struct psclist_head	 biorq_png_lentry;
+	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* redblack tree membership */
+	struct bmapc_memb	*biorq_bmap;	/* backpointer to our bmap	*/
+	struct msl_fsrqinfo	*biorq_fsrqi;
 };
 
 #define	BIORQ_READ		(1 <<  0)
@@ -177,14 +177,14 @@ struct bmpc_ioreq {
 #define	BIORQ_FLUSHRDY		(1 <<  6)
 #define BIORQ_WAIT		(1 <<  8)
 
-#define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
-#define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
-#define BIORQ_RLOCK(r)			reqlock(&(r)->biorq_lock)
-#define BIORQ_URLOCK(r)			ureqlock(&(r)->biorq_lock)
-#define BIORQ_LOCK_ENSURE(r)		LOCK_ENSURE(&(r)->biorq_lock)
+#define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
+#define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
+#define BIORQ_RLOCK(r)		reqlock(&(r)->biorq_lock)
+#define BIORQ_URLOCK(r)		ureqlock(&(r)->biorq_lock)
+#define BIORQ_LOCK_ENSURE(r)	LOCK_ENSURE(&(r)->biorq_lock)
 
-#define BIORQ_SETATTR(r, fl)		SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
-#define BIORQ_CLEARATTR(r, fl)		CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
+#define BIORQ_SETATTR(r, fl)	SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
+#define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
@@ -224,8 +224,8 @@ bmpc_biorq_cmp(const void *x, const void *y)
 	return (CMP(a, b));
 }
 
-SPLAY_HEAD(bmpc_biorq_tree, bmpc_ioreq);
-SPLAY_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
+RB_HEAD(bmpc_biorq_tree, bmpc_ioreq);
+RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
@@ -314,7 +314,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	psc_waitq_init(&bmpc->bmpc_waitq);
 
-	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
+	RB_INIT(&bmpc->bmpc_new_biorqs);
 
 	PFL_GETTIMESPEC(&bmpc->bmpc_oldest);
 	lc_addtail(&bmpcLru, bmpc);
