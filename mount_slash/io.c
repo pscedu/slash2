@@ -1860,18 +1860,12 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	struct msl_fsrqinfo *q;
 
 	q = PSC_AGP(pfr + 1, 0);
-	for (i = 0; i < MAX_BMAPS_REQ; i++)
-		q->mfsrq_biorq[i] = NULL;
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
 	q->mfsrq_size = size;
-	q->mfsrq_len = 0;
 	q->mfsrq_off = off;
-	q->mfsrq_err = 0;
 	q->mfsrq_ref = 1;
 	q->mfsrq_flags = (rw == SL_READ) ? MFSRQ_READ : MFSRQ_NONE;
-	q->mfsrq_niov = 0;
-	q->mfsrq_iovs = NULL;
 
 	mfh_incref(q->mfsrq_mfh);
 
