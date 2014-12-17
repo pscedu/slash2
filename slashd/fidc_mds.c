@@ -51,6 +51,9 @@ slfid_to_vfsid(slfid_t fid, int *vfsid)
 	/*
 	 * Our client uses this special fid to contact us during mount,
 	 * at which time it does not know the site ID yet.
+	 *
+	 * XXX The client should be able to retrieve the site id from
+	 * the slash2 config file.
 	 */
 	if (fid == SLFID_ROOT) {
 		*vfsid = current_vfsid;
