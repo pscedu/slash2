@@ -53,7 +53,7 @@ struct psc_listcache	 bmpcLru;
 
 SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
-SPLAY_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry,
+RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry,
     bmpc_biorq_cmp)
 
 /**
@@ -277,7 +277,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 {
 	struct bmap_pagecache_entry *a, *b;
 
-	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
@@ -317,7 +317,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
  retry:
 	expired = 0;
 	BMAP_LOCK(b);
-	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		BIORQ_ULOCK(r);
@@ -349,19 +349,19 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		bci->bci_flush_rc = rc;
 
 	bmpc = bmap_2_bmpc(b);
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
+	for (r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
 
-		tmp = SPLAY_NEXT(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs, r);
+		tmp = RB_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
 
 		BIORQ_LOCK(r);
 		if (r->biorq_flags & BIORQ_SCHED) {
 			BIORQ_ULOCK(r);
 			continue;
 		}
-		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}
