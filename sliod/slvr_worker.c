@@ -46,13 +46,13 @@
 #include "sliod.h"
 #include "slvr.h"
 
-int slvr_nbreqset_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int sli_rmi_bcrcupd_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 struct psc_poolmaster		 bmap_crcupd_poolmaster;
 struct psc_poolmgr		*bmap_crcupd_pool;
+psc_atomic32_t			 sli_ninfl_bcrcupd;
 
 struct psc_listcache		 bcr_ready;
-struct pscrpc_nbreqset		*sl_nbrqset;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
 struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 
@@ -84,10 +84,10 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		return (rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
-	rq->rq_interpret_reply = slvr_nbreqset_cb;
+	rq->rq_interpret_reply = sli_rmi_bcrcupd_cb;
 	rq->rq_async_args.pointer_arg[0] = (void *)bcrs;
 	rq->rq_async_args.pointer_arg[1] = csvc;
 
@@ -101,7 +101,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.nblks,
 		    &bcr->bcr_crcup.utimgen);
 		if (rc)
-			goto out;
+			PFL_GOTOERR(out, rc);
 
 		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
@@ -117,9 +117,15 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 	    iovs, mq->ncrc_updates);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	if (!rc)
-		rc = SL_NBRQSET_ADD(csvc, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
+	psc_atomic32_inc(&sli_ninfl_bcrcupd);
 
   out:
 	PSCFREE(iovs);
@@ -128,8 +134,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		if (rq)
 			pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-	} else
-		OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
+	}
 	return (rc);
 }
 
@@ -144,7 +149,10 @@ slicrudthr_main(struct psc_thread *thr)
 	bcrs = PSCALLOC(sizeof(*bcrs));
 
 	while (pscthr_run(thr)) {
-		pscrpc_nbreqset_reap(sl_nbrqset);
+#define MAX_INFL_BCRCUPD 128
+		while (psc_atomic32_read(&sli_ninfl_bcrcupd) >
+		    MAX_INFL_BCRCUPD)
+			usleep(3000);
 
 		LIST_CACHE_LOCK(&bcr_ready);
 		PFL_GETTIMESPEC(&now);
@@ -196,7 +204,7 @@ slicrudthr_main(struct psc_thread *thr)
 		 * If we fail to send an RPC, we must leave the
 		 * reference in the tree for future attempt(s).
 		 * Otherwise, the callback function (i.e.
-		 * slvr_nbreqset_cb()) should remove them from
+		 * sli_rmi_bcrcupd_cb) should remove them from
 		 * the tree.
 		 */
 		rc = slvr_worker_crcup_genrq(bcrs);
@@ -216,7 +224,7 @@ slicrudthr_main(struct psc_thread *thr)
 }
 
 int
-slvr_nbreqset_cb(struct pscrpc_request *rq,
+sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct srm_bmap_crcwrt_rep *mp;
@@ -271,6 +279,8 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	PSCFREE(a);
 
 	sl_csvc_decref(csvc);
+
+	psc_atomic32_dec(&sli_ninfl_bcrcupd);
 
 	return (1);
 }
