@@ -323,7 +323,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 	BMAP_LOCK(b);
 	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		r->biorq_flags |= BIORQ_EXPIRE;
 		BIORQ_ULOCK(r);
 		expired++;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
@@ -529,7 +529,7 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_WRITE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_SCHED, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DIO, &flags, &seq);
-	PFL_PRFLAG(BIORQ_FORCE_EXPIRE, &flags, &seq);
+	PFL_PRFLAG(BIORQ_EXPIRE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DESTROY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);

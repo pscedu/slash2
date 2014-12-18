@@ -832,7 +832,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_WRITE		? 'w' : '-',
 	    msr->msr_flags & BIORQ_SCHED		? 's' : '-',
 	    msr->msr_flags & BIORQ_DIO			? 'd' : '-',
-	    msr->msr_flags & BIORQ_FORCE_EXPIRE		? 'x' : '-',
+	    msr->msr_flags & BIORQ_EXPIRE		? 'x' : '-',
 	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
 	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
 	    msr->msr_flags & BIORQ_WAIT			? 'W' : '-',

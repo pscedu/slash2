@@ -72,7 +72,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
-	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
+	if (a->biorq_flags & BIORQ_EXPIRE)
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
@@ -407,7 +407,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * re-established with that sliod.  But that logic is too
 	 * complicated to get right.
 	 */
-	r->biorq_flags &= ~BIORQ_FORCE_EXPIRE;
+	r->biorq_flags &= ~BIORQ_EXPIRE;
 	PFL_GETTIMESPEC(&r->biorq_expire);
 
 	/*

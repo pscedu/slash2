@@ -172,7 +172,7 @@ struct bmpc_ioreq {
 #define	BIORQ_WRITE		(1 <<  1)
 #define	BIORQ_SCHED		(1 <<  2)	/* flush in progress, don't clear unless retry happen */
 #define	BIORQ_DIO		(1 <<  3)
-#define	BIORQ_FORCE_EXPIRE	(1 <<  4)
+#define	BIORQ_EXPIRE		(1 <<  4)
 #define	BIORQ_DESTROY		(1 <<  5)
 #define	BIORQ_FLUSHRDY		(1 <<  6)
 #define BIORQ_FREEBUF		(1 <<  7)	/* DIO READ needs a buffer */
@@ -199,7 +199,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
 	    (b)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
 	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
-	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_EXPIRE	? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\

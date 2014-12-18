@@ -1025,7 +1025,7 @@ bmap_biorq_expire(struct bmap *b)
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
+		BIORQ_SETATTR(r, BIORQ_EXPIRE);
 	BMAP_ULOCK(b);
 
 	bmap_flushq_wake(BMAPFLSH_EXPIRE);
