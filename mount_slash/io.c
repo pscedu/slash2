@@ -1866,7 +1866,6 @@ __static struct msl_fsrqinfo *
 msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
     char *buf, size_t size, off_t off, enum rw rw)
 {
-	int i;
 	struct msl_fsrqinfo *q;
 
 	q = PSC_AGP(pfr + 1, 0);
