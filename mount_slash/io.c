@@ -362,11 +362,11 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
-	if (r->biorq_flags & BIORQ_FREEBUF)
-		PSCFREE(r->biorq_buf);
-
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
+
+	if (r->biorq_flags & BIORQ_FREEBUF)
+		PSCFREE(r->biorq_buf);
 
 	msl_biorq_del(r);
 
