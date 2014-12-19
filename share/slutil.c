@@ -115,8 +115,8 @@ sl_externalize_statfs(const struct statvfs *sfb,
     struct srt_statfs *ssfb)
 {
 	memset(ssfb, 0, sizeof(*ssfb));
-	ssfb->sf_bsize		= sfb->f_frsize;
-	ssfb->sf_iosize		= sfb->f_bsize;
+	ssfb->sf_bsize		= sfb->f_bsize;
+	ssfb->sf_frsize		= sfb->f_frsize;
 	ssfb->sf_blocks		= sfb->f_blocks;
 	ssfb->sf_bfree		= sfb->f_bfree;
 	ssfb->sf_bavail		= sfb->f_bavail;
@@ -130,8 +130,8 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
     struct statvfs *sfb)
 {
 	memset(sfb, 0, sizeof(*sfb));
-	sfb->f_bsize		= ssfb->sf_iosize;
-	sfb->f_frsize		= ssfb->sf_bsize;
+	sfb->f_bsize		= ssfb->sf_bsize;
+	sfb->f_frsize		= ssfb->sf_frsize;
 	sfb->f_blocks		= ssfb->sf_blocks;
 	sfb->f_bfree		= ssfb->sf_bfree;
 	sfb->f_bavail		= ssfb->sf_bavail;
