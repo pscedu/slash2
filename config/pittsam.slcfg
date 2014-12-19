@@ -48,6 +48,7 @@ site @PSC {
 		id	= 10;
 		nids	= sense51-66.psc.edu;
 		fsroot	= /sense51_pool0/slio;
+		flags	= "disable_bia";
 		self_test = "/local/sbin/st /sense51_pool0";
 	}
 
@@ -56,6 +57,7 @@ site @PSC {
 		id	= 11;
 		nids	= sense51-66-io1.psc.edu;
 		fsroot	= /sense51_pool1/slio;
+		flags	= "disable_bia";
 		self_test = "/local/sbin/st /sense51_pool1";
 	}
 
