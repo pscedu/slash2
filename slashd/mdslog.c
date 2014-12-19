@@ -219,7 +219,7 @@ mds_record_update_prog(void)
 static void
 mds_record_reclaim_prog(void)
 {
-	int ri, rc, index, lastindex = 0;
+	int ri, rc, idx, lastindex = 0;
 	struct reclaim_prog_entry *rp, *rbase;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
@@ -235,8 +235,8 @@ mds_record_reclaim_prog(void)
 		rpmi = res2rpmi(res);
 		si = rpmi->rpmi_info;
 
-		index = si->si_index;
-		rp = &rbase[index];
+		idx = si->si_index;
+		rp = &rbase[idx];
 		RPMI_LOCK(rpmi);
 		if (si->si_flags & SIF_NEW_PROG_ENTRY) {
 			si->si_flags &= ~SIF_NEW_PROG_ENTRY;
@@ -248,8 +248,8 @@ mds_record_reclaim_prog(void)
 		rp->rpe_xid = si->si_xid;
 		rp->rpe_batchno = si->si_batchno;
 
-		if (lastindex < index)
-			lastindex = index;
+		if (lastindex < idx)
+			lastindex = idx;
 	}
 	lastindex++;
 	rc = mds_write_file(reclaim_prg.prg_handle,
@@ -1916,7 +1916,7 @@ mds_journal_init(uint64_t fsuuid)
 {
 	void *handle, *reclaimbuf;
 	char *journalfn, fn[PATH_MAX];
-	int i, ri, rc, max, nios, count, stale, total, index, npeers;
+	int i, ri, rc, max, nios, count, stale, total, idx, npeers;
 	uint64_t last_update_xid = 0, last_distill_xid = 0;
 	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0;
 	struct reclaim_prog_entry *rbase, *rp;
@@ -2018,7 +2018,7 @@ mds_journal_init(uint64_t fsuuid)
 
 	stale = 0;
 	batchno = 0;
-	count = index = size / RP_ENTSZ;
+	count = idx = size / RP_ENTSZ;
 	for (i = 0; i < count; i++) {
 		rp = &rbase[i];
 
@@ -2146,7 +2146,7 @@ mds_journal_init(uint64_t fsuuid)
 			continue;
 
 		RPMI_LOCK(rpmi);
-		si->si_index = index++;
+		si->si_index = idx++;
 		si->si_flags &= ~SIF_NEED_JRNL_INIT;
 		si->si_flags |= SIF_NEW_PROG_ENTRY;
 		si->si_batchmeter.pm_maxp = &reclaim_prg.cur_batchno;
