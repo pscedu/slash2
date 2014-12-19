@@ -199,14 +199,15 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
 	    (b)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
 	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
-	    (b)->biorq_flags & BIORQ_EXPIRE	? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_EXPIRE		? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
 	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\
 	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
-	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
+	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire),	\
+	    ## __VA_ARGS__)
 
 static __inline int
 bmpc_biorq_cmp(const void *x, const void *y)
