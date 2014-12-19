@@ -329,8 +329,8 @@ struct srt_stat {
 struct srt_statfs {
 	char			sf_type[16];
 	uint32_t		sf_bsize;	/* file system block size */
-	uint32_t		sf_iosize;	/* ideal I/O transfer size */
-	uint64_t		sf_blocks;	/* size of fs in f_bsize units */
+	uint32_t		sf_frsize;	/* fragment size */
+	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
 	uint64_t		sf_bfree;	/* # free blocks */
 	uint64_t		sf_bavail;	/* # free blocks for non-root */
 	uint64_t		sf_files;	/* # inodes */
