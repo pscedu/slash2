@@ -822,6 +822,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (exp) {
 		struct pscrpc_connection *c;
 
+		if (csvc->csvc_import == NULL)
+			csvc->csvc_import = slrpc_new_import(
+			    csvc->csvc_rqptl, csvc->csvc_rpptl);
+
 		/*
 		 * If an export was specified, the peer has already
 		 * established a connection to our service, so just
