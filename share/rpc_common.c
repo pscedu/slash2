@@ -167,6 +167,9 @@ slrpc_connect_finish(struct slashrpc_cservice *csvc,
 
 	locked = CSVC_RLOCK(csvc);
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
+	if (psc_atomic32_read(&csvc->csvc_refcnt) == 1)
+		psc_atomic32_clearmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTING);
 	if (success) {
 		if (csvc->csvc_import != imp)
 			csvc->csvc_import = imp;
@@ -197,7 +200,6 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
 	if (rc) {
 		csvc->csvc_lasterrno = rc;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
@@ -250,6 +252,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	CSVC_LOCK(csvc);
 	psc_assert((psc_atomic32_read(&csvc->csvc_flags) &
 	    CSVCF_BUSY) == 0);
+
 	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_BUSY);
 
 	if (flags & CSVCF_NONBLOCK) {
