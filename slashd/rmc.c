@@ -68,6 +68,8 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			use_global_mount;
+
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 
@@ -916,7 +918,15 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	struct fidc_membh *f = NULL;
 	struct iovec iov[2];
 	off_t nextoff;
-	int rc, vfsid;
+	int rc, nsite, vfsid;
+	struct sl_site *site;
+
+	uint64_t fid;
+	int localroot;
+	size_t entsize;
+	off_t entoff = 0;
+	struct pscfs_dirent *dirent;
+	struct srt_stat *attr, tmpattr;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -937,20 +947,80 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	if (fgp->fg_fid == SLFID_ROOT)
 		psc_scan_filesystems();
 
-	rc = mdsio_readdir(vfsid, &rootcreds, size, off,
-	    iov[0].iov_base, outsize, nents, &iov[1], eof, &nextoff,
-	    fcmh_2_mfh(f));
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (fgp->fg_fid == SLFID_ROOT && use_global_mount) {
 
-	iov[0].iov_len = *outsize;
+		mount_info_t *mountinfo;
+		struct mio_rootnames *rn;
 
-	/*
-	 * If this is a request for the root, we fake part of the
-	 * readdir contents by returning the file system names here.
-	 */
-	if (fgp->fg_fid == SLFID_ROOT)
-		slm_rmc_handle_readdir_roots(&iov[0], &iov[1], *nents);
+		nsite = 0;
+		CONF_LOCK();
+		CONF_FOREACH_SITE(site) {
+			nsite++;
+		}
+		CONF_ULOCK();
+
+		*nents = nsite;
+		iov[1].iov_base = PSCALLOC(nsite * sizeof(struct srt_readdir_ent));
+		attr = iov[1].iov_base;
+		dirent = iov[0].iov_base;
+
+		CONF_LOCK();
+		CONF_FOREACH_SITE(site) {
+			fid = SLFID_ROOT;
+			FID_SET_SITEID(fid, site->site_id);
+			dirent->pfd_type = S_IFDIR; 
+			dirent->pfd_off = entoff;
+			dirent->pfd_namelen = strlen(site->site_name);
+			strcpy(dirent->pfd_name, site->site_name);
+			entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
+			dirent = PSC_AGP(dirent, entsize);
+			entoff += entsize;
+
+			localroot = 0;
+			rn = slm_rmc_search_roots(site->site_name);
+			if (rn) {
+				mountinfo = &zfsMount[rn->rn_vfsid];
+				fid = SLFID_ROOT;
+				FID_SET_SITEID(fid, mountinfo->siteid);
+
+				rc = mdsio_getattr(rn->rn_vfsid,
+				    mountinfo->rootid, mountinfo->rootinfo,
+				    &rootcreds, &tmpattr);
+				if (!rc) {
+					localroot = 1;
+					tmpattr.sst_fg.fg_fid = fid;
+				} 
+			}
+			/* 
+			 * Fill in real attributes for the local root or fake
+			 * attributes for remote roots.  We could talk to
+			 * a remote MDS for the real attributes of its root.
+			 */
+			if (!localroot) 
+				tmpattr.sst_fg.fg_fid = fid;
+
+			*attr = tmpattr;
+			attr++;
+		}
+		CONF_ULOCK();
+
+	} else {
+
+		rc = mdsio_readdir(vfsid, &rootcreds, size, off,
+		    iov[0].iov_base, outsize, nents, &iov[1], eof, &nextoff,
+		    fcmh_2_mfh(f));
+		if (rc)
+			PFL_GOTOERR(out, rc);
+
+		iov[0].iov_len = *outsize;
+
+		/*
+		 * If this is a request for the root, we fake part of the
+		 * readdir contents by returning the file system names here.
+		 */
+		if (fgp->fg_fid == SLFID_ROOT)
+			slm_rmc_handle_readdir_roots(&iov[0], &iov[1], *nents);
+	}
 
 	if (piggybuf &&
 	    SRM_READDIR_BUFSZ(*outsize, *nents) <= piggysize) {
