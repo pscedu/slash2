@@ -110,7 +110,6 @@ const char			*fmt =
     "  replblks %B\n"
     "  xcrc %y mem %X od %x\n"
     "  bmaps %N\n%M";
-// bmaps
 
 struct psc_listcache		 files;
 struct psc_poolmaster		 files_poolmaster;
