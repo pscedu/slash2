@@ -88,7 +88,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscfs_clientctx pfcc;
 	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	uint32_t n;
@@ -178,7 +178,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *f = NULL;
 	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	int added = 0, rc;
 
@@ -360,7 +360,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_fattr_req *mq;
 	struct srm_set_fattr_rep *mp;
 	struct pscfs_clientctx pfcc;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	int rc;
@@ -427,7 +427,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	int rc;
