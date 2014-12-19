@@ -2019,7 +2019,7 @@ mds_journal_init(uint64_t fsuuid)
 	rbase = reclaim_prg.prg_buf;
 
 	stale = 0;
-	batchno = UINT64_MAX;
+	batchno = 0;
 	count = idx = size / RP_ENTSZ;
 	for (i = 0; i < count; i++) {
 		rp = &rbase[i];
@@ -2044,7 +2044,7 @@ mds_journal_init(uint64_t fsuuid)
 		si->si_batchno = rp->rpe_batchno;
 		si->si_flags &= ~SIF_NEED_JRNL_INIT;
 		si->si_index = i;
-		if (si->si_batchno < batchno)
+		if (si->si_batchno > batchno)
 			batchno = si->si_batchno;
 		si->si_batchmeter.pm_maxp = &reclaim_prg.cur_batchno;
 		RPMI_ULOCK(rpmi);
@@ -2057,9 +2057,6 @@ mds_journal_init(uint64_t fsuuid)
 		psclog_warnx("%d stale entry(s) have been zeroed from the "
 		    "reclaim progress file", stale);
 	}
-
-	if (batchno == UINT64_MAX)
-		batchno = 0;
 
 	rc = ENOENT;
 	lwm = batchno;
