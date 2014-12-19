@@ -567,6 +567,7 @@ peer-54321-128.182.99.29@tcp10-snd          46.1M
   established
 - add 'msctl softstop' that exits when all procs are done
 - add tunables ctlparam - similar to opstats
+- add ctl -p pid to get the pid
 
 - remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
 
@@ -622,3 +623,64 @@ st_blocks
 
 - use global mount to supported distributed MDS, no forwarding after initial contact,
   no division of a pool into multiple file systems.
+
+
+
+ls /slfs/.slfidns/0x101010 should return ENOENT not ERANGE
+   (bad site ID?)
+
+zfs
+- trimthr is taking 100% CPU on MDS
+
+slashd
+- rcm mutex csvc decref crash from repl-status
+- arc_get_buf OOM crash
+
+- piggyback small GETXATTR/LISTXATTR directly into RPC
+
+add rpc xid to psc_log_fmt
+
+- fuse: bad error value: 101 (ENETUNREACH) probably from bmap_to_csvc
+1297480 fuse: bad error value: 504
+
+VM images for slash2?
+
+- msctl -S or infer sockfn from mountpoint name:
+   msctl -r /supercell/tmp/foo
+     -> statfs() parent dir until fsid changes
+     -> connect(AF_LOCAL, .slctlsock)
+
+honor .slmd/resid on startup for MDS and IOD
+
+
+move from splay -> redblack in bmpc_biorq
+
+
+- failed replication need to reset upschdb
+- batchrq is reaching limit then hanging
+
+would fuse_reply_poll help us?
+would fuse_reply_ioctl help us in place of msctl?
+
+unify setting st_blksize for all of:
+- getattr
+- setattr
+- create
+- mknod
+- link
+- lookup
+- mkdir
+- symlink
+
+use XATTR_MAXNAMELEN to check on xattr name length
+
+- online flag isn't getting reset when reconnecting (see pitt)
+
+
+unnecessary lock contention?
+mount_slash/io.c:
+ 728                                 MFH_LOCK(q->mfsrq_mfh);
+ 729                                 len = msl_pages_copyout(r, q);
+ 730                                 MFH_ULOCK(q->mfsrq_mfh);
+
+ stkvers is not getting updated from certain clients/sliod
