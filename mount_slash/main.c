@@ -743,7 +743,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	 * Lookup and possibly create a new fidcache handle for inum.
 	 * If the FID does not exist in the cache then a placeholder
 	 * will be allocated.  msl_stat() will detect incomplete attrs
-	 * via FCMH_GETTING_ATTRS flag and RPC for them.
+	 * via the FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
@@ -2074,7 +2074,7 @@ slc_getprog(pid_t pid, char *prog, size_t len)
 	if (strstr(prog, "/bash") == NULL &&
 	    strstr(prog, "/python") == NULL &&
 	    strstr(prog, "/perl") == NULL &&
-	     strstr(prog, "/ksh") == NULL)
+	    strstr(prog, "/ksh") == NULL)
 		return;
 
 	snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
@@ -3349,7 +3349,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 			r->biorq_ref = 1;
 			r->biorq_bmap = b;
-			r->biorq_npages = 0;
 			r->biorq_flags = BIORQ_READ;
 			r->biorq_last_sliod = IOS_ID_ANY;
 
