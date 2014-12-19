@@ -737,6 +737,9 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 			len = r->biorq_len;
 		} else {
 			if (q->mfsrq_flags & MFSRQ_READ) {
+				/*
+				 * Lock to update iovs attached to q.
+				 */
 				MFH_LOCK(q->mfsrq_mfh);
 				len = msl_pages_copyout(r, q);
 				MFH_ULOCK(q->mfsrq_mfh);
