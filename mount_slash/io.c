@@ -640,6 +640,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	    q, q->mfsrq_ref, q->mfsrq_len, q->mfsrq_err, pfr);
 
 	q->mfsrq_ref--;
+	psc_assert(q->mfsrq_ref >= 0);
 	if (q->mfsrq_ref) {
 		MFH_ULOCK(q->mfsrq_mfh);
 		return;
