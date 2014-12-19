@@ -33,7 +33,7 @@
 #include "sltypes.h"
 
 struct slictlmsg_replwkst {
-	struct slash_fidgen	srws_fg;
+	struct sl_fidgen	srws_fg;
 	char			srws_peer_addr[RESM_ADDRBUF_SZ];
 	sl_bmapno_t		srws_bmapno;
 	uint32_t		srws_data_tot;

@@ -102,7 +102,7 @@ struct sli_import_arg {
 
 int
 sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
-    const struct slash_fidgen *pfg, const char *name,
+    const struct sl_fidgen *pfg, const char *name,
     const struct stat *stb, char fidfn[PATH_MAX])
 {
 	struct pscrpc_request *rq;
@@ -169,7 +169,7 @@ sli_import(const char *fn, const struct stat *stb,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
-	struct slash_fidgen tfg, fg;
+	struct sl_fidgen tfg, fg;
 	struct stat tstb;
 	const char *str;
 

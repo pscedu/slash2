@@ -70,10 +70,10 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 
 #define sli_fcmh_peek(fgp, fp)  fidc_lookup((fgp), FIDC_LOOKUP_NONE, (fp))
 
-void	sli_fg_makepath(const struct slash_fidgen *, char *);
+void	sli_fg_makepath(const struct sl_fidgen *, char *);
 int	sli_fcmh_getattr(struct fidc_membh *);
 int	sli_fcmh_lookup_fid(struct slashrpc_cservice *,
-	    const struct slash_fidgen *, const char *,
-	    struct slash_fidgen *, int *);
+	    const struct sl_fidgen *, const char *,
+	    struct sl_fidgen *, int *);
 
 #endif /* _FIDC_IOD_H_ */

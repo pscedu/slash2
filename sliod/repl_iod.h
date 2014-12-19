@@ -51,7 +51,7 @@ struct sli_batch_reply {
 };
 
 struct sli_repl_workrq {
-	struct slash_fidgen	 srw_fg;
+	struct sl_fidgen	 srw_fg;
 	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
@@ -85,9 +85,9 @@ enum {
 	    (srw), psc_atomic32_read(&(srw)->srw_refcnt))
 
 struct sli_repl_workrq *
-	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
+	sli_repl_findwq(const struct sl_fidgen *, sl_bmapno_t);
 
-int	sli_repl_addwk(int, sl_ios_id_t, const struct slash_fidgen *,
+int	sli_repl_addwk(int, sl_ios_id_t, const struct sl_fidgen *,
 	    sl_bmapno_t, sl_bmapgen_t, int, struct sli_batch_reply *,
 	    struct srt_replwk_repent *);
 void	sli_repl_init(void);

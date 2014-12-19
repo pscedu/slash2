@@ -145,7 +145,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct sli_rdwrstats *rwst;
-	struct slash_fidgen *fgp;
+	struct sl_fidgen *fgp;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;

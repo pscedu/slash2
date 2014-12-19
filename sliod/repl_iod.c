@@ -55,7 +55,7 @@ struct psc_lockedlist	 sli_replwkq_active =
 	    srw_active_lentry);
 
 struct sli_repl_workrq *
-sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
+sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
 {
 	struct sli_repl_workrq *w = NULL;
 
@@ -69,7 +69,7 @@ sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 
 int
 sli_repl_addwk(int op, sl_ios_id_t resid,
-    const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
+    const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_bmapgen_t bgen, int len, struct sli_batch_reply *bchrp,
     struct srt_replwk_repent *pp)
 {
