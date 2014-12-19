@@ -894,7 +894,7 @@ struct srm_readdir_req {
 #define srm_replrq_rep		srm_generic_rep
 
 struct srm_readdir_rep {
-	uint64_t		size;		/* XXX make 32-bit */
+	uint64_t		size;		/* sum of dirents, XXX make 32-bit */
 	uint32_t		eof:1;		/* flag: directory read EOF */
 	uint32_t		num:31;		/* #dirents returned */
 	 int32_t		rc;
