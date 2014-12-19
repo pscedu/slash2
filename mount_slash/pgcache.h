@@ -159,13 +159,13 @@ struct bmpc_ioreq {
 	sl_ios_id_t		 biorq_last_sliod;
 	psc_spinlock_t		 biorq_lock;
 	struct timespec		 biorq_expire;
-	int			 biorq_npages;	/* does not include readaheads */
+	int			 biorq_npages;	/* does not include readaheads  */
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head	 biorq_png_lentry;
-	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* redblack tree membership */
+	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* redblack tree membership     */
 	struct bmapc_memb	*biorq_bmap;	/* backpointer to our bmap	*/
-	struct msl_fsrqinfo	*biorq_fsrqi;
+	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
 };
 
 #define	BIORQ_READ		(1 <<  0)
