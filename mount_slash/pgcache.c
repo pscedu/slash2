@@ -283,7 +283,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 void
 bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 {
-	struct bmap_pagecache_entry *a, *b;
+	struct bmap_pagecache_entry *e, *next;
 
 	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
@@ -296,18 +296,19 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	}
 
 	/* Remove any LRU pages still associated with the bmap. */
-	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a;
-	    a = b) {
-		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
+	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
+	    e = next) {
+		next = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree,
+		    e);
 
-		BMPCE_LOCK(a);
+		BMPCE_LOCK(e);
 
-		psc_assert(a->bmpce_flags & BMPCE_LRU);
-		psc_assert(!psc_atomic32_read(&a->bmpce_ref));
+		psc_assert(e->bmpce_flags & BMPCE_LRU);
+		psc_assert(!psc_atomic32_read(&e->bmpce_ref));
 
 		OPSTAT_INCR(SLC_OPST_BMPCE_BMAP_REAP);
-		pll_remove(&bmpc->bmpc_lru, a);
-		bmpce_free(a, bmpc);
+		pll_remove(&bmpc->bmpc_lru, e);
+		bmpce_free(e, bmpc);
 	}
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(pll_empty(&bmpc->bmpc_lru));
