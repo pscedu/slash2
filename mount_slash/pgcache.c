@@ -112,6 +112,8 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
 
+	BMAP_LOCK_ENSURE(b);
+
 	bmpc = bmap_2_bmpc(b);
 	search.bmpce_off = off;
 
@@ -166,6 +168,8 @@ void
 bmpce_free(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
+	psc_assert(psc_atomic32_read(&e->bmpce_ref) == 0);
+
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
