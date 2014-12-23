@@ -173,14 +173,15 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 }
 
 void
-readahead_queue(struct bmap *b, uint32_t off, int npages)
+readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
+    uint32_t off, int npages)
 {
 	struct readaheadrq *rarq;
 
 	rarq = psc_pool_get(slc_readaheadrq_pool);
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
-	rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
-	rarq->rarq_bno = b->bcm_bmapno;
+	rarq->rarq_fg = *fgp;
+	rarq->rarq_bno = bno;
 	rarq->rarq_off = off;
 	rarq->rarq_npages = npages;
 	lc_add(&slc_readaheadq, rarq);
@@ -891,7 +892,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	sl_csvc_decref(csvc);
 
-
+#if 0
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
 	    &rapages, &raoff2, &rapages2))
 		return;
@@ -913,7 +914,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
 		    b->bcm_bmapno + 1, raoff2, rapages2);
-
+#endif
 
 	return (rc);
 }
