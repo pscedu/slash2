@@ -257,7 +257,7 @@ struct readaheadrq {
 int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
-void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *, int, int);
+void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);

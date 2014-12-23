@@ -388,8 +388,8 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 
 	BIORQ_LOCK(r);
 	if (r->biorq_ref == 1 &&
-	    (r->biorq_flags & BIORQ_READ) ||
-	    !(r->biorq_flags & BIORQ_FLUSHRDY)) {
+	    ((r->biorq_flags & BIORQ_READ) ||
+	    !(r->biorq_flags & BIORQ_FLUSHRDY))) {
 		BIORQ_ULOCK(r);
 		/*
 		 * A request can be split into several RPCs so we can't
