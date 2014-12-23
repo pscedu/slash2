@@ -384,8 +384,6 @@ void
 _msl_biorq_release(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
-	struct msl_fsrqinfo *q = r->biorq_fsrqi;
-
 	BIORQ_LOCK(r);
 	if (r->biorq_ref == 1 &&
 	    ((r->biorq_flags & BIORQ_READ) ||
