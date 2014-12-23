@@ -172,6 +172,20 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 	psc_fatalx("biorq %p does not have page %d", r, idx);
 }
 
+void
+readahead_queue(struct bmap *b, uint32_t off, int npages)
+{
+	struct readaheadrq *rarq;
+
+	rarq = psc_pool_get(slc_readaheadrq_pool);
+	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+	rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
+	rarq->rarq_bno = b->bcm_bmapno;
+	rarq->rarq_off = off;
+	rarq->rarq_npages = npages;
+	lc_add(&slc_readaheadq, rarq);
+}
+
 /**
  * msl_biorq_build - Construct a request structure for an I/O issued on
  *	a bmap.
@@ -186,7 +200,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	int i, bsize, npages, rapages, rapages2;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
-	struct readaheadrq *rarq;
 	struct bmpc_ioreq *r;
 
 	/*
@@ -267,24 +280,16 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	/*
 	 * Enqueue read ahead for next sequential region of file space.
 	 */
-	rarq = psc_pool_get(slc_readaheadrq_pool);
-	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
-	rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
-	rarq->rarq_bno = b->bcm_bmapno;
-	rarq->rarq_off = raoff;
-	rarq->rarq_npages = rapages;
-	lc_add(&slc_readaheadq, rarq);
+	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno, raoff,
+	    rapages);
 
-	if (rapages2 && b->bcm_bmapno < nbmaps - 1) {
-		/* Enqueue read ahead into next bmap. */
-		rarq = psc_pool_get(slc_readaheadrq_pool);
-		INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
-		rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
-		rarq->rarq_bno = b->bcm_bmapno + 1;
-		rarq->rarq_off = raoff2;
-		rarq->rarq_npages = rapages2;
-		lc_add(&slc_readaheadq, rarq);
-	}
+	/*
+	 * Enqueue read ahead into next bmap if our prediction would
+	 * extend into that space.
+	 */
+	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
+		    b->bcm_bmapno + 1, raoff2, rapages2);
 }
 
 __static void
@@ -658,14 +663,19 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		} else {
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_OK);
 
-			psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
+			if (len == 0) {
+				pscfs_reply_read(pfr, NULL, 0, 0);
+			} else
+				if (q->mfsrq_iovs) {
+				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
-			if (q->mfsrq_iovs) {
 				pscfs_reply_read(pfr, q->mfsrq_iovs,
 				    q->mfsrq_niov, 0);
 			} else {
 				struct iovec iov[MAX_BMAPS_REQ];
 				int nio = 0;
+
+				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
 				for (i = 0; i < MAX_BMAPS_REQ; i++) {
 					r = q->mfsrq_biorq[i];
@@ -880,6 +890,31 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	PSCFREE(a);
 
 	sl_csvc_decref(csvc);
+
+
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
+	    &rapages, &raoff2, &rapages2))
+		return;
+
+	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
+	    "raoff2=%d rapages2=%d",
+	    raoff, rapages, raoff2, rapages2);
+
+	/*
+	 * Enqueue read ahead for next sequential region of file space.
+	 */
+	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno, raoff,
+	    rapages);
+
+	/*
+	 * Enqueue read ahead into next bmap if our prediction would
+	 * extend into that space.
+	 */
+	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
+		    b->bcm_bmapno + 1, raoff2, rapages2);
+
+
 	return (rc);
 }
 
@@ -2137,7 +2172,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * In addition, it allows us to abort the I/O if we cannot even
 	 * build a biorq with the bmap.
 	 */
-	msl_complete_fsrq(q, rc, 0);
+	msl_complete_fsrq(q, rc, size);
 	return (0);
 }
 
