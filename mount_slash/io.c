@@ -359,6 +359,19 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	psc_pool_return(slc_biorq_pool, r);
 }
 
+#define biorq_incref(r)			_biorq_incref(PFL_CALLERINFO(), (r))
+
+void
+_biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+{
+	int locked;
+
+	locked = BIORQ_RLOCK(r);
+	r->biorq_ref++;
+	DEBUG_BIORQ(PLL_DIAG, r, "incref");
+	BIORQ_URLOCK(r, locked);
+}
+
 void
 _msl_biorq_release(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
@@ -480,7 +493,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
-		r->biorq_ref++;
+		biorq_incref(r);
 		r->biorq_flags |= BIORQ_WAIT;
 		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p", e);
 		pll_add(&e->bmpce_pndgaios, r);
@@ -696,8 +709,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	rc = q->mfsrq_err;
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	psclog_diag("complete_fsrq: biorq=%p fsrq=%p pfr=%p", r0, q,
-	    mfsrq_2_pfr(q));
+	DEBUG_BIORQ(PLL_DIAG, r0, "copying");
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
@@ -1018,16 +1030,15 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
+		biorq_incref(r);
+
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
+			msl_biorq_release(r);
 			OPSTAT_INCR(SLC_OPST_DIO_ADD_REQ_FAIL);
 			PFL_GOTOERR(out, rc);
 		}
 		rq = NULL;
-		BIORQ_LOCK(r);
-		r->biorq_ref++;
-		DEBUG_BIORQ(PLL_DIAG, r, "dio launch");
-		BIORQ_ULOCK(r);
 	}
 
 	/*
@@ -1094,7 +1105,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 * processed prematurely.
 	 */
 	BIORQ_LOCK(r);
-	r->biorq_ref++;
+	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
@@ -1371,16 +1382,15 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 	rq->rq_interpret_reply = msl_read_cb0;
+
+	biorq_incref(r);
+
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
+		msl_biorq_release(r);
 		OPSTAT_INCR(SLC_OPST_READ_ADD_REQ_FAIL);
 		PFL_GOTOERR(out, rc);
 	}
-
-	BIORQ_LOCK(r);
-	r->biorq_ref++;
-	DEBUG_BIORQ(PLL_DIAG, r, "RPC launch");
-	BIORQ_ULOCK(r);
 
 	PSCFREE(iovs);
 	return (0);
@@ -1848,6 +1858,7 @@ msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
 	psc_assert(!q->mfsrq_biorq[biorq_num]);
 	q->mfsrq_biorq[biorq_num] = r;
 	q->mfsrq_ref++;
+	DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
 	MFH_ULOCK(q->mfsrq_mfh);
 }
 
@@ -1872,7 +1883,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	else
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE);
 
-	psclog_diag("fsrq=%p pfr=%p rw=%d", q, pfr, rw);
+	DPRINTF_MFSRQ(PLL_DIAG, q, "created");
 	return (q);
 }
 

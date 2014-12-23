@@ -202,7 +202,16 @@ struct msl_fsrqinfo {
 
 #define mfsrq_2_pfr(q)			((struct pscfs_req *)(q) - 1)
 
-void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
+#define DPRINTFS_MFSRQ(level, ss, q, fmt, ...)				\
+	psclogs((level), (ss), "mfsrq@%p ref=%d flags=%d len=%zd "	\
+	    "error=%d pfr=%p mfh=%p " fmt,				\
+	    (q), (q)->mfsrq_ref, (q)->mfsrq_flags, (q)->mfsrq_len,	\
+	    (q)->mfsrq_err, mfsrq_2_pfr(q), (q)->mfsrq_mfh, ## __VA_ARGS__)
+
+#define DPRINTF_MFSRQ(level, q, fmt, ...)				\
+	DPRINTFS_MFSRQ((level), SLSS_FCMH, (q), fmt, ## __VA_ARGS__)
+
+void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *, int);
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
@@ -241,7 +250,7 @@ struct readaheadrq {
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
 
-#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r))
+#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
 int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
