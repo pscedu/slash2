@@ -159,7 +159,6 @@ struct bmpc_ioreq {
 	sl_ios_id_t		 biorq_last_sliod;
 	psc_spinlock_t		 biorq_lock;
 	struct timespec		 biorq_expire;
-	int			 biorq_npages;	/* does not include readaheads  */
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head	 biorq_png_lentry;
@@ -177,6 +176,7 @@ struct bmpc_ioreq {
 #define	BIORQ_FLUSHRDY		(1 <<  6)
 #define BIORQ_FREEBUF		(1 <<  7)	/* DIO READ needs a buffer */
 #define BIORQ_WAIT		(1 <<  8)
+#define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
