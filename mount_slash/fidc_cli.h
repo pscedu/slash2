@@ -85,11 +85,6 @@ struct fcmh_cli_info {
 	} u;
 	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec			 fci_etime;	/* attr expire time */
-
-	struct psclist_head		 fci_readahead;
-	sl_bmapno_t			 fci_bmapno;
-	uint32_t			 fci_raoff;
-	int			 	 fci_rapages;
 };
 
 #define fcmh_2_nrepls(f)	fcmh_2_fci(f)->fci_inode.nrepls
@@ -121,7 +116,6 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_DSIZE	(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
 #define FCMH_CLI_DIRTY_MTIME	(_FCMH_FLGSHFT << 3)	/* has dirty mtime */
 #define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 4)	/* on dirty queue */
-#define FCMH_CLI_READA_QUEUE	(_FCMH_FLGSHFT << 5)	/* readahead into the next bmap */
 
 #define FCMH_CLI_DIRTY_ATTRS	(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 

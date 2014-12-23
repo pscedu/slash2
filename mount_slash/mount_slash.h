@@ -219,15 +219,25 @@ resm2rmci(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
+struct readaheadrq {
+	struct psc_listentry		rarq_lentry;
+	struct sl_fidgen		rarq_fg;
+	sl_bmapno_t			rarq_bno;
+	uint32_t			rarq_off;
+	int				rarq_npages;
+};
+
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
 
-#define msl_biorq_release(r)	_msl_biorq_release(PFL_CALLERINFOSS(SLSS_BMAP), (r))
+#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 0, 0)
+#define msl_biorq_release_done(r)	_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 1, 0)
+#define msl_biorq_release_decref(r)	_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 0, 1)
 
 int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
-void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *, int, int);
 
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
@@ -258,6 +268,7 @@ struct msl_fhent *
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
+void	 msreadaheadthr_spawn(void);
 
 #define bmap_flushq_wake(reason)						\
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (reason))
@@ -454,7 +465,6 @@ extern struct psc_iostats	 msl_io_1m_stat;
 extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;
 extern struct psc_listcache	 slc_bmaptimeoutq;
-extern struct psc_listcache	 slc_readaheadq;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;

@@ -23,7 +23,7 @@
  */
 
 /*
- * Core/internal CLI routines (badly named file).
+ * Client I/O and related routines: caching, RPC scheduling, etc.
  */
 
 #include <sys/types.h>
@@ -100,6 +100,10 @@ struct psc_iostats	msl_io_64k_stat;
 struct psc_iostats	msl_io_128k_stat;
 struct psc_iostats	msl_io_512k_stat;
 struct psc_iostats	msl_io_1m_stat;
+
+struct psc_poolmaster	 slc_readaheadrq_poolmaster;
+struct psc_poolmgr	*slc_readaheadrq_pool;
+struct psc_listcache	 slc_readaheadq;
 
 static void
 msl_update_iocounters(int len)
@@ -179,12 +183,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int last)
 {
 	uint32_t aoff, alen, raoff, raoff2, nbmaps, bmpce_off;
-	int i, bsize, npages, rapages, rapages2, do_readahead;
+	int i, bsize, npages, rapages, rapages2;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
-	struct fcmh_cli_info *fci;
+	struct readaheadrq *rarq;
 	struct bmpc_ioreq *r;
-	struct fidc_membh *f;
 
 	/*
 	 * Align the offset and length to the start of a page.  Note
@@ -253,52 +256,34 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
-	do_readahead = msl_getra(mfh, bsize, aoff, npages, &raoff,
-	    &rapages, &raoff2, &rapages2);
-
-	f = mfh->mfh_fcmh;
-	fci = fcmh_2_fci(f);
-	if (!do_readahead) {
-		FCMH_LOCK(f);
-		if (f->fcmh_flags & FCMH_CLI_READA_QUEUE) {
-			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
-			lc_remove(&slc_readaheadq, fci);
-			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			return;
-		}
-		FCMH_ULOCK(f);
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
+	    &rapages, &raoff2, &rapages2))
 		return;
-	}
 
-	psclog_diag("raoff=%d rapages=%d", raoff, rapages);
+	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
+	    "raoff2=%d rapages2=%d",
+	    raoff, rapages, raoff2, rapages2);
 
-	for (i = 0; i < rapages; i++) {
-		bmpce_off = raoff + (i * BMPC_BUFSZ);
+	/*
+	 * Enqueue read ahead for next sequential region of file space.
+	 */
+	rarq = psc_pool_get(slc_readaheadrq_pool);
+	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+	rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
+	rarq->rarq_bno = b->bcm_bmapno;
+	rarq->rarq_off = raoff;
+	rarq->rarq_npages = rapages;
+	lc_add(&slc_readaheadq, rarq);
 
-		BMAP_LOCK(b);
-		e = bmpce_lookup_locked(b, bmpce_off,
-		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
-		BMAP_ULOCK(b);
-
-		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "bmpce_foff = %d", r, e, i, npages, bmpce_off);
-
-		psc_dynarray_add(&r->biorq_pages, e);
-	}
 	if (rapages2 && b->bcm_bmapno < nbmaps - 1) {
-		FCMH_LOCK(f);
-		fci->fci_raoff = raoff2;
-		fci->fci_rapages = rapages2;
-		fci->fci_bmapno = b->bcm_bmapno + 1;
-		if (!(f->fcmh_flags & FCMH_CLI_READA_QUEUE)) {
-			f->fcmh_flags |= FCMH_CLI_READA_QUEUE;
-			lc_addtail(&slc_readaheadq, fci);
-			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
-		}
-		FCMH_ULOCK(f);
-		psclog_diag("bmapno = %d, raoff = %d, rapages = %d",
-		    fci->fci_bmapno, fci->fci_raoff, fci->fci_rapages);
-		return;
+		/* Enqueue read ahead into next bmap. */
+		rarq = psc_pool_get(slc_readaheadrq_pool);
+		INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+		rarq->rarq_fg = b->bcm_fcmh->fcmh_fg;
+		rarq->rarq_bno = b->bcm_bmapno + 1;
+		rarq->rarq_off = raoff2;
+		rarq->rarq_npages = rapages2;
+		lc_add(&slc_readaheadq, rarq);
 	}
 }
 
@@ -2132,13 +2117,84 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/*
-	 * Drop the our reference to the fsrq.  This reference acts like
-	 * a barrier to multiple biorqs so that none of them can
-	 * complete a fsrq prematurely.
+	 * Drop our reference to the fsrq.  This reference acts like a
+	 * barrier to multiple biorqs so that none of them can complete
+	 * an fsrq prematurely.
 	 *
 	 * In addition, it allows us to abort the I/O if we cannot even
-	 * build a biorq with bmap.
+	 * build a biorq with the bmap.
 	 */
 	msl_complete_fsrq(q, rc, 0);
 	return (0);
+}
+
+void
+msreadaheadthr_main(struct psc_thread *thr)
+{
+	struct bmap_pagecache_entry *e;
+	struct readaheadrq *rarq;
+	struct fidc_membh *f;
+	struct bmpc_ioreq *r;
+	struct bmap *b;
+	int i;
+
+	while (pscthr_run(thr)) {
+		f = NULL;
+		b = NULL;
+
+		rarq = lc_getwait(&slc_readaheadq);
+		fidc_lookup(&rarq->rarq_fg, 0, &f);
+		if (f == NULL)
+			goto end;
+		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
+			goto end;
+		if (b->bcm_flags & BMAP_DIO)
+			goto end;
+
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 0, BIORQ_READ);
+		for (i = 0; i < rarq->rarq_npages; i++) {
+			BMAP_LOCK(b);
+			e = bmpce_lookup_locked(b,
+			    rarq->rarq_off + i * BMPC_BUFSZ,
+			    &f->fcmh_waitq);
+			BMAP_ULOCK(b);
+
+			psc_dynarray_add(&r->biorq_pages, e);
+		}
+		msl_pages_fetch(r);
+		msl_biorq_release(r);
+
+ end:
+		if (b)
+			bmap_op_done(b);
+		if (f)
+			fcmh_op_done(f);
+		psc_pool_return(slc_readaheadrq_pool, rarq);
+	}
+}
+
+void
+msreadaheadthr_spawn(void)
+{
+	struct msreadahead_thread *mrat;
+	struct psc_thread *thr;
+	int i;
+
+	psc_poolmaster_init(&slc_readaheadrq_poolmaster,
+	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "readaheadrq");
+	slc_readaheadrq_pool = psc_poolmaster_getmgr(
+	    &slc_readaheadrq_poolmaster);
+
+	lc_reginit(&slc_readaheadq, struct readaheadrq, rarq_lentry,
+	    "readaheadq");
+
+	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
+		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
+		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
+		mrat = msreadaheadthr(thr);
+		psc_multiwait_init(&mrat->mrat_mw, "%s",
+		    thr->pscthr_name);
+		pscthr_setready(thr);
+	}
 }

@@ -114,7 +114,6 @@ struct uid_mapping {
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
-struct psc_listcache		 slc_readaheadq;
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -3303,83 +3302,6 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 }
 
 void
-msreadaheadthr_main(struct psc_thread *thr)
-{
-	int i, rc, did_work;
-	struct bmap *b;
-	struct fidc_membh *f;
-	struct bmpc_ioreq *r;
-	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *e;
-	struct fcmh_cli_info *fci, *tmp_fci;
-
-	while (pscthr_run(thr)) {
-		did_work = 0;
-		LIST_CACHE_LOCK(&slc_readaheadq);
-		lc_peekheadwait(&slc_readaheadq);
-		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &slc_readaheadq) {
-
-			f = fci_2_fcmh(fci);
-			if (!FCMH_TRYLOCK(f))
-				continue;
-
-			if (!(f->fcmh_flags & FCMH_CLI_READA_QUEUE)) {
-				FCMH_ULOCK(f);
-				continue;
-			}
-			lc_remove(&slc_readaheadq, fci);
-			f->fcmh_flags &= ~FCMH_CLI_READA_QUEUE;
-			FCMH_ULOCK(f);
-
-			LIST_CACHE_ULOCK(&slc_readaheadq);
-			did_work = 1;
-
-			rc = bmap_get(f, fci->fci_bmapno, SL_READ, &b);
-			if (rc) {
-				fcmh_op_done_type(f,
-				    FCMH_OPCNT_READAHEAD);
-				break;
-			}
-			r = psc_pool_get(slc_biorq_pool);
-			memset(r, 0, sizeof(*r));
-
-			INIT_PSC_LISTENTRY(&r->biorq_lentry);
-			INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
-			INIT_SPINLOCK(&r->biorq_lock);
-
-			r->biorq_ref = 1;
-			r->biorq_bmap = b;
-			r->biorq_flags = BIORQ_READ;
-			r->biorq_last_sliod = IOS_ID_ANY;
-
-			bmpc = bmap_2_bmpc(b);
-			pll_add(&bmpc->bmpc_pndg_biorqs, r);
-			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
-
-			bmap_op_done(b);
-
-			for (i = 0; i < fci->fci_rapages; i++) {
-				BMAP_LOCK(b);
-				e = bmpce_lookup_locked(b,
-				    fci->fci_raoff + i * BMPC_BUFSZ,
-				    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
-				BMAP_ULOCK(b);
-
-				psc_dynarray_add(&r->biorq_pages, e);
-			}
-			OPSTAT_INCR(SLC_OPST_READAHEAD_FETCH);
-			msl_pages_fetch(r);
-			msl_biorq_release(r);
-
-			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			break;
-		}
-		if (!did_work)
-			LIST_CACHE_ULOCK(&slc_readaheadq);
-	}
-}
-
-void
 msattrflushthr_main(struct psc_thread *thr)
 {
 	struct timespec ts, nexttimeo;
@@ -3421,26 +3343,6 @@ msattrflushthr_main(struct psc_thread *thr)
 			psc_waitq_waitrel(&msl_flush_attrq,
 			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
 		}
-	}
-}
-
-void
-msreadaheadthr_spawn(void)
-{
-	struct msreadahead_thread *mrat;
-	struct psc_thread *thr;
-	int i;
-
-	lc_reginit(&slc_readaheadq, struct fcmh_cli_info, fci_readahead,
-	    "readahead");
-
-	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
-		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
-		mrat = msreadaheadthr(thr);
-		psc_multiwait_init(&mrat->mrat_mw, "%s",
-		    thr->pscthr_name);
-		pscthr_setready(thr);
 	}
 }
 
