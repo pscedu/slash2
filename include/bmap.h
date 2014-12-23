@@ -345,7 +345,7 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
 
-#define bmap_getf(f, n, rw, fl, bp)	_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP),\
+#define bmap_getf(f, n, rw, fl, bp)	_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
 					(f), (n), (rw), (fl), (bp))
 
 #define bmap_lookup(f, n, bp)		_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
