@@ -181,33 +181,36 @@ struct bmpc_ioreq {
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
 #define BIORQ_RLOCK(r)		reqlock(&(r)->biorq_lock)
-#define BIORQ_URLOCK(r)		ureqlock(&(r)->biorq_lock)
+#define BIORQ_URLOCK(r, lk)	ureqlock(&(r)->biorq_lock, (lk))
 #define BIORQ_LOCK_ENSURE(r)	LOCK_ENSURE(&(r)->biorq_lock)
 
 #define BIORQ_SETATTR(r, fl)	SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 #define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
-#define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s "						\
+#define DEBUGS_BIORQ(level, ss, r, fmt, ...)				\
+	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s%s "	\
 	    "ref=%d off=%u len=%u "					\
-	    "retry=%u buf=%p rqi=%p "					\
-	    "sliod=%x np=%d "						\
-	    "b=%p ex="PSCPRI_TIMESPEC" : "fmt,				\
-	    (b), (b)->biorq_flags,					\
-	    (b)->biorq_flags & BIORQ_READ		? "r" : "",	\
-	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
-	    (b)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
-	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
-	    (b)->biorq_flags & BIORQ_EXPIRE		? "x" : "",	\
-	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
-	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
-	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
-	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
-	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\
-	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
-	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire),	\
+	    "retry=%u buf=%p rqi=%p pfr=%p "				\
+	    "sliod=%x npages=%d "					\
+	    "bmap=%p exp="PSCPRI_TIMESPEC" : "fmt,			\
+	    (r), (r)->biorq_flags,					\
+	    (r)->biorq_flags & BIORQ_READ		? "r" : "",	\
+	    (r)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
+	    (r)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
+	    (r)->biorq_flags & BIORQ_DIO		? "d" : "",	\
+	    (r)->biorq_flags & BIORQ_EXPIRE		? "x" : "",	\
+	    (r)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
+	    (r)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
+	    (r)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
+	    (r)->biorq_ref, (r)->biorq_off, (r)->biorq_len,		\
+	    (r)->biorq_retries, (r)->biorq_buf, (r)->biorq_fsrqi,	\
+	    (r)->biorq_fsrqi ? mfsrq_2_pfr((r)->biorq_fsrqi) : NULL,	\
+	    (r)->biorq_last_sliod, psc_dynarray_len(&(r)->biorq_pages),	\
+	    (r)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(r)->biorq_expire),	\
 	    ## __VA_ARGS__)
+
+#define DEBUG_BIORQ(level, r, fmt, ...)					\
+	DEBUGS_BIORQ((level), SLSS_BMAP, (r), fmt, ## __VA_ARGS__)
 
 static __inline int
 bmpc_biorq_cmp(const void *x, const void *y)
@@ -240,7 +243,7 @@ struct bmap_pagecache {
 	 * requests are sorted based on their starting offsets to
 	 * facilitate write coalescing.
 	 *
-	 * The splay is protected by the bmap lock.
+	 * The tree is protected by the bmap lock.
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
