@@ -722,6 +722,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 			if (q->mfsrq_flags & MFSRQ_READ) {
 				/*
 				 * Lock to update iovs attached to q.
+				 * Fast because no actual copying.
 				 */
 				MFH_LOCK(q->mfsrq_mfh);
 				len = msl_pages_copyout(r, q);
@@ -770,7 +771,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			if (e->bmpce_flags & BMPCE_AIOWAIT) {
 				psc_assert(e != e0);
 				msl_fsrq_aiowait_tryadd_locked(e, r);
-				DEBUG_BIORQ(PLL_NOTICE, r,
+				DEBUG_BIORQ(PLL_DIAG, r,
 				    "still blocked on (bmpce@%p)", e);
 			}
 			/*
@@ -778,7 +779,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			 */
 			BMPCE_ULOCK(e);
 		}
-		DEBUG_BIORQ(PLL_NOTICE, r, "unblocked by (bmpce@%p)", e);
+		DEBUG_BIORQ(PLL_DIAG, r, "unblocked by (bmpce@%p)", e);
 		msl_biorq_release(r);
 	}
 }
@@ -1717,9 +1718,6 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
 		q->mfsrq_iovs[q->mfsrq_niov].iov_base = src;
 		q->mfsrq_niov++;
-#if 0
-		memcpy(dest, src, nbytes);
-#endif
 
 		BMPCE_ULOCK(e);
 
@@ -1737,7 +1735,8 @@ static void
 msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 {
 	size_t prev, curr;
-	spinlock(&mfh->mfh_lock);
+
+	MFH_LOCK(mfh);
 
 	/*
 	 * If the first read starts from offset 0, the following will
@@ -1750,8 +1749,9 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 		curr = off / SLASH_BMAP_SIZE;
 		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
 			/*
-			 * The raoff can go negative here. However, we can
-			 * catch the overrun and fix it later in msl_getra().
+			 * The raoff can go negative here. However, we
+			 * can catch the overrun and fix it later in
+			 * msl_getra().
 			 */
 			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
 	} else {
@@ -1762,7 +1762,7 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	mfh->mfh_ra.mra_loff = off;
 	mfh->mfh_ra.mra_lsz = size;
 
-	freelock(&mfh->mfh_lock);
+	MFH_ULOCK(mfh);
 }
 
 /*
@@ -1896,7 +1896,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
 	f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 	if (q->mfsrq_off + q->mfsrq_len > fcmh_2_fsz(f)) {
-		psclog_info("fid: "SLPRI_FID", "
+		psclog_diag("fid: "SLPRI_FID", "
 		    "size from %"PRId64" to %"PRId64,
 		    fcmh_2_fid(f), fcmh_2_fsz(f),
 		    q->mfsrq_off + q->mfsrq_len);
@@ -2103,8 +2103,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = -ETIMEDOUT;
 
 		/*
-		 * Make sure we don't copy pages from biorq in
-		 * case of an error.
+		 * Make sure we don't copy pages from biorq in case of
+		 * an error.
 		 */
 		mfsrq_seterr(q, rc);
 	}

@@ -120,10 +120,17 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
 	off_t				 mra_lsz;	/* last size */
-	int				 mra_nseq;	/* num sequential io's */
 	off_t				 mra_raoff;
+	int				 mra_nseq;	/* num sequential io's */
 };
 
+/*
+ * Maximum number of bmaps that may span an I/O request.  We currently
+ * limit FUSE to 128MB I/Os and bmaps are by default 128MB, meaning any
+ * I/O can never span more than two bmap regions.
+ *
+ * XXX This value should be calculated dynamically.
+ */
 #define MAX_BMAPS_REQ			2
 
 struct slc_async_req {
@@ -171,6 +178,10 @@ struct msl_fhent {
 #define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
 #define MFH_URLOCK(m, lk)		ureqlock(&(m)->mfh_lock, (lk))
 
+/*
+ * This is attached to each pscfs_req structure.  It is only used for
+ * I/O requests (read/write).
+ */
 struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
 	struct msl_fhent		*mfsrq_mfh;
@@ -230,9 +241,7 @@ struct readaheadrq {
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
 
-#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 0, 0)
-#define msl_biorq_release_done(r)	_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 1, 0)
-#define msl_biorq_release_decref(r)	_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r), 0, 1)
+#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(PSS_TMP), (r))
 
 int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);

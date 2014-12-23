@@ -2013,7 +2013,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	pfcc = pscfs_getclientctx(pfr);
 
-	spinlock(&mfh->mfh_lock);
+	MFH_LOCK(mfh);
 	rc = msl_flush_int_locked(mfh, 1);
 	rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
 	//if (rc && slc_rmc_retry(pfr, &rc))
@@ -2023,7 +2023,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
-	freelock(&mfh->mfh_lock);
+	MFH_ULOCK(mfh);
 
 	pscfs_reply_flush(pfr, rc);
 }
@@ -2888,7 +2888,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 		OPSTAT_INCR(SLC_OPST_FSYNC);
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
-		spinlock(&mfh->mfh_lock);
+		MFH_LOCK(mfh);
 		rc = msl_flush_int_locked(mfh, 1);
 		if (!datasync_only) {
 			int rc2;
@@ -2899,7 +2899,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 			if (!rc)
 				rc = rc2;
 		}
-		freelock(&mfh->mfh_lock);
+		MFH_ULOCK(mfh);
 	}
 
 	pscfs_reply_fsync(pfr, rc);
