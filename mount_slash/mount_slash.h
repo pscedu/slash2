@@ -196,9 +196,11 @@ struct msl_fsrqinfo {
 	struct iovec			*mfsrq_iovs;
 };
 
-#define MFSRQ_NONE			(0 << 0)
+#define MFSRQ_NONE			0
 #define MFSRQ_READ			(1 << 0)
 #define MFSRQ_AIOWAIT			(1 << 1)
+#define MFSRQ_FSREPLIED			(1 << 2)	/* replied to pscfs, as a sanity check */
+#define MFSRQ_COPIED			(1 << 3)	/* data has been copied in/out from user to our buffers */
 
 #define mfsrq_2_pfr(q)			((struct pscfs_req *)(q) - 1)
 

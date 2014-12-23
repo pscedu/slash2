@@ -246,7 +246,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_last_sliod = IOS_ID_ANY;
 
 	/* Add the biorq to the fsrq. */
-	msl_fsrqinfo_biorq_add(q, r, rqnum);
+	if (q)
+		msl_fsrqinfo_biorq_add(q, r, rqnum);
 
 	BMAP_LOCK(b);
 	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
