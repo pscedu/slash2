@@ -150,6 +150,7 @@ slicrudthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 #define MAX_INFL_BCRCUPD 128
+		/* XXX per-MDS */
 		while (psc_atomic32_read(&sli_ninfl_bcrcupd) >
 		    MAX_INFL_BCRCUPD)
 			usleep(3000);
@@ -195,8 +196,10 @@ slicrudthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&bcr_ready);
 
-		if (!psc_dynarray_len(bcrs))
+		if (!psc_dynarray_len(bcrs)) {
+			usleep(3000)
 			continue;
+		}
 
 		OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
 
