@@ -806,7 +806,6 @@ msbwatchthr_main(struct psc_thread *thr)
 	int i;
 
 	while (pscthr_run(thr)) {
-		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		/*
 		 * A bmap can be on both slc_bmapflushq and
 		 * slc_bmaptimeoutq.  It is taken off the slc_bmapflushq
@@ -832,6 +831,13 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&slc_bmapflushq);
 
+		if (!psc_dynarray_len(&bmaps)) {
+			usleep(1000);
+			continue;
+		}
+
+		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
+
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			/*
 			 * XXX: If BMAP_TOFREE is set after the above
@@ -842,10 +848,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			 */
 			msl_bmap_lease_tryext(b, 0);
 		}
-		if (!psc_dynarray_len(&bmaps))
-			usleep(1000);
-		else
-			psc_dynarray_reset(&bmaps);
+		psc_dynarray_reset(&bmaps);
 	}
 }
 
