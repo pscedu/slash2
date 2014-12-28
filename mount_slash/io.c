@@ -645,10 +645,9 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		} else {
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ_OK);
 
-			if (len == 0) {
+			if (q->mfsrq_len == 0) {
 				pscfs_reply_read(pfr, NULL, 0, 0);
-			} else
-				if (q->mfsrq_iovs) {
+			} else if (q->mfsrq_iovs) {
 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
 				pscfs_reply_read(pfr, q->mfsrq_iovs,
@@ -1964,7 +1963,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * In addition, it allows us to abort the I/O if we cannot even
 	 * build a biorq with the bmap.
 	 */
-	msl_complete_fsrq(q, rc, size);
+	msl_complete_fsrq(q, rc, 0);
 	return (0);
 }
 
