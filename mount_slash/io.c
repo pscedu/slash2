@@ -1773,6 +1773,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
+	struct timespec ts0, ts1, tsd;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
@@ -1851,6 +1852,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		psc_assert(tsize);
 
+		PFL_GETTIMESPEC(&ts0);
+
 		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -1860,6 +1863,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			bmap_op_done(b);
 			PFL_GOTOERR(out, rc);
 		}
+
+		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &tsd);
+		OPSTAT_ADD(SLC_OPST_GETBMAP_WAIT_MSECS,
+		    tsd.tv_sec * 1000 + tsd.tv_nsec / 1000000);
 
 		/*
 		 * Re-relativize the offset if this request spans more
