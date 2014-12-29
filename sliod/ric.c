@@ -144,7 +144,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
-	struct sli_rdwrstats *rwst;
+	struct pfl_iostats_grad *ist;
 	struct sl_fidgen *fgp;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
@@ -228,10 +228,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/* XXX move this until after success and do accounting for errors */
-	for (rwst = sli_rdwrstats; (rwst + 1)->size; rwst++)
-		if (mq->size < rwst->size)
+	for (ist = sli_rdwr_ist; ist->size; ist++)
+		if (mq->size < ist->size)
 			break;
-	psc_iostats_intv_add(rw == SL_WRITE ? &rwst->wr : &rwst->rd, 1);
+	psc_iostats_intv_add(rw == SL_WRITE ? &ist->rw.wr : &ist->rw.rd, 1);
 
 	mp->rc = sli_fcmh_get(fgp, &f);
 	if (mp->rc)

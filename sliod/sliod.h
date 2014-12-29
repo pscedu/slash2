@@ -154,16 +154,11 @@ resm2rmii(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-extern struct sli_rdwrstats {
-	int64_t			size;
-	struct psc_iostats	rd;
-	struct psc_iostats	wr;
-} sli_rdwrstats[];
-
 void		slictlthr_main(const char *);
 
 int		iod_inode_getinfo(struct sl_fidgen *, uint64_t *, uint64_t *, uint32_t *);
 
+extern struct pfl_iostats_grad	 sli_rdwr_ist[];
 int				 sli_selftest_rc;
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;

@@ -68,12 +68,12 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 int			 sli_selftest_rc;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
+struct pfl_iostats_grad	 sli_rdwr_ist[8];
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
-const char		*progname;
 
-struct sli_rdwrstats	 sli_rdwrstats[8];
+const char		*progname;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -271,19 +271,21 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	slvr_cache_init();
 
-	sli_rdwrstats[0].size =        1024;
-	sli_rdwrstats[1].size =    4 * 1024;
-	sli_rdwrstats[2].size =   16 * 1024;
-	sli_rdwrstats[3].size =   64 * 1024;
-	sli_rdwrstats[4].size =  128 * 1024;
-	sli_rdwrstats[5].size =  512 * 1024;
-	sli_rdwrstats[6].size = 1024 * 1024;
-	sli_rdwrstats[7].size = 0;
+	sli_rdwr_ist[0].size =        1024;
+	sli_rdwr_ist[1].size =    4 * 1024;
+	sli_rdwr_ist[2].size =   16 * 1024;
+	sli_rdwr_ist[3].size =   64 * 1024;
+	sli_rdwr_ist[4].size =  128 * 1024;
+	sli_rdwr_ist[5].size =  512 * 1024;
+	sli_rdwr_ist[6].size = 1024 * 1024;
+	sli_rdwr_ist[7].size = 0;
 
-	for (sz = i = 0; sli_rdwrstats[i].size; i++, sz = nsz) {
-		nsz = sli_rdwrstats[i].size / 1024;
-		psc_iostats_init(&sli_rdwrstats[i].rd, "rd:%dk-%dk", sz, nsz);
-		psc_iostats_init(&sli_rdwrstats[i].wr, "wr:%dk-%dk", sz, nsz);
+	for (sz = i = 0; sli_rdwr_ist[i].size; i++, sz = nsz) {
+		nsz = sli_rdwr_ist[i].size / 1024;
+		psc_iostats_initf(&sli_rdwr_ist[i].rw.rd, PISTF_BASE10,
+		    "rd:%dk-%dk", sz, nsz);
+		psc_iostats_initf(&sli_rdwr_ist[i].rw.wr, PISTF_BASE10,
+		    "wr:%dk-%dk", sz, nsz);
 	}
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
