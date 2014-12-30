@@ -566,7 +566,7 @@ mfsrq_clrerr(struct msl_fsrqinfo *q)
 
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err) {
-		psclog_warnx("clearing rqinfo q=%p err=%d", q,
+		DPRINTF_MFSRQ(PLL_WARN, q, "clearing err=%d",
 		    q->mfsrq_err);
 		q->mfsrq_err = 0;
 		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY_CLEAR_ERR);
@@ -582,7 +582,7 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err == 0 && rc) {
 		q->mfsrq_err = rc;
-		psclog_warnx("setting rqinfo q=%p err=%d", q, rc);
+		DPRINTF_MFSRQ(PLL_WARN, q, "setting err=%d", rc);
 	}
 	MFH_URLOCK(q->mfsrq_mfh, lk);
 }
@@ -932,7 +932,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	psc_waitq_wakeall(&msl_fhent_aio_waitq);
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup, q=%p", q);
+	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 
 	msl_biorq_release(r);
 
@@ -1054,7 +1054,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		BIORQ_LOCK(r);
 		while (r->biorq_ref > 1) {
 			BIORQ_ULOCK(r);
-			DEBUG_BIORQ(PLL_DIAG, r, "aiowait sleep, q=%p", q);
+			DEBUG_BIORQ(PLL_DIAG, r, "aiowait sleep");
 			psc_waitq_wait(&msl_fhent_aio_waitq,
 			    &q->mfsrq_mfh->mfh_lock);
 			BIORQ_LOCK(r);
