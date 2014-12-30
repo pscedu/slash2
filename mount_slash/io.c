@@ -1330,14 +1330,17 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 int
 msl_pages_fetch(struct bmpc_ioreq *r)
 {
-	int i, rc = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
+	struct timespec ts0, ts1, tsd;
+	int i, rc = 0, aiowait = 0;
 
 	if (r->biorq_flags & BIORQ_READ) {
 		rc = msl_launch_read_rpcs(r);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+
+	PFL_GETTIMESPEC(&ts0);
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
@@ -1372,6 +1375,12 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 		}
 		BMPCE_ULOCK(e);
 	}
+
+	PFL_GETTIMESPEC(&ts1);
+	timespecsub(&ts1, &ts0, &tsd);
+	OPSTAT_ADD(SLC_OPST_BIORQ_FETCH_WAIT_USECS,
+	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
+
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
 	return (rc);
@@ -1908,8 +1917,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD(SLC_OPST_GETBMAP_WAIT_MSECS,
-		    tsd.tv_sec * 1000 + tsd.tv_nsec / 1000000);
+		OPSTAT_ADD(SLC_OPST_GETBMAP_WAIT_USECS,
+		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 		/*
 		 * Re-relativize the offset if this request spans more
