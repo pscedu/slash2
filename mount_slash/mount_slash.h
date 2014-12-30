@@ -225,7 +225,7 @@ struct resprof_cli_info {
 	int				 rpci_flags;
 };
 
-#define RPCIF_AVOID			(1 << 0)
+#define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)

@@ -1124,7 +1124,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 }
 
 /**
- * msl_read_rpc_launch - Launch a RPC for a given range of pages.  Note
+ * msl_read_rpc_launch - Launch an RPC for a given range of pages.  Note
  *	that a request can be satisfied by multiple RPCs because parts
  *	of the range covered by the request may have already been
  *	cached.

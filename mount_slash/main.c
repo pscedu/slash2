@@ -3302,6 +3302,13 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		sl_csvc_decref(csvc);
 }
 
+/*
+ * Attribute flush thread.  This thread takes files on a queue that are
+ * getting write(2) activity which need to send st_size and st_mtime
+ * updates to the MDS.
+ *
+ * XXX this logic should be async.
+ */
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
