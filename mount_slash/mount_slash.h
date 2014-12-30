@@ -116,6 +116,10 @@ PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
+#define NUM_BMAP_FLUSH_THREADS		2
+#define NUM_ATTR_FLUSH_THREADS		2
+#define NUM_READAHEAD_THREADS		2
+
 #define MS_READAHEAD_MAXPGS		16
 
 struct msl_ra {

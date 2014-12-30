@@ -35,13 +35,6 @@
 /* number of bmaps to allow before reaper kicks into gear */
 #define	BMAP_CACHE_MAX			1024
 
-/* number of bmap flush threads */
-#define NUM_BMAP_FLUSH_THREADS		2
-
-#define NUM_ATTR_FLUSH_THREADS		2
-
-#define NUM_READAHEAD_THREADS		8
-
 /**
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */
