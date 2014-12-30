@@ -85,45 +85,28 @@ struct psc_waitq	msl_fhent_aio_waitq = PSC_WAITQ_INIT;
 struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-psc_atomic32_t		slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
+psc_atomic32_t		 slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
-struct psc_iostats	msl_diord_stat;
-struct psc_iostats	msl_diowr_stat;
-struct psc_iostats	msl_rdcache_stat;
-struct psc_iostats	msl_racache_stat;
+struct pfl_iostats_rw	 slc_dio_ist;
+struct pfl_iostats	 slc_rdcache_ist;
+struct pfl_iostats	 slc_racache_ist;
 
-struct psc_iostats	msl_io_1b_stat;
-struct psc_iostats	msl_io_1k_stat;
-struct psc_iostats	msl_io_4k_stat;
-struct psc_iostats	msl_io_16k_stat;
-struct psc_iostats	msl_io_64k_stat;
-struct psc_iostats	msl_io_128k_stat;
-struct psc_iostats	msl_io_512k_stat;
-struct psc_iostats	msl_io_1m_stat;
+struct pfl_iostats_grad	 slc_iosyscall_ist[8];
+struct pfl_iostats_grad	 slc_iorpc_ist[8];
 
 struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
 struct psc_listcache	 slc_readaheadq;
 
-static void
-msl_update_iocounters(int len)
+void
+msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 {
-	if (len < 1024)
-		psc_iostats_intv_add(&msl_io_1b_stat, 1);
-	else if (len < 4096)
-		psc_iostats_intv_add(&msl_io_1k_stat, 1);
-	else if (len < 16386)
-		psc_iostats_intv_add(&msl_io_4k_stat, 1);
-	else if (len < 65536)
-		psc_iostats_intv_add(&msl_io_16k_stat, 1);
-	else if (len < 131072)
-		psc_iostats_intv_add(&msl_io_64k_stat, 1);
-	else if (len < 524288)
-		psc_iostats_intv_add(&msl_io_128k_stat, 1);
-	else if (len < 1048576)
-		psc_iostats_intv_add(&msl_io_512k_stat, 1);
+	for (; ist->size && len >= ist->size; ist++)
+		;
+	if (rw == SL_READ)
+		psc_iostats_intv_add(&ist->rw.rd, 1);
 	else
-		psc_iostats_intv_add(&msl_io_1m_stat, 1);
+		psc_iostats_intv_add(&ist->rw.wr, 1);
 }
 
 __static int
@@ -152,7 +135,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 
 		if (e->bmpce_flags & BMPCE_DATARDY) {
 			if (!checkonly)
-				psc_iostats_intv_add(&msl_rdcache_stat,
+				psc_iostats_intv_add(&slc_rdcache_ist,
 				    nbytes);
 			return (1);
 		}
@@ -160,7 +143,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			if (!checkonly) {
-				psc_iostats_intv_add(&msl_rdcache_stat,
+				psc_iostats_intv_add(&slc_rdcache_ist,
 				    nbytes);
 				OPSTAT_INCR(SLC_OPST_READ_PART_VALID);
 			}
@@ -1081,16 +1064,17 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		MFH_ULOCK(q->mfsrq_mfh);
 		pscrpc_nbreqset_destroy(nbs);
 		OPSTAT_INCR(SLC_OPST_BIORQ_RESTART);
+		/*
+		 * Async I/O registered by sliod; we must wait for a
+		 * notification from him when it is ready.
+		 */
 		goto retry;
 	}
 
-	/*
-	 * Async I/O registered by sliod; we must wait for a
-	 * notification from him when it is ready.
-	 */
 	if (rc == 0)
 		psc_iostats_intv_add(op == SRMT_WRITE ?
-		    &msl_diowr_stat : &msl_diord_stat, size);
+		    &slc_dio_ist.wr : &slc_dio_ist.rd, size);
+
  out:
 	if (rq)
 		pscrpc_req_finished(rq);

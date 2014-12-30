@@ -28,7 +28,6 @@
 #include <stddef.h>
 
 #include "pfl/ctlsvr.h"
-#include "pfl/iostats.h"
 #include "pfl/random.h"
 #include "pfl/rpc.h"
 

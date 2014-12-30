@@ -29,6 +29,7 @@
 
 #include "pfl/atomic.h"
 #include "pfl/fs.h"
+#include "pfl/iostats.h"
 #include "pfl/multiwait.h"
 #include "pfl/service.h"
 
@@ -279,6 +280,8 @@ void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
+void	 msl_update_iocounters(struct pfl_iostats_grad *, enum rw, int);
+
 int	 msl_try_get_replica_res(struct bmapc_memb *, int, int,
 	    struct slashrpc_cservice **);
 struct msl_fhent *
@@ -468,19 +471,12 @@ extern sl_ios_id_t		 prefIOS;
 extern struct sl_resm		*slc_rmc_resm;
 extern char			 mountpoint[];
 
-extern struct psc_iostats	 msl_diord_stat;
-extern struct psc_iostats	 msl_diowr_stat;
-extern struct psc_iostats	 msl_rdcache_stat;
-extern struct psc_iostats	 msl_racache_stat;
+extern struct pfl_iostats_rw	 slc_dio_ist;
+extern struct pfl_iostats	 slc_rdcache_ist;
+extern struct pfl_iostats	 slc_racache_ist;
 
-extern struct psc_iostats	 msl_io_1b_stat;
-extern struct psc_iostats	 msl_io_1k_stat;
-extern struct psc_iostats	 msl_io_4k_stat;
-extern struct psc_iostats	 msl_io_16k_stat;
-extern struct psc_iostats	 msl_io_64k_stat;
-extern struct psc_iostats	 msl_io_128k_stat;
-extern struct psc_iostats	 msl_io_512k_stat;
-extern struct psc_iostats	 msl_io_1m_stat;
+extern struct pfl_iostats_grad	 slc_iosyscall_ist[];
+extern struct pfl_iostats_grad	 slc_iorpc_ist[];
 
 extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;

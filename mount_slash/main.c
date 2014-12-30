@@ -3449,19 +3449,21 @@ msl_init(void)
 	msctlthr_spawn();
 	mstimerthr_spawn();
 
-	psc_iostats_init(&msl_diord_stat, "dio-rd");
-	psc_iostats_init(&msl_diowr_stat, "dio-wr");
-	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
-	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
+	psc_iostats_init(&slc_dio_ist.rd, "dio-rd");
+	psc_iostats_init(&slc_dio_ist.wr, "dio-wr");
+	psc_iostats_init(&slc_rdcache_ist, "rd-cache-hit");
+	psc_iostats_init(&slc_racache_ist, "ra-cache-hit");
 
-	psc_iostats_initf(&msl_io_1b_stat, PISTF_BASE10, "iosz:0-1k");
-	psc_iostats_initf(&msl_io_1k_stat, PISTF_BASE10, "iosz:1k-3k");
-	psc_iostats_initf(&msl_io_4k_stat, PISTF_BASE10, "iosz:4k-15k");
-	psc_iostats_initf(&msl_io_16k_stat, PISTF_BASE10, "iosz:16k-63k");
-	psc_iostats_initf(&msl_io_64k_stat, PISTF_BASE10, "iosz:64k-127k");
-	psc_iostats_initf(&msl_io_128k_stat, PISTF_BASE10, "iosz:128k-511k");
-	psc_iostats_initf(&msl_io_512k_stat, PISTF_BASE10, "iosz:512k-1m");
-	psc_iostats_initf(&msl_io_1m_stat, PISTF_BASE10, "iosz:1m-");
+	slc_iosyscall_ist[0].size = slc_iorpc_ist[0].size =        1024;
+	slc_iosyscall_ist[1].size = slc_iorpc_ist[1].size =    4 * 1024;
+	slc_iosyscall_ist[2].size = slc_iorpc_ist[2].size =   16 * 1024;
+	slc_iosyscall_ist[3].size = slc_iorpc_ist[3].size =   64 * 1024;
+	slc_iosyscall_ist[4].size = slc_iorpc_ist[4].size =  128 * 1024;
+	slc_iosyscall_ist[5].size = slc_iorpc_ist[5].size =  512 * 1024;
+	slc_iosyscall_ist[6].size = slc_iorpc_ist[6].size = 1024 * 1024;
+	slc_iosyscall_ist[7].size = slc_iorpc_ist[7].size = 0;
+	pfl_iostats_grad_init(slc_iosyscall_ist, PISTF_BASE10, "iosz");
+	pfl_iostats_grad_init(slc_iorpc_ist, PISTF_BASE10, "iorpc");
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
