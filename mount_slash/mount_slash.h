@@ -122,13 +122,6 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define MS_READAHEAD_MAXPGS		16
 
-struct msl_ra {
-	off_t				 mra_loff;	/* last offset */
-	off_t				 mra_lsz;	/* last size */
-	off_t				 mra_raoff;
-	int				 mra_nseq;	/* num sequential io's */
-};
-
 /*
  * Maximum number of bmaps that may span an I/O request.  We currently
  * limit FUSE to 128MB I/Os and bmaps are by default 128MB, meaning any
@@ -166,7 +159,12 @@ struct msl_fhent {
 
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
-	struct msl_ra			 mfh_ra;	/* readahead tracking */
+
+	/* XXX these should be 32-bit as they can relative to bmap */
+	off_t				 mfh_predio_lastoff;	/* last offset */
+	off_t				 mfh_predio_lastsz;	/* last size */
+	off_t				 mfh_predio_off;	/* next offset */
+	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */
 	struct timespec			 mfh_open_time;	/* clock_gettime(2) at open(2) time */
@@ -176,7 +174,9 @@ struct msl_fhent {
 	char				 mfh_uprog[256];
 };
 
-#define MSL_FHENT_CLOSING		(1 << 0)
+#define MFHF_CLOSING			(1 << 0)	/* close(2) has been issued */
+#define MFHF_TRACKING_RA		(1 << 1)	/* tracking for readahead */
+#define MFHF_TRACKING_WA		(1 << 2)	/* tracking for writeahead */
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)

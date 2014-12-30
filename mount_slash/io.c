@@ -1545,37 +1545,94 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 	return (tbytes);
 }
 
-static void
-msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
+void
+mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
+    enum rw rw)
 {
 	size_t prev, curr;
 
 	MFH_LOCK(mfh);
+
+	if (rw == SL_WRITE) {
+		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
+			mfh->mfh_flags |= MFHF_TRACKING_WA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+		}
+	} else {
+		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
+			mfh->mfh_flags |= MFHF_TRACKING_RA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+		}
+	}
 
 	/*
 	 * If the first read starts from offset 0, the following will
 	 * trigger a read-ahead.  This is because as part of the
 	 * msl_fhent structure, the fields are zeroed during allocation.
 	 */
-	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off) {
-		mfh->mfh_ra.mra_nseq++;
-		prev = mfh->mfh_ra.mra_loff / SLASH_BMAP_SIZE;
+	if (mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsz == off) {
+		mfh->mfh_predio_nseq++;
+		prev = mfh->mfh_predio_lastoff / SLASH_BMAP_SIZE;
 		curr = off / SLASH_BMAP_SIZE;
-		if (curr > prev && mfh->mfh_ra.mra_nseq > 1)
+		if (curr > prev && mfh->mfh_predio_nseq > 1)
 			/*
-			 * The raoff can go negative here. However, we
-			 * can catch the overrun and fix it later in
+			 * off can go negative here.  However, we can
+			 * catch the overrun and fix it later in
 			 * msl_getra().
 			 */
-			mfh->mfh_ra.mra_raoff -= SLASH_BMAP_SIZE;
+			mfh->mfh_predio_off -= SLASH_BMAP_SIZE;
 	} else {
-		mfh->mfh_ra.mra_raoff = 0;
-		mfh->mfh_ra.mra_nseq = 0;
+		mfh->mfh_predio_off = 0;
+		mfh->mfh_predio_nseq = 0;
 	}
 
-	mfh->mfh_ra.mra_loff = off;
-	mfh->mfh_ra.mra_lsz = size;
+	mfh->mfh_predio_lastoff = off;
+	mfh->mfh_predio_lastsz = size;
 
+	MFH_ULOCK(mfh);
+}
+
+void
+mfh_prod_writeahead(struct msl_fhent *mfh, size_t len, off_t off)
+{
+	//struct bmap *b;
+
+	MFH_LOCK(mfh);
+	if (mfh->mfh_flags & MFHF_TRACKING_RA)
+		PFL_GOTOERR(out, 0);
+	if (!mfh->mfh_predio_nseq)
+		PFL_GOTOERR(out, 0);
+
+	(void)len;
+	(void)off;
+#if 0
+	/* XXX magic number */
+	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
+	    mfh->mfh_predio_off)
+		PFL_GOTOERR(out, 0);
+
+	raoff = off + npages * BMPC_BUFSZ;
+	if (mfh->mfh_predio_off) {
+		if (mfh->mfh_predio_off > raoff)
+			raoff = mfh->mfh_predio_off;
+
+	if (!has been sequential)
+		return;
+	if (already has bmap)
+		return;
+	MFH_ULOCK(mfh);
+
+	if (bmap_getf(mfh->mfh_fcmh, bno,
+	    SL_WRITE, BMAPGETF_ASYNC | BMAPGETF_ADV, &b) == 0)
+		bmap_op_done(b);
+#endif
+	return;
+
+ out:
 	MFH_ULOCK(mfh);
 }
 
@@ -1603,30 +1660,31 @@ __static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
     uint32_t *raoff1, int *rasize1, uint32_t *raoff2, int *rasize2)
 {
-	int rapages;
+	int rapages, rc = 0;
 	uint32_t raoff;
 
 	MFH_LOCK(mfh);
-	if (!mfh->mfh_ra.mra_nseq) {
-		MFH_ULOCK(mfh);
-		return (0);
-	}
+	if (mfh->mfh_flags & MFHF_TRACKING_WA)
+		PFL_GOTOERR(out, 0);
+
+	if (!mfh->mfh_predio_nseq)
+		PFL_GOTOERR(out, 0);
+
+	/* XXX magic number */
 	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
-	    mfh->mfh_ra.mra_raoff) {
-		MFH_ULOCK(mfh);
-		return (0);
-	}
+	    mfh->mfh_predio_off)
+		PFL_GOTOERR(out, 0);
 
 	/* A sudden increase in request size can overrun our window */
 	raoff = off + npages * BMPC_BUFSZ;
-	if (mfh->mfh_ra.mra_raoff) {
-		if (mfh->mfh_ra.mra_raoff > raoff)
-			raoff = mfh->mfh_ra.mra_raoff;
+	if (mfh->mfh_predio_off) {
+		if (mfh->mfh_predio_off > raoff)
+			raoff = mfh->mfh_predio_off;
 		else
 			OPSTAT_INCR(SLC_OPST_READ_AHEAD_OVERRUN);
 	}
 
-	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
+	rapages = MIN(mfh->mfh_predio_nseq * 2,
 	    psc_atomic32_read(&slc_max_readahead));
 
 	/*
@@ -1647,11 +1705,12 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 		*raoff2 = (int)raoff - bsize;
 		*rasize2 = rapages;
 	}
-	mfh->mfh_ra.mra_raoff = raoff + rapages * BMPC_BUFSZ;
+	mfh->mfh_predio_off = raoff + rapages * BMPC_BUFSZ;
+	rc = 1;
 
+ out:
 	MFH_ULOCK(mfh);
-
-	return (1);
+	return (rc);
 }
 
 void
@@ -1786,8 +1845,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		/* Catch read ops which extend beyond EOF. */
 		if (size + (uint64_t)off > fsz)
 			size = fsz - off;
-		msl_setra(mfh, size, off);
 	}
+	mfh_track_predictive_io(mfh, size, off, rw);
 
 	/*
 	 * Get the start and end block regions from the input
@@ -1891,6 +1950,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			buf += tlen;
 		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
+
+	if (rw == SL_WRITE)
+		mfh_prod_writeahead(mfh, size, off);
 
 	/*
 	 * Step 2: launch biorqs if necessary

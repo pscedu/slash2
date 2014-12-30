@@ -2173,8 +2173,9 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	fci = fcmh_2_fci(f);
 
 	MFH_LOCK(mfh);
-	mfh->mfh_flags |= MSL_FHENT_CLOSING;
+	mfh->mfh_flags |= MFHF_CLOSING;
 
+	/* force expire to provoke immediate flush */
 	FCMH_LOCK(f);
 	PFL_GETTIMESPEC(&fci->fci_etime);
 	fci->fci_etime.tv_sec--;
