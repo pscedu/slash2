@@ -272,6 +272,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		}
 	}
 
+	msl_update_iocounters(slc_iorpc_ist, SL_WRITE, bwc->bwc_size);
+
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
 	bmap_flushq_wake(BMAPFLSH_RPCDONE);

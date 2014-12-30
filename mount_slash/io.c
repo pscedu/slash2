@@ -204,8 +204,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	psc_assert(len);
 	psc_assert(roff + len <= SLASH_BMAP_SIZE);
 
-	msl_update_iocounters(len);
-
 	r = bmpc_biorq_new(q, b, buf, rqnum, roff, len, op);
 	if (r->biorq_flags & BIORQ_DIO)
 		/*
@@ -813,6 +811,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *e;
+	struct srm_io_req *mq;
 	struct bmap *b;
 	int i;
 
@@ -840,7 +839,15 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
 			BMAP_ULOCK(b);
 		}
-		mfsrq_seterr(r->biorq_fsrqi, rc);
+		if ((r->biorq_flags & BIORQ_READAHEAD) == 0)
+			mfsrq_seterr(r->biorq_fsrqi, rc);
+	} else {
+		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+		if (r->biorq_flags & BIORQ_READAHEAD)
+			psc_iostats_intv_add(&slc_racache_ist, mq->size);
+		else
+			msl_update_iocounters(slc_iorpc_ist, SL_READ,
+			    mq->size);
 	}
 
 	msl_biorq_release(r);
@@ -934,6 +941,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 
+	//msl_update_iocounters(slc_iorpc_ist, rw, bwc->bwc_size);
+
 	msl_biorq_release(r);
 
 	return (rc);
@@ -995,7 +1004,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		PFL_GOTOERR(out, rc);
 
   retry:
-
 	nbs = pscrpc_nbreqset_init(NULL);
 
 	/*
@@ -1215,10 +1223,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		OPSTAT_INCR(SLC_OPST_READ_ADD_REQ_FAIL);
 		PFL_GOTOERR(out, rc);
 	}
-
-	if (r->biorq_flags & BIORQ_READAHEAD)
-		psc_iostats_intv_add(&msl_racache_stat, npages *
-		    BMPC_BUFSZ);
 
 	PSCFREE(iovs);
 	return (0);
@@ -1872,11 +1876,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	mfh->mfh_retries = 0;
 
 	/*
-	 * Initialize some state in the pfr to help with aio requests.
+	 * Initialize some state in the request to help with aio
+	 * handling.
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
 	if (rw == SL_READ && (!size || off >= (off_t)fsz))
 		PFL_GOTOERR(out, rc = 0);
+
+	msl_update_iocounters(slc_iosyscall_ist, rw, size);
 
  restart:
 	rc = 0;
