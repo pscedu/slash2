@@ -8,13 +8,14 @@ ctl=msctl
 
 usage()
 {
-	echo "usage: $0 [-F filter] [-P profile] [-gv]" >&2
+	echo "usage: $0 [-dgv] [-F filter] [-P profile]" >&2
 	exit 1
 }
 
 bkav=("$@")
-while getopts "F:gP:v" c; do
+while getopts "dF:gP:v" c; do
 	case $c in
+	d) nodaemonize=1	;;
 	F) filter=$OPTARG	;;
 	g) filter=mygdb		;;
 	P) prof=$OPTARG		;;
@@ -44,8 +45,4 @@ export CONFIG_FILE=$base/slcfg
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
-preproc
-$filter $prog -D $base/var -U $xargs $mp
-postproc $?
-vsleep $start
-exec $0 "${bkav[@]}"
+rundaemon $filter $prog -D $base/var -U $xargs $mp

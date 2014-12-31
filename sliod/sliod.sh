@@ -8,13 +8,14 @@ ctl=slictl
 
 usage()
 {
-	echo "usage: $0 [-F filter] [-P profile] [-gv] [instance]" >&2
+	echo "usage: $0 [-dgv] [-F filter] [-P profile] [instance]" >&2
 	exit 1
 }
 
 bkav=("$@")
-while getopts "F:gP:v" c; do
+while getopts "dF:gP:v" c; do
 	case $c in
+	d) nodaemonize=1	;;
 	F) filter=$OPTARG	;;
 	g) filter=mygdb		;;
 	P) prof=$OPTARG		;;
@@ -39,8 +40,4 @@ export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
 export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
 export CONFIG_FILE=$base/slcfg
 
-preproc
-$filter $prog -D $base/var
-postproc $?
-vsleep $start
-exec $0 "${bkav[@]}"
+rundaemon $filter $prog -D $base/var
