@@ -1612,7 +1612,11 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 void
 mfh_prod_writeahead(struct msl_fhent *mfh, size_t len, off_t off)
 {
-	//struct bmap *b;
+	(void)mfh;
+	(void)len;
+	(void)off;
+#if 0
+	struct bmap *b;
 
 	MFH_LOCK(mfh);
 	if (mfh->mfh_flags & MFHF_TRACKING_RA)
@@ -1622,7 +1626,7 @@ mfh_prod_writeahead(struct msl_fhent *mfh, size_t len, off_t off)
 
 	(void)len;
 	(void)off;
-#if 0
+
 	/* XXX magic number */
 	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
 	    mfh->mfh_predio_off)
@@ -1642,11 +1646,11 @@ mfh_prod_writeahead(struct msl_fhent *mfh, size_t len, off_t off)
 	if (bmap_getf(mfh->mfh_fcmh, bno,
 	    SL_WRITE, BMAPGETF_ASYNC | BMAPGETF_ADV, &b) == 0)
 		bmap_op_done(b);
-#endif
 	return;
 
  out:
 	MFH_ULOCK(mfh);
+#endif
 }
 
 /*
