@@ -654,13 +654,15 @@ slvr_repl_prep(struct slvr *s)
 /*
  * Prepare a sliver for an incoming I/O.  This may entail faulting 32k
  * aligned regions in from the underlying fs.
+ *
  * @s: the sliver
  * @off: offset into the slvr (not bmap or file object)
  * @len: len relative to the slvr
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
+    int flags)
 {
 	ssize_t rc = 0;
 
