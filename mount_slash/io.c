@@ -250,8 +250,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
-	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
-	    &rapages, &raoff2, &rapages2))
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
+	    &raoff2, &rapages2))
 		return;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
@@ -862,8 +862,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	sl_csvc_decref(csvc);
 
 #if 0
-	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
-	    &rapages, &raoff2, &rapages2))
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
+	    &raoff2, &rapages2))
 		return;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
