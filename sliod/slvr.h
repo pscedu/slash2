@@ -76,6 +76,7 @@ struct slvr {
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO in repldst */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
 #define SLVR_WRLOCK		(1 <<  9)	/* exclusive locking for concurrent writing */
+#define SLVR_READAHEAD		(1 << 10)	/* loaded via readahead prediction */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -205,13 +206,19 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 int	slvr_buffer_reap(struct psc_poolmgr *);
 
-extern struct psc_listcache	sli_lruslvrs;
-extern struct psc_listcache	sli_crcqslvrs;
-extern struct psc_waitq		sli_slvr_waitq;
+struct sli_readaheadrq {
+	struct sl_fidgen	rarq_fg;
+	sl_bmapno_t		rarq_bno;
+	int32_t			rarq_off;
+	int32_t			rarq_size;
+	struct psc_listentry	rarq_lentry;
+};
 
-extern struct psc_listcache	sli_readaheadq;
-extern struct psc_waitq		sli_readaheadq_waitq;
-extern psc_spinlock_t		sli_readaheadq_lock;
+extern struct psc_poolmgr	*sli_readaheadrq_pool;
+extern struct psc_listcache	 sli_lruslvrs;
+extern struct psc_listcache	 sli_crcqslvrs;
+extern struct psc_listcache	 sli_readaheadq;
+extern struct psc_waitq		 sli_slvr_waitq;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

@@ -52,11 +52,14 @@
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
+struct psc_poolmaster	 sli_readaheadrq_poolmaster;
 
 struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
+struct psc_poolmgr	*sli_readaheadrq_pool;
 
+struct psc_listcache	 sli_readaheadq;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
@@ -1035,57 +1038,38 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-slireadahead_main(struct psc_thread *thr)
+slirathr_main(struct psc_thread *thr)
 {
-	struct slvr *s;
-	struct timespec ts;
+	struct sli_readaheadrq *rarq;
+	struct bmapc_memb *b;
 	struct fidc_membh *f;
-	struct bmapc_memb *bmap;
-	struct fcmh_iod_info *fii;
-	int i, rc, bmapno, slvrno;
+	struct slvr *s;
+	int i, slvrno;
 
-	ts.tv_sec = 5;
-	ts.tv_nsec = 0;
 	while (pscthr_run(thr)) {
-		fii = lc_peekhead(&sli_readaheadq);
-		if (!fii) {
-			spinlock(&sli_readaheadq_lock);
-			psc_waitq_waitrel(&sli_readaheadq_waitq,
-			    &sli_readaheadq_lock, &ts);
-			continue;
-		}
-		f = fii_2_fcmh(fii);
-		FCMH_LOCK(f);
+		f = NULL;
+		b = NULL;
 
-		f->fcmh_flags &= ~FCMH_IOD_READAHEAD;
-		lc_remove(&sli_readaheadq, fii);
-
-		if (!fcmh_2_nseq(f)) {
-			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			continue;
+		rarq = lc_getwait(&sli_readaheadq);
+		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
+			goto skip;
+		slvrno = rarq->rarq_off / SLASH_SLVR_SIZE;
+		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
+			goto skip;
+		for (i = 0; i < 4; i++) {
+			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
+			    SL_READ);
+			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
+			    SLVR_READAHEAD);
+			slvr_rio_done(s);
 		}
 
-		bmapno = fcmh_2_bmap(f);
-		slvrno = fcmh_2_off(f) / SLASH_SLVR_SIZE;
-		if (slvrno >= SLASH_SLVRS_PER_BMAP) {
-			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
-			continue;
-		}
-		FCMH_ULOCK(f);
-
-		rc = bmap_get(f, bmapno, SL_READ, &bmap);
-		if (!rc) {
-			OPSTAT_INCR(SLI_OPST_READAHEAD);
-			for (i = 0; i < 2; i++) {
-				s = slvr_lookup(slvrno + i,
-				    bmap_2_bii(bmap), SL_READ);
-				slvr_io_prep(s, 0, SLASH_SLVR_SIZE,
-				    SL_READ);
-				slvr_rio_done(s);
-			}
-			bmap_op_done(bmap);
-		}
-		fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
+ skip:
+		if (b)
+			bmap_op_done(b);
+		if (f)
+			fcmh_op_done(f);
+		psc_pool_return(sli_readaheadrq_pool, rarq);
 	}
 }
 
@@ -1098,6 +1082,15 @@ slvr_cache_init(void)
 	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+
+	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
+	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "readaheadrq");
+	sli_readaheadrq_pool = psc_poolmaster_getmgr(
+	    &sli_readaheadrq_poolmaster);
+
+	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
+	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
@@ -1120,15 +1113,11 @@ slvr_cache_init(void)
 		    "sliaiothr");
 	}
 
-	lc_reginit(&sli_readaheadq, struct fcmh_iod_info,
-	    fii_lentry, "readahead");
-
 	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
-		pscthr_init(SLITHRT_READ_AHEAD, slireadahead_main, NULL,
-		    0, "slireadahead%d", i);
+		pscthr_init(SLITHRT_READ_AHEAD, slirathr_main, NULL, 0,
+		    "slirathr%d", i);
 
 	sl_buffer_cache_init();
-
 	slvr_worker_init();
 }
 

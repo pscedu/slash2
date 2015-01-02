@@ -35,9 +35,9 @@ struct fidc_membh;
 
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
-	uint32_t		fii_off;
-	int			fii_bmap;
-	int			fii_nseq;	/* num sequential io's */
+	uint32_t		fii_predio_boff;/* offset within bmap */
+	sl_bmapno_t		fii_predio_lastbno;
+	int			fii_predio_nseq;/* num sequential io's */
 	struct psclist_head	fii_lentry;	/* all fcmhs with readahead */
 };
 
@@ -57,17 +57,12 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 	return (fcmh - 1);
 }
 
-/* ios-specific fcmh_flags */
-#define FCMH_IOD_READAHEAD	(_FCMH_FLGSHFT << 0)    /* read ahead */
-#define FCMH_IOD_BACKFILE	(_FCMH_FLGSHFT << 1)    /* backing file exist */
+/* sliod-specific fcmh_flags */
+#define FCMH_IOD_BACKFILE	(_FCMH_FLGSHFT << 0)    /* backing file exists */
 
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
-#define fcmh_2_off(fcmh)	fcmh_2_fii(fcmh)->fii_off
-#define fcmh_2_bmap(fcmh)	fcmh_2_fii(fcmh)->fii_bmap
-#define fcmh_2_nseq(fcmh)	fcmh_2_fii(fcmh)->fii_nseq
 
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, (fp))
-
 #define sli_fcmh_peek(fgp, fp)  fidc_lookup((fgp), FIDC_LOOKUP_NONE, (fp))
 
 void	sli_fg_makepath(const struct sl_fidgen *, char *);

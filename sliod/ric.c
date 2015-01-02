@@ -53,10 +53,6 @@
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
-struct psc_listcache		 sli_readaheadq;
-struct psc_waitq		 sli_readaheadq_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			 sli_readaheadq_lock = SPINLOCK_INIT;
-
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)
@@ -135,12 +131,35 @@ slvrs_wrlock(struct slvr **slvrs, int nslvrs)
 	}
 }
 
+void
+readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
+    uint32_t off, uint32_t size)
+{
+	struct sli_readaheadrq *rarq;
+
+	if (off >= SLASH_BMAP_SIZE)
+		return;
+
+//	if (lastbno &&
+//	    off >= f->fcmh_sstb.sst_size % SLASH_SLVR_SIZE)
+//		return;
+
+	rarq = psc_pool_get(sli_readaheadrq_pool);
+	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+	rarq->rarq_fg = *fgp;
+	rarq->rarq_bno = bno;
+	rarq->rarq_off = off;
+	rarq->rarq_size = size;
+	lc_add(&sli_readaheadq, rarq);
+}
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	sl_bmapno_t bmapno, slvrno;
 	int rc, nslvrs = 0, i, needaio = 0;
 	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
+	struct fcmh_iod_info *fii;
 	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
@@ -237,6 +256,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	fii = fcmh_2_fii(f);
+
 	FCMH_LOCK(f);
 	/* Update the utimegen if necessary. */
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
@@ -283,7 +304,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		rv = slvr_io_prep(slvr[i], roff, len[i], rw);
+		rv = slvr_io_prep(slvr[i], roff, len[i], rw, 0);
 
 #if 0
 		/* if last sliver, bound to EOF */
@@ -393,22 +414,18 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-#if 0
 	FCMH_LOCK(f);
-	if (fcmh_2_off(f) == mq->offset || mq->offset == 0) {
-		fcmh_2_nseq(f)++;
-		if (!(f->fcmh_flags & FCMH_IOD_READAHEAD)) {
-			f->fcmh_flags |= FCMH_IOD_READAHEAD;
-			lc_addtail(&sli_readaheadq, fcmh_2_fii(f));
-			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
-		}
-	} else
-		fcmh_2_nseq(f) = 0;
-
-	fcmh_2_off(f) = mq->offset + mq->size;
-	fcmh_2_bmap(f) = bmapno;
+//	if ((fii->fii_predio_lastbno == bmapno &&
+//	     fii->fii_predio_boff == mq->offset) ||
+//	    mq->offset == 0) {
+//		fii->fii_predio_nseq++;
+		readahead_enqueue(&f->fcmh_fg, bmapno, mq->offset +
+		    mq->size, mq->size);
+//	} else
+//		fii->fii_predio_nseq = 0;
+	fii->fii_predio_boff = mq->offset + mq->size;
+	fii->fii_predio_lastbno = bmapno;
 	FCMH_ULOCK(f);
-#endif
 
  out:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
