@@ -710,10 +710,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * released.
 	 */
 	s->slvr_flags |= SLVR_FAULTING;
-	if (rw == SL_READ)
-		goto do_read;
 
-	if (!off && len == SLASH_SLVR_SIZE) {
+	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
 		 * Full sliver write, no need to read blocks from disk.
 		 * All blocks will be dirtied by the incoming network
