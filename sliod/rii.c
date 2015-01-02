@@ -160,7 +160,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
 
-	rv = slvr_io_prep(s, 0, mq->len, SL_READ);
+	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
 
