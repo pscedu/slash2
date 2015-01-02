@@ -701,8 +701,12 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
-	if (s->slvr_flags & SLVR_DATARDY)
+	if (s->slvr_flags & SLVR_DATARDY) {
+		if ((flags & SLVR_READAHEAD) == 0 &&
+		    s->slvr_flags & SLVR_READAHEAD)
+			OPSTAT_INCR(SLI_OPST_READAHEAD_HIT);
 		goto out;
+	}
 
 	/*
 	 * Importing data into the sliver is now our responsibility,
@@ -720,8 +724,11 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
- do_read:
+	if (flags & SLVR_READAHEAD)
+		s->slvr_flags |= SLVR_READAHEAD;
+
 	SLVR_ULOCK(s);
+
 	/*
 	 * Execute read to fault in needed blocks after dropping the
 	 * lock.  All should be protected by the FAULTING bit.
