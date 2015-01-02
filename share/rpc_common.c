@@ -167,7 +167,7 @@ slrpc_connect_finish(struct slashrpc_cservice *csvc,
 
 	locked = CSVC_RLOCK(csvc);
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
-	if (psc_atomic32_read(&csvc->csvc_refcnt) == 1)
+	if (--csvc->csvc_tryref == 0)
 		psc_atomic32_clearmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
 	if (success) {
@@ -285,6 +285,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (flags & CSVCF_NONBLOCK) {
 		CSVC_LOCK(csvc);
 		sl_csvc_incref(csvc);
+		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
 		rq->rq_interpret_reply = slrpc_connect_cb;
@@ -850,7 +851,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		if (c)
 			pscrpc_put_connection(c);
 
-		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+		csvc->csvc_mtime = now;
+		psc_atomic32_clearmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTING);
+		psc_atomic32_setmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTED);
 
 	} else if (psc_atomic32_read(&csvc->csvc_flags) &
 	    CSVCF_CONNECTING) {
@@ -879,6 +884,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		psc_atomic32_setmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
+		psc_atomic32_clearmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTED);
 		if (flags & CSVCF_NONBLOCK) {
 			if (csvc->csvc_import) {
 				pscrpc_import_put(csvc->csvc_import);
@@ -903,7 +910,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 						rc = 0;
 						goto proc_conn;
 					}
-					if (trc == EWOULDBLOCK)
+					if (rc != EWOULDBLOCK)
 						rc = trc;
 				}
 

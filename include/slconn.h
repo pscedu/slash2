@@ -85,6 +85,7 @@ struct slrpc_cservice {
 	struct slconn_params	 csvc_params;
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;
+	int			 csvc_tryref;
 	psc_atomic32_t		 csvc_refcnt;
 	struct timespec		 csvc_mtime;		/* last activity */
 	struct psclist_head	 csvc_lentry;
