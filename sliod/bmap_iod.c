@@ -269,7 +269,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR(SLI_OPST_SRMT_RELEASE);
+		OPSTAT_INCR(SLI_OPST_RELEASE);
 
 		brr->nbmaps = nrls;
 		/*
