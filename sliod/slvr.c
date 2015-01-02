@@ -93,8 +93,8 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 
 		/*
 		 * This thread holds faulting status so all others are
-		 *  waiting on us which means that exclusive access to
-		 *  slvr contents is ours until we set SLVR_DATARDY.
+		 * waiting on us which means that exclusive access to
+		 * slvr contents is ours until we set SLVR_DATARDY.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
@@ -554,6 +554,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		SLVR_LOCK(s);
 		SLVR_WAIT(s, s->slvr_blkgreads > 0);
 		SLVR_ULOCK(s);
+
 		/*
 		 * We incremented pndgwrts so any blocking reads should
 		 * wait for this counter to reach zero.
@@ -662,6 +663,7 @@ slvr_repl_prep(struct slvr *s)
  * @off: offset into the slvr (not bmap or file object)
  * @len: len relative to the slvr
  * @rw: read or write op
+ * @flags: operational flags.
  */
 ssize_t
 slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
