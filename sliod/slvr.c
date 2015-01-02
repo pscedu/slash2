@@ -484,6 +484,7 @@ __static ssize_t
 slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 {
 	int sblk, nblks, save_errno = 0;
+	struct timespec ts0, ts1, tsd;
 	struct fidc_membh *f;
 	uint64_t *v8;
 	ssize_t	rc;
@@ -504,12 +505,14 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			return (sli_aio_register(s));
 
 		/*
-		 * Do full sliver read, ignoring off and len.
+		 * Do full sliver read, ignoring specific off and len.
 		 */
 		sblk = 0;
 		size = SLASH_SLVR_SIZE;
 		foff = slvr_2_fileoff(s, sblk);
 		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
+
+		PFL_GETTIMESPEC(&ts0);
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    foff);
@@ -543,6 +546,11 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD);
 			}
 		}
+
+		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &tsd);
+		OPSTAT_ADD(SLI_OPST_READ_WAIT_USECS,
+		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
 
