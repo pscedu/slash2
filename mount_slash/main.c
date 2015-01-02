@@ -1344,7 +1344,7 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	OPSTAT_INCR(SLC_OPST_RMDIR);
-	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 0));
+	pscfs_reply_rmdir(pfr, msl_delete(pfr, pinum, name, 0));
 }
 
 void
