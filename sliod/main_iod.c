@@ -68,7 +68,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 int			 sli_selftest_rc;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
-struct pfl_iostats_grad	 sli_rdwr_ist[8];
+struct pfl_iostats_grad	 sli_iorpc_ist[8];
+struct pfl_iostats_rw	 sli_backingstore_ist;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
@@ -198,8 +199,8 @@ main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
-	int sz, nsz, i, rc, c;
 	struct stat stb;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -271,22 +272,18 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	slvr_cache_init();
 
-	sli_rdwr_ist[0].size =        1024;
-	sli_rdwr_ist[1].size =    4 * 1024;
-	sli_rdwr_ist[2].size =   16 * 1024;
-	sli_rdwr_ist[3].size =   64 * 1024;
-	sli_rdwr_ist[4].size =  128 * 1024;
-	sli_rdwr_ist[5].size =  512 * 1024;
-	sli_rdwr_ist[6].size = 1024 * 1024;
-	sli_rdwr_ist[7].size = 0;
+	sli_iorpc_ist[0].size =        1024;
+	sli_iorpc_ist[1].size =    4 * 1024;
+	sli_iorpc_ist[2].size =   16 * 1024;
+	sli_iorpc_ist[3].size =   64 * 1024;
+	sli_iorpc_ist[4].size =  128 * 1024;
+	sli_iorpc_ist[5].size =  512 * 1024;
+	sli_iorpc_ist[6].size = 1024 * 1024;
+	sli_iorpc_ist[7].size = 0;
+	pfl_iostats_grad_init(sli_iorpc_ist, PISTF_BASE10, "iorpc");
 
-	for (sz = i = 0; sli_rdwr_ist[i].size; i++, sz = nsz) {
-		nsz = sli_rdwr_ist[i].size / 1024;
-		psc_iostats_initf(&sli_rdwr_ist[i].rw.rd, PISTF_BASE10,
-		    "rd:%dk-%dk", sz, nsz);
-		psc_iostats_initf(&sli_rdwr_ist[i].rw.wr, PISTF_BASE10,
-		    "wr:%dk-%dk", sz, nsz);
-	}
+	psc_iostats_init(&sli_backingstore_ist.rd, "backingstore-rd");
+	psc_iostats_init(&sli_backingstore_ist.wr, "backingstore-wr");
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
 	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,

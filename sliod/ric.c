@@ -247,7 +247,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/* XXX move this until after success and do accounting for errors */
-	for (ist = sli_rdwr_ist; ist->size; ist++)
+	for (ist = sli_iorpc_ist; ist->size; ist++)
 		if (mq->size < ist->size)
 			break;
 	psc_iostats_intv_add(rw == SL_WRITE ? &ist->rw.wr : &ist->rw.rd, 1);

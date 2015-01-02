@@ -158,7 +158,8 @@ void		slictlthr_main(const char *);
 
 int		iod_inode_getinfo(struct sl_fidgen *, uint64_t *, uint64_t *, uint32_t *);
 
-extern struct pfl_iostats_grad	 sli_rdwr_ist[];
+extern struct pfl_iostats_grad	 sli_iorpc_ist[];
+extern struct pfl_iostats_rw	 sli_backingstore_ist;
 int				 sli_selftest_rc;
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
