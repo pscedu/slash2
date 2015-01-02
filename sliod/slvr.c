@@ -886,7 +886,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 				psc_fatalx("max pndgwrts limit reached");
 		} else {
 			if (++s->slvr_pndgreads == 0)
-				psc_fatalx("max pndgwrts limit reached");
+				psc_fatalx("max pndgreads limit reached");
 		}
 
 		SLVR_ULOCK(s);
