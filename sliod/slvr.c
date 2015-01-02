@@ -527,6 +527,8 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		} else if (rc) {
 			int crc_rc;
 
+			psc_iostats_intv_add(&sli_backingstore_ist.rd, rc);
+
 			/*
 			 * When a file is truncated, the generation
 			 * number increments and all CRCs should be
@@ -573,7 +575,9 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
-		}
+		} else
+			psc_iostats_intv_add(&sli_backingstore_ist.wr,
+			    rc);
 	}
 
 	if (rc < 0)
