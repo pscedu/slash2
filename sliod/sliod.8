@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd October 27, 2014
+.Dd November 26, 2014
 .Dt SLIOD 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -241,7 +241,7 @@ source code file line number
 file system request's originating process'
 .Tn PID
 .It Ic N
-daemon base name
+daemon executable file base name
 .It Ic n
 symbolic thread name which generated log message
 .It Ic r
@@ -261,6 +261,9 @@ file system request's originating process' user
 .Tn ID
 .It Ic u
 microseconds into current second when generated
+.It Ic X
+file system request's originating process'
+executable name
 .El
 .Pp
 Examples:
