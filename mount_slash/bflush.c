@@ -804,8 +804,9 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	freelock(&slc_bflush_lock);
 }
 
-/**
- * Lease watcher thread.
+/*
+ * Lease watcher thread: issues "lease extension" RPCs for bmaps when
+ * deemed appropriate.
  */
 __static void
 msbwatchthr_main(struct psc_thread *thr)
