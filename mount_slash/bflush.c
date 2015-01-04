@@ -776,21 +776,29 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 __static void
 bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 {
+	struct timespec ts0, ts1, tsd;
 	struct resm_cli_info *rmci;
+	int account = 0;
 
 	rmci = resm2rmci(m);
 	/*
 	 * XXX use resm multiwait?
 	 */
 	spinlock(&slc_bflush_lock);
+	PFL_GETTIMESPEC(&ts0);
 	while (atomic_read(&rmci->rmci_infl_rpcs) >=
 	    MAX_OUTSTANDING_RPCS) {
+		account = 1;
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
-		/* RPC completion will wake us up. */
-		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RPCWAIT);
 		psc_waitq_waitrel(&slc_bflush_waitq, &slc_bflush_lock,
 		    &bmapFlushWaitSecs);
 		spinlock(&slc_bflush_lock);
+	}
+	if (account) {
+		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &tsd);
+		OPSTAT_ADD(SLC_OPST_FLUSH_WAIT_USECS,
+		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
 	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 	freelock(&slc_bflush_lock);
