@@ -946,11 +946,11 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	struct sl_site *site;
 
 	uint64_t fid;
-	int localroot;
 	size_t entsize;
 	off_t entoff = 0;
 	struct pscfs_dirent *dirent;
-	struct srt_stat *attr, tmpattr;
+	struct srt_stat *attr;
+	struct timespec now;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -973,9 +973,6 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 
 	if (fgp->fg_fid == SLFID_ROOT && use_global_mount) {
 
-		mount_info_t *mountinfo;
-		struct mio_rootnames *rn;
-
 		nsite = 0;
 		CONF_LOCK();
 		CONF_FOREACH_SITE(site) {
@@ -992,6 +989,8 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		CONF_FOREACH_SITE(site) {
 			fid = SLFID_ROOT;
 			FID_SET_SITEID(fid, site->site_id);
+
+			dirent->pfd_ino = fid;
 			dirent->pfd_type = S_IFDIR; 
 			dirent->pfd_off = entoff;
 			dirent->pfd_namelen = strlen(site->site_name);
@@ -1000,33 +999,28 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			dirent = PSC_AGP(dirent, entsize);
 			entoff += entsize;
 
-			localroot = 0;
-			rn = slm_rmc_search_roots(site->site_name);
-			if (rn) {
-				mountinfo = &zfsMount[rn->rn_vfsid];
-				fid = SLFID_ROOT;
-				FID_SET_SITEID(fid, mountinfo->siteid);
-
-				rc = mdsio_getattr(rn->rn_vfsid,
-				    mountinfo->rootid, mountinfo->rootinfo,
-				    &rootcreds, &tmpattr);
-				if (!rc) {
-					localroot = 1;
-					tmpattr.sst_fg.fg_fid = fid;
-				} 
-			}
-			/* 
-			 * Fill in real attributes for the local root or fake
-			 * attributes for remote roots.  We could talk to
-			 * a remote MDS for the real attributes of its root.
-			 */
-			if (!localroot) 
-				tmpattr.sst_fg.fg_fid = fid;
-
-			*attr = tmpattr;
+			attr->sst_fg.fg_fid = fid;
+			attr->sst_fg.fg_gen = 2;
+			attr->sst_dev = 0;
+			attr->sst_utimgen = 0;
+			attr->sst_mode = 16877;
+			attr->sst_nlink = 2;
+			attr->sst_uid = 0;
+			attr->sst_gid = 0;
+			attr->sst_blocks = 4;
+			attr->sst_blksize = 4096;
+			attr->sst_size = 1024; 
+			PFL_GETTIMESPEC(&now);
+			attr->sst_mtim.tv_sec = now.tv_sec;
+			attr->sst_mtim.tv_nsec = now.tv_nsec;
+			attr->sst_atim.tv_sec = now.tv_sec;
+			attr->sst_atim.tv_nsec = now.tv_nsec;
+			attr->sst_ctim.tv_sec = now.tv_sec;
 			attr++;
 		}
 		CONF_ULOCK();
+		iov[0].iov_len = entoff;
+		iov[1].iov_len = nsite * sizeof(struct srt_stat);
 
 	} else {
 
