@@ -250,6 +250,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
+	/*
+ 	 * XXX: Enlarge the original request to include some readhead pages
+ 	 * within the same bmap can save extra RPCs. And the cost of waiting
+ 	 * them all should be minimal.
+ 	 */
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
 	    &raoff2, &rapages2))
 		return;
