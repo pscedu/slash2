@@ -155,9 +155,33 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
 	int vfsid;
+	struct timespec now;
 
 	OPSTAT_INCR(SLM_OPST_GETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
+		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
+		mp->attr.sst_fg.fg_gen = 1;
+		mp->attr.sst_dev = 0;
+		mp->attr.sst_utimgen = 0;
+		mp->attr.sst_mode = 16877;
+		mp->attr.sst_nlink = 2;
+		mp->attr.sst_uid = 0;
+		mp->attr.sst_gid = 0;
+		mp->attr.sst_blocks = 4;
+		mp->attr.sst_blksize = 4096;
+		mp->attr.sst_size = 1024; 
+		PFL_GETTIMESPEC(&now);
+		mp->attr.sst_mtim.tv_sec = now.tv_sec;
+		mp->attr.sst_mtim.tv_nsec = now.tv_nsec;
+		mp->attr.sst_atim.tv_sec = now.tv_sec;
+		mp->attr.sst_atim.tv_nsec = now.tv_nsec;
+		mp->attr.sst_ctim.tv_sec = now.tv_sec;
+		mp->attr.sst_ctim.tv_nsec = now.tv_nsec;
+		return (0);
+	}
+
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
