@@ -171,7 +171,7 @@ struct mdsio_ops {
 #define mdsio_symlink		mdsio_ops.mio_symlink			/* zfsslash2_symlink() */
 #define mdsio_unlink		mdsio_ops.mio_unlink			/* zfsslash2_unlink() */
 #define mdsio_write		mdsio_ops.mio_write			/* zfsslash2_write() */
-#define mdsio_hasxattrs		mdsio_ops.mio_hasxattrs			/* zfsslash2_hasxattr() */
+#define mdsio_hasxattrs		mdsio_ops.mio_hasxattrs			/* zfsslash2_hasxattrs() */
 #define mdsio_listxattr		mdsio_ops.mio_listxattr			/* zfsslash2_listxattr() */
 #define mdsio_setxattr		mdsio_ops.mio_setxattr			/* zfsslash2_setxattr() */
 #define mdsio_getxattr		mdsio_ops.mio_getxattr			/* zfsslash2_getxattr() */
