@@ -213,7 +213,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		return;
 
 	/*
-	 * Caculate the number of pages needed to accommodate this
+	 * Calculate the number of pages needed to accommodate this
 	 * request.
 	 */
 	npages = alen / BMPC_BUFSZ;
