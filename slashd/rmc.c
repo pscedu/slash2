@@ -1003,6 +1003,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			dirent = PSC_AGP(dirent, entsize);
 			entoff += entsize;
 
+			attr->xattrsize = 0;
 			attr->sstb.sst_fg.fg_fid = SLFID_ROOT;
 			attr->sstb.sst_fg.fg_gen = 2;
 			attr->sstb.sst_dev = 0;
@@ -1054,6 +1055,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr++;
 		}
 		CONF_ULOCK();
+		*outsize = entoff;
 		iov[0].iov_len = entoff;
 		iov[1].iov_len = (nsite + 2)* sizeof(struct srt_stat);
 
