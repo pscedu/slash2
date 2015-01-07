@@ -1055,6 +1055,8 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr++;
 		}
 		CONF_ULOCK();
+
+		*eof = 1;
 		*outsize = entoff;
 		iov[0].iov_len = entoff;
 		iov[1].iov_len = (nsite + 2)* sizeof(struct srt_stat);
