@@ -942,14 +942,14 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	struct fidc_membh *f = NULL;
 	struct iovec iov[2];
 	off_t nextoff;
-	int rc, nsite, vfsid;
+	int i, rc, nsite, vfsid;
 	struct sl_site *site;
 
 	uint64_t fid;
 	size_t entsize;
 	off_t entoff = 0;
 	struct pscfs_dirent *dirent;
-	struct srt_stat *attr;
+	struct srt_readdir_ent *attr;
 	struct timespec now;
 
 	memset(iov, 0, sizeof(iov));
@@ -980,11 +980,46 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		}
 		CONF_ULOCK();
 
-		*nents = nsite;
-		iov[1].iov_base = PSCALLOC(nsite * sizeof(struct srt_readdir_ent));
+		*nents = nsite + 2;
+		iov[1].iov_base = PSCALLOC((nsite + 2) * sizeof(struct srt_readdir_ent));
 		attr = iov[1].iov_base;
 		dirent = iov[0].iov_base;
 
+		PFL_GETTIMESPEC(&now);
+
+		for (i = 0; i < 2; i++) {
+
+			dirent->pfd_ino = SLFID_ROOT;
+			dirent->pfd_type = S_IFDIR; 
+			dirent->pfd_off = entoff;
+			if (i == 0) {
+				dirent->pfd_namelen = 1; 
+				strcpy(dirent->pfd_name, ".");
+			} else {
+				dirent->pfd_namelen = 2; 
+				strcpy(dirent->pfd_name, "..");
+			}
+			entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
+			dirent = PSC_AGP(dirent, entsize);
+			entoff += entsize;
+
+			attr->sstb.sst_fg.fg_fid = SLFID_ROOT;
+			attr->sstb.sst_fg.fg_gen = 2;
+			attr->sstb.sst_dev = 0;
+			attr->sstb.sst_utimgen = 0;
+			attr->sstb.sst_mode = 16877;
+			attr->sstb.sst_nlink = 2 + nsite;
+			attr->sstb.sst_uid = 0;
+			attr->sstb.sst_gid = 0;
+			attr->sstb.sst_blocks = 4;
+			attr->sstb.sst_blksize = 4096;
+			attr->sstb.sst_size = 1024; 
+			attr->sstb.sst_mtim.tv_sec = now.tv_sec;
+			attr->sstb.sst_mtim.tv_nsec = now.tv_nsec;
+			attr->sstb.sst_atim.tv_sec = now.tv_sec;
+			attr->sstb.sst_atim.tv_nsec = now.tv_nsec;
+			attr++;
+		}
 		CONF_LOCK();
 		CONF_FOREACH_SITE(site) {
 			fid = SLFID_ROOT;
@@ -999,28 +1034,28 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			dirent = PSC_AGP(dirent, entsize);
 			entoff += entsize;
 
-			attr->sst_fg.fg_fid = fid;
-			attr->sst_fg.fg_gen = 2;
-			attr->sst_dev = 0;
-			attr->sst_utimgen = 0;
-			attr->sst_mode = 16877;
-			attr->sst_nlink = 2;
-			attr->sst_uid = 0;
-			attr->sst_gid = 0;
-			attr->sst_blocks = 4;
-			attr->sst_blksize = 4096;
-			attr->sst_size = 1024; 
-			PFL_GETTIMESPEC(&now);
-			attr->sst_mtim.tv_sec = now.tv_sec;
-			attr->sst_mtim.tv_nsec = now.tv_nsec;
-			attr->sst_atim.tv_sec = now.tv_sec;
-			attr->sst_atim.tv_nsec = now.tv_nsec;
-			attr->sst_ctim.tv_sec = now.tv_sec;
+			attr->xattrsize = 0;
+			attr->sstb.sst_fg.fg_fid = fid;
+			attr->sstb.sst_fg.fg_gen = 2;
+			attr->sstb.sst_dev = 0;
+			attr->sstb.sst_utimgen = 0;
+			attr->sstb.sst_mode = 16877;
+			attr->sstb.sst_nlink = 2;
+			attr->sstb.sst_uid = 0;
+			attr->sstb.sst_gid = 0;
+			attr->sstb.sst_blocks = 4;
+			attr->sstb.sst_blksize = 4096;
+			attr->sstb.sst_size = 1024; 
+			attr->sstb.sst_mtim.tv_sec = now.tv_sec;
+			attr->sstb.sst_mtim.tv_nsec = now.tv_nsec;
+			attr->sstb.sst_atim.tv_sec = now.tv_sec;
+			attr->sstb.sst_atim.tv_nsec = now.tv_nsec;
+			attr->sstb.sst_ctim.tv_sec = now.tv_sec;
 			attr++;
 		}
 		CONF_ULOCK();
 		iov[0].iov_len = entoff;
-		iov[1].iov_len = nsite * sizeof(struct srt_stat);
+		iov[1].iov_len = (nsite + 2)* sizeof(struct srt_stat);
 
 	} else {
 
