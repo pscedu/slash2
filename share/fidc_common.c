@@ -103,7 +103,7 @@ fidc_reap(int max, int only_expired)
 	LIST_CACHE_LOCK(&fidcIdleList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
 		/* never reap root (/) */
-		if (fcmh_2_fid(f) == SLFID_ROOT)
+		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
 			continue;
 
 		if (!FCMH_TRYLOCK(f))
