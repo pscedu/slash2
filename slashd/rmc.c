@@ -641,6 +641,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
+
+	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+		mp->rc = EPERM;
+		return (0);
+	}
+
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mq->flags & SRM_LEASEBMAPF_GETINODE)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
