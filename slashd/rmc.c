@@ -433,6 +433,46 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	if (fcmh_2_mfid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
+
+	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+
+		uint64_t fid;
+		struct timespec now;
+		struct sl_site *site;
+
+		CONF_LOCK();
+		mp->rc = ENOENT;
+		CONF_FOREACH_SITE(site) {
+	    		if (strcmp(mq->name, site->site_name) != 0)
+				continue;
+
+			fid = SLFID_ROOT;
+			FID_SET_SITEID(fid, site->site_id);
+
+			mp->xattrsize = 0;
+			mp->attr.sst_fg.fg_fid = fid;
+			mp->attr.sst_fg.fg_gen = 2;
+			mp->attr.sst_dev = 0;
+			mp->attr.sst_utimgen = 0;
+			mp->attr.sst_mode = 16877;
+			mp->attr.sst_nlink = 2;
+			mp->attr.sst_uid = 0;
+			mp->attr.sst_gid = 0;
+			mp->attr.sst_blocks = 4;
+			mp->attr.sst_blksize = 4096;
+			mp->attr.sst_size = 1024; 
+			PFL_GETTIMESPEC(&now);
+			mp->attr.sst_mtim.tv_sec = now.tv_sec;
+			mp->attr.sst_mtim.tv_nsec = now.tv_nsec;
+			mp->attr.sst_atim.tv_sec = now.tv_sec;
+			mp->attr.sst_atim.tv_nsec = now.tv_nsec;
+			mp->rc = 0;
+			break;
+		}
+		CONF_ULOCK();
+		goto out;
+	}
+
 	mp->rc = mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
 	    &rootcreds, &mp->attr, &mp->xattrsize);
 	if (mp->rc)
