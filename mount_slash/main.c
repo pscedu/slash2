@@ -2832,7 +2832,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		mdie.mdie_pfr = pfr;
 		mdie.mdie_pinum = fcmh_2_fid(c);
-		/* XXX this currently crashes fuse.ko but needs to happen */
 		dircache_walk(c, msl_dc_inv_entry, &mdie);
 	}
 
