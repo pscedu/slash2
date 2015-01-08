@@ -576,6 +576,10 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_MKDIR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+		mp->rc = -EPERM;
+		return (0);
+	}
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		return (0);
