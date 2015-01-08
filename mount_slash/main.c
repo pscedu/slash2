@@ -969,6 +969,9 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		return (ENAMETOOLONG);
 
  retry:
+
+	OPSTAT_INCR(SLC_OPST_LOOKUP_RPC);
+
 	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
