@@ -1397,6 +1397,8 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 	    "reclaim batchno=%"PRId64" res=%s rc=%d",
 	    si->si_batchno, res->res_name, rc);
 
+	sl_csvc_decref(csvc);
+
 	return (0);
 }
 
