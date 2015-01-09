@@ -73,7 +73,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 	if (fcmh_2_gen(f) == FGEN_ANY)
 	    fcmh_2_gen(f) = sstb->sst_gen;
 
-	if (fcmh_2_fid(f) != SLFID_ROOT &&
+	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT &&
 	    fcmh_2_gen(f) > sstb->sst_gen) {
 		DEBUG_FCMH(PLL_WARN, f, "attempt to set attr with "
 		    "gen %"PRIu64" from old gen %"PRIu64,
