@@ -617,6 +617,8 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
  fail:
 	if (rc && rc != -PFLERR_NOTCONN)
 		psclog_errorx("error rc=%d", rc);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc ? 0 : 1);
 }
 
