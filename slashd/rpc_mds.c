@@ -558,8 +558,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;
 		LIST_CACHE_LOCK(l);
 		LIST_CACHE_FOREACH(br, l)
-			if (br->br_flags & BATCHF_PNDG)
-				batchrq_sched_finish(br, -ECONNRESET);
+			batchrq_sched_finish(br, -ECONNRESET);
 		LIST_CACHE_ULOCK(l);
 	}
 }
