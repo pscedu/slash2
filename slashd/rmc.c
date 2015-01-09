@@ -643,7 +643,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
-		mp->rc = EPERM;
+		mp->rc = EACCES;
 		return (0);
 	}
 
