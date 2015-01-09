@@ -142,7 +142,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
 
 int	batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
-	    int, int, int, void *, size_t, void *,
+	    uint32_t, int, int, void *, size_t, void *,
 	    void (*)(struct batchrq *, int), int);
 int	batchrq_handle(struct pscrpc_request *);
 

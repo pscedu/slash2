@@ -413,7 +413,7 @@ batchrq_handle(struct pscrpc_request *rq)
 
 int
 batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
-    int opc, int rcvptl, int sndptl, void *buf, size_t len,
+    uint32_t opc, int rcvptl, int sndptl, void *buf, size_t len,
     void *scratch, void (*cbf)(struct batchrq *, int), int expire)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
