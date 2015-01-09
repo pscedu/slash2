@@ -431,7 +431,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH(br, l)
 		if ((br->br_flags & BATCHF_PNDG) == 0 &&
-		    br->br_rq->rq_reqmsg->opc) {
+		    opc == br->br_rq->rq_reqmsg->opc) {
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
