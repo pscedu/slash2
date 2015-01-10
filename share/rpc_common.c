@@ -244,10 +244,13 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
+	struct pscrpc_connection *c;
 	struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
 	int rc;
+
+	c = pscrpc_get_connection(server_id, local, NULL);
 
 	CSVC_LOCK(csvc);
 	psc_assert((psc_atomic32_read(&csvc->csvc_flags) &
@@ -265,8 +268,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	imp = csvc->csvc_import;
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
-	imp->imp_connection = pscrpc_get_connection(server_id, local,
-	    NULL);
+	imp->imp_connection = c;
 	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 
