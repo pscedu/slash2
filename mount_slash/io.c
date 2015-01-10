@@ -251,10 +251,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
 	/*
- 	 * XXX: Enlarge the original request to include some readhead pages
- 	 * within the same bmap can save extra RPCs. And the cost of waiting
- 	 * them all should be minimal.
- 	 */
+	 * XXX: Enlarge the original request to include some readhead
+	 * pages within the same bmap can save extra RPCs.  And the cost
+	 * of waiting them all should be minimal.
+	 */
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
 	    &raoff2, &rapages2))
 		return;
@@ -848,11 +848,10 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			mfsrq_seterr(r->biorq_fsrqi, rc);
 	} else {
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+		msl_update_iocounters(slc_iorpc_ist, SL_READ,
+		    mq->size);
 		if (r->biorq_flags & BIORQ_READAHEAD)
 			psc_iostats_intv_add(&slc_racache_ist, mq->size);
-		else
-			msl_update_iocounters(slc_iorpc_ist, SL_READ,
-			    mq->size);
 	}
 
 	msl_biorq_release(r);
