@@ -273,6 +273,8 @@ struct sl_expcli_ops {
 		}							\
 		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
+		if ((error) == 0)					\
+			slrpc_rep_in((csvc), (rq));			\
 	} while (0)
 
 #define SL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
