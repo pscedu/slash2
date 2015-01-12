@@ -152,6 +152,8 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	struct bmap_mds_lease *bml = NULL, *tmp;
 	int rc = 0, force_dio = 0, check_leases = 0;
 
+	BMAP_LOCK_ENSURE(b);
+
 	if (b->bcm_flags & BMAP_DIO)
 		return (0);
 
@@ -838,6 +840,8 @@ mds_bmap_getbml(struct bmap *b, uint64_t seq, uint64_t nid, uint32_t pid)
 {
 	struct bmap_mds_lease *bml, *bml1, *bml2;
 	struct bmap_mds_info *bmi;
+
+	BMAP_LOCK_ENSURE(b);
 
 	bml1 = NULL;
 	bmi = bmap_2_bmi(b);
