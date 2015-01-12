@@ -812,12 +812,13 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
-	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RW,
+	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
 	    &slc_max_nretries);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_var("sys.readahead_pgs",
-	    PFLCTL_PARAMF_RW, &slc_max_readahead);
+	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
+	    &slc_max_readahead);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

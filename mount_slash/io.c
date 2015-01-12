@@ -1076,6 +1076,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		MFH_ULOCK(q->mfsrq_mfh);
 		pscrpc_nbreqset_destroy(nbs);
 		OPSTAT_INCR("biorq_restart");
+
 		/*
 		 * Async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
@@ -1386,7 +1387,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 
 	PFL_GETTIMESPEC(&ts1);
 	timespecsub(&ts1, &ts0, &tsd);
-	OPSTAT_ADD(SLC_OPST_BIORQ_FETCH_WAIT_USECS,
+	OPSTAT_ADD("biorq_fetch_wait_usecs",
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
  out:
@@ -1932,7 +1933,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD(SLC_OPST_GETBMAP_WAIT_USECS,
+		OPSTAT_ADD("getbmap_wait_usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 		/*

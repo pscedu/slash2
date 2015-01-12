@@ -795,7 +795,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD(SLC_OPST_FLUSH_WAIT_USECS,
+		OPSTAT_ADD("flush_wait_usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
 	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
