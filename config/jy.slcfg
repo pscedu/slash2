@@ -18,51 +18,42 @@ site @JY {
 	resource md {
 		type	= mds;
 		id	= 101;
-		nids	= lime;
-		journal	= /dev/sdl;
+		#nids	= yuzu-ib;
+		nids	= lime-ib;
+		journal	= /dev/disk/by-id/scsi-1ATA_ST3500630AS_5QG0D167;
 	}
-
-#	resource io {
-#		type	= parallel_lfs_compnt;
-#		id	= 102;
-#		fsroot	= /home/slio-jy;
-#		nids	= wolverine;
-#	}
-
-#	resource kam {
-#		type	= standalone_fs;
-#		id	= 103;
-#		fsroot	= /slio-jy;
-#		nids	= kaminari;
-#	}
 
 	resource citron {
 		type	= standalone_fs;
-#		type	= archival_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
-		nids	= citron;
+		nids	= citron-ib;
 	}
 
 	resource orange {
 		type	= standalone_fs;
-#		type	= archival_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
-		nids	= orange;
+		nids	= orange-ib;
 	}
 
 	resource lemon {
 		type	= standalone_fs;
-#		type	= archival_fs;
 		id	= 107;
 		fsroot	= /local/jy.s2/io;
-		nids	= lemon;
+		nids	= lemon-ib;
+	}
+
+	resource kiwi {
+		type	= standalone_fs;
+		id	= 108;
+		fsroot	= /local/jy.s2/io;
+		nids	= kiwi;
 	}
 
 	resource io {
 		type	= cluster_noshare_lfs;
 		id	= 1000;
-		ios	= lemon@JY, orange@JY, citron@JY;
+		ios	= lemon@JY, orange@JY, citron@JY, kiwi@JY;
 	}
 }
