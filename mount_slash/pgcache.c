@@ -71,8 +71,8 @@ bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 void
 bwc_release(struct bmpc_write_coalescer *bwc)
 {
-	bwc_init(bwc_pool, bwc);
 	psc_dynarray_free(&bwc->bwc_biorqs);
+	bwc_init(bwc_pool, bwc);
 	psc_pool_return(bwc_pool, bwc);
 }
 
