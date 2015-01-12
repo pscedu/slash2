@@ -1701,6 +1701,11 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	if (mq->pfid == SLFID_ROOT && use_global_mount) {
+		mp->rc = EACCES;
+		return (0);
+	}
+
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
