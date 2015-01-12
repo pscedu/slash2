@@ -528,24 +528,6 @@ sliriithr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 	pcst->pcst_nread = sliriithr(thr)->sirit_st_nread;
 }
 
-void
-slictlparam_reclaim_xid_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%"PRIu64, current_reclaim_xid);
-}
-
-void
-slictlparam_reclaim_batchno_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%"PRIu64, current_reclaim_batchno);
-}
-
-void
-slictlparam_selftestrc_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d", sli_selftest_rc);
-}
-
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
@@ -593,16 +575,19 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
-	psc_ctlparam_register_simple("reclaim.xid",
-	    slictlparam_reclaim_xid_get, NULL);
-	psc_ctlparam_register_simple("reclaim.batchno",
-	    slictlparam_reclaim_batchno_get, NULL);
-	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
+	psc_ctlparam_register_simple("sys.uptime", slctlparam_uptime_get,
 	    NULL);
-	psc_ctlparam_register_simple("version", slctlparam_version_get,
+	psc_ctlparam_register_var("sys.version", slctlparam_version_get,
 	    NULL);
-	psc_ctlparam_register_simple("selftestrc",
-	    slictlparam_selftestrc_get, NULL);
+
+	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
+	    0, &bimSeq.bim_minseq);
+	psc_ctlparam_register_var("sys.reclaim_batchno",
+	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_batchno);
+	psc_ctlparam_register_var("sys.reclaim_xid",
+	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_xid);
+	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
+	    0, &sli_selftest_rc);
 
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }

@@ -71,7 +71,6 @@ bim_updateseq(uint64_t seq)
 	if (seq > bimSeq.bim_minseq ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		bimSeq.bim_minseq = seq;
-		OPSTAT_ASSIGN(SLI_OPST_MIN_SEQNO, seq);
 		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
 		goto done;
