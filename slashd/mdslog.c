@@ -296,23 +296,24 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 void
 mds_remove_logfiles(uint64_t batchno, int update)
 {
+	int rc, nfound = 0, notfound = 0;
 	struct timeval tv1, tv2;
-	int rc, notfound = 0;
 	int64_t i;
 
-	gettimeofday(&tv1, NULL);
+	PFL_GETTIME(&tv1);
 	for (i = (int64_t) batchno - 2; i >= 0; i--) {
 		rc = mds_remove_logfile(i, update, 1);
-		if (rc)
-			notfound++;
-		if (notfound > 10)
-			break;
+		if (rc) {
+			if (++notfound > 10)
+				break;
+		} else
+			nfound++;
 	}
-	gettimeofday(&tv2, NULL);
-	psclog_info("%"PRId64" log file(s) have been removed in %d "
-	    "second(s), LWM is %"PRId64,
-	    OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
-	    (int)(tv2.tv_sec - tv1.tv_sec), batchno);
+	PFL_GETTIME(&tv2);
+	if (nfound)
+		psclog_info("%"PRId64" log file(s) have been removed "
+		    "in %"PSCPRI_TIMET" second(s); LWM is %"PRId64,
+		    nfound, tv2.tv_sec - tv1.tv_sec, batchno);
 }
 
 int
@@ -456,7 +457,6 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 
 	spinlock(&mds_distill_lock);
 	reclaim_prg.cur_xid = xid;
-	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, reclaim_prg.cur_xid);
 	freelock(&mds_distill_lock);
 
 	reclaim_prg.log_offset += R_ENTSZ;
@@ -1435,9 +1435,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 	void *handle;
 	size_t size;
 
-	batchno = (*pbatchno)++;
-
-	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_CURSOR, batchno);
+	slm_reclaim_proc_batchno = batchno = (*pbatchno)++;
 
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
@@ -2085,7 +2083,6 @@ mds_journal_init(uint64_t fsuuid)
 
 	reclaim_prg.cur_batchno = batchno;
 	OPSTAT_INCR("reclaim_batchno");
-	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_BATCHNO, batchno);
 
 	if (sstb.sst_size) {
 		reclaimbuf = PSCALLOC(sstb.sst_size);
@@ -2127,7 +2124,6 @@ mds_journal_init(uint64_t fsuuid)
 
 	reclaim_prg.cur_xid = last_reclaim_xid;
 	OPSTAT_INCR("reclaim_xid");
-	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, reclaim_prg.cur_xid);
 
 	last_distill_xid = last_reclaim_xid;
 
