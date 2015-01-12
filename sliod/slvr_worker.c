@@ -444,12 +444,17 @@ slislvrthr_main(struct psc_thread *thr)
 
 		psc_mutex_unlock(&mtx);
 
+		/*
+		 * If we didn't do any work, induce sleep to avoid
+		 * spinning.
+		 */
+		if (!psc_dynarray_len(&ss)) {
+			usleep(1000);
+			continue;
+		}
+
 		DYNARRAY_FOREACH(s, i, &ss)
 			slislvrthr_proc(s);
-
-		PFL_GETTIMESPEC(&expire);
-		expire.tv_sec += CRC_QUEUE_AGE;
-		psc_waitq_waitabs(&sli_slvr_waitq, NULL, &expire);
 
 		psc_dynarray_reset(&ss);
 	}
