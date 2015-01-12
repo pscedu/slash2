@@ -3454,6 +3454,10 @@ msl_init(void)
 	slrpc_initcli();
 	slc_rpc_initsvc();
 
+	sl_nbrqset = pscrpc_nbreqset_init(NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
+	    "msnbrqthr%d");
+
 	/* Start up service threads. */
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
@@ -3474,10 +3478,6 @@ msl_init(void)
 	slc_iosyscall_ist[7].size = slc_iorpc_ist[7].size = 0;
 	pfl_iostats_grad_init(slc_iosyscall_ist, PISTF_BASE10, "iosz");
 	pfl_iostats_grad_init(slc_iorpc_ist, PISTF_BASE10, "iorpc");
-
-	sl_nbrqset = pscrpc_nbreqset_init(NULL);
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
-	    "msnbrqthr%d");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
