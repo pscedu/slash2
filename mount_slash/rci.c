@@ -130,8 +130,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			LIST_CACHE_ULOCK(lc);
 		}
 	}
-	if (nwait > OPSTAT_CURR(SLC_OPST_READ_AIO_WAIT_MAX))
-		OPSTAT_ASSIGN(SLC_OPST_READ_AIO_WAIT_MAX, nwait);
+	OPSTAT_SET_MAX("read_aio_wait_max", nwait);
 
 	if (!found) {
 		psclog_warnx("could not find async req id=%#"PRIx64,
@@ -170,7 +169,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_dio_cb) {
-	
+
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 		if (mq->op == SRMIOP_RD)

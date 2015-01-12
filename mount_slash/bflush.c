@@ -589,9 +589,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		bwc->bwc_niovs++;
 		OPSTAT_INCR("write_coalesce");
 	}
-	if (bwc->bwc_niovs > OPSTAT_CURR(SLC_OPST_WRITE_COALESCE_MAX))
-		OPSTAT_ASSIGN(SLC_OPST_WRITE_COALESCE_MAX,
-		    bwc->bwc_niovs);
+	OPSTAT_SET_MAX("write_coalesce_max", bwc->bwc_niovs);
 
 	psc_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
 	psc_assert(!tot_reqsz);
