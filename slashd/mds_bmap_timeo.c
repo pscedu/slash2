@@ -71,8 +71,6 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 {
 	mdsBmapTimeoTbl.btt_maxseq = maxseq;
 	mdsBmapTimeoTbl.btt_minseq = minseq;
-	OPSTAT_ASSIGN(SLM_OPST_MAX_SEQNO, maxseq);
-	OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, minseq);
 }
 
 int
@@ -119,7 +117,6 @@ mds_bmap_timeotbl_getnextseq(void)
 		mdsBmapTimeoTbl.btt_maxseq = 0;
 
 	hwm = mdsBmapTimeoTbl.btt_maxseq;
-	OPSTAT_ASSIGN(SLM_OPST_MAX_SEQNO, mdsBmapTimeoTbl.btt_maxseq);
 	mds_bmap_timeotbl_journal_seqno();
 
 	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
@@ -144,8 +141,6 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 		else
 			mdsBmapTimeoTbl.btt_minseq =
 			    mdsBmapTimeoTbl.btt_maxseq;
-		OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO,
-		    mdsBmapTimeoTbl.btt_minseq);
 		mds_bmap_timeotbl_journal_seqno();
 	}
 	freelock(&mdsBmapTimeoTbl.btt_lock);
