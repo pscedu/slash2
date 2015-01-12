@@ -487,12 +487,6 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 void
-msctlparam_mountpoint_get(char buf[PCP_VALUE_MAX])
-{
-	strlcpy(buf, mountpoint, PCP_VALUE_MAX);
-}
-
-void
 msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 {
 	struct sl_resource *r;
@@ -513,48 +507,6 @@ msctlparam_prefios_set(const char *val)
 	if (r == NULL)
 		return (-1);
 	slc_setprefios(r->res_id);
-	return (0);
-}
-
-void
-msctlparam_readahead_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    psc_atomic32_read(&slc_max_readahead));
-}
-
-int
-msctlparam_readahead_set(const char *val)
-{
-	long value;
-	char *endp;
-
-	value = strtol(val, &endp, 10);
-	if (*endp || endp == val ||
-	    value < 0 || value > 32 * 1024)
-		return (-1);
-	psc_atomic32_set(&slc_max_readahead, value);
-	return (0);
-}
-
-void
-msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    psc_atomic32_read(&slc_max_nretries));
-}
-
-int
-msctlparam_offlinenretries_set(const char *val)
-{
-	char *endp;
-	long l;
-
-	l = strtol(val, &endp, 10);
-	if (l < 1 || l > 1000 ||
-	    endp == val || *endp != '\0')
-		return (-1);
-	psc_atomic32_set(&slc_max_nretries, l);
 	return (0);
 }
 
@@ -846,24 +798,23 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
-	psc_ctlparam_register_simple("nbrq.outstanding",
+	psc_ctlparam_register_simple("sys.nbrq_outstanding",
 	    slctlparam_nbrq_outstanding_get, NULL);
-	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
-	    NULL);
-	psc_ctlparam_register_simple("version", slctlparam_version_get,
-	    NULL);
+	psc_ctlparam_register("sys.resources", slctlparam_resources);
+	psc_ctlparam_register_simple("sys.uptime",
+	    slctlparam_uptime_get, NULL);
+	psc_ctlparam_register_simple("sys.version",
+	    slctlparam_version_get, NULL);
 
 	/* XXX: add max_fs_iosz */
-	psc_ctlparam_register_simple("mountpoint",
-	    msctlparam_mountpoint_get, NULL);
-	psc_ctlparam_register_simple("pref_ios",
+	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
+	    0, mountpoint);
+	psc_ctlparam_register_var("sys.offline_nretries",
+	    PFLCTL_PARAMT_STR, PFLCTL_PARAMF_RW, &slc_max_nretries);
+	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
-	psc_ctlparam_register_simple("offline_nretries",
-	    msctlparam_offlinenretries_get,
-	    msctlparam_offlinenretries_set);
-	psc_ctlparam_register_simple("readahead_pgs",
-	    msctlparam_readahead_get, msctlparam_readahead_set);
-	psc_ctlparam_register("resources", slctlparam_resources);
+	psc_ctlparam_register_simple("sys.readahead_pgs",
+	    PFLCTL_PARAMF_RW, &slc_max_readahead);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
