@@ -38,6 +38,7 @@
 #include "pfl/str.h"
 #include "pfl/walk.h"
 
+#include "bmap_iod.h"
 #include "ctl.h"
 #include "ctl_iod.h"
 #include "ctlsvr.h"
@@ -577,7 +578,7 @@ slictlthr_main(const char *fn)
 
 	psc_ctlparam_register_simple("sys.uptime", slctlparam_uptime_get,
 	    NULL);
-	psc_ctlparam_register_var("sys.version", slctlparam_version_get,
+	psc_ctlparam_register_simple("sys.version", slctlparam_version_get,
 	    NULL);
 
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,

@@ -54,6 +54,7 @@
 #include "inode.h"
 #include "journal_mds.h"
 #include "mdsio.h"
+#include "mdslog.h"
 #include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"
@@ -98,20 +99,8 @@ struct reclaim_prog_entry {
 	int32_t			 _pad;
 };
 
-struct {
-	uint64_t		 cur_batchno;
-	uint64_t		 cur_xid;		/* journal xid of update */
-	uint64_t		 sync_xid;		/* on disk */
-	struct psc_waitq	 waitq;
-	psc_spinlock_t		 lock;
-
-	void			*prg_handle;
-	void			*prg_buf;
-
-	void			*log_handle;
-	void			*log_buf;
-	off_t			 log_offset;
-} nsupd_prg, reclaim_prg;
+struct slm_progress		 nsupd_prg;
+struct slm_progress		 reclaim_prg;
 
 /* max # of seconds to wait for updates before hard retry */
 #define SL_UPDATE_MAX_AGE	 30
@@ -131,6 +120,8 @@ psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
 
 static int			 cursor_update_inprog;
 static int			 cursor_update_needed;
+
+uint64_t			 slm_reclaim_proc_batchno;
 
 static int
 mds_open_file(char *fn, int flags, void **handle)
@@ -296,11 +287,11 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 void
 mds_remove_logfiles(uint64_t batchno, int update)
 {
-	int rc, nfound = 0, notfound = 0;
+	int rc, notfound = 0;
 	struct timeval tv1, tv2;
-	int64_t i;
+	int64_t i, nfound = 0;
 
-	PFL_GETTIME(&tv1);
+	PFL_GETTIMEVAL(&tv1);
 	for (i = (int64_t) batchno - 2; i >= 0; i--) {
 		rc = mds_remove_logfile(i, update, 1);
 		if (rc) {
@@ -309,7 +300,7 @@ mds_remove_logfiles(uint64_t batchno, int update)
 		} else
 			nfound++;
 	}
-	PFL_GETTIME(&tv2);
+	PFL_GETTIMEVAL(&tv2);
 	if (nfound)
 		psclog_info("%"PRId64" log file(s) have been removed "
 		    "in %"PSCPRI_TIMET" second(s); LWM is %"PRId64,

@@ -36,6 +36,7 @@
 #include "ctl_mds.h"
 #include "ctlsvr.h"
 #include "mdsio.h"
+#include "mdslog.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
