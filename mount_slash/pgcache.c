@@ -225,7 +225,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct timespec issue;
 	struct bmpc_ioreq *r;
-	long inflight;
 
 	r = psc_pool_get(slc_biorq_pool);
 	memset(r, 0, sizeof(*r));
@@ -263,12 +262,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	BMAP_ULOCK(b);
 
-	OPSTAT_INCR("biorq_alloc");
-
-	inflight = OPSTAT_CURR(SLC_OPST_BIORQ_ALLOC) -
-	    OPSTAT_CURR(SLC_OPST_BIORQ_DESTROY);
-	if (inflight > OPSTAT_CURR(SLC_OPST_BIORQ_MAX))
-		OPSTAT_ASSIGN(SLC_OPST_BIORQ_MAX, inflight);
+//	OPSTAT_SET_MAX("biorq_max", slc_biorq_pool->ppm_total -
+//	    slc_biorq_pool->ppm_used);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "creating");
 
