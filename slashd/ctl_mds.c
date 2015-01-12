@@ -130,11 +130,11 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	if (nlevels > 6)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	/* namespace.stats.<site|#AGGR>.<activity>.<op>.<field> */
-	/* ex: namespace.stats.#aggr.replay.mkdir.successes */
+	/* sys.namespace_stats.<site|#AGGR>.<activity>.<op>.<field> */
+	/* ex: sys.namespace_stats.#aggr.replay.mkdir.successes */
 
-	levels[0] = "namespace";
-	levels[1] = "stats";
+	levels[0] = "sys";
+	levels[1] = "namespace_stats";
 
 	if (strlcpy(p_site, nlevels > 2 ? levels[2] : "*",
 	    sizeof(p_site)) >= sizeof(p_site))
@@ -670,26 +670,26 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
-	psc_ctlparam_register("resources", slctlparam_resources);
-	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
+	psc_ctlparam_register("sys.resources", slctlparam_resources);
+	psc_ctlparam_register_simple("sys.uptime", slctlparam_uptime_get,
 	    NULL);
-	psc_ctlparam_register_simple("version", slctlparam_version_get,
+	psc_ctlparam_register_simple("sys.version", slctlparam_version_get,
 	    NULL);
 
 	psc_ctlparam_register("sys.namespace_stats",
 	    slmctlparam_namespace_stats);
 	psc_ctlparam_register_simple("sys.nextfid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
-	psc_ctlparam_register_var("reclaim_xid", PFLCTL_PARAMT_UINT64,
-	    0, &reclaim_prg.cur_xid);
-	psc_ctlparam_register_var("reclaim_batchno",
+	psc_ctlparam_register_var("sys.reclaim_xid",
+	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_xid);
+	psc_ctlparam_register_var("sys.reclaim_batchno",
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_batchno);
-	psc_ctlparam_register_var("reclaim_cursor",
+	psc_ctlparam_register_var("sys.reclaim_cursor",
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
-	psc_ctlparam_register_var("bmaxseqno", PFLCTL_PARAMT_UINT64, 0,
-	    &mdsBmapTimeoTbl.btt_maxseq);
-	psc_ctlparam_register_var("bminseqno", PFLCTL_PARAMT_UINT64, 0,
-	    &mdsBmapTimeoTbl.btt_minseq);
+	psc_ctlparam_register_var("sys.bmaxseqno", PFLCTL_PARAMT_UINT64,
+	    0, &mdsBmapTimeoTbl.btt_maxseq);
+	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
+	    0, &mdsBmapTimeoTbl.btt_minseq);
 
 	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
 }

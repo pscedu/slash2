@@ -240,27 +240,28 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 	struct sl_resource *r;
 	struct sl_site *s;
 
-	if (nlevels > 4)
+	if (nlevels > 5)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	set = mh->mh_type == PCMT_SETPARAM;
 
-	if (set && nlevels != 4)
+	if (set && nlevels != 5)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-	/* resources.<site>.<res>.<field> */
-	/* ex: resources.SITE.RES.FLAG */
-	/* ex: resources.SITE.* */
+	/* sys.resources.<site>.<res>.<field> */
+	/* ex: sys.resources.SITE.RES.FLAG */
+	/* ex: sys.resources.SITE.* */
 
-	levels[0] = "resources";
+	levels[0] = "sys";
+	levels[1] = "resources";
 
-	if (strlcpy(p_site, nlevels > 1 ? levels[1] : "*",
+	if (strlcpy(p_site, nlevels > 2 ? levels[2] : "*",
 	    sizeof(p_site)) >= sizeof(p_site))
 		return (psc_ctlsenderr(fd, mh, "invalid site"));
-	if (strlcpy(p_res, nlevels > 2 ? levels[2] : "*",
+	if (strlcpy(p_res, nlevels > 3 ? levels[3] : "*",
 	    sizeof(p_res)) >= sizeof(p_res))
 		return (psc_ctlsenderr(fd, mh, "invalid resource"));
-	if (strlcpy(p_field, nlevels > 3 ? levels[3] : "*",
+	if (strlcpy(p_field, nlevels > 4 ? levels[4] : "*",
 	    sizeof(p_field)) >= sizeof(p_field))
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
@@ -284,8 +285,8 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 			continue;
 		}
 
-		levels[1] = s->site_name;
-		levels[2] = resname;
+		levels[2] = s->site_name;
+		levels[3] = resname;
 
 		cfv = r->res_type == SLREST_MDS ?
 		    slctl_resmds_fields : slctl_resios_fields;
@@ -293,8 +294,8 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 			if (strcmp(p_field, "*") == 0 ||
 			    strcmp(p_field, cf->name) == 0) {
 				field_found = 1;
-				levels[3] = (char *)cf->name;
-				if (!cf->cbf(fd, mh, pcp, levels, 4,
+				levels[4] = (char *)cf->name;
+				if (!cf->cbf(fd, mh, pcp, levels, 5,
 				    set, r))
 				    return (0);
 			}
@@ -333,11 +334,4 @@ slctlparam_uptime_get(char *val)
 	    delta.tv_sec / (60 * 60 * 24),
 	    (delta.tv_sec % (60 * 60 * 24)) / (60 * 60),
 	    (delta.tv_sec % (60 * 60)) / 60);
-}
-
-void
-slctlparam_nbrq_outstanding_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d",
-	    sl_nbrqset->nb_reqset->set_remaining);
 }
