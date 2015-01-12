@@ -1447,6 +1447,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 			psc_fatalx("Failed to open reclaim log file, "
 			    "batchno=%"PRId64": %s",
 			    batchno, slstrerror(rc));
+
 		/*
 		 * However, if the log file is missing for some reason,
 		 * we skip it so that we can make progress.
