@@ -62,7 +62,7 @@ enum {
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
-#define NSLVR_READAHEAD_THRS	2
+#define NSLVR_READAHEAD_THRS	16
 
 enum {
 	SLI_OPST_AIO_DIO,
