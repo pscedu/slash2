@@ -178,7 +178,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	bmapno = mq->sbd.sbd_bmapno;
 
 	if (mq->flags & SRM_IOF_DIO)
-		OPSTAT_INCR(SLI_OPST_HANDLE_DIO);
+		OPSTAT_INCR("handle_dio");
 
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
@@ -242,7 +242,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
 		mp->rc = -PFLERR_KEYEXPIRED;
-		OPSTAT_INCR(SLI_OPST_KEY_EXPIRE);
+		OPSTAT_INCR("key_expire");
 		return (mp->rc);
 	}
 
@@ -349,7 +349,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (aiocbr == NULL)
 			PFL_GOTOERR(out, 0);
 		if (mq->flags & SRM_IOF_DIO) {
-			OPSTAT_INCR(SLI_OPST_AIO_DIO);
+			OPSTAT_INCR("aio_dio");
 			aiocbr->aiocbr_flags |= SLI_AIOCBSF_DIO;
 		}
 
@@ -374,7 +374,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 */
 				slvr[i]->slvr_aioreply = aiocbr;
 				psc_assert(slvr[i]->slvr_flags & SLVR_FAULTING);
-				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
+				OPSTAT_INCR("aio_insert");
 				SLVR_ULOCK(slvr[i]);
 				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
@@ -466,7 +466,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR(SLI_OPST_RELEASE_BMAP);
+	OPSTAT_INCR("release_bmap");
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
@@ -494,7 +494,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
 				    rc, fcmh_2_fd(f), errno);
-			OPSTAT_INCR(SLI_OPST_FSYNC);
+			OPSTAT_INCR("fsync");
 		} else
 			FCMH_ULOCK(f);
 
@@ -563,11 +563,11 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 		break;
 	case SRMT_READ:
-		OPSTAT_INCR(SLI_OPST_HANDLE_READ);
+		OPSTAT_INCR("handle_read");
 		rc = sli_ric_handle_read(rq);
 		break;
 	case SRMT_WRITE:
-		OPSTAT_INCR(SLI_OPST_HANDLE_WRITE);
+		OPSTAT_INCR("handle_write");
 		rc = sli_ric_handle_write(rq);
 		break;
 	case SRMT_RELEASEBMAP:

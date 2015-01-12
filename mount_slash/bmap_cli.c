@@ -55,7 +55,7 @@ msl_bmap_free(void)
 		spinlock(&bmapTimeoutLock);
 		psc_waitq_wakeall(&bmapTimeoutWaitq);
 		freelock(&bmapTimeoutLock);
-		OPSTAT_INCR(SLC_OPST_BMAP_ALLOC_STALL);
+		OPSTAT_INCR("bmap_alloc_stall");
 		sleep(1);
 	}
 }
@@ -193,7 +193,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = 0;
-		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_FAIL);
+		OPSTAT_INCR("bmap_reassign_fail");
 	} else {
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
@@ -201,7 +201,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_etime);
 		timespecadd(&bmap_2_bci(b)->bci_etime,
 		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_etime);
-		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
+		OPSTAT_INCR("bmap_reassign_done");
 	}
 
 	b->bcm_flags &= ~BMAP_CLI_REASSIGNREQ;
@@ -241,7 +241,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		timespecadd(&ts, &msl_bmap_max_lease,
 		    &bmap_2_bci(b)->bci_etime);
 
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
+		OPSTAT_INCR("bmap_lease_ext_done");
 	} else {
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
@@ -252,7 +252,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		bci->bci_etime = ts;
 		bmap_2_bci(b)->bci_error = rc;
 		b->bcm_flags |= BMAP_CLI_LEASEFAILED;
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
+		OPSTAT_INCR("bmap_lease_ext_fail");
 	}
 
 	b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
@@ -308,7 +308,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
-		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_BAIL);
+		OPSTAT_INCR("bmap_reassign_bail");
 		return;
 	}
 
@@ -345,7 +345,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
-		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
+		OPSTAT_INCR("bmap_reassign_send");
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
@@ -359,7 +359,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
-		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_ABRT);
+		OPSTAT_INCR("bmap_reassign_abrt");
 	}
 }
 
@@ -419,7 +419,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	if (secs >= BMAP_CLI_EXTREQSECS &&
 	    !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 		if (blockable)
-			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_HIT);
+			OPSTAT_INCR("bmap_lease_ext_hit");
 		BMAP_ULOCK(b);
 		return (0);
 	}
@@ -447,7 +447,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
+		OPSTAT_INCR("bmap_lease_ext_send");
 
  out:
 	BMAP_LOCK(b);
@@ -465,12 +465,12 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
+		OPSTAT_INCR("bmap_lease_ext_abrt");
 	} else if (blockable) {
 		/*
 		 * We should never cache data without a lease.
 		 */
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_WAIT);
+		OPSTAT_INCR("bmap_lease_ext_wait");
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
 		rc = bmap_2_bci(b)->bci_error;
 		BMAP_ULOCK(b);
@@ -555,7 +555,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	fci = fcmh_2_fci(f);
 
  retry:
-	OPSTAT_INCR(SLC_OPST_BMAP_RETRIEVE);
+	OPSTAT_INCR("bmap_retrieve");
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -790,7 +790,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
-		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
+		OPSTAT_INCR("bmap_release");
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
@@ -847,11 +847,11 @@ msbreleasethr_main(struct psc_thread *thr)
 
 				DEBUG_BMAP(PLL_DIAG, b, "res(%s)",
 				    resm->resm_res->res_name);
-				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_WRITE);
+				OPSTAT_INCR("bmap_release_write");
 			} else {
 				resm = slc_rmc_resm;
 				rmci = resm2rmci(slc_rmc_resm);
-				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_READ);
+				OPSTAT_INCR("bmap_release_read");
 			}
 
 			memcpy(&rmci->rmci_bmaprls.sbd[rmci->rmci_bmaprls.nbmaps],
@@ -1007,7 +1007,7 @@ bmap_biorq_waitempty(struct bmap *b)
 
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
-	OPSTAT_INCR(SLC_OPST_BMAP_WAIT_EMPTY);
+	OPSTAT_INCR("bmap_wait_empty");
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));

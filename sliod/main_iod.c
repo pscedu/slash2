@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
-	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);
+	OPSTAT_INCR("min_seqno");
 
 	slictlthr_main(sfn);
 	exit(0);

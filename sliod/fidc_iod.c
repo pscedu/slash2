@@ -109,10 +109,10 @@ sli_open_backing_file(struct fidc_membh *f)
 		rc = errno;
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
-		OPSTAT_INCR(SLI_OPST_OPEN_FAIL);
+		OPSTAT_INCR("open_fail");
 		lvl = PLL_WARN;
 	} else
-		OPSTAT_INCR(SLI_OPST_OPEN_SUCCEED);
+		OPSTAT_INCR("open_succeed");
 	psclog(lvl, "opened backing file path=%s fd=%d rc=%d",
 	    strstr(fidfn, SL_RPATH_FIDNS_DIR), fcmh_2_fd(f), rc);
 	return (rc);
@@ -177,7 +177,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 	FCMH_LOCK_ENSURE(f);
 	psc_assert(fg->fg_fid == fcmh_2_fid(f));
 
-	OPSTAT_INCR(SLI_OPST_REOPEN);
+	OPSTAT_INCR("reopen");
 
 	/*
 	 * If our generation number is still unknown try to set it here.
@@ -202,11 +202,11 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 		 */
 		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
 			if (close(fcmh_2_fd(f)) == -1) {
-				OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
+				OPSTAT_INCR("close_fail");
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "reopen/close errno=%d", errno);
 			} else {
-				OPSTAT_INCR(SLI_OPST_CLOSE_SUCCEED);
+				OPSTAT_INCR("close_succeed");
 			}
 			fcmh_2_fd(f) = -1;
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
@@ -292,11 +292,11 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
 	if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
 		if (close(fcmh_2_fd(f)) == -1) {
-			OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
+			OPSTAT_INCR("close_fail");
 			DEBUG_FCMH(PLL_ERROR, f,
 			    "dtor/close errno=%d", errno);
 		} else
-			OPSTAT_INCR(SLI_OPST_CLOSE_SUCCEED);
+			OPSTAT_INCR("close_succeed");
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 		f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 	}

@@ -289,7 +289,7 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 		    slstrerror(rc));
 	if (!rc) {
 		psclog_info("Log file %s has been removed", logfn);
-		OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
+		OPSTAT_INCR("logfile_remove");
 	}
 	return (rc);
 }
@@ -350,7 +350,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	if (rc)
 		psc_fatalx("Failed to create log file %s: %s", logfn,
 		    slstrerror(rc));
-	OPSTAT_INCR(SLM_OPST_LOGFILE_CREATE);
+	OPSTAT_INCR("logfile_create");
 	return (rc);
 }
 
@@ -467,7 +467,7 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 		reclaim_prg.log_handle = NULL;
 
 		reclaim_prg.cur_batchno++;
-		OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
+		OPSTAT_INCR("reclaim_batchno");
 
 		spinlock(&mds_distill_lock);
 		reclaim_prg.sync_xid = xid;
@@ -1377,9 +1377,9 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 	si = rpmi->rpmi_info;
 
 	if (rc)
-		OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_FAIL);
+		OPSTAT_INCR("reclaim_rpc_fail");
 	else {
-		OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_SEND);
+		OPSTAT_INCR("reclaim_rpc_send");
 
 		RPMI_LOCK(rpmi);
 		si->si_xid = ra->xid + 1;
@@ -1630,7 +1630,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 			if (csvc)
 				sl_csvc_decref(csvc);
 
-			OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_FAIL);
+			OPSTAT_INCR("reclaim_rpc_fail");
 			psclog(rc == SLERR_ION_OFFLINE ? PLL_INFO :
 			    PLL_WARN, "reclaim RPC failure: "
 			    "batchno=%"PRId64" dst=%s rc=%d",
@@ -1936,7 +1936,7 @@ mds_journal_init(uint64_t fsuuid)
 	struct sl_site *s;
 	size_t size;
 
-	OPSTAT_INCR(SLM_OPST_RECLAIM_CURSOR);
+	OPSTAT_INCR("reclaim_cursor");
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(U_ENTSZ == 512);
@@ -2084,7 +2084,7 @@ mds_journal_init(uint64_t fsuuid)
 	psc_assert(rc == 0);
 
 	reclaim_prg.cur_batchno = batchno;
-	OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
+	OPSTAT_INCR("reclaim_batchno");
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_BATCHNO, batchno);
 
 	if (sstb.sst_size) {
@@ -2126,7 +2126,7 @@ mds_journal_init(uint64_t fsuuid)
 	}
 
 	reclaim_prg.cur_xid = last_reclaim_xid;
-	OPSTAT_INCR(SLM_OPST_RECLAIM_XID);
+	OPSTAT_INCR("reclaim_xid");
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, reclaim_prg.cur_xid);
 
 	last_distill_xid = last_reclaim_xid;
@@ -2301,7 +2301,7 @@ mds_reserve_slot(int count)
 	nwaits = pjournal_reserve_slot(slm_journal, count);
 	while (nwaits > 0) {
 		nwaits--;
-		OPSTAT_INCR(SLM_OPST_JOURNAL_WAIT);
+		OPSTAT_INCR("journal_wait");
 	}
 }
 

@@ -78,7 +78,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 		struct srt_replwk_reqent *pq;
 		struct srt_replwk_repent *pp;
 
-		OPSTAT_INCR(SLI_OPST_HANDLE_REPL_SCHED);
+		OPSTAT_INCR("handle_repl_sched");
 
 		bchrp = PSCALLOC(sizeof(*bchrp));
 		bchrp->total = mq->len / sizeof(*pq);
@@ -98,7 +98,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	case SRMT_PRECLAIM: {
 		struct srt_preclaim_reqent *pq;
 
-		OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
+		OPSTAT_INCR("handle_preclaim");
 
 		for (pq = buf;
 		    (char *)pq < (char *)buf + mq->len;
@@ -149,7 +149,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	len = sizeof(struct srt_reclaim_entry);
 
-	OPSTAT_INCR(SLI_OPST_RECLAIM);
+	OPSTAT_INCR("reclaim");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	// XXX adjust for RPC overhead in metric?
@@ -188,7 +188,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 				close(fcmh_2_fd(f));
 				fcmh_2_fd(f) = -1;
 				f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
-				OPSTAT_INCR(SLI_OPST_RECLAIM_CLOSE);
+				OPSTAT_INCR("reclaim_close");
 			}
 			fcmh_op_done(f);
 		}
@@ -204,7 +204,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * it can do nothing.  Reporting an error can stall mds
 		 * progress.
 		 */
-		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
+		OPSTAT_INCR("reclaim_file");
 		if (unlink(fidfn) == -1 && errno != ENOENT) {
 			mp->rc = -errno;
 			psclog_errorx("error reclaiming %s "

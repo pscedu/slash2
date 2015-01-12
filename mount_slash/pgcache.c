@@ -125,12 +125,12 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
 				BMAP_ULOCK(b);
 				pscthr_yield();
-				OPSTAT_INCR(SLC_OPST_BMPCE_EIO);
+				OPSTAT_INCR("bmpce_eio");
 				BMAP_LOCK(b);
 				continue;
 			}
 			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
-			OPSTAT_INCR(SLC_OPST_BMPCE_HIT);
+			OPSTAT_INCR("bmpce_hit");
 			psc_atomic32_inc(&e->bmpce_ref);
 			break;
 		}
@@ -138,7 +138,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 		if (e2 == NULL) {
 			BMAP_ULOCK(b);
 			e2 = psc_pool_get(bmpce_pool);
-			OPSTAT_INCR(SLC_OPST_BMPCE_GET);
+			OPSTAT_INCR("bmpce_get");
 			BMAP_LOCK(b);
 			continue;
 		} else {
@@ -151,14 +151,14 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 			e->bmpce_len = 0;
 			e->bmpce_waitq = wq;
 
-			OPSTAT_INCR(SLC_OPST_BMPCE_INSERT);
+			OPSTAT_INCR("bmpce_insert");
 			PSC_SPLAY_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 			break;
 		}
 	}
 	if (e2) {
-		OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
+		OPSTAT_INCR("bmpce_put");
 		psc_pool_return(bmpce_pool, e2);
 	}
 	return (e);
@@ -172,7 +172,7 @@ bmpce_free(struct bmap_pagecache_entry *e,
 
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
-	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
+	OPSTAT_INCR("bmpce_put");
 	bmpce_init(bmpce_pool, e);
 	psc_pool_return(bmpce_pool, e);
 }
@@ -263,7 +263,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	BMAP_ULOCK(b);
 
-	OPSTAT_INCR(SLC_OPST_BIORQ_ALLOC);
+	OPSTAT_INCR("biorq_alloc");
 
 	inflight = OPSTAT_CURR(SLC_OPST_BIORQ_ALLOC) -
 	    OPSTAT_CURR(SLC_OPST_BIORQ_DESTROY);
@@ -307,7 +307,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		psc_assert(e->bmpce_flags & BMPCE_LRU);
 		psc_assert(!psc_atomic32_read(&e->bmpce_ref));
 
-		OPSTAT_INCR(SLC_OPST_BMPCE_BMAP_REAP);
+		OPSTAT_INCR("bmpce_bmap_reap");
 		pll_remove(&bmpc->bmpc_lru, e);
 		bmpce_free(e, bmpc);
 	}
@@ -380,7 +380,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 	}
-	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY_BATCH);
+	OPSTAT_INCR("biorq_destroy_batch");
 	psc_dynarray_free(&a);
 }
 
@@ -418,7 +418,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			BMPCE_ULOCK(e);
 			continue;
 		}
-		OPSTAT_INCR(SLC_OPST_BMPCE_REAP);
+		OPSTAT_INCR("bmpce_reap");
 		pll_remove(&bmpc->bmpc_lru, e);
 		bmpce_free(e, bmpc);
 		if (++freed >= nfree)
@@ -470,7 +470,7 @@ bmpce_reap(struct psc_poolmgr *m)
 			    psc_atomic32_read(&m->ppm_nwaiters));
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else {
-			OPSTAT_INCR(SLC_OPST_BMPCE_REAP_SPIN);
+			OPSTAT_INCR("bmpce_reap_spin");
 			psclog_debug("skip bmpc=%p, nothing on lru",
 			    bmpc);
 		}
@@ -505,7 +505,7 @@ bmpc_global_init(void)
 	    "bmpclru");
 
 	/* make it visible */
-	OPSTAT_INCR(SLC_OPST_BIORQ_MAX);
+	OPSTAT_INCR("biorq_max");
 }
 
 #if PFL_DEBUG > 0

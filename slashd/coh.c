@@ -111,7 +111,7 @@ mdscoh_cb(struct pscrpc_request *rq,
 	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
-	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
+	OPSTAT_INCR("coherent_cb");
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
@@ -187,6 +187,6 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	rq->rq_interpret_reply = mdscoh_cb;
 	psc_assert(SL_NBRQSET_ADD(csvc, rq) == 0);
 
-	OPSTAT_INCR(SLM_OPST_COHERENT_REQ);
+	OPSTAT_INCR("coherent_req");
 	return (0);
 }

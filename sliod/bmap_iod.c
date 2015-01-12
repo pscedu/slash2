@@ -91,7 +91,7 @@ bim_updateseq(uint64_t seq)
 		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
 		    bimSeq.bim_minseq, seq);
 		bimSeq.bim_minseq = seq;
-		OPSTAT_INCR(SLI_OPST_SEQNO_REDUCE);
+		OPSTAT_INCR("seqno_reduce");
 		goto done;
 	}
 
@@ -103,7 +103,7 @@ bim_updateseq(uint64_t seq)
 	psclog_warnx("Seqno %"PRId64" is invalid "
 	    "(bim_minseq=%"PRId64")",
 	    seq, bimSeq.bim_minseq);
-	OPSTAT_INCR(SLI_OPST_SEQNO_INVALID);
+	OPSTAT_INCR("seqno_invalid");
 
  done:
 	freelock(&bimSeq.bim_lock);
@@ -122,7 +122,7 @@ bim_getcurseq(void)
 	struct timespec crtime;
 	int rc;
 
-	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
+	OPSTAT_INCR("get_cur_seq");
 
  retry:
 	spinlock(&bimSeq.bim_lock);
@@ -140,7 +140,7 @@ bim_getcurseq(void)
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
 		freelock(&bimSeq.bim_lock);
 
-		OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ_RPC);
+		OPSTAT_INCR("get_cur_seq_rpc");
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
@@ -269,7 +269,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR(SLI_OPST_RELEASE);
+		OPSTAT_INCR("release");
 
 		brr->nbmaps = nrls;
 		/*

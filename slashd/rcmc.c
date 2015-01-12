@@ -263,7 +263,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
-			OPSTAT_INCR(SLM_OPST_REPLST_ALL);
+			OPSTAT_INCR("replst_all");
 
 			UPSCH_LOCK();
 			dbdo(slmrcmthr_walk, &da,

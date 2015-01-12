@@ -133,7 +133,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
-	OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD);
+	OPSTAT_INCR("handle_replread");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) 
@@ -178,7 +178,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
 			s->slvr_aioreply = aiocbr;
-			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
+			OPSTAT_INCR("aio_insert");
 			SLVR_ULOCK(s);
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
@@ -233,7 +233,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
-	OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_AIO);
+	OPSTAT_INCR("handle_replread_aio");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
@@ -335,11 +335,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < (int)nitems(w->srw_slvr));
 
 	if (rc == -SLERR_AIOWAIT)
-		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB_AIO);
+		OPSTAT_INCR("issue_replread_cb_aio");
 	else if (rc)
-		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
+		OPSTAT_INCR("issue_replread_error");
 	else
-		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB);
+		OPSTAT_INCR("issue_replread_cb");
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -415,9 +415,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 		replwk_queue(w);
 		sli_replwkrq_decref(w, rc);
-		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
+		OPSTAT_INCR("issue_replread_error");
 	} else {
-		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD);
+		OPSTAT_INCR("issue_replread");
 	}
 	if (rq)
 		pscrpc_req_finished(rq);

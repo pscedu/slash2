@@ -194,7 +194,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	    mp))
 		goto out;
 
-	OPSTAT_INCR(SLI_OPST_REPL_READAIO);
+	OPSTAT_INCR("repl_readaio");
 
 	s = a->aiocbr_slvrs[0];
 
@@ -237,7 +237,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rc)
 		goto out;
 
-	OPSTAT_INCR(SLI_OPST_SLVR_AIO_REPLY);
+	OPSTAT_INCR("slvr_aio_reply");
 
 	mq->rc = slvr_aio_chkslvrs(a);
 
@@ -300,7 +300,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
-	OPSTAT_INCR(SLI_OPST_IOCB_FREE);
+	OPSTAT_INCR("iocb_free");
 	psc_pool_return(sli_iocb_pool, iocb);
 }
 
@@ -353,7 +353,7 @@ sli_aio_iocb_new(struct slvr *s)
 {
 	struct sli_iocb *iocb;
 
-	OPSTAT_INCR(SLI_OPST_IOCB_GET);
+	OPSTAT_INCR("iocb_get");
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
 	INIT_LISTENTRY(&iocb->iocb_lentry);
@@ -499,7 +499,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 
 	errno = 0;
 	if (rw == SL_READ) {
-		OPSTAT_INCR(SLI_OPST_FSIO_READ);
+		OPSTAT_INCR("fsio_read");
 
 		if (slcfg_local->cfg_async_io)
 			return (sli_aio_register(s));
@@ -523,7 +523,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 
 		if (rc == -1) {
 			save_errno = errno;
-			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
+			OPSTAT_INCR("fsio_read_fail");
 		} else if (rc) {
 			int crc_rc;
 
@@ -540,12 +540,12 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			crc_rc = slvr_do_crc(s, NULL);
 			SLVR_ULOCK(s);
 			if (crc_rc == PFLERR_BADCRC) {
-				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD);
+				OPSTAT_INCR("fsio_read_crc_bad");
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
 				    nblks, foff);
 			} else {
-				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD);
+				OPSTAT_INCR("fsio_read_crc_good");
 			}
 		}
 
@@ -554,7 +554,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		OPSTAT_ADD(SLI_OPST_READ_WAIT_USECS,
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	} else {
-		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
+		OPSTAT_INCR("fsio_write");
 
 		sblk = off / SLASH_SLVR_BLKSZ;
 		psc_assert((off % SLASH_SLVR_BLKSZ) == 0);
@@ -574,7 +574,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		    foff);
 		if (rc == -1) {
 			save_errno = errno;
-			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
+			OPSTAT_INCR("fsio_write_fail");
 		} else
 			psc_iostats_intv_add(&sli_backingstore_ist.wr,
 			    rc);
@@ -704,7 +704,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	if (s->slvr_flags & SLVR_DATARDY) {
 		if ((flags & SLVR_READAHEAD) == 0 &&
 		    s->slvr_flags & SLVR_READAHEAD)
-			OPSTAT_INCR(SLI_OPST_READAHEAD_HIT);
+			OPSTAT_INCR("readahead_hit");
 		goto out;
 	}
 

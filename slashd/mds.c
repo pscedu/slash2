@@ -208,7 +208,7 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 		}
 	}
 	if (!rc && (want_dio || force_dio)) {
-		OPSTAT_INCR(SLM_OPST_BMAP_DIO_SET);
+		OPSTAT_INCR("bmap_dio_set");
 		b->bcm_flags |= BMAP_DIO;
 		b->bcm_flags &= ~BMAP_DIOCB;
 	}
@@ -303,7 +303,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 
 	ok = mds_sliod_alive(si);
 	if (!ok) {
-		OPSTAT_INCR(SLM_OPST_SLIOD_PING_FAIL);
+		OPSTAT_INCR("sliod_ping_fail");
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_name);
 	}
@@ -817,7 +817,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	}
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_WRITE;
-	OPSTAT_INCR(SLM_OPST_BMAP_CHWRMODE_DONE);
+	OPSTAT_INCR("bmap_chwrmode_done");
 
   out:
 	b->bcm_flags &= ~BMAP_IONASSIGN;
@@ -1168,7 +1168,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	     (bmi->bmi_writers == 1 && !bmi->bmi_readers))) {
 		/* Remove the directio flag if possible. */
 		b->bcm_flags &= ~(BMAP_DIO | BMAP_DIOCB);
-		OPSTAT_INCR(SLM_OPST_BMAP_DIO_CLR);
+		OPSTAT_INCR("bmap_dio_clr");
 	}
 
 	/*
@@ -1939,7 +1939,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmap *b;
 	int rc, rw;
 
-	OPSTAT_INCR(SLM_OPST_LEASE_RENEW);
+	OPSTAT_INCR("lease_renew");
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
@@ -1951,7 +1951,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	BMAP_ULOCK(b);
 
 	if (!obml)
-		OPSTAT_INCR(SLM_OPST_LEASE_RENEW_ENOENT);
+		OPSTAT_INCR("lease_renew_enoent");
 
 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);

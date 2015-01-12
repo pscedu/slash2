@@ -124,7 +124,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
+	OPSTAT_INCR("crc_update");
 	psc_atomic32_inc(&sli_ninfl_bcrcupd);
 
   out:
@@ -201,7 +201,7 @@ slicrudthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
+		OPSTAT_INCR("crc_update_push");
 
 		/*
 		 * If we fail to send an RPC, we must leave the
@@ -238,7 +238,7 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 	struct bcrcupd *bcr;
 	int i;
 
-	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB);
+	OPSTAT_INCR("crc_update_cb");
 
 	a = args->pointer_arg[0];
 	csvc = args->pointer_arg[1];
@@ -263,7 +263,7 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 		if (rq->rq_status) {
 			BII_ULOCK(bii);
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
-			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
+			OPSTAT_INCR("crc_update_cb_failure");
 			continue;
 		}
 		bcr_ready_remove(bcr);

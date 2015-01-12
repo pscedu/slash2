@@ -201,7 +201,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	sl_siteid_t siteid;
 	int i;
 
-	OPSTAT_INCR(SLC_OPST_SLC_FCMH_CTOR);
+	OPSTAT_INCR("slc_fcmh_ctor");
 
 	fci = fcmh_get_pri(f);
 	slc_fcmh_refresh_age(f);
@@ -236,7 +236,7 @@ void
 slc_fcmh_dtor(struct fidc_membh *f)
 {
 	/* XXX consolidate into pool stats */
-	OPSTAT_INCR(SLC_OPST_SLC_FCMH_DTOR);
+	OPSTAT_INCR("slc_fcmh_dtor");
 
 	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
 		dircache_purge(f);

@@ -85,7 +85,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
-		OPSTAT_INCR(SLC_OPST_DIRCACHE_UNUSED);
+		OPSTAT_INCR("dircache_unused");
 
 	while (p->dcp_refcnt)
 		fcmh_wait_nocond_locked(d);
@@ -219,7 +219,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
 			    q.dce_namelen) == 0) {
 				ino = dirent->pfd_ino;
 				found = 1;
-				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
+				OPSTAT_INCR("dircache_lookup_hit");
 			}
 
 			psclog_debug("fid="SLPRI_FID" off=%"PRId64" "
@@ -384,7 +384,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	off_t adj;
 	int i;
 
-	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
+	OPSTAT_INCR("dircache_reg_entry");
 
 	dce = base0 = PSCALLOC(nents * sizeof(*dce));
 

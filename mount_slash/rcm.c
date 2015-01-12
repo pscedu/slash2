@@ -244,7 +244,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR(SLC_OPST_BMAP_DIO);
+	OPSTAT_INCR("bmap_dio");
 	psclog_info("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->blkno, mq->seq);
 
@@ -313,12 +313,12 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		if (mq->size)
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-		OPSTAT_INCR(SLC_OPST_READDIR_DROP);
+		OPSTAT_INCR("readdir_drop");
 		PFL_GOTOERR(out2, 0);
 	}
 
 	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
-		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
+		OPSTAT_INCR("readdir_stale");
 		PFL_GOTOERR(out1, mp->rc = -PFLERR_STALE);
 	}
 
