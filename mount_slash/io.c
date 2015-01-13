@@ -656,11 +656,11 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 			}
 		}
 	} else {
-		msl_update_attributes(q);
 		if (q->mfsrq_err)
 			OPSTAT_INCR("fsrq_write_err");
 		else {
 			OPSTAT_INCR("fsrq_write_ok");
+			msl_update_attributes(q);
 			psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 		}
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
@@ -1779,9 +1779,6 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	struct fidc_membh *f;
 	struct msl_fhent *mfh;
 	struct fcmh_cli_info *fci;
-
-	if (q->mfsrq_err)
-		return;
 
 	mfh = q->mfsrq_mfh;
 	f = mfh->mfh_fcmh;
