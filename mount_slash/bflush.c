@@ -468,9 +468,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		return;
 
  out:
-	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
+	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs)
 		bmap_flush_resched(r, rc);
-	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);
