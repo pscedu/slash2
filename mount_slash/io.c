@@ -299,6 +299,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
+		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
 		if ((b->bcm_flags & BMAP_FLUSHQ) &&
@@ -1120,6 +1121,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
+	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 	BIORQ_ULOCK(r);
@@ -1173,7 +1175,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
-
 		BMPCE_ULOCK(e);
 
 		iovs[i].iov_base = e->bmpce_base;
@@ -1296,7 +1297,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	 * the storage.
 	 */
 	if (needflush)
-		bmpc_biorqs_flush(r->biorq_bmap, 1);
+		bmpc_biorqs_flush_wait(r->biorq_bmap);
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {

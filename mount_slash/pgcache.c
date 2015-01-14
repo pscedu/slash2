@@ -229,6 +229,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r = psc_pool_get(slc_biorq_pool);
 	memset(r, 0, sizeof(*r));
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
+	INIT_PSC_LISTENTRY(&r->biorq_exp_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_aio_lentry);
 	INIT_SPINLOCK(&r->biorq_lock);
 
@@ -310,24 +311,49 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	psc_assert(pll_empty(&bmpc->bmpc_lru));
 }
 
+/*
+ * Flush all biorqs on the bmap's `new' biorq list, which all writes get
+ * initially placed on.  This routine is called in all flush code paths
+ * and before launching read RPCs.
+ *
+ * @b: bmap to flush.
+ * @all: whether to continuously monitor and flush any new biorqs added
+ *	while waiting for old ones to clear.
+ */
 void
-bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
+bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	int expired;
+
+	/*
+	 * XXX if `all' is false, we should not wait for any new biorqs
+	 * added to the bmap since this routine has started flushing.
+	 */
+	(void)all;
 
 	bmpc = bmap_2_bmpc(b);
 
  retry:
 	expired = 0;
 	BMAP_LOCK(b);
-	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
+	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_EXPIRE;
-		BIORQ_ULOCK(r);
 		expired++;
+		/*
+		 * This list is sorted by time (when the biorq added) is
+		 * added so when we encounter an already expired biorq
+		 * we can stop since we've already processed it and all
+		 * biorqs before it.
+		 */
+		if (r->biorq_flags & BIORQ_EXPIRE) {
+			BIORQ_ULOCK(r);
+			break;
+		}
+		r->biorq_flags |= BIORQ_EXPIRE;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
+		BIORQ_ULOCK(r);
 	}
 	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
@@ -363,6 +389,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		}
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
+		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}

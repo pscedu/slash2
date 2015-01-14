@@ -160,9 +160,10 @@ struct bmpc_ioreq {
 	psc_spinlock_t		 biorq_lock;
 	struct timespec		 biorq_expire;
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
-	struct psclist_head	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
-	struct psclist_head	 biorq_aio_lentry;
-	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* redblack tree membership     */
+	struct psc_listentry	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
+	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_new_biorqs_exp */
+	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios	*/
+	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* indexed on offset for write coalescing */
 	struct bmapc_memb	*biorq_bmap;	/* backpointer to our bmap	*/
 	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
 };
@@ -246,8 +247,9 @@ struct bmap_pagecache {
 	 * The tree is protected by the bmap lock.
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
-	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
+	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* for flushing/expiring */
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* pending I/O requests */
+	struct psc_listentry		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
 struct bmpc_write_coalescer {
@@ -258,7 +260,7 @@ struct bmpc_write_coalescer {
 	struct bmap_pagecache_entry	*bwc_bmpces[BMPC_COALESCE_MAX_IOV];
 	int				 bwc_niovs;
 	int				 bwc_nbmpces;
-	struct psclist_head		 bwc_lentry;
+	struct psc_listentry		 bwc_lentry;
 };
 
 static __inline void
@@ -272,6 +274,8 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op, uint32_t of
 	(((r)->biorq_off & ~BMPC_BUFMASK) + ((nbmpce) * BMPC_BUFSZ))
 
 #define biorq_voff_get(r)	((r)->biorq_off + (r)->biorq_len)
+
+#define bmpc_biorqs_flush_wait(b)	bmpc_biorqs_flush((b), 0)
 
 void	 bmpc_global_init(void);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
@@ -316,6 +320,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
+	pll_init(&bmpc->bmpc_new_biorqs_exp, struct bmpc_ioreq,
+	    biorq_exp_lentry, NULL);
 
 	psc_waitq_init(&bmpc->bmpc_waitq);
 
