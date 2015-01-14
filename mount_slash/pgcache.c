@@ -342,10 +342,10 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 		BIORQ_LOCK(r);
 		expired++;
 		/*
-		 * This list is sorted by time (when the biorq added) is
-		 * added so when we encounter an already expired biorq
-		 * we can stop since we've already processed it and all
-		 * biorqs before it.
+		 * A biorq can only be added at the end of the list.
+		 * So when we encounter an already expired biorq
+		 * we can stop since we've already processed it and 
+		 * all biorqs before it.
 		 */
 		if (r->biorq_flags & BIORQ_EXPIRE) {
 			BIORQ_ULOCK(r);
