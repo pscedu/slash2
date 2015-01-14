@@ -90,7 +90,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
-	    biorq_png_lentry, &e->bmpce_lock);
+	    biorq_aio_lentry, &e->bmpce_lock);
 	e->bmpce_base = base;
 	if (!e->bmpce_base)
 		e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
@@ -229,7 +229,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r = psc_pool_get(slc_biorq_pool);
 	memset(r, 0, sizeof(*r));
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
-	INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
+	INIT_PSC_LISTENTRY(&r->biorq_aio_lentry);
 	INIT_SPINLOCK(&r->biorq_lock);
 
 	PFL_GETTIMESPEC(&issue);

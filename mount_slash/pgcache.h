@@ -161,7 +161,7 @@ struct bmpc_ioreq {
 	struct timespec		 biorq_expire;
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
-	struct psclist_head	 biorq_png_lentry;
+	struct psclist_head	 biorq_aio_lentry;
 	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* redblack tree membership     */
 	struct bmapc_memb	*biorq_bmap;	/* backpointer to our bmap	*/
 	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
