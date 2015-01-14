@@ -304,8 +304,8 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
-	    RB_EMPTY(&bmpc->bmpc_new_biorqs)   ||
-	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
+	    RB_EMPTY(&bmpc->bmpc_new_biorqs) ||
+	    !pll_empty(&bmpc->bmpc_pndg_biorqs) ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
 		OPSTAT_INCR("bmap_reassign_bail");
