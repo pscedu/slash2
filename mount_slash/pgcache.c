@@ -331,11 +331,8 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 	}
 	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
-		if (wait) {
-			psc_waitq_waitrel_us(&bmpc->bmpc_waitq,
-			    &b->bcm_lock, 3000);
-			goto retry;
-		}
+		psc_waitq_wait(&bmpc->bmpc_waitq, &b->bcm_lock);
+		goto retry;
 	}
 	BMAP_ULOCK(b);
 }
@@ -369,6 +366,8 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}
+	if (psc_dynarray_len(&a))
+		bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 
 	DYNARRAY_FOREACH(r, i, &a) {
