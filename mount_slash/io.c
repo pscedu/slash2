@@ -1273,12 +1273,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		if (e->bmpce_flags & BMPCE_FAULTING) {
-			BMPCE_ULOCK(e);
-			continue;
-		}
-
-		if (msl_biorq_page_valid(r, i, 0)) {
+		if (e->bmpce_flags & BMPCE_FAULTING ||
+		    msl_biorq_page_valid(r, i, 0)) {
 			BMPCE_ULOCK(e);
 			continue;
 		}
@@ -1300,9 +1296,6 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
-		/*
-		 * Mixing readahead pages and normal pages is tricky.
-		 */
 		if (i && e->bmpce_off != off) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
 			if (rc)
