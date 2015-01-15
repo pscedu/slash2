@@ -2066,6 +2066,10 @@ msreadaheadthr_main(struct psc_thread *thr)
 			    &f->fcmh_waitq);
 			BMAP_ULOCK(b);
 
+			BMPCE_LOCK(e);
+			e->bmpce_flags |= BMPCE_READAHEAD;
+			BMPCE_ULOCK(e);
+
 			psc_dynarray_add(&r->biorq_pages, e);
 		}
 		msl_launch_read_rpcs(r);
