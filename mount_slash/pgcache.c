@@ -138,7 +138,6 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 		if (e2 == NULL) {
 			BMAP_ULOCK(b);
 			e2 = psc_pool_get(bmpce_pool);
-			OPSTAT_INCR("bmpce_get");
 			BMAP_LOCK(b);
 			continue;
 		} else {
@@ -151,14 +150,13 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 			e->bmpce_len = 0;
 			e->bmpce_waitq = wq;
 
-			OPSTAT_INCR("bmpce_insert");
 			PSC_SPLAY_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 			break;
 		}
 	}
 	if (e2) {
-		OPSTAT_INCR("bmpce_put");
+		OPSTAT_INCR("bmpce_gratuitous");
 		psc_pool_return(bmpce_pool, e2);
 	}
 	return (e);
@@ -172,7 +170,6 @@ bmpce_free(struct bmap_pagecache_entry *e,
 
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
-	OPSTAT_INCR("bmpce_put");
 	bmpce_init(bmpce_pool, e);
 	psc_pool_return(bmpce_pool, e);
 }
@@ -344,7 +341,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 		/*
 		 * A biorq can only be added at the end of the list.
 		 * So when we encounter an already expired biorq
-		 * we can stop since we've already processed it and 
+		 * we can stop since we've already processed it and
 		 * all biorqs before it.
 		 */
 		if (r->biorq_flags & BIORQ_EXPIRE) {
