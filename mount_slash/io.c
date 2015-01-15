@@ -89,6 +89,7 @@ psc_atomic32_t		 slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
 struct pfl_iostats_rw	 slc_dio_ist;
 struct pfl_iostats	 slc_rdcache_ist;
+struct pfl_iostats	 slc_readahead_hit_ist;
 struct pfl_iostats	 slc_readahead_issue_ist;
 
 struct pfl_iostats_grad	 slc_iosyscall_ist[8];
@@ -1331,8 +1332,10 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	struct timespec ts0, ts1, tsd;
 	int i, rc = 0, aiowait = 0;
+	int perfect_ra = 0;
 
 	if (r->biorq_flags & BIORQ_READ) {
+		perfect_ra = 1;
 		rc = msl_launch_read_rpcs(r);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -1347,7 +1350,11 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
+			perfect_ra = 0;
 		}
+
+		if ((e->bmpce_flags & BMPCE_READAHEAD) == 0)
+			perfect_ra = 0;
 
 		if (e->bmpce_flags & BMPCE_EIO) {
 			rc = e->bmpce_rc;
@@ -1378,6 +1385,9 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	timespecsub(&ts1, &ts0, &tsd);
 	OPSTAT_ADD("biorq_fetch_wait_usecs",
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
+
+	if (rc == 0 && perfect_ra)
+		psc_iostats_intv_add(&slc_readahead_hit, r->biorq_len);
 
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);

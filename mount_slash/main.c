@@ -3470,6 +3470,7 @@ msl_init(void)
 	psc_iostats_init(&slc_dio_ist.wr, "dio-wr");
 	psc_iostats_init(&slc_rdcache_ist, "rd-cache-hit");
 	psc_iostats_init(&slc_readahead_issue_ist, "readahead-issue");
+	psc_iostats_init(&slc_readahead_hit_ist, "readahead-hit");
 
 	slc_iosyscall_ist[0].size = slc_iorpc_ist[0].size =        1024;
 	slc_iosyscall_ist[1].size = slc_iorpc_ist[1].size =    4 * 1024;
