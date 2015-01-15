@@ -142,7 +142,7 @@ uint32_t			 sl_sys_upnonce;
 struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
-int				 slc_posix_mkgrps;
+int				 slc_posix_mkgrps = 1;
 
 int
 uidmap_ext_cred(struct srt_creds *cr)
