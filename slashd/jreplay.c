@@ -67,7 +67,7 @@ mds_replay_bmap(void *jent, int op)
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
@@ -233,7 +233,7 @@ mds_replay_ino(void *jent, int op)
 {
 	struct slmds_jent_ino_repls *sjir = jent;
 	struct slash_inode_handle *ih = NULL;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct fidc_membh *f;
 	int j, rc;
 

@@ -1028,7 +1028,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct fidc_membh *f = NULL;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct bmap *b = NULL;
 	sl_bmapno_t bno;
 

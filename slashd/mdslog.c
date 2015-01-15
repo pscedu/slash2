@@ -767,12 +767,12 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	switch (op) {
 	case NS_OP_UNLINK:
 		if (sstb->sst_nlink > 1)
-			COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
+			COPYFG((struct sl_fidgen *)arg, &sstb->sst_fg);
 		break;
 	case NS_OP_RENAME: {
 		struct {
-			struct slash_fidgen clfg;
-			struct slash_fidgen *fgp;
+			struct sl_fidgen clfg;
+			struct sl_fidgen *fgp;
 		} *aa;
 
 		aa = arg;

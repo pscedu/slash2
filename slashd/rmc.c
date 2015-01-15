@@ -1255,7 +1255,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	struct fidc_membh *c, *op = NULL, *np = NULL;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
-	struct slash_fidgen chfg[2];
+	struct sl_fidgen chfg[2];
 	struct iovec iov[2];
 	int vfsid;
 
@@ -1692,7 +1692,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
-	struct slash_fidgen fg, oldfg, chfg;
+	struct sl_fidgen fg, oldfg, chfg;
 	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;

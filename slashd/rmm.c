@@ -292,8 +292,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
  * callers.
  */
 int
-slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
-    struct slash_fidgen *nfg, char *name, char *newname, uint32_t mode,
+slm_rmm_forward_namespace(int op, struct sl_fidgen *fg,
+    struct sl_fidgen *nfg, char *name, char *newname, uint32_t mode,
     const struct slash_creds *crp, struct srt_stat *sstb,
     int32_t to_set)
 {

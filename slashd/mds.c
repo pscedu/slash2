@@ -1294,7 +1294,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 	struct srm_bmap_release_rep *mp;
 	struct bmap_mds_lease *bml;
 	struct srt_bmapdesc *sbd;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct fidc_membh *f;
 	struct bmap *b;
 	uint32_t i;
@@ -1371,7 +1371,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	struct pfl_odt_receipt *r = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap_mds_lease *bml;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct bmap *b = NULL;
 	struct sl_resm *resm;
 	int rc;
@@ -1683,7 +1683,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 }
 
 int
-mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
+mds_bmap_load_fg(const struct sl_fidgen *fg, sl_bmapno_t bmapno,
     struct bmap **bp)
 {
 	struct fidc_membh *f;
@@ -2523,7 +2523,7 @@ slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
     __unusedx void *arg)
 {
 	struct {
-		struct slash_fidgen fg;
+		struct sl_fidgen fg;
 	} *pt = data;
 	struct fidc_membh *f;
 //	sl_bmapno_t bno;

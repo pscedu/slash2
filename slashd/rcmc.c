@@ -250,7 +250,7 @@ slmrcmthr_main(struct psc_thread *thr)
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
 	struct psc_dynarray da;
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct fidc_membh *f;
 	int n, rc;
 	void *p;

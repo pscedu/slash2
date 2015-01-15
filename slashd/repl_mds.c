@@ -724,7 +724,7 @@ slm_repl_upd_write(struct bmapc_memb *b, int rel)
  *	as priority, if the request already exists.
  */
 int
-mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
+mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios, int sys_prio, int usr_prio)
 {
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
@@ -929,7 +929,7 @@ slm_repl_countvalid_cb(__unusedx struct bmapc_memb *b, int iosidx,
 }
 
 int
-mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
+mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios)
 {
 	int rc, flags, empty_tract[NBREPLST], tract[NBREPLST],
