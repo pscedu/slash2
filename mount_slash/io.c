@@ -1278,7 +1278,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		if (e->bmpce_flags & BMPCE_FAULTING ||
 		    msl_biorq_page_valid(r, i, 0)) {
 			BMPCE_ULOCK(e);
-			OPST_INCR("readahead_gratuitous");
+			OPSTAT_INCR("readahead_gratuitous");
 			continue;
 		}
 
