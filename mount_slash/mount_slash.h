@@ -327,7 +327,7 @@ extern char			 mountpoint[];
 
 extern struct pfl_iostats_rw	 slc_dio_ist;
 extern struct pfl_iostats	 slc_rdcache_ist;
-extern struct pfl_iostats	 slc_racache_ist;
+extern struct pfl_iostats	 slc_readahead_issue_ist;
 
 extern struct pfl_iostats_grad	 slc_iosyscall_ist[];
 extern struct pfl_iostats_grad	 slc_iorpc_ist[];

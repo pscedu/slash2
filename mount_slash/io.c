@@ -89,7 +89,7 @@ psc_atomic32_t		 slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
 struct pfl_iostats_rw	 slc_dio_ist;
 struct pfl_iostats	 slc_rdcache_ist;
-struct pfl_iostats	 slc_racache_ist;
+struct pfl_iostats	 slc_readahead_issue_ist;
 
 struct pfl_iostats_grad	 slc_iosyscall_ist[8];
 struct pfl_iostats_grad	 slc_iorpc_ist[8];
@@ -852,7 +852,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		msl_update_iocounters(slc_iorpc_ist, SL_READ,
 		    mq->size);
 		if (r->biorq_flags & BIORQ_READAHEAD)
-			psc_iostats_intv_add(&slc_racache_ist, mq->size);
+			psc_iostats_intv_add(&slc_readahead_issue_ist,
+			    mq->size);
 	}
 
 	msl_biorq_release(r);
