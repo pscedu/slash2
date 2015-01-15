@@ -117,8 +117,8 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define NUM_BMAP_FLUSH_THREADS		16
-#define NUM_ATTR_FLUSH_THREADS		2
-#define NUM_READAHEAD_THREADS		16
+#define NUM_ATTR_FLUSH_THREADS		4
+#define NUM_READAHEAD_THREADS		4
 
 #define MS_READAHEAD_MAXPGS		32
 
@@ -328,6 +328,7 @@ extern char			 mountpoint[];
 extern struct pfl_iostats_rw	 slc_dio_ist;
 extern struct pfl_iostats	 slc_rdcache_ist;
 extern struct pfl_iostats	 slc_readahead_issue_ist;
+extern struct pfl_iostats	 slc_readahead_hit_ist;
 
 extern struct pfl_iostats_grad	 slc_iosyscall_ist[];
 extern struct pfl_iostats_grad	 slc_iorpc_ist[];
