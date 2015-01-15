@@ -3466,8 +3466,8 @@ msl_init(void)
 	msctlthr_spawn();
 	mstimerthr_spawn();
 
-	psc_iostats_init(&slc_dio_ist.rd, "dio-rd");
-	psc_iostats_init(&slc_dio_ist.wr, "dio-wr");
+	psc_iostats_init(&slc_dio_ist.rd, "dio-rpc-rd");
+	psc_iostats_init(&slc_dio_ist.wr, "dio-rpc-wr");
 	psc_iostats_init(&slc_rdcache_ist, "rd-cache-hit");
 	psc_iostats_init(&slc_readahead_issue_ist, "readahead-issue");
 	psc_iostats_init(&slc_readahead_hit_ist, "readahead-hit");
