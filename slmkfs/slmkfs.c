@@ -57,10 +57,10 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-uint64_t         siteid;
-uint64_t         fsuuid;
+uint64_t	 siteid;
+uint64_t	 fsuuid;
 sl_ios_id_t	 resid = IOS_ID_ANY;
-const char      *datadir = SL_PATH_DATA_DIR;
+const char	*datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
 
