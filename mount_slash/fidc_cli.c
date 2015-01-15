@@ -96,7 +96,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
 
 	psc_assert(sstb->sst_gen != FGEN_ANY);
-#if 0
+#if 1
 	/* XXX FixMe: broken by global mount */
 	psc_assert(f->fcmh_fg.fg_fid == sstb->sst_fid);
 #endif
