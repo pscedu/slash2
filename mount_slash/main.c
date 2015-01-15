@@ -952,7 +952,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 __static int
-msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
+msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
@@ -962,6 +962,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc;
+	pscfs_inum_t pinum = fcmh_2_fid(p);
 
 	if (strlen(name) == 0)
 		return (ENOENT);
@@ -972,7 +973,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	OPSTAT_INCR("lookup_rpc");
 
-	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1162,7 +1163,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	fcmh_op_done(p);
 
 	if (remote)
-		return (msl_lookuprpc(pfr, pinum, name, fgp, sstb, fp));
+		return (msl_lookuprpc(pfr, p, name, fgp, sstb, fp));
 
 	/*
 	 * We should do a lookup based on name here because a rename
