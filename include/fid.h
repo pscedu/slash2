@@ -140,9 +140,9 @@ struct sl_fidgen {
 #define COPYFG(dst, src)						\
 	do {								\
 		psc_assert(sizeof(*(dst)) ==				\
-		    sizeof(struct slash_fidgen));			\
+		    sizeof(struct sl_fidgen));				\
 		psc_assert(sizeof(*(src)) ==				\
-		    sizeof(struct slash_fidgen));			\
+		    sizeof(struct sl_fidgen));				\
 		memcpy((dst), (src), sizeof(*(dst)));			\
 	} while (0)
 
@@ -191,7 +191,7 @@ sl_sprinta_fgen(slfgen_t fgen)
 }
 
 static __inline const char *
-sl_sprintfa_fg(struct slash_fidgen *fg)
+sl_sprintfa_fg(struct sl_fidgen *fg)
 {
 	char *buf;
 	int rc;

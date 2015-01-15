@@ -52,7 +52,7 @@ struct sl_fcmh_ops {
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
-	int	(*sfop_modify)(struct fidc_membh *, const struct slash_fidgen *);
+	int	(*sfop_modify)(struct fidc_membh *, const struct sl_fidgen *);
 };
 
 /**
@@ -269,7 +269,7 @@ int	fidc_reap(int, int);
 void	sl_freapthr_spawn(int, const char *);
 
 int	_fidc_lookup(const struct pfl_callerinfo *,
-	    const struct slash_fidgen *, int,
+	    const struct sl_fidgen *, int,
 	    struct fidc_membh **, void *);
 
 #define fidc_lookup(fgp, lkfl, fcmhp)			\
@@ -281,7 +281,7 @@ int	_fidc_lookup(const struct pfl_callerinfo *,
 
 #define fidc_lookup_fid(fid, fp)					\
 	_PFL_RVSTART {							\
-		struct slash_fidgen _fg = { (fid), FGEN_ANY };		\
+		struct sl_fidgen _fg = { (fid), FGEN_ANY };		\
 									\
 		fidc_lookup_fg(&_fg, (fp));				\
 	} _PFL_RVEND

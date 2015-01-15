@@ -43,7 +43,7 @@ struct slctlmsg_conn {
 #define SLCTL_REST_CLI		0
 
 struct slctlmsg_fcmh {
-	struct slash_fidgen	scf_fg;		/* identity of the file */
+	struct sl_fidgen	scf_fg;		/* identity of the file */
 	uint64_t		scf_size;
 	int64_t			scf_blksize;
 	int32_t			scf_ptruncgen;
@@ -60,7 +60,7 @@ struct slctlmsg_fcmh {
 #define SLCTL_FCL_BUSY		1	/* only FCMH_CAC_BUSY */
 
 struct slctlmsg_bmap {
-	struct slash_fidgen	scb_fg;
+	struct sl_fidgen	scb_fg;
 	uint32_t		scb_bno;
 	sl_bmapgen_t		scb_bgen;
 
