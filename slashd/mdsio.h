@@ -98,7 +98,7 @@ struct mdsio_ops {
 			sl_log_update_t, sl_getslfid_cb_t);
 	int	(*mio_opencreatef)(int, mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *,
 			struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_opendir)(int, mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
+	int	(*mio_opendir)(int, mdsio_fid_t, const struct slash_creds *, struct sl_fidgen *, void *);
 	int	(*mio_preadv)(int, const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
 	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, void *,
 			sl_log_write_t, void *);
@@ -108,13 +108,13 @@ struct mdsio_ops {
 	int	(*mio_release)(int, const struct slash_creds *, void *);
 	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *,
 			sl_log_update_t, void *);
-	int	(*mio_rmdir)(int, mdsio_fid_t, struct slash_fidgen *, const char *, const struct slash_creds *, sl_log_update_t);
+	int	(*mio_rmdir)(int, mdsio_fid_t, struct sl_fidgen *, const char *, const struct slash_creds *, sl_log_update_t);
 	int	(*mio_setattr)(int, mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *,
 			void *, sl_log_update_t);
 	int	(*mio_statfs)(int, struct statvfs *);
 	int	(*mio_symlink)(int, const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
 			mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_unlink)(int, mdsio_fid_t, struct slash_fidgen *, const char *, const struct slash_creds *, sl_log_update_t, void *);
+	int	(*mio_unlink)(int, mdsio_fid_t, struct sl_fidgen *, const char *, const struct slash_creds *, sl_log_update_t, void *);
 	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, void *,
 			sl_log_write_t, void *);
 

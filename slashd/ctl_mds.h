@@ -43,7 +43,7 @@ struct slmctlmsg_statfs {
 };
 
 struct slmctlmsg_bml {
-	struct slash_fidgen	scbl_fg;
+	struct sl_fidgen	scbl_fg;
 	uint32_t		scbl_bno;
 	uint32_t		scbl_flags;
 	uint32_t		scbl_ndups;

@@ -132,8 +132,8 @@ int	slm_rmc_handle_lookup(struct pscrpc_request *);
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
-int	slm_rmm_forward_namespace(int, struct slash_fidgen *,
-	    struct slash_fidgen *, char *, char *, uint32_t,
+int	slm_rmm_forward_namespace(int, struct sl_fidgen *,
+	    struct sl_fidgen *, char *, char *, uint32_t,
 	    const struct slash_creds *, struct srt_stat *, int32_t);
 
 int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *,

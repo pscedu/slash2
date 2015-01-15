@@ -261,7 +261,7 @@ int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
 int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
 	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,
 	    uint8_t *, int);
-int	 mds_bmap_load_fg(const struct slash_fidgen *, sl_bmapno_t,
+int	 mds_bmap_load_fg(const struct sl_fidgen *, sl_bmapno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 	    struct bmapc_memb **);

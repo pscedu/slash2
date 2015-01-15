@@ -63,7 +63,7 @@ enum {
 
 struct slm_update_generic {
 	struct sl_resm			*upg_resm;
-	struct slash_fidgen		 upg_fg;
+	struct sl_fidgen		 upg_fg;
 	sl_bmapno_t			 upg_bno;
 	struct slm_update_data		 upg_upd;
 	struct psc_listentry		 upg_lentry;

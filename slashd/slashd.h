@@ -284,7 +284,7 @@ struct slm_wkdata_wr_brepl {
 	struct bmapc_memb	*b;
 
 	/* only used during REPLAY */
-	struct slash_fidgen	 fg;
+	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
 };
 
@@ -313,7 +313,7 @@ struct slm_wkdata_batchrq_cb {
 };
 
 struct slm_wkdata_upschq {
-	struct slash_fidgen	 fg;
+	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
 };
 
@@ -327,7 +327,7 @@ struct slm_wkdata_readdir {
 	struct slrpc_cservice	*csvc;
 
 	/* for running mdsio_readdir() */
-	struct slash_fidgen	 fg;
+	struct sl_fidgen	 fg;
 	off_t			 off;
 	size_t			 size;
 
