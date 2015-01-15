@@ -1268,10 +1268,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
 	struct psc_dynarray pages = DYNARRAY_INIT;
-	int rc = 0, i, j, npages, needflush = 0;
+	int rc = 0, i, j, needflush = 0;
 	uint32_t off = 0;
 
-	npages = 0;
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (e->bmpce_flags & BMPCE_FAULTING) {
@@ -1283,11 +1282,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			BMPCE_ULOCK(e);
 			continue;
 		}
-		npages++;
 
 		e->bmpce_flags |= BMPCE_FAULTING;
-		DEBUG_BMPCE(PLL_DIAG, e, "npages = %d, i = %d", npages, i);
 		psc_dynarray_add(&pages, e);
+		DEBUG_BMPCE(PLL_DIAG, e, "npages=%d i=%d",
+		    psc_dynarray_len(&pages), i);
 		BMPCE_ULOCK(e);
 		needflush = 1;
 	}
@@ -1301,18 +1300,12 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
-
-		if (!npages)
-			break;
-
 		/*
 		 * Mixing readahead pages and normal pages is tricky.
 		 */
-		if (i && (e->bmpce_off != off || i >= npages)) {
+		if (i && e->bmpce_off != off) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
 			if (rc)
-				break;
-			if (i >= npages)
 				break;
 			j = i;
 		}
