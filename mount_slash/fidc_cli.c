@@ -218,7 +218,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
-	if (fcmh_2_fid(f) != SLFID_ROOT && fcmh_2_fid(f) != SLFID_NS &&
+	if (fcmh_2_fid(f) != SLFID_ROOT &&
 	    siteid != slc_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
