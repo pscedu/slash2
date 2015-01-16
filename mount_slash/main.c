@@ -102,7 +102,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FLUSH_ATTR_TIMEOUT	8
 
-#define fcmh_reserved(f)	(fcmh_2_fid(f) == SLFID_NS ? EPERM : 0)
+#define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
 struct uid_mapping {
 	/* these are 64-bit as limitation of hash API */
@@ -651,17 +651,12 @@ msl_stat(struct fidc_membh *f, void *arg)
 	 * Special case to handle accesses to
 	 * /$mountpoint/.slfidns/<fid>
 	 */
-	if (fcmh_2_fid(f) == SLFID_NS) {
-		struct srt_stat sstb;
-
-		memset(&sstb, 0, sizeof(sstb));
-		sstb.sst_fid = SLFID_NS;
-		sstb.sst_mode = S_IFDIR | 0111;
-		sstb.sst_nlink = 2;
-		sstb.sst_size = 2;
-		sstb.sst_blksize = MSL_FS_BLKSIZ;
-		sstb.sst_blocks = 4;
-		slc_fcmh_setattrf(f, &sstb, 0);
+	if (FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS) {
+		f->fcmh_sstb.sst_mode = S_IFDIR | 0111;
+		f->fcmh_sstb.sst_nlink = 2;
+		f->fcmh_sstb.sst_size = 2;
+		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
+		f->fcmh_sstb.sst_blocks = 4;
 		return (0);
 	}
 
@@ -1104,21 +1099,26 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		*fp = NULL;
 
 #define MSL_FIDNS_RPATH	".slfidns"
-	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
-		struct fidc_membh f;
 
-		memset(&f, 0, sizeof(f));
-		INIT_SPINLOCK(&f.fcmh_lock);
-		fcmh_2_fid(&f) = SLFID_NS;
-		msl_stat(&f, NULL);
+	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
+
+		slfid_t	fid;
+
+		fid = SLFID_NS;
+		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
 		if (fgp) {
-			fgp->fg_fid = SLFID_NS;
+			fgp->fg_fid = fid;
 			fgp->fg_gen = 0;
 		}
-		*sstb = f.fcmh_sstb;
+		sstb->sst_fid = fid;
+		sstb->sst_gen = 0;
+		sstb->sst_mode = S_IFDIR | 0111;
+		sstb->sst_nlink = 2;
+		sstb->sst_size = 2;
+		sstb->sst_blksize = MSL_FS_BLKSIZ;
 		return (0);
 	}
-	if (pinum == SLFID_NS) {
+	if (FID_GET_INUM(pinum) == SLFID_NS) {
 		slfid_t fid;
 		char *endp;
 
@@ -1128,6 +1128,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		fid = strtoll(name, &endp, 16);
 		if (endp == name || *endp != '\0')
 			return (ENOENT);
+
+		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
 		rc = msl_load_fcmh(pfr, fid, &c);
 		if (rc)
 			return (-rc);
