@@ -1115,8 +1115,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			fgp->fg_fid = SLFID_NS;
 			fgp->fg_gen = 0;
 		}
-		if (sstb)
-			*sstb = f.fcmh_sstb;
+		*sstb = f.fcmh_sstb;
 		return (0);
 	}
 	if (pinum == SLFID_NS) {
