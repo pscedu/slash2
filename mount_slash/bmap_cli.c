@@ -162,7 +162,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 		 * XXX need some sort of randomizer here so that many
 		 * clients do not flood the MDS.
 		 */
-		usleep(500000);
+		sleep(1);
 		goto retry;
 	}
 
@@ -609,8 +609,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 		DEBUG_BMAP(PLL_NOTICE, bmap,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
-		usleep(500000);
-		if (nretries > BMAP_CLI_MAX_LEASE * 8 * 5)
+		sleep(1);
+		if (nretries > BMAP_CLI_MAX_LEASE)
 			return (-ETIMEDOUT);
 		goto retry;
 	}
