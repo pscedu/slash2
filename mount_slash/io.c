@@ -608,6 +608,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 	if (!q->mfsrq_err) {
 		mfsrq_seterr(q, rc);
 		q->mfsrq_len += len;
+		psc_assert(q->mfsrq_len <= q->mfsrq_size); 
 		if (q->mfsrq_flags & MFSRQ_READ)
 			q->mfsrq_mfh->mfh_nbytes_rd += len;
 		else
