@@ -43,7 +43,7 @@
 psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
 struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
 
-/**
+/*
  * Avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
  */
 void
@@ -60,8 +60,8 @@ msl_bmap_free(void)
 	}
 }
 
-/**
- * msl_bmap_init - Initialize CLI-specific data of a bmap structure.
+/*
+ * Initialize CLI-specific data of a bmap structure.
  * @b: the bmap struct
  */
 void
@@ -76,9 +76,8 @@ msl_bmap_init(struct bmap *b)
 	INIT_PSC_LISTENTRY(&bci->bci_lentry);
 }
 
-/**
- * msl_bmap_modeset - Set READ or WRITE as access mode on an open file
- *	block map.
+/*
+ * Set READ or WRITE as access mode on an open file bmap.
  * @b: bmap.
  * @rw: access mode to set the bmap to.
  */
@@ -90,8 +89,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
 	struct fcmh_cli_info *fci;
-	struct fidc_membh *f;
 	struct sl_resource *r;
+	struct fidc_membh *f;
 	int rc, nretries = 0;
 
 	f = b->bcm_fcmh;
@@ -363,10 +362,11 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	}
 }
 
-/**
- * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.
- *	If successful, this will result in the creation and assignment
- *	of a new lease sequence number from the MDS.
+/*
+ * Attempt to extend the lease time on a bmap.  If successful, this will
+ * result in the creation and assignment of a new lease sequence number
+ * from the MDS.
+ *
  * @blockable:  means the caller will not block if a renew RPC is
  *	outstanding.  Currently, only fsthreads which try lease
  *	extension prior to initiating I/O are 'blockable'.  This is so
@@ -529,9 +529,10 @@ slc_reptbl_cmp(const void *a, const void *b, void *arg)
 	return (CMP(xv, yv));
 }
 
-/**
- * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
- *	retrieve one or more bmaps from the MDS.
+/*
+ * Perform a blocking 'LEASEBMAP' operation to retrieve one or more
+ * bmaps from the MDS.
+ *
  * @b: the bmap ID to retrieve.
  * @rw: read or write access
  */
@@ -539,6 +540,7 @@ int
 msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
     __unusedx int flags)
 {
+	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
@@ -546,7 +548,6 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
-	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
 	psc_assert(bmap->bcm_fcmh);
@@ -617,15 +618,16 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	return (rc);
 }
 
-/**
- * msl_bmap_cache_rls - Called from rcm.c (SRMT_BMAPDIO).
+/*
+ * Called from rcm.c (SRMT_BMAPDIO).
+ *
  * @b:  the bmap whose cached pages should be released.
  */
 void
 msl_bmap_cache_rls(struct bmap *b)
 {
-	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+	struct bmap_pagecache_entry *e;
 
 	BMAP_LOCK(b);
 	SPLAY_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
@@ -774,9 +776,9 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbreleasethr_main(struct psc_thread *thr)
 {
+	struct timespec crtime, nto = { BMAP_CLI_TIMEO_INC, 0 };
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
-	struct timespec crtime, nto = { BMAP_CLI_TIMEO_INC, 0 };
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
@@ -884,10 +886,11 @@ msbreleasethr_main(struct psc_thread *thr)
 	psc_dynarray_free(&bcis);
 }
 
-/**
- * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
- *	locate the ION csvc.  The ION was chosen by the MDS and
- *	returned in the msl_bmap_retrieve routine.
+/*
+ * Given a bmap, perform a series of lookups to locate the ION csvc.
+ * The ION was chosen by the MDS and returned in the msl_bmap_retrieve
+ * routine.
+ *
  * @b: the bmap
  * @exclusive: whether to return connections to the specific ION the MDS
  *	told us to use instead of any ION in any IOS whose state is
@@ -1034,8 +1037,8 @@ bmap_biorq_expire(struct bmap *b)
 	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
-/**
- * msl_bmap_final_cleanup - Implement bmo_final_cleanupf() operation.
+/*
+ * Implement bmo_final_cleanupf() operation.
  */
 void
 msl_bmap_final_cleanup(struct bmap *b)
