@@ -303,7 +303,7 @@ batchrq_sched_finish(struct batchrq *br, int rc)
 		    struct slm_wkdata_batchrq_cb);
 		wk->br = br;
 		wk->rc = rc;
-		pfl_workq_putitem(wk);
+		pfl_workq_putitemq(&slm_db_workq, wk);
 	}
 }
 
