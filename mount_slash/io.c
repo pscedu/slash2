@@ -854,30 +854,6 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	sl_csvc_decref(csvc);
 
-#if 0
-	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
-	    &raoff2, &rapages2))
-		return;
-
-	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
-	    "raoff2=%d rapages2=%d",
-	    raoff, rapages, raoff2, rapages2);
-
-	/*
-	 * Enqueue read ahead for next sequential region of file space.
-	 */
-	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno, raoff,
-	    rapages);
-
-	/*
-	 * Enqueue read ahead into next bmap if our prediction would
-	 * extend into that space.
-	 */
-	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
-		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
-		    b->bcm_bmapno + 1, raoff2, rapages2);
-#endif
-
 	return (rc);
 }
 
