@@ -1050,9 +1050,14 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		goto retry;
 	}
 
-	if (rc == 0)
+	if (rc == 0) {
 		psc_iostats_intv_add(op == SRMT_WRITE ?
 		    &slc_dio_ist.wr : &slc_dio_ist.rd, size);
+		q = r->biorq_fsrqi;
+		MFH_LOCK(q->mfsrq_mfh);
+		q->mfsrq_flags |= MFSRQ_COPIED;
+		MFH_ULOCK(q->mfsrq_mfh);
+	}
 
  out:
 	if (rq)
