@@ -155,7 +155,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 //	if (rc && slc_rmc_retry(pfr, &rc))
 //		goto retry;
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		DEBUG_BMAP(PLL_NOTICE, b, "SLERR_BMAP_DIOWAIT rt=%d",
+		DEBUG_BMAP(PLL_NOTICE, b, "SLERR_BMAP_DIOWAIT try=%d",
 		    nretries);
 		nretries++;
 		/*
@@ -607,7 +607,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_NOTICE, bmap,
-		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
+		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		usleep(500000);
 		if (nretries > BMAP_CLI_MAX_LEASE * 8 * 5)
