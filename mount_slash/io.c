@@ -608,7 +608,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 	if (!q->mfsrq_err) {
 		mfsrq_seterr(q, rc);
 		q->mfsrq_len += len;
-		psc_assert(q->mfsrq_len <= q->mfsrq_size); 
+		psc_assert(q->mfsrq_len <= q->mfsrq_size);
 		if (q->mfsrq_flags & MFSRQ_READ)
 			q->mfsrq_mfh->mfh_nbytes_rd += len;
 		else
@@ -1175,7 +1175,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG", start=%d, pages=%d, ios=%u",
+	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG" start=%d pages=%d "
+	    "ios=%u",
 	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), startpage, npages,
 	    bmap_2_ios(r->biorq_bmap));
 
@@ -1199,7 +1200,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 
  out:
 	if (rq) {
-		DEBUG_REQ(PLL_ERROR, rq, "req failed, rc = %d", rc);
+		DEBUG_REQ(PLL_ERROR, rq, "req failed rc=%d", rc);
 		pscrpc_req_finished(rq);
 	}
 	if (csvc)
