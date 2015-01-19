@@ -163,6 +163,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 		 * clients do not flood the MDS.
 		 */
 		sleep(1);
+		if (++nretries > BMAP_CLI_MAX_LEASE)
+			return (-ETIMEDOUT);
 		goto retry;
 	}
 
