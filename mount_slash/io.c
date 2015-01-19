@@ -1876,7 +1876,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * its page cache.  This first loop retrieves all the pages.
 	 */
 	for (i = 0; i < nr; i++) {
-
 		DEBUG_FCMH(PLL_DIAG, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
 		    (rw == SL_READ) ? "read" : "write");
@@ -1983,13 +1982,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		mfsrq_seterr(q, rc);
 	}
 
-	/* Step 4: finish up biorqs */
-	for (i = 0; i < nr; i++) {
-		r = q->mfsrq_biorq[i];
-		if (r)
-			msl_biorq_release(r);
-	}
-
 	/*
 	 * Drop our reference to the fsrq.  This reference acts like a
 	 * barrier to multiple biorqs so that none of them can complete
@@ -1999,6 +1991,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * build a biorq with the bmap.
 	 */
 	msl_complete_fsrq(q, rc, 0);
+
+	/* Step 4: finish up biorqs */
+	for (i = 0; i < nr; i++) {
+		r = q->mfsrq_biorq[i];
+		if (r)
+			msl_biorq_release(r);
+	}
 	return (0);
 }
 
