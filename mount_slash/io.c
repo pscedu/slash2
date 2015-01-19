@@ -671,64 +671,50 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 }
 
 int
-msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
+msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
-	int i, rc, found = 0, needflush = 0;
 	struct msl_fsrqinfo *q;
-	struct bmpc_ioreq *r;
+	int i, needflush = 0;
 	size_t len = 0;
 
-	q = r0->biorq_fsrqi;
+	q = r->biorq_fsrqi;
 	if (q == NULL)
 		return (0);
 
-	MFH_LOCK(q->mfsrq_mfh);
-	rc = q->mfsrq_err;
-	MFH_ULOCK(q->mfsrq_mfh);
+	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
-	DEBUG_BIORQ(PLL_DIAG, r0, "copying");
+	/* ensure biorq is in fsrq */
+	for (i = 0; i < MAX_BMAPS_REQ; i++)
+		if (r == q->mfsrq_biorq[i])
+			break;
+	if (i == MAX_BMAPS_REQ)
+		DEBUG_BIORQ(PLL_FATAL, r, "missing biorq in fsrq");
 
-	for (i = 0; i < MAX_BMAPS_REQ; i++) {
-		r = q->mfsrq_biorq[i];
-
-		/* only complete myself */
-		if (r != r0)
-			continue;
-
-		found = 1;
-		if (rc)
-			continue;
-
-		if (r->biorq_flags & BIORQ_DIO) {
+	if (r->biorq_flags & BIORQ_DIO) {
+		/*
+		 * Support mix of dio and cached reads.  This may occur
+		 * if the read request spans bmaps.  The 'len' here was
+		 * possibly adjusted against the tail of the file in
+		 * msl_io().
+		 */
+		len = r->biorq_len;
+	} else {
+		if (q->mfsrq_flags & MFSRQ_READ) {
 			/*
-			 * Support mix of dio and cached reads.  This
-			 * may occur if the read request spans bmaps.
-			 * The 'len' here was possibly adjusted against
-			 * the tail of the file in msl_io().
+			 * Lock to update iovs attached to q.
+			 * Fast because no actual copying.
 			 */
-			len = r->biorq_len;
-		} else {
-			if (q->mfsrq_flags & MFSRQ_READ) {
-				/*
-				 * Lock to update iovs attached to q.
-				 * Fast because no actual copying.
-				 */
-				MFH_LOCK(q->mfsrq_mfh);
-				len = msl_pages_copyout(r, q);
-				MFH_ULOCK(q->mfsrq_mfh);
-			} else {
-				len = msl_pages_copyin(r);
-				needflush = 1;
-			}
 			MFH_LOCK(q->mfsrq_mfh);
-			q->mfsrq_flags |= MFSRQ_COPIED;
+			len = msl_pages_copyout(r, q);
 			MFH_ULOCK(q->mfsrq_mfh);
+		} else {
+			len = msl_pages_copyin(r);
+			needflush = 1;
 		}
+		MFH_LOCK(q->mfsrq_mfh);
+		q->mfsrq_flags |= MFSRQ_COPIED;
+		MFH_ULOCK(q->mfsrq_mfh);
 	}
-	if (!found)
-		psc_fatalx("missing biorq %p in fsrq %p", r0, q);
-
-	psc_assert(len <= q->mfsrq_size);
 	msl_complete_fsrq(q, 0, len);
 	return (needflush);
 }
