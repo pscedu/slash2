@@ -113,9 +113,9 @@ msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 __static int
 msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 {
-	int i;
-	uint32_t toff, tsize, nbytes;
 	struct bmap_pagecache_entry *e;
+	uint32_t toff, tsize, nbytes;
+	int i;
 
 	toff = r->biorq_off;
 	tsize = r->biorq_len;
@@ -171,9 +171,8 @@ readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	lc_add(&slc_readaheadq, rarq);
 }
 
-/**
- * msl_biorq_build - Construct a request structure for an I/O issued on
- *	a bmap.
+/*
+ * Construct a request structure for an I/O issued on a bmap.
  * Notes: roff is bmap aligned.
  */
 __static void
@@ -360,7 +359,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_pool_return(slc_biorq_pool, r);
 }
 
-#define biorq_incref(r)			_biorq_incref(PFL_CALLERINFO(), (r))
+#define biorq_incref(r)		_biorq_incref(PFL_CALLERINFO(), (r))
 
 void
 _biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
@@ -501,11 +500,11 @@ msl_req_aio_add(struct pscrpc_request *rq,
     int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
     struct pscrpc_async_args *av)
 {
-	struct bmpc_ioreq *r;
 	struct psc_dynarray *a = av->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmap_pagecache_entry *e;
 	struct slc_async_req *car;
 	struct srm_io_rep *mp;
+	struct bmpc_ioreq *r;
 	struct sl_resm *m;
 	int i;
 
@@ -592,7 +591,8 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 	MFH_URLOCK(q->mfsrq_mfh, lk);
 }
 
-#define msl_complete_fsrq(q, rc, len) _msl_complete_fsrq(PFL_CALLERINFO(), (q), (rc), (len))
+#define msl_complete_fsrq(q, rc, len)					\
+	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (rc), (len))
 
 void
 _msl_complete_fsrq(const struct pfl_callerinfo *pci,
@@ -733,9 +733,8 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	return (needflush);
 }
 
-/**
- * msl_bmpce_complete_biorq: Try to complete biorqs waiting on this page
- *	cache entry.
+/*
+ * Try to complete biorqs waiting on this page cache entry.
  */
 __static void
 msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
@@ -803,11 +802,12 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	msl_bmpce_complete_biorq(e, rc);
 }
 
-/**
- * msl_read_cb - RPC callback used only for read or RBW operations.
- *	The primary purpose is to set the bmpce's to DATARDY so that
- *	other threads waiting for DATARDY may be unblocked.
- *  Note: Unref of the biorq will happen after the pages have been
+/*
+ * RPC callback used only for read or RBW operations.  The primary
+ * purpose is to set the bmpce's to DATARDY so that other threads
+ * waiting for DATARDY may be unblocked.
+ *
+ * Note: Unref of the biorq will happen after the pages have been
  *	copied out to the applicaton buffers.
  */
 int
@@ -895,10 +895,10 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	return (rc);
 }
 
-/**
- * msl_read_cb0 - Thin layer around msl_read_cb(), which does the real
- *	READ completion processing, in case an AIOWAIT is discovered.
- *	Upon completion of the AIO, msl_read_cb() is called.
+/*
+ * Thin layer around msl_read_cb(), which does the real READ completion
+ * processing, in case an AIOWAIT is discovered.  Upon completion of the
+ * AIO, msl_read_cb() is called.
  */
 int
 msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
@@ -973,8 +973,8 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 __static int
 msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
-	size_t len, off, size;
 	int i, op, n, rc;
+	size_t len, off, size;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_nbreqset *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1140,19 +1140,18 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BMAP_ULOCK(b);
 }
 
-/**
- * msl_read_rpc_launch - Launch an RPC for a given range of pages.  Note
- *	that a request can be satisfied by multiple RPCs because parts
- *	of the range covered by the request may have already been
- *	cached.
+/*
+ * Launch an RPC for a given range of pages.  Note that a request can be
+ * satisfied by multiple RPCs because parts of the range covered by the
+ * request may have already been cached.
  */
 __static int
 msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
     int startpage, int npages)
 {
 	struct slashrpc_cservice *csvc = NULL;
-	struct bmap_pagecache_entry *e;
 	struct pscrpc_request *rq = NULL;
+	struct bmap_pagecache_entry *e;
 	struct psc_dynarray *a = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -1268,9 +1267,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 __static int
 msl_launch_read_rpcs(struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache_entry *e;
-	struct psc_dynarray pages = DYNARRAY_INIT;
 	int rc = 0, i, j, needflush = 0;
+	struct psc_dynarray pages = DYNARRAY_INIT;
+	struct bmap_pagecache_entry *e;
 	uint32_t off = 0;
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
@@ -1320,19 +1319,18 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	return (rc);
 }
 
-/**
- * msl_pages_fetch - Launch read RPCs for pages that are owned by the
- *	given I/O request.  This function is called to perform a pure
- *	read request or a read-before-write for a write request.  It is
- *	also used to wait for read-ahead pages to complete.
+/*
+ * Launch read RPCs for pages that are owned by the given I/O request.
+ * This function is called to perform a pure read request or a
+ * read-before-write for a write request.  It is also used to wait for
+ * read-ahead pages to complete.
  */
 int
 msl_pages_fetch(struct bmpc_ioreq *r)
 {
+	int i, rc = 0, aiowait = 0, perfect_ra = 0;
 	struct bmap_pagecache_entry *e;
 	struct timespec ts0, ts1, tsd;
-	int i, rc = 0, aiowait = 0;
-	int perfect_ra = 0;
 
 	if (r->biorq_flags & BIORQ_READ) {
 		perfect_ra = 1;
@@ -1394,9 +1392,10 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	return (rc);
 }
 
-/**
- * msl_pages_copyin - Copy user pages into buffer cache and schedule
- *	them to be sent to the ION backend.
+/*
+ * Copy user pages into buffer cache and schedule them to be sent to the
+ * ION backend.
+ *
  * @r: array of request structs.
  */
 __static size_t
@@ -1485,14 +1484,14 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 	return (r->biorq_len);
 }
 
-/**
- * msl_pages_copyout - Copy pages to the user application buffer.
+/*
+ * Copy pages to the user application buffer.
  */
 size_t
 msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 {
-	struct bmap_pagecache_entry *e;
 	size_t nbytes, tbytes = 0, rflen;
+	struct bmap_pagecache_entry *e;
 	int i, npages, tsize;
 	char *dest, *src;
 	off_t toff;
@@ -1774,10 +1773,10 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 void
 msl_update_attributes(struct msl_fsrqinfo *q)
 {
-	struct timespec ts;
-	struct fidc_membh *f;
-	struct msl_fhent *mfh;
 	struct fcmh_cli_info *fci;
+	struct msl_fhent *mfh;
+	struct fidc_membh *f;
+	struct timespec ts;
 
 	mfh = q->mfsrq_mfh;
 	f = mfh->mfh_fcmh;
@@ -1806,16 +1805,16 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	FCMH_ULOCK(f);
 }
 
-/**
- * msl_io - I/O gateway routine which bridges pscfs and the SLASH2
- *	client cache and backend.  msl_io() handles the creation of
- *	biorq's and the loading of bmaps (which are attached to the
- *	file's fcmh and is ultimately responsible for data being
- *	prefetched (as needed), copied into or from the cache, and (on
- *	write) being pushed to the correct I/O server.
+/*
+ * I/O gateway routine which bridges pscfs and the SLASH2 client cache
+ * and backend.  msl_io() handles the creation of biorq's and the
+ * loading of bmaps (which are attached to the file's fcmh and is
+ * ultimately responsible for data being prefetched (as needed), copied
+ * into or from the cache, and (on write) being pushed to the correct
+ * I/O server.
  *
- *	The function implements the backend of mslfsop_read() and
- *	mslfsop_write().
+ * The function implements the backend of mslfsop_read() and
+ * mslfsop_write().
  *
  * @pfr: file system request, used for tracking potentially asynchronous
  *	activity.
