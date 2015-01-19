@@ -612,7 +612,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		sleep(1);
-		if (nretries > BMAP_CLI_MAX_LEASE)
+		if (++nretries > BMAP_CLI_MAX_LEASE)
 			return (-ETIMEDOUT);
 		goto retry;
 	}
