@@ -1,0 +1,132 @@
+.\" $Id: reclaim.8 23175 2014-02-15 20:59:25Z yanovich $
+.\" %PSCGPL_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2015, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or (at
+.\" your option) any later version.
+.\"
+.\" This program is distributed WITHOUT ANY WARRANTY; without even the
+.\" implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+.\" PURPOSE.  See the GNU General Public License contained in the file
+.\" `COPYING-GPL' at the top of this distribution or at
+.\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
+.\"
+.\" Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
+.\" 300 S. Craig Street			e-mail: remarks@psc.edu
+.\" Pittsburgh, PA 15213			web: http://www.psc.edu/
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd January 25, 2014
+.Dt DUMPFID 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm dumpfid
+.Nd display or manipulate a
+.Tn SLASH2
+metadata backing file
+.Sh SYNOPSIS
+.Nm dumpfid
+.Op Fl R
+.Op Fl C Ar hosts
+.Op Fl F Ar fmt
+.Op Fl O Ar file
+.Op Fl t Ar nthr
+.Op Fl x Ar pattern
+.Ar
+.Sh DESCRIPTION
+The
+.Nm
+utility displays fields from a SLASH2 metadata backing file.
+The options are as follows:
+.Pp
+.Bl -tag -width Ds
+.It Fl R
+Recursively descend through any directory structure and dump all files
+under the hierarchy.
+.It Fl C Ar hosts
+Run the dump across multiple hosts.
+The format of
+.Ar hosts
+is:
+.Pp
+.Dl Ar hostspec Ns , Ns Ar ...
+.Pp
+where each
+.Ar hostspec
+has the format:
+.Pp
+.Dl Ar hostname : Ns Ar nthr : Ns Ar path
+.It Fl F Ar fmt
+Specify the output format.
+The following tokens are translated:
+.Pp
+.Bl -tag -width 5n -offset indent -compact
+.It Ic \&%B
+.No constituent replicas Ic st_blocks
+.It Ic \&%b
+.Ic st_blocks
+.It Ic \&%C
+computed inode CRC
+.It Ic \&%c
+stored inode CRC
+.It Ic \&%d
+inode CRC validity
+.It Ic \&%F
+file ID (FID)
+.It Ic \&%f
+filename
+.It Ic \&%G
+file generation number
+.It Ic \&%g
+file group
+.It Ic \&%L
+inode flags
+.It Ic \&%M
+bmap contents
+.It Ic \&%N
+number of bmaps
+.It Ic \&%n
+number of registered replicas
+.It Ic \&%R
+IOS IDs of registered replicas
+.It Ic \&%s
+file data size
+.It Ic \&%u
+file user
+.It Ic \&%v
+inode version number
+.It Ic \&%X
+computed additional inode CRC
+.It Ic \&%x
+stored additional inode CRC
+.It Ic \&%y
+additional inode CRC validity
+.El
+.Pp
+The default output format includes all fields with descriptive labels.
+.It Fl O Ar file
+Direct output to the given
+.Ar file
+instead of standard output.
+.Pp
+The following tokens are translated:
+.Pp
+.Bl -tag -width 5n -offset indent -compact
+.It %n
+the thread number
+.El
+.It Fl t Ar nthr
+Run
+.Ar nthr
+simultaneously operating threads concurrently.
+.It Fl x Ar pattern
+When used in conjunction with
+.Ar R ,
+exclude any file path that matches the given
+.Ar pattern .
+.Sh SEE ALSO
+.Xr slashd 8
