@@ -75,6 +75,20 @@ psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 
 extern struct psc_hashtbl rootHtable;
 
+static void
+slm_set_timestamp(struct srt_stat *attr)
+{
+	struct timespec now;
+
+	PFL_GETTIMESPEC(&now);
+	attr->sst_mtim.tv_sec = now.tv_sec;
+	attr->sst_mtim.tv_nsec = now.tv_nsec;
+	attr->sst_atim.tv_sec = now.tv_sec;
+	attr->sst_atim.tv_nsec = now.tv_nsec;
+	attr->sst_ctim.tv_sec = now.tv_sec;
+	attr->sst_ctim.tv_nsec = now.tv_nsec;
+}
+
 void *
 slm_rmc_search_roots(char *name)
 {
@@ -157,7 +171,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
 	int vfsid;
-	struct timespec now;
 
 	OPSTAT_INCR("getattr");
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -174,13 +187,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 		mp->attr.sst_blocks = 4;
 		mp->attr.sst_blksize = 4096;
 		mp->attr.sst_size = 1024; 
-		PFL_GETTIMESPEC(&now);
-		mp->attr.sst_mtim.tv_sec = now.tv_sec;
-		mp->attr.sst_mtim.tv_nsec = now.tv_nsec;
-		mp->attr.sst_atim.tv_sec = now.tv_sec;
-		mp->attr.sst_atim.tv_nsec = now.tv_nsec;
-		mp->attr.sst_ctim.tv_sec = now.tv_sec;
-		mp->attr.sst_ctim.tv_nsec = now.tv_nsec;
+		slm_set_timestamp(&mp->attr);
 		return (0);
 	}
 
@@ -439,7 +446,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
 
 		uint64_t fid;
-		struct timespec now;
 		struct sl_site *site;
 
 		CONF_LOCK();
@@ -463,11 +469,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 			mp->attr.sst_blocks = 4;
 			mp->attr.sst_blksize = 4096;
 			mp->attr.sst_size = 1024; 
-			PFL_GETTIMESPEC(&now);
-			mp->attr.sst_mtim.tv_sec = now.tv_sec;
-			mp->attr.sst_mtim.tv_nsec = now.tv_nsec;
-			mp->attr.sst_atim.tv_sec = now.tv_sec;
-			mp->attr.sst_atim.tv_nsec = now.tv_nsec;
+			slm_set_timestamp(&mp->attr);
 			mp->rc = 0;
 			break;
 		}
@@ -1068,10 +1070,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr->sstb.sst_blocks = 4;
 			attr->sstb.sst_blksize = 4096;
 			attr->sstb.sst_size = 1024; 
-			attr->sstb.sst_mtim.tv_sec = now.tv_sec;
-			attr->sstb.sst_mtim.tv_nsec = now.tv_nsec;
-			attr->sstb.sst_atim.tv_sec = now.tv_sec;
-			attr->sstb.sst_atim.tv_nsec = now.tv_nsec;
+			slm_set_timestamp(&attr->sstb);
 			attr++;
 		}
 		CONF_LOCK();
@@ -1100,11 +1099,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr->sstb.sst_blocks = 4;
 			attr->sstb.sst_blksize = 4096;
 			attr->sstb.sst_size = 1024; 
-			attr->sstb.sst_mtim.tv_sec = now.tv_sec;
-			attr->sstb.sst_mtim.tv_nsec = now.tv_nsec;
-			attr->sstb.sst_atim.tv_sec = now.tv_sec;
-			attr->sstb.sst_atim.tv_nsec = now.tv_nsec;
-			attr->sstb.sst_ctim.tv_sec = now.tv_sec;
+			slm_set_timestamp(&attr->sstb);
 			attr++;
 		}
 		CONF_ULOCK();
