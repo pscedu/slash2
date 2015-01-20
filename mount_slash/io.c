@@ -1984,16 +1984,16 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/*
-	 * Drop our reference to the fsrq.  This reference acts like a
-	 * barrier to multiple biorqs so that none of them can complete
-	 * an fsrq prematurely.
-	 *
-	 * In addition, it allows us to abort the I/O if we cannot even
-	 * build a biorq with the bmap.
+	 * Step 4: drop our reference to the fsrq.  This is done to
+	 * insert any error obtained in this routine to the mfsrq.  Each
+	 * biorq holds a reference to the mfsrq so reply to pscfs will
+	 * only happen after each biorq finishes.  For DIO, buffers are
+	 * attached to the biorqs directly so they must be used before
+	 * being freed.
 	 */
 	msl_complete_fsrq(q, rc, 0);
 
-	/* Step 4: finish up biorqs */
+	/* Step 5: finish up biorqs. */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
