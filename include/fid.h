@@ -59,6 +59,8 @@ struct sl_fidgen;
  * Normally, we allow 42-bit worth of FIDs to be allocated.  When that
  * limit is reached, we could let system administrator to bump the cycle
  * number and zero the FID bits.
+ *
+ * 01/20/2014: site id should really be called MDS ID.
  */
 #define	SLASH_FID_FLAG_BITS	4
 #define	SLASH_FID_SITE_BITS	10
