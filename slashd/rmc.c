@@ -110,6 +110,8 @@ slm_set_curr_slashfid(slfid_t slfid)
  *	However, doing so can confuse our clients (think identity
  *	theft).  So we must make sure that we never reuse a SLASH FID,
  *	even after a crash.
+ *
+ *	The siteid has already been baked into the initial cursor file.
  */
 int
 slm_get_next_slashfid(slfid_t *fidp)
