@@ -598,6 +598,7 @@ void
 _msl_complete_fsrq(const struct pfl_callerinfo *pci,
     struct msl_fsrqinfo *q, int rc, size_t len)
 {
+	void *iov = q->mfsrq_iovs;
 	struct pscfs_req *pfr;
 	struct bmpc_ioreq *r;
 	int i;
@@ -668,7 +669,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		}
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
 	}
-	PSCFREE(q->mfsrq_iovs);
+	PSCFREE(iov);
 }
 
 int
