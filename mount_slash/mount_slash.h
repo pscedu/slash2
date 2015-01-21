@@ -302,7 +302,7 @@ void	 msreadaheadthr_spawn(void);
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
-void	 slc_getprog(pid_t, char *, size_t);
+void	 slc_getuprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 

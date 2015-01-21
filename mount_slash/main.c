@@ -2059,7 +2059,7 @@ mfh_decref(struct msl_fhent *mfh)
 }
 
 void
-slc_getprog(pid_t pid, char *prog, size_t len)
+slc_getuprog(pid_t pid, char *prog, size_t len)
 {
 	char *p, *np, *ep, fn[128], buf[128];
 	int rc, fd;
@@ -2150,7 +2150,7 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 		} else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
-		slc_getprog(pid, mft->mft_uprog, sizeof(mft->mft_uprog));
+		slc_getuprog(pid, mft->mft_uprog, sizeof(mft->mft_uprog));
 	}
 
 	return (pld->pld_uprog = mft->mft_uprog);

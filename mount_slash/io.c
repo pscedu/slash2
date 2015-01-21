@@ -422,7 +422,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 
 		pci.pci_subsys = SLCSS_INFO;
 		if (psc_log_shouldlog(&pci, PLL_INFO))
-			slc_getprog(mfh->mfh_pid, mfh->mfh_uprog,
+			slc_getuprog(mfh->mfh_pid, mfh->mfh_uprog,
 			    sizeof(mfh->mfh_uprog));
 	}
 
