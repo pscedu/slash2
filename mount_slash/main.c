@@ -2061,9 +2061,9 @@ mfh_decref(struct msl_fhent *mfh)
 void
 slc_getprog(pid_t pid, char *prog, size_t len)
 {
-	char *p, fn[128], buf[128];
-	ssize_t sz;
+	char *p, *np, *ep, fn[128], buf[128];
 	int rc, fd;
+	ssize_t sz;
 
 	rc = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
 	if (rc == -1)
@@ -2095,11 +2095,30 @@ slc_getprog(pid_t pid, char *prog, size_t len)
 	if (sz == -1)
 		return;
 
-	buf[sz] = '\0';
+	/*
+	 * Parse various interpreters such as:
+	 *	/bin/sh - foo.sh
+	 *	/bin/sh foo.sh
+	 *	/bin/perl -W foo.pl
+	 */
+
+	/* skip first arg: should be identical to `exe' above */
+	ep = &buf[sz];
+	*ep = '\0';
 	p = strchr(buf, '\0');
-	if (p != buf + sz)
-		snprintf(prog + strlen(prog), len - strlen(prog),
-		    " %s", p + 1);
+	if (p == ep)
+		return;
+	p++;
+
+	/* concatentate (i.e. switch NUL to space) next two args */
+	np = strchr(p, '\0');
+	if (np != ep) {
+		*np++ = ' ';
+		np = strchr(np, '\0');
+		if (np != ep)
+			*np++ = ' ';
+	}
+	snprintf(prog + strlen(prog), len - strlen(prog), " %s", p + 1);
 }
 
 const char *
