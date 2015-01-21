@@ -1069,6 +1069,9 @@ slirathr_main(struct psc_thread *thr)
 		f = NULL;
 		b = NULL;
 
+		if (slcfg_local->cfg_async_io)
+			break;
+
 		rarq = lc_getwait(&sli_readaheadq);
 		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
 			goto skip;
