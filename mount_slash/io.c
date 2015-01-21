@@ -675,10 +675,11 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 int
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
+	int rc, i, needflush = 0;
 	struct msl_fsrqinfo *q;
-	int i, needflush = 0;
 	size_t len = 0;
 
+	/* don't do anything for readahead */
 	q = r->biorq_fsrqi;
 	if (q == NULL)
 		return (0);
@@ -692,7 +693,12 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (i == MAX_BMAPS_REQ)
 		DEBUG_BIORQ(PLL_FATAL, r, "missing biorq in fsrq");
 
-	if (r->biorq_flags & BIORQ_DIO) {
+	MFH_LOCK(q->mfsrq_mfh);
+	rc = q->mfsrq_err;
+	MFH_ULOCK(q->mfsrq_mfh);
+
+	if (rc) {
+	} else if (r->biorq_flags & BIORQ_DIO) {
 		/*
 		 * Support mix of dio and cached reads.  This may occur
 		 * if the read request spans bmaps.  The 'len' here was
