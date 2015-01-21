@@ -2118,7 +2118,7 @@ slc_getuprog(pid_t pid, char *prog, size_t len)
 		if (np != ep)
 			*np++ = ' ';
 	}
-	snprintf(prog + strlen(prog), len - strlen(prog), " %s", p + 1);
+	snprintf(prog + strlen(prog), len - strlen(prog), " %s", p);
 }
 
 const char *
