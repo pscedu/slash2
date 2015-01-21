@@ -1080,6 +1080,12 @@ slirathr_main(struct psc_thread *thr)
 			    SL_READ);
 			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVR_READAHEAD);
+			/*
+			 * FixMe: This cause asserts on flags when we
+			 * encounter AIOWAIT. We need a unified way to
+			 * perform I/O done on each sliver instead of
+			 * sprinkling them all over the place.
+			 */
 			slvr_rio_done(s);
 		}
 
