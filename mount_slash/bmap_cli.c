@@ -785,6 +785,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
+	struct fcmh_cli_info *fci;
 	int i, nitems;
 
 	/*
@@ -853,8 +854,9 @@ msbreleasethr_main(struct psc_thread *thr)
 				    resm->resm_res->res_name);
 				OPSTAT_INCR("bmap_release_write");
 			} else {
-				resm = slc_rmc_resm;
-				rmci = resm2rmci(slc_rmc_resm);
+				fci = fcmh_get_pri(b->bcm_fcmh);
+				resm = fci->fci_resm;
+				rmci = resm2rmci(resm);
 				OPSTAT_INCR("bmap_release_read");
 			}
 
