@@ -175,6 +175,8 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	OPSTAT_INCR("getattr");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	psclog_diag("lookup: pfid="SLPRI_FID, mq->fg.fg_fid);
+
 	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
 		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
 		mp->attr.sst_fg.fg_gen = 1;
