@@ -814,6 +814,10 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (fcmh_isdir(c))
 		PFL_GOTOERR(out, rc = EISDIR);
 
+
+	if (FID_GET_SITEID(fcmh_2_fid(p)) != FID_GET_SITEID(fcmh_2_fid(c)))
+		PFL_GOTOERR(out, rc = EXDEV);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (rc)
