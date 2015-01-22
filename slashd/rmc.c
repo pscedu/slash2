@@ -395,10 +395,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = -slm_fcmh_get(&mq->fg, &c);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->fg, &c);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
