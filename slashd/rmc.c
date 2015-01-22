@@ -76,10 +76,18 @@ psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 extern struct psc_hashtbl rootHtable;
 
 static void
-slm_set_timestamp(struct srt_stat *attr)
+slm_root_attributes(struct srt_stat *attr)
 {
 	struct timespec now;
 
+	attr->sst_dev = 0;
+	attr->sst_utimgen = 0;
+	attr->sst_mode = 16877;
+	attr->sst_nlink = 2;
+	attr->sst_uid = 0;
+	attr->sst_gid = 0;
+	attr->sst_blocks = 4;
+	attr->sst_blksize = 4096;
 	PFL_GETTIMESPEC(&now);
 	attr->sst_mtim.tv_sec = now.tv_sec;
 	attr->sst_mtim.tv_nsec = now.tv_nsec;
@@ -180,16 +188,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
 		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
 		mp->attr.sst_fg.fg_gen = 1;
-		mp->attr.sst_dev = 0;
-		mp->attr.sst_utimgen = 0;
-		mp->attr.sst_mode = 16877;
-		mp->attr.sst_nlink = 2;
-		mp->attr.sst_uid = 0;
-		mp->attr.sst_gid = 0;
-		mp->attr.sst_blocks = 4;
-		mp->attr.sst_blksize = 4096;
-		mp->attr.sst_size = 1024; 
-		slm_set_timestamp(&mp->attr);
+		slm_root_attributes(&mp->attr);
 		return (0);
 	}
 
@@ -461,17 +460,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 			mp->xattrsize = 0;
 			mp->attr.sst_fg.fg_fid = fid;
-			mp->attr.sst_fg.fg_gen = 2;
-			mp->attr.sst_dev = 0;
-			mp->attr.sst_utimgen = 0;
-			mp->attr.sst_mode = 16877;
-			mp->attr.sst_nlink = 2;
-			mp->attr.sst_uid = 0;
-			mp->attr.sst_gid = 0;
-			mp->attr.sst_blocks = 4;
-			mp->attr.sst_blksize = 4096;
-			mp->attr.sst_size = 1024; 
-			slm_set_timestamp(&mp->attr);
+			slm_root_attributes(&mp->attr);
 			mp->rc = 0;
 			break;
 		}
@@ -1063,16 +1052,8 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr->xattrsize = 0;
 			attr->sstb.sst_fg.fg_fid = SLFID_ROOT;
 			attr->sstb.sst_fg.fg_gen = 2;
-			attr->sstb.sst_dev = 0;
-			attr->sstb.sst_utimgen = 0;
-			attr->sstb.sst_mode = 16877;
+			slm_root_attributes(&attr->sstb);
 			attr->sstb.sst_nlink = 2 + nsite;
-			attr->sstb.sst_uid = 0;
-			attr->sstb.sst_gid = 0;
-			attr->sstb.sst_blocks = 4;
-			attr->sstb.sst_blksize = 4096;
-			attr->sstb.sst_size = 1024; 
-			slm_set_timestamp(&attr->sstb);
 			attr++;
 		}
 		CONF_LOCK();
@@ -1092,16 +1073,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			attr->xattrsize = 0;
 			attr->sstb.sst_fg.fg_fid = fid;
 			attr->sstb.sst_fg.fg_gen = 2;
-			attr->sstb.sst_dev = 0;
-			attr->sstb.sst_utimgen = 0;
-			attr->sstb.sst_mode = 16877;
-			attr->sstb.sst_nlink = 2;
-			attr->sstb.sst_uid = 0;
-			attr->sstb.sst_gid = 0;
-			attr->sstb.sst_blocks = 4;
-			attr->sstb.sst_blksize = 4096;
-			attr->sstb.sst_size = 1024; 
-			slm_set_timestamp(&attr->sstb);
+			slm_root_attributes(&attr->sstb);
 			attr++;
 		}
 		CONF_ULOCK();
