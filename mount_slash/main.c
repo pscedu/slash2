@@ -963,11 +963,6 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 	pscfs_inum_t pinum = fcmh_2_fid(p);
 
-	if (strlen(name) == 0)
-		return (ENOENT);
-	if (strlen(name) > SL_NAME_MAX)
-		return (ENAMETOOLONG);
-
  retry:
 
 	OPSTAT_INCR("lookup_rpc");
@@ -1101,6 +1096,11 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	if (fp)
 		*fp = NULL;
+
+	if (strlen(name) == 0)
+		return (ENOENT);
+	if (strlen(name) > SL_NAME_MAX)
+		return (ENAMETOOLONG);
 
 #define MSL_FIDNS_RPATH	".slfidns"
 
