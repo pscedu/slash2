@@ -460,6 +460,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 			mp->xattrsize = 0;
 			mp->attr.sst_fg.fg_fid = fid;
+			mp->attr.sst_fg.fg_gen = 2;
 			slm_root_attributes(&mp->attr);
 			mp->rc = 0;
 			break;
