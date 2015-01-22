@@ -555,6 +555,7 @@ msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
 	msr->msr_expire.tv_sec = r->biorq_expire.tv_sec;
 	msr->msr_expire.tv_nsec = r->biorq_expire.tv_nsec;
 	msr->msr_npages = psc_dynarray_len(&r->biorq_pages);
+	msr->msr_addr = (long)r;
 	BIORQ_ULOCK(r);
 
 	return (psc_ctlmsg_sendv(fd, mh, msr));

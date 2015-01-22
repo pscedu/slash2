@@ -88,6 +88,7 @@ struct msctlmsg_biorq {
 	struct pfl_timespec	msr_expire;
 	 int32_t		msr_npages;
 	 int32_t		msr_nrq;
+	    long                msr_addr;
 };
 
 struct msctlmsg_bmpce {
