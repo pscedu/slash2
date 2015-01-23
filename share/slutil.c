@@ -140,21 +140,6 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
 	sfb->f_favail		= ssfb->sf_favail;
 }
 
-#ifdef HAVE_STATFS_FSTYPE
-void
-statfs_2_statvfs(const struct statfs *sfb, struct statvfs *svfb)
-{
-	svfb->f_bsize		= sfb->f_bsize;
-	svfb->f_frsize		= sfb->f_frsize;
-	svfb->f_blocks		= sfb->f_blocks;
-	svfb->f_bfree		= sfb->f_bfree;
-	svfb->f_bavail		= sfb->f_bavail;
-	svfb->f_files		= sfb->f_files;
-	svfb->f_ffree		= sfb->f_ffree;
-	svfb->f_favail		= sfb->f_files;
-}
-#endif
-
 #define PERMCHECK(accmode, fmode, mask)						\
 	(((((accmode) & R_OK) && ((fmode) & ((mask) & _S_IRUGO)) == 0) ||	\
 	  (((accmode) & W_OK) && ((fmode) & ((mask) & _S_IWUGO)) == 0) ||	\
