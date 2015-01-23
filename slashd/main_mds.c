@@ -77,7 +77,7 @@ uint32_t		 sl_sys_upnonce;
 struct pfl_odt		*slm_ptrunc_odt;
 
 /* this table is immutable, at least for now */
-struct psc_hashtbl	 rootHtable;
+struct psc_hashtbl	 slm_roots;
 
 struct psc_listcache	 slm_db_workq;
 int			 slm_opstate;
@@ -386,8 +386,8 @@ psc_register_filesystem(int vfsid)
 	strlcpy(rn->rn_name, basename(zfsMount[vfsid].name),
 	    sizeof(rn->rn_name));
 	rn->rn_vfsid = vfsid;
-	psc_hashent_init(&rootHtable, rn);
-	psc_hashtbl_add_item(&rootHtable, rn);
+	psc_hashent_init(&slm_roots, rn);
+	psc_hashtbl_add_item(&slm_roots, rn);
 
 	zfsMount[vfsid].flag |= ZFS_SLASH2_READY;
 	psclog_info("file system %s registered (site=%"PRIx64" uuid=%"PRIx64")",
@@ -509,7 +509,7 @@ main(int argc, char *argv[])
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
-	psc_hashtbl_init(&rootHtable, PHTF_STR, struct mio_rootnames,
+	psc_hashtbl_init(&slm_roots, PHTF_STR, struct mio_rootnames,
 	    rn_name, rn_hentry, 97, NULL, "rootnames");
 
 	/* using hook can cause layer violation */

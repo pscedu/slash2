@@ -100,7 +100,7 @@ slm_rmc_search_roots(char *name)
 {
 	void *p;
 
-	p = psc_hashtbl_search(&rootHtable, NULL, NULL, name);
+	p = psc_hashtbl_search(&slm_roots, NULL, NULL, name);
 	return (p);
 }
 

@@ -410,6 +410,6 @@ extern struct pfl_odt_ops	 slm_odtops;
 
 extern int			 use_global_mount;
 
-extern struct psc_hashtbl	 rootHtable;
+extern struct psc_hashtbl	 slm_roots;
 
 #endif /* _SLASHD_H_ */
