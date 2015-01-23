@@ -509,10 +509,10 @@ struct srm_bmap_chwrmode_rep {
 
 struct srm_bmap_dio_req {
 	uint64_t		fid;
-	uint64_t		seq;
-	uint32_t		bno;
-	uint32_t		dio;
-	uint32_t		mode;
+	uint64_t		seq;		/* bmap sequence # */
+	uint32_t		bno;		/* bmap number */
+	uint32_t		dio;		/* XXX should be a flag */
+	uint32_t		mode;		/* read or write XXX unused */
 	 int32_t		_pad;
 } __packed;
 
