@@ -408,6 +408,8 @@ extern int			 slm_opstate;
 
 extern struct pfl_odt_ops	 slm_odtops;
 
-extern int			 use_global_mount; 
+extern int			 use_global_mount;
+
+extern struct psc_hashtbl	 rootHtable;
 
 #endif /* _SLASHD_H_ */

@@ -68,12 +68,10 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-long			use_global_mount;
+int			use_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
-
-extern struct psc_hashtbl rootHtable;
 
 static void
 slm_root_attributes(struct srt_stat *attr)
