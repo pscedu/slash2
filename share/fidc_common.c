@@ -171,7 +171,7 @@ fidc_reaper(struct psc_poolmgr *m)
  */
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
-    const struct slash_fidgen *fgp, int flags, struct fidc_membh **fp,
+    const struct sl_fidgen *fgp, int flags, struct fidc_membh **fp,
     void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;

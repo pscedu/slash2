@@ -967,7 +967,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 __static int
 msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
-    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb,
+    const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -1101,7 +1101,7 @@ lookup_cache_tally_miss(struct fidc_membh *p, off_t off)
 __static int
 msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
-    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb,
+    const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
 	struct fidc_membh *p, *c = NULL;
@@ -1759,7 +1759,7 @@ void
 mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct slash_fidgen fg;
+	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct stat stb;
@@ -2280,7 +2280,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srt_stat srcsstb, dstsstb;
-	struct slash_fidgen srcfg, dstfg;
+	struct sl_fidgen srcfg, dstfg;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
 	struct pscfs_creds pcr;
