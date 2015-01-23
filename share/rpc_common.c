@@ -272,6 +272,8 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_BUSY);
 	csvc->csvc_owner = pthread_self();
+	csvc->csvc_lineno = __LINE__;
+	csvc->csvc_fn = __FILE__;
 
 	if (flags & CSVCF_NONBLOCK) {
 		imp = slrpc_new_import(csvc->csvc_rqptl,
