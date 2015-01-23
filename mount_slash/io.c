@@ -911,6 +911,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	}
 
 	q = r->biorq_fsrqi;
+	msl_biorq_release(r);
+
 	MFH_LOCK(q->mfsrq_mfh);
 	mfsrq_seterr(q, rc);
 	psc_waitq_wakeall(&msl_fhent_aio_waitq);
@@ -919,8 +921,6 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 
 	//msl_update_iocounters(slc_iorpc_ist, rw, bwc->bwc_size);
-
-	msl_biorq_release(r);
 
 	return (rc);
 }
