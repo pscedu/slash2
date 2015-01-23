@@ -271,6 +271,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	    CSVCF_BUSY) == 0);
 
 	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_BUSY);
+	csvc->csvc_owner = pthread_self();
 
 	if (flags & CSVCF_NONBLOCK) {
 		imp = slrpc_new_import(csvc->csvc_rqptl,
@@ -291,6 +292,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
 		CSVC_LOCK(csvc);
+		csvc->csvc_owner = 0;
 		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_ULOCK(csvc);
@@ -317,6 +319,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 			pscrpc_req_finished(rq);
 
 			CSVC_LOCK(csvc);
+			csvc->csvc_owner = 0;
 			psc_atomic32_clearmask(&csvc->csvc_flags,
 			    CSVCF_BUSY);
 			slrpc_connect_finish(csvc, imp, oimp, 0);
@@ -324,6 +327,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 			return (rc);
 		}
 		CSVC_LOCK(csvc);
+		csvc->csvc_owner = 0;
 		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
 		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
@@ -343,6 +347,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	pscrpc_req_finished(rq);
 
 	CSVC_LOCK(csvc);
+	csvc->csvc_owner = 0;
 	psc_atomic32_clearmask(&csvc->csvc_flags,
 	    CSVCF_BUSY);
 	slrpc_connect_finish(csvc, imp, NULL, rc == 0);

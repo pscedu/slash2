@@ -87,6 +87,7 @@ struct slrpc_cservice {
 	int			 csvc_lasterrno;
 	int			 csvc_tryref;
 	psc_atomic32_t		 csvc_refcnt;
+	pthread_t		 csvc_owner;
 	struct timespec		 csvc_mtime;		/* last activity */
 	struct psclist_head	 csvc_lentry;
 	struct pfl_mutex	 csvc_mutex;
