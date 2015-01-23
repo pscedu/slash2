@@ -131,7 +131,7 @@ mdscoh_cb(struct pscrpc_request *rq,
 	wk = pfl_workq_getitem(slmcoh_releasebml,
 	    struct slm_wkdata_coh_releasebml);
 	wk->fid = mq->fid;
-	wk->bno = mq->blkno;
+	wk->bno = mq->bno;
 	wk->seq = mq->seq;
 	wk->peer = rq->rq_peer;
 	pfl_workq_putitem(wk);
@@ -179,7 +179,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	}
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
-	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
+	mq->bno = bml_2_bmap(bml)->bcm_bmapno;
 	mq->seq = bml->bml_seq;
 	mq->dio = 1;
 

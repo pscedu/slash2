@@ -246,7 +246,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	OPSTAT_INCR("bmap_dio");
 	psclog_info("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
-	    mq->fid, mq->blkno, mq->seq);
+	    mq->fid, mq->bno, mq->seq);
 
 	/*
 	 * XXX it is possible this fcmh won't be in the cache -- force a
@@ -257,9 +257,9 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
-	    mq->blkno, mq->seq);
+	    mq->bno, mq->seq);
 
-	mp->rc = bmap_lookup(f, mq->blkno, &b);
+	mp->rc = bmap_lookup(f, mq->bno, &b);
 	if (mp->rc)
 		goto out;
 

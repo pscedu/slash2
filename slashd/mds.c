@@ -1505,17 +1505,17 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	 * BMAP_OP #2
 	 * XXX are we sure after restart bmap will be loaded?
 	 */
-	rc = bmap_lookup(f, c->blkno, &bmap);
+	rc = bmap_lookup(f, c->bno, &bmap);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed lookup bmap(%u) rc=%d",
-		    c->blkno, rc);
+		    c->bno, rc);
 		rc = -EBADF;
 		goto out;
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_DIAG, bmap, "blkno=%u sz=%"PRId64" ios(%s)",
-	    c->blkno, c->fsize, res->res_name);
+	DEBUG_BMAP(PLL_DIAG, bmap, "bmapno=%u sz=%"PRId64" ios(%s)",
+	    c->bno, c->fsize, res->res_name);
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
@@ -1542,12 +1542,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		 */
 
 		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
-		    c->blkno, c->fsize, res->res_name);
+		    "EALREADY bmapno=%u sz=%"PRId64" ios(%s)",
+		    c->bno, c->fsize, res->res_name);
 
 		DEBUG_FCMH(PLL_ERROR, f,
-		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
-		    c->blkno, c->fsize, res->res_name);
+		    "EALREADY bmapno=%u sz=%"PRId64" ios(%s)",
+		    c->bno, c->fsize, res->res_name);
 
 		BMAP_ULOCK(bmap);
 		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);

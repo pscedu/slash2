@@ -353,7 +353,7 @@ slislvrthr_proc(struct slvr *s)
 		uint32_t i;
 		int found;
 
-		psc_assert(bcr->bcr_crcup.blkno == b->bcm_bmapno);
+		psc_assert(bcr->bcr_crcup.bno == b->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
 		    b->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
@@ -390,7 +390,7 @@ slislvrthr_proc(struct slvr *s)
 		COPYFG(&bcr->bcr_crcup.fg, &b->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_bii = bii;
-		bcr->bcr_crcup.blkno = b->bcm_bmapno;
+		bcr->bcr_crcup.bno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;

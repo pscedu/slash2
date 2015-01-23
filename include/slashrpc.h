@@ -510,7 +510,7 @@ struct srm_bmap_chwrmode_rep {
 struct srm_bmap_dio_req {
 	uint64_t		fid;
 	uint64_t		seq;
-	uint32_t		blkno;
+	uint32_t		bno;
 	uint32_t		dio;
 	uint32_t		mode;
 	 int32_t		_pad;
@@ -530,7 +530,7 @@ struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
 	struct sl_fidgen	fg;
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
 	uint64_t		nblks;		/* st_blocks for us */
-	uint32_t		blkno;		/* bmap block number */
+	uint32_t		bno;		/* bmap number */
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
 	 int32_t		extend;
@@ -555,7 +555,7 @@ struct srm_bmap_crcwrt_rep {
 
 struct srm_bmap_iod_get {
 	uint64_t		fid;
-	uint32_t		blkno;
+	uint32_t		bno;
 	 int32_t		_pad;
 } __packed;
 
