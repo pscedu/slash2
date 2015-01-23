@@ -41,8 +41,6 @@
 #include "slashd.h"
 #include "slconfig.h"
 
-extern int use_global_mount;
-
 struct sl_mds_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
@@ -559,29 +557,6 @@ slmctlparam_nextfid_set(const char *val)
 	return (rc);
 }
 
-void
-slmctlparam_global_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d", use_global_mount);
-}
-
-int
-slmctlparam_global_set(const char *val)
-{
-	unsigned long l;
-	char *endp;
-	int rc = 0;
-
-	l = strtol(val, &endp, 0);
-	if (endp == val || *endp)
-		rc = -1;
-	else if (l != 0 && l != 1)
-		rc = -1;
-	else
-		use_global_mount = l;
-	return (rc);
-}
- 
 int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
@@ -705,8 +680,8 @@ slmctlthr_main(const char *fn)
 	    slmctlparam_namespace_stats);
 	psc_ctlparam_register_simple("sys.nextfid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
-	psc_ctlparam_register_simple("sys.global",
-	    slmctlparam_global_get, slmctlparam_global_set);
+	psc_ctlparam_register_var("sys.global",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &use_global_mount);
 	psc_ctlparam_register_var("sys.reclaim_xid",
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_xid);
 	psc_ctlparam_register_var("sys.reclaim_batchno",
