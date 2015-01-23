@@ -101,21 +101,19 @@ slistatfsthr_main(struct psc_thread *thr)
 	struct statvfs sfb;
 	int rc;
 
-	while (pscthr_run(thr)) {
 #ifdef HAVE_STATFS_FSTYPE
-		struct statfs b;
+	struct statfs b;
 
-		rc = statfs(slcfg_local->cfg_fsroot, &b);
-		if (rc == -1)
-			psclog_error("statfs %s",
-			    slcfg_local->cfg_fsroot);
-		statfs_2_statvfs(&b, &sfb);
-#else
+	rc = statfs(slcfg_local->cfg_fsroot, &b);
+	if (rc == -1)
+		psclog_error("statfs %s", slcfg_local->cfg_fsroot);
+#endif
+
+	while (pscthr_run(thr)) {
 		rc = statvfs(slcfg_local->cfg_fsroot, &sfb);
 		if (rc == -1)
 			psclog_error("statvfs %s",
 			    slcfg_local->cfg_fsroot);
-#endif
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
@@ -126,7 +124,7 @@ slistatfsthr_main(struct psc_thread *thr)
 #endif
 			freelock(&sli_ssfb_lock);
 		}
-		sleep(30);
+		sleep(60);
 	}
 }
 
