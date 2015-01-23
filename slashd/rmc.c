@@ -1573,7 +1573,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		 * IOS has not come online yet and sent us its stats;
 		 * skip it.
 		 */
-		if (si->si_ssfb.sf_bsize == 0) {
+		if (si->si_ssfb.sf_frsize == 0) {
 			RPMI_ULOCK(rpmi);
 			continue;
 		}

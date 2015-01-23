@@ -139,7 +139,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
-	if (f->sf_bsize == 0) {
+	if (f->sf_frsize == 0) {
 		DEBUG_REQ(PLL_MAX, rq, "%s sent bogus STATFS",
 		    resm->resm_name);
 		return;
