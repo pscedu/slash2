@@ -115,7 +115,7 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	/* get an fcmh for the file */
 	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 	DEBUG_SRW(w, PLL_DEBUG, "created");
 
 	/* get the replication chunk's bmap */
@@ -175,6 +175,9 @@ void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
 	(void)reqlock(&w->srw_lock);
+
+	if (rc == -ETIMEDOUT)
+		rc = -PFLERR_TIMEDOUT;
 
 	/*
 	 * This keeps the very first error and causes our thread to drop
