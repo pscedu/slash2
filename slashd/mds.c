@@ -1507,14 +1507,14 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	 */
 	rc = bmap_lookup(f, c->bno, &bmap);
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "failed lookup bmap(%u) rc=%d",
-		    c->bno, rc);
+		DEBUG_FCMH(PLL_ERROR, f, "bmap lookup failed; "
+		    "bno=%u rc=%d", c->bno, rc);
 		rc = -EBADF;
 		goto out;
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_DIAG, bmap, "bmapno=%u sz=%"PRId64" ios(%s)",
+	DEBUG_BMAP(PLL_DIAG, bmap, "bmapno=%u sz=%"PRId64" ios=%s",
 	    c->bno, c->fsize, res->res_name);
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
@@ -1542,11 +1542,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		 */
 
 		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "EALREADY bmapno=%u sz=%"PRId64" ios(%s)",
+		    "EALREADY bmapno=%u sz=%"PRId64" ios=%s",
 		    c->bno, c->fsize, res->res_name);
 
 		DEBUG_FCMH(PLL_ERROR, f,
-		    "EALREADY bmapno=%u sz=%"PRId64" ios(%s)",
+		    "EALREADY bmapno=%u sz=%"PRId64" ios=%s",
 		    c->bno, c->fsize, res->res_name);
 
 		BMAP_ULOCK(bmap);
@@ -1555,8 +1555,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 
 	/*
 	 * Mark that bmap is undergoing CRC updates - this is
-	 * non-reentrant so the ION must know better than to
-	 * send multiple requests for the same bmap.
+	 * non-reentrant so the ION must know better than to send
+	 * multiple requests for the same bmap.
 	 */
 	bmap->bcm_flags |= BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
