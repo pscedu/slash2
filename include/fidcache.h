@@ -73,6 +73,8 @@ struct fidc_membh {
 	int			 fcmh_refcnt;	/* threads referencing us */
 	psc_spinlock_t		 fcmh_lock;
 	pthread_t		 fcmh_owner;	/* holds BUSY */
+	const char		*fcmh_fn;
+	int			 fcmh_lineno;
 	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
@@ -156,6 +158,8 @@ struct fidc_membh {
 		} else {						\
 			(f)->fcmh_flags |= FCMH_BUSY;			\
 			(f)->fcmh_owner = _pthr;			\
+			(f)->fcmh_lineno = __LINE__;			\
+			(f)->fcmh_fn = __FILE__;			\
 			DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");		\
 			_got = 1;					\
 		}							\
@@ -178,6 +182,8 @@ struct fidc_membh {
 			    (f)->fcmh_flags & FCMH_BUSY);		\
 			(f)->fcmh_flags |= FCMH_BUSY;			\
 			(f)->fcmh_owner = _pthr;			\
+			(f)->fcmh_lineno = __LINE__;			\
+			(f)->fcmh_fn = __FILE__;			\
 			DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");		\
 		}							\
 		(_wasbusy);						\
