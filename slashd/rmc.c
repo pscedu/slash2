@@ -452,7 +452,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		CONF_LOCK();
 		mp->rc = ENOENT;
 		CONF_FOREACH_SITE(site) {
-	    		if (strcmp(mq->name, site->site_name) != 0)
+			if (strcmp(mq->name, site->site_name) != 0)
 				continue;
 
 			fid = SLFID_ROOT;
@@ -1037,13 +1037,13 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		for (i = 0; i < 2; i++) {
 
 			dirent->pfd_ino = SLFID_ROOT;
-			dirent->pfd_type = S_IFDIR; 
+			dirent->pfd_type = S_IFDIR;
 			dirent->pfd_off = entoff;
 			if (i == 0) {
-				dirent->pfd_namelen = 1; 
+				dirent->pfd_namelen = 1;
 				strcpy(dirent->pfd_name, ".");
 			} else {
-				dirent->pfd_namelen = 2; 
+				dirent->pfd_namelen = 2;
 				strcpy(dirent->pfd_name, "..");
 			}
 			entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
@@ -1063,7 +1063,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 			FID_SET_SITEID(fid, site->site_id);
 
 			dirent->pfd_ino = fid;
-			dirent->pfd_type = S_IFDIR; 
+			dirent->pfd_type = S_IFDIR;
 			dirent->pfd_off = entoff;
 			dirent->pfd_namelen = strlen(site->site_name);
 			strcpy(dirent->pfd_name, site->site_name);
