@@ -47,6 +47,7 @@ char *pfl_errstrs[] = {
 /*  8 */ "Bad magic",
 /*  9 */ "Required key not available",
 /* 10 */ "Invalid checksum",
+/* 11 */ "Operation timed out",
 	  NULL
 };
 
