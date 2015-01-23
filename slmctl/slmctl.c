@@ -183,13 +183,13 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	 * The following uses the formula from df.c in GNU coreutils.
 	 * However, we don't do integer arithmetic.
 	 */
-	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_bsize) :
+	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_frsize) :
 	    printf("%7s", "-");
 	printf(" ");
 	b->sf_blocks ? psc_ctl_prhuman((b->sf_blocks - b->sf_bfree) *
-	    b->sf_bsize) : printf("%7s", "-");
+	    b->sf_frsize) : printf("%7s", "-");
 	printf(" ");
-	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_bsize) :
+	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_frsize) :
 	    printf("%7s", "-");
 	printf(" ");
 
