@@ -83,7 +83,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-#ifdef HAVE_FUSE_BIG_WRITES
+#ifdef HAVE_FUSE_BIG_WRITES || 1
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
 #else
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
@@ -619,6 +619,9 @@ mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 	struct msl_fhent *mfh;
 	int rflags, rc;
 
+	if (inum == SLFID_CTLSOCK) {
+	}
+
 	rflags = 0;
 	rc = msl_open(pfr, inum, oflags, &mfh, &rflags);
 	pscfs_reply_open(pfr, mfh, rflags, rc);
@@ -657,6 +660,18 @@ msl_stat(struct fidc_membh *f, void *arg)
 		f->fcmh_sstb.sst_size = 2;
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 		f->fcmh_sstb.sst_blocks = 4;
+		return (0);
+	} else if (fcmh_2_fid(f) == SLFID_CTLSOCK) {
+		struct srt_stat sstb;
+
+		memset(&sstb, 0, sizeof(sstb));
+		sstb.sst_fid = SLFID_CTLSOCK;
+		sstb.sst_mode = S_IFSOCK | 0666;
+		sstb.sst_nlink = 2;
+		sstb.sst_size = 0;
+		sstb.sst_blksize = MSL_FS_BLKSIZ;
+		sstb.sst_blocks = 0;
+		slc_fcmh_setattrf(f, &sstb, 0);
 		return (0);
 	}
 
@@ -1102,24 +1117,36 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
 
-#define MSL_FIDNS_RPATH	".slfidns"
+	if (pinum == SLFID_ROOT) {
+		if (strcmp(name, MSL_FIDNS_RPATH) == 0) {
+			struct fidc_membh f;
 
-	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
+			memset(&f, 0, sizeof(f));
+			INIT_SPINLOCK(&f.fcmh_lock);
+			fcmh_2_fid(&f) = SLFID_NS;
+			msl_stat(&f, NULL);
+			if (fgp)
+				fgp->fg_fid = SLFID_NS;
+			if (sstb)
+				*sstb = f.fcmh_sstb;
+			return (0);
+		} else if (strcmp(name, MSL_CTLSOCK_RPATH) == 0) {
+			struct fidc_membh f;
 
-		slfid_t	fid;
-
-		fid = SLFID_NS;
-		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
-		if (fgp) {
-			fgp->fg_fid = fid;
-			fgp->fg_gen = 0;
+			memset(&f, 0, sizeof(f));
+			INIT_SPINLOCK(&f.fcmh_lock);
+			fcmh_2_fid(&f) = SLFID_CTLSOCK;
+			sstb->sst_mode = S_IFDIR | 0111;
+			sstb->sst_nlink = 2;
+			sstb->sst_size = 2;
+			sstb->sst_blksize = MSL_FS_BLKSIZ;
+			msl_stat(&f, NULL);
+			if (fgp)
+				fgp->fg_fid = SLFID_CTLSOCK;
+			if (sstb)
+				*sstb = f.fcmh_sstb;
+			return (0);
 		}
-		sstb->sst_fid = fid;
-		sstb->sst_gen = 0;
-		sstb->sst_mode = S_IFDIR | 0111;
-		sstb->sst_nlink = 2;
-		sstb->sst_size = 2;
-		sstb->sst_blksize = MSL_FS_BLKSIZ;
 		return (0);
 	}
 	if (FID_GET_INUM(pinum) == SLFID_NS) {
@@ -1933,7 +1960,8 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 int
 msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 {
-	int rc, waslocked, to_set = 0, flush_size = 0, flush_mtime = 0;
+	int dummy, flush_size = 0, flush_mtime = 0;
+	int rc, waslocked, to_set = 0;
 	struct srt_stat attr;
 
 	waslocked = FCMH_RLOCK(f);
@@ -1948,14 +1976,14 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
 		flush_size = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-		f->fcmh_flags |= FCMH_BUSY;
+		FCMH_REQ_BUSY(f, &dummy);
 		to_set |= PSCFS_SETATTRF_DATASIZE;
 		attr.sst_size = f->fcmh_sstb.sst_size;
 	}
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
 		flush_mtime = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-		f->fcmh_flags |= FCMH_BUSY;
+		FCMH_REQ_BUSY(f, &dummy);
 		to_set |= PSCFS_SETATTRF_MTIME;
 		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
@@ -1972,7 +2000,7 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 	rc = msl_setattr(pfcc, f, to_set, &attr, NULL, NULL);
 
 	FCMH_LOCK(f);
-	f->fcmh_flags &= ~FCMH_BUSY;
+	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
 	if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
@@ -3527,8 +3555,9 @@ msl_init(void)
 
 		r = libsl_str2res(name);
 		if (r == NULL)
-			psclog_warnx("PREF_IOS (%s) does not resolve to "
-			    "a valid IOS; defaulting to IOS_ID_ANY", name);
+			psclog_warnx("PREF_IOS (%s) does not resolve "
+			    "to a valid IOS; defaulting to IOS_ID_ANY",
+			    name);
 		else
 			slc_setprefios(r->res_id);
 	}
