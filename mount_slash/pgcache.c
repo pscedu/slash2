@@ -363,11 +363,13 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 void
 bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 {
-	int i;
-	struct bmpc_ioreq *r, *tmp;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r, *tmp;
 	struct bmap_cli_info *bci;
+	int i;
+
+	BMAP_LOCK_ENSURE(b);
 
 	bci = bmap_2_bci(b);
 	if (rc && !bci->bci_flush_rc)
