@@ -349,7 +349,7 @@ struct slm_batchscratch_repl {
 struct mio_rootnames {
 	char			 rn_name[PATH_MAX];
 	int			 rn_vfsid;
-	struct psc_hashent	 rn_hentry;
+	struct pfl_hashentry	 rn_hentry;
 };
 
 #define SLM_NWORKER_THREADS	4

@@ -75,7 +75,7 @@ struct fidc_membh {
 	pthread_t		 fcmh_owner;	/* holds BUSY */
 	const char		*fcmh_fn;
 	int			 fcmh_lineno;
-	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
+	struct pfl_hashentry	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */

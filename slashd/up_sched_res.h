@@ -180,7 +180,7 @@ void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 extern struct psc_mlist		 slm_upschq;
 
 struct slm_sth {
-	struct psc_hashent	 sth_hentry;
+	struct pfl_hashentry	 sth_hentry;
 	const char		*sth_fmt;
 	sqlite3_stmt		*sth_sth;
 	struct pfl_mutex	 sth_mutex;

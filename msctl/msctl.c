@@ -109,7 +109,7 @@ struct fnfidpair {
 	struct stat		 ffp_stb;
 	char			 ffp_fn[PATH_MAX];
 	slfid_t			 ffp_fid;
-	struct psc_hashent	 ffp_hentry;
+	struct pfl_hashentry	 ffp_hentry;
 };
 
 /* keep in sync with BRPOL_* constants */

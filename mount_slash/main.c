@@ -108,7 +108,7 @@ struct uid_mapping {
 	/* these are 64-bit as limitation of hash API */
 	uint64_t		um_key;
 	uint64_t		um_val;
-	struct psc_hashent	um_hentry;
+	struct pfl_hashentry	um_hentry;
 };
 
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;

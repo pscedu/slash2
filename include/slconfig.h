@@ -74,7 +74,7 @@ enum sl_res_type {
 /* Resource (I/O system, MDS) */
 struct sl_resource {
 	uint64_t		 res_hashkey;
-	struct psc_hashent	 res_hentry;
+	struct pfl_hashentry	 res_hentry;
 
 	sl_ios_id_t		 res_id;
 	int			 res_flags;
