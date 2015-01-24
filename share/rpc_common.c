@@ -365,6 +365,7 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 	struct srm_ping_rep *mp;
 	int rc = 0;
 
+	// XXX SL_GET_RQ_STATUS(csvc)
 	if (!rq->rq_status) {
 		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, 0);
 		if (rc == 0)
@@ -581,9 +582,11 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	while (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_BUSY) {
-		CSVC_WAIT(csvc);
-		CSVC_LOCK(csvc);
+	if (highlevel) {
+		while (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_BUSY) {
+			CSVC_WAIT(csvc);
+			CSVC_LOCK(csvc);
+		}
 	}
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	csvc->csvc_lasterrno = 0;
