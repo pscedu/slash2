@@ -223,7 +223,7 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	int w;
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
-	printf("%-16s %12s %6s %5s %5s "
+	printf("%-16s %10s %6s %5s %5s "
 	    "%7s %3s %7s %4s %6s",
 	    "fid", "flags", "mode", "uid", "gid",
 	    "size", "ref", "fgen", "pgen", "ugen");
