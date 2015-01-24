@@ -83,7 +83,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-#ifdef HAVE_FUSE_BIG_WRITES || 1
+#ifdef HAVE_FUSE_BIG_WRITES
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
 #else
 # define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
@@ -619,9 +619,6 @@ mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 	struct msl_fhent *mfh;
 	int rflags, rc;
 
-	if (inum == SLFID_CTLSOCK) {
-	}
-
 	rflags = 0;
 	rc = msl_open(pfr, inum, oflags, &mfh, &rflags);
 	pscfs_reply_open(pfr, mfh, rflags, rc);
@@ -660,18 +657,6 @@ msl_stat(struct fidc_membh *f, void *arg)
 		f->fcmh_sstb.sst_size = 2;
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 		f->fcmh_sstb.sst_blocks = 4;
-		return (0);
-	} else if (fcmh_2_fid(f) == SLFID_CTLSOCK) {
-		struct srt_stat sstb;
-
-		memset(&sstb, 0, sizeof(sstb));
-		sstb.sst_fid = SLFID_CTLSOCK;
-		sstb.sst_mode = S_IFSOCK | 0666;
-		sstb.sst_nlink = 2;
-		sstb.sst_size = 0;
-		sstb.sst_blksize = MSL_FS_BLKSIZ;
-		sstb.sst_blocks = 0;
-		slc_fcmh_setattrf(f, &sstb, 0);
 		return (0);
 	}
 
@@ -1117,36 +1102,24 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
 
-	if (pinum == SLFID_ROOT) {
-		if (strcmp(name, MSL_FIDNS_RPATH) == 0) {
-			struct fidc_membh f;
+#define MSL_FIDNS_RPATH	".slfidns"
 
-			memset(&f, 0, sizeof(f));
-			INIT_SPINLOCK(&f.fcmh_lock);
-			fcmh_2_fid(&f) = SLFID_NS;
-			msl_stat(&f, NULL);
-			if (fgp)
-				fgp->fg_fid = SLFID_NS;
-			if (sstb)
-				*sstb = f.fcmh_sstb;
-			return (0);
-		} else if (strcmp(name, MSL_CTLSOCK_RPATH) == 0) {
-			struct fidc_membh f;
+	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 
-			memset(&f, 0, sizeof(f));
-			INIT_SPINLOCK(&f.fcmh_lock);
-			fcmh_2_fid(&f) = SLFID_CTLSOCK;
-			sstb->sst_mode = S_IFDIR | 0111;
-			sstb->sst_nlink = 2;
-			sstb->sst_size = 2;
-			sstb->sst_blksize = MSL_FS_BLKSIZ;
-			msl_stat(&f, NULL);
-			if (fgp)
-				fgp->fg_fid = SLFID_CTLSOCK;
-			if (sstb)
-				*sstb = f.fcmh_sstb;
-			return (0);
+		slfid_t	fid;
+
+		fid = SLFID_NS;
+		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
+		if (fgp) {
+			fgp->fg_fid = fid;
+			fgp->fg_gen = 0;
 		}
+		sstb->sst_fid = fid;
+		sstb->sst_gen = 0;
+		sstb->sst_mode = S_IFDIR | 0111;
+		sstb->sst_nlink = 2;
+		sstb->sst_size = 2;
+		sstb->sst_blksize = MSL_FS_BLKSIZ;
 		return (0);
 	}
 	if (FID_GET_INUM(pinum) == SLFID_NS) {
