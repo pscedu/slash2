@@ -62,6 +62,7 @@ main(int argc, char *argv[])
 	printf("%4d [PFLERR_BADMAGIC]: %s\n", PFLERR_BADMAGIC, slstrerror(PFLERR_BADMAGIC));
 	printf("%4d [PFLERR_NOKEY]: %s\n", PFLERR_NOKEY, slstrerror(PFLERR_NOKEY));
 	printf("%4d [PFLERR_BADCRC]: %s\n", PFLERR_BADCRC, slstrerror(PFLERR_BADCRC));
+	printf("%4d [PFLERR_TIMEDOUT]: %s\n", PFLERR_TIMEDOUT, slstrerror(PFLERR_TIMEDOUT));
 	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
 	printf("%4d [SLERR_REPL_NOT_ACT]: %s\n", SLERR_REPL_NOT_ACT, slstrerror(SLERR_REPL_NOT_ACT));
 	printf("%4d [SLERR_RPCIO]: %s\n", SLERR_RPCIO, slstrerror(SLERR_RPCIO));
