@@ -382,10 +382,11 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		    r);
 
 		BIORQ_LOCK(r);
-		if (r->biorq_flags & BIORQ_SCHED) {
+		if (r->biorq_flags & (BIORQ_SCHED | BIORQ_FLUSHED)) {
 			BIORQ_ULOCK(r);
 			continue;
 		}
+		r->biorq_flags |= BIORQ_FLUSHED;
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
 		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);

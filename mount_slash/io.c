@@ -299,6 +299,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
+		r->biorq_flags |= BIORQ_FLUSHED;
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
 		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
@@ -312,7 +313,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
+	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
 	psc_waitq_wakeall(&bmpc->bmpc_waitq);
