@@ -166,7 +166,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 			retifset[BREPLST_REPL_SCHED] = 1;
 			retifset[BREPLST_REPL_QUEUED] = 1;
 
-			OPSTAT2_INCR("replcompl", bsr->bsr_amt);
+			OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 		} else {
 			tract[BREPLST_REPL_QUEUED] =
 			    BREPLST_REPL_QUEUED;
