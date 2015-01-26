@@ -30,5 +30,4 @@
 void
 mstimerthr_spawn(void)
 {
-	psc_tiosthr_spawn(MSTHRT_TIOS, "mstiosthr");
 }

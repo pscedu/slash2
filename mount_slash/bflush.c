@@ -67,6 +67,8 @@ struct psc_waitq		slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			slc_bflush_lock = SPINLOCK_INIT;
 int				slc_bflush_tmout_flags;
 
+psc_atomic32_t			slc_write_coalesce_max;
+
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
@@ -272,7 +274,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	msl_update_iocounters(slc_iorpc_ist, SL_WRITE, bwc->bwc_size);
+	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE, bwc->bwc_size);
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
@@ -588,7 +590,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		bwc->bwc_niovs++;
 		OPSTAT_INCR("write_coalesce");
 	}
-	OPSTAT_SET_MAX("write_coalesce_max", bwc->bwc_niovs);
+	psc_atomic32_setmax(&slc_write_coalesce_max, bwc->bwc_niovs);
 
 	psc_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
 	psc_assert(!tot_reqsz);

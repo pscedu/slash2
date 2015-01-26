@@ -958,7 +958,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RCI		*/ NULL,
 /* RCM		*/ NULL,
 /* READAHEAD	*/ NULL,
-/* TIOS		*/ NULL,
+/* OPSTIMER	*/ NULL,
 /* USKLNDPL	*/ NULL,
 /* WORKER	*/ NULL
 };

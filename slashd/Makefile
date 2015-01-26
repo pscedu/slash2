@@ -27,7 +27,6 @@ SRCS+=		rmc.c
 SRCS+=		rmi.c
 SRCS+=		rmm.c
 SRCS+=		rpc_mds.c
-SRCS+=		timer_mds.c
 SRCS+=		up_sched_res.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c

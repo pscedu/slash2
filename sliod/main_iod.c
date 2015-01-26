@@ -68,8 +68,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 int			 sli_selftest_rc;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
-struct pfl_iostats_grad	 sli_iorpc_ist[8];
-struct pfl_iostats_rw	 sli_backingstore_ist;
+struct pfl_iostats_grad	 sli_iorpc_iostats[8];
+struct pfl_iostats_rw	 sli_backingstore_iostats;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
@@ -270,18 +270,18 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
 	slvr_cache_init();
 
-	sli_iorpc_ist[0].size =        1024;
-	sli_iorpc_ist[1].size =    4 * 1024;
-	sli_iorpc_ist[2].size =   16 * 1024;
-	sli_iorpc_ist[3].size =   64 * 1024;
-	sli_iorpc_ist[4].size =  128 * 1024;
-	sli_iorpc_ist[5].size =  512 * 1024;
-	sli_iorpc_ist[6].size = 1024 * 1024;
-	sli_iorpc_ist[7].size = 0;
-	pfl_iostats_grad_init(sli_iorpc_ist, PISTF_BASE10, "iorpc");
+	sli_iorpc_iostats[0].size =        1024;
+	sli_iorpc_iostats[1].size =    4 * 1024;
+	sli_iorpc_iostats[2].size =   16 * 1024;
+	sli_iorpc_iostats[3].size =   64 * 1024;
+	sli_iorpc_iostats[4].size =  128 * 1024;
+	sli_iorpc_iostats[5].size =  512 * 1024;
+	sli_iorpc_iostats[6].size = 1024 * 1024;
+	sli_iorpc_iostats[7].size = 0;
+	pfl_iostats_grad_init(sli_iorpc_iostats, OPSTF_BASE10, "iorpc");
 
-	psc_iostats_init(&sli_backingstore_ist.rd, "backingstore-rd");
-	psc_iostats_init(&sli_backingstore_ist.wr, "backingstore-wr");
+	sli_backingstore_iostats.rd = pfl_opstat_init("backingstore-rd");
+	sli_backingstore_iostats.wr = pfl_opstat_init("backingstore-wr");
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
 	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
@@ -319,7 +319,7 @@ main(int argc, char *argv[])
 
 	slibmaprlsthr_spawn();
 	sli_rpc_initsvc();
-	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
+	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
 	OPSTAT_INCR("min_seqno");

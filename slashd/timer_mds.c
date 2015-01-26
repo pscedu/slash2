@@ -30,5 +30,4 @@
 void
 slmtimerthr_spawn(void)
 {
-	psc_tiosthr_spawn(SLMTHRT_TIOS, "slmtiosthr");
 }

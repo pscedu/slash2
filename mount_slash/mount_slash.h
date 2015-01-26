@@ -64,7 +64,7 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
-	MSTHRT_TIOS,			/* timer iostat updater */
+	MSTHRT_OPSTIMER,		/* opstats updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
 };
@@ -293,7 +293,6 @@ struct msl_fhent *
 
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
-void	 mstimerthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 
 #define bmap_flushq_wake(reason)						\
@@ -325,13 +324,13 @@ extern sl_ios_id_t		 prefIOS;
 extern struct sl_resm		*slc_rmc_resm;
 extern char			 mountpoint[];
 
-extern struct pfl_iostats_rw	 slc_dio_ist;
-extern struct pfl_iostats	 slc_rdcache_ist;
-extern struct pfl_iostats	 slc_readahead_issue_ist;
-extern struct pfl_iostats	 slc_readahead_hit_ist;
+extern struct pfl_iostats_rw	 slc_dio_iostats;
+extern struct pfl_opstat	*slc_rdcache_iostats;
+extern struct pfl_opstat	*slc_readahead_issue_iostats;
+extern struct pfl_opstat	*slc_readahead_hit_iostats;
 
-extern struct pfl_iostats_grad	 slc_iosyscall_ist[];
-extern struct pfl_iostats_grad	 slc_iorpc_ist[];
+extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
+extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
 
 extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;

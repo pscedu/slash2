@@ -87,13 +87,13 @@ struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 psc_atomic32_t		 slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
 
-struct pfl_iostats_rw	 slc_dio_ist;
-struct pfl_iostats	 slc_rdcache_ist;
-struct pfl_iostats	 slc_readahead_hit_ist;
-struct pfl_iostats	 slc_readahead_issue_ist;
+struct pfl_iostats_rw	 slc_dio_iostats;
+struct pfl_opstat	*slc_rdcache_iostats;
+struct pfl_opstat	*slc_readahead_hit_iostats;
+struct pfl_opstat	*slc_readahead_issue_iostats;
 
-struct pfl_iostats_grad	 slc_iosyscall_ist[8];
-struct pfl_iostats_grad	 slc_iorpc_ist[8];
+struct pfl_iostats_grad	 slc_iosyscall_iostats[8];
+struct pfl_iostats_grad	 slc_iorpc_iostats[8];
 
 struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
@@ -104,10 +104,7 @@ msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 {
 	for (; ist->size && len >= ist->size; ist++)
 		;
-	if (rw == SL_READ)
-		psc_iostats_intv_add(&ist->rw.rd, 1);
-	else
-		psc_iostats_intv_add(&ist->rw.wr, 1);
+	pfl_opstat_incr(rw == SL_READ ? ist->rw.rd : ist->rw.wr);
 }
 
 __static int
@@ -136,16 +133,14 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 
 		if (e->bmpce_flags & BMPCE_DATARDY) {
 			if (!checkonly)
-				psc_iostats_intv_add(&slc_rdcache_ist,
-				    nbytes);
+				pfl_opstat_add(slc_rdcache_iostats, nbytes);
 			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			if (!checkonly) {
-				psc_iostats_intv_add(&slc_rdcache_ist,
-				    nbytes);
+				pfl_opstat_add(slc_rdcache_iostats, nbytes);
 				OPSTAT_INCR("read_part_valid");
 			}
 			return (1);
@@ -846,10 +841,10 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			mfsrq_seterr(r->biorq_fsrqi, rc);
 	} else {
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-		msl_update_iocounters(slc_iorpc_ist, SL_READ,
+		msl_update_iocounters(slc_iorpc_iostats, SL_READ,
 		    mq->size);
 		if (r->biorq_flags & BIORQ_READAHEAD)
-			psc_iostats_intv_add(&slc_readahead_issue_ist,
+			pfl_opstat_add(slc_readahead_issue_iostats,
 			    mq->size);
 	}
 
@@ -922,7 +917,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 
-	//msl_update_iocounters(slc_iorpc_ist, rw, bwc->bwc_size);
+	//msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
 
 	return (rc);
 }
@@ -1060,8 +1055,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
 	if (rc == 0) {
-		psc_iostats_intv_add(op == SRMT_WRITE ?
-		    &slc_dio_ist.wr : &slc_dio_ist.rd, size);
+		pfl_opstat_add(op == SRMT_WRITE ?
+		    slc_dio_iostats.wr : slc_dio_iostats.rd, size);
 		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		q->mfsrq_flags |= MFSRQ_COPIED;
@@ -1363,7 +1358,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 	if (rc == 0 && perfect_ra)
-		psc_iostats_intv_add(&slc_readahead_hit_ist, r->biorq_len);
+		pfl_opstat_add(slc_readahead_hit_iostats, r->biorq_len);
 
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
@@ -1865,7 +1860,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (rw == SL_READ && (!size || off >= (off_t)fsz))
 		PFL_GOTOERR(out, rc = 0);
 
-	msl_update_iocounters(slc_iosyscall_ist, rw, size);
+	msl_update_iocounters(slc_iosyscall_iostats, rw, size);
 
  restart:
 	rc = 0;

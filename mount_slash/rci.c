@@ -40,6 +40,8 @@
 #define RCI_AIO_READ_WAIT_NS	1000000
 #define CAR_LOOKUP_MAX		10000
 
+psc_atomic32_t			slc_read_aio_wait_max;
+
 int
 slc_rci_handle_ctl(struct pscrpc_request *rq)
 {
@@ -130,7 +132,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			LIST_CACHE_ULOCK(lc);
 		}
 	}
-	OPSTAT_SET_MAX("read_aio_wait_max", nwait);
+	psc_atomic32_setmax(&slc_read_aio_wait_max, nwait);
 
 	if (!found) {
 		psclog_warnx("could not find async req id=%#"PRIx64,

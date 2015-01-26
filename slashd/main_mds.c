@@ -42,6 +42,7 @@
 #include "pfl/random.h"
 #include "pfl/str.h"
 #include "pfl/thread.h"
+#include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
 #include "pfl/workthr.h"
 
@@ -687,7 +688,7 @@ main(int argc, char *argv[])
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	slmbmaptimeothr_spawn();
-	slmtimerthr_spawn();
+	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
 	slmconnthr_spawn();
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();

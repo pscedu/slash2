@@ -527,7 +527,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		} else if (rc) {
 			int crc_rc;
 
-			psc_iostats_intv_add(&sli_backingstore_ist.rd, rc);
+			pfl_opstat_add(sli_backingstore_iostats.rd, rc);
 
 			/*
 			 * When a file is truncated, the generation
@@ -539,6 +539,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s, NULL);
 			SLVR_ULOCK(s);
+
 			if (crc_rc == PFLERR_BADCRC) {
 				OPSTAT_INCR("fsio_read_crc_bad");
 				DEBUG_SLVR(PLL_ERROR, s,
@@ -576,8 +577,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			save_errno = errno;
 			OPSTAT_INCR("fsio_write_fail");
 		} else
-			psc_iostats_intv_add(&sli_backingstore_ist.wr,
-			    rc);
+			pfl_opstat_add(sli_backingstore_iostats.wr, rc);
 	}
 
 	if (rc < 0)

@@ -313,7 +313,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RMC		*/ slmrmcthr_pr,
 /* RMI		*/ NULL,
 /* RMM		*/ slmrmmthr_pr,
-/* TIOS		*/ NULL,
+/* OPSTIMER	*/ NULL,
 /* UPSCHED	*/ NULL,
 /* USKLNDPL	*/ NULL,
 /* WORKER	*/ NULL,

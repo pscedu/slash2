@@ -646,7 +646,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RMC		*/ NULL,
 /* RMI		*/ NULL,
 /* RMM		*/ NULL,
-/* TIOS		*/ NULL,
+/* OPSTIMER	*/ NULL,
 /* UPSCHED	*/ NULL,
 /* USKLNDPL	*/ NULL,
 /* WORKER	*/ NULL,

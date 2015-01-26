@@ -57,7 +57,7 @@ enum {
 	SLITHRT_SLVR_CRC,	/* sliver CRC updaters */
 	SLITHRT_READ_AHEAD,	/* sliver read-ahead */
 	SLITHRT_STATFS,		/* statvfs(2) updater */
-	SLITHRT_TIOS,		/* iostats updater */
+	SLITHRT_OPSTIMER,	/* iostats updater */
 	SLITHRT_USKLNDPL	/* userland socket Lustre net dev poll thr */
 };
 
@@ -100,8 +100,8 @@ void		slictlthr_main(const char *);
 
 int		iod_inode_getinfo(struct sl_fidgen *, uint64_t *, uint64_t *, uint32_t *);
 
-extern struct pfl_iostats_grad	 sli_iorpc_ist[];
-extern struct pfl_iostats_rw	 sli_backingstore_ist;
+extern struct pfl_iostats_grad	 sli_iorpc_iostats[];
+extern struct pfl_iostats_rw	 sli_backingstore_iostats;
 int				 sli_selftest_rc;
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;

@@ -247,10 +247,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/* XXX move this until after success and do accounting for errors */
-	for (ist = sli_iorpc_ist; ist->size; ist++)
+	for (ist = sli_iorpc_iostats; ist->size; ist++)
 		if (mq->size < ist->size)
 			break;
-	psc_iostats_intv_add(rw == SL_WRITE ? &ist->rw.wr : &ist->rw.rd, 1);
+	pfl_opstat_add(rw == SL_WRITE ? ist->rw.wr : ist->rw.rd, 1);
 
 	mp->rc = sli_fcmh_get(fgp, &f);
 	if (mp->rc)

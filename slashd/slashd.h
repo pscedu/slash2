@@ -68,7 +68,7 @@ enum {
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
 	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
 	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
-	SLMTHRT_TIOS,		/* I/O stats updater */
+	SLMTHRT_OPSTIMER,	/* opstats updater */
 	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
 	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
 	SLMTHRT_WORKER,		/* miscellaneous work */
@@ -376,7 +376,6 @@ void		 slmbkdbthr_main(struct psc_thread *);
 void		 slmbmaptimeothr_spawn(void);
 void		 slmctlthr_main(const char *);
 void		 slmrcmthr_main(struct psc_thread *);
-void		 slmtimerthr_spawn(void);
 
 slfid_t		 slm_get_curr_slashfid(void);
 void		 slm_set_curr_slashfid(slfid_t);

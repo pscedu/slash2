@@ -61,6 +61,7 @@
 #include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/time.h"
+#include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
 #include "pfl/workthr.h"
@@ -3490,24 +3491,24 @@ msl_init(void)
 	/* Start up service threads. */
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
-	mstimerthr_spawn();
+	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
 
-	psc_iostats_init(&slc_dio_ist.rd, "dio-rpc-rd");
-	psc_iostats_init(&slc_dio_ist.wr, "dio-rpc-wr");
-	psc_iostats_init(&slc_rdcache_ist, "rd-cache-hit");
-	psc_iostats_init(&slc_readahead_issue_ist, "readahead-issue");
-	psc_iostats_init(&slc_readahead_hit_ist, "readahead-hit");
+	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
+	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
+	slc_rdcache_iostats = pfl_opstat_init("rd-cache-hit");
+	slc_readahead_issue_iostats = pfl_opstat_init("readahead-issue");
+	slc_readahead_hit_iostats = pfl_opstat_init("readahead-hit");
 
-	slc_iosyscall_ist[0].size = slc_iorpc_ist[0].size =        1024;
-	slc_iosyscall_ist[1].size = slc_iorpc_ist[1].size =    4 * 1024;
-	slc_iosyscall_ist[2].size = slc_iorpc_ist[2].size =   16 * 1024;
-	slc_iosyscall_ist[3].size = slc_iorpc_ist[3].size =   64 * 1024;
-	slc_iosyscall_ist[4].size = slc_iorpc_ist[4].size =  128 * 1024;
-	slc_iosyscall_ist[5].size = slc_iorpc_ist[5].size =  512 * 1024;
-	slc_iosyscall_ist[6].size = slc_iorpc_ist[6].size = 1024 * 1024;
-	slc_iosyscall_ist[7].size = slc_iorpc_ist[7].size = 0;
-	pfl_iostats_grad_init(slc_iosyscall_ist, PISTF_BASE10, "iosz");
-	pfl_iostats_grad_init(slc_iorpc_ist, PISTF_BASE10, "iorpc");
+	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
+	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
+	slc_iosyscall_iostats[2].size = slc_iorpc_iostats[2].size =   16 * 1024;
+	slc_iosyscall_iostats[3].size = slc_iorpc_iostats[3].size =   64 * 1024;
+	slc_iosyscall_iostats[4].size = slc_iorpc_iostats[4].size =  128 * 1024;
+	slc_iosyscall_iostats[5].size = slc_iorpc_iostats[5].size =  512 * 1024;
+	slc_iosyscall_iostats[6].size = slc_iorpc_iostats[6].size = 1024 * 1024;
+	slc_iosyscall_iostats[7].size = slc_iorpc_iostats[7].size = 0;
+	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10, "iosz");
+	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10, "iorpc");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
