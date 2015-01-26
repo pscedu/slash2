@@ -128,9 +128,12 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 
 	fci = fcmh_2_fci(d);
 	lk = FCMH_RLOCK(d);
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
+			continue;
 		DYNARRAY_FOREACH(dce, n, p->dcp_dents_name)
 			cbf(p, dce, cbarg);
+	}
 	FCMH_URLOCK(d, lk);
 }
 
