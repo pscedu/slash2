@@ -1528,6 +1528,9 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 			next_batchno = MIN(next_batchno,
 			    si->si_batchno);
 			sl_csvc_decref(csvc);
+		} else {
+			RPMI_ULOCK(rpmi);
+			continue;
 		}
 
 		if (si->si_batchno < batchno) {
