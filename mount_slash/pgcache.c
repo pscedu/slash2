@@ -365,7 +365,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r, *tmp;
+	struct bmpc_ioreq *r;
 	struct bmap_cli_info *bci;
 	int i;
 
@@ -376,20 +376,12 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		bci->bci_flush_rc = rc;
 
 	bmpc = bmap_2_bmpc(b);
-	for (r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
-	    r = tmp) {
-		tmp = RB_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
-
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
-		if (r->biorq_flags & (BIORQ_SCHED | BIORQ_FLUSHED)) {
+		if (r->biorq_flags & BIORQ_SCHED) {
 			BIORQ_ULOCK(r);
 			continue;
 		}
-		r->biorq_flags |= BIORQ_FLUSHED;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
-		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}
