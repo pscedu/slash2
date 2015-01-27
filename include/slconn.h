@@ -24,7 +24,7 @@
 
 /*
  * This interface provides connections to hosts (servers and clients) in
- * a SLASH network.
+ * a SLASH2 network.
  */
 
 #ifndef _SLCONN_H_
@@ -36,8 +36,9 @@
 #include <stdint.h>
 
 #include "pfl/err.h"
-#include "pfl/export.h"
 #include "pfl/atomic.h"
+#include "pfl/export.h"
+#include "pfl/iostats.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
 
@@ -218,8 +219,26 @@ struct sl_expcli_ops {
 #define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
 
 #define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
-	slrpc_newreq((csvc), (op), &(rq), sizeof(*(mq)), sizeof(*(mp)),	\
-	    &(mq))
+	_PFL_RVSTART {							\
+		static struct pfl_opstat *_opst;			\
+		int _rc;						\
+									\
+		_rc = slrpc_newreq((csvc), (op), &(rq), sizeof(*(mq)),	\
+		    sizeof(*(mp)), &(mq));				\
+		if (_rc == 0) {						\
+			if (_opst == NULL) {				\
+				const char *_str;			\
+				int _len;				\
+									\
+				_str = strchr(#op, '_') + 1;		\
+				_len = strcspn(_str, ")");		\
+				_opst = pfl_opstat_initf(OPSTF_BASE10,	\
+				    "rpc.%.*s", _len, _str);		\
+			}						\
+			pfl_opstat_incr(_opst);				\
+		}							\
+		_rc;							\
+	} _PFL_RVEND
 
 #define SL_RSX_WAITREPF(csvc, rq, mp, flags)				\
 	_PFL_RVSTART {							\
