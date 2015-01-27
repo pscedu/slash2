@@ -233,7 +233,7 @@ struct sl_expcli_ops {
 				_str = strchr(#op, '_') + 1;		\
 				_len = strcspn(_str, ")");		\
 				_opst = pfl_opstat_initf(OPSTF_BASE10,	\
-				    "rpc.%.*s", _len, _str);		\
+				    "rpc.issue.%.*s", _len, _str);	\
 			}						\
 			pfl_opstat_incr(_opst);				\
 		}							\
