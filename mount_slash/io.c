@@ -294,7 +294,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		r->biorq_flags |= BIORQ_FLUSHED;
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
 		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
@@ -987,7 +986,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0, off = 0; i < n; i++, off += len) {
 		len = MIN(LNET_MTU, size - off);
 
-		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
+		if (op == SRMT_WRITE)
+			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
+		else
+			rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 		if (op == SRMT_WRITE)
 			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 		else
