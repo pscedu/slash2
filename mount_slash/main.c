@@ -1227,38 +1227,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	pscfs_getcreds(pfr, &pcr);
 
-#if 0
-
-	/* XXX this code causes svn checkout fails with I/O errors */
-
-	struct srt_stat sstb;
-
-	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name,
-	    NULL, &sstb, NULL);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	FCMH_LOCK(p);
-	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && pcr.pcr_uid) {
-		if (p->fcmh_sstb.sst_uid != pcr.pcr_uid) {
-			struct srt_stat sstb;
-
-			FCMH_ULOCK(p);
-
-
-			if (sstb.sst_uid != pcr.pcr_uid)
-				rc = EPERM;
-		} else
-			FCMH_ULOCK(p);
-	} else {
-		rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
-		FCMH_ULOCK(p);
-	}
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-#else
-
 	FCMH_LOCK(p);
 	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && pcr.pcr_uid) {
 		if (p->fcmh_sstb.sst_uid != pcr.pcr_uid) {
@@ -1281,8 +1249,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-#endif
 
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR,
