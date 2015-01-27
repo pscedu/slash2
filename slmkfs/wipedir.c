@@ -50,7 +50,7 @@ wipefs_user(const char *fn, const struct stat *stb, int info,
 	if (level < 1)
 		return (0);
 	if (S_ISDIR(stb->st_mode)) {
-		/* skip SLASH internal metadata */
+		/* skip SLASH2 internal metadata */
 		p = strrchr(fn, '/');
 		if (p)
 			p++;
@@ -120,7 +120,7 @@ wipefs(const char *dir)
 	pfl_filewalk(dir, PFL_FILEWALKF_RECURSIVE, NULL, wipefs_user,
 	    NULL);
 
-	/* remove the SLASH fid namespace */
+	/* remove the SLASH2 FID namespace */
 	xmkfn(fn, "%s/%s", dir, SL_RPATH_META_DIR, SL_RPATH_FIDNS_DIR);
 	if (stat(fn, &stb) == 0 || errno != ENOENT)
 		pfl_filewalk(fn, PFL_FILEWALKF_RECURSIVE, NULL,

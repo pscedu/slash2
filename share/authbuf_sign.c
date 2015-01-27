@@ -25,7 +25,7 @@
 /*
  * authbuf_sign - routines for signing and checking the signatures of
  * authbufs on RPC messages.  The secret key is shared among all hosts
- * in a SLASH network.
+ * in a SLASH2 deployment.
  *
  * The authbuf is transmitted as the last buffer in any given RPC.
  */

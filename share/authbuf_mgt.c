@@ -24,7 +24,7 @@
 
 /*
  * authbuf_mgt - routines for managing the secret key used to provide
- * in RPC messages sent between hosts in a SLASH network.
+ * in RPC messages sent between hosts in a SLASH2 deployment.
  */
 
 #include <sys/types.h>

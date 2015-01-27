@@ -124,11 +124,11 @@ slm_set_curr_slashfid(slfid_t slfid)
 }
 
 /**
- * slm_get_next_slashfid - Return the next SLASH FID to use.  Note that
+ * slm_get_next_slashfid - Return the next SLASH2 FID to use.  Note that
  *	from ZFS point of view, it is perfectly okay that we use the
- *	same SLASH FID to refer to different files/directories.
+ *	same SLASH2 FID to refer to different files/directories.
  *	However, doing so can confuse our clients (think identity
- *	theft).  So we must make sure that we never reuse a SLASH FID,
+ *	theft).  So we must make sure that we never reuse a SLASH2 FID,
  *	even after a crash.
  *
  *	The siteid has already been baked into the initial cursor file.

@@ -21,19 +21,19 @@
 .\" %PSC_END_COPYRIGHT%
 .Dd August 14, 2012
 .Dt SLCFG 5
-.ds volume PSC \- SLASH Administrator's Manual
+.ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm /etc/slash/slcfg
 .Nd
-.Tn SLASH
+.Tn SLASH2
 file system configuration
 .Sh DESCRIPTION
 The
 .Nm slcfg
 configuration file specifies storage resources and networks for use on a
-.Tn SLASH
-network.
+.Tn SLASH2
+deployment.
 This document describes the format of this file.
 .Pp
 Empty lines and lines beginning with
@@ -74,7 +74,7 @@ This directory must be initialized with
 For
 .Xr mount_slash 8 ,
 the file system root where file data retrieved over a
-.Tn SLASH
+.Tn SLASH2
 network may be cached locally.
 .It Ic journal
 Set the path of the operation journal file.
@@ -97,7 +97,7 @@ for more information
 .It Ic port
 .Tn TCP
 port used to establish connections to
-.Tn SLASH
+.Tn SLASH2
 peers.
 .It Ic pref_ios
 Preferred
@@ -155,7 +155,7 @@ argument may be a filename or
 pattern.
 .Ss Site configuration
 Each site resident on a
-.Tn SLASH
+.Tn SLASH2
 network requires its own section in
 .Nm slcfg
 and has the following format:
@@ -243,7 +243,7 @@ file systems
 .Bl -tag -width Pa -compact
 .It Pa /etc/slash/slcfg
 default
-.Tn SLASH
+.Tn SLASH2
 resource configuration
 .El
 .Sh EXAMPLES

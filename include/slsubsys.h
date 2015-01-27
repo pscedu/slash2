@@ -23,7 +23,7 @@
  */
 
 /*
- * SLASH daemon subsystem definitions.
+ * SLASH2 shared daemon subsystem definitions.
  */
 
 #ifndef _SLSUBSYS_H_

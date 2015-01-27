@@ -2246,7 +2246,7 @@ mds_journal_init(uint64_t fsuuid)
 	slm_journal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	slm_journal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
-	psclog_info("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
+	psclog_info("Last SLASH2 FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_info("Last synced ZFS transaction group number is %"PRId64,
 	    slm_journal->pj_commit_txg);
 	psclog_info("Last replayed SLASH2 transaction ID is %"PRId64,

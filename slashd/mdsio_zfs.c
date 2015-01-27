@@ -25,7 +25,7 @@
 /*
  * This file contains routines for accessing the backing store of the MDS
  * file system, where each file in existence here actually contains the
- * SLASH file's metadata.
+ * SLASH2 file's metadata.
  */
 
 #include <poll.h>

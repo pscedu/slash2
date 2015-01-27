@@ -23,8 +23,8 @@
  */
 
 /*
- * The bmap (block map) interface divides the space of a file in a SLASH
- * network into manageable units.  bmaps are ordered sequentially from
+ * The bmap (block map) interface divides the space of a file in a SLASH2
+ * deployment into manageable units.  bmaps are ordered sequentially from
  * the beginning of the file space and are the fundamental elements of
  * I/O node file region ownership and in replication management.
  *

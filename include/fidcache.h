@@ -24,7 +24,7 @@
 
 /*
  * The fidcache manages a pool of handles in memory representing files
- * resident in a SLASH network.  Entries in this pool are thusly
+ * resident in a SLASH2 network.  Entries in this pool are thusly
  * fidcache member handles (fcmh).
  */
 

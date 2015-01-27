@@ -23,9 +23,9 @@
  */
 
 /*
- * SLASH remote procedure call (RPC) message (SRM) definitions, for
- * issuing operations on and communicating with other hosts in a SLASH
- * network.
+ * SLASH2 remote procedure call (RPC) message (SRM) definitions, for
+ * issuing operations on and communicating with other hosts in a SLASH2
+ * deployment.
  */
 
 #ifndef _SLASHRPC_H_
@@ -44,7 +44,7 @@
 struct stat;
 struct statvfs;
 
-/* SLASH RPC channel to MDS from CLI. */
+/* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
@@ -53,7 +53,7 @@ struct statvfs;
 #define SRMC_VERSION		1
 #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
 
-/* SLASH RPC channel to MDS from MDS. */
+/* RPC channel to MDS from MDS. */
 #define SRMM_REQ_PORTAL		15
 #define SRMM_REP_PORTAL		16
 #define SRMM_BULK_PORTAL	17
@@ -62,7 +62,7 @@ struct statvfs;
 #define SRMM_VERSION		1
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
 
-/* SLASH RPC channel to MDS from ION. */
+/* RPC channel to MDS from ION. */
 #define SRMI_REQ_PORTAL		20
 #define SRMI_REP_PORTAL		21
 #define SRMI_BULK_PORTAL	22
@@ -71,7 +71,7 @@ struct statvfs;
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
 
-/* SLASH RPC channel to CLI from MDS. */
+/* RPC channel to CLI from MDS. */
 #define SRCM_REQ_PORTAL		25
 #define SRCM_REP_PORTAL		26
 #define SRCM_BULK_PORTAL	27
@@ -80,7 +80,7 @@ struct statvfs;
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
 
-/* SLASH RPC channel to ION from CLI. */
+/* RPC channel to ION from CLI. */
 #define SRIC_REQ_PORTAL		30
 #define SRIC_REP_PORTAL		31
 #define SRIC_BULK_PORTAL	32
@@ -89,7 +89,7 @@ struct statvfs;
 #define SRIC_VERSION		1
 #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
 
-/* SLASH RPC channel to ION from ION. */
+/* RPC channel to ION from ION. */
 #define SRII_REQ_PORTAL		35
 #define SRII_REP_PORTAL		36
 #define SRII_BULK_PORTAL	37
@@ -98,7 +98,7 @@ struct statvfs;
 #define SRII_VERSION		1
 #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
 
-/* SLASH RPC channel to ION from MDS. */
+/* RPC channel to ION from MDS. */
 #define SRIM_REQ_PORTAL		40
 #define SRIM_REP_PORTAL		41
 #define SRIM_BULK_PORTAL	42
@@ -107,7 +107,7 @@ struct statvfs;
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
-/* SLASH RPC channel to CLI from ION. */
+/* RPC channel to CLI from ION. */
 #define SRCI_REQ_PORTAL		45
 #define SRCI_REP_PORTAL		46
 #define SRCI_BULK_PORTAL	47
@@ -119,7 +119,7 @@ struct statvfs;
 /* sizeof(authbuf_footer) + sizeof(pscrpc_msg) + 8 */
 #define SLRPC_MSGADJ		(176)
 
-/* SLASH RPC message types and submessage types (for BATCH). */
+/* SLASH2 RPC message types and submessage types (for BATCH). */
 enum {
 	/* control operations */
 	SRMT_CONNECT = 1,			/*  1: connect */
@@ -268,7 +268,7 @@ struct srt_bmapdesc {
 	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
 } __packed;
 
-/* SLASH RPC transportably safe structures. */
+/* RPC transportably safe structures. */
 struct srt_stat {
 	struct sl_fidgen	sst_fg;		/* file ID + truncate generation */
 	uint64_t		sst_dev;	/* ID of device containing file */

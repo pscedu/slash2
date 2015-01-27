@@ -24,7 +24,7 @@
 
 /*
  * This interface provides access to the information parsed from the
- * SLASH configuration file about sites and servers in a SLASH network.
+ * SLASH2 configuration file about sites and servers in a SLASH2 deployment.
  */
 
 #ifndef _SLCONFIG_H_

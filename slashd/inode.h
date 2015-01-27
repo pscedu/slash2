@@ -23,8 +23,8 @@
  */
 
 /*
- * Inodes contain part of the metadata about files resident in a SLASH
- * network.  Inode handles are in-memory representations of this
+ * Inodes contain part of the metadata about files resident in a SLASH2
+ * deployment.  Inode handles are in-memory representations of this
  * metadata.
  */
 

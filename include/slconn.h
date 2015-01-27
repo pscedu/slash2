@@ -24,7 +24,7 @@
 
 /*
  * This interface provides connections to hosts (servers and clients) in
- * a SLASH2 network.
+ * a SLASH2 deployment.
  */
 
 #ifndef _SLCONN_H_

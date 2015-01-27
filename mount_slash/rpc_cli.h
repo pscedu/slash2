@@ -47,14 +47,14 @@ struct slrpc_cservice;
 #define MSL_READDIR_CBARG_FCMH		1
 #define MSL_READDIR_CBARG_PAGE		2
 
-/* SLASH RPC channel for CLI from MDS. */
+/* RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
 #define SRCM_NBUFS			256
 #define SRCM_BUFSZ			512
 #define SRCM_REPSZ			512
 #define SRCM_SVCNAME			"msrcm"
 
-/* SLASH RPC channel for CLI from ION. */
+/* RPC channel for CLI from ION. */
 #define SRCI_NTHREADS			8
 #define SRCI_NBUFS			256
 #define SRCI_BUFSZ			512

@@ -24,7 +24,7 @@
 
 /*
  * This file contains definitions related to the assignment and
- * orchestration of the identifers of files (FID) in a SLASH network.
+ * orchestration of the identifers of files (FID) in a SLASH2 deployment.
  */
 
 #ifndef _SLASH_FID_H_
@@ -42,7 +42,7 @@
 struct sl_fidgen;
 
 /*
- * SLASH file IDs (FID) consist of four parts: flag bits, site ID, cycle
+ * SLASH2 file IDs (FID) consist of four parts: flag bits, site ID, cycle
  * bits, and a file sequence number.  FIDs are used always used for
  * external communication among other clients, I/O servers, and MDS to
  * identify files.
@@ -96,7 +96,7 @@ struct sl_fidgen {
 #define FGEN_ANY		UINT64_C(0xffffffffffffffff)
 
 /*
- * The following SLASHIDs are reserved:
+ * The following FIDs are reserved:
  *	0	not used
  */
 #define SLFID_ROOT		1	/* / */
