@@ -190,6 +190,8 @@ slrpc_connect_finish(struct slashrpc_cservice *csvc,
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
+		pscrpc_abort_inflight(imp);
+		pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
 	CSVC_WAKE(csvc);
@@ -858,6 +860,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  restart:
 	if (sl_csvc_useable(csvc))
 		goto out;
+
+	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
