@@ -259,6 +259,7 @@ struct sl_expcli_ops {
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
+		static struct pfl_iostats *_opst;			\
 		int _rc;						\
 									\
 		_rc = slrpc_allocrep((rq), &(mq), sizeof(*(mq)),	\
@@ -267,6 +268,12 @@ struct sl_expcli_ops {
 			return (_rc);					\
 		if ((mp)->rc)						\
 			return ((mp)->rc);				\
+									\
+		if (_opst == NULL)					\
+			_opst = pfl_opstat_initf(OPSTF_BASE10,		\
+			    "rpc.handle.%s", strstr(__func__,		\
+			    "_handle_") + 10);				\
+		pfl_opstat_incr(_opst);					\
 	} while (0)
 
 #define SL_NBRQSETX_ADD(set, csvc, rq)					\
