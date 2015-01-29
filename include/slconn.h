@@ -259,7 +259,7 @@ struct sl_expcli_ops {
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
-		static struct pfl_iostats *_opst;			\
+		static struct pfl_opstat *_opst;			\
 		int _rc;						\
 									\
 		_rc = slrpc_allocrep((rq), &(mq), sizeof(*(mq)),	\
