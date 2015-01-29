@@ -232,8 +232,12 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (!a->aiocbr_csvc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(a->aiocbr_csvc, a->aiocbr_rw == SL_WRITE ?
-	    SRMT_WRITE : SRMT_READ, rq, mq, mp);
+	if (a->aiocbr_rw == SL_WRITE)
+		rc = SL_RSX_NEWREQ(a->aiocbr_csvc, SRMT_WRITE, rq, mq,
+		    mp);
+	else
+		rc = SL_RSX_NEWREQ(a->aiocbr_csvc, SRMT_READ, rq, mq,
+		    mp);
 	if (rc)
 		goto out;
 
