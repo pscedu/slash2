@@ -130,9 +130,12 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc,
-	    mh->mh_type == MSCMT_ADDREPLRQ ?
-	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp, rc);
+	if (mh->mh_type == MSCMT_ADDREPLRQ)
+		MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_REPL_ADDRQ, rq,
+		    mq, mp, rc);
+	else
+		MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_REPL_DELRQ, rq,
+		    mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc));
