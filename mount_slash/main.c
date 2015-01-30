@@ -2,7 +2,7 @@
 /*
  * %PSCGPL_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2007-2014, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2909,7 +2909,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 }
 
 void
-mslfsop_destroy(void)
+mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
 	pscthr_killall();
 	/* XXX wait */
