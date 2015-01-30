@@ -77,8 +77,7 @@ struct slrpc_cservice;
 		(rc) = slc_rmc_getcsvc((pfcc), _resm, &(csvc));		\
 		if (rc)							\
 			break;						\
-		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),		\
-		    (mp));						\
+		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp));	\
 		if (rc) {						\
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
