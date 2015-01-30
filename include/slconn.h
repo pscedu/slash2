@@ -272,7 +272,7 @@ struct sl_expcli_ops {
 		if (_opst == NULL)					\
 			_opst = pfl_opstat_initf(OPSTF_BASE10,		\
 			    "rpc.handle.%s", strstr(__func__,		\
-			    "_handle_") + 10);				\
+			    "_handle_") + 8);				\
 		pfl_opstat_incr(_opst);					\
 	} while (0)
 
