@@ -3507,7 +3507,7 @@ msl_init(void)
 	}
 }
 
-struct pscfs pscfs = {
+struct pscfs slc_pscfs = {
 	mslfsop_access,
 	mslfsop_release,
 	mslfsop_release,	/* releasedir */
@@ -3803,6 +3803,8 @@ main(int argc, char *argv[])
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	psc_dynarray_add(&pscfs_modules, &slc_pscfs);
 
 	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
 }
