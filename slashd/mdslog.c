@@ -2,7 +2,7 @@
 /*
  * %PSCGPL_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2008-2014, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2015, Pittsburgh Supercomputing Center (PSC).
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
