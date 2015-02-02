@@ -670,7 +670,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 int
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
-	int rc, i, needflush = 0;
+	int i, needflush = 0;
 	struct msl_fsrqinfo *q;
 	size_t len = 0;
 
@@ -689,10 +689,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 		DEBUG_BIORQ(PLL_FATAL, r, "missing biorq in fsrq");
 
 	MFH_LOCK(q->mfsrq_mfh);
-	rc = q->mfsrq_err;
-	MFH_ULOCK(q->mfsrq_mfh);
-
-	if (rc) {
+	if (q->mfsrq_err) {
 	} else if (r->biorq_flags & BIORQ_DIO) {
 		/*
 		 * Support mix of dio and cached reads.  This may occur
@@ -707,17 +704,14 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 			 * Lock to update iovs attached to q.
 			 * Fast because no actual copying.
 			 */
-			MFH_LOCK(q->mfsrq_mfh);
 			len = msl_pages_copyout(r, q);
-			MFH_ULOCK(q->mfsrq_mfh);
 		} else {
 			len = msl_pages_copyin(r);
 			needflush = 1;
 		}
-		MFH_LOCK(q->mfsrq_mfh);
 		q->mfsrq_flags |= MFSRQ_COPIED;
-		MFH_ULOCK(q->mfsrq_mfh);
 	}
+	MFH_ULOCK(q->mfsrq_mfh);
 	msl_complete_fsrq(q, len);
 	return (needflush);
 }
