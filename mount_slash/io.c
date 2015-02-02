@@ -587,12 +587,12 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 	MFH_URLOCK(q->mfsrq_mfh, lk);
 }
 
-#define msl_complete_fsrq(q, rc, len)					\
-	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (rc), (len))
+#define msl_complete_fsrq(q, len)					\
+	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (len))
 
 void
 _msl_complete_fsrq(const struct pfl_callerinfo *pci,
-    struct msl_fsrqinfo *q, int rc, size_t len)
+    struct msl_fsrqinfo *q, size_t len)
 {
 	void *oiov = q->mfsrq_iovs;
 	struct pscfs_req *pfr;
@@ -603,7 +603,6 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 
 	MFH_LOCK(q->mfsrq_mfh);
 	if (!q->mfsrq_err) {
-		mfsrq_seterr(q, rc);
 		q->mfsrq_len += len;
 		psc_assert(q->mfsrq_len <= q->mfsrq_size);
 		if (q->mfsrq_flags & MFSRQ_READ)
@@ -719,7 +718,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
-	msl_complete_fsrq(q, 0, len);
+	msl_complete_fsrq(q, len);
 	return (needflush);
 }
 
@@ -1997,7 +1996,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * attached to the biorqs directly so they must be used before
 	 * being freed.
 	 */
-	msl_complete_fsrq(q, rc, 0);
+	msl_complete_fsrq(q, 0);
 
 	/* Step 5: finish up biorqs. */
 	for (i = 0; i < nr; i++) {
