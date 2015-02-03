@@ -1267,7 +1267,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
-		if (i && e->bmpce_off != off) {
+		if (i > j && e->bmpce_off != off) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
 			if (rc)
 				break;
