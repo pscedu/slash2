@@ -1267,6 +1267,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
+		/*
+		 * Note that i > j imples i > 0.  Due to cached pages, the pages
+		 * in the array are not necessarily contiguous.
+		 */
 		if (i > j && e->bmpce_off != off) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
 			if (rc)
