@@ -2583,6 +2583,10 @@ msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
 	if (p->dcp_flags & DIRCACHEPGF_LOADING)
 		return;
 
+	/*
+ 	 * This hangs the client running 3.10.0-123.13.2.el7, but works fine
+ 	 * on Ubuntu 14.10 (3.16.0-23-generic).
+ 	 */
 	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
 	    d->dce_name, d->dce_namelen);
 }
