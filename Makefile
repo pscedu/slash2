@@ -1,15 +1,15 @@
 # $Id$
+# %PSCGPL_COPYRIGHT%
 
 ROOTDIR=..
 include ${ROOTDIR}/Makefile.path
+include ${SLASH_BASE}/mk/pre.mk
 
 MAN+=		doc/sladm.7
 MAN+=		doc/slcfg.5
 
-# this is a workaround to SRC_PATH better
+# this is a kludge to SRC_PATH for allowing code indexing from this dir
 MODULES+=	pfl lnet-hdrs zfs
-
-include ${SLASHMK}
 
 ifneq ($(filter cli,${SLASH_MODULES}),)
   SUBDIRS+=	mount_slash
@@ -39,6 +39,8 @@ SUBDIRS+=	utils
 ifdef SLCFG
   SLCFGV=	${SLCFG}:${SLCFG_DST}
 endif
+
+include ${SLASHMK}
 
 install-hook:
 	@IFS=';' V="${SLCFGV}"; for i in $$V; do			\
