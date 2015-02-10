@@ -379,7 +379,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
-	r->biorq_flags &= ~BIORQ_SCHED;
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
@@ -392,6 +391,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 		return;
+	} else {
+		r->biorq_flags &= ~BIORQ_SCHED;
+		BIORQ_ULOCK(r);
 	}
 	OPSTAT_INCR("bmap_flush_resched");
 
