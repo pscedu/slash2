@@ -330,11 +330,11 @@ main(int argc, char *argv[])
 
 	/* on ION, we must specify a uuid */
 	if (ion && !fsuuid)
-		errx(1, "fsuuid must be specified for I/O servers");
+		errx(1, "fsuuid (-u) must be specified for I/O servers");
 	if (!ion && !specsid)
-		errx(1, "site ID must be specified for MDS servers");
+		errx(1, "site ID (-I) must be specified for MDS servers");
 	if (ion && resid == IOS_ID_ANY)
-		errx(1, "resource ID must be specified for I/O servers");
+		errx(1, "resource ID (-R) must be specified for I/O servers");
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
