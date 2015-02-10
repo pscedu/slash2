@@ -391,10 +391,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 		return;
-	} else {
-		r->biorq_flags &= ~BIORQ_SCHED;
-		BIORQ_ULOCK(r);
 	}
+	r->biorq_flags &= ~BIORQ_SCHED;
 	OPSTAT_INCR("bmap_flush_resched");
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
