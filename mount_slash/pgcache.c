@@ -378,6 +378,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	bmpc = bmap_2_bmpc(b);
 	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
+		assert(r->biorq_flags & BIORQ_FLUSHRDY);
 		if (r->biorq_flags & BIORQ_SCHED) {
 			BIORQ_ULOCK(r);
 			continue;
