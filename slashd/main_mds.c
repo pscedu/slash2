@@ -536,6 +536,9 @@ main(int argc, char *argv[])
 	for (vfsid = 0; vfsid < mount_index; vfsid++)
 		psc_register_filesystem(vfsid);
 
+	if (!mount_index)
+		errx(1, "No ZFS file system exists!");
+
 	found = 0;
 	for (vfsid = 0; vfsid < mount_index; vfsid++) {
 		/* nodeSite->site_id is nodeResm->resm_res->res_site */
