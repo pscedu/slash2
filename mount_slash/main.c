@@ -3459,8 +3459,13 @@ msl_init(void)
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL);
+	sl_nbrqset_flush = pscrpc_nbreqset_init(NULL);
+
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
 	    "msnbrqthr%d");
+
+	pscrpc_nbreapthr_spawn(sl_nbrqset_flush, MSTHRT_NBRQ, 1,
+	    "msnbflushthr%d");
 
 	/* Start up service threads. */
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
