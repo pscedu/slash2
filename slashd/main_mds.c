@@ -187,7 +187,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		    zpoolname);
 
 	if (WEXITSTATUS(rc))
-		psc_fatal("Fail to mount ZFS filename %s", zpoolname);
+		psc_fatal("Fail to mount ZFS file system %s", zpoolname);
 
 	/* mount the rest file systems in the pool */
 	rc = system("zfs mount -a");
