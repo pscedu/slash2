@@ -173,6 +173,9 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatal("Fail to execute command to import %s",
 		    zpoolname);
 
+	if (WEXITSTATUS(rc))
+		psc_fatal("Fail to import ZFS pool %s", zpoolname);
+
 	/* mount the default file system in the pool */
 	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount %s", zpoolname);
 	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
@@ -182,6 +185,9 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	if (rc == -1)
 		psc_fatal("Fail to execute command to mount %s",
 		    zpoolname);
+
+	if (WEXITSTATUS(rc))
+		psc_fatal("Fail to mount ZFS filename %s", zpoolname);
 
 	/* mount the rest file systems in the pool */
 	rc = system("zfs mount -a");
