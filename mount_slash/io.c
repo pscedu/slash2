@@ -267,6 +267,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	/*
 	 * Enqueue read ahead into next bmap if our prediction would
 	 * extend into that space.
+	 *
+	 * XXX: There used to be a dequeue logic that removes the file
+	 * from read-ahead if a subsequent read is not sequential.
 	 */
 	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
