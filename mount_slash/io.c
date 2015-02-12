@@ -2028,8 +2028,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAP_DIO)
 			goto end;
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 0, BIORQ_READ);
-		r->biorq_flags |= BIORQ_READAHEAD;
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 0, 
+			BIORQ_READ | BIORQ_READAHEAD);
+
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			BMAP_LOCK(b);
 			e = bmpce_lookup_locked(b,
