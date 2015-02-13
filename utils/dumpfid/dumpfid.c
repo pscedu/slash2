@@ -96,7 +96,7 @@ int				 recurse;
 pthread_barrier_t		 barrier;
 struct psc_lockedlist		 excludes = PLL_INIT(&excludes, struct path, p_lentry);
 const char			*outfn;
-const char			*fmt =
+const char			*display_fmt =
     "%f:\n"
     "  crc %d mem %C od %c\n"
     "  version %v\n"
@@ -145,15 +145,45 @@ pr_repls(FILE *outfp, struct file *f)
 }
 
 void
-pr_times(FILE *outfp, struct file *f)
+pr_times(const char **p, FILE *outfp, struct file *f)
 {
-	uint32_t i;
+	time_t tim;
+	struct tm tm;
+	struct pfl_timespec *ts;
+	const char *t = *p;
+	char fmt[64], buf[64];
+	int i;
 
-	for (i = 0; i < f->f_nrepls; i++)
-		fprintf(outfp, "%s%u", i ? "," : "",
-		    i < SL_DEF_REPLICAS ?
-		    f->f_ino.ino_repls[i].bs_id :
-		    f->f_inox.inox_repls[i - SL_DEF_REPLICAS].bs_id);
+	switch (*++t) {
+	case 'a':
+		ts = &f->f_sstb.sst_atim;
+		break;
+	case 'c':
+		ts = &f->f_sstb.sst_ctim;
+		break;
+	case 'm':
+		ts = &f->f_sstb.sst_mtim;
+		break;
+	default:
+		errx(1, "invalid %%T times specification: %s", t);
+		break;
+	}
+	if (*++t != '<')
+		errx(1, "invalid %%T format: %s", t);
+	t++;
+	for (i = 0; *t != '\0' && *t != '>' && i < (int)sizeof(fmt); i++)
+		fmt[i] = *t++;
+	if (i == sizeof(fmt))
+		errx(1, "%%T format too long: %s", t);
+	fmt[i] = '\0';
+
+	tim = ts->tv_sec;
+	localtime_r(&tim, &tm);
+
+	strftime(buf, sizeof(buf), fmt, &tm);
+	fprintf(outfp, "%s", buf);
+
+	*p = t;
 }
 
 void
@@ -265,7 +295,6 @@ addexclude(const char *fn)
 int
 load_data_fd(struct file *f, void *buf)
 {
-printf("fd\n");
 	f->f_fd = open(f->f_fn, O_RDONLY);
 	if (f->f_fd == -1)
 		return (0);
@@ -281,7 +310,6 @@ printf("fd\n");
 int
 load_data_inox(struct file *f, void *buf)
 {
-printf("inox\n");
 	if (getxattr(f->f_fn, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
 	    INOXSTAT_SZ)
 		return (0);
@@ -294,7 +322,6 @@ printf("inox\n");
 int
 load_data_ino(struct file *f, void *buf)
 {
-printf("ino\n");
 	if (getxattr(f->f_fn, SLXAT_INOSTAT, buf, INOSTAT_SZ) !=
 	    INOSTAT_SZ)
 		return (0);
@@ -305,8 +332,8 @@ printf("ino\n");
 int
 load_data_stat(struct file *f, void *buf)
 {
-printf("stat\n");
-	if (getxattr(f->f_fn, SLXAT_STAT, buf, STAT_SZ))
+	if (getxattr(f->f_fn, SLXAT_STAT, buf, STAT_SZ) !=
+	    STAT_SZ)
 		return (0);
 	return (1);
 }
@@ -360,7 +387,7 @@ thrmain(struct psc_thread *thr)
 		sstb = &f->f_sstb;
 		ino = &f->f_ino;
 		f->f_nrepls = MIN(SL_MAX_REPLICAS, ino->ino_nrepls);
-		(void)PRFMTSTR(t->t_fp, fmt,
+		(void)PRFMTSTR(t->t_fp, display_fmt,
 		    PRFMTSTRCASEV('B', pr_repl_blks(_fp, f))
 		    PRFMTSTRCASE('b', PRIu64, sstb->sst_blocks)
 		    PRFMTSTRCASE('C', PSCPRIxCRC64, f->f_ino_mem_crc)
@@ -373,12 +400,13 @@ thrmain(struct psc_thread *thr)
 		    PRFMTSTRCASE('g', "u", sstb->sst_gid)
 		    PRFMTSTRCASE('L', "#x", ino->ino_flags)
 		    PRFMTSTRCASEV('M', pr_bmaps(t, _fp, f))
-		    PRFMTSTRCASE('m', "s", pfl_fmt_mode(sstb->sst_mode, modebuf))
+		    PRFMTSTRCASE('m', "s", pfl_fmt_mode(sstb->sst_mode,
+			modebuf))
 		    PRFMTSTRCASE('N', PSCPRIdOFFT,
 			(f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
 		    PRFMTSTRCASE('n', "u", ino->ino_nrepls)
 		    PRFMTSTRCASEV('R', pr_repls(_fp, f))
-		    PRFMTSTRCASEV('T', pr_times(_fp, f))
+		    PRFMTSTRCASEV('T', pr_times(&_t, _fp, f))
 		    PRFMTSTRCASE('s', PRIu64, sstb->sst_size)
 		    PRFMTSTRCASE('u', "u", sstb->sst_uid)
 		    PRFMTSTRCASE('v', "u", ino->ino_version)
@@ -451,7 +479,7 @@ main(int argc, char *argv[])
 			addhost(optarg);
 			break;
 		case 'F':
-			fmt = optarg;
+			display_fmt = optarg;
 			break;
 		case 'O':
 			outfn = optarg;
@@ -481,7 +509,7 @@ main(int argc, char *argv[])
 	fp = fopen("/dev/null", "w");
 	if (fp == NULL)
 		err(1, "/dev/null");
-	(void)PRFMTSTR(fp, fmt,
+	(void)PRFMTSTR(fp, display_fmt,
 	    PRFMTSTRCASEV('B', need |= NEED_INOX)
 	    PRFMTSTRCASEV('b', )
 	    PRFMTSTRCASEV('C', need |= NEED_INO)
