@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fmt.h"
 #include "pfl/fmtstr.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
@@ -133,6 +134,18 @@ searchpaths(struct psc_lockedlist *pll, const char *fn)
 
 void
 pr_repls(FILE *outfp, struct file *f)
+{
+	uint32_t i;
+
+	for (i = 0; i < f->f_nrepls; i++)
+		fprintf(outfp, "%s%u", i ? "," : "",
+		    i < SL_DEF_REPLICAS ?
+		    f->f_ino.ino_repls[i].bs_id :
+		    f->f_inox.inox_repls[i - SL_DEF_REPLICAS].bs_id);
+}
+
+void
+pr_times(FILE *outfp, struct file *f)
 {
 	uint32_t i;
 
@@ -252,6 +265,7 @@ addexclude(const char *fn)
 int
 load_data_fd(struct file *f, void *buf)
 {
+printf("fd\n");
 	f->f_fd = open(f->f_fn, O_RDONLY);
 	if (f->f_fd == -1)
 		return (0);
@@ -267,6 +281,7 @@ load_data_fd(struct file *f, void *buf)
 int
 load_data_inox(struct file *f, void *buf)
 {
+printf("inox\n");
 	if (getxattr(f->f_fn, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
 	    INOXSTAT_SZ)
 		return (0);
@@ -279,6 +294,7 @@ load_data_inox(struct file *f, void *buf)
 int
 load_data_ino(struct file *f, void *buf)
 {
+printf("ino\n");
 	if (getxattr(f->f_fn, SLXAT_INOSTAT, buf, INOSTAT_SZ) !=
 	    INOSTAT_SZ)
 		return (0);
@@ -289,6 +305,7 @@ load_data_ino(struct file *f, void *buf)
 int
 load_data_stat(struct file *f, void *buf)
 {
+printf("stat\n");
 	if (getxattr(f->f_fn, SLXAT_STAT, buf, STAT_SZ))
 		return (0);
 	return (1);
@@ -299,6 +316,7 @@ int (*load_data)(struct file *f, void *) = load_data_stat;
 void
 thrmain(struct psc_thread *thr)
 {
+	char modebuf[16];
 	struct slm_ino_od *ino;
 	struct srt_stat *sstb;
 	struct file *f;
@@ -328,7 +346,7 @@ thrmain(struct psc_thread *thr)
 			);
 			t->t_fp = fopen(fn, "w");
 			if (t->t_fp == NULL)
-				err(1, "%s", fn);
+				err(1, "open %s", fn);
 		} else
 			t->t_fp = stdout;
 	}
@@ -355,10 +373,12 @@ thrmain(struct psc_thread *thr)
 		    PRFMTSTRCASE('g', "u", sstb->sst_gid)
 		    PRFMTSTRCASE('L', "#x", ino->ino_flags)
 		    PRFMTSTRCASEV('M', pr_bmaps(t, _fp, f))
+		    PRFMTSTRCASE('m', "s", pfl_fmt_mode(sstb->sst_mode, modebuf))
 		    PRFMTSTRCASE('N', PSCPRIdOFFT,
 			(f->f_metasize - SL_BMAP_START_OFF) / BMAP_OD_SZ)
 		    PRFMTSTRCASE('n', "u", ino->ino_nrepls)
 		    PRFMTSTRCASEV('R', pr_repls(_fp, f))
+		    PRFMTSTRCASEV('T', pr_times(_fp, f))
 		    PRFMTSTRCASE('s', PRIu64, sstb->sst_size)
 		    PRFMTSTRCASE('u', "u", sstb->sst_uid)
 		    PRFMTSTRCASE('v', "u", ino->ino_version)
@@ -473,10 +493,12 @@ main(int argc, char *argv[])
 	    PRFMTSTRCASEV('g', )
 	    PRFMTSTRCASEV('L', need |= NEED_INO)
 	    PRFMTSTRCASEV('M', need |= NEED_FD)
+	    PRFMTSTRCASEV('m', )
 	    PRFMTSTRCASEV('N', )
 	    PRFMTSTRCASEV('n', need |= NEED_INO)
 	    PRFMTSTRCASEV('R', need |= NEED_INOX)
 	    PRFMTSTRCASEV('s', )
+	    PRFMTSTRCASEV('T', )
 	    PRFMTSTRCASEV('u', )
 	    PRFMTSTRCASEV('v', need |= NEED_INO)
 	    PRFMTSTRCASEV('X', need |= NEED_INOX)
