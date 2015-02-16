@@ -254,9 +254,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	    &raoff2, &rapages2))
 		return;
 
-	DEBUG_BIORQ(PLL_DIAG, r, "readahead raoff=%d rapages=%d "
-	    "raoff2=%d rapages2=%d",
-	    raoff, rapages, raoff2, rapages2);
+	DEBUG_BIORQ(PLL_DIAG, r, "roff = %d, npages = %d, raoff=%d rapages=%d "
+	    "raoff2=%d rapages2=%d, mfh->mfh_predio_off = %ld",
+	    roff, npages, raoff, rapages, raoff2, rapages2, mfh->mfh_predio_off);
 
 	/*
 	 * Enqueue read ahead for next sequential region of file space.
