@@ -1,0 +1,35 @@
+# $Id$
+
+# See slcfg(5) for more information.
+
+set port=9078;
+set nets="tcp2";
+
+set pref_mds="burton@PSC";
+set pref_ios="sense51@NRAO";
+set fsuuid="";
+
+site @PSC {
+	site_id		= 0;
+
+	resource burton {
+		type	= mds;
+		id	= 1;
+		nids	= burton.psc.edu;
+		journal	= /dev/sdl;
+		zpool_name = "nrao_s2md";
+		zpool_cache = "/opt/nrao.s2/md.zcf";
+	}
+}
+
+site @NRAO {
+	site_id		= 1;
+
+	resource io0 {
+		type	= standalone_fs;
+		id	= 10;
+		nids	= nrao.edu;
+		fsroot	= /data/supercell0;
+#		selftest = "/local/sbin/st /samfs_slio";
+	}
+}

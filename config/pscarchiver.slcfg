@@ -186,3 +186,5 @@ site @PSCARCH {
 			  sense7s0@PSCARCH, sense7s1@PSCARCH, sense7s2@PSCARCH, sense7s3@PSCARCH, sense7s4@PSCARCH, sense7s5@PSCARCH, sense7s6@PSCARCH;
 	}
 }
+
+# link 1.25G
