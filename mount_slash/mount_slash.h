@@ -120,7 +120,7 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define NUM_ATTR_FLUSH_THREADS		4
 #define NUM_READAHEAD_THREADS		4
 
-#define MS_READAHEAD_MAXPGS		32
+#define MS_READAHEAD_MAXPGS		64
 
 /*
  * Maximum number of bmaps that may span an I/O request.  We currently
