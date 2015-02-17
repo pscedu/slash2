@@ -131,6 +131,10 @@ append_path(const char *newpath)
  * Use system() calls to import pool and mount file systems.  Note that
  * the paths needed by the system() is built in at compile time and
  * added by append_path() at run time.
+ *
+ * We don't check WEXITSTATUS(rc) after a system() call because sometimes
+ * the ZFS tool can return an error (e.g., EEXIST) even if the pool is 
+ * otherwise healthy.
  */
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
