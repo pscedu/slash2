@@ -86,6 +86,7 @@ struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 psc_atomic32_t		 slc_max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
+psc_atomic32_t		 slc_readahead_pipesz = PSC_ATOMIC32_INIT(MS_READAHEAD_PIPESZ);
 
 struct pfl_iostats_rw	 slc_dio_iostats;
 struct pfl_opstat	*slc_rdcache_iostats;
@@ -1667,8 +1668,8 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	if (!mfh->mfh_predio_nseq)
 		PFL_GOTOERR(out, 0);
 
-	/* XXX magic number */
-	if (off + npages * BMPC_BUFSZ + 128 * BMPC_BUFSZ <
+	if (off + npages * BMPC_BUFSZ + 
+	    psc_atomic32_read(&slc_readahead_pipesz) * BMPC_BUFSZ <
 	    mfh->mfh_predio_off)
 		PFL_GOTOERR(out, 0);
 

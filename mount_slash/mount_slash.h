@@ -121,6 +121,7 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define NUM_READAHEAD_THREADS		4
 
 #define MS_READAHEAD_MAXPGS		64
+#define MS_READAHEAD_PIPESZ		128
 
 /*
  * Maximum number of bmaps that may span an I/O request.  We currently
@@ -342,5 +343,6 @@ extern struct psc_poolmgr	*slc_mfh_pool;
 
 extern psc_atomic32_t		 slc_max_nretries;
 extern psc_atomic32_t		 slc_max_readahead;
+extern psc_atomic32_t		 slc_readahead_pipesz;
 
 #endif /* _MOUNT_SLASH_H_ */
