@@ -1668,7 +1668,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 		PFL_GOTOERR(out, 0);
 
 	/* XXX magic number */
-	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
+	if (off + npages * BMPC_BUFSZ + 128 * BMPC_BUFSZ <
 	    mfh->mfh_predio_off)
 		PFL_GOTOERR(out, 0);
 
