@@ -1591,47 +1591,19 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 }
 
 void
-mfh_prod_writeahead(struct msl_fhent *mfh, size_t len, off_t off)
+mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 {
-	(void)mfh;
-	(void)len;
-	(void)off;
 #if 0
+	int rc;
 	struct bmap *b;
 
-	MFH_LOCK(mfh);
-	if (mfh->mfh_flags & MFHF_TRACKING_RA)
-		PFL_GOTOERR(out, 0);
-	if (!mfh->mfh_predio_nseq)
-		PFL_GOTOERR(out, 0);
-
-	(void)len;
-	(void)off;
-
-	/* XXX magic number */
-	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
-	    mfh->mfh_predio_off)
-		PFL_GOTOERR(out, 0);
-
-	raoff = off + npages * BMPC_BUFSZ;
-	if (mfh->mfh_predio_off) {
-		if (mfh->mfh_predio_off > raoff)
-			raoff = mfh->mfh_predio_off;
-
-	if (!has been sequential)
+	rc = bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, 0, &b);
+	if (rc)
 		return;
-	if (already has bmap)
-		return;
-	MFH_ULOCK(mfh);
-
-	if (bmap_getf(mfh->mfh_fcmh, bno,
-	    SL_WRITE, BMAPGETF_ASYNC | BMAPGETF_ADV, &b) == 0)
-		bmap_op_done(b);
-	return;
-
- out:
-	MFH_ULOCK(mfh);
+	rc = msl_bmap_lease_tryext(b, 0);
+	bmap_op_done(b);
 #endif
+
 }
 
 /*
@@ -1817,6 +1789,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	int nr, i, j, rc;
 	uint64_t fsz;
 	off_t roff;
+	sl_bmapno_t bno;
 
 	f = mfh->mfh_fcmh;
 
@@ -1940,7 +1913,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			    fsz, nr - 1);
 		}
 
+		bno = b->bcm_bmapno;
 		bmap_op_done(b);
+
 		roff += tlen;
 		tsize -= tlen;
 		if (buf)
@@ -1948,8 +1923,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
+	/*
+	 * We should always be able to ask for the next bmap because a future write can
+	 * extend the length of a file.
+	 */
 	if (rw == SL_WRITE)
-		mfh_prod_writeahead(mfh, size, off);
+		mfh_prod_writeahead(mfh, bno + 1);
 
 	/*
 	 * Step 2: launch biorqs if necessary
