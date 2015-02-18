@@ -447,6 +447,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	/*
 	 * Save CPU: assume that the head of the list is the oldest
 	 * entry.
+	 *
+	 * XXX I don't see much point in distinguishing between pages
+	 * of different bmaps.  They are from the same file after all.
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
