@@ -383,6 +383,11 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 			BIORQ_ULOCK(r);
 			continue;
 		}
+		/*
+		 * Avoid another thread from reaching here and 
+		 * destroying the same biorq again.
+		 */
+		r->biorq_flags |= BIORQ_SCHED;
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
 	}
