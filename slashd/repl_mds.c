@@ -215,6 +215,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		rc = j;
 	}
+
  out:
 	INOH_URLOCK(ih, locked);
 	return (inox_rc ? inox_rc : rc);
@@ -640,7 +641,8 @@ slm_repl_upd_write(struct bmapc_memb *b, int rel)
 
 		if (vold == vnew)
 			;
-		else if (vnew == BREPLST_REPL_QUEUED ||
+		else if ((vold != BREPLST_REPL_SCHED &&
+		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vnew == BREPLST_GARBAGE &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid, NULL);
