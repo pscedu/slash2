@@ -80,7 +80,8 @@ struct pfl_odt		*slm_ptrunc_odt;
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 slm_roots;
 
-struct psc_listcache	 slm_db_workq;
+struct psc_listcache	 slm_db_lopri_workq;
+struct psc_listcache	 slm_db_hipri_workq;
 int			 slm_opstate;
 
 struct psc_poolmaster	 slm_bml_poolmaster;
@@ -665,15 +666,25 @@ main(int argc, char *argv[])
 	    "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	lc_reginit(&slm_db_workq, struct pfl_workrq, wkrq_lentry,
+	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
 	    "dbworkq");
-	LIST_CACHE_LOCK(&slm_db_workq);
+	LIST_CACHE_LOCK(&slm_db_lopri_workq);
 	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main, NULL,
-	    sizeof(struct slmdbwk_thread), "slmdbwkthr");
-	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_workq;
+	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
+	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
 	pscthr_setready(thr);
-	psc_waitq_wait(&slm_db_workq.plc_wq_want,
-	    &slm_db_workq.plc_lock);
+	psc_waitq_wait(&slm_db_lopri_workq.plc_wq_want,
+	    &slm_db_lopri_workq.plc_lock);
+
+	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
+	    "dbworkq");
+	LIST_CACHE_LOCK(&slm_db_hipri_workq);
+	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main, NULL,
+	    sizeof(struct slmdbwk_thread), "slmdbhiwkthr");
+	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
+	pscthr_setready(thr);
+	psc_waitq_wait(&slm_db_hipri_workq.plc_wq_want,
+	    &slm_db_hipri_workq.plc_lock);
 
 	dbdo(slm_upsch_revert_cb, NULL,
 	    " SELECT	fid,"

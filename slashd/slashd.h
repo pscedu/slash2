@@ -399,7 +399,8 @@ extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;
 extern struct pfl_odt		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
-extern struct psc_listcache	 slm_db_workq;
+extern struct psc_listcache	 slm_db_lopri_workq;
+extern struct psc_listcache	 slm_db_hipri_workq;
 
 extern struct psc_thread	*slmconnthr;
 

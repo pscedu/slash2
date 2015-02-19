@@ -440,7 +440,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	wk->b = av->pointer_arg[IP_BMAP];
 	wk->off = av->space[IN_OFF];
 	wk->dst_resm = av->pointer_arg[IP_DSTRESM];
-	pfl_workq_putitemq(&slm_db_workq, wk);
+	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	return (0);
 }
 
@@ -872,7 +872,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = b->bcm_bmapno;
 		else
 			wk->bno = BMAPNO_ANY;
-		pfl_workq_putitemq(&slm_db_workq, wk);
+		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
 	if (b) {
 		BMAPOD_ULOCK(bmi);
