@@ -206,7 +206,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		repl[k].bs_id = ios;
 		++*nr;
 
-		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
+		DEBUG_INOH(PLL_DIAG, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
 		mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
