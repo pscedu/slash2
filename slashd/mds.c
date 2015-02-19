@@ -1775,7 +1775,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		FCMH_ULOCK(f);
 	}
 
-	flag = BMAPGETF_LOAD | (new ? BMAPGETF_NODISKREAD : 0);
+	flag = BMAPGETF_CREATE | (new ? BMAPGETF_NODISKREAD : 0);
 	rc = bmap_getf(f, bmapno, SL_WRITE, flag, &b);
 	if (rc)
 		return (rc);
@@ -2132,7 +2132,7 @@ slm_ptrunc_prepare(void *p)
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(f);
 	for (;; i++) {
-		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_LOAD |
+		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
 
@@ -2233,7 +2233,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
 	for (;; i++) {
-		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_LOAD |
+		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
 

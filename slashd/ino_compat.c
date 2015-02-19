@@ -53,7 +53,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 	th = inoh_2_mfh(ih);
 	fh = inoh_2_mfh(ih);
 
-	fl = BMAPGETF_LOAD | BMAPGETF_NOAUTOINST;
+	fl = BMAPGETF_CREATE | BMAPGETF_NOAUTOINST;
 	if (sic)
 		fl |= BMAPGETF_NORETRIEVE;
 

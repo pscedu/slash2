@@ -493,7 +493,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	/* XXX this load should be nonblocking so we can reply quickly */
 	// no-op?
-	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
+	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_CREATE |
 	    BMAPGETF_NORETRIEVE, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);

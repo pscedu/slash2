@@ -222,7 +222,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	if (rw)
 		bmaprw = rw == SL_WRITE ? BMAP_WR : BMAP_RD;
 
-	new_bmap = flags & BMAPGETF_LOAD;
+	new_bmap = flags & BMAPGETF_CREATE;
 	b = bmap_lookup_cache(f, n, &new_bmap);
 	if (b == NULL) {
 		rc = ENOENT;

@@ -80,7 +80,7 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
-	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_LOAD, &b);
+	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		goto out;
 	bmi = bmap_2_bmi(b);

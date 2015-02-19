@@ -213,7 +213,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
 			if (bmap_getf(f, n, SL_WRITE,
-			    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
+			    BMAPGETF_CREATE| BMAPGETF_NOAUTOINST, &b))
 				break;
 
 			BMAP_LOCK(b);

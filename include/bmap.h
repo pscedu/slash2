@@ -317,7 +317,7 @@ struct bmap {
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
-#define BMAPGETF_LOAD		(1 << 0)	/* allow loading if not in cache */
+#define BMAPGETF_CREATE		(1 << 0)	/* create a new bmap if not in cache */
 #define BMAPGETF_NORETRIEVE	(1 << 1)	/* when loading, do not invoke retrievef */
 #define BMAPGETF_NOAUTOINST	(1 << 2)	/* do not autoinstantiate */
 #define BMAPGETF_NODISKREAD	(1 << 3)	/* do not read from disk - nothing there */
@@ -352,7 +352,7 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 					(f), (n), 0, 0, (bp))
 
 #define bmap_get(f, n, rw, bp)		_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
-					(f), (n), (rw), BMAPGETF_LOAD, (bp))
+					(f), (n), (rw), BMAPGETF_CREATE, (bp))
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */

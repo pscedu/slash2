@@ -1051,7 +1051,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_LOAD, &b);
+	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 

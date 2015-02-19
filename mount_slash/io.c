@@ -1590,6 +1590,10 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 	MFH_ULOCK(mfh);
 }
 
+/*
+ * If the write is sequential, prefech the write lease for the next
+ * bmap. 
+ */
 void
 mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 {
