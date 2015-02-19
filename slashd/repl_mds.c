@@ -656,10 +656,8 @@ slm_repl_upd_write(struct bmapc_memb *b, int rel)
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
 			PUSH_IOS(b, &del, resid, NULL);
-		else if ((vold == BREPLST_REPL_SCHED &&
-		     vnew != BREPLST_REPL_SCHED) ||
-		    (vold == BREPLST_TRUNCPNDG_SCHED &&
-		     vnew != BREPLST_TRUNCPNDG_SCHED))
+		else if (vold == BREPLST_REPL_SCHED ||
+		    vold == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 		else if ((vold != BREPLST_REPL_QUEUED &&
 		      vnew == BREPLST_REPL_QUEUED) ||
