@@ -218,6 +218,39 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	return (rc);
 }
+__static int
+msl_bmap_lease_get_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmap *bmap = args->pointer_arg[MSL_CBARG_BMAP];
+	struct bmap_cli_info *bci = bmap_2_bci(bmap);
+	struct srm_leasebmap_rep *mp;
+	struct fidc_membh *f;
+	int rc;
+
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+
+	if (!rc) {
+
+		f = bmap->bcm_fcmh;
+		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
+		FCMH_LOCK(f);
+
+		msl_bmap_reap_init(bmap, &mp->sbd);
+		slc_fcmh_load_inode(f, &mp->ino);
+
+		psc_waitq_wakeall(&f->fcmh_waitq);
+		FCMH_ULOCK(f);
+		OPSTAT_INCR("bmap_get_async_ok");
+	}
+
+	DEBUG_BMAP(PLL_DIAG, bmap, "rc=%d repls=%d ios=%#x seq=%"PRId64,
+	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
+
+	sl_csvc_decref(csvc);
+	return (rc);
+}
 
 __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
@@ -539,8 +572,7 @@ slc_reptbl_cmp(const void *a, const void *b, void *arg)
  * @rw: read or write access
  */
 int
-msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
-    __unusedx int flags)
+msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 	struct slashrpc_cservice *csvc = NULL;
@@ -574,6 +606,16 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    bmap->bcm_bmapno, rw == SL_READ ? "read" : "write");
+
+	if (flags & BMAPGETF_ASYNC) {
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = bmap;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_bmap_lease_get_cb;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (!rc)
+			OPSTAT_INCR("bmap_get_async");
+		return (rc);
+	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)

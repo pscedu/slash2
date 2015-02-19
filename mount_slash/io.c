@@ -1601,10 +1601,9 @@ mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 	int rc;
 	struct bmap *b;
 
-	rc = bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, 0, &b);
+	rc = bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, BMAPGETF_ASYNC, &b);
 	if (rc)
 		return;
-	rc = msl_bmap_lease_tryext(b, 0);
 	bmap_op_done(b);
 #endif
 
