@@ -2831,6 +2831,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(c);
+
+#if 0
+	/*
+ 	 * Just because the attributes of a directory change, don't mean
+ 	 * that the dcache entries of its children are invalid.
+ 	 */
 	if (fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
@@ -2838,6 +2844,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		mdie.mdie_pinum = fcmh_2_fid(c);
 		dircache_walk(c, msl_dc_inv_entry, &mdie);
 	}
+#endif
 
  out:
 	if (c) {
