@@ -1543,8 +1543,13 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->fid, &vfsid);
 	if (mp->rc)
 		return (0);
+
 	/*
-	 * statfs information are gathered from the MDS and its IOSes.
+	 * STATFS is gathered from the metadata file system (nfiles) and
+	 * the client's preferred IOS' recent statvfs data (data
+	 * capacity/usage), sent periodically.  When the preferred IOS
+	 * is a cluster, loop through each IOS and calculate aggregate
+	 * space.
 	 */
 	mp->rc = mdsio_statfs(vfsid, &sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
