@@ -48,8 +48,12 @@ struct pscrpc_svc_handle slm_rmc_svc;
 
 struct psc_poolmaster	 batchrq_pool_master;
 struct psc_poolmgr	*batchrq_pool;
-struct psc_listcache	 batchrqs_pndg;
-struct psc_listcache	 batchrqs_wait;
+struct psc_spinlock	 batchrqs_lock = SPINLOCK_INIT;
+struct psc_listcache	 batchrqs_delayed;	/* waiting to be filled/timeout to be sent */
+struct psc_listcache	 batchrqs_waitreply;	/* awaiting reply */
+
+#define BATCHMGR_LOCK()		spinlock(&batchrqs_lock)
+#define BATCHMGR_ULOCK()	freelock(&batchrqs_lock)
 
 void
 slm_rpc_initsvc(void)
@@ -253,58 +257,89 @@ batchrq_cmp(const void *a, const void *b)
 }
 
 void
-batchrq_finish(struct batchrq *br, int rc)
+batchrq_decref(struct batchrq *br, int rc)
 {
-	struct psc_listcache *l;
+	int finish = 0;
+	// LOCK_ENSURE(&batchrqs_lock);
 
-	lc_remove(&batchrqs_wait, br);
-	l = batchrq_2_lc(br);
-	lc_remove(l, br);
+	if (br->br_rc == 0)
+		br->br_rc = rc;
+	psc_assert(br->br_refcnt > 0);
+	if (--br->br_refcnt == 0) {
+		struct psc_listcache *l;
 
-	if (br->br_rq && (br->br_flags & BATCHF_SENT) == 0)
-		pscrpc_req_finished(br->br_rq);
-	if (br->br_csvc)
+		finish = 1;
+		if (br->br_flags & (BATCHF_WAITREPLY |
+		    BATCHF_RQINFL))
+			lc_remove(&batchrqs_waitreply, br);
+		else
+			lc_remove(&batchrqs_delayed, br);
+		l = batchrq_2_lc(br);
+		lc_remove(l, br);
+	}
+
+	BATCHMGR_ULOCK();
+
+	if (finish) {
+		if (br->br_rq)
+			pscrpc_req_finished(br->br_rq);
 		sl_csvc_decref(br->br_csvc);
 
-	br->br_cbf(br, rc);
+		br->br_cbf(br, br->br_rc);
 
-	PSCFREE(br->br_buf);
-	PSCFREE(br->br_reply);
-	psc_dynarray_free(&br->br_scratch);
+		PSCFREE(br->br_buf);
+		PSCFREE(br->br_reply);
+		psc_dynarray_free(&br->br_scratch);
 
-	psc_pool_return(batchrq_pool, br);
+		psc_pool_return(batchrq_pool, br);
+	}
 }
 
 int
-batchrq_handle_wkcb(void *p)
+batchrq_finish_wkcb(void *p)
 {
 	struct slm_wkdata_batchrq_cb *wk = p;
+	struct batchrq *br = wk->br;
 
-	batchrq_finish(wk->br, wk->rc);
+	BATCHMGR_LOCK();
+	batchrq_decref(br, wk->rc);
 	return (0);
 }
 
 void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
-	int sched = 1;
+	struct slm_wkdata_batchrq_cb *wk;
 
-	spinlock(&br->br_lock);
-	if (br->br_flags & BATCHF_FINISHQ)
-		sched = 0;
-	else
-		br->br_flags |= BATCHF_FINISHQ;
-	freelock(&br->br_lock);
+	wk = pfl_workq_getitem(batchrq_finish_wkcb,
+	    struct slm_wkdata_batchrq_cb);
+	wk->br = br;
+	wk->rc = rc;
+	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+}
 
-	if (sched) {
-		struct slm_wkdata_batchrq_cb *wk;
+int
+batchrq_waitreply_wkcb(void *p)
+{
+	struct slm_wkdata_batchrq_cb *wk = p;
+	struct batchrq *br = wk->br;
 
-		wk = pfl_workq_getitem(batchrq_handle_wkcb,
-		    struct slm_wkdata_batchrq_cb);
-		wk->br = br;
-		wk->rc = rc;
-		pfl_workq_putitemq(&slm_db_workq, wk);
-	}
+	BATCHMGR_LOCK();
+	br->br_flags &= ~BATCHF_RQINFL;
+	br->br_flags |= BATCHF_WAITREPLY;
+	batchrq_decref(br, 0);
+	return (0);
+}
+
+void
+batchrq_sched_waitreply(struct batchrq *br)
+{
+	struct slm_wkdata_batchrq_cb *wk;
+
+	wk = pfl_workq_getitem(batchrq_waitreply_wkcb,
+	    struct slm_wkdata_batchrq_cb);
+	wk->br = br;
+	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 }
 
 int
@@ -318,32 +353,34 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	if (rc == 0)
 		slrpc_rep_in(br->br_csvc, rq);
 
-	/* nbrqset finishes the request for us */
-	br->br_rq = NULL;
 	if (rc)
 		batchrq_sched_finish(br, rc);
+	else
+		batchrq_sched_waitreply(br);
 	return (0);
 }
 
 void
 batchrq_send(struct batchrq *br)
 {
-	struct psc_listcache *ml;
 	struct pscrpc_request *rq;
+	struct psc_listcache *ml;
 	struct iovec iov;
 	int rc;
 
-	ml = &batchrqs_pndg;
+	ml = &batchrqs_delayed;
 
 	LIST_CACHE_LOCK_ENSURE(ml);
 
-	br->br_flags |= BATCHF_PNDG | BATCHF_SENT;
+	rq = br->br_rq;
+
+	br->br_refcnt++;
+	br->br_flags |= BATCHF_RQINFL;
+	br->br_rq = NULL;
+
 	lc_remove(ml, br);
 
-	/* XXX remove ml lock? */
-	lc_add(&batchrqs_wait, br);
-
-	rq = br->br_rq;
+	lc_add(&batchrqs_waitreply, br);
 
 	iov.iov_base = br->br_buf;
 	iov.iov_len = br->br_len;
@@ -357,8 +394,11 @@ batchrq_send(struct batchrq *br)
 	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
 	if (rc) {
  err:
-		br->br_flags &= ~BATCHF_SENT;
-		batchrq_finish(br, rc);
+		br->br_refcnt--;
+		br->br_rq = rq;
+		br->br_flags &= ~BATCHF_RQINFL;
+		batchrq_decref(br, rc);
+		BATCHMGR_LOCK();
 	}
 }
 
@@ -378,7 +418,7 @@ sl_handle_batchrp(struct pscrpc_request *rq)
 
 	memset(&iov, 0, sizeof(iov));
 
-	lc = &batchrqs_wait;
+	lc = &batchrqs_waitreply;
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->len < 0 || mq->len > LNET_MTU) {
@@ -424,13 +464,14 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	struct batchrq *br;
 	int rc = 0;
 
-	ml = &batchrqs_pndg;
-	LIST_CACHE_LOCK(ml);
+	BATCHMGR_LOCK();
+
+	ml = &batchrqs_delayed;
 
 	l = &res2rpmi(r)->rpmi_batchrqs;
-	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH(br, l)
-		if ((br->br_flags & BATCHF_PNDG) == 0 &&
+		if ((br->br_flags & (BATCHF_RQINFL |
+		    BATCHF_WAITREPLY)) == 0 &&
 		    opc == br->br_rq->rq_reqmsg->opc) {
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
@@ -452,7 +493,6 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	psc_dynarray_init(&br->br_scratch);
 	INIT_PSC_LISTENTRY(&br->br_lentry);
 	INIT_PSC_LISTENTRY(&br->br_lentry_ml);
-	INIT_SPINLOCK(&br->br_lock);
 	br->br_rq = rq;
 	br->br_rcv_ptl = rcvptl;
 	br->br_snd_ptl = sndptl;
@@ -461,6 +501,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	br->br_res = r;
 	br->br_cbf = cbf;
 	br->br_buf = PSCALLOC(LNET_MTU);
+	br->br_refcnt = 1;
 
 	PFL_GETTIMEVAL(&br->br_expire);
 	br->br_expire.tv_sec += expire;
@@ -485,8 +526,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	csvc = NULL;
 
  out:
-	LIST_CACHE_ULOCK(l);
-	LIST_CACHE_ULOCK(ml);
+	BATCHMGR_ULOCK();
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -496,32 +536,28 @@ void
 slmbchrqthr_main(struct psc_thread *thr)
 {
 	struct timeval now, wait;
-	struct batchrq *br, *brn;
 	struct psc_listcache *ml;
+	struct batchrq *br;
 
-	ml = &batchrqs_pndg;
+	ml = &batchrqs_delayed;
 
 	wait.tv_sec = 0;
 	wait.tv_usec = 0;
 
 	while (pscthr_run(thr)) {
+		LIST_CACHE_LOCK(ml);
+		br = lc_peekheadwait(ml);
+		PFL_GETTIMEVAL(&now);
+		if (timercmp(&now, &br->br_expire, >))
+			batchrq_send(br);
+		else
+			timersub(&br->br_expire, &now, &wait);
+		LIST_CACHE_ULOCK(ml);
+
 		usleep(wait.tv_sec * 1000000 + wait.tv_usec);
 
-		wait.tv_sec = 1;
+		wait.tv_sec = 0;
 		wait.tv_usec = 0;
-
-		PFL_GETTIMEVAL(&now);
-
-		LIST_CACHE_LOCK(ml);
-		LIST_CACHE_FOREACH_SAFE(br, brn, ml) {
-			if (timercmp(&now, &br->br_expire, >)) {
-				batchrq_send(br);
-				continue;
-			}
-			timersub(&br->br_expire, &now, &wait);
-			break;
-		}
-		LIST_CACHE_ULOCK(ml);
 	}
 }
 
@@ -533,10 +569,15 @@ slmbchrqthr_spawn(void)
 	    NULL, NULL, NULL, "bchrq");
 	batchrq_pool = psc_poolmaster_getmgr(&batchrq_pool_master);
 
-	lc_reginit(&batchrqs_pndg, struct batchrq, br_lentry_ml,
-	    "bchrqpndg");
-	lc_reginit(&batchrqs_wait, struct batchrq, br_lentry_ml,
+	lc_reginit(&batchrqs_delayed, struct batchrq, br_lentry_ml,
+	    "bchrqdelay");
+	batchrqs_delayed.plc_flags |= PLLF_EXTLOCK;
+	batchrqs_delayed.plc_lockp = &batchrqs_lock;
+
+	lc_reginit(&batchrqs_waitreply, struct batchrq, br_lentry_ml,
 	    "bchrqwait");
+	batchrqs_waitreply.plc_flags |= PLLF_EXTLOCK;
+	batchrqs_waitreply.plc_lockp = &batchrqs_lock;
 
 	pscthr_init(SLMTHRT_BATCHRQ, slmbchrqthr_main, NULL, 0,
 	    "slmbchrqthr");

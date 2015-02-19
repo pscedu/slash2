@@ -138,7 +138,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 	brepls_init(retifset, 0);
 
 	for (bq = br->br_buf, idx = 0;
-	    (char *)bq < (char *)br->br_buf + br->br_len;
+	    bq < PSC_AGP(br->br_buf, br->br_len);
 	    bq++, bp ? bp++ : 0, idx++) {
 		b = NULL;
 		f = NULL;
@@ -152,15 +152,17 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 		if (rc)
 			goto skip;
 
+		// XXX grab bmap write lock before checking bgen!!!
+
 		// XXX check fgen
 
 		BHGEN_GET(b, &bgen);
 		if (bp && bp->rc == 0 && bq->bgen != bgen)
 			bp->rc = SLERR_GEN_OLD;
 
-		if (ecode == 0 && (char *)bp <
-		    (char *)br->br_reply + br->br_replen &&
-		    bp && bp->rc == 0) {
+		if (ecode == 0 && bp &&
+		    bp < PSC_AGP(br->br_reply, br->br_replen) &&
+		    bp->rc == 0) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 			tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 			retifset[BREPLST_REPL_SCHED] = 1;
@@ -168,19 +170,33 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 
 			OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 		} else {
-			tract[BREPLST_REPL_QUEUED] =
-			    BREPLST_REPL_QUEUED;
-			tract[BREPLST_REPL_SCHED] =
-			    bp == NULL || bp->rc == SLERR_ION_OFFLINE ?
-			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+			if (bp == NULL || bp->rc == SLERR_ION_OFFLINE) {
+				dbdo(NULL, NULL,
+				    " UPDATE	upsch"
+				    " SET	status = 'Q'"
+				    " WHERE	resid = ?"
+				    "   AND	fid = ?"
+				    "   AND	bno = ?",
+				    SQLITE_INTEGER, br->br_res->res_id,
+				    SQLITE_INTEGER64, bmap_2_fid(b),
+				    SQLITE_INTEGER, b->bcm_bmapno);
+				tract[BREPLST_REPL_SCHED] =
+				    BREPLST_REPL_QUEUED;
+			} else {
+				tract[BREPLST_REPL_SCHED] =
+				    BREPLST_GARBAGE;
+			}
+
+			tract[BREPLST_REPL_QUEUED] = -1;
 			retifset[BREPLST_REPL_SCHED] = 1;
 			retifset[BREPLST_REPL_QUEUED] = 0;
 
 			DEBUG_BMAP(PLL_WARN, b, "replication "
-			    "arrangement failure; src=%s dst=%s rc=%d",
+			    "arrangement failure; src=%s dst=%s "
+			    "ecode=%d rc=%d",
 			    src_resm ? src_resm->resm_name : NULL,
 			    dst_resm ? dst_resm->resm_name : NULL,
-			    ecode ? ecode : bp ? bp->rc : -999);
+			    ecode, bp ? bp->rc : -999);
 		}
 
 		if (mds_repl_bmap_apply(b, tract, retifset,
@@ -335,7 +351,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	/*
 	 * We succesfully scheduled some work; if there is more
-	 * bandwidth available, schedule more.
+	 * bandwidth available, schedule more work.
 	 */
 	if (moreamt)
 		upschq_resm(dst_resm, UPDT_PAGEIN);
@@ -1047,13 +1063,12 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-	if (rc) {
-		mds_bmap_write_logrepls(b);
-	} else {
+	if (rc)
+		mds_bmap_write(b, NULL, NULL);
+	else
 		BMAPOD_MODIFY_DONE(b, 0);
-		BMAP_UNBUSY(b);
-		FCMH_UNBUSY(f);
-	}
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(f);
 
  out:
 	if (b)
