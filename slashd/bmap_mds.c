@@ -185,7 +185,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	if (flags & BMAPGETF_NODISKREAD) {
 		mds_bmap_initnew(b);
-		goto out;
+		goto out2;
 	}
 
 	f = b->bcm_fcmh;
@@ -207,9 +207,8 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	if (rc)
 		goto out1;
 
-	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
+	if (nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
-
 
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can
@@ -231,7 +230,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 			rc = PFLERR_BADCRC;
 	}
 
-  out1:
+ out1:
 
 	/*
 	 * At this point, the short I/O is an error since the bmap isn't
@@ -246,7 +245,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
- out:
+ out2:
 	if (slm_opstate == SLM_OPSTATE_REPLAY)
 		return (0);
 
