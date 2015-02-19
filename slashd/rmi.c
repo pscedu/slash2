@@ -619,7 +619,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 	/* miscellaneous messages */
 	case SRMT_BATCH_RP:
-		rc = batchrq_handle(rq);
+		rc = sl_handle_batchrp(rq);
 		break;
 
 	default:

@@ -368,7 +368,7 @@ batchrq_send(struct batchrq *br)
  * response indicating success/failure.
  */
 int
-batchrq_handle(struct pscrpc_request *rq)
+sl_handle_batchrp(struct pscrpc_request *rq)
 {
 	struct psc_listcache *lc;
 	struct srm_batch_req *mq;

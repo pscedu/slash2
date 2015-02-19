@@ -144,7 +144,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 int	batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
 	    uint32_t, int, int, void *, size_t, void *,
 	    void (*)(struct batchrq *, int), int);
-int	batchrq_handle(struct pscrpc_request *);
+int	sl_handle_batchrp(struct pscrpc_request *);
 
 void	slmbchrqthr_spawn(void);
 

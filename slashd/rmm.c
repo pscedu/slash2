@@ -267,7 +267,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		    SLCONNT_MDS);
 		break;
 	case SRMT_BATCH_RP:
-		rc = batchrq_handle(rq);
+		rc = sl_handle_batchrp(rq);
 		break;
 	case SRMT_NAMESPACE_UPDATE:
 		rc = slm_rmm_handle_namespace_update(rq);
