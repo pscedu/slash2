@@ -491,8 +491,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	// XXX bug fci->fci_inode.newreplpol inherited?
 	FCMH_ULOCK(c);
 
-	/* XXX this load should be nonblocking so we can reply quickly */
-	// no-op?
+	/*
+	 * Instantiate a bmap and load it with the piggybacked lease
+	 * from the above create RPC.
+	 */
 	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_CREATE |
 	    BMAPGETF_NORETRIEVE, &b);
 	if (rc)
