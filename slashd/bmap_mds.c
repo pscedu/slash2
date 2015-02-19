@@ -204,11 +204,12 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mfh(b));
 
+	if (rc)
+		goto out1;
+
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
 
-	if (rc)
-		goto error;
 
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can
@@ -230,12 +231,13 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 			rc = PFLERR_BADCRC;
 	}
 
+  out1:
+
 	/*
 	 * At this point, the short I/O is an error since the bmap isn't
 	 * zeros.
 	 */
 	if (rc) {
- error:
 		DEBUG_BMAP(PLL_ERROR, b, "mdsio_read: rc=%d", rc);
 		return (rc);
 	}
