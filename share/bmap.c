@@ -217,8 +217,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	int rc = 0, new_bmap, bmaprw = 0;
 	struct bmap *b;
 
-	*bp = NULL;
-
+	if (bp)
+		*bp = NULL;
 	if (rw)
 		bmaprw = rw == SL_WRITE ? BMAP_WR : BMAP_RD;
 
@@ -228,6 +228,18 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = ENOENT;
 		goto out;
 	}
+
+	if (flags & BMAPGETF_ASYNC) {
+		BMAP_ULOCK(b);
+		if (new_bmap) {
+			b->bcm_flags |= bmaprw;
+			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
+		}
+		if (!new_bmap || rc)
+			bmap_op_done(b);
+		return (0);
+	}
+
 	if (new_bmap) {
 		b->bcm_flags |= bmaprw;
 		BMAP_ULOCK(b);

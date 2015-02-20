@@ -232,18 +232,18 @@ msl_bmap_lease_get_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	if (!rc) {
-
 		f = bmap->bcm_fcmh;
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		FCMH_LOCK(f);
 
-		msl_bmap_reap_init(bmap, &mp->sbd);
+		msl_bmap_reap_init(bmap, &mp->sbd, 1);
 		slc_fcmh_load_inode(f, &mp->ino);
 
 		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);
 		OPSTAT_INCR("bmap_get_async_ok");
-	}
+	} else
+		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rc=%d repls=%d ios=%#x seq=%"PRId64,
 	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
@@ -626,7 +626,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 
 	FCMH_LOCK(f);
 
-	msl_bmap_reap_init(bmap, &mp->sbd);
+	msl_bmap_reap_init(bmap, &mp->sbd, 0);
 
 	slc_fcmh_load_inode(f, &mp->ino);
 
@@ -683,7 +683,7 @@ msl_bmap_cache_rls(struct bmap *b)
 }
 
 void
-msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
+msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	int locked;
@@ -724,7 +724,9 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAP_DIO;
 	}
-	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+
+	if (!async)
+		bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
 	BMAP_URLOCK(b, locked);
 

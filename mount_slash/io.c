@@ -1598,13 +1598,8 @@ void
 mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 {
 #if 0
-	int rc;
-	struct bmap *b;
-
-	rc = bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, BMAPGETF_ASYNC, &b);
-	if (rc)
-		return;
-	bmap_op_done(b);
+	(void) bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, 
+		BMAPGETF_CREATE | BMAPGETF_ASYNC, NULL);
 #endif
 
 }
