@@ -727,6 +727,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 	if (!async)
 		bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
+	b->bcm_flags &= ~BMAP_INIT;
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b,
