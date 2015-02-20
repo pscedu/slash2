@@ -686,11 +686,10 @@ void
 msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
-	int locked;
 
 	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
 
-	locked = BMAP_RLOCK(b);
+	BMAP_LOCK(b);
 
 	bci->bci_sbd = *sbd;
 	/*
@@ -728,7 +727,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 	if (!async)
 		bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
-	BMAP_URLOCK(b, locked);
+	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "reap init: nseq=%"PRId64", etime="PSCPRI_TIMESPEC,
