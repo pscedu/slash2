@@ -356,7 +356,7 @@ slcfg_route_lookup(const char *name)
 	int i;
 
 	DYNARRAY_FOREACH(srt, i, &slcfg_routes)
-		if (srt->srt_name && strcmp(name, srt->srt_name))
+		if (srt->srt_name && strcmp(name, srt->srt_name) == 0)
 			return (srt);
 	return (NULL);
 }
@@ -384,6 +384,9 @@ slcfg_route_new(int type, void *ptr, const char *namefmt, ...)
 	srt = PSCALLOC(sizeof(*srt));
 	srt->srt_name = name;
 	srt->srt_ptr = ptr;
+	srt->srt_type = type;
+	srt->srt_filename = cfg_filename;
+	srt->srt_lineno = cfg_lineno;
 	psc_dynarray_add(&slcfg_routes, srt);
 	return (srt);
 }
