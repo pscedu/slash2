@@ -1598,6 +1598,9 @@ void
 mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 {
 #if 0
+	if (!mfh->mfh_predio_nseq)
+		return;
+
 	(void) bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, 
 		BMAPGETF_CREATE | BMAPGETF_ASYNC, NULL);
 #endif
