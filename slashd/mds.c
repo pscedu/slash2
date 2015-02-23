@@ -225,7 +225,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
-	atomic_inc(&rmmi->rmmi_refcnt);
+	psc_atomic32_inc(&rmmi->rmmi_refcnt);
 
 	psc_assert(bml->bml_bmi->bmi_assign);
 	bml->bml_bmi->bmi_wr_ion = rmmi;
@@ -607,7 +607,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	BMAP_ULOCK(b);
 
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
-	atomic_inc(&rmmi->rmmi_refcnt);
+	psc_atomic32_inc(&rmmi->rmmi_refcnt);
 
 	DEBUG_BMAP(PLL_DIAG, b, "online res(%s)",
 	    resm->resm_res->res_name);
@@ -1211,7 +1211,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		} else {
 			psc_assert(!bmi->bmi_assign);
 		}
-		atomic_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
+		psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
 		bmi->bmi_wr_ion = NULL;
 
 		/*

@@ -69,7 +69,7 @@ slcfg_init_resm(struct sl_resm *m)
 	struct resm_mds_info *rmmi;
 
 	rmmi = resm2rmmi(m);
-	atomic_set(&rmmi->rmmi_refcnt, 0);
+	psc_atomic32_set(&rmmi->rmmi_refcnt, 0);
 }
 
 void
