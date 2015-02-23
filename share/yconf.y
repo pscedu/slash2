@@ -362,10 +362,12 @@ endpoints	: endpoint
 
 endpoint	: NAME {
 			char *p;
+			int rc;
 
 			if (currentSite) {
-				asprintf(&p, "%s@%s", $1,
+				rc = asprintf(&p, "%s@%s", $1,
 				    currentSite->site_name);
+				psc_assert(rc != -1);
 				psc_dynarray_add(&t_slcfg_route->
 				    srt_endpoints, p);
 				PSCFREE($1);
@@ -981,6 +983,7 @@ void
 slcfg_parse(const char *config_file)
 {
 	extern FILE *yyin;
+	struct psc_dynarray dangling;
 	struct slcfg_route *srt, *it;
 	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
@@ -1028,8 +1031,8 @@ slcfg_parse(const char *config_file)
 	CONF_LOCK();
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	CONF_FOREACH_SITE(s) {
-		s->site_route = slcfg_route_new(SRTT_SITE, s,
-		    "%s", site_name);
+		s->site_rtnode = slcfg_route_new(SRTT_SITE, s,
+		    "%s", s->site_name);
 
 		psc_dynarray_reset(&dangling);
 		DYNARRAY_FOREACH(srt, i, &s->site_routes)
@@ -1063,7 +1066,7 @@ slcfg_parse(const char *config_file)
 		DYNARRAY_FOREACH(srt, i, &s->site_routes) {
 			psc_assert(srt->srt_type == SRTT_NODE);
 			DYNARRAY_FOREACH(endpname, j,
-			    srt->srt_endpoints) {
+			    &srt->srt_endpoints) {
 				it = slcfg_route_lookup(endpname);
 				if (it == NULL)
 					errx(1, "%s:%d: endpoint %s "
@@ -1084,7 +1087,7 @@ slcfg_parse(const char *config_file)
 		 * each other.
 		 */
 		DYNARRAY_FOREACH(srt, i, &dangling) {
-			slcfg_route_link(s->site_route, srt);
+			slcfg_route_link(s->site_rtnode, srt);
 			DYNARRAY_FOREACH(it, j, &dangling)
 				slcfg_route_link(srt, it);
 		}
@@ -1098,7 +1101,7 @@ slcfg_parse(const char *config_file)
 	DYNARRAY_FOREACH(srt, i, &slcfg_site_routes) {
 		psc_assert(srt->srt_type == SRTT_NODE);
 		DYNARRAY_FOREACH(endpname, j,
-		    srt->srt_endpoints) {
+		    &srt->srt_endpoints) {
 			it = slcfg_route_lookup(endpname);
 			if (it == NULL)
 				errx(1, "%s:%d: endpoint %s "

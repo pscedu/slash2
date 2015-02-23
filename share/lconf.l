@@ -70,7 +70,6 @@ resource	{ return (RESOURCE); }
 route		{ return (ROUTE); }
 set		{ return (SET); }
 site		{ return (SITE); }
-subnet		{ return (SUBNET); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);

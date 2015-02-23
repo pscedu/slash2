@@ -72,9 +72,9 @@ struct slcfg_route {
 
 	int			 srt_type;
 	void			*srt_ptr;	/* type-specific */
-	struct bw_dir		 srt_ingress;	/* bandwidth going into route node */
-	struct bw_dir		 srt_egress;	/* bandwidth coming out of route node */
-	struct bw_dir		 srt_aggr;	/* aggregate (egress + ingress), e.g.
+	struct slcfg_route_dir	 srt_ingress;	/* bandwidth going into route node */
+	struct slcfg_route_dir	 srt_egress;	/* bandwidth coming out of route node */
+	struct slcfg_route_dir	 srt_aggr;	/* aggregate (egress + ingress), e.g.
 						 * for poor switching hardware */
 };
 
@@ -184,7 +184,7 @@ struct sl_site {
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
 	struct slcfg_route	*site_rtnode;
-	struct psc_dynarray	*site_routes;
+	struct psc_dynarray	 site_routes;
 };
 
 /* highest allowed site ID */
@@ -320,6 +320,10 @@ int			 slcfg_site_cmp(const void *, const void *);
 
 void			 slcfg_parse(const char *);
 void			 slcfg_resm_addaddr(char *, const char *);
+
+void			 slcfg_route_link(struct slcfg_route *, struct slcfg_route *);
+struct slcfg_route 	*slcfg_route_new(int, void *, const char *, ...);
+struct slcfg_route	*slcfg_route_lookup(const char *);
 
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 void			 libsl_init(int);

@@ -41,9 +41,11 @@
 #include "slerr.h"
 
 struct psc_dynarray	sl_lnet_prids = DYNARRAY_INIT;
+struct psc_dynarray	slcfg_routes;		/* all routes */
+struct psc_dynarray	slcfg_site_routes;	/* routes connecting sites */
 
-/**
- * libsl_resm_lookup - Sanity check this node's resource membership.
+/*
+ * Sanity check this node's resource membership.
  * Notes: must be called after LNET has been initialized.
  */
 struct sl_resm *
@@ -350,26 +352,27 @@ slcfg_res_cmp(const void *a, const void *b)
 struct slcfg_route *
 slcfg_route_lookup(const char *name)
 {
+	struct slcfg_route *srt;
 	int i;
 
-	DYNARRAY_FOREACH(srt, i)
+	DYNARRAY_FOREACH(srt, i, &slcfg_routes)
 		if (srt->srt_name && strcmp(name, srt->srt_name))
 			return (srt);
 	return (NULL);
 }
 
-void
+struct slcfg_route *
 slcfg_route_new(int type, void *ptr, const char *namefmt, ...)
 {
 	struct slcfg_route *srt;
-	struct slcfg_route *srt;
 	char *name = NULL;
 	va_list ap;
+	int rc;
 
 	if (namefmt) {
 		va_start(ap, namefmt);
-		vasprintf(&name, namefmt, ap)
-		// psc_assert(rc != -1);
+		rc = vasprintf(&name, namefmt, ap);
+		psc_assert(rc != -1);
 		va_end(ap);
 
 		srt = slcfg_route_lookup(name);
@@ -382,6 +385,7 @@ slcfg_route_new(int type, void *ptr, const char *namefmt, ...)
 	srt->srt_name = name;
 	srt->srt_ptr = ptr;
 	psc_dynarray_add(&slcfg_routes, srt);
+	return (srt);
 }
 
 void
