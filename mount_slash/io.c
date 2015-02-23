@@ -1592,7 +1592,8 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 
 /*
  * If the write is sequential, prefech the write lease for the next
- * bmap. 
+ * bmap.  At this point, the performace gain is negligible. So we
+ * disable the code, but keep it for reference.
  */
 void
 mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
