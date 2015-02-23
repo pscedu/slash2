@@ -43,75 +43,21 @@ site @PSC {
 	site_desc	= "Pittsburgh Supercomputing Center";
 	site_id		= 1;
 
-	resource sense51s0 {
-		type	= standalone_fs;
-		id	= 10;
-		nids	= sense51-66.psc.edu;
-		fsroot	= /sense51_pool0/slio;
-		flags	= "disable_bia";
-		self_test = "/local/sbin/st /sense51_pool0";
-	}
-
-	resource sense51s1 {
-		type	= standalone_fs;
-		id	= 11;
-		nids	= sense51-66-io1.psc.edu;
-		fsroot	= /sense51_pool1/slio;
-		flags	= "disable_bia";
-		self_test = "/local/sbin/st /sense51_pool1";
-	}
-
-	resource sense51s2 {
-		type	= standalone_fs;
-		id	= 12;
-		nids	= sense51-66-io2.psc.edu;
-		fsroot	= /sense51_pool2/slio;
-		self_test = "/local/sbin/st /sense51_pool2";
-	}
-
-	resource sense51s3 {
-		type	= standalone_fs;
-		id	= 13;
-		nids	= sense51-66-io3.psc.edu;
-		fsroot	= /sense51_pool3/slio;
-		self_test = "/local/sbin/st /sense51_pool3";
-	}
-
-	resource sense51s4 {
-		type	= standalone_fs;
-		id	= 14;
-		nids	= sense51-66-io4.psc.edu;
-		fsroot	= /sense51_pool4/slio;
-		self_test = "/local/sbin/st /sense51_pool4";
-	}
-
-	resource sense51s5 {
-		type	= standalone_fs;
-		id	= 15;
-		nids	= sense51-66-io5.psc.edu;
-		fsroot	= /sense51_pool5/slio;
-		self_test = "/local/sbin/st /sense51_pool5";
-	}
-
-	resource sense51s6 {
-		type	= standalone_fs;
-		id	= 16;
-		nids	= sense51-66-io6.psc.edu;
-		fsroot	= /sense51_pool6/slio;
-		self_test = "/local/sbin/st /sense51_pool6";
-	}
+	resource sense51s0 { type = standalone_fs; id = 10; nids = sense51-66.psc.edu;     fsroot = /sense51_pool0/slio; self_test = "/local/sbin/st -u 90 /sense51_pool0"; }
+	resource sense51s1 { type = standalone_fs; id = 11; nids = sense51-66-io1.psc.edu; fsroot = /sense51_pool1/slio; self_test = "/local/sbin/st -u 90 /sense51_pool1"; }
+	resource sense51s2 { type = standalone_fs; id = 12; nids = sense51-66-io2.psc.edu; fsroot = /sense51_pool2/slio; self_test = "/local/sbin/st -u 90 /sense51_pool2"; }
+	resource sense51s3 { type = standalone_fs; id = 13; nids = sense51-66-io3.psc.edu; fsroot = /sense51_pool3/slio; self_test = "/local/sbin/st -u 90 /sense51_pool3"; }
+	resource sense51s4 { type = standalone_fs; id = 14; nids = sense51-66-io4.psc.edu; fsroot = /sense51_pool4/slio; self_test = "/local/sbin/st -u 90 /sense51_pool4"; }
+	resource sense51s5 { type = standalone_fs; id = 15; nids = sense51-66-io5.psc.edu; fsroot = /sense51_pool5/slio; self_test = "/local/sbin/st -u 90 /sense51_pool5"; }
+	resource sense51s6 { type = standalone_fs; id = 16; nids = sense51-66-io6.psc.edu; fsroot = /sense51_pool6/slio; self_test = "/local/sbin/st -u 90 /sense51_pool6"; }
 
 	resource sense51 {
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0@PSC, sense51s1@PSC, sense51s2@PSC,
-			  sense51s3@PSC, sense51s4@PSC, sense51s5@PSC,
-			  sense51s6@PSC;
+		ios	= sense51s0@PSC, sense51s1@PSC, sense51s2@PSC, sense51s3@PSC, sense51s4@PSC, sense51s5@PSC, sense51s6@PSC;
 	}
+
+	route sense51 { endpoints = sense51s0, sense51s1, sense51s2, sense51s3, sense51s4, sense51s5, sense51s6; };
 }
 
-# link @PSCARCH @PITT 1G;
-#
-# link @PSC @TACC @NICS @NCSA 40G;
-#
-# link sense@PSC 10G;
+route { endpoints = PSCARCH, PITT };

@@ -29,17 +29,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/str.h"
 #include "pfl/alloc.h"
 #include "pfl/log.h"
+#include "pfl/str.h"
 
 #include "slconfig.h"
 #include "yconf.h"
 
-extern char	 cfg_filename[];
-extern int	 cfg_lineno;
+extern char		  cfg_filename[];
+extern int		  cfg_lineno;
 
-extern char	*yylval;
+extern char		 *yylval;
 
 extern struct sl_site	  *currentSite;
 extern struct sl_resource *currentRes;
@@ -61,13 +61,16 @@ sizeval		[0-9]+[KMGTBkmgtb]?
 
 %%
 
-include		{ return (INCLUDE); }
 global		{ yywarn("`global' deprecated by `set'"); return (SET); }
-set		{ return (SET); }
-site		{ return (SITE_PROFILE); }
-resource	{ return (RESOURCE_PROFILE); }
-peers|ios	{ return (PEERS); }
+endpoints	{ return (ENDPOINTS); }
+include		{ return (INCLUDE); }
 nids		{ return (NIDS); }
+peers|ios	{ return (PEERS); }
+resource	{ return (RESOURCE); }
+route		{ return (ROUTE); }
+set		{ return (SET); }
+site		{ return (SITE); }
+subnet		{ return (SUBNET); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);

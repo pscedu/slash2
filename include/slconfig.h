@@ -52,13 +52,45 @@ struct slrpc_cservice;
 #define RESM_ADDRBUF_SZ		(RES_NAME_MAX + PSCRPC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
 #define LNET_NAME_MAX		32
 
+/* smallest allocable bandwidth unit */
+#define BW_UNITSZ		4096
+
+/* utilization and available bandwidth in one direction */
+struct slcfg_route_dir {
+	uint32_t		 srd_avail;	/* units of RESMLINK_UNITSZ/sec */
+//	uint32_t		 srd_reserved;	/* estimate of IO and other traffic at IOS */
+	uint32_t		 srd_used;	/* amount MDS has scheduled */
+};
+
+/* bandwidth control point (bottleneck) */
+struct slcfg_route {
+	struct psc_dynarray	 srt_endpoints;
+	const char		*srt_name;
+
+	const char		*srt_filename;
+	int			 srt_lineno;
+
+	int			 srt_type;
+	void			*srt_ptr;	/* type-specific */
+	struct bw_dir		 srt_ingress;	/* bandwidth going into route node */
+	struct bw_dir		 srt_egress;	/* bandwidth coming out of route node */
+	struct bw_dir		 srt_aggr;	/* aggregate (egress + ingress), e.g.
+						 * for poor switching hardware */
+};
+
+enum {
+	SRTT_IOS,				/* IOS endpoint */
+	SRTT_SITE,				/* site "midnode" */
+	SRTT_NODE				/* hierarchical node */
+};
+
 enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
-	SLREST_CLUSTER_NOSHARE_LFS,	/* Logical set of stand-alone servers */
+	SLREST_CLUSTER_NOSHARE_LFS,		/* Logical set of stand-alone servers */
 	SLREST_MDS,
-	SLREST_PARALLEL_COMPNT,		/* A member of a parallel fs */
-	SLREST_PARALLEL_LFS,		/* Logical parallel fs */
+	SLREST_PARALLEL_COMPNT,			/* A member of a parallel fs */
+	SLREST_PARALLEL_LFS,			/* Logical parallel fs */
 	SLREST_STANDALONE_FS
 };
 
@@ -77,15 +109,16 @@ struct sl_resource {
 	struct pfl_hashentry	 res_hentry;
 
 	sl_ios_id_t		 res_id;
-	int			 res_flags;
+	int			 res_flags;	/* see RESF_* below */
 	enum sl_res_type	 res_type;
 	uint32_t		 res_stkvers;	/* peer SLASH2 stack version */
-	struct sl_site		*res_site;
+	struct sl_site		*res_site;	/* backpointer to site */
 	struct psc_dynarray	 res_peers;
-	struct psc_dynarray	 res_members;
+	struct psc_dynarray	 res_members;	/* for cluster types */
 	char			 res_name[RES_NAME_MAX];
-	char			*res_desc;
+	char			*res_desc;	/* human description */
 	struct slcfg_local	*res_localcfg;
+	struct slcfg_route	*res_route;
 };
 
 /* res_flags */
@@ -123,7 +156,7 @@ struct sl_resm_nid {
 struct sl_resm {
 	struct slrpc_cservice	*resm_csvc;	/* client RPC service - must be first */
 	struct psc_dynarray	 resm_nids;	/* network interfaces */
-	struct sl_resource	*resm_res;
+	struct sl_resource	*resm_res;	/* backpointer to resource */
 	struct pfl_mutex	 resm_mutex;
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
@@ -150,6 +183,8 @@ struct sl_site {
 	struct psc_listentry	 site_lentry;
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
+	struct slcfg_route	*site_rtnode;
+	struct psc_dynarray	*site_routes;
 };
 
 /* highest allowed site ID */
@@ -161,6 +196,7 @@ site_get_pri(struct sl_site *site)
 	return (site + 1);
 }
 
+/* LNET route */
 struct sl_lnetrt {
 	union pfl_sockaddr	 lrt_addr;
 	int			 lrt_mask;	/* # bits in network */
@@ -168,16 +204,18 @@ struct sl_lnetrt {
 	struct psclist_head	 lrt_lentry;
 };
 
+/* link between LNET interface and LNET route */
 struct lnetif_pair {
 	uint32_t		 net;
+	int			 flags;		/* see LPF_* flags */
 	char			 ifn[IFNAMSIZ];
 	struct psclist_head	 lentry;
-	int			 flags;
 };
 
 #define LPF_NOACCEPTOR		(1 << 0)
 #define LPF_SKIP		(1 << 1)
 
+/* local (host-specific settings) configuration */
 struct slcfg_local {
 	char			*cfg_journal;
 	char			*cfg_zpcachefn;
@@ -193,8 +231,9 @@ struct slcfg_local {
 	int			 cfg_root_squash:1;
 };
 
+/* SLASH2 deployment settings shared by all nodes */
 struct sl_config {
-	char			 gconf_routes[256];
+	char			 gconf_lroutes[256];
 	char			 gconf_lnets[LNETS_MAX];
 	int			 gconf_port;
 	struct psclist_head	 gconf_routehd;
@@ -305,6 +344,8 @@ extern struct sl_resm	*nodeResm;
 
 #define nodeSite	nodeResm->resm_site
 #define nodeResProf	nodeResm->resm_res
+
+extern struct psc_dynarray slcfg_site_routes;
 
 extern struct slcfg_local *slcfg_local;
 extern struct sl_config	 globalConfig;

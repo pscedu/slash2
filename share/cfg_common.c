@@ -240,8 +240,8 @@ libsl_init(int nmsgs)
 	if (rc == -1)
 		psc_fatal("LNET port %d", globalConfig.gconf_port);
 
-	if (globalConfig.gconf_routes[0])
-		setenv("LNET_ROUTES", globalConfig.gconf_routes, 0);
+	if (globalConfig.gconf_lroutes[0])
+		setenv("LNET_ROUTES", globalConfig.gconf_lroutes, 0);
 
 	setenv("USOCK_CPORT", pbuf, 0);
 	setenv("LNET_ACCEPT_PORT", pbuf, 0);
@@ -345,4 +345,50 @@ slcfg_res_cmp(const void *a, const void *b)
 	const struct sl_resource * const *py = b, *y = *py;
 
 	return (CMP(x->res_id, y->res_id));
+}
+
+struct slcfg_route *
+slcfg_route_lookup(const char *name)
+{
+	int i;
+
+	DYNARRAY_FOREACH(srt, i)
+		if (srt->srt_name && strcmp(name, srt->srt_name))
+			return (srt);
+	return (NULL);
+}
+
+void
+slcfg_route_new(int type, void *ptr, const char *namefmt, ...)
+{
+	struct slcfg_route *srt;
+	struct slcfg_route *srt;
+	char *name = NULL;
+	va_list ap;
+
+	if (namefmt) {
+		va_start(ap, namefmt);
+		vasprintf(&name, namefmt, ap)
+		// psc_assert(rc != -1);
+		va_end(ap);
+
+		srt = slcfg_route_lookup(name);
+		if (srt)
+			yyerror("duplicate route name: %s "
+			    "(defined at %s:%d)", name,
+			    srt->srt_filename, srt->srt_lineno);
+	}
+	srt = PSCALLOC(sizeof(*srt));
+	srt->srt_name = name;
+	srt->srt_ptr = ptr;
+	psc_dynarray_add(&slcfg_routes, srt);
+}
+
+void
+slcfg_route_link(struct slcfg_route *a, struct slcfg_route *b)
+{
+	if (a == b)
+		return;
+	psc_dynarray_add_ifdne(&a->srt_endpoints, b);
+	psc_dynarray_add_ifdne(&b->srt_endpoints, a);
 }
