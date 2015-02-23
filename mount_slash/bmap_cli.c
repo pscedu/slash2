@@ -218,6 +218,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	return (rc);
 }
+
 __static int
 msl_bmap_lease_get_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -612,7 +613,9 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_bmap_lease_get_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (!rc)
+		if (rc)
+			sl_csvc_decref(csvc);
+		else
 			OPSTAT_INCR("bmap_get_async");
 		return (rc);
 	}
