@@ -138,7 +138,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 	brepls_init(retifset, 0);
 
 	for (bq = br->br_buf, idx = 0;
-	    bq < PSC_AGP(br->br_buf, br->br_len);
+	    (char *)bq < (char *)PSC_AGP(br->br_buf, br->br_len);
 	    bq++, bp ? bp++ : 0, idx++) {
 		b = NULL;
 		f = NULL;
@@ -160,8 +160,8 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 		if (bp && bp->rc == 0 && bq->bgen != bgen)
 			bp->rc = SLERR_GEN_OLD;
 
-		if (ecode == 0 && bp &&
-		    bp < PSC_AGP(br->br_reply, br->br_replen) &&
+		if (ecode == 0 && bp && (char *)bp <
+		    (char *)PSC_AGP(br->br_reply, br->br_replen) &&
 		    bp->rc == 0) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 			tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
