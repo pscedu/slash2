@@ -1373,16 +1373,14 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	struct bmap_mds_lease *bml;
 	struct sl_fidgen fg;
 	struct bmap *b = NULL;
-	struct sl_resm *resm;
 	int rc;
 
 	r = PSCALLOC(sizeof(*r));
 	memcpy(r, odtr, sizeof(*r));
 
-	resm = libsl_ios2resm(bia->bia_ios);
-
 	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
-	    bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
+	    bia->bia_fid, bia->bia_seq,
+	    libsl_ios2resm(bia->bia_ios)->resm_res_name,
 	    bia->bia_bmapno);
 
 	if (!bia->bia_fid) {
