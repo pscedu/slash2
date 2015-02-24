@@ -394,6 +394,15 @@ peer		: NAME '@' NAME {
 			PSCFREE($1);
 			PSCFREE($3);
 		}
+		| NAME {
+			char *p;
+
+			if (asprintf(&p, "%s@%s", $1,
+			    currentSite->site_name) == -1)
+				psc_fatal("asprintf");
+			psc_dynarray_add(&currentRes->res_peers, p);
+			PSCFREE($1);
+		}
 		;
 
 nidslist	: NIDS '=' nids ';'
