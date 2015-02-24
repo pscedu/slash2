@@ -604,7 +604,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 __static int
 bmap_flushable(struct bmapc_memb *b)
 {
-	int secs, samples = 0, flush = 0, force = 0;
+	int samples = 0, flush = 0, force = 0;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	struct timespec ts;
@@ -644,8 +644,7 @@ bmap_flushable(struct bmapc_memb *b)
 	if (flush && !force) {
 		/* assert: the bmap should a write bmap at this point */
 		PFL_GETTIMESPEC(&ts);
-		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-		if (secs < BMAP_CLI_EXTREQSECS ||
+		if ((ts.tv_sec + BMAP_CLI_EXTREQSECS < bmap_2_bci(b)->bci_etime.tv_sec) ||
 		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 			OPSTAT_INCR("flush_skip_expire");
 			flush = 0;
