@@ -1380,7 +1380,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 
 	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq,
-	    libsl_ios2resm(bia->bia_ios)->resm_res_name,
+	    libsl_ios2resm(bia->bia_ios)->resm_name,
 	    bia->bia_bmapno);
 
 	if (!bia->bia_fid) {
