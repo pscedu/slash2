@@ -931,6 +931,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			    &bmapTimeoutLock, &nto);
 			continue;
 		}
+		/* XXX This causes CPU spinning if trylock() fails */
 		lc_peekheadwait(&slc_bmaptimeoutq);
 	}
 	psc_dynarray_free(&rels);
