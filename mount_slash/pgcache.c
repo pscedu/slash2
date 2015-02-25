@@ -217,7 +217,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 
 struct bmpc_ioreq *
 bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
-    int rqnum, uint32_t off, uint32_t len, int flags)
+    uint32_t off, uint32_t len, int flags)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct timespec issue;
@@ -241,10 +241,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_flags = flags;
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
-
-	/* Add the biorq to the fsrq. */
-	if (q)
-		msl_fsrqinfo_biorq_add(q, r, rqnum);
 
 	BMAP_LOCK(b);
 	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);

@@ -171,7 +171,7 @@ readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
  * Construct a request structure for an I/O issued on a bmap.
  * Notes: roff is bmap aligned.
  */
-__static void
+__static struct bmpc_ioreq *
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op, uint64_t fsz,
     int last)
@@ -200,13 +200,13 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	psc_assert(len);
 	psc_assert(roff + len <= SLASH_BMAP_SIZE);
 
-	r = bmpc_biorq_new(q, b, buf, rqnum, roff, len, op);
+	r = bmpc_biorq_new(q, b, buf, roff, len, op);
 	if (r->biorq_flags & BIORQ_DIO)
 		/*
 		 * The bmap is set to use directio; we may then skip
 		 * cache preparation.
 		 */
-		return;
+		goto out;
 
 	/*
 	 * Calculate the number of pages needed to accommodate this
@@ -238,7 +238,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	}
 
 	if (op == BIORQ_WRITE || rqnum != last)
-		return;
+		goto out;
 
 	nbmaps = (fsz + SLASH_BMAP_SIZE - 1) / SLASH_BMAP_SIZE;
 	if (b->bcm_bmapno < nbmaps - 1)
@@ -253,7 +253,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	 */
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
 	    &raoff2, &rapages2))
-		return;
+		goto out;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "roff = %d, npages = %d, raoff=%d rapages=%d "
 	    "raoff2=%d rapages2=%d, mfh->mfh_predio_off = %ld",
@@ -275,6 +275,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
 		    b->bcm_bmapno + 1, raoff2, rapages2);
+ out:
+	return (r);
 }
 
 __static void
@@ -1909,7 +1911,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 * roff - (i * SLASH_BMAP_SIZE) should be zero
 			 * if i == 1.
 			 */
-			msl_biorq_build(q, b, buf, i,
+			r = msl_biorq_build(q, b, buf, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE,
 			    fsz, nr - 1);
@@ -1917,6 +1919,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		bno = b->bcm_bmapno;
 		bmap_op_done(b);
+
+		msl_fsrqinfo_biorq_add(q, r, i);
 
 		roff += tlen;
 		tsize -= tlen;
@@ -2014,7 +2018,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAP_DIO)
 			goto end;
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 0, 
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 
 			BIORQ_READ | BIORQ_READAHEAD);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {

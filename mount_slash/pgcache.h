@@ -285,7 +285,7 @@ void	 bmpc_biorqs_destroy_locked(struct bmapc_memb *, int);
 
 struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
-	    char *, int, uint32_t, uint32_t, int);
+	    char *, uint32_t, uint32_t, int);
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
