@@ -150,8 +150,8 @@ pr_times(const char **p, FILE *outfp, struct file *f)
 	time_t tim;
 	struct tm tm;
 	struct pfl_timespec *ts;
-	const char *t = *p;
 	char fmt[64], buf[64];
+	const char *t = *p;
 	int i;
 
 	switch (*++t) {
@@ -177,11 +177,13 @@ pr_times(const char **p, FILE *outfp, struct file *f)
 		errx(1, "%%T format too long: %s", t);
 	fmt[i] = '\0';
 
-	tim = ts->tv_sec;
-	localtime_r(&tim, &tm);
+	if (f) {
+		tim = ts->tv_sec;
+		localtime_r(&tim, &tm);
 
-	strftime(buf, sizeof(buf), fmt, &tm);
-	fprintf(outfp, "%s", buf);
+		strftime(buf, sizeof(buf), fmt, &tm);
+		fprintf(outfp, "%s", buf);
+	}
 
 	*p = t;
 }
@@ -275,6 +277,7 @@ queue(const char *fn, __unusedx const struct stat *stb, int ftyp,
 
 	f = psc_pool_get(files_pool);
 	memset(f, 0, sizeof(*f));
+	f->f_fd = -1;
 	INIT_PSC_LISTENTRY(&f->f_lentry);
 	f->f_fn = pfl_strdup(fn);
 	lc_add(&files, f);
@@ -526,7 +529,7 @@ main(int argc, char *argv[])
 	    PRFMTSTRCASEV('n', need |= NEED_INO)
 	    PRFMTSTRCASEV('R', need |= NEED_INOX)
 	    PRFMTSTRCASEV('s', )
-	    PRFMTSTRCASEV('T', )
+	    PRFMTSTRCASEV('T', pr_times(&_t, NULL, NULL))
 	    PRFMTSTRCASEV('u', )
 	    PRFMTSTRCASEV('v', need |= NEED_INO)
 	    PRFMTSTRCASEV('X', need |= NEED_INOX)
@@ -569,4 +572,3 @@ main(int argc, char *argv[])
 		pthread_join(thrv[i]->pscthr_pthread, NULL);
 	exit(0);
 }
-// sort and use setsize id to scan
