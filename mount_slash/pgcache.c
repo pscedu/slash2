@@ -243,7 +243,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_last_sliod = IOS_ID_ANY;
 
 	BMAP_LOCK(b);
-	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 	if (b->bcm_flags & BMAP_DIO) {
 		r->biorq_flags |= BIORQ_DIO;
 		if (flags & BIORQ_READ) {

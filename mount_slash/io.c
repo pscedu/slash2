@@ -1902,9 +1902,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				}
 				BMPCE_ULOCK(e);
 			}
-			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
-			bmap_op_done_type(r->biorq_bmap,
-			    BMAP_OPCNT_BIORQ);
+			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
 		} else {
 			/*
@@ -1918,6 +1916,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		}
 
 		bno = b->bcm_bmapno;
+		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
 		msl_fsrqinfo_biorq_add(q, r, i);
@@ -2020,6 +2019,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 
 			BIORQ_READ | BIORQ_READAHEAD);
+		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			BMAP_LOCK(b);
