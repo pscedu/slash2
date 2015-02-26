@@ -895,9 +895,13 @@ bmap_flush(void)
 			continue;
 		}
 
+#if 0
 		if (bmap_flushable(b) ||
 		   (b->bcm_flags & BMAP_TOFREE) ||
 		   (b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
+#else
+		{
+#endif
 			b->bcm_flags |= BMAP_CLI_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
