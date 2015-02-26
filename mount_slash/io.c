@@ -173,8 +173,7 @@ readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
  */
 __static struct bmpc_ioreq *
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
-    int rqnum, uint32_t roff, uint32_t len, int op, uint64_t fsz,
-    int last)
+    int rqnum, uint32_t roff, uint32_t len, int op)
 {
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
@@ -1876,8 +1875,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 */
 			r = msl_biorq_build(q, b, buf, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
-			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE,
-			    fsz, nr - 1);
+			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 			retry = 0;
 		}
 
