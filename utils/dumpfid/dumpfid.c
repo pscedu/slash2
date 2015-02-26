@@ -193,6 +193,9 @@ pr_repl_blks(FILE *outfp, struct file *f)
 {
 	uint32_t i;
 
+	if (S_ISDIR(f->f_sstb.sst_mode))
+		return;
+
 	for (i = 0; i < f->f_nrepls; i++)
 		fprintf(outfp, "%s%"PRIu64, i ? "," : "",
 		    i < SL_DEF_REPLICAS ?
@@ -213,6 +216,8 @@ pr_bmaps(struct thr *t, FILE *outfp, struct file *f)
 	size_t rc;
 	FILE *fp;
 
+	if (S_ISDIR(f->f_sstb.sst_mode))
+		return;
 	if (f->f_metasize <= SL_BMAP_START_OFF)
 		return;
 
@@ -272,7 +277,8 @@ queue(const char *fn, __unusedx const struct stat *stb, int ftyp,
 		return (PFL_FILEWALK_RC_SKIP);
 	}
 
-	if (ftyp != PFWT_F)
+	if (ftyp != PFWT_F &&
+	    ftyp != PFWT_D)
 		return (0);
 
 	f = psc_pool_get(files_pool);
