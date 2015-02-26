@@ -1925,7 +1925,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
 		    &raoff2, &rapages2))
-			continue;
+			goto next;
 
 		DEBUG_BIORQ(PLL_DIAG, r, "aoff = %d, npages = %d, raoff=%d rapages=%d "
 		    "raoff2=%d rapages2=%d, mfh->mfh_predio_off = %ld",
