@@ -1820,7 +1820,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	tlen = MIN(SLASH_BMAP_SIZE - (size_t)roff, tsize);
 
 	/*
-	 * Step 1: build biorqs and get bmap.
+	 * Step 1: request bmaps and build biorqs.
 	 *
 	 * For each block range, get its bmap and make a request into
 	 * its page cache.  This first loop retrieves all the pages.
@@ -1890,8 +1890,20 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		msl_fsrqinfo_biorq_add(q, r, i);
 
-		if (rw == SL_WRITE || i != nr - 1)
+		/*
+		 * Trigger read-ahead or write-ahead on the last request.
+		 */
+		if (i != nr - 1)
 			goto next;
+
+		/*
+		 * We should always be able to ask for the next bmap because 
+		 * a future write can extend the length of a file.
+		 */
+		if (rw == SL_WRITE) {
+			mfh_prod_writeahead(mfh, bno + 1);
+			goto next;
+		}
 		
 		aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
 		alen = tlen + (roff & BMPC_BUFMASK);
@@ -1940,16 +1952,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		tsize -= tlen;
 		if (buf)
 			buf += tlen;
-
 		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
-
-	/*
-	 * We should always be able to ask for the next bmap because a future write can
-	 * extend the length of a file.
-	 */
-	if (rw == SL_WRITE)
-		mfh_prod_writeahead(mfh, bno + 1);
 
 	/*
 	 * Step 2: launch biorqs if necessary
