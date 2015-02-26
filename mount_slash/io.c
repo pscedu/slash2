@@ -181,14 +181,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	int i, npages;
 	uint32_t aoff, alen, bmpce_off;
 
-	/*
-	 * Align the offset and length to the start of a page.  Note
-	 * that roff is already made relative to the start of the given
-	 * bmap.
-	 */
-	aoff = roff & ~BMPC_BUFMASK;
-	alen = len + (roff & BMPC_BUFMASK);
-
 	DEBUG_BMAP(PLL_DIAG, b,
 	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
 	    pll_nitems(&bmap_2_bmpc(b)->bmpc_lru));
@@ -200,12 +192,20 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	psc_assert(roff + len <= SLASH_BMAP_SIZE);
 
 	r = bmpc_biorq_new(q, b, buf, roff, len, op);
+	/*
+	 * If the request is set to use Direct I/O, then we don't
+	 * need to associate pages with it.
+	 */
 	if (r->biorq_flags & BIORQ_DIO)
-		/*
-		 * The bmap is set to use directio; we may then skip
-		 * cache preparation.
-		 */
-		goto out;
+		return (r);
+
+	/*
+	 * Align the offset and length to the start of a page.  Note
+	 * that roff is already made relative to the start of the given
+	 * bmap.
+	 */
+	aoff = roff & ~BMPC_BUFMASK;
+	alen = len + (roff & BMPC_BUFMASK);
 
 	/*
 	 * Calculate the number of pages needed to accommodate this
@@ -235,8 +235,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		psc_dynarray_add(&r->biorq_pages, e);
 	}
-
- out:
 	return (r);
 }
 
