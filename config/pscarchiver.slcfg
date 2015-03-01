@@ -114,82 +114,69 @@ site @PSCARCH {
 		desc	= "sense0 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ffb;
-		ios	= sense0s0@PSCARCH, sense0s1@PSCARCH, sense0s2@PSCARCH, sense0s3@PSCARCH, sense0s4@PSCARCH, sense0s5@PSCARCH, sense0s6@PSCARCH, sense0s7@PSCARCH;
+		ios	= sense0s0, sense0s1, sense0s2, sense0s3, sense0s4, sense0s5, sense0s6, sense0s7;
 	}
 
 	resource sense1 {
 		desc	= "sense1 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ffc;
-		ios	= sense1s0@PSCARCH, sense1s1@PSCARCH, sense1s2@PSCARCH, sense1s3@PSCARCH, sense1s4@PSCARCH, sense1s5@PSCARCH, sense1s6@PSCARCH;
+		ios	= sense1s0, sense1s1, sense1s2, sense1s3, sense1s4, sense1s5, sense1s6;
 	}
 
 	resource sense2 {
 		desc	= "sense2 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ffd;
-		ios	= sense2s0@PSCARCH, sense2s1@PSCARCH, sense2s2@PSCARCH, sense2s3@PSCARCH, sense2s4@PSCARCH, sense2s5@PSCARCH, sense2s6@PSCARCH, sense2s7@PSCARCH;
+		ios	= sense2s0, sense2s1, sense2s2, sense2s3, sense2s4, sense2s5, sense2s6, sense2s7;
 	}
 
 	resource sense3 {
 		desc	= "sense3 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ffe;
-		ios	= sense3s0@PSCARCH, sense3s1@PSCARCH, sense3s2@PSCARCH, sense3s3@PSCARCH, sense3s4@PSCARCH, sense3s5@PSCARCH, sense3s6@PSCARCH;
+		ios	= sense3s0, sense3s1, sense3s2, sense3s3, sense3s4, sense3s5, sense3s6;
 	}
 
 	resource sense4 {
 		desc	= "sense4 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ff9;
-		ios	= sense4s0@PSCARCH, sense4s1@PSCARCH, sense4s2@PSCARCH, sense4s3@PSCARCH, sense4s4@PSCARCH, sense4s5@PSCARCH, sense4s6@PSCARCH, sense4s7@PSCARCH;
+		ios	= sense4s0, sense4s1, sense4s2, sense4s3, sense4s4, sense4s5, sense4s6, sense4s7;
 	}
 
 	resource sense5 {
 		desc	= "sense5 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ffa;
-		ios	= sense5s0@PSCARCH, sense5s1@PSCARCH, sense5s2@PSCARCH, sense5s3@PSCARCH, sense5s4@PSCARCH, sense5s5@PSCARCH, sense5s6@PSCARCH;
+		ios	= sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6;
 	}
 
 	resource sense6 {
 		desc	= "sense6 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ff6;
-		ios	= sense6s0@PSCARCH, sense6s1@PSCARCH, sense6s2@PSCARCH, sense6s3@PSCARCH, sense6s4@PSCARCH, sense6s5@PSCARCH, sense6s6@PSCARCH, sense6s7@PSCARCH;
+		ios	= sense6s0, sense6s1, sense6s2, sense6s3, sense6s4, sense6s5, sense6s6, sense6s7;
 	}
 
 	resource sense7 {
 		desc	= "sense7 sliods";
 		type	= cluster_noshare_lfs;
 		id	= 0x1ff7;
-		ios	= sense7s0@PSCARCH, sense7s1@PSCARCH, sense7s2@PSCARCH, sense7s3@PSCARCH, sense7s4@PSCARCH, sense7s5@PSCARCH, sense7s6@PSCARCH;
+		ios	= sense7s0, sense7s1, sense7s2, sense7s3, sense7s4, sense7s5, sense7s6;
 	}
 
 	resource sense {
 		desc	= "sense";
 		type	= cluster_noshare_lfs;
 		id	= 0x1fff;
-		ios	= sense0s0@PSCARCH, sense0s1@PSCARCH, sense0s2@PSCARCH, sense0s3@PSCARCH, sense0s4@PSCARCH, sense0s5@PSCARCH, sense0s6@PSCARCH, sense0s7@PSCARCH,
-			  sense1s0@PSCARCH, sense1s1@PSCARCH, sense1s2@PSCARCH, sense1s3@PSCARCH, sense1s4@PSCARCH, sense1s5@PSCARCH, sense1s6@PSCARCH,
-			  sense2s0@PSCARCH, sense2s1@PSCARCH, sense2s2@PSCARCH, sense2s3@PSCARCH, sense2s4@PSCARCH, sense2s5@PSCARCH, sense2s6@PSCARCH, sense2s7@PSCARCH,
-			  sense3s0@PSCARCH, sense3s1@PSCARCH, sense3s2@PSCARCH, sense3s3@PSCARCH, sense3s4@PSCARCH, sense3s5@PSCARCH, sense3s6@PSCARCH,
-			  sense4s0@PSCARCH, sense4s1@PSCARCH, sense4s2@PSCARCH, sense4s3@PSCARCH, sense4s4@PSCARCH, sense4s5@PSCARCH, sense4s6@PSCARCH, sense4s7@PSCARCH,
-			  sense5s0@PSCARCH, sense5s1@PSCARCH, sense5s2@PSCARCH, sense5s3@PSCARCH, sense5s4@PSCARCH, sense5s5@PSCARCH, sense5s6@PSCARCH,
-			  sense6s0@PSCARCH, sense6s1@PSCARCH, sense6s2@PSCARCH, sense6s3@PSCARCH, sense6s4@PSCARCH, sense6s5@PSCARCH, sense6s6@PSCARCH, sense6s7@PSCARCH,
-			  sense7s0@PSCARCH, sense7s1@PSCARCH, sense7s2@PSCARCH, sense7s3@PSCARCH, sense7s4@PSCARCH, sense7s5@PSCARCH, sense7s6@PSCARCH;
+		ios	= sense0s0, sense0s1, sense0s2, sense0s3, sense0s4, sense0s5, sense0s6, sense0s7,
+			  sense1s0, sense1s1, sense1s2, sense1s3, sense1s4, sense1s5, sense1s6,
+			  sense2s0, sense2s1, sense2s2, sense2s3, sense2s4, sense2s5, sense2s6, sense2s7,
+			  sense3s0, sense3s1, sense3s2, sense3s3, sense3s4, sense3s5, sense3s6,
+			  sense4s0, sense4s1, sense4s2, sense4s3, sense4s4, sense4s5, sense4s6, sense4s7,
+			  sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6,
+			  sense6s0, sense6s1, sense6s2, sense6s3, sense6s4, sense6s5, sense6s6, sense6s7,
+			  sense7s0, sense7s1, sense7s2, sense7s3, sense7s4, sense7s5, sense7s6;
 	}
-
-	# hosts are only full-duplex up to 1.4GB/s empirically
-	# aggr = 1.4GB;
-	route sense0 { endpoints = sense0s0, sense0s1, sense0s2, sense0s3, sense0s4, sense0s5, sense0s6, sense0s7; }
-	route sense1 { endpoints = sense1s0, sense1s1, sense1s2, sense1s3, sense1s4, sense1s5, sense1s6; }
-	route sense2 { endpoints = sense2s0, sense2s1, sense2s2, sense2s3, sense2s4, sense2s5, sense2s6, sense2s7; }
-	route sense3 { endpoints = sense3s0, sense3s1, sense3s2, sense3s3, sense3s4, sense3s5, sense3s6; }
-	route sense4 { endpoints = sense4s0, sense4s1, sense4s2, sense4s3, sense4s4, sense4s5, sense4s6, sense4s7; }
-	route sense5 { endpoints = sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6; }
-	route sense6 { endpoints = sense6s0, sense6s1, sense6s2, sense6s3, sense6s4, sense6s5, sense6s6, sense6s7; }
-	route sense7 { endpoints = sense7s0, sense7s1, sense7s2, sense7s3, sense7s4, sense7s5, sense7s6; }
-
-	# route sense { endpoints = sense0, sense1, sense2, sense3, sense4, sense5, sense6, sense7; }
 }
