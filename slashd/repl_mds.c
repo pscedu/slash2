@@ -536,55 +536,6 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	return (rc);
 }
 
-void
-slm_iosv_setbusy(sl_replica_t *iosv, int nios)
-{
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
-	struct sl_resource *r;
-	int n;
-
-	/* this must be sorted to avoid deadlocks */
-	qsort(iosv, nios, sizeof(iosv[0]), iosid_cmp);
-	for (n = 0; n < nios; n++) {
-		r = libsl_id2res(iosv[n].bs_id);
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
-		RPMI_LOCK(rpmi);
-		while (si->si_flags & SIF_BUSY) {
-			psc_waitq_wait_mutex(&rpmi->rpmi_waitq,
-			    &rpmi->rpmi_mutex);
-			RPMI_LOCK(rpmi);
-		}
-		si->si_flags |= SIF_BUSY;
-		si->si_owner = pthread_self();
-		RPMI_ULOCK(rpmi);
-	}
-}
-
-void
-slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
-{
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
-	struct sl_resource *r;
-	int n;
-
-	for (n = 0; n < nios; n++) {
-		r = libsl_id2res(iosv[n].bs_id);
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
-		RPMI_LOCK(rpmi);
-		psc_assert(si->si_flags & SIF_BUSY);
-		si->si_flags &= ~SIF_BUSY;
-		si->si_owner = 0;
-		RPMI_ULOCK(rpmi);
-		psc_waitq_wakeall(&rpmi->rpmi_waitq);
-	}
-}
-
 #define PUSH_IOS(b, a, id, st)						\
 	do {								\
 		(a)->stat[(a)->nios] = (st);				\
@@ -738,8 +689,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
-	slm_iosv_setbusy(iosv, nios);
-
 	/* Find/add our replica's IOS ID */
 	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f),
 	    iosv, iosidx, nios);
@@ -891,7 +840,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
  out:
 	if (f)
 		fcmh_op_done(f);
-	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
 
@@ -943,8 +891,6 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
 		return (-rc);
-
-	slm_iosv_setbusy(iosv, nios);
 
 	flags = 0;
 	if (fcmh_isdir(f))
