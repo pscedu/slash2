@@ -1563,7 +1563,7 @@ mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
 	if (!mfh->mfh_predio_nseq)
 		return;
 
-	(void) bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE, 
+	(void) bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE,
 		BMAPGETF_CREATE | BMAPGETF_ASYNC, NULL);
 #endif
 
@@ -1603,7 +1603,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	if (!mfh->mfh_predio_nseq)
 		PFL_GOTOERR(out, 0);
 
-	if (off + npages * BMPC_BUFSZ + 
+	if (off + npages * BMPC_BUFSZ +
 	    psc_atomic32_read(&slc_readahead_pipesz) * BMPC_BUFSZ <
 	    mfh->mfh_predio_off)
 		PFL_GOTOERR(out, 0);
@@ -1887,20 +1887,22 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		msl_fsrqinfo_biorq_add(q, r, i);
 
 		/*
-		 * Trigger read-ahead or write-ahead on the last request.
+		 * Trigger read-ahead or write-ahead on the last
+		 * request.
 		 */
 		if (i != nr - 1)
 			goto next;
 
 		/*
-		 * We should always be able to ask for the next bmap because 
-		 * a future write can extend the length of a file.
+		 * We should always be able to ask for the next bmap
+		 * because a future write can extend the length of a
+		 * file.
 		 */
 		if (rw == SL_WRITE) {
 			mfh_prod_writeahead(mfh, bno + 1);
 			goto next;
 		}
-		
+
 		aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
 		alen = tlen + (roff & BMPC_BUFMASK);
 
@@ -1912,33 +1914,38 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (b->bcm_bmapno < nbmaps - 1)
 			bsize = SLASH_BMAP_SIZE;
 		else
-			bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
+			bsize = fsz - (uint64_t)SLASH_BMAP_SIZE *
+			    (nbmaps - 1);
 
 		/*
-		 * XXX: Enlarge the original request to include some readhead
-		 * pages within the same bmap can save extra RPCs.  And the cost
-		 * of waiting them all should be minimal.
+		 * XXX: Enlarge the original request to include some
+		 * readhead pages within the same bmap can save extra
+		 * RPCs.  And the cost of waiting them all should be
+		 * minimal.
 		 */
-		if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages,
-		    &raoff2, &rapages2))
+		if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
+		    &rapages, &raoff2, &rapages2))
 			goto next;
 
-		DEBUG_BIORQ(PLL_DIAG, r, "aoff = %d, npages = %d, raoff=%d rapages=%d "
-		    "raoff2=%d rapages2=%d, mfh->mfh_predio_off = %ld",
-		    aoff, npages, raoff, rapages, raoff2, rapages2, mfh->mfh_predio_off);
+		DEBUG_BIORQ(PLL_DIAG, r, "aoff=%d npages=%d raoff=%d "
+		    "rapages=%d raoff2=%d rapages2=%d predio_off=%ld",
+		    aoff, npages, raoff, rapages, raoff2, rapages2,
+		    mfh->mfh_predio_off);
 
 		/*
-		 * Enqueue read ahead for next sequential region of file space.
+		 * Enqueue read ahead for next sequential region of file
+		 * space.
 		 */
-		readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno, raoff,
-		    rapages);
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno,
+		    raoff, rapages);
 
 		/*
-		 * Enqueue read ahead into next bmap if our prediction would
-		 * extend into that space.
+		 * Enqueue read ahead into next bmap if our prediction
+		 * would extend into that space.
 		 *
-		 * XXX: There used to be a dequeue logic that removes the file
-		 * from read-ahead if a subsequent read is not sequential.
+		 * XXX: There used to be a dequeue logic that removes
+		 * the file from read-ahead if a subsequent read is not
+		 * sequential.
 		 */
 		if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 			readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
@@ -2033,7 +2040,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAP_DIO)
 			goto end;
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, 
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0,
 			BIORQ_READ | BIORQ_READAHEAD);
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
