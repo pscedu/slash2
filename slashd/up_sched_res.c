@@ -110,7 +110,7 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
 		UPD_DECREF(upd);
 }
 
-/**
+/*
  * Handle batch replication finish/error.  If success, we update the
  * bmap to the new residency states.  If error, we revert all changes
  * and set things back to a virgin state for future processing.
@@ -220,7 +220,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 	}
 }
 
-/**
+/*
  * Try arranging a REPL_SCHEDWK for a bmap between a source and dst IOS
  * pair.  We estimate the data to reserve bandwidth then add the entry
  * to a batch RPC for the destination.  We mark the bmap residency table
@@ -458,7 +458,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
-/**
+/*
  * Try to issue a PTRUNC resolution to an ION.
  * Returns:
  *   -1	: The activity can never happen; give up.
@@ -1171,8 +1171,8 @@ slmupschthr_spawn(void)
 			upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 }
 
-/**
- * upschq_resm - Schedule a PAGEIN for a resm.
+/*
+ * Schedule a PAGEIN for a resm.
  */
 void
 upschq_resm(struct sl_resm *m, int type)
@@ -1207,8 +1207,8 @@ upschq_resm(struct sl_resm *m, int type)
 	UPD_UNBUSY(upd);
 }
 
-/**
- * upd_initf - Initialize a peer resource update.
+/*
+ * Initialize a peer resource update.
  * @upd: peer update structure.
  * @type: type of update.
  * @flags: operation flags.
