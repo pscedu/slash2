@@ -41,7 +41,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 
-struct sl_mds_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
+struct slm_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
 	"propagate",
@@ -82,7 +82,7 @@ lookup(const char **tab, int n, const char *key)
 int
 slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels,
-    struct sl_mds_nsstats *st, int d_val, int o_val, int s_val)
+    struct slm_nsstats *st, int d_val, int o_val, int s_val)
 {
 	int d_start, o_start, s_start, i_d, i_o, i_s;
 	char nbuf[16];
