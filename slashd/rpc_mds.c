@@ -115,25 +115,16 @@ slm_rpc_initsvc(void)
 }
 
 void
-slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
+slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
+    struct pscrpc_msg *m, int idx)
 {
 	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
 	struct srt_statfs *f;
-	struct pscrpc_msg *m;
 	struct sl_resm *resm;
-	int locked;
+	struct rpmi_ios *si;
 
-	m = type == PSCRPC_MSG_REPLY ? rq->rq_repmsg : rq->rq_reqmsg;
-	if (m == NULL) {
-		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
-		return;
-	}
-	if (m->bufcount < 2) {
-		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
-		return;
-	}
-	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
+	psc_assert(idx >= 0);
+	f = pscrpc_msg_buf(m, idx, sizeof(*f));
 	if (f == NULL) {
 		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
 		return;
@@ -148,52 +139,57 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		    resm->resm_name);
 		return;
 	}
-	si = res2iosinfo(resm->resm_res);
 	rpmi = res2rpmi(resm->resm_res);
-	locked = RPMI_RLOCK(rpmi);
+	si = rpmi->rpmi_info;
+	RPMI_LOCK(rpmi);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
-	RPMI_URLOCK(rpmi, locked);
+	RPMI_ULOCK(rpmi);
 }
 
-int
-slrpc_newreq(struct slashrpc_cservice *csvc, int op,
-    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+void
+slm_rpc_ion_unpack_bwqueued(struct pscrpc_request *rq,
+    struct pscrpc_msg *m, int idx)
 {
-	int rc;
+	struct resprof_mds_info *rpmi;
+	struct srt_bwqueued *sbq;
+	struct rpmi_ios *si;
+	struct sl_resm *resm;
 
-	if (csvc->csvc_peertype == SLCONNT_IOD &&
-	    op == SRMT_PING) {
-		int qlens[] = {
-			qlen,
-			sizeof(struct srt_authbuf_footer)
-		};
-		int plens[] = {
-			plen,
-			sizeof(struct srt_statfs),
-			sizeof(struct srt_authbuf_footer)
-		};
+	resm = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
+	if (resm == NULL) {
+		psclog_errorx("unknown peer");
+		return;
+	}
+	psc_assert(idx >= 0);
+	sbq = pscrpc_msg_buf(m, idx, sizeof(*sbq));
+	if (sbq == NULL) {
+		DEBUG_REQ(PLL_ERROR, rq, "unable to import bwqueued");
+		return;
+	}
+	rpmi = res2rpmi(resm->resm_res);
+	si = rpmi->rpmi_info;
+	RPMI_LOCK(rpmi);
 
-		rc = RSX_NEWREQN(csvc->csvc_import, csvc->csvc_version,
-		    op, *rqp, nitems(qlens), qlens, nitems(plens),
-		    plens, *(void **)mqp);
-	} else
-		rc = slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp);
-	return (rc);
+	si->si_bw_ingress.bwd_inflight = 0;
+	si->si_bw_egress.bwd_inflight = 0;
+	si->si_bw_aggr.bwd_inflight = 0;
+
+	si->si_bw_ingress.bwd_queued = sbq->sbq_ingress;
+	si->si_bw_egress.bwd_queued = sbq->sbq_egress;
+	si->si_bw_aggr.bwd_queued = sbq->sbq_aggr;
+
+	RPMI_ULOCK(rpmi);
 }
 
 void
 slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
-	if (rq->rq_reqmsg->opc == SRMT_CONNECT) {
-		struct srm_connect_req *mq;
-		struct pscrpc_msg *m;
+	struct pscrpc_msg *m = rq->rq_reqmsg;
 
-		m = rq->rq_reqmsg;
-		if (m == NULL) {
-			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
-			return;
-		}
+	if (m->opc == SRMT_CONNECT) {
+		struct srm_connect_req *mq;
+
 		if (m->bufcount < 1) {
 			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
 			return;
@@ -211,17 +207,31 @@ slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
 void
 slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_IOD &&
-	    rq->rq_reqmsg->opc == SRMT_PING)
-		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REPLY);
+	struct pscrpc_msg *m = rq->rq_repmsg;
+
+	if (csvc->csvc_peertype == SLCONNT_IOD && m) {
+		int idx = m->bufcount - 2;
+
+		if (m->flags & SLRPC_MSGF_STATFS)
+			slm_rpc_ion_unpack_statfs(rq, m, idx--);
+		if (m->flags & SLRPC_MSGF_BWQUEUED)
+			slm_rpc_ion_unpack_bwqueued(rq, m, idx--);
+	}
 }
 
 void
 slrpc_req_in(struct pscrpc_request *rq)
 {
-	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service &&
-	    rq->rq_reqmsg->opc == SRMT_PING)
-		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
+	struct pscrpc_msg *m = rq->rq_reqmsg;
+
+	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service && m) {
+		int idx = m->bufcount - 2;
+
+		if (m->flags & SLRPC_MSGF_STATFS)
+			slm_rpc_ion_unpack_statfs(rq, m, idx--);
+		if (m->flags & SLRPC_MSGF_BWQUEUED)
+			slm_rpc_ion_unpack_bwqueued(rq, m, idx--);
+	}
 }
 
 int
@@ -230,16 +240,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 {
 	int rc;
 
-	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
-		int plens[] = {
-			plen,
-			sizeof(struct srt_authbuf_footer)
-		};
-
-		rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
-		    nitems(plens), plens, rcoff);
-	} else
-		rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
+	rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_rep *mp = *(void **)mpp;
 
@@ -260,6 +261,7 @@ void
 batchrq_decref(struct batchrq *br, int rc)
 {
 	int finish = 0;
+
 	// LOCK_ENSURE(&batchrqs_lock);
 
 	if (br->br_rc == 0)
@@ -590,10 +592,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 	} else {
 		struct psc_listcache *l;
 		struct batchrq *br;
-		sl_replica_t repl;
 
-		repl.bs_id = resm->resm_res_id;
-		slm_iosv_setbusy(&repl, 1);
 		upschq_resm(resm, UPDT_HLDROP);
 
 		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;

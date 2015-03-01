@@ -160,7 +160,7 @@ site2smi(struct sl_site *site)
 }
 
 /* per-MDS eventually consistent namespace stats */
-struct sl_mds_nsstats {
+struct slm_nsstats {
 	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
 };
 
@@ -183,11 +183,11 @@ struct sl_mds_nsstats {
 	_SLM_NSSTATS_ADJ(dec, (peerinfo), (dir), (op), (sum))
 
 /*
- * This structure tracks the progress of namespace log application on a
- * MDS.  We allow one pending request per MDS until it responds or
- * timeouts.
+ * This structure is attached to the sl_resource for MDS peers.  It tracks the
+ * progress of namespace log application on an MDS.  We allow one pending
+ * request per MDS until it responds or timeouts.
  */
-struct sl_mds_peerinfo {
+struct rpmi_mds {
 	struct psc_meter	  sp_batchmeter;
 #define sp_batchno sp_batchmeter.pm_cur
 	uint64_t		  sp_xid;
@@ -198,41 +198,56 @@ struct sl_mds_peerinfo {
 
 	int			  sp_send_count;	/* # of updates in the batch */
 	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
-
 	uint64_t		  sp_recv_seqno;	/* last received log sequence number */
 
-	struct sl_mds_nsstats	  sp_stats;
+	struct slm_nsstats	  sp_stats;
 };
+#define sl_mds_peerinfo rpmi_mds
 
 #define	SPF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 
-#define res2mdsinfo(res)	((struct sl_mds_peerinfo *)res2rpmi(res)->rpmi_info)
+#define res2rpmi_mds(res)	((struct rpmi_mds *)res2rpmi(res)->rpmi_info)
+#define res2mdsinfo(res)	res2rpmi_mds(res)
+
+/* bandwidth */
+#define BW_QUEUESZ		(8 * 32 * 1024)		/* max allowable in queue */
+
+/* bandwidth and reserved in one direction */
+struct bw_dir {
+	int32_t			 bwd_queued;		/* bandwidth in reserve queue */
+	int32_t			 bwd_inflight;		/* scratchpad until update is recv'd */
+	int32_t			 bwd_assigned;		/* amount MDS has assigned */
+};
 
 /*
- * This structure tracks the progress of garbage collection on each I/O
- * server.
+ * This structure is attached to the sl_resource for IOS peers.  It tracks the
+ * progress of garbage collection on each IOS.
  */
-struct sl_mds_iosinfo {
-	int			  si_flags;
-	pthread_t		  si_owner;
-	struct timespec		  si_lastcomm;		/* last communication (PING) to track soft conn reset */
+struct rpmi_ios {
+	struct timespec		  si_lastcomm;		/* PING timeout to trigger conn reset */
 	uint64_t		  si_xid;		/* garbage reclaim transaction group identifier */
 	struct psc_meter	  si_batchmeter;
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
+	int			  si_flags;
 	struct srt_statfs	  si_ssfb;
+
+	struct bw_dir		  si_bw_ingress;	/* incoming bandwidth */
+	struct bw_dir		  si_bw_egress;		/* outgoing bandwidth */
+	struct bw_dir		  si_bw_aggr;		/* aggregate (incoming + outgoing) */
 };
+#define sl_mds_iosinfo rpmi_ios
 
 #define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 #define SIF_DISABLE_LEASE	(1 << 1)		/* disable bmap lease assignments */
 #define SIF_DISABLE_ADVLEASE	(1 << 2)		/* advisory (from sliod) control */
 #define SIF_DISABLE_GC		(1 << 3)		/* disable garbage collection temporarily */
-#define SIF_BUSY		(1 << 4)
-#define SIF_UPSCH_PAGING	(1 << 5)
-#define	SIF_NEW_PROG_ENTRY	(1 << 6)		/* new entry in the reclaim prog file */
-#define	SIF_PRECLAIM_NOTSUP	(1 << 7)		/* can punch holes for replica ejection */
+#define SIF_UPSCH_PAGING	(1 << 4)		/* upsch will page more work in destined for this IOS */
+#define	SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
+#define	SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
 
-#define res2iosinfo(r)		((struct sl_mds_iosinfo *)res2rpmi(r)->rpmi_info)
+#define res2rpmi_ios(r)		((struct rpmi_ios *)res2rpmi(r)->rpmi_info)
+#define res2iosinfo(res)	res2rpmi_ios(res)
 
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
@@ -241,7 +256,7 @@ struct resprof_mds_info {
 	struct psc_waitq	  rpmi_waitq;
 	struct psc_listcache	  rpmi_batchrqs;
 
-	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
+	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
 	void			 *rpmi_info;
 };
 
@@ -258,8 +273,7 @@ res2rpmi(struct sl_resource *res)
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
-	int			 rmmi_busyid;
-	atomic_t		 rmmi_refcnt;		/* #CLIs using this ion */
+	psc_atomic32_t		 rmmi_refcnt;		/* #CLIs using this ion */
 };
 
 static __inline struct resm_mds_info *
@@ -370,8 +384,6 @@ int		 mds_lease_reassign(struct fidc_membh *,
 
 int		 mds_sliod_alive(void *);
 
-void		 slm_iosv_setbusy(sl_replica_t *, int);
-
 void		 slmbkdbthr_main(struct psc_thread *);
 void		 slmbmaptimeothr_spawn(void);
 void		 slmctlthr_main(const char *);
@@ -398,7 +410,7 @@ void		 _dbdo(const struct pfl_callerinfo *,
 extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;
 extern struct pfl_odt		*slm_ptrunc_odt;
-extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
+extern struct slm_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct psc_listcache	 slm_db_lopri_workq;
 extern struct psc_listcache	 slm_db_hipri_workq;
 
