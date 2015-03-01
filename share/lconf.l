@@ -76,7 +76,7 @@ yes|no {
 }
 
 parallel_lfs|cluster_noshare_lfs|parallel_lfs_compnt|standalone_fs|archival_fs|mds {
-	psclog_trace("Resource type string %s", yytext);
+	psclog_trace("RESOURCE_TYPE %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);
 }
@@ -100,7 +100,7 @@ parallel_lfs|cluster_noshare_lfs|parallel_lfs_compnt|standalone_fs|archival_fs|m
 }
 
 {lnetname} {
-	psclog_trace("LNETNAME string %s", yytext);
+	psclog_trace("LNETNAME %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (LNETNAME);
 }
@@ -138,7 +138,7 @@ parallel_lfs|cluster_noshare_lfs|parallel_lfs_compnt|standalone_fs|archival_fs|m
 {quotedstr} {
 	size_t len;
 
-	psclog_trace("Quoted string %s", yytext);
+	psclog_trace("QUOTEDS %s", yytext);
 	len = strlen(yytext);
 	psc_assert(len > 1);
 
