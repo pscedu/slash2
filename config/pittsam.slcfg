@@ -54,10 +54,6 @@ site @PSC {
 	resource sense51 {
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0@PSC, sense51s1@PSC, sense51s2@PSC, sense51s3@PSC, sense51s4@PSC, sense51s5@PSC, sense51s6@PSC;
+		ios	= sense51s0, sense51s1, sense51s2, sense51s3, sense51s4, sense51s5, sense51s6;
 	}
-
-	route sense51 { endpoints = sense51s0, sense51s1, sense51s2, sense51s3, sense51s4, sense51s5, sense51s6; };
 }
-
-route { endpoints = PSCARCH, PITT };
