@@ -188,10 +188,10 @@ struct sl_mds_nsstats {
  * timeouts.
  */
 struct sl_mds_peerinfo {
-	int			  sp_flags;
 	struct psc_meter	  sp_batchmeter;
 #define sp_batchno sp_batchmeter.pm_cur
 	uint64_t		  sp_xid;
+	int			  sp_flags;
 
 	int			  sp_fails;		/* the number of successive RPC failures */
 	int			  sp_skips;		/* the number of times to skip */
