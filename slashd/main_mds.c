@@ -133,9 +133,9 @@ append_path(const char *newpath)
  * the paths needed by the system() is built in at compile time and
  * added by append_path() at run time.
  *
- * We don't check WEXITSTATUS(rc) after a system() call because sometimes
- * the ZFS tool can return an error (e.g., EEXIST) even if the pool is 
- * otherwise healthy.
+ * We don't check WEXITSTATUS(rc) after a system() call because
+ * sometimes the ZFS tool can return an error (e.g. EEXIST) even if the
+ * pool is otherwise healthy.
  */
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
@@ -155,7 +155,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	 * for some reason.
 	 */
 	dir = opendir(mountpoint);
-	if (dir != NULL) {
+	if (dir) {
 		i = 0;
 		while ((d = readdir(dir)) != NULL) {
 			if (i++ < 2)
@@ -167,23 +167,14 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
-	rc = snprintf(cmdbuf, sizeof(cmdbuf),
-	    "zpool import -f -c '%s' '%s'", zfspoolcf ? zfspoolcf : "",
-	    zpoolname);
-	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
-		psc_fatal("failed to construct command to import %s",
-		    zpoolname);
-	rc = system(cmdbuf);
+	rc = pfl_systemf("zpool import -f -c '%s' '%s'",
+	    zfspoolcf ?  zfspoolcf : "", zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to import zpool "
 		    "%s: %s", zpoolname, cmdbuf);
 
 	/* mount the default file system in the pool */
-	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount %s", zpoolname);
-	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
-		psc_fatal("failed to construct command to mount %s",
-		    zpoolname);
-	rc = system(cmdbuf);
+	rc = pfl_systemf("zfs mount %s", zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to mount %s",
 		    zpoolname);
@@ -210,9 +201,7 @@ slmconnthr_spawn(void)
 			slm_geticsvcf(m, CSVCF_NORECON);
 }
 
-/**
- * read_vfsid -
- *
+/*
  * Note: The root file system must have fsid of zero, so that a client
  * can see all the file systems in the pool.
  */
@@ -306,8 +295,8 @@ psc_register_filesystem(int vfsid)
 	if (!(zfsMount[vfsid].flag & ZFS_SLASH2_MKDIR) && fsname) {
 		fsname++;
 		/*
-		 * make sure that the newly mounted file system has an
-		 * entry
+		 * Make sure that the newly mounted file system has an
+		 * entry.
 		 */
 		slfid_to_vfsid(SLFID_ROOT, &root_vfsid);
 		rc = mdsio_lookup(root_vfsid, MDSIO_FID_ROOT, fsname,
