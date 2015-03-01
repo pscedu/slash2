@@ -63,10 +63,9 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct slm_resmlink	*repl_busytable;
-int			 repl_busytable_nents;
-psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
-struct sl_mds_iosinfo	 slm_null_si;
+struct sl_mds_iosinfo	 slm_null_si = {
+	.si_flags = SIF_PRECLAIM_NOTSUP
+};
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -1033,149 +1032,79 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
  out:
 	if (f)
 		fcmh_op_done(f);
-	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
 
-/**
- * mds_repl_nodes_adjbusy - Adjust the bandwidth estimate between two
- *	IONs.
- * @ma: resm #1.
- * @mb: resm #2.
+#define HAS_BW(bwd, amt)						\
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < BW_QUEUESZ)
+
+#define ADJ_BW(bwd, amt)						\
+	do {								\
+		(bwd)->bwd_inflight += (amt);				\
+		(bwd)->bwd_assigned += (amt);				\
+		psc_assert((bwd)->bwd_assigned >= 0);			\
+	} while (0)
+
+/*
+ * Adjust the bandwidth estimate between two IONs.
+ * @src: source resm.
+ * @dst: destination resm2.
  * @amt: adjustment amount.
- * @moreamt: whether there is still bandwidth left after reservation.
- * Returns: if @amt is positive, return value is the amount that has
- *	been reserved or zero if none could be allocated.
+ * @moreavail: whether there is still bandwidth left after this
+ * reservation.
  */
-int64_t
-mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
-    int64_t amt, int64_t *moreamt)
+int
+resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst, int64_t amt,
+    int *moreavail)
 {
-	int wake = 0, minid, maxid, locked;
-	struct resm_mds_info *ma, *mb;
-	struct slm_resmlink *srl;
+	struct resprof_mds_info *r_min, *r_max;
+	struct rpmi_ios *is, *id;
+	int rc = 0;
 
-	if (moreamt)
-		*moreamt = 0;
+	if (moreavail)
+		*moreavail = 0;
 
-	ma = resm2rmmi(rma);
-	mb = resm2rmmi(rmb);
+	/* sort by addr to avoid deadlock */
+	r_min = MIN(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
+	r_max = MIN(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
+	RPMI_LOCK(r_min);
+	RPMI_LOCK(r_max);
 
-	psc_assert(ma->rmmi_busyid != mb->rmmi_busyid);
-	minid = MIN(ma->rmmi_busyid, mb->rmmi_busyid);
-	maxid = MAX(ma->rmmi_busyid, mb->rmmi_busyid);
+	is = res2rpmi_ios(src->resm_res);
+	id = res2rpmi_ios(dst->resm_res);
 
-	locked = reqlock(&repl_busytable_lock);
-	srl = repl_busytable + MDS_REPL_BUSYNODES(minid, maxid);
+	if (amt < 0 ||
+	    (HAS_BW(&is->si_bw_egress, amt) &&
+	     HAS_BW(&is->si_bw_aggr, amt) &&
+	     HAS_BW(&id->si_bw_ingress, amt) &&
+	     HAS_BW(&id->si_bw_aggr, amt))) {
+		ADJ_BW(&is->si_bw_egress, amt);
+		ADJ_BW(&is->si_bw_aggr, amt);
+		ADJ_BW(&id->si_bw_ingress, amt);
+		ADJ_BW(&id->si_bw_aggr, amt);
 
-#if 0
-	if (psc_dynarray_len(&a->rpmi_upschq) == 0 &&
-	    psc_dynarray_len(&b->rpmi_upschq) == 0 && srl->srl_used)
-		srl->srl_used = 0;
-#endif
+		if (moreavail &&
+		    HAS_BW(&is->si_bw_egress, 1) &&
+		    HAS_BW(&is->si_bw_aggr, 1) &&
+		    HAS_BW(&id->si_bw_ingress, 1) &&
+		    HAS_BW(&id->si_bw_aggr, 1))
+			*moreavail = 1;
 
-	if (srl->srl_used + amt >= srl->srl_avail) {
+		rc = 1;
+	}
+
+	/* XXX upsch page in? */
+	if (amt < 0) {
 		/*
-		 * Requested amount was *greater* than available
-		 * bandwidth.  Give everything we have.
+		 * We released some bandwidth; wake anyone waiting for
+		 * some.
 		 */
-		amt = srl->srl_avail - srl->srl_used;
-		srl->srl_used = srl->srl_avail;
-	} else {
-		/*
-		 * Amount requested fits in available bandwidth (or we
-		 * are deallocating if amt < 0).  Satisfy request and
-		 * adjust.
-		 */
-		srl->srl_used += amt;
-		if (srl->srl_used < 0) {
-			srl->srl_used = 0;
-			wake = 1;
-		}
-		amt = srl->srl_used;
-
-		if (moreamt)
-			*moreamt = srl->srl_avail - srl->srl_used;
-	}
-	ureqlock(&repl_busytable_lock, locked);
-
-	/*
-	 * If we reset the amount, alert anyone waiting to utilize the
-	 * new connection slots.
-	 */
-	if (wake) {
-		CSVC_WAKE(rma->resm_csvc);
-		CSVC_WAKE(rmb->resm_csvc);
-	}
-	return (amt);
-}
-
-void
-mds_repl_node_clearallbusy(struct sl_resm *m)
-{
-	int n, j, locked[2], dummy;
-	struct resm_mds_info *rmmi;
-	struct sl_resource *r;
-	struct sl_resm *resm;
-	struct sl_site *s;
-
-	rmmi = resm2rmmi(m);
-	(void)CONF_TRYRLOCK(locked);
-	(void)tryreqlock(&repl_busytable_lock, locked + 1);
-
-	if (0) {
- retry:
-		if (CONF_HASLOCK())
-			CONF_ULOCK();
+		CSVC_WAKE(src->resm_csvc);
+		CSVC_WAKE(dst->resm_csvc);
 	}
 
-	if (!CONF_TRYRLOCK(&dummy))
-		goto retry;
-	if (!tryreqlock(&repl_busytable_lock, &dummy))
-		goto retry;
+	RPMI_ULOCK(r_max);
+	RPMI_ULOCK(r_min);
 
-	CONF_FOREACH_RESM(s, r, n, resm, j) {
-		if (!RES_ISFS(r) || resm->resm_csvc == NULL)
-			continue;
-		if (resm2rmmi(resm) != rmmi)
-			mds_repl_nodes_clearbusy(m, resm);
-	}
-	ureqlock(&repl_busytable_lock, locked[1]);
-	CONF_URLOCK(locked[0]);
-}
-
-void
-mds_repl_buildbusytable(void)
-{
-	struct resm_mds_info *rmmi;
-	struct slm_resmlink *srl;
-	struct sl_resource *r;
-	struct sl_resm *m;
-	struct sl_site *s;
-	int n, j;
-
-	/* count # resm's (IONs) and assign each a busy identifier */
-	CONF_LOCK();
-	spinlock(&repl_busytable_lock);
-	repl_busytable_nents = 0;
-	CONF_FOREACH_RESM(s, r, n, m, j) {
-		if (!RES_ISFS(r))
-			continue;
-		rmmi = resm2rmmi(m);
-		rmmi->rmmi_busyid = repl_busytable_nents++;
-	}
-	CONF_ULOCK();
-
-	if (repl_busytable)
-		PSCFREE(repl_busytable);
-	repl_busytable = psc_calloc(sizeof(*repl_busytable),
-	    repl_busytable_nents * (repl_busytable_nents + 1) / 2, 0);
-	for (n = 0; n < repl_busytable_nents; n++)
-		for (j = n + 1; j < repl_busytable_nents; j++) {
-			srl = repl_busytable + MDS_REPL_BUSYNODES(n, j);
-			srl->srl_avail = SLM_RESMLINK_DEF_BANDWIDTH;
-		}
-	freelock(&repl_busytable_lock);
-
-	slm_null_si.si_flags |= SIF_PRECLAIM_NOTSUP;
+	return (rc);
 }

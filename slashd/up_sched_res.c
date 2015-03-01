@@ -211,8 +211,8 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 		if (f)
 			fcmh_op_done(f);
 
-		mds_repl_nodes_adjbusy(src_resm, dst_resm,
-		    -bsr->bsr_amt, NULL);
+		resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt,
+		    NULL);
 		upschq_resm(dst_resm, UPDT_PAGEIN);
 //		upschq_resm(src_resm, UPDT_PAGEIN);
 
@@ -231,13 +231,13 @@ int
 slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
-	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc;
+	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc, moreavail;
 	struct slashrpc_cservice *csvc = NULL;
 	struct slm_batchscratch_repl *bsr;
 	struct srt_replwk_reqent pe;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
-	int64_t amt, moreamt;
+	int64_t amt;
 	sl_bmapno_t lastbno;
 
 	dst_resm = res_getmemb(dst_res);
@@ -255,12 +255,11 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		return (1);
 	}
 
-	spinlock(&repl_busytable_lock);
-	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt, &moreamt);
-	if (amt == 0) {
+	if (!resmpair_bw_adj(src_resm, dst_resm, amt, &moreavail)) {
 		/*
-		 * No bandwidth available.
-		 * Add "src to become unbusy" condition to multiwait.
+		 * No bandwidth available: bail and add "src to become
+		 * unbusy" and "dst to become unbusy" conditions to
+		 * multiwait.
 		 */
 		psc_multiwait_setcondwakeable(&slm_upsch_mw,
 		    &src_resm->resm_csvc->csvc_mwc, 1);
@@ -269,7 +268,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 		/* push batch out immediately */
 	}
-	freelock(&repl_busytable_lock);
 	if (amt == 0)
 		return (0);
 
@@ -353,7 +351,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * We succesfully scheduled some work; if there is more
 	 * bandwidth available, schedule more work.
 	 */
-	if (moreamt)
+	if (moreavail)
 		upschq_resm(dst_resm, UPDT_PAGEIN);
 
 	return (1);
@@ -372,8 +370,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 
 	if (bsr->bsr_amt)
-		mds_repl_nodes_adjbusy(src_resm, dst_resm,
-		    -bsr->bsr_amt, NULL);
+		resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt,
+		    NULL);
 
 	UPSCH_WAKE();
 
@@ -644,6 +642,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	sl_replica_t repl;
+return;
 
 	upg = upd_getpriv(tupd);
 	repl.bs_id = upg->upg_resm->resm_res_id;
@@ -687,8 +686,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		RPMI_LOCK(rpmi);
 	}
 	RPMI_ULOCK(rpmi);
-	slm_iosv_clearbusy(&repl, 1);
-	mds_repl_node_clearallbusy(upg->upg_resm);
 }
 
 void
@@ -1143,8 +1140,6 @@ slm_upsch_init(void)
 
 	psc_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
 	    upd_lentry, "upschq");
-
-	mds_repl_buildbusytable();
 }
 
 void

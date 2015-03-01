@@ -52,38 +52,6 @@ struct slrpc_cservice;
 #define RESM_ADDRBUF_SZ		(RES_NAME_MAX + PSCRPC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
 #define LNET_NAME_MAX		32
 
-/* smallest allocable bandwidth unit */
-#define BW_UNITSZ		4096
-
-/* utilization and available bandwidth in one direction */
-struct slcfg_route_dir {
-	uint32_t		 srd_avail;	/* units of RESMLINK_UNITSZ/sec */
-//	uint32_t		 srd_reserved;	/* estimate of IO and other traffic at IOS */
-	uint32_t		 srd_used;	/* amount MDS has scheduled */
-};
-
-/* bandwidth control point (bottleneck) */
-struct slcfg_route {
-	struct psc_dynarray	 srt_endpoints;
-	const char		*srt_name;
-
-	const char		*srt_filename;
-	int			 srt_lineno;
-
-	int			 srt_type;
-	void			*srt_ptr;	/* type-specific */
-	struct slcfg_route_dir	 srt_ingress;	/* bandwidth going into route node */
-	struct slcfg_route_dir	 srt_egress;	/* bandwidth coming out of route node */
-	struct slcfg_route_dir	 srt_aggr;	/* aggregate (egress + ingress), e.g.
-						 * for poor switching hardware */
-};
-
-enum {
-	SRTT_IOS,				/* IOS endpoint */
-	SRTT_SITE,				/* site "midnode" */
-	SRTT_NODE				/* hierarchical node */
-};
-
 enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
@@ -94,6 +62,7 @@ enum sl_res_type {
 	SLREST_STANDALONE_FS
 };
 
+/* XXX rename to RES_ISNODE() */
 #define RES_ISFS(res)							\
 	((res)->res_type == SLREST_ARCHIVAL_FS		||		\
 	 (res)->res_type == SLREST_PARALLEL_COMPNT	||		\
@@ -118,7 +87,6 @@ struct sl_resource {
 	char			 res_name[RES_NAME_MAX];
 	char			*res_desc;	/* human description */
 	struct slcfg_local	*res_localcfg;
-	struct slcfg_route	*res_route;
 };
 
 /* res_flags */
@@ -183,8 +151,6 @@ struct sl_site {
 	struct psc_listentry	 site_lentry;
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
-	struct slcfg_route	*site_rtnode;
-	struct psc_dynarray	 site_routes;
 };
 
 /* highest allowed site ID */
@@ -321,10 +287,6 @@ int			 slcfg_site_cmp(const void *, const void *);
 void			 slcfg_parse(const char *);
 void			 slcfg_resm_addaddr(char *, const char *);
 
-void			 slcfg_route_link(struct slcfg_route *, struct slcfg_route *);
-struct slcfg_route 	*slcfg_route_new(int, void *, const char *, ...);
-struct slcfg_route	*slcfg_route_lookup(const char *);
-
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 void			 libsl_init(int);
 char			*libsl_ios2name(sl_ios_id_t);
@@ -348,8 +310,6 @@ extern struct sl_resm	*nodeResm;
 
 #define nodeSite	nodeResm->resm_site
 #define nodeResProf	nodeResm->resm_res
-
-extern struct psc_dynarray slcfg_site_routes;
 
 extern struct slcfg_local *slcfg_local;
 extern struct sl_config	 globalConfig;

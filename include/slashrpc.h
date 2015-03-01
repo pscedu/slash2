@@ -326,6 +326,15 @@ struct srt_stat {
 		    sizeof(*(dst)) - _n);				\
 	} while (0)
 
+#define BW_UNITSZ		4096		/* denomination of bw */
+
+struct srt_bwqueued {
+	 int32_t		 sbq_ingress;
+	 int32_t		 sbq_egress;
+	 int32_t		 sbq_aggr;
+	 int32_t		_sbq_pad;
+} __packed;
+
 struct srt_statfs {
 	char			sf_type[16];
 	uint32_t		sf_bsize;	/* file system block size */

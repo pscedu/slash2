@@ -392,6 +392,7 @@ slmctlcmd_upsch_query(__unusedx int fd,
 	return (0);
 }
 
+#if 0
 __static int
 slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
     struct slmctlmsg_replpair *scrp, struct sl_resm *m0,
@@ -484,6 +485,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 	CONF_ULOCK();
 	return (rc);
 }
+#endif
 
 /**
  * slmctlrep_getstatfs - Send a response to a "GETSTATFS" inquiry.
@@ -620,7 +622,7 @@ struct psc_ctlop slmctlops[] = {
 	, { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
 	, { slctlrep_getconn,		sizeof(struct slctlmsg_conn) }
 	, { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
-	, { slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) }
+//	, { slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) }
 	, { slmctlrep_getstatfs,	sizeof(struct slmctlmsg_statfs) }
 	, { slmctlcmd_stop,		0 }
 	, { slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }

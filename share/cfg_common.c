@@ -41,8 +41,6 @@
 #include "slerr.h"
 
 struct psc_dynarray	sl_lnet_prids = DYNARRAY_INIT;
-struct psc_dynarray	slcfg_routes;		/* all routes */
-struct psc_dynarray	slcfg_site_routes;	/* routes connecting sites */
 
 /*
  * Sanity check this node's resource membership.
@@ -347,55 +345,4 @@ slcfg_res_cmp(const void *a, const void *b)
 	const struct sl_resource * const *py = b, *y = *py;
 
 	return (CMP(x->res_id, y->res_id));
-}
-
-struct slcfg_route *
-slcfg_route_lookup(const char *name)
-{
-	struct slcfg_route *srt;
-	int i;
-
-	DYNARRAY_FOREACH(srt, i, &slcfg_routes)
-		if (srt->srt_name && strcmp(name, srt->srt_name) == 0)
-			return (srt);
-	return (NULL);
-}
-
-struct slcfg_route *
-slcfg_route_new(int type, void *ptr, const char *namefmt, ...)
-{
-	struct slcfg_route *srt;
-	char *name = NULL;
-	va_list ap;
-	int rc;
-
-	if (namefmt) {
-		va_start(ap, namefmt);
-		rc = vasprintf(&name, namefmt, ap);
-		psc_assert(rc != -1);
-		va_end(ap);
-
-		srt = slcfg_route_lookup(name);
-		if (srt)
-			yyerror("duplicate route name: %s "
-			    "(defined at %s:%d)", name,
-			    srt->srt_filename, srt->srt_lineno);
-	}
-	srt = PSCALLOC(sizeof(*srt));
-	srt->srt_name = name;
-	srt->srt_ptr = ptr;
-	srt->srt_type = type;
-	srt->srt_filename = cfg_filename;
-	srt->srt_lineno = cfg_lineno;
-	psc_dynarray_add(&slcfg_routes, srt);
-	return (srt);
-}
-
-void
-slcfg_route_link(struct slcfg_route *a, struct slcfg_route *b)
-{
-	if (a == b)
-		return;
-	psc_dynarray_add_ifdne(&a->srt_endpoints, b);
-	psc_dynarray_add_ifdne(&b->srt_endpoints, a);
 }

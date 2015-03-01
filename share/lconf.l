@@ -62,12 +62,10 @@ sizeval		[0-9]+[KMGTBkmgtb]?
 %%
 
 global		{ yywarn("`global' deprecated by `set'"); return (SET); }
-endpoints	{ return (ENDPOINTS); }
 include		{ return (INCLUDE); }
 nids		{ return (NIDS); }
 peers|ios	{ return (PEERS); }
 resource	{ return (RESOURCE); }
-route		{ return (ROUTE); }
 set		{ return (SET); }
 site		{ return (SITE); }
 

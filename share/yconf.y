@@ -151,7 +151,6 @@ struct psclist_head	   cfg_files = PSCLIST_HEAD_INIT(cfg_files);
 struct ifaddrs		  *cfg_ifaddrs;
 PSCLIST_HEAD(cfg_lnetif_pairs);
 
-struct slcfg_route	  *t_slcfg_route;
 struct sl_site		  *currentSite;
 struct sl_resource	  *currentRes;
 struct sl_resm		  *currentResm;
@@ -170,11 +169,9 @@ struct slcfg_local	  *slcfg_local = &slcfg_local_data;
 %token PATHNAME
 %token SIZEVAL
 
-%token ENDPOINTS
 %token INCLUDE
 %token RESOURCE
 %token RESOURCE_TYPE
-%token ROUTE
 %token SET
 %token SITE
 
@@ -186,15 +183,11 @@ struct slcfg_local	  *slcfg_local = &slcfg_local_data;
 
 %%
 
-config		: vars includes cfg_sections
+config		: vars includes site_profiles
 		;
 
-cfg_sections	: /* nothing */
-		| cfg_section cfg_sections
-		;
-
-cfg_section	: site_profile
-		| route
+site_profiles	: /* nothing */
+		| site_profile site_profiles
 		;
 
 vars		: /* nothing */
@@ -353,31 +346,6 @@ resource_start	: RESOURCE NAME '{' {
 		}
 		;
 
-endpointslist	: ENDPOINTS '=' endpoints ';'
-		;
-
-endpoints	: endpoint
-		| endpoint ',' endpoints
-		;
-
-endpoint	: NAME {
-			char *p;
-			int rc;
-
-			if (currentSite) {
-				rc = asprintf(&p, "%s@%s", $1,
-				    currentSite->site_name);
-				psc_assert(rc != -1);
-				psc_dynarray_add(&t_slcfg_route->
-				    srt_endpoints, p);
-				PSCFREE($1);
-			} else {
-				psc_dynarray_add(&t_slcfg_route->
-				    srt_endpoints, $1);
-			}
-		}
-		;
-
 peerlist	: PEERS '=' peers ';'
 		;
 
@@ -431,7 +399,6 @@ statement	: bool_stmt
 		| hexnum_stmt
 		| lnetname_stmt
 		| nidslist
-		| endpointslist
 		| num_stmt
 		| path_stmt
 		| peerlist
@@ -547,20 +514,6 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
-		}
-		;
-
-route		: route_start statements '}'
-		;
-
-route_start	: ROUTE NAME '{' {
-			t_slcfg_route = slcfg_route_new(SRTT_NODE, NULL,
-			    "%s@%s", $2, currentSite->site_name);
-			PSCFREE($2);
-		}
-		| ROUTE '{' {
-			t_slcfg_route = slcfg_route_new(SRTT_NODE, NULL,
-			    NULL);
 		}
 		;
 
@@ -992,12 +945,9 @@ void
 slcfg_parse(const char *config_file)
 {
 	extern FILE *yyin;
-	struct psc_dynarray dangling;
-	struct slcfg_route *srt, *it;
 	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
 	struct sl_site *s;
-	const char *endpname;
 	int i, j;
 	char *p;
 
@@ -1035,28 +985,12 @@ slcfg_parse(const char *config_file)
 	if (!globalConfig.gconf_fsuuid)
 		psclog_errorx("no fsuuid specified");
 
-	psc_dynarray_init(&dangling);
-
 	CONF_LOCK();
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	CONF_FOREACH_SITE(s) {
-		s->site_rtnode = slcfg_route_new(SRTT_SITE, s,
-		    "%s", s->site_name);
-
-		psc_dynarray_reset(&dangling);
-		DYNARRAY_FOREACH(srt, i, &s->site_routes)
-			psc_dynarray_add(&dangling, srt);
-
 		psc_dynarray_sort(&s->site_resources, qsort,
 		    slcfg_res_cmp);
 		SITE_FOREACH_RES(s, r, j) {
-			if (RES_ISFS(r)) {
-				r->res_route = slcfg_route_new(
-				    SRTT_IOS, r, "%s", r->res_name);
-				psc_dynarray_add(&dangling,
-				    r->res_route);
-			}
-
 			/* Resolve peer names */
 			DYNARRAY_FOREACH(p, i, &r->res_peers) {
 				peer = libsl_str2res(p);
@@ -1071,66 +1005,8 @@ slcfg_parse(const char *config_file)
 					slcfg_peer2resm(r, peer);
 			}
 		}
-
-		DYNARRAY_FOREACH(srt, i, &s->site_routes) {
-			psc_assert(srt->srt_type == SRTT_NODE);
-			DYNARRAY_FOREACH(endpname, j,
-			    &srt->srt_endpoints) {
-				it = slcfg_route_lookup(endpname);
-				if (it == NULL)
-					errx(1, "%s:%d: endpoint %s "
-					    "from route %s unknown",
-					    srt->srt_filename,
-					    srt->srt_lineno, endpname,
-					    srt->srt_name);
-				if (psc_dynarray_exists(&dangling, it))
-					psc_dynarray_remove(&dangling, it);
-				psc_dynarray_setpos(&srt->srt_endpoints,
-				    j, it);
-				psc_dynarray_add(&it->srt_endpoints, srt);
-			}
-		}
-
-		/*
-		 * Connect all dangling route nodes to this site and to
-		 * each other.
-		 */
-		DYNARRAY_FOREACH(srt, i, &dangling) {
-			slcfg_route_link(s->site_rtnode, srt);
-			DYNARRAY_FOREACH(it, j, &dangling)
-				slcfg_route_link(srt, it);
-		}
 	}
 	CONF_ULOCK();
-
-	psc_dynarray_reset(&dangling);
-	CONF_FOREACH_SITE(s)
-		psc_dynarray_add(&dangling, s->site_rtnode);
-
-	DYNARRAY_FOREACH(srt, i, &slcfg_site_routes) {
-		psc_assert(srt->srt_type == SRTT_NODE);
-		DYNARRAY_FOREACH(endpname, j,
-		    &srt->srt_endpoints) {
-			it = slcfg_route_lookup(endpname);
-			if (it == NULL)
-				errx(1, "%s:%d: endpoint %s "
-				    "from route %s unknown",
-				    srt->srt_filename,
-				    srt->srt_lineno, endpname,
-				    srt->srt_name);
-			if (psc_dynarray_exists(&dangling, it))
-				psc_dynarray_remove(&dangling, it);
-			psc_dynarray_setpos(&srt->srt_endpoints, j, it);
-			psc_dynarray_add(&it->srt_endpoints, srt);
-		}
-	}
-
-	/* connect all dangling routes to each other */
-	DYNARRAY_FOREACH(srt, i, &dangling)
-		DYNARRAY_FOREACH(it, j, &dangling)
-			slcfg_route_link(srt, it);
-
-	psc_dynarray_free(&dangling);
 
 	/*
 	 * Check again as post-parsing processing higher level errors
