@@ -228,7 +228,6 @@ sli_rpc_mds_pack_statfs(struct pscrpc_msg *m, int idx)
 		psclog_errorx("unable to pack statfs");
 		return;
 	}
-	m->flags |= SLRPC_MSGF_STATFS;
 
 	spinlock(&sli_ssfb_lock);
 	data->f = sli_ssfb;
@@ -244,7 +243,7 @@ sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		int nq = 1, qlens[4] = { qlen };
+		int rc, flags = 0, nq = 1, qlens[4] = { qlen };
 		struct timespec now;
 
 		PFL_GETTIMESPEC(&now);
@@ -256,6 +255,7 @@ sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
 			sli_ssfb_send = now;
 			sli_ssfb_send.tv_sec += 1;
 			freelock(&sli_ssfb_lock);
+			flags |= SLRPC_MSGF_STATFS;
 		}
 		if (nq > 1) {
 			int plens[] = {
@@ -264,9 +264,12 @@ sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
 			};
 
 			qlens[nq++] = sizeof(struct srt_authbuf_footer);
-			return (RSX_NEWREQN(csvc->csvc_import,
+			rc = RSX_NEWREQN(csvc->csvc_import,
 			    csvc->csvc_version, op, *rqp, nq, qlens,
-			    nitems(plens), plens, *(void **)mqp));
+			    nitems(plens), plens, *(void **)mqp);
+			if (rc == 0)
+				(*rqp)->rq_reqmsg->flags |= flags;
+			return (rc);
 		}
 	}
 	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
