@@ -359,8 +359,8 @@ const struct slctl_res_field slctl_resios_fields[] = {
 	{ NULL, NULL },
 };
 
-/**
- * slmctlcmd_stop - Handle a STOP command to terminate execution.
+/*
+ * Handle a STOP command to terminate execution.
  */
 __dead int
 slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
@@ -392,8 +392,8 @@ slmctlcmd_upsch_query(__unusedx int fd,
 	return (0);
 }
 
-/**
- * slmctlrep_getreplqueued - Send a response to a "GETREPLQUEUED" inquiry.
+/*
+ * Send a response to a "GETREPLQUEUED" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -439,8 +439,8 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 	return (rc);
 }
 
-/**
- * slmctlrep_getstatfs - Send a response to a "GETSTATFS" inquiry.
+/*
+ * Send a response to a "GETSTATFS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -523,8 +523,8 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
-/**
- * slmctlrep_getbml - Send a response to a "GETBML" inquiry.
+/*
+ * Send a response to a "GETBML" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
