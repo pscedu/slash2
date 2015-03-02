@@ -85,60 +85,52 @@ packshow_fcmhs(char *fid)
 }
 
 void
-packshow_replpairs(char *pair)
+packshow_replqueued(char *res)
 {
-	struct slmctlmsg_replpair *scrp;
+	struct slmctlmsg_replqueued *scrq;
 
-	scrp = psc_ctlmsg_push(SLMCMT_GETREPLPAIRS, sizeof(*scrp));
-	if (pair && strcasecmp(pair, "busy") == 0)
-		strlcpy(scrp->scrp_addrbuf[0], SLMC_RP_ADDRCLASS_BUSY,
-		    sizeof(scrp->scrp_addrbuf[0]));
+	scrq = psc_ctlmsg_push(SLMCMT_GETREPLQUEUED, sizeof(*scrq));
+	if (res && strcasecmp(res, "busy") == 0)
+		strlcpy(scrq->scrq_resname, SLMC_REPLQ_BUSY,
+		    sizeof(scrq->scrq_resname));
 }
 
 void
-packshow_statfs(__unusedx char *pair)
+packshow_statfs(__unusedx char *s)
 {
 	psc_ctlmsg_push(SLMCMT_GETSTATFS,
 	    sizeof(struct slmctlmsg_statfs));
 }
 
 void
-packshow_bml(__unusedx char *pair)
+packshow_bml(__unusedx char *s)
 {
 	psc_ctlmsg_push(SLMCMT_GETBML, sizeof(struct slmctlmsg_bml));
 }
 
 void
-slm_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-26s %-26s %9s %9s\n",
-	    "repl-resm-A", "repl-resm-B", "used", "avail");
+	printf("%-32s %7s %7s %7s %7s %7s %7s\n",
+	    "resource", "in-q", "in-bw", "out-q", "out-bw", "aggr-q",
+	    "aggr-bw");
 }
 
 void
-slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
-	const struct slmctlmsg_replpair *scrp = m;
-	char *p, addr[2][RESM_ADDRBUF_SZ];
-	int i, j;
+	const struct slmctlmsg_replqueued *scrq = m;
 
-	for (i = 0; i < 2; i++) {
-		strlcpy(addr[i], scrp->scrp_addrbuf[i],
-		    sizeof(addr[i]));
-		p = addr[i];
-		for (j = 0; j < 2 && p; j++)
-			p = strchr(p + 1, '@');
-		if (p)
-			*p = '\0';
-	}
-
-	printf("%-26s %-26s ", addr[0], addr[1]);
-	psc_ctl_prhuman(scrp->scrp_used);
-	printf("/s ");
-	psc_ctl_prhuman(scrp->scrp_avail);
-	printf("/s\n");
+	printf("%-32s", scrq->scrq_resname);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_queued);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_assigned);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_queued);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_assigned);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_queued);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_assigned);
+	printf("\n");
 }
 
 void
@@ -277,7 +269,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "bml",		packshow_bml },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
-	{ "replpairs",		packshow_replpairs },
+	{ "replqueued",		packshow_replqueued },
 	{ "statfs",		packshow_statfs },
 
 	/* aliases */
@@ -291,7 +283,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
-	{ slm_replpair_prhdr,	slm_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },
+	{ slm_replqueued_prhdr,	slm_replqueued_prdat,	sizeof(struct slmctlmsg_replqueued),	NULL },
 	{ slm_statfs_prhdr,	slm_statfs_prdat,	sizeof(struct slmctlmsg_statfs),	NULL },
 	{ NULL,			NULL,			0,					NULL },
 	{ slm_bml_prhdr,	slm_bml_prdat,		sizeof(struct slmctlmsg_bml),		NULL }
