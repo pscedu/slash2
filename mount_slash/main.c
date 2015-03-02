@@ -2586,9 +2586,9 @@ msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
 		return;
 
 	/*
- 	 * This hangs the client running 3.10.0-123.13.2.el7, but works fine
- 	 * on Ubuntu 14.10 (3.16.0-23-generic).
- 	 */
+	 * This hangs the client running 3.10.0-123.13.2.el7, but works fine
+	 * on Ubuntu 14.10 (3.16.0-23-generic).
+	 */
 	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
 	    d->dce_name, d->dce_namelen);
 }
@@ -2836,9 +2836,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 #if 0
 	/*
- 	 * Just because the attributes of a directory change, don't mean
- 	 * that the dcache entries of its children are invalid.
- 	 */
+	 * Just because the attributes of a directory change, don't mean
+	 * that the dcache entries of its children are invalid.
+	 */
 	if (fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
