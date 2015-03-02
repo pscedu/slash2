@@ -1961,7 +1961,7 @@ mds_journal_init(uint64_t fsuuid)
 	}
 	psclog_info("Journal device is %s", journalfn);
 
-	slm_journal = pjournal_open(journalfn);
+	slm_journal = pjournal_open("metadata", journalfn);
 	if (slm_journal == NULL)
 		psc_fatalx("failed to open log file %s",
 		    journalfn);
