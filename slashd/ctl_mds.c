@@ -401,20 +401,17 @@ slmctlcmd_upsch_query(__unusedx int fd,
 int
 slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
-	int busyonly = 0, i, j, i0, j0, rc = 1;
+	int busyonly = 0, i, rc = 1;
 	struct slmctlmsg_replqueued *scrq = mb;
-	struct sl_resource *r, *r0;
-	struct sl_resm *m, *m0;
-	struct sl_site *s, *s0;
-	struct resm_mds_info *rmmi0, *rmmi1;
-	struct slm_resmlink *srl;
+	struct sl_resource *r;
 	struct rpmi_ios *si;
+	struct sl_site *s;
 
-	if (strcasecmp(scrp->scrp_addrbuf[0], SLMC_REPLQ_BUSY) == 0)
+	if (strcasecmp(scrq->scrq_resname, SLMC_REPLQ_BUSY) == 0)
 		busyonly = 1;
 
 	CONF_LOCK();
-	CONF_FOREACH_RES(s, r, i, m, j) {
+	CONF_FOREACH_RES(s, r, i) {
 		if (!RES_ISFS(r))
 			continue;
 
@@ -441,7 +438,6 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 	CONF_ULOCK();
 	return (rc);
 }
-#endif
 
 /**
  * slmctlrep_getstatfs - Send a response to a "GETSTATFS" inquiry.
