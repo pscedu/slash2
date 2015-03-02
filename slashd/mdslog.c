@@ -1361,8 +1361,6 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_reclaim_rep, rc);
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 
 	rpmi = res2rpmi(res);
 	si = rpmi->rpmi_info;
@@ -2281,7 +2279,6 @@ mds_journal_init(uint64_t fsuuid)
 	pscthr_init(SLMTHRT_JNAMESPACE, slmjnsthr_main, NULL, 0,
 	    "slmjnsthr");
 #endif
-
 }
 
 void
