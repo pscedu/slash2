@@ -49,9 +49,8 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 #define SRII_REPLREAD_CBARG_CSVC	2
 
-/**
- * sli_rii_replread_release_sliver - We call this function in the
- * following two cases:
+/*
+ * We call this function in the following two cases:
  *
  *  (1) When the request for a replication of a sliver has completed;
  *  (2) When the asynchronous I/O for a replication of a sliver has
@@ -70,9 +69,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_AIOWAIT;
 		/*
-		 * It should be either 1 or 2 (when aio replies
-		 * early), but just be paranoid in case peer
-		 * will resend.
+		 * It should be either 1 or 2 (when aio replies early),
+		 * but just be paranoid in case peer will resend.
 		 */
 		psc_assert(s->slvr_pndgwrts > 0);
 		s->slvr_pndgwrts--;
@@ -115,9 +113,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	return (rc);
 }
 
-/**
- * sli_rii_handle_repl_read - Handler for sliver replication read
- *	request.  This runs at the source IOS of a replication request.
+/*
+ * Handler for sliver replication read request.  This runs at the source
+ * IOS of a replication request.
  */
 __static int
 sli_rii_handle_repl_read(struct pscrpc_request *rq)
@@ -132,8 +130,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	int rv;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
-
-	OPSTAT_INCR("handle_replread");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
@@ -217,12 +213,11 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * sli_rii_handle_repl_read_aio - Handler for sliver replication aio
- *	read request.
+/*
+ * Handler for sliver replication aio read request.
  *
- *	The peer has completed an async I/O of a previously requested
- *	sliver and that sliver has been posted for GET.
+ * The peer has completed an async I/O of a previously requested sliver
+ * and that sliver has been posted for GET.
  */
 __static int
 sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
@@ -237,8 +232,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	int slvridx = 0;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
-
-	OPSTAT_INCR("handle_replread_aio");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
@@ -314,9 +307,9 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * sli_rii_replread_cb - Callback triggered when an SRMT_REPL_READ request
- *	finishes, running in the context of the replica destination.
+/*
+ * Callback triggered when an SRMT_REPL_READ request finishes, running
+ * in the context of the replica destination.
  */
 __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
@@ -406,6 +399,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
 		rq = NULL;
+
  out:
 	if (rc) {
 		SLVR_LOCK(s);
