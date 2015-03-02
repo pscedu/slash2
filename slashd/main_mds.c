@@ -41,6 +41,7 @@
 #include "pfl/pfl.h"
 #include "pfl/random.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
