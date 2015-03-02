@@ -161,7 +161,7 @@ slm_rpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_IOD) {
-		int flags = 0, np = 1, plens[] = { plen };
+		int flags = 0, np = 1, plens[3] = { plen };
 		int qlens[] = {
 			qlen,
 			sizeof(struct srt_authbuf_footer)
