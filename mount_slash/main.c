@@ -1486,15 +1486,13 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct srm_readdir_rep *mp;
 	int rc;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_rep, rc);
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 		msl_readdir_error(d, p, rc);
 	} else {
-		slrpc_rep_in(csvc, rq);
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-		mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 		if (SRM_READDIR_BUFSZ(mp->size, mp->num) <=
 		    sizeof(mp->ents)) {
 			struct iovec iov[2];
