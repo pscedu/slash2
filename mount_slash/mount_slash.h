@@ -271,7 +271,6 @@ void	 mfh_incref(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
-void	 msl_reada_rpc_launch(struct psc_dynarray *, int, int, struct bmap *);
 int	 msl_stat(struct fidc_membh *, void *);
 
 ssize_t	slc_getxattr(const struct pscfs_clientctx *,

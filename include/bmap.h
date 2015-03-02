@@ -365,12 +365,11 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_SLVR,		/*  5: */
 	BMAP_OPCNT_BCRSCHED,		/*  6: */
 	BMAP_OPCNT_TRUNCWAIT,		/*  7: */
-	BMAP_OPCNT_READA,		/*  8: */
-	BMAP_OPCNT_LEASEEXT,		/*  9: */
-	BMAP_OPCNT_REASSIGN,		/* 10: */
-	BMAP_OPCNT_FLUSH,		/* 11: */
-	BMAP_OPCNT_UPSCH,		/* 12: peer update scheduler */
-	BMAP_OPCNT_WORK			/* 13: generic worker thread */
+	BMAP_OPCNT_LEASEEXT,		/*  8: */
+	BMAP_OPCNT_REASSIGN,		/*  9: */
+	BMAP_OPCNT_FLUSH,		/* 10: */
+	BMAP_OPCNT_UPSCH,		/* 11: peer update scheduler */
+	BMAP_OPCNT_WORK			/* 12: generic worker thread */
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);

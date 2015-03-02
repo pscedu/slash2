@@ -53,7 +53,6 @@ enum {
 	SLMTHRT_FREAP,		/* file reaper */
 	SLMTHRT_BKDB,		/* upsch database backup */
 	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
-	SLMTHRT_COH,		/* coherency thread */
 	SLMTHRT_CONN,		/* peer resource connection monitor */
 	SLMTHRT_CTL,		/* control processor */
 	SLMTHRT_CTLAC,		/* control acceptor */
