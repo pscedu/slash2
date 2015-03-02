@@ -70,43 +70,20 @@ slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
 	    *(void **)mqp));
 }
 
-__weak int
-slrpc_newreq(struct slashrpc_cservice *csvc, int op,
-    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
-{
-	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
-}
-
-__weak void
-slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
-    __unusedx struct pscrpc_request *rq)
-{
-}
-
-__weak void
-slrpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
-    __unusedx struct pscrpc_request *rq)
-{
-}
-
-__weak void
-slrpc_req_in(__unusedx struct pscrpc_request *rq)
-{
-}
-
 int
 slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq, int plen, void *mpp, int flags)
 {
 	int rc;
 
-	slrpc_req_out(csvc, rq);
+	if (slrpc_ops.slrpc_req_out)
+		slrpc_ops.slrpc_req_out(csvc, rq);
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pfl_rsx_waitrep(rq, plen, mpp);
 	if (rc == 0) {
 		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
-		if (rc == 0)
-			slrpc_rep_in(csvc, rq);
+		if (rc == 0 && slrpc_ops.slrpc_rep_in)
+			slrpc_ops.slrpc_rep_in(csvc, rq);
 	}
 	return (rc);
 }
@@ -121,8 +98,8 @@ slrpc_allocrepn(struct pscrpc_request *rq, void *mq0p, int q0len,
 	    plens, rcoff);
 	rcp = PSC_AGP(*(void **)mp0p, rcoff);
 	*rcp = authbuf_check(rq, PSCRPC_MSG_REQUEST, 0);
-	if (*rcp == 0)
-		slrpc_req_in(rq);
+	if (*rcp == 0 && slrpc_ops.slrpc_req_in)
+		slrpc_ops.slrpc_req_in(rq);
 	return (*rcp);
 }
 
@@ -136,11 +113,12 @@ slrpc_allocgenrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	    plens, rcoff));
 }
 
-__weak int
-slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
-    void *mpp, int plen, int rcoff)
+void
+slrpc_rep_out(struct pscrpc_request *rq)
 {
-	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
+	if (slrpc_ops.slrpc_rep_out)
+		slrpc_ops.slrpc_rep_out(rq);
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 }
 
 void
@@ -364,29 +342,14 @@ int
 slrpc_ping_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	struct srm_ping_rep *mp;
-	int rc = 0;
+	int rc;
 
-	// XXX SL_GET_RQ_STATUS(csvc)
-	if (!rq->rq_status) {
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, 0);
-		if (rc == 0)
-			rc = rq->rq_status;
-		if (rc == 0) {
-			mp = pscrpc_msg_buf(rq->rq_repmsg, 0,
-			    sizeof(*mp));
-			rc = mp->rc;
-		}
-	}
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	csvc = args->pointer_arg[0];
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	if (rc)
-		sl_csvc_disconnect(csvc);
-	else
-		slrpc_rep_in(csvc, rq);
 	sl_csvc_decref(csvc);
 	return (0);
 }

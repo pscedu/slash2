@@ -948,8 +948,6 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 
 	if (decr) {
 		EXPORT_LOCK(exp);
@@ -2086,7 +2084,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	}
  out:
 	mds_note_update(-1);
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, -(abs(rc)), 0);
 	return (rc);
 }

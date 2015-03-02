@@ -397,7 +397,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

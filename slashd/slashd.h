@@ -231,6 +231,7 @@ struct rpmi_ios {
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
 	struct srt_statfs	  si_ssfb;
+	struct timespec		  si_ssfb_send;
 
 	struct bw_dir		  si_bw_ingress;	/* incoming bandwidth */
 	struct bw_dir		  si_bw_egress;		/* outgoing bandwidth */

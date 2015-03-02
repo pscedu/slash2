@@ -49,8 +49,8 @@ struct pscrpc_svc_handle sli_ric_svc;
 struct pscrpc_svc_handle sli_rii_svc;
 struct pscrpc_svc_handle sli_rim_svc;
 
-/**
- * sli_rpc_initsvc - create and initialize RPC services.
+/*
+ * Create and initialize RPC services.
  */
 void
 sli_rpc_initsvc(void)
@@ -116,8 +116,6 @@ sli_rci_ctl_cb(struct pscrpc_request *rq,
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_ctl_rep, rc);
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -217,118 +215,142 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 }
 
 void
-sli_rpc_mds_pack_statfs(struct pscrpc_msg *m)
+sli_rpc_mds_pack_statfs(struct pscrpc_msg *m, int idx)
 {
-	struct srt_statfs *f;
+	struct {
+		struct srt_statfs	f;
+		struct srt_bwqueued	bwq;
+	} *data;
 
-	if (m == NULL) {
-		psclog_errorx("msg is NULL");
-		return;
-	}
-	psc_assert(m->bufcount > 2);
-	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
-	if (f == NULL) {
+	psc_assert(idx > 0 && (uint32_t)idx < m->bufcount);
+	data = pscrpc_msg_buf(m, idx, sizeof(*data));
+	if (data == NULL) {
 		psclog_errorx("unable to pack statfs");
 		return;
 	}
+	m->flags |= SLRPC_MSGF_STATFS;
+
 	spinlock(&sli_ssfb_lock);
-	memcpy(f, &sli_ssfb, sizeof(*f));
+	data->f = sli_ssfb;
 	freelock(&sli_ssfb_lock);
+
+	spinlock(&sli_bwqueued_lock);
+	data->bwq = sli_bwqueued;
+	freelock(&sli_bwqueued_lock);
 }
 
 int
-slrpc_newreq(struct slashrpc_cservice *csvc, int op,
+sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		if (op == SRMT_PING) {
-			int qlens[] = {
-				qlen,
-				sizeof(struct srt_statfs),
-				sizeof(struct srt_authbuf_footer)
-			};
+		int nq = 1, qlens[4] = { qlen };
+		struct timespec now;
+
+		PFL_GETTIMESPEC(&now);
+
+		if (timespeccmp(&now, &sli_ssfb_send, >)) {
+			qlens[nq++] = sizeof(struct srt_statfs) +
+			    sizeof(struct srt_bwqueued);
+			spinlock(&sli_ssfb_lock);
+			sli_ssfb_send = now;
+			sli_ssfb_send.tv_sec += 1;
+			freelock(&sli_ssfb_lock);
+		}
+		if (nq > 1) {
 			int plens[] = {
 				plen,
 				sizeof(struct srt_authbuf_footer)
 			};
 
+			qlens[nq++] = sizeof(struct srt_authbuf_footer);
 			return (RSX_NEWREQN(csvc->csvc_import,
-			    csvc->csvc_version, op, *rqp, nitems(qlens),
-			    qlens, nitems(plens), plens,
-			    *(void **)mqp));
-		} else {
-			int qlens[] = {
-				qlen,
-				sizeof(struct srt_authbuf_footer)
-			};
-			int plens[] = {
-				plen,
-				sizeof(struct srt_authbuf_footer)
-			};
-
-			return (RSX_NEWREQN(csvc->csvc_import,
-			    csvc->csvc_version, op, *rqp, nitems(qlens),
-			    qlens, nitems(plens), plens,
-			    *(void **)mqp));
+			    csvc->csvc_version, op, *rqp, nq, qlens,
+			    nitems(plens), plens, *(void **)mqp));
 		}
 	}
 	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
 }
 
 void
-slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+sli_rpc_req_out(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_MDS &&
-	    rq->rq_reqmsg->opc == SRMT_PING)
-		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
-}
+	struct pscrpc_msg *m = rq->rq_reqmsg;
 
-void
-slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
-{
-	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
-			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
+	if (csvc->csvc_peertype == SLCONNT_MDS && m) {
+		int idx = 1;
+
+		if (m->flags & SLRPC_MSGF_STATFS)
+			sli_rpc_mds_pack_statfs(m, idx++);
 	}
 }
 
 void
-slrpc_req_in(struct pscrpc_request *rq)
+sli_rpc_req_in(struct pscrpc_request *rq)
 {
-	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
+	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service)
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq,
 			    PSCRPC_MSG_REQUEST);
-		if (rq->rq_reqmsg->opc == SRMT_PING)
-			sli_rpc_mds_pack_statfs(rq->rq_repmsg);
+}
+
+void
+sli_rpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+{
+	if (csvc->csvc_peertype == SLCONNT_MDS)
+		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
+			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
+}
+
+void
+sli_rpc_rep_out(struct pscrpc_request *rq)
+{
+	struct pscrpc_msg *qm = rq->rq_reqmsg;
+	struct pscrpc_msg *pm = rq->rq_repmsg;
+
+	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
+		int idx = 1;
+
+		if (qm->flags & SLRPC_MSGF_STATFS)
+			sli_rpc_mds_pack_statfs(pm, idx++);
 	}
 }
 
 int
-slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
+sli_rpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
     void *mpp, int plen, int rcoff)
 {
 	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
-		if (rq->rq_reqmsg->opc == SRMT_PING) {
-			int rc, plens[] = {
-				plen,
-				sizeof(struct srt_statfs),
-				sizeof(struct srt_authbuf_footer)
-			};
+		int rc, np = 1, plens[] = { plen };
+		struct pscrpc_msg *qm = rq->rq_reqmsg;
 
-			rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
-			    nitems(plens), plens, rcoff);
-			return (rc);
-		} else {
-			int rc, plens[] = {
-				plen,
-				sizeof(struct srt_authbuf_footer)
-			};
+		if (qm->flags & SLRPC_MSGF_STATFS)
+			plens[np++] = sizeof(struct srt_statfs) +
+			    sizeof(struct srt_bwqueued);
+		if (np > 1) {
+			plens[np++] = sizeof(struct srt_authbuf_footer);
+			rc = slrpc_allocrepn(rq, mqp, qlen, mpp, np,
+			    plens, rcoff);
+			if (rc == 0) {
+				struct pscrpc_msg *pm;
+				int idx = 1;
 
-			rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
-			    nitems(plens), plens, rcoff);
+				pm = rq->rq_repmsg;
+				if (qm->flags & SLRPC_MSGF_STATFS)
+					sli_rpc_mds_pack_statfs(pm, idx++);
+			}
 			return (rc);
 		}
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }
+
+struct slrpc_ops slrpc_ops = {
+	sli_rpc_newreq,
+	sli_rpc_req_in,
+	sli_rpc_req_out,
+	sli_rpc_allocrep,
+	sli_rpc_rep_in,
+	sli_rpc_rep_out
+};

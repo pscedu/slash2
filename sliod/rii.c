@@ -197,6 +197,11 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
 	    &iov, 1);
+
+	/*
+	 * Do the authbuf signing here in locked context to ensure the
+	 * slab doesn't change.
+	 */
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 
 	SLVR_LOCK(s);
@@ -451,7 +456,7 @@ sli_rii_handler(struct pscrpc_request *rq)
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

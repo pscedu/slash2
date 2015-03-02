@@ -102,9 +102,12 @@ int		iod_inode_getinfo(struct sl_fidgen *, uint64_t *, uint64_t *, uint32_t *);
 
 extern struct pfl_iostats_grad	 sli_iorpc_iostats[];
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;
-int				 sli_selftest_rc;
+extern int			 sli_selftest_rc;
+extern struct srt_bwqueued	 sli_bwqueued;
+extern psc_spinlock_t		 sli_bwqueued_lock;
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
+extern struct timespec		 sli_ssfb_send;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 current_reclaim_xid;

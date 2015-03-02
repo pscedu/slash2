@@ -236,3 +236,4 @@ sl_resm_hldrop(struct sl_resm *resm)
 }
 
 struct sl_expcli_ops sl_expcli_ops;
+struct slrpc_ops slrpc_ops;

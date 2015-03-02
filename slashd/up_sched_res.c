@@ -441,8 +441,6 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 	if (rc == 0)
 		rc = av->space[IN_RC];
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 
 	if (rc)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);

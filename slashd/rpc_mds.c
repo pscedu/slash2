@@ -119,13 +119,16 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
     struct pscrpc_msg *m, int idx)
 {
 	struct resprof_mds_info *rpmi;
-	struct srt_statfs *f;
 	struct sl_resm *resm;
 	struct rpmi_ios *si;
+	struct {
+		struct srt_statfs	f;
+		struct srt_bwqueued	bwq;
+	} *data;
 
 	psc_assert(idx >= 0);
-	f = pscrpc_msg_buf(m, idx, sizeof(*f));
-	if (f == NULL) {
+	data = pscrpc_msg_buf(m, idx, sizeof(*data));
+	if (data == NULL) {
 		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
 		return;
 	}
@@ -134,7 +137,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 		psclog_errorx("unknown peer");
 		return;
 	}
-	if (f->sf_frsize == 0) {
+	if (data->f.sf_frsize == 0) {
 		DEBUG_REQ(PLL_MAX, rq, "%s sent bogus STATFS",
 		    resm->resm_name);
 		return;
@@ -142,47 +145,62 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 	rpmi = res2rpmi(resm->resm_res);
 	si = rpmi->rpmi_info;
 	RPMI_LOCK(rpmi);
-	memcpy(&si->si_ssfb, f, sizeof(*f));
-	RPMI_ULOCK(rpmi);
-}
-
-void
-slm_rpc_ion_unpack_bwqueued(struct pscrpc_request *rq,
-    struct pscrpc_msg *m, int idx)
-{
-	struct resprof_mds_info *rpmi;
-	struct srt_bwqueued *sbq;
-	struct rpmi_ios *si;
-	struct sl_resm *resm;
-
-	resm = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-	if (resm == NULL) {
-		psclog_errorx("unknown peer");
-		return;
-	}
-	psc_assert(idx >= 0);
-	sbq = pscrpc_msg_buf(m, idx, sizeof(*sbq));
-	if (sbq == NULL) {
-		DEBUG_REQ(PLL_ERROR, rq, "unable to import bwqueued");
-		return;
-	}
-	rpmi = res2rpmi(resm->resm_res);
-	si = rpmi->rpmi_info;
-	RPMI_LOCK(rpmi);
+	si->si_ssfb = data->f;
 
 	si->si_bw_ingress.bwd_inflight = 0;
 	si->si_bw_egress.bwd_inflight = 0;
 	si->si_bw_aggr.bwd_inflight = 0;
-
-	si->si_bw_ingress.bwd_queued = sbq->sbq_ingress;
-	si->si_bw_egress.bwd_queued = sbq->sbq_egress;
-	si->si_bw_aggr.bwd_queued = sbq->sbq_aggr;
-
+	si->si_bw_ingress.bwd_queued = data->bwq.sbq_ingress;
+	si->si_bw_egress.bwd_queued = data->bwq.sbq_egress;
+	si->si_bw_aggr.bwd_queued = data->bwq.sbq_aggr;
 	RPMI_ULOCK(rpmi);
 }
 
+int
+slm_rpc_newreq(struct slashrpc_cservice *csvc, int op,
+    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+{
+	if (csvc->csvc_peertype == SLCONNT_IOD) {
+		int flags = 0, np = 1, plens[] = { plen };
+		int qlens[] = {
+			qlen,
+			sizeof(struct srt_authbuf_footer)
+		};
+		struct resprof_mds_info *rpmi;
+		struct sl_resm *resm;
+		struct rpmi_ios *si;
+		struct timespec now;
+		int rc;
+
+		PFL_GETTIMESPEC(&now);
+
+		resm = csvc->csvc_import->imp_hldrop_arg; /* XXX hack */
+		rpmi = res2rpmi(resm->resm_res);
+		si = rpmi->rpmi_info;
+		if (timespeccmp(&now, &si->si_ssfb_send, >)) {
+			plens[np++] = sizeof(struct srt_statfs) +
+			    sizeof(struct srt_bwqueued);
+			flags |= SLRPC_MSGF_STATFS;
+			RPMI_LOCK(rpmi);
+			si->si_ssfb_send = now;
+			si->si_ssfb_send.tv_sec += 1;
+			RPMI_ULOCK(rpmi);
+		}
+		if (np > 1) {
+			plens[np++] = sizeof(struct srt_authbuf_footer);
+			rc = RSX_NEWREQN(csvc->csvc_import,
+			    csvc->csvc_version, op, *rqp, nitems(qlens),
+			    qlens, nitems(plens), plens, *(void **)mqp);
+			if (rc == 0)
+				(*rqp)->rq_reqmsg->flags |= flags;
+			return (rc);
+		}
+	}
+	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
+}
+
 void
-slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
+slm_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct pscrpc_msg *m = rq->rq_reqmsg;
@@ -205,42 +223,38 @@ slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
 }
 
 void
-slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
-{
-	struct pscrpc_msg *m = rq->rq_repmsg;
-
-	if (csvc->csvc_peertype == SLCONNT_IOD && m) {
-		int idx = m->bufcount - 2;
-
-		if (m->flags & SLRPC_MSGF_STATFS)
-			slm_rpc_ion_unpack_statfs(rq, m, idx--);
-		if (m->flags & SLRPC_MSGF_BWQUEUED)
-			slm_rpc_ion_unpack_bwqueued(rq, m, idx--);
-	}
-}
-
-void
-slrpc_req_in(struct pscrpc_request *rq)
+slm_rpc_req_in(struct pscrpc_request *rq)
 {
 	struct pscrpc_msg *m = rq->rq_reqmsg;
 
 	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service && m) {
-		int idx = m->bufcount - 2;
+		int idx = 1;
 
 		if (m->flags & SLRPC_MSGF_STATFS)
-			slm_rpc_ion_unpack_statfs(rq, m, idx--);
-		if (m->flags & SLRPC_MSGF_BWQUEUED)
-			slm_rpc_ion_unpack_bwqueued(rq, m, idx--);
+			slm_rpc_ion_unpack_statfs(rq, m, idx++);
+	}
+}
+
+void
+slm_rpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+{
+	struct pscrpc_msg *m = rq->rq_repmsg;
+
+	if (csvc->csvc_peertype == SLCONNT_IOD && m) {
+		int idx = 1;
+
+		if (m->flags & SLRPC_MSGF_STATFS)
+			slm_rpc_ion_unpack_statfs(rq, m, idx++);
 	}
 }
 
 int
-slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
+slm_rpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen0,
     void *mpp, int plen, int rcoff)
 {
 	int rc;
 
-	rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
+	rc = slrpc_allocgenrep(rq, mqp, qlen0, mpp, plen, rcoff);
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_rep *mp = *(void **)mpp;
 
@@ -352,8 +366,6 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	SL_GET_RQ_STATUS_TYPE(br->br_csvc, rq, struct srm_batch_rep,
 	    rc);
-	if (rc == 0)
-		slrpc_rep_in(br->br_csvc, rq);
 
 	if (rc)
 		batchrq_sched_finish(br, rc);
@@ -602,3 +614,12 @@ sl_resm_hldrop(struct sl_resm *resm)
 		LIST_CACHE_ULOCK(l);
 	}
 }
+
+struct slrpc_ops slrpc_ops = {
+	slm_rpc_newreq,
+	slm_rpc_req_in,
+	slm_rpc_req_out,
+	slm_rpc_allocrep,
+	slm_rpc_rep_in,
+	NULL
+};

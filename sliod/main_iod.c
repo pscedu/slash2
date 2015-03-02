@@ -66,8 +66,13 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 sli_selftest_rc;
+
+struct srt_bwqueued	 sli_bwqueued;
+psc_spinlock_t		 sli_bwqueued_lock = SPINLOCK_INIT;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
+struct timespec		 sli_ssfb_send;
+
 struct pfl_iostats_grad	 sli_iorpc_iostats[8];
 struct pfl_iostats_rw	 sli_backingstore_iostats;
 struct psc_thread	*sliconnthr;

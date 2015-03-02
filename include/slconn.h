@@ -223,8 +223,9 @@ struct sl_expcli_ops {
 		static struct pfl_opstat *_opst;			\
 		int _rc;						\
 									\
-		_rc = slrpc_newreq((csvc), (op), &(rq), sizeof(*(mq)),	\
-		    sizeof(*(mp)), &(mq));				\
+		_rc = (slrpc_ops.slrpc_newreq ?				\
+		    slrpc_ops.slrpc_newreq : slrpc_newgenreq)((csvc),	\
+		    (op), &(rq), sizeof(*(mq)), sizeof(*(mp)), &(mq));	\
 		if (_rc == 0) {						\
 			if (_opst == NULL) {				\
 				const char *_str;			\
@@ -262,8 +263,10 @@ struct sl_expcli_ops {
 		static struct pfl_opstat *_opst;			\
 		int _rc;						\
 									\
-		_rc = slrpc_allocrep((rq), &(mq), sizeof(*(mq)),	\
-		    &(mp), sizeof(*(mp)), offsetof(typeof(*(mp)), rc));	\
+		_rc = (slrpc_ops.slrpc_allocrep ?			\
+		    slrpc_ops.slrpc_allocrep : slrpc_allocgenrep)((rq),	\
+		    &(mq), sizeof(*(mq)), &(mp), sizeof(*(mp)),		\
+		    offsetof(typeof(*(mp)), rc));			\
 		if (_rc)						\
 			return (_rc);					\
 		if ((mp)->rc)						\
@@ -278,7 +281,8 @@ struct sl_expcli_ops {
 
 #define SL_NBRQSETX_ADD(set, csvc, rq)					\
 	_PFL_RVSTART {							\
-		slrpc_req_out((csvc), (rq));				\
+		if (slrpc_ops.slrpc_req_out)				\
+			slrpc_ops.slrpc_req_out((csvc), (rq));		\
 		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
 		pscrpc_nbreqset_add((set), (rq));			\
 	} _PFL_RVEND
@@ -304,8 +308,8 @@ struct sl_expcli_ops {
 		}							\
 		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
-		if ((error) == 0)					\
-			slrpc_rep_in((csvc), (rq));			\
+		if ((error) == 0 && slrpc_ops.slrpc_rep_in)		\
+			slrpc_ops.slrpc_rep_in((csvc), (rq));		\
 	} while (0)
 
 #define SL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
@@ -314,6 +318,15 @@ struct sl_expcli_ops {
 									\
 		SL_GET_RQ_STATUS((csvc), (rq), _mp, (rc));		\
 	} while (0)
+
+struct slrpc_ops {
+	int	 (*slrpc_newreq)(struct slashrpc_cservice *, int, struct pscrpc_request **, int, int, void *);
+	void	 (*slrpc_req_in)(struct pscrpc_request *);
+	void	 (*slrpc_req_out)(struct slashrpc_cservice *, struct pscrpc_request *);
+	int	 (*slrpc_allocrep)(struct pscrpc_request *, void *, int, void *, int, int);
+	void	 (*slrpc_rep_in)(struct slashrpc_cservice *, struct pscrpc_request *);
+	void	 (*slrpc_rep_out)(struct pscrpc_request *);
+};
 
 struct slashrpc_cservice *
 	_sl_csvc_get(const struct pfl_callerinfo *,
@@ -340,26 +353,21 @@ void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 
 void	 slrpc_initcli(void);
 
-int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t, uint32_t, enum slconn_type);
+int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,
+    	    uint32_t, enum slconn_type);
 
 int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
-		struct pscrpc_request **, int, int, void *);
-int	 slrpc_newreq(struct slashrpc_cservice *, int,
-		struct pscrpc_request **, int, int, void *);
+	    struct pscrpc_request **, int, int, void *);
 
 int	 slrpc_waitrep(struct slashrpc_cservice *,
-		struct pscrpc_request *, int, void *, int);
+	    struct pscrpc_request *, int, void *, int);
 
 int	 slrpc_allocrepn(struct pscrpc_request *, void *, int, void *,
-		int, const int *, int);
+	    int, const int *, int);
 int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
-		int, int);
-int	 slrpc_allocrep(struct pscrpc_request *, void *, int, void *,
-		int, int);
+	    int, int);
 
-void	 slrpc_req_out(struct slashrpc_cservice *, struct pscrpc_request *);
-void	 slrpc_rep_in(struct slashrpc_cservice *, struct pscrpc_request *);
-void	 slrpc_req_in(struct pscrpc_request *);
+void	 slrpc_rep_out(struct pscrpc_request *);
 
 int	 slrpc_bulkclient(struct pscrpc_request *, int, int, struct iovec *, int);
 int	 slrpc_bulkserver(struct pscrpc_request *, int, int, struct iovec *, int);
@@ -373,5 +381,6 @@ extern struct psc_lockedlist	 sl_clients;
 extern struct sl_expcli_ops	 sl_expcli_ops;
 extern struct pscrpc_nbreqset	*sl_nbrqset;
 extern struct pscrpc_nbreqset	*sl_nbrqset_flush;
+extern struct slrpc_ops		 slrpc_ops;
 
 #endif /* _SLCONN_H_ */
