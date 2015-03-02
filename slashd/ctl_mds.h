@@ -28,13 +28,17 @@
 
 #include "slashrpc.h"
 
-struct slmctlmsg_replpair {
-	char			scrp_addrbuf[2][RESM_ADDRBUF_SZ];
-	uint64_t		scrp_avail;
-	uint64_t		scrp_used;
+struct slmctlmsg_replqueued {
+	char			scrq_resname[RES_NAME_MAX];
+	uint32_t		scrq_ingress_queued;
+	uint32_t		scrq_ingress_assigned;
+	uint32_t		scrq_egress_queued;
+	uint32_t		scrq_egress_assigned;
+	uint32_t		scrq_aggr_queued;
+	uint32_t		scrq_aggr_assigned;
 };
 
-#define SLMC_RP_ADDRCLASS_BUSY	":busy"
+#define SLMC_REPLQ_BUSY		":busy"
 
 struct slmctlmsg_statfs {
 	char			scsf_resname[RES_NAME_MAX];
@@ -70,7 +74,7 @@ struct slmctlmsg_upsch_query {
 #define SLMCMT_GETBMAP		(NPCMT + 0)
 #define SLMCMT_GETCONNS		(NPCMT + 1)
 #define SLMCMT_GETFCMHS		(NPCMT + 2)
-#define SLMCMT_GETREPLPAIRS	(NPCMT + 3)
+#define SLMCMT_GETREPLQUEUED	(NPCMT + 3)
 #define SLMCMT_GETSTATFS	(NPCMT + 4)
 #define SLMCMT_STOP		(NPCMT + 5)
 #define SLMCMT_GETBML		(NPCMT + 6)

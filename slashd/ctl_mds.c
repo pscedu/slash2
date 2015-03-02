@@ -392,96 +392,52 @@ slmctlcmd_upsch_query(__unusedx int fd,
 	return (0);
 }
 
-#if 0
-__static int
-slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
-    struct slmctlmsg_replpair *scrp, struct sl_resm *m0,
-    struct sl_resm *m1, int busyonly)
-{
-	struct resm_mds_info *rmmi0, *rmmi1;
-	struct slm_resmlink *srl;
-
-	rmmi0 = resm2rmmi(m0);
-	rmmi1 = resm2rmmi(m1);
-	srl = repl_busytable + MDS_REPL_BUSYNODES(
-	    MIN(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid),
-	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));
-
-	if (busyonly && srl->srl_used == 0)
-		return (1);
-
-	memset(scrp, 0, sizeof(*scrp));
-	strlcpy(scrp->scrp_addrbuf[0], m0->resm_res->res_name,
-	    sizeof(scrp->scrp_addrbuf[0]));
-	strlcpy(scrp->scrp_addrbuf[1], m1->resm_res->res_name,
-	    sizeof(scrp->scrp_addrbuf[1]));
-	scrp->scrp_avail = srl->srl_avail;
-	scrp->scrp_used = srl->srl_used;
-	return (psc_ctlmsg_sendv(fd, mh, scrp));
-}
-
 /**
- * slmctlrep_getreplpairs - Send a response to a "GETREPLPAIRS" inquiry.
+ * slmctlrep_getreplqueued - Send a response to a "GETREPLQUEUED" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
 int
-slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
+slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
 	int busyonly = 0, i, j, i0, j0, rc = 1;
-	struct slmctlmsg_replpair *scrp = mb;
+	struct slmctlmsg_replqueued *scrq = mb;
 	struct sl_resource *r, *r0;
 	struct sl_resm *m, *m0;
 	struct sl_site *s, *s0;
+	struct resm_mds_info *rmmi0, *rmmi1;
+	struct slm_resmlink *srl;
+	struct rpmi_ios *si;
 
-	if (strcasecmp(scrp->scrp_addrbuf[0], SLMC_RP_ADDRCLASS_BUSY) == 0)
+	if (strcasecmp(scrp->scrp_addrbuf[0], SLMC_REPLQ_BUSY) == 0)
 		busyonly = 1;
 
 	CONF_LOCK();
-	spinlock(&repl_busytable_lock);
-	CONF_FOREACH_RESM(s, r, i, m, j) {
+	CONF_FOREACH_RES(s, r, i, m, j) {
 		if (!RES_ISFS(r))
 			continue;
 
-		/* stats between members within this resource */
-		j0 = j + 1;
-		RES_FOREACH_MEMB_CONT(r, m0, j0) {
-			rc = slmctlrep_replpair_send(fd, mh, scrp, m,
-			    m0, busyonly);
-			if (!rc)
-				goto done;
-		}
+		si = res2rpmi_ios(r);
 
-		/* stats between resources within this site */
-		i0 = i + 1;
-		SITE_FOREACH_RES_CONT(s, r0, i0) {
-			if (!RES_ISFS(r0))
-				continue;
-			RES_FOREACH_MEMB(r0, m0, j0) {
-				rc = slmctlrep_replpair_send(fd, mh,
-				    scrp, m, m0, busyonly);
-				if (!rc)
-					goto done;
-			}
-		}
+		if (busyonly && si->si_bw_aggr.bwd_assigned == 0)
+			continue;
 
-		/* stats between resources of other sites */
-		s0 = pll_next_item(&globalConfig.gconf_sites, s);
-		CONF_FOREACH_SITE_CONT(s0)
-			SITE_FOREACH_RES(s0, r0, i0) {
-				if (!RES_ISFS(r0))
-					continue;
-				RES_FOREACH_MEMB(r0, m0, j0) {
-					rc = slmctlrep_replpair_send(fd,
-					    mh, scrp, m, m0, busyonly);
-					if (!rc)
-						goto done;
-				}
-			}
+		memset(scrq, 0, sizeof(*scrq));
+		strlcpy(scrq->scrq_resname, r->res_name,
+		    sizeof(scrq->scrq_resname));
+		scrq->scrq_ingress_queued = si->si_bw_ingress.bwd_queued;
+		scrq->scrq_ingress_assigned = si->si_bw_ingress.bwd_assigned;
+		scrq->scrq_egress_queued = si->si_bw_egress.bwd_queued;
+		scrq->scrq_egress_assigned = si->si_bw_egress.bwd_assigned;
+		scrq->scrq_aggr_queued = si->si_bw_aggr.bwd_queued;
+		scrq->scrq_aggr_assigned = si->si_bw_aggr.bwd_assigned;
+		rc = psc_ctlmsg_sendv(fd, mh, scrq);
+
+		if (!rc)
+			goto done;
 	}
  done:
-	freelock(&repl_busytable_lock);
 	CONF_ULOCK();
 	return (rc);
 }
@@ -622,7 +578,7 @@ struct psc_ctlop slmctlops[] = {
 	, { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
 	, { slctlrep_getconn,		sizeof(struct slctlmsg_conn) }
 	, { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
-//	, { slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) }
+	, { slmctlrep_getreplqueued,	sizeof(struct slmctlmsg_replqueued) }
 	, { slmctlrep_getstatfs,	sizeof(struct slmctlmsg_statfs) }
 	, { slmctlcmd_stop,		0 }
 	, { slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }
