@@ -1012,7 +1012,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst, int64_t amt,
 
 	/* sort by addr to avoid deadlock */
 	r_min = MIN(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
-	r_max = MIN(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
+	r_max = MAX(res2rpmi(src->resm_res), res2rpmi(dst->resm_res));
 	RPMI_LOCK(r_min);
 	RPMI_LOCK(r_max);
 
