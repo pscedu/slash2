@@ -168,6 +168,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_write_coalescer);
+	PRTYPE(struct bw_dir);
 	PRTYPE(struct dircache_ent);
 	PRTYPE(struct dircache_expire);
 	PRTYPE(struct dircache_page);
@@ -203,6 +204,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct resm_mds_info);
 	PRTYPE(struct resprof_cli_info);
 	PRTYPE(struct resprof_mds_info);
+	PRTYPE(struct rpmi_ios);
+	PRTYPE(struct rpmi_mds);
 	PRTYPE(struct site_mds_info);
 	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
@@ -213,9 +216,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_ino_compat);
 	PRTYPE(struct sl_lnetrt);
 	PRTYPE(struct sl_mds_crc_log);
-	PRTYPE(struct sl_mds_iosinfo);
-	PRTYPE(struct sl_mds_nsstats);
-	PRTYPE(struct sl_mds_peerinfo);
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resm_nid);
 	PRTYPE(struct sl_resource);
@@ -224,8 +224,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slc_wkdata_readdir);
 	PRTYPE(struct slcfg_local);
-	PRTYPE(struct slcfg_route);
-	PRTYPE(struct slcfg_route_dir);
 	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctl_res_field);
@@ -248,10 +246,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_ino_od);
 	PRTYPE(struct slm_inoh);
 	PRTYPE(struct slm_inox_od);
+	PRTYPE(struct slm_nsstats);
 	PRTYPE(struct slm_progress);
 	PRTYPE(struct slm_readdir_ra_past);
 	PRTYPE(struct slm_replst_workreq);
-	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_sth);
 	PRTYPE(struct slm_update_data);
 	PRTYPE(struct slm_update_generic);
@@ -283,6 +281,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmthr_dbh);
 	PRTYPE(struct slmupsch_thread);
 	PRTYPE(struct slrpc_cservice);
+	PRTYPE(struct slrpc_ops);
 	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
@@ -364,6 +363,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmap_crcwire);
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_bmapminseq);
+	PRTYPE(struct srt_bwqueued);
 	PRTYPE(struct srt_creds);
 	PRTYPE(struct srt_ctlsetopt);
 	PRTYPE(struct srt_inode);
@@ -587,7 +587,6 @@ main(int argc, char *argv[])
 	PRVAL(RESF_PREFIOS);
 	PRVAL(RIC_MAX_SLVRS_PER_IO);
 	PRVAL(RPCIF_AVOID);
-	PRVAL(SIF_BUSY);
 	PRVAL(SIF_DISABLE_ADVLEASE);
 	PRVAL(SIF_DISABLE_GC);
 	PRVAL(SIF_DISABLE_LEASE);
@@ -934,9 +933,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_SYMLINK);
 	PRVAL(SRMT_UNLINK);
 	PRVAL(SRMT_WRITE);
-	PRVAL(SRTT_IOS);
-	PRVAL(SRTT_NODE);
-	PRVAL(SRTT_SITE);
 	PRVAL(UPDT_BMAP);
 	PRVAL(UPDT_HLDROP);
 	PRVAL(UPDT_PAGEIN);
