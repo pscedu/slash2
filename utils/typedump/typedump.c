@@ -263,7 +263,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_wkdata_wr_brepl);
 	PRTYPE(struct slmctl_thread);
 	PRTYPE(struct slmctlmsg_bml);
-	PRTYPE(struct slmctlmsg_replpair);
+	PRTYPE(struct slmctlmsg_replqueued);
 	PRTYPE(struct slmctlmsg_statfs);
 	PRTYPE(struct slmctlmsg_upsch_query);
 	PRTYPE(struct slmdbwk_thread);
