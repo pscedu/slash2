@@ -136,7 +136,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	OPSTAT_INCR("handle_replread");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fg.fg_fid == FID_ANY) 
+	if (mq->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
