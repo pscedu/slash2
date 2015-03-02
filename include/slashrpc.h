@@ -120,7 +120,6 @@ struct statvfs;
 #define SLRPC_MSGADJ		(176)
 
 #define SLRPC_MSGF_STATFS	_PFLRPC_MSGF_LAST
-#define SLRPC_MSGF_BWQUEUED	(_PFLRPC_MSGF_LAST + 1)
 
 /* SLASH2 RPC message types and submessage types (for BATCH). */
 enum {
