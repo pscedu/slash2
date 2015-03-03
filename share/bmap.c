@@ -208,7 +208,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
  * @rw: access mode.
  * @flags: retrieval parameters.
  * @bp: value-result bmap pointer.
- * Notes: returns the bmap referenced via bcm_opcnt.
+ * Notes: returns the bmap referenced and locked.
  */
 int
 _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
