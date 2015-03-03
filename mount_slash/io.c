@@ -1883,17 +1883,23 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
+		if (!retry)
+			msl_fsrqinfo_biorq_add(q, r, i);
+
+		if (i != nr - 1) {
+			roff += tlen;
+			tsize -= tlen;
+			if (buf)
+				buf += tlen;
+			tlen = MIN(SLASH_BMAP_SIZE, tsize);
+			continue;
+		}
 		if (retry)
-			goto next;
-
-		msl_fsrqinfo_biorq_add(q, r, i);
-
+			continue;
 		/*
 		 * Trigger read-ahead or write-ahead on the last
-		 * request.
+		 * request, only if we are not retrying.
 		 */
-		if (i != nr - 1)
-			goto next;
 
 		/*
 		 * We should always be able to ask for the next bmap
@@ -1902,7 +1908,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		if (rw == SL_WRITE) {
 			mfh_prod_writeahead(mfh, bno + 1);
-			goto next;
+			break;
 		}
 
 		aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
@@ -1927,7 +1933,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
 		    &rapages, &raoff2, &rapages2))
-			goto next;
+			break;
 
 		DEBUG_BIORQ(PLL_DIAG, r, "aoff=%d npages=%d raoff=%d "
 		    "rapages=%d raoff2=%d rapages2=%d predio_off=%ld",
@@ -1952,12 +1958,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 			readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
 			    b->bcm_bmapno + 1, raoff2, rapages2);
- next:
-		roff += tlen;
-		tsize -= tlen;
-		if (buf)
-			buf += tlen;
-		tlen = MIN(SLASH_BMAP_SIZE, tsize);
+		break;
 	}
 
 	/*
