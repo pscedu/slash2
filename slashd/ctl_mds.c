@@ -423,11 +423,14 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 		memset(scrq, 0, sizeof(*scrq));
 		strlcpy(scrq->scrq_resname, r->res_name,
 		    sizeof(scrq->scrq_resname));
-		scrq->scrq_ingress_queued = si->si_bw_ingress.bwd_queued;
+		scrq->scrq_ingress_queued = si->si_bw_ingress.bwd_queued +
+		    si->si_bw_ingress.bwd_inflight;
 		scrq->scrq_ingress_assigned = si->si_bw_ingress.bwd_assigned;
-		scrq->scrq_egress_queued = si->si_bw_egress.bwd_queued;
+		scrq->scrq_egress_queued = si->si_bw_egress.bwd_queued +
+		    si->si_bw_egress.bwd_inflight;
 		scrq->scrq_egress_assigned = si->si_bw_egress.bwd_assigned;
-		scrq->scrq_aggr_queued = si->si_bw_aggr.bwd_queued;
+		scrq->scrq_aggr_queued = si->si_bw_aggr.bwd_queued +
+		    si->si_bw_aggr.bwd_inflight;
 		scrq->scrq_aggr_assigned = si->si_bw_aggr.bwd_assigned;
 		rc = psc_ctlmsg_sendv(fd, mh, scrq);
 
