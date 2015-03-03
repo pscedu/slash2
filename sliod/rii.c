@@ -287,7 +287,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	SLVR_LOCK(s);
 	/* Block until the callback handler has finished. */
-	SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
+	SLVR_WAIT(s, s->slvr_flags & SLVR_REPLWIRE);
 	SLVR_ULOCK(s);
 
 	/* Ensure the sliver is found in the work item's array. */
