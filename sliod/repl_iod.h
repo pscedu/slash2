@@ -39,8 +39,6 @@ struct fidc_membh;
 struct sl_resm;
 struct slvr;
 
-#define REPL_MAX_INFLIGHT_SLVRS	4			/* maximum # inflight slivers between IONs */
-
 #define SLI_REPL_SLVR_SCHED	((void *)0x1)
 
 struct sli_batch_reply {
@@ -55,24 +53,25 @@ struct sli_repl_workrq {
 	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
-	struct sl_resource	*srw_src_res;		/* repl source */
 	uint32_t		 srw_len;		/* bmap size */
+	struct sl_resource	*srw_src_res;		/* repl source */
 
-	uint32_t		 srw_status;		/* return code to pass back to MDS */
 	psc_spinlock_t		 srw_lock;
+	int32_t			 srw_status;		/* return code to pass back to MDS */
 	psc_atomic32_t		 srw_refcnt;		/* number of inflight slivers */
 	int			 srw_nslvr_tot;
 	int			 srw_nslvr_cur;
 
 	struct sli_batch_reply	*srw_bchrp;
-	struct srt_replwk_repent*srw_pp;
+	struct srt_replwk_repent*srw_pp;		/* batch reply buffer entry for
+							 * reporting return code for this work */
 
 	struct bmapc_memb	*srw_bcm;
 	struct fidc_membh	*srw_fcmh;
 	struct psclist_head	 srw_active_lentry;	/* entry in the active list */
 	struct psclist_head	 srw_pending_lentry;	/* entry in the pending list */
 
-	struct slvr		*srw_slvr[REPL_MAX_INFLIGHT_SLVRS];
+	struct slvr		*srw_slvr[SLASH_SLVRS_PER_BMAP];
 };
 
 enum {
@@ -94,7 +93,9 @@ void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
 
-void replwk_queue(struct sli_repl_workrq *);
+void	sli_bwqueued_adj(int32_t *, int);
+
+void	replwk_queue(struct sli_repl_workrq *);
 
 extern struct psc_lockedlist	 sli_replwkq_active;
 extern struct psc_listcache	 sli_replwkq_pending;

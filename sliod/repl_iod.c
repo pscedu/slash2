@@ -22,6 +22,14 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Routines for handling replication requests from the MDS.  Requests
+ * are always directed at the destination IOS, so this entails tracking
+ * the transfers via work request units and scheduling them.  The
+ * MDS(es) are in charge of oversubscription but there are windows when
+ * we can get bursty.
+ */
+
 #include <stdio.h>
 
 #include "pfl/atomic.h"
@@ -67,6 +75,28 @@ sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
 	return (w);
 }
 
+#define SIGN(x)		((x) < 0 ? -1 : 1)
+
+void
+sli_bwqueued_adj(int32_t *p, int amt_bytes)
+{
+	int amt;
+
+	amt = SIGN(amt_bytes) * howmany(abs(amt_bytes), BW_UNITSZ);
+
+	spinlock(&sli_bwqueued_lock);
+	*p += amt;
+	sli_bwqueued.sbq_aggr += amt;
+	freelock(&sli_bwqueued_lock);
+
+	spinlock(&sli_ssfb_lock);
+	sli_ssfb_send.tv_sec = 0;	/* reset timer */
+	freelock(&sli_ssfb_lock);
+}
+
+/*
+ * Add a piece of work to the scheduling engine.
+ */
 int
 sli_repl_addwk(int op, sl_ios_id_t resid,
     const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
@@ -121,28 +151,26 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	/* get the replication chunk's bmap */
 	rc = bmap_get(w->srw_fcmh, w->srw_bmapno, SL_READ, &w->srw_bcm);
 	if (rc)
-		psclog_errorx("bmap_get %u: %s",
-		    w->srw_bmapno, slstrerror(rc));
-	else {
-		bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
-		bmap_op_done(w->srw_bcm);
+		PFL_GOTOERR(out, rc);
 
-		/* mark slivers for replication */
-		if (op == SLI_REPLWKOP_REPL) {
-			BMAP_LOCK(w->srw_bcm);
-			for (i = len = 0;
-			    i < SLASH_SLVRS_PER_BMAP &&
-			    len < (int)w->srw_len;
-			    i++, len += SLASH_SLVR_SIZE) {
+	bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
+	bmap_op_done(w->srw_bcm);
 
-				bii = bmap_2_bii(w->srw_bcm);
-				bii->bii_crcstates[i] |=
-				    BMAP_SLVR_WANTREPL;
-				w->srw_nslvr_tot++;
-			}
-			BMAP_ULOCK(w->srw_bcm);
+	/* mark slivers for replication */
+	if (op == SLI_REPLWKOP_REPL) {
+		sli_bwqueued_adj(&sli_bwqueued.sbq_ingress, len);
+
+		BMAP_LOCK(w->srw_bcm);
+		for (i = len = 0;
+		    i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
+		    i++, len += SLASH_SLVR_SIZE) {
+			bii = bmap_2_bii(w->srw_bcm);
+			bii->bii_crcstates[i] |= BMAP_SLVR_WANTREPL;
+			w->srw_nslvr_tot++;
 		}
+		BMAP_ULOCK(w->srw_bcm);
 	}
+
 	psclog_diag("fid="SLPRI_FG" bmap=%d #slivers=%d",
 	    SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
 
@@ -171,13 +199,21 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	return (rc);
 }
 
+int
+pflrpc_portable_rc(int rc)
+{
+	switch (rc) {
+	case -ETIMEDOUT: return (-PFLERR_TIMEDOUT);
+	}
+	return (rc);
+}
+
 void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
 	(void)reqlock(&w->srw_lock);
 
-	if (rc == -ETIMEDOUT)
-		rc = -PFLERR_TIMEDOUT;
+	rc = pflrpc_portable_rc(rc);
 
 	/*
 	 * This keeps the very first error and causes our thread to drop
@@ -194,6 +230,11 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	DEBUG_SRW(w, PLL_DEBUG, "destroying");
 
 	pll_remove(&sli_replwkq_active, w);
+
+	if (w->srw_op == SLI_REPLWKOP_REPL)
+		sli_bwqueued_adj(&sli_bwqueued.sbq_ingress,
+		    -w->srw_len);
+
 	/* inform MDS we've finished */
 	sli_rmi_issue_repl_schedwk(w);
 
@@ -266,12 +307,12 @@ slireplpndthr_main(struct psc_thread *thr)
 		}
 
 		/* find a pointer slot we can use to transmit the sliver */
-		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS;
+		for (slvridx = 0; slvridx < nitems(w->srw_slvr);
 		    slvridx++)
 			if (w->srw_slvr[slvridx] == NULL)
 				break;
 
-		if (slvridx == REPL_MAX_INFLIGHT_SLVRS) {
+		if (slvridx == nitems(w->srw_slvr)) {
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 			LIST_CACHE_LOCK(&sli_replwkq_pending);

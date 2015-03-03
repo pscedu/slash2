@@ -192,18 +192,12 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	s->slvr_blkgreads++;
 	SLVR_ULOCK(s);
 
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_egress += iov.iov_len;
-	sli_bwqueued.sbq_aggr += iov.iov_len;
-	freelock(&sli_bwqueued_lock);
+	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
 
 	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
 	    &iov, 1);
 
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_egress -= iov.iov_len;
-	sli_bwqueued.sbq_aggr -= iov.iov_len;
-	freelock(&sli_bwqueued_lock);
+	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, -mq->len);
 
 	/*
 	 * Do the authbuf signing here in locked context to ensure the
@@ -307,18 +301,12 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_egress += iov.iov_len;
-	sli_bwqueued.sbq_aggr += iov.iov_len;
-	freelock(&sli_bwqueued_lock);
+	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
 
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
 	    &iov, 1);
 
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_egress -= iov.iov_len;
-	sli_bwqueued.sbq_aggr -= iov.iov_len;
-	freelock(&sli_bwqueued_lock);
+	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, -mq->len);
 
 	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 
@@ -340,7 +328,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
 	struct sli_repl_workrq *w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	struct slvr *s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
-	uint32_t len = args->space[SRII_REPLREAD_CBARG_LEN];
 	int rc, slvridx;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_read_rep, rc);
@@ -351,13 +338,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr));
 
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_ingress -= len;
-	sli_bwqueued.sbq_aggr -= len;
-	freelock(&sli_bwqueued_lock);
-
 	if (rc == -SLERR_AIOWAIT)
-		OPSTAT_INCR("issue_replread_cb_aio");
+		OPSTAT_INCR("issue_replread_aio");
 	else if (rc)
 		OPSTAT_INCR("issue_replread_error");
 	else
@@ -398,6 +380,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->slvrno = slvrno;
 
 	psc_atomic32_inc(&w->srw_refcnt);
+	DEBUG_SRW(w, PLL_DEBUG, "incref");
+
 	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
 	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
@@ -417,24 +401,10 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_CSVC] = csvc;
-	rq->rq_async_args.space[SRII_REPLREAD_CBARG_LEN] = iov.iov_len;
-
-	DEBUG_SRW(w, PLL_DEBUG, "incref");
-
-	spinlock(&sli_bwqueued_lock);
-	sli_bwqueued.sbq_ingress += iov.iov_len;
-	sli_bwqueued.sbq_aggr += iov.iov_len;
-	freelock(&sli_bwqueued_lock);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
 		rq = NULL;
-	else {
-		spinlock(&sli_bwqueued_lock);
-		sli_bwqueued.sbq_ingress -= iov.iov_len;
-		sli_bwqueued.sbq_aggr -= iov.iov_len;
-		freelock(&sli_bwqueued_lock);
-	}
 
  out:
 	if (rc) {

@@ -986,26 +986,32 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
-		(bwd)->bwd_inflight += (amt);				\
+		if ((amt) > 0)						\
+			(bwd)->bwd_inflight += (amt);			\
 		(bwd)->bwd_assigned += (amt);				\
 		psc_assert((bwd)->bwd_assigned >= 0);			\
 	} while (0)
 
+#define SIGN(x)	((x) >= 0 ? 1 : -1)
+
 /*
  * Adjust the bandwidth estimate between two IONs.
  * @src: source resm.
- * @dst: destination resm2.
- * @amt: adjustment amount.
+ * @dst: destination resm.
+ * @amt_bytes: adjustment amount, in octets.
  * @moreavail: whether there is still bandwidth left after this
  * reservation.
  */
 int
-resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst, int64_t amt,
+resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst, int64_t amt_bytes,
     int *moreavail)
 {
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
+	int32_t amt;
 	int rc = 0;
+
+	amt = SIGN(amt_bytes) * howmany(labs(amt_bytes), BW_UNITSZ);
 
 	if (moreavail)
 		*moreavail = 0;

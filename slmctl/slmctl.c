@@ -124,12 +124,12 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct slmctlmsg_replqueued *scrq = m;
 
 	printf("%-32s", scrq->scrq_resname);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_queued);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_assigned);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_queued);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_assigned);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_queued);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_assigned);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_queued * BW_UNITSZ);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_assigned * BW_UNITSZ);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_queued * BW_UNITSZ);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_assigned * BW_UNITSZ);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_queued * BW_UNITSZ);
+	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_assigned * BW_UNITSZ);
 	printf("\n");
 }
 
