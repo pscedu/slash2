@@ -1753,7 +1753,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	int nr, i, j, rc, retry;
 	uint64_t fsz;
 	off_t roff;
-	sl_bmapno_t bno;
 	uint32_t aoff, alen, raoff, raoff2, nbmaps;
 	int bsize, npages, rapages, rapages2;
 
@@ -1879,7 +1878,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			retry = 0;
 		}
 
-		bno = b->bcm_bmapno;
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
@@ -1907,7 +1905,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 * file.
 		 */
 		if (rw == SL_WRITE) {
-			mfh_prod_writeahead(mfh, bno + 1);
+			mfh_prod_writeahead(mfh, b->bcm_bmapno + 1);
 			break;
 		}
 
