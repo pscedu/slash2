@@ -507,7 +507,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		}
 
 		new = 1;
-		BMAP_LOCK(b);
 		bii = bmap_2_bii(b);
 		PLL_FOREACH(p, &bii->bii_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {

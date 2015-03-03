@@ -888,8 +888,8 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 
 	ts.slvr_num = num;
 
+	BII_LOCK_ENSURE(bii);
  retry:
-	BII_LOCK(bii);
 	s = SPLAY_FIND(biod_slvrtree, &bii->bii_slvrs, &ts);
 	if (s) {
 		SLVR_LOCK(s);
@@ -902,6 +902,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			 */
 			BII_ULOCK(bii);
 			pscthr_yield();
+			BII_LOCK(bii);
 			goto retry;
 		}
 
@@ -916,13 +917,13 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		}
 
 		SLVR_ULOCK(s);
-		BII_ULOCK(bii);
 	} else {
 		if (!alloc) {
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
 			tmp2 = psc_pool_get(sl_bufs_pool);
+			BII_LOCK(bii);
 			goto retry;
 		}
 
@@ -955,7 +956,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&sli_lruslvrs, s);
 
-		BII_ULOCK(bii);
 	}
 	if (rw == SL_WRITE)
 		DEBUG_SLVR(PLL_DIAG, s, "write incref");

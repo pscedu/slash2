@@ -383,8 +383,11 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	DEBUG_SRW(w, PLL_DEBUG, "incref");
 
 	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
+
+	BMAP_LOCK(w->srw_bcm);
 	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
+	BMAP_ULOCK(w->srw_bcm);
 
 	slvr_repl_prep(s);
 
