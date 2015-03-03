@@ -223,10 +223,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
-		BMAP_LOCK(b);
 		e = bmpce_lookup_locked(b, bmpce_off,
 		    &b->bcm_fcmh->fcmh_waitq);
-		BMAP_ULOCK(b);
 
 		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
 		    "bmpce_foff = %"PRIx64,
@@ -1228,8 +1226,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	 * We must flush any pending writes first before reading from
 	 * the storage.
 	 */
-	if (needflush)
+	if (needflush) {
+		BMAP_LOCK(r->biorq_bmap);
 		bmpc_biorqs_flush_wait(r->biorq_bmap);
+		BMAP_ULOCK(r->biorq_bmap);
+	}
 
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
@@ -1840,6 +1841,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			bmap_op_done(b);
 			PFL_GOTOERR(out, rc);
 		}
+		BMAP_LOCK(b);
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
@@ -2045,11 +2047,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {
-			BMAP_LOCK(b);
 			e = bmpce_lookup_locked(b,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
 			    &f->fcmh_waitq);
-			BMAP_ULOCK(b);
 
 			BMPCE_LOCK(e);
 			e->bmpce_flags |= BMPCE_READAHEAD;
@@ -2057,8 +2057,10 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 			psc_dynarray_add(&r->biorq_pages, e);
 		}
+		BMAP_ULOCK(b);
 		msl_launch_read_rpcs(r);
 		msl_biorq_release(r);
+		BMAP_LOCK(b);
 
  end:
 		if (b)

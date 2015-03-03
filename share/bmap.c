@@ -298,10 +298,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		    PLL_ERROR : PLL_DIAG, b, "grabbed rc=%d", rc);
 		if (rc)
 			bmap_op_done(b);
-		else {
+		else
 			*bp = b;
-			BMAP_ULOCK(b);
-		}
 	}
 	return (rc);
 }

@@ -859,6 +859,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			 * not being zero.  And this has been seen
 			 * although with a different patch.
 			 */
+			BMAP_LOCK(b);
 			msl_bmap_lease_tryext(b, 0);
 		}
 		psc_dynarray_reset(&bmaps);

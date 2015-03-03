@@ -125,8 +125,8 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
 				BMAP_ULOCK(b);
 				pscthr_yield();
-				OPSTAT_INCR("bmpce_eio");
 				BMAP_LOCK(b);
+				OPSTAT_INCR("bmpce_eio");
 				continue;
 			}
 			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
@@ -242,7 +242,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
 
-	BMAP_LOCK(b);
+	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAP_DIO) {
 		r->biorq_flags |= BIORQ_DIO;
 		if (flags & BIORQ_READ) {
@@ -252,8 +252,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	}
 
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
-
-	BMAP_ULOCK(b);
 
 //	OPSTAT_SET_MAX("biorq_max", slc_biorq_pool->ppm_total -
 //	    slc_biorq_pool->ppm_used);
@@ -326,10 +324,10 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	(void)all;
 
 	bmpc = bmap_2_bmpc(b);
+	BMAP_LOCK_ENSURE(b);
 
  retry:
 	expired = 0;
-	BMAP_LOCK(b);
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
 		expired++;
@@ -350,9 +348,9 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		psc_waitq_wait(&bmpc->bmpc_waitq, &b->bcm_lock);
+		BMAP_LOCK(b);
 		goto retry;
 	}
-	BMAP_ULOCK(b);
 }
 
 void

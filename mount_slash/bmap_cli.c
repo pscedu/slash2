@@ -237,6 +237,7 @@ msl_bmap_lease_get_cb(struct pscrpc_request *rq,
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		FCMH_LOCK(f);
 
+		BMAP_LOCK(bmap);
 		msl_bmap_reap_init(bmap, &mp->sbd, 1);
 		slc_fcmh_load_inode(f, &mp->ino);
 
@@ -422,7 +423,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct timespec ts;
 	int secs, rc;
 
-	BMAP_LOCK(b);
+	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAP_TOFREE) {
 		psc_assert(!blockable);
 		BMAP_ULOCK(b);
@@ -629,6 +630,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 
 	FCMH_LOCK(f);
 
+	BMAP_LOCK(bmap);
 	msl_bmap_reap_init(bmap, &mp->sbd, 0);
 
 	slc_fcmh_load_inode(f, &mp->ino);
@@ -692,7 +694,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 
 	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
 
-	BMAP_LOCK(b);
+	BMAP_LOCK_ENSURE(b);
 
 	bci->bci_sbd = *sbd;
 	/*
