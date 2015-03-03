@@ -235,7 +235,6 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	bmi = bmap_2_bmi(b);
 
-	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq,
 	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
@@ -1513,6 +1512,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	BMAP_ULOCK(b);
 	BHREPL_POLICY_SET(b, mq->pol);
 
 	mds_bmap_write_repls_rel(b);

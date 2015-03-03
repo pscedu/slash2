@@ -736,8 +736,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			if (bmap_get(f, bmapno, SL_WRITE, &b))
 				continue;
 
-			BMAP_LOCK(b);
-
 			/*
 			 * If no VALID replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
@@ -785,7 +783,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc == 0) {
-			BMAP_LOCK(b);
 
 			/*
 			 * If no VALID replicas exist, the bmap must be
@@ -929,6 +926,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			if (bmap_get(f, bmapno, SL_WRITE, &b))
 				continue;
 
+			BMAP_ULOCK(b);
 			replv.n = 0;
 			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
 			    slm_repl_countvalid_cb, &replv);
@@ -955,6 +953,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc == 0) {
+			BMAP_ULOCK(b);
 			replv.n = 0;
 			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
 			    slm_repl_countvalid_cb, &replv);

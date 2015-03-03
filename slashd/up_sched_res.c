@@ -151,6 +151,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 		rc = bmap_get(f, bq->bno, SL_WRITE, &b);
 		if (rc)
 			goto skip;
+		BMAP_ULOCK(b);
 
 		// XXX grab bmap write lock before checking bgen!!!
 
@@ -570,6 +571,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 		rc = bmap_get(f, pe->bno, SL_WRITE, &b);
 		if (rc)
 			goto fail;
+		BMAP_ULOCK(b);
 		rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f),
 		    &repl, &idx, 1);
 		if (rc >= 0) {
@@ -853,6 +855,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
+	BMAP_ULOCK(b);
 	bmi = bmap_2_bmi(b);
 
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
@@ -1050,6 +1053,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	BMAP_ULOCK(b);
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;

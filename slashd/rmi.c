@@ -223,6 +223,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	BMAP_ULOCK(b);
 	iosidx = mds_repl_ios_lookup(current_vfsid,
 	    fcmh_2_inoh(b->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
@@ -242,6 +243,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	for (;; bno--) {
 		if (bmap_get(f, bno, SL_WRITE, &b))
 			continue;
+		BMAP_ULOCK(b);
 		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
 		mds_bmap_write_repls_rel(b);
 
@@ -381,6 +383,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
 
+		BMAP_ULOCK(b);
 		bmi = bmap_2_bmi(b);
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)

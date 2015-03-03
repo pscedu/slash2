@@ -216,7 +216,6 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			    BMAPGETF_CREATE| BMAPGETF_NOAUTOINST, &b))
 				break;
 
-			BMAP_LOCK(b);
 			rc = slmrcmthr_walk_brepls(rsw, f, b, n, &rq);
 			bmap_op_done(b);
 		}

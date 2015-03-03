@@ -83,6 +83,8 @@ mds_replay_bmap(void *jent, int op)
 	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		goto out;
+
+	BMAP_ULOCK(b);
 	bmi = bmap_2_bmi(b);
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "before bmap replay op=%d", op);
