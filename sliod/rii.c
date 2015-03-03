@@ -48,6 +48,7 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 #define SRII_REPLREAD_CBARG_CSVC	2
+#define SRII_REPLREAD_CBARG_LEN		0
 
 /*
  * We call this function in the following two cases:
@@ -191,8 +192,18 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	s->slvr_blkgreads++;
 	SLVR_ULOCK(s);
 
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_egress += iov.iov_len;
+	sli_bwqueued.sbq_aggr += iov.iov_len;
+	freelock(&sli_bwqueued_lock);
+
 	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
 	    &iov, 1);
+
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_egress -= iov.iov_len;
+	sli_bwqueued.sbq_aggr -= iov.iov_len;
+	freelock(&sli_bwqueued_lock);
 
 	/*
 	 * Do the authbuf signing here in locked context to ensure the
@@ -286,6 +297,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 			break;
 
 	if (slvridx == (int)nitems(w->srw_slvr)) {
+		// FATAL?
 		DEBUG_SLVR(PLL_ERROR, s,
 		    "failed to find slvr in wq=%p", w);
 		// XXX leak srw
@@ -295,8 +307,18 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_egress += iov.iov_len;
+	sli_bwqueued.sbq_aggr += iov.iov_len;
+	freelock(&sli_bwqueued_lock);
+
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
 	    &iov, 1);
+
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_egress -= iov.iov_len;
+	sli_bwqueued.sbq_aggr -= iov.iov_len;
+	freelock(&sli_bwqueued_lock);
 
 	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 
@@ -315,14 +337,11 @@ __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc;
-	struct sli_repl_workrq *w;
-	struct slvr *s;
+	struct slashrpc_cservice *csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
+	struct sli_repl_workrq *w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
+	struct slvr *s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
+	uint32_t len = args->space[SRII_REPLREAD_CBARG_LEN];
 	int rc, slvridx;
-
-	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
-	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
-	csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_read_rep, rc);
 
@@ -331,6 +350,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		if (w->srw_slvr[slvridx] == s)
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr));
+
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_ingress -= len;
+	sli_bwqueued.sbq_aggr -= len;
+	freelock(&sli_bwqueued_lock);
 
 	if (rc == -SLERR_AIOWAIT)
 		OPSTAT_INCR("issue_replread_cb_aio");
@@ -393,12 +417,24 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_CSVC] = csvc;
+	rq->rq_async_args.space[SRII_REPLREAD_CBARG_LEN] = iov.iov_len;
 
 	DEBUG_SRW(w, PLL_DEBUG, "incref");
+
+	spinlock(&sli_bwqueued_lock);
+	sli_bwqueued.sbq_ingress += iov.iov_len;
+	sli_bwqueued.sbq_aggr += iov.iov_len;
+	freelock(&sli_bwqueued_lock);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
 		rq = NULL;
+	else {
+		spinlock(&sli_bwqueued_lock);
+		sli_bwqueued.sbq_ingress -= iov.iov_len;
+		sli_bwqueued.sbq_aggr -= iov.iov_len;
+		freelock(&sli_bwqueued_lock);
+	}
 
  out:
 	if (rc) {
