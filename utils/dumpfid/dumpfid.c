@@ -378,7 +378,7 @@ thrmain(struct psc_thread *thr)
 
 			(void)FMTSTR(fn, sizeof(fn), outfn,
 			    FMTSTRCASE('n', "s", thr->pscthr_name +
-				strcspn(thr->pscthr_name, "012345679"))
+				strcspn(thr->pscthr_name, "0123456789"))
 			);
 			t->t_fp = fopen(fn, "w");
 			if (t->t_fp == NULL)
@@ -552,7 +552,8 @@ main(int argc, char *argv[])
 		load_data = load_data_ino;
 
 	psc_poolmaster_init(&files_poolmaster, struct file, f_lentry, 0,
-	    256, 256, 256, NULL, NULL, NULL, "files", NULL);
+	    nthr * 4, nthr * 4, nthr * 4, NULL, NULL, NULL, "files",
+	    NULL);
 	files_pool = psc_poolmaster_getmgr(&files_poolmaster);
 
 	pthread_barrier_init(&barrier, NULL, nthr + 1);
