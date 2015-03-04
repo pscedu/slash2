@@ -256,9 +256,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
+	if (r->biorq_flags & BIORQ_ONTREE) 
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
 		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		if ((b->bcm_flags & BMAP_FLUSHQ) &&
 		    RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
@@ -1053,7 +1054,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 */
 	BIORQ_LOCK(r);
 	biorq_incref(r);
-	r->biorq_flags |= BIORQ_FLUSHRDY;
+	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");

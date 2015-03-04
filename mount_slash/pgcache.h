@@ -178,7 +178,8 @@ struct bmpc_ioreq {
 #define	BIORQ_FLUSHRDY		(1 <<  6)
 #define BIORQ_FREEBUF		(1 <<  7)	/* DIO READ needs a buffer */
 #define BIORQ_WAIT		(1 <<  8)
-#define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
+#define BIORQ_ONTREE		(1 <<  9)
+#define BIORQ_READAHEAD		(1 <<  10)	/* performed by readahead */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)

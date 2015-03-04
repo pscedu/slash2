@@ -374,10 +374,12 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
 	struct bmap_cli_info *bci;
 	int delta;
+	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap_pagecache *bmpc;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched, rc = %d", rc);
 
-	BMAP_LOCK(r->biorq_bmap);
+	BMAP_LOCK(b);
 	BIORQ_LOCK(r);
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
@@ -391,6 +393,12 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 		return;
+	}
+
+	if (!(r->biorq_flags & BIORQ_ONTREE)) {
+		bmpc = bmap_2_bmpc(b);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		r->biorq_flags |= BIORQ_ONTREE;
 	}
 	r->biorq_flags &= ~BIORQ_SCHED;
 	OPSTAT_INCR("bmap_flush_resched");
@@ -432,7 +440,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	r->biorq_expire.tv_sec += delta;
 
 	BIORQ_ULOCK(r);
-	BMAP_ULOCK(r->biorq_bmap);
+	BMAP_ULOCK(b);
 	/*
 	 * If we were able to connect to an IOS, but the RPC fails
 	 * somehow, try to use a different IOS if possible.
@@ -447,6 +455,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	int i, rc;
+	struct bmap_pagecache *bmpc;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
@@ -457,10 +466,15 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
+	BMAP_LOCK(b);
+	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		psc_assert(b == r->biorq_bmap);
 		r->biorq_last_sliod = bmap_2_ios(b);
+		r->biorq_flags &= ~BIORQ_ONTREE;
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	}
+	BMAP_ULOCK(b);
 
 	psclog_diag("bwc cb arg (%p) size=%zu nbiorqs=%d",
 	    bwc, bwc->bwc_size, psc_dynarray_len(&bwc->bwc_biorqs));
