@@ -689,6 +689,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
+	if (!fcmh_isdir(f) && !fcmh_isreg(f))
+		PFL_GOTOERR(out, rc = -EOPNOTSUPP);
+
 	/* Find/add our replica's IOS ID */
 	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f),
 	    iosv, iosidx, nios);
