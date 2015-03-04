@@ -529,7 +529,7 @@ cmd_replrq_one(const char *fn, const struct stat *stb,
 	struct replrq_arg *ra = arg;
 	int n;
 
-	if (S_ISLNK(stb->st_mode)) {
+	if (!S_ISREG(stb->st_mode) && !S_ISDIR(stb->st_mode)) {
 		if (!recursive) {
 			errno = EINVAL;
 			warn("%s", fn);
