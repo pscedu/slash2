@@ -643,6 +643,7 @@ bmap_flushable(struct bmapc_memb *b)
 
 		BIORQ_LOCK(r);
 		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
+		psc_assert(!(r->biorq_flags & BIORQ_SCHED));
 
 		if (r->biorq_flags & BIORQ_SCHED) {
 			BIORQ_ULOCK(r);
@@ -947,6 +948,7 @@ bmap_flush(void)
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 			BIORQ_LOCK(r);
 
+			psc_assert(!(r->biorq_flags & BIORQ_SCHED));
 			if (r->biorq_flags & BIORQ_SCHED) {
 				BIORQ_ULOCK(r);
 				continue;
