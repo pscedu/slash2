@@ -22,13 +22,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <sys/param.h>
 #include <sys/stat.h>
 
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +57,6 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-uint64_t	 siteid;
 uint64_t	 fsuuid;
 sl_ios_id_t	 resid = IOS_ID_ANY;
 const char	*datadir = SL_PATH_DATA_DIR;
@@ -106,9 +105,8 @@ slnewfs_touchfile(const char *fmt, ...)
 	close(fd);
 }
 
-/**
- * slnewfs_create - Create a SLASH2 metadata or user data directory
- *	structure.
+/*
+ * Create a SLASH2 metadata or user data directory structure.
  */
 void
 slnewfs_create(const char *fsroot, uint32_t depth)
@@ -146,6 +144,18 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fprintf(fp, "%#x\n", resid);
 	fclose(fp);
 
+	/* creation time */
+	xmkfn(fn, "%s/%s", metadir, "timestamp");
+	fp = fopen(fn, "w");
+	if (fp == NULL)
+		psc_fatal("open %s", fn);
+	if (fchmod(fileno(fp), 0600) == -1)
+		psclog_warn("chown %u %s", pw->pw_uid, fn);
+	tm = cursor.pjc_timestamp;
+	fprintf(fp, "This pool was created %s on %s\n", ctime(&tm),
+	    psc_get_hostname());
+	fclose(fp);
+
 	if (ion)
 		return;
 
@@ -165,17 +175,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	/* create temporary processing directory */
 	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
 	slnewfs_mkdir(fn);
-
-	/* create the SITEID file */
-	xmkfn(fn, "%s/%s", metadir, SL_FN_SITEID);
-	fp = fopen(fn, "w");
-	if (fp == NULL)
-		psc_fatal("open %s", fn);
-	fprintf(fp, "%"PRIx64"\n", siteid);
-	if (!ion)
-		printf("The SITEID of the file system is %#"PRIx64"\n",
-		    siteid);
-	fclose(fp);
 
 	/* create the journal cursor file */
 	xmkfn(fn, "%s/%s", metadir, SL_FN_CURSOR);
@@ -201,18 +200,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_touchfile("%s/%s.%d", metadir, SL_FN_RECLAIMLOG, 0);
 	slnewfs_touchfile("%s/%s", metadir, SL_FN_RECLAIMPROG);
 
-	/* creation time */
-	xmkfn(fn, "%s/%s", metadir, "timestamp");
-	fp = fopen(fn, "w");
-	if (fp == NULL)
-		psc_fatal("open %s", fn);
-	if (fchmod(fileno(fp), 0600) == -1)
-		psclog_warn("chown %u %s", pw->pw_uid, fn);
-	tm = cursor.pjc_timestamp;
-	fprintf(fp, "This pool was created %s on %s\n", ctime(&tm),
-	    psc_get_hostname());
-	fclose(fp);
-
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
 	pfl_odt_create(fn, 128 * 1024, 128 - 16, wipe, 0x1000, 0,
 	    ODTBL_OPT_CRC);
@@ -222,44 +209,12 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	    ODTBL_OPT_CRC);
 }
 
-void
-slcfg_init_res(__unusedx struct sl_resource *res)
-{
-}
-
-void
-slcfg_init_resm(__unusedx struct sl_resm *resm)
-{
-}
-
-void
-slcfg_init_site(__unusedx struct sl_site *site)
-{
-}
-
-int	 cfg_site_pri_sz;
-int	 cfg_res_pri_sz;
-int	 cfg_resm_pri_sz;
-
-int
-psc_usklndthr_get_type(__unusedx const char *namefmt)
-{
-	return (0);
-}
-
-void
-psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX],
-    __unusedx const char *namefmt, __unusedx va_list ap)
-{
-	strlcpy(buf, "cfg", PSC_THRNAME_MAX);
-}
-
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-iW] [-c conf] [-D datadir] [-I siteid]\n"
-	    "\t[-R resid] [-u fsuuid] fsroot\n",
+	    "usage: %s [-iW] [-c conf] [-D datadir]\n"
+	    "\t[-I siteid:resid] [-u fsuuid] fsroot\n",
 	    progname);
 	exit(1);
 }
@@ -267,43 +222,47 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char *cfgfn = NULL, *endp;
+	char *endp, *s_resid;
+	sl_siteid_ti siteid;
 	int c, specsid = 0;
 	long l;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "c:D:I:iR:u:W")) != -1)
+	while ((c = getopt(argc, argv, "D:iI:u:W")) != -1)
 		switch (c) {
-		case 'c':
-			cfgfn = optarg;
-			break;
 		case 'D':
 			datadir = optarg;
 			break;
 		case 'I':
-			endp = NULL;
-			siteid = strtoull(optarg, &endp, 0);
-			if (endp == optarg || *endp)
-				errx(1, "%s: invalid SITEID", optarg);
-			if (siteid >= (1 << SLASH_FID_SITE_BITS))
-				errx(1, "%"PRIu64": SITEID too big",
-				    siteid);
-			specsid = 1;
-			break;
-		case 'i':
-			ion = 1;
-			break;
-		case 'R':
+			s_resid = strchr(optarg, ':');
+			if (resid == NULL)
+				errx(1, "-I %s: ID must be specified in "
+				    "the format `SITE_ID:RESOURCE_ID'",
+				    optarg);
+			s_resid++ = '\0';
+
 			if (strncmp(optarg, "0x", 2))
-				errx(1, "%s: RESID must be in "
+				errx(1, "-I %s: SITE_ID must be in "
 				    "hexadecimal format", optarg);
 			endp = NULL;
 			l = strtoul(optarg, &endp, 16);
-			if (endp == optarg || *endp ||
-			    l == IOS_ID_ANY || l > UINT32_MAX)
-				errx(1, "%s: invalid RESID", optarg);
-			resid = l;
+			if (endp == optarg || *endp || l > UINT16_MAX)
+				errx(1, "%s: invalid SITE_ID", optarg);
+			site_id = l;
+
+			if (strncmp(s_resid, "0x", 2))
+				errx(1, "-I %s: RESOURCE_ID must be in "
+				    "hexadecimal format", s_resid);
+			endp = NULL;
+			l = strtoul(s_resid, &endp, 16);
+			if (endp == s_resid || *endp || l > UINT16_MAX)
+				errx(1, "-I %s: invalid RESOURCE_ID",
+				    s_resid);
+			resid = sl_global_id_build(site_id, l);
+			break;
+		case 'i':
+			ion = 1;
 			break;
 		case 'u':
 			if (strncmp(optarg, "0x", 2))
@@ -325,16 +284,11 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	if (cfgfn)
-		slcfg_parse(cfgfn);
-
-	/* on ION, we must specify a uuid */
 	if (ion && !fsuuid)
 		errx(1, "fsuuid (-u) must be specified for I/O servers");
-	if (!ion && !specsid)
-		errx(1, "site ID (-I) must be specified for MDS servers");
-	if (ion && resid == IOS_ID_ANY)
-		errx(1, "resource ID (-R) must be specified for I/O servers");
+	if (resid == IOS_ID_ANY)
+		errx(1, "resource ID (-R) must be specified in the "
+		    "format `SITE_ID:RESOURCE_ID' e.g. 0x1:0x1001");
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
