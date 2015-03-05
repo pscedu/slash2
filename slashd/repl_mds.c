@@ -1005,8 +1005,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
  * reservation.
  */
 int
-resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst, int64_t amt_bytes,
-    int *moreavail)
+resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
+    int64_t amt_bytes, int *moreavail)
 {
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
