@@ -89,11 +89,11 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
 {
-	struct fidc_membh *f;
-	int i, locked[2];
-	int64_t amt = 0;
-	off_t bsiz, sz;
+	int i, locked[2], lastslvr, lastsize;
 	struct bmap_mds_info *bmi;
+	struct fidc_membh *f;
+	sl_bmapno_t lastbno;
+	int64_t amt = 0;
 
 	locked[1] = 0; /* gcc */
 
@@ -104,24 +104,29 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	else
 		BMAP_LOCK(b);
 
+	lastbno = fcmh_nvalidbmaps(f);
+	if (lastbno)
+		lastbno--;
+
+	if (fcmh_2_fsz(f)) {
+		lastslvr = (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) /
+		    SLASH_SLVR_SIZE;
+		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
+	} else {
+		lastslvr = 0;
+		lastsize = 0;
+	}
+
 	bmi = bmap_2_bmi(b);
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
 			/*
-			 * If this is the last bmap, tally only the
-			 * portion of data that exists.  This is needed
-			 * to fill big network pipes when dealing with
-			 * lots of small files.
+			 * If this is the last sliver of the last bmap,
+			 * tally only the portion of data that exists.
 			 */
-			bsiz = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
-			if (bsiz == 0 && fcmh_2_fsz(f))
-				bsiz = SLASH_BMAP_SIZE;
-			if (b->bcm_bmapno == fcmh_nvalidbmaps(f) - 1 &&
-			    i == bsiz / SLASH_SLVR_SIZE) {
-				sz = bsiz % SLASH_SLVR_SIZE;
-				if (sz == 0 && bsiz)
-					sz = SLASH_SLVR_SIZE;
-				amt += sz;
+			if (b->bcm_bmapno == lastbno &&
+			    i == lastslvr) {
+				amt += lastsize;
 				break;
 			}
 			amt += SLASH_SLVR_SIZE;
