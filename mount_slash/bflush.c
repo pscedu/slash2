@@ -666,9 +666,6 @@ bmap_flushable(struct bmapc_memb *b)
 static void
 bwc_desched(struct bmpc_write_coalescer *bwc)
 {
-	int i;
-	struct bmpc_ioreq *r;
-
 	psc_dynarray_reset(&bwc->bwc_biorqs);
 	bwc->bwc_soff = bwc->bwc_size = 0;
 }
