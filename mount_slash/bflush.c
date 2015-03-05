@@ -400,7 +400,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
-	r->biorq_flags &= ~BIORQ_SCHED;
 	OPSTAT_INCR("bmap_flush_resched");
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
@@ -643,12 +642,6 @@ bmap_flushable(struct bmapc_memb *b)
 
 		BIORQ_LOCK(r);
 		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
-		psc_assert(!(r->biorq_flags & BIORQ_SCHED));
-
-		if (r->biorq_flags & BIORQ_SCHED) {
-			BIORQ_ULOCK(r);
-			continue;
-		}
 		if (r->biorq_flags & BIORQ_EXPIRE)
 			force = 1;
 
@@ -676,11 +669,6 @@ bwc_desched(struct bmpc_write_coalescer *bwc)
 	int i;
 	struct bmpc_ioreq *r;
 
-	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
-		BIORQ_LOCK(r);
-		r->biorq_flags &= ~BIORQ_SCHED;
-		BIORQ_ULOCK(r);
-	}
 	psc_dynarray_reset(&bwc->bwc_biorqs);
 	bwc->bwc_soff = bwc->bwc_size = 0;
 }
@@ -946,17 +934,6 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
-			BIORQ_LOCK(r);
-
-			psc_assert(!(r->biorq_flags & BIORQ_SCHED));
-			if (r->biorq_flags & BIORQ_SCHED) {
-				BIORQ_ULOCK(r);
-				continue;
-			}
-
-			r->biorq_flags |= BIORQ_SCHED;
-			BIORQ_ULOCK(r);
-
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
 		}

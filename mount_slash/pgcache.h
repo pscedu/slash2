@@ -171,15 +171,14 @@ struct bmpc_ioreq {
 
 #define	BIORQ_READ		(1 <<  0)
 #define	BIORQ_WRITE		(1 <<  1)
-#define	BIORQ_SCHED		(1 <<  2)	/* flush in progress, don't clear unless retry happen */
-#define	BIORQ_DIO		(1 <<  3)
-#define	BIORQ_EXPIRE		(1 <<  4)
-#define	BIORQ_DESTROY		(1 <<  5)
-#define	BIORQ_FLUSHRDY		(1 <<  6)
-#define BIORQ_FREEBUF		(1 <<  7)	/* DIO READ needs a buffer */
-#define BIORQ_WAIT		(1 <<  8)
-#define BIORQ_ONTREE		(1 <<  9)
-#define BIORQ_READAHEAD		(1 <<  10)	/* performed by readahead */
+#define	BIORQ_DIO		(1 <<  2)
+#define	BIORQ_EXPIRE		(1 <<  3)
+#define	BIORQ_DESTROY		(1 <<  4)
+#define	BIORQ_FLUSHRDY		(1 <<  5)
+#define BIORQ_FREEBUF		(1 <<  6)	/* DIO READ needs a buffer */
+#define BIORQ_WAIT		(1 <<  7)
+#define BIORQ_ONTREE		(1 <<  8)
+#define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
@@ -191,7 +190,7 @@ struct bmpc_ioreq {
 #define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
 #define DEBUGS_BIORQ(level, ss, r, fmt, ...)				\
-	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s%s "	\
+	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s "	\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p pfr=%p "				\
 	    "sliod=%x npages=%d "					\
@@ -199,7 +198,6 @@ struct bmpc_ioreq {
 	    (r), (r)->biorq_flags,					\
 	    (r)->biorq_flags & BIORQ_READ		? "r" : "",	\
 	    (r)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
-	    (r)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
 	    (r)->biorq_flags & BIORQ_DIO		? "d" : "",	\
 	    (r)->biorq_flags & BIORQ_EXPIRE		? "x" : "",	\
 	    (r)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
