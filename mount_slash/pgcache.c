@@ -369,20 +369,19 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		bci->bci_flush_rc = rc;
 
 	bmpc = bmap_2_bmpc(b);
-	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
-		BIORQ_LOCK(r);
-		assert(r->biorq_flags & BIORQ_FLUSHRDY);
-		if (r->biorq_flags & BIORQ_SCHED) {
-			BIORQ_ULOCK(r);
-			continue;
-		}
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
+		psc_dynarray_add(&a, r);
+
+	DYNARRAY_FOREACH(r, i, &a) {
 		/*
 		 * Avoid another thread from reaching here and 
 		 * destroying the same biorq again.
 		 */
-		r->biorq_flags |= BIORQ_SCHED;
+		BIORQ_LOCK(r);
+		assert(r->biorq_flags & BIORQ_FLUSHRDY);
+		r->biorq_flags &= ~BIORQ_ONTREE;
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 		BIORQ_ULOCK(r);
-		psc_dynarray_add(&a, r);
 	}
 	if (psc_dynarray_len(&a))
 		bmap_wake_locked(b);
