@@ -109,9 +109,15 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 		lastbno--;
 
 	if (fcmh_2_fsz(f)) {
-		lastslvr = (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) /
-		    SLASH_SLVR_SIZE;
+		off_t bmapsize;
+
+		bmapsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+		if (bmapsize == 0)
+			bmapsize = SLASH_BMAP_SIZE;
+		lastslvr = (bmapsize - 1) / SLASH_SLVR_SIZE;
 		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
+		if (lastsize == 0)
+			lastsize = SLASH_SLVR_SIZE;
 	} else {
 		lastslvr = 0;
 		lastsize = 0;
