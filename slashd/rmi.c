@@ -85,9 +85,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (mp->rc);
 
-	psc_assert(b);
-
-	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
+	DEBUG_BMAP(PLL_DIAG, b, "sending to sliod");
 
 	bmi = bmap_2_bmi(b);
 	memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
@@ -119,7 +117,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->ncrc_updates > MAX_BMAP_NCRC_UPDATES) {
 		psclog_errorx("ncrc_updates=%u is > %d",
-		    mq->ncrc_updates, MAX_BMAP_NCRC_UPDATES); 
+		    mq->ncrc_updates, MAX_BMAP_NCRC_UPDATES);
 		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
