@@ -22,6 +22,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * SLASH2 bmap routines.  A bmap is a chunk of a file (e.g. 128MiB).
+ * All activity in SLASH2 is centered around bmaps, e.g. I/O leases
+ * to clients, replication work, etc.
+ */
+
 #define PSC_SUBSYS SLSS_BMAP
 #include "slsubsys.h"
 
@@ -47,8 +53,8 @@ SPLAY_GENERATE(bmap_cache, bmap, bcm_tentry, bmap_cmp)
 struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
 
-/**
- * bmap_cmp - comparator for bmaps in the splay cache.
+/*
+ * Comparator for bmaps in the splay cache.
  * @a: a bmap
  * @b: another bmap
  */
@@ -109,17 +115,18 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 	}
 }
 
-/**
- * bmap_lookup_cache - Lookup and optionally create a new bmap
- *	structure.
- * @new_bmap: whether to allow creation and also value-result of status.
+/*
+ * Lookup and optionally create a new bmap structure.
+ * @f: file's bmap tree to search.
+ * @n: bmap index number to search for.
+ * @new_bmap: whether to allow creation and also value-result of whether
+ * it was newly created or not.
  */
 struct bmap *
-bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
-    int *new_bmap)
+bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 {
-	int doalloc;
 	struct bmap lb, *b, *b2 = NULL;
+	int doalloc;
 
 	doalloc = *new_bmap;
 	lb.bcm_bmapno = n;
