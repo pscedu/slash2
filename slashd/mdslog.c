@@ -1308,13 +1308,13 @@ mds_open_cursor(void)
 	/* old utility does not set fsid, so we fill it here */
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
 		FID_SET_SITEID(mds_cursor.pjc_fid,
-		    zfsMount[current_vfsid].siteid);
+		    zfs_mounts[current_vfsid].zm_siteid);
 
 #if 0
 	/* backward compatibility */
 	if (mount_index == 1) {
 		psc_assert(current_vfsid == 0);
-		zfsMount[current_vfsid].fsid = FID_GET_SITEID(mds_cursor.pjc_fid);
+		zfs_mounts[current_vfsid].fsid = FID_GET_SITEID(mds_cursor.pjc_fid);
 	}
 #endif
 

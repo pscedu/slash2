@@ -61,14 +61,14 @@ slfid_to_vfsid(slfid_t fid, int *vfsid)
 	}
 
 	/* only have default file system in the root */
-	if (mount_index == 1) {
+	if (zfs_nmounts == 1) {
 		*vfsid = current_vfsid;
 		return (0);
 	}
 
 	siteid = FID_GET_SITEID(fid);
-	for (i = 0; i < mount_index; i++) {
-		if (zfsMount[i].siteid == (uint64_t)siteid) {
+	for (i = 0; i < zfs_nmounts; i++) {
+		if (zfs_mounts[i].zm_siteid == (uint64_t)siteid) {
 			*vfsid = i;
 			return (0);
 		}

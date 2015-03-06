@@ -218,7 +218,7 @@ slm_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
 			return;
 		}
 
-		mq->fsuuid = zfsMount[current_vfsid].uuid;
+		mq->fsuuid = zfs_mounts[current_vfsid].zm_uuid;
 	}
 }
 
@@ -258,7 +258,7 @@ slm_rpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen0,
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_rep *mp = *(void **)mpp;
 
-		mp->fsuuid = zfsMount[current_vfsid].uuid;
+		mp->fsuuid = zfs_mounts[current_vfsid].zm_uuid;
 	}
 	return (rc);
 }
@@ -408,6 +408,12 @@ batchrq_send(struct batchrq *br)
 	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
 	if (rc) {
  err:
+		/*
+		 * If we failed, check again to see if the connection
+		 * has been reestablished since there can be delay in
+		 * using this API.
+		 */
+
 		br->br_refcnt--;
 		br->br_rq = rq;
 		br->br_flags &= ~BATCHF_RQINFL;

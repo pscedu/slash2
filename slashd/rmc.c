@@ -480,13 +480,14 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 		rn = slm_rmc_search_roots(mq->name);
 		if (rn) {
-			mountinfo = &zfsMount[rn->rn_vfsid];
+			mountinfo = &zfs_mounts[rn->rn_vfsid];
 			fid = SLFID_ROOT;
-			FID_SET_SITEID(fid, mountinfo->siteid);
+			FID_SET_SITEID(fid, mountinfo->zm_siteid);
 
 			error = mdsio_getattr(rn->rn_vfsid,
-			    mountinfo->rootid, mountinfo->rootinfo,
-			    &rootcreds, &tmpattr);
+			    mountinfo->zm_rootid,
+			    mountinfo->zm_rootinfo, &rootcreds,
+			    &tmpattr);
 			if (!error) {
 				tmpattr.sst_fg.fg_fid = fid;
 				mp->attr = tmpattr;
@@ -740,14 +741,15 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 
 		rn = slm_rmc_search_roots(dirent->pfd_name);
 		if (rn) {
-			mountinfo = &zfsMount[rn->rn_vfsid];
+			mountinfo = &zfs_mounts[rn->rn_vfsid];
 			fid = SLFID_ROOT;
-			FID_SET_SITEID(fid, mountinfo->siteid);
+			FID_SET_SITEID(fid, mountinfo->zm_siteid);
 			dirent->pfd_ino = fid;
 
 			error = mdsio_getattr(rn->rn_vfsid,
-			    mountinfo->rootid, mountinfo->rootinfo,
-			    &rootcreds, &tmpattr);
+			    mountinfo->zm_rootid,
+			    mountinfo->zm_rootinfo, &rootcreds,
+			    &tmpattr);
 			if (!error) {
 				tmpattr.sst_fg.fg_fid = fid;
 				*attr = tmpattr;
