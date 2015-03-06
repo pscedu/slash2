@@ -1522,8 +1522,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	DEBUG_BMAP(PLL_DIAG, bmap, "bmapno=%u sz=%"PRId64" ios=%s",
 	    c->bno, c->fsize, res->res_name);
 
-	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
-
 	bmi = bmap_2_bmi(bmap);
 
 	if (!bmi->bmi_wr_ion ||
