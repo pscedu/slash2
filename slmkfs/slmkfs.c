@@ -111,7 +111,7 @@ slnewfs_touchfile(const char *fmt, ...)
 void
 slnewfs_create(const char *fsroot, uint32_t depth)
 {
-	char metadir[PATH_MAX], fn[PATH_MAX];
+	char *p, metadir[PATH_MAX], fn[PATH_MAX], strtm[32];
 	time_t tm;
 	FILE *fp;
 	int fd;
@@ -152,7 +152,11 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (fchmod(fileno(fp), 0600) == -1)
 		psclog_warn("chown %u %s", pw->pw_uid, fn);
 	tm = cursor.pjc_timestamp;
-	fprintf(fp, "This pool was created %s on %s\n", ctime(&tm),
+	ctime_r(&tm, strtm);
+	p = strchr(strtm, '\n');
+	if (p)
+		*p = '\0';
+	fprintf(fp, "This pool was created %s on %s\n", strtm,
 	    psc_get_hostname());
 	fclose(fp);
 
