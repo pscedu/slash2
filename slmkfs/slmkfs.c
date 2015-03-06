@@ -193,7 +193,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	cursor.pjc_version = PJRNL_CURSOR_VERSION;
 	cursor.pjc_timestamp = time(NULL);
 	cursor.pjc_fid = SLFID_MIN;
-	FID_SET_SITEID(cursor.pjc_fid, siteid);
+	FID_SET_SITEID(cursor.pjc_fid, sl_resid_to_siteid(resid));
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);
@@ -227,9 +227,9 @@ int
 main(int argc, char *argv[])
 {
 	char *endp, *s_resid;
-	sl_siteid_ti siteid;
-	int c, specsid = 0;
+	sl_siteid_t site_id;
 	long l;
+	int c;
 
 	pfl_init();
 	progname = argv[0];
@@ -240,11 +240,11 @@ main(int argc, char *argv[])
 			break;
 		case 'I':
 			s_resid = strchr(optarg, ':');
-			if (resid == NULL)
+			if (s_resid == NULL)
 				errx(1, "-I %s: ID must be specified in "
 				    "the format `SITE_ID:RESOURCE_ID'",
 				    optarg);
-			s_resid++ = '\0';
+			*s_resid++ = '\0';
 
 			if (strncmp(optarg, "0x", 2))
 				errx(1, "-I %s: SITE_ID must be in "
