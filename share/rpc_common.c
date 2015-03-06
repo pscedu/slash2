@@ -209,18 +209,20 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 }
 
 struct pscrpc_import *
-slrpc_new_import(uint32_t rqptl, uint32_t rpptl)
+slrpc_new_import(struct slashrpc_cservice *csvc)
 {
 	struct pscrpc_import *imp;
 
 	imp = pscrpc_new_import();
 	if (imp == NULL)
 		psc_fatalx("pscrpc_new_import");
-	imp->imp_cli_request_portal = rqptl;
-	imp->imp_cli_reply_portal = rpptl;
+	imp->imp_cli_request_portal = csvc->csvc_rqptl;
+	imp->imp_cli_reply_portal = csvc->csvc_rpptl;
 	imp->imp_max_retries = 2;
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;
+	imp->imp_hldropf = csvc->csvc_hldropf;
+	imp->imp_hldrop_arg = csvc->csvc_hldroparg;
 	return (imp);
 }
 
@@ -257,8 +259,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_fn = __FILE__;
 
 	if (flags & CSVCF_NONBLOCK) {
-		imp = slrpc_new_import(csvc->csvc_rqptl,
-		    csvc->csvc_rpptl);
+		imp = slrpc_new_import(csvc);
 		oimp = csvc->csvc_import;
 		csvc->csvc_import = imp;
 	}
@@ -563,8 +564,7 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
-	csvc->csvc_import = slrpc_new_import(csvc->csvc_rqptl,
-	    csvc->csvc_rpptl);
+	csvc->csvc_import = slrpc_new_import(csvc);
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
 }
@@ -610,7 +610,8 @@ _sl_csvc_disable(const struct pfl_callerinfo *pci,
  * @rpptl: reply portal ID.
  */
 __static struct slashrpc_cservice *
-sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
+sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
+    void *hldroparg)
 {
 	struct slashrpc_cservice *csvc;
 
@@ -620,7 +621,9 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);
 	csvc->csvc_rqptl = rqptl;
 	csvc->csvc_rpptl = rpptl;
-	csvc->csvc_import = slrpc_new_import(rqptl, rpptl);
+	csvc->csvc_hldropf = hldropf;
+	csvc->csvc_hldroparg = hldroparg;
+	csvc->csvc_import = slrpc_new_import(csvc);
 	return (csvc);
 }
 
@@ -721,105 +724,98 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
     enum slconn_type peertype, struct psc_multiwait *mw)
 {
+	void *hldropf, *hldroparg;
+	uint32_t *stkversp = NULL;
 	int rc = 0, addlist = 0, locked = 0;
 	struct slashrpc_cservice *csvc;
+	struct sl_resm *resm;
 	struct timespec now;
-	uint32_t *stkversp = NULL;
-	struct {
-		struct slashrpc_cservice *csvc;
-		uint32_t stkvers;
-	} *expc;
+	lnet_nid_t peernid;
 
-	if (*csvcp == NULL) {
-		locked = CONF_RLOCK();
-		if (*csvcp == NULL) {
-			/* initialize service */
-			csvc = sl_csvc_create(rqptl, rpptl);
-			csvc->csvc_params.scp_csvcp = csvcp;
-			psc_atomic32_set(&csvc->csvc_flags, flags);
-			csvc->csvc_peertype = peertype;
-			csvc->csvc_peernids = peernids;
-
-			csvc->csvc_version = version;
-			csvc->csvc_magic = magic;
-
-			/* ensure peer is of the given resource type */
-			switch (peertype) {
-			case SLCONNT_CLI: {
-				char buf[RESM_ADDRBUF_SZ];
-
-				csvc->csvc_import->imp_hldropf =
-				    sl_imp_hldrop_cli;
-				csvc->csvc_import->imp_hldrop_arg =
-				    csvc;
-				psc_atomic32_set(&csvc->csvc_refcnt, 1);
-
-				snprintf(buf, sizeof(buf), "%p", csvc);
-				if (exp && exp->exp_connection)
-					pscrpc_id2str(
-					    exp->exp_connection->c_peer,
-					    buf);
-				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, PMWCF_WAKEALL, "cli-%s", buf);
-				expc = (void *)csvc->csvc_params.scp_csvcp;
-				stkversp = &expc->stkvers;
-
-				//if (imp->imp_connection->c_peer)
-
-				break;
-			    }
-			case SLCONNT_IOD: {
-				struct sl_resm *resm;
-				lnet_nid_t peernid;
-
-				peernid = slrpc_getpeernid(exp, peernids);
-				resm = libsl_nid2resm(peernid);
-				if (resm->resm_res->res_type == SLREST_MDS)
-					psc_fatalx("csvc requested type "
-					    "is IOD but resource is MDS");
-				csvc->csvc_import->imp_hldropf =
-				    sl_imp_hldrop_resm;
-				csvc->csvc_import->imp_hldrop_arg =
-				    resm;
-				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, PMWCF_WAKEALL, "res-%s",
-				    resm->resm_name);
-				stkversp = &resm->resm_res->res_stkvers;
-				break;
-			    }
-			case SLCONNT_MDS: {
-				struct sl_resm *resm;
-				lnet_nid_t peernid;
-
-				peernid = slrpc_getpeernid(exp, peernids);
-				resm = libsl_nid2resm(peernid);
-				if (resm->resm_res->res_type != SLREST_MDS)
-					psc_fatalx("csvc requested type "
-					    "is MDS but resource is IOD");
-				csvc->csvc_import->imp_hldropf =
-				    sl_imp_hldrop_resm;
-				csvc->csvc_import->imp_hldrop_arg =
-				    resm;
-				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, PMWCF_WAKEALL, "res-%s",
-				    resm->resm_name);
-				stkversp = &resm->resm_res->res_stkvers;
-				break;
-			    }
-			default:
-				psc_fatalx("%d: bad peer connection "
-				    "type", peertype);
-			}
-			if (peertype == SLCONNT_CLI)
-				addlist = 1;
-
-			*csvcp = csvc;
-		}
-		CONF_URLOCK(locked);
+	if (*csvcp) {
+		csvc = *csvcp;
+		locked = CSVC_RLOCK(csvc);
+		goto restart;
 	}
-	csvc = *csvcp;
 
-	locked = CSVC_RLOCK(csvc);
+	locked = CONF_RLOCK();
+	if (*csvcp) {
+		csvc = *csvcp;
+		goto restart;
+	}
+
+	switch (peertype) {
+	case SLCONNT_CLI: {
+		hldropf = sl_imp_hldrop_cli;
+		hldropf = csvc;
+		break;
+	case SLCONNT_IOD: {
+	case SLCONNT_MDS: {
+		peernid = slrpc_getpeernid(exp, peernids);
+		resm = libsl_nid2resm(peernid);
+
+		if (peertype == SLCONNT_MDS) {
+			if (resm->resm_type != SLREST_MDS)
+				psc_fatalx("csvc requested type is MDS "
+				    "but resource is MDS");
+		} else {
+			if (resm->resm_type == SLREST_MDS)
+				psc_fatalx("csvc requested type is IOS "
+				    "but resource is MDS");
+		}
+
+		hldropf = sl_imp_hldrop_resm;
+		hldroparg = resm;
+		break;
+	default:
+		psc_fatalx("%d: bad peer type", peertype);
+	}
+
+	/* initialize service */
+	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
+	csvc->csvc_params.scp_csvcp = csvcp;
+	psc_atomic32_set(&csvc->csvc_flags, flags);
+	csvc->csvc_peertype = peertype;
+	csvc->csvc_peernids = peernids;
+	csvc->csvc_version = version;
+	csvc->csvc_magic = magic;
+
+	/* ensure peer is of the given resource type */
+	switch (peertype) {
+	case SLCONNT_CLI: {
+		char addrbuf[RESM_ADDRBUF_SZ];
+		struct {
+			struct slashrpc_cservice *csvc;
+			uint32_t stkvers;
+		} *expc;
+
+		/* Hold reference as the multiwait arg below. */
+		psc_atomic32_set(&csvc->csvc_refcnt, 1);
+
+		snprintf(addrbuf, sizeof(addrbuf), "%p", csvc);
+		if (exp && exp->exp_connection)
+			pscrpc_id2str(exp->exp_connection->c_peer,
+			    addrbuf);
+		psc_multiwaitcond_init(&csvc->csvc_mwc, csvc,
+		    PMWCF_WAKEALL, "cli-%s", addrbuf);
+		expc = (void *)csvc->csvc_params.scp_csvcp;
+		stkversp = &expc->stkvers;
+
+		//if (imp->imp_connection->c_peer)
+
+		break;
+	    }
+	case SLCONNT_IOD:
+	case SLCONNT_MDS:
+		psc_multiwaitcond_init(&csvc->csvc_mwc, csvc,
+		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
+		stkversp = &resm->resm_res->res_stkvers;
+		break;
+	}
+	if (peertype == SLCONNT_CLI)
+		addlist = 1;
+
+	*csvcp = csvc;
 
  restart:
 	if (sl_csvc_useable(csvc))
@@ -833,8 +829,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		struct pscrpc_connection *c;
 
 		if (csvc->csvc_import == NULL)
-			csvc->csvc_import = slrpc_new_import(
-			    csvc->csvc_rqptl, csvc->csvc_rpptl);
+			csvc->csvc_import = slrpc_new_import(csvc);
 
 		/*
 		 * If an export was specified, the peer has already
@@ -899,8 +894,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			}
 			csvc->csvc_tryref = 1;
 		} else if (csvc->csvc_import == NULL)
-			csvc->csvc_import = slrpc_new_import(
-			    csvc->csvc_rqptl, csvc->csvc_rpptl);
+			csvc->csvc_import = slrpc_new_import(csvc);
 		CSVC_ULOCK(csvc);
 
 		if (stkversp == NULL)
