@@ -1802,7 +1802,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
 	if (rw == SL_READ && (!size || off >= (off_t)fsz))
-		PFL_GOTOERR(out, rc = 0);
+		PFL_GOTOERR(out2, rc = 0);
 
 	msl_update_iocounters(slc_iosyscall_iostats, rw, size);
 
@@ -1834,12 +1834,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
-			PFL_GOTOERR(out, rc);
+			PFL_GOTOERR(out2, rc);
 
 		rc = msl_bmap_lease_tryext(b, 1);
 		if (rc) {
 			bmap_op_done(b);
-			PFL_GOTOERR(out, rc);
+			PFL_GOTOERR(out2, rc);
 		}
 		BMAP_LOCK(b);
 
@@ -1981,7 +1981,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			break;
 	}
 
- out:
+ out2:
 	/* Step 4: retry if at least one biorq failed */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f,
