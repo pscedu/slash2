@@ -92,6 +92,8 @@ struct slrpc_cservice {
 	int			 csvc_lineno;
 	const char		*csvc_fn;
 	pthread_t		 csvc_owner;
+	void			*csvc_hldropf;
+	void			*csvc_hldroparg;
 
 	struct timespec		 csvc_mtime;		/* last activity */
 	struct psclist_head	 csvc_lentry;
@@ -354,7 +356,7 @@ void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 void	 slrpc_initcli(void);
 
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,
-    	    uint32_t, enum slconn_type);
+	    uint32_t, enum slconn_type);
 
 int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
 	    struct pscrpc_request **, int, int, void *);

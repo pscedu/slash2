@@ -622,7 +622,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
 	csvc->csvc_rqptl = rqptl;
 	csvc->csvc_rpptl = rpptl;
 	csvc->csvc_hldropf = hldropf;
-	csvc->csvc_hldroparg = hldroparg;
+	csvc->csvc_hldroparg = hldroparg ? hldroparg : NULL;
 	csvc->csvc_import = slrpc_new_import(csvc);
 	return (csvc);
 }
@@ -745,12 +745,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	}
 
 	switch (peertype) {
-	case SLCONNT_CLI: {
+	case SLCONNT_CLI: 
 		hldropf = sl_imp_hldrop_cli;
-		hldropf = csvc;
+		hldropf = NULL;
 		break;
-	case SLCONNT_IOD: {
-	case SLCONNT_MDS: {
+	case SLCONNT_IOD: 
+	case SLCONNT_MDS: 
 		peernid = slrpc_getpeernid(exp, peernids);
 		resm = libsl_nid2resm(peernid);
 
