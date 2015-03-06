@@ -238,8 +238,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	struct srt_replwk_reqent pe;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
-	int64_t amt;
 	sl_bmapno_t lastbno;
+	int64_t amt;
 
 	dst_resm = res_getmemb(dst_res);
 	f = b->bcm_fcmh;
@@ -267,10 +267,9 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		psc_multiwait_setcondwakeable(&slm_upsch_mw,
 		    &dst_resm->resm_csvc->csvc_mwc, 1);
 
-		/* push batch out immediately */
-	}
-	if (amt == 0)
+		/* XXX push batch out immediately */
 		return (0);
+	}
 
 	bsr = PSCALLOC(sizeof(*bsr));
 	bsr->bsr_off = off;
@@ -322,14 +321,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(fail, rc = -ENODEV);
 
-	rc = batchrq_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
-	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), bsr,
-	    slm_batch_repl_cb, 5);
-	if (rc)
-		PFL_GOTOERR(fail, rc);
-
-	OPSTAT2_ADD("replsched", amt);
-
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
 	    " SET	status = 'S'"
@@ -339,6 +330,25 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	    SQLITE_INTEGER, dst_res->res_id,
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
+
+	rc = batchrq_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
+	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), bsr,
+	    slm_batch_repl_cb, 5);
+	if (rc) {
+		dbdo(NULL, NULL,
+		    " UPDATE	upsch"
+		    " SET	status = 'Q'"
+		    " WHERE	resid = ?"
+		    "   AND	fid = ?"
+		    "   AND	bno = ?",
+		    SQLITE_INTEGER, dst_res->res_id,
+		    SQLITE_INTEGER64, bmap_2_fid(b),
+		    SQLITE_INTEGER, b->bcm_bmapno);
+
+		PFL_GOTOERR(fail, rc);
+	}
+
+	OPSTAT2_ADD("replsched", amt);
 
 	/*
 	 * We use this release API because mds_repl_bmap_apply() grabbed
@@ -370,9 +380,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	}
 
-	if (bsr->bsr_amt)
-		resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt,
-		    NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
 
 	UPSCH_WAKE();
 
