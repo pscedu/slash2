@@ -32,10 +32,10 @@
 
 #include <dirent.h>
 
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "pfl/bitflag.h"
 #include "pfl/lock.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 #include "pfl/thread.h"
 
 #include "bmap_mds.h"
@@ -118,13 +118,13 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
     struct fidc_membh *f, struct bmapc_memb *b, sl_bmapno_t n,
     struct pscrpc_request **rqp)
 {
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct srt_replst_bhdr bhdr;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int nbits, rc;
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
@@ -161,12 +161,12 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	return (0);
 }
 
-/**
- * slm_rcm_issue_getreplst - Issue a GETREPLST reply to a CLI from MDS.
+/*
+ * Issue a GETREPLST reply to a CLI from MDS.
  */
 int
 slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
-    struct fidc_membh *f, int is_eof)
+    struct fidc_membh *f)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -191,11 +191,10 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 			    (fcmh_2_nrepls(f) - SL_DEF_REPLICAS) *
 			    sizeof(mq->repls[0]));
 		}
-	}
-	if (is_eof)
+	} else
 		mq->rc = EOF;
 
-	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp); // async
+	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp); // XXX async
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -209,11 +208,11 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	sl_bmapno_t n;
 	int rc, rc2;
 
-	rc = slm_rcm_issue_getreplst(rsw, f, 0);
+	rc = slm_rcm_issue_getreplst(rsw, f);
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
-			if (bmap_getf(f, n, SL_WRITE,
-			    BMAPGETF_CREATE| BMAPGETF_NOAUTOINST, &b))
+			if (bmap_getf(f, n, SL_WRITE, BMAPGETF_CREATE |
+			    BMAPGETF_NOAUTOINST, &b))
 				break;
 
 			rc = slmrcmthr_walk_brepls(rsw, f, b, n, &rq);
@@ -249,8 +248,8 @@ slmrcmthr_main(struct psc_thread *thr)
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
 	struct psc_dynarray da;
-	struct sl_fidgen fg;
 	struct fidc_membh *f;
+	struct sl_fidgen fg;
 	int n, rc;
 	void *p;
 
@@ -285,7 +284,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		}
 
 		/* signal EOF */
-		slm_rcm_issue_getreplst(rsw, NULL, 1);
+		slm_rcm_issue_getreplst(rsw, NULL);
 
 		sl_csvc_decref(rsw->rsw_csvc);
 		PSCFREE(rsw);
