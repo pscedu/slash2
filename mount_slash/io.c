@@ -1885,83 +1885,87 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (!retry)
 			msl_fsrqinfo_biorq_add(q, r, i);
 
-		if (i != nr - 1) {
-			roff += tlen;
-			tsize -= tlen;
-			if (buf)
-				buf += tlen;
-			tlen = MIN(SLASH_BMAP_SIZE, tsize);
-			continue;
-		}
-		if (retry)
-			continue;
 		/*
-		 * Trigger read-ahead or write-ahead on the last
-		 * request, only if we are not retrying.
+		 * No need to update roff and tsize for the last iteration.
+		 * Plus, we need them for read-ahead work in the next setp.
 		 */
-
-		/*
-		 * We should always be able to ask for the next bmap
-		 * because a future write can extend the length of a
-		 * file.
-		 */
-		if (rw == SL_WRITE) {
-			mfh_prod_writeahead(mfh, b->bcm_bmapno + 1);
-			break;
-		}
-
-		aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
-		alen = tlen + (roff & BMPC_BUFMASK);
-
-		npages = alen / BMPC_BUFSZ;
-		if (alen % BMPC_BUFSZ)
-			npages++;
-
-		nbmaps = (fsz + SLASH_BMAP_SIZE - 1) / SLASH_BMAP_SIZE;
-		if (b->bcm_bmapno < nbmaps - 1)
-			bsize = SLASH_BMAP_SIZE;
-		else
-			bsize = fsz - (uint64_t)SLASH_BMAP_SIZE *
-			    (nbmaps - 1);
-
-		/*
-		 * XXX: Enlarge the original request to include some
-		 * readhead pages within the same bmap can save extra
-		 * RPCs.  And the cost of waiting them all should be
-		 * minimal.
-		 */
-		if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
-		    &rapages, &raoff2, &rapages2))
+		if (i == nr - 1)
 			break;
 
-		DEBUG_BIORQ(PLL_DIAG, r, "aoff=%d npages=%d raoff=%d "
-		    "rapages=%d raoff2=%d rapages2=%d predio_off=%ld",
-		    aoff, npages, raoff, rapages, raoff2, rapages2,
-		    mfh->mfh_predio_off);
-
-		/*
-		 * Enqueue read ahead for next sequential region of file
-		 * space.
-		 */
-		readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno,
-		    raoff, rapages);
-
-		/*
-		 * Enqueue read ahead into next bmap if our prediction
-		 * would extend into that space.
-		 *
-		 * XXX: There used to be a dequeue logic that removes
-		 * the file from read-ahead if a subsequent read is not
-		 * sequential.
-		 */
-		if (rapages2 && b->bcm_bmapno < nbmaps - 1)
-			readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
-			    b->bcm_bmapno + 1, raoff2, rapages2);
-		break;
+		roff += tlen;
+		tsize -= tlen;
+		if (buf)
+			buf += tlen;
+		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
 	/*
-	 * Step 2: launch biorqs if necessary
+	 * Step 2: Trigger read-ahead or write-ahead if necessary.
+	 *
+	 */
+	if (retry) 
+		goto out1;
+	/*
+	 * We should always be able to ask for the next bmap
+	 * because a future write can extend the length of a
+	 * file.
+	 */
+	if (rw == SL_WRITE) {
+		mfh_prod_writeahead(mfh, b->bcm_bmapno + 1);
+		goto out1;
+	}
+
+	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
+	alen = tlen + (roff & BMPC_BUFMASK);
+
+	npages = alen / BMPC_BUFSZ;
+	if (alen % BMPC_BUFSZ)
+		npages++;
+
+	nbmaps = (fsz + SLASH_BMAP_SIZE - 1) / SLASH_BMAP_SIZE;
+	if (b->bcm_bmapno < nbmaps - 1)
+		bsize = SLASH_BMAP_SIZE;
+	else
+		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE *
+		    (nbmaps - 1);
+
+	/*
+	 * XXX: Enlarge the original request to include some
+	 * readhead pages within the same bmap can save extra
+	 * RPCs.  And the cost of waiting them all should be
+	 * minimal.
+	 */
+	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
+	    &rapages, &raoff2, &rapages2))
+		goto out1;
+
+	DEBUG_BIORQ(PLL_DIAG, r, "aoff=%d npages=%d raoff=%d "
+	    "rapages=%d raoff2=%d rapages2=%d predio_off=%ld",
+	    aoff, npages, raoff, rapages, raoff2, rapages2,
+	    mfh->mfh_predio_off);
+
+	/*
+	 * Enqueue read ahead for next sequential region of file
+	 * space.
+	 */
+	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno,
+	    raoff, rapages);
+
+	/*
+	 * Enqueue read ahead into next bmap if our prediction
+	 * would extend into that space.
+	 *
+	 * XXX: There used to be a dequeue logic that removes
+	 * the file from read-ahead if a subsequent read is not
+	 * sequential.
+	 */
+	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
+		    b->bcm_bmapno + 1, raoff2, rapages2);
+ out1:
+
+	/*
+	 * Step 3: launch biorqs if necessary
 	 *
 	 * Note that the offsets used here are file-wise offsets not
 	 * offsets into the buffer.
@@ -1978,7 +1982,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
  out:
-	/* Step 3: retry if at least one biorq failed */
+	/* Step 4: retry if at least one biorq failed */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f,
 		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
@@ -2001,7 +2005,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/*
-	 * Step 4: drop our reference to the fsrq.  This is done to
+	 * Step 5: drop our reference to the fsrq.  This is done to
 	 * insert any error obtained in this routine to the mfsrq.  Each
 	 * biorq holds a reference to the mfsrq so reply to pscfs will
 	 * only happen after each biorq finishes.  For DIO, buffers are
