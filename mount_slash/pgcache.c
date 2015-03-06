@@ -369,10 +369,9 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		bci->bci_flush_rc = rc;
 
 	bmpc = bmap_2_bmpc(b);
-	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
+	while (!RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
+		r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs);
 		psc_dynarray_add(&a, r);
-
-	DYNARRAY_FOREACH(r, i, &a) {
 		/*
 		 * Avoid another thread from reaching here and 
 		 * destroying the same biorq again.
