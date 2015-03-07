@@ -103,8 +103,9 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 	<oof:pre>
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs-fuse &amp;&amp; sleep 3
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
-<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set compression=on s2mds_pool
-<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -I $site_id /s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set atime=off s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set compression=lz4 s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -I $site_id:$resource_id /s2mds_pool
 The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
@@ -181,12 +182,12 @@ The UUID of the pool is 0x2a8ae931a776366e
 	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"my metadata server"</oof:span>;
 	     <oof:span class='syn_keyword'>type</oof:span> = mds;
 	     <oof:span class='syn_keyword'>id</oof:span>   = 0;
-	     <oof:span class='syn_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
-	     <oof:span class='syn_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
+	     <oof:span class='syn_comment'># `nids' should be the IP or hostname of your MDS node.</oof:span> #
+	     <oof:span class='syn_comment'># It should be on the network specified in the variable `nets'</oof:span> #
 	     <oof:span class='syn_comment'># variable above.</oof:span> #
 	     <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.100;
-	     <oof:span class='syn_comment'># 'jrnldev' matches the device we formatted above.</oof:span> #
-	     <oof:span class='syn_keyword'>jrnldev</oof:span> = /dev/sdJ1;
+	     <oof:span class='syn_comment'># `journal' must be the device formatted above.</oof:span> #
+	     <oof:span class='syn_keyword'>journal</oof:span> = /dev/sdJ1;
      }
 
      <oof:span class='syn_keyword'>resource</oof:span> ion1 {
@@ -200,7 +201,7 @@ The UUID of the pool is 0x2a8ae931a776366e
      }
 
      <oof:span class='syn_keyword'>resource</oof:span> ion2 {
-	   <oof:span class='syn_keyword'>desc</oof:span> = "I/O server 2";
+	   <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"I/O server 2"</span>;
 	   <oof:span class='syn_keyword'>type</oof:span> = standalone_fs;
 	   <oof:span class='syn_keyword'>id</oof:span>   = 2;
 	   <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.102, 10.0.0.2;
@@ -236,7 +237,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 		ion2:
 	</oof:p>
 	<oof:pre>
-<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i -u 0x2a8ae931a776366e /disk
+<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i -u 0x2a8ae931a776366e -I 0x401:0x6210 /disk
 <oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>$</oof:span> ls -l /disk/.slmd/
 total 4
 drwx------ 3 root root 4096 Jun 18 15:10 2a8ae931a776366e

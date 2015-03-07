@@ -56,8 +56,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		file:
 	</oof:p>
 	<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; slash_nara/mk/local.mk
-<oof:span class='prompt_meta'>$</oof:span> echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLCFGV=config/<oof:strong>$mysite.slcfg</oof:strong>:<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
 </oof:pre>
 
 	<oof:header size="2">Compilation Prerequisites</oof:header>
@@ -177,7 +176,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		libraries outside the SLASH2 source root are also fetched:
 	</oof:p>
 	<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> svn up
+<oof:span class='prompt_meta'>$</oof:span> make up
 </oof:pre>
 
 	<oof:p>
@@ -185,7 +184,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		pulling updates, recompile the suite:
 	</oof:p>
 	<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> make
+<oof:span class='prompt_meta'>$</oof:span> make build
 <oof:span class='prompt_meta'>#</oof:span> make install
 </oof:pre>
 

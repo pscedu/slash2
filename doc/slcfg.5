@@ -57,35 +57,15 @@ to the given value
 .Ar val .
 The following variables may be set:
 .Bl -tag -offset 3n -width 1n
-.It Ic allow_exec
-Optional executable
+.It Ic allow_exec Pq optional; client-only
+Executable
 .Xr open 2
-access list.
-This setting applies to
-.Xr mount_slash 8
-only.
-.It Ic fs_root
-For
-.Xr sliod 8 ,
-the file system root where backend data is stored.
-This directory must be initialized with
-.Xr slmkfs 8 .
-.Pp
-For
-.Xr mount_slash 8 ,
-the file system root where file data retrieved over a
-.Tn SLASH2
-network may be cached locally.
-.It Ic journal
-Set the path of the operation journal file.
-May be a direct device for increased performance.
-Defaults to
-.Pa /var/lib/slash/op-journal .
-This setting applies to
-.Xr slashd 8
-only.
+access list, separated by colons
+.Pq Sq :\& .
+.It Ic fsuuid
+
 .It Ic nets
-This value is used to specify environment variable
+This value is used to specify the environment variable
 .Ev LNET_IP2NETS
 .Po see
 .Xr slashd 8 ,
@@ -99,22 +79,6 @@ for more information
 port used to establish connections to
 .Tn SLASH2
 peers.
-.It Ic pref_ios
-Preferred
-.Tn I/O
-system resource name.
-This setting applies to
-.Xr mount_slash 8
-only.
-.It Ic pref_mds
-Default
-.Tn MDS
-resource name.
-This setting applies to
-.Xr sliod 8
-and
-.Xr mount_slash 8
-only.
 .It Ic routes
 This value, if specified, is used to specify the environment variable
 .Ev LNET_ROUTES
@@ -125,20 +89,6 @@ or
 .Xr sliod 8
 for more information
 .Pc .
-.It Ic zpool_name
-The
-.Tn ZFS
-pool name for the backend metadata storage.
-This setting applies to
-.Xr slashd 8
-only.
-.It Ic zpool_cache
-The
-.Tn ZFS
-pool cache file for loading the backend metadata storage.
-This setting applies to
-.Xr slashd 8
-only.
 .El
 .El
 .Pp
@@ -190,30 +140,55 @@ Each member node of a cluster must also have its own resource profile.
 Resource specifications recognize the following variables:
 .Pp
 .Bl -tag -offset 3n -width jnrldevX -compact
-.It Ic desc
+.It Ic arc_max Pq optional; MDS-only
+.It Ic desc Pq optional
 Short description of the resource.
+.It Ic fidcachesz Pq optional
+.It Ic flags
 .It Ic fsroot
-Analogous to the
-.Ic fs_root
-variable.
+For
+.Xr sliod 8 ,
+the file system root where backend data is stored.
+This directory must be initialized with
+.Xr slmkfs 8 .
 .It Ic id
 Numerical identifier for the resource, required to be unique for all
 resources in a site.
 .It Ic ios
 One or more resource names comprising the cluster, separated by comma
 delimiters
-.Pq applies only to clusters .
-.It Ic jrnldev
-Analogous to the
-.Ic journal
-variable.
+.Pq applies only to clusters .  
+.It Ic journal
+Set the path of the operation journal file.
+May be a direct device for increased performance.
+Defaults to
+.Pa /var/lib/slash/op-journal .
+This setting applies to
+.Xr slashd 8
+only.
 .It Ic nids
 One or more host addresses this resource identifies through.
 Domain name services are accessed as necessary and the
 .Tn LNET
 network may be specified if it cannot be unambiguously determined.
-.It Ic selftest
-Command to run occassionally as a self health test to report to the
+.It Ic pref_ios
+Preferred
+.Tn I/O
+system resource name.
+This setting applies to
+.Xr mount_slash 8
+only.
+.It Ic pref_mds
+Default
+.Tn MDS
+resource name.
+This setting applies to
+.Xr sliod 8
+and
+.Xr mount_slash 8
+only.
+.It Ic self_test
+Command to run occasionally as a self health test to report to the
 .Tn MDS
 to indicate high level file system backend or other kinds of problems
 .Pq ION only .
@@ -238,6 +213,23 @@ Cluster composed of one or more nodes with independent
 .Pq non-shared
 file systems
 .El
+.It Ic zpool_name Pq MDS-only
+The
+.Tn ZFS
+pool name for the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
+.It Ic zpool_cache Pq MDS-only
+The
+.Tn ZFS
+pool cache file for loading the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
+
+
+
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact

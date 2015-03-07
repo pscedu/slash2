@@ -81,12 +81,14 @@ Before this file system can be used by the
 metadata server, it must be initialized by
 .Xr slmkfs 8 :
 .Bd -literal -offset indent
-# slmkfs -I $site_id /mypool
+# slmkfs -I $site_id:$res_id /mypool
 .Ed
 .Pp
 The
 .Va $site_id
-must match the site's ID as specified in
+must match the site's ID and
+.Va $res_id
+must match the resource's ID as specified in
 .Xr slcfg 5 .
 .Pp
 During formatting of a new MDS file system, a file system unique ID will
@@ -150,7 +152,7 @@ option.
 This directory must be initialized for use with
 .Xr slmkfs 8 :
 .Bd -literal -offset indent
-# slmkfs -i fsroot
+# slmkfs -i -u $fsuuid -I $site_id:$res_id /$fsroot
 .Ed
 .Pp
 Next, ensure that the shared
