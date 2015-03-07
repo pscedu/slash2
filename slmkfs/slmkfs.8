@@ -31,10 +31,7 @@ backing store file system
 .Sh SYNOPSIS
 .Nm slmkfs
 .Op Fl iW
-.Op Fl c Ar conf
-.Op Fl D Ar datadir
-.Op Fl I Ar siteid
-.Op Fl R Ar resid
+.Op Fl I Ar siteid:resid
 .Op Fl u Ar fsuuid
 .Pa fsroot
 .Sh DESCRIPTION
@@ -57,17 +54,18 @@ queue.
 .Pp
 The following options are available:
 .Bl -tag -offset 3n -width 3n
-.It Fl c Ar conf
-Specify configuration file from which to extract other parameters
-.Pq such as Fl u .
-.It Fl D Ar datadir
-Specify an alternative directory where operation data is stored.
-Defaults to
-.Pa /var/lib/slash .
-.It Fl I Ar siteid
-Specify this site's ID number.
-Should match the same value of the site ID from its profile in the
-specified configuration file.
+.It Fl I Ar siteid:resid
+Specify this resource's ID number.
+The format is the site ID, in hexadecimal notation with the
+.Sq 0x
+prefix, followed by a colon
+.Pq Sq :\& ,
+followed by the resource ID, in hexadecimal notation with the
+.Sq 0x
+prefix.
+Both IDs must match the corresponding profile from the
+.Xr slcfg 5
+configuration file for this resource.
 .It Fl i
 Format a file system suitable for use with
 .Tn I/O
@@ -75,24 +73,15 @@ nodes.
 The default is to format the file system for use with an
 .Tn MDS
 server.
-.It Fl R Ar resid
-Specify resource ID, which must correspond to the
-.Ic id
-field from the analogous
-.Xr slcfg 5
-resource definition.
-Must be in hexadecimal format
-.Po i.e. Sq 0x
-.No prefix Pc .
 .It Fl u
-Specify file system
+Specify the file system
 .Tn UUID
 .Po for
 .Tn I/O nodes only
 .Pc .
-Must be in hexadecimal format
-.Po i.e. Sq 0x
-.No prefix Pc .
+Must be in hexadecimal format with the
+.Sq 0x
+prefix.
 .It Fl W
 Completely wipe all existing data on the destination file system before
 initializing the internal structure.
