@@ -85,7 +85,7 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
-	int fl = 0;
+	int fl = PFL_FILEWALKF_NOCHDIR;
 
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
@@ -398,12 +398,12 @@ sli_import(const char *fn, const struct stat *stb,
 int
 slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	int fl = PFL_FILEWALKF_NOCHDIR;
 	struct slictlmsg_fileop *sfop = m;
 	struct statvfs vfssb1, vfssb2;
 	struct sli_import_arg a;
 	struct stat sb1, sb2;
 	char buf[SL_PATH_MAX];
-	int fl = 0;
 
 	sfop->sfop_fn[sizeof(sfop->sfop_fn) - 1] = '\0';
 	sfop->sfop_fn2[sizeof(sfop->sfop_fn2) - 1] = '\0';
