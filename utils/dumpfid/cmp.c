@@ -8,14 +8,15 @@
 #include <sys/stat.h>
 
 #include <stdio.h>
-#include <fts.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fts.h"
+
 
 int
 f_inocmp(const FTSENT **a, const FTSENT **b)
 {
-	return (CMP((*a)->fts_statp->st_ino, (*b)->fts_statp->st_ino));
+	return (CMP((*a)->fts_ino, (*b)->fts_ino));
 }
 
 void *cmpf = f_inocmp;
