@@ -40,6 +40,10 @@ SLASH_MODULES?=		cli ion mds
 
 -include ${SLASH_BASE}/mk/local.mk
 
+ifneq ($(filter mds,${SLASH_MODULES}),)
+ SLASH_MODULES+=	zfs
+endif
+
 ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
  ifneq ($(filter acl,${SLASH_OPTIONS}),)
   SRCS+=		${SLASH_BASE}/mount_slash/acl_cli.c
