@@ -59,7 +59,6 @@ int		 ion;
 struct passwd	*pw;
 uint64_t	 fsuuid;
 sl_ios_id_t	 resid = IOS_ID_ANY;
-const char	*datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
 
@@ -217,8 +216,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-iW] [-c conf] [-D datadir]\n"
-	    "\t[-I siteid:resid] [-u fsuuid] fsroot\n",
+	    "usage: %s [-iW] [-I siteid:resid] [-u fsuuid] fsroot\n",
 	    progname);
 	exit(1);
 }
@@ -233,11 +231,8 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:iI:u:W")) != -1)
+	while ((c = getopt(argc, argv, "iI:u:W")) != -1)
 		switch (c) {
-		case 'D':
-			datadir = optarg;
-			break;
 		case 'I':
 			s_resid = strchr(optarg, ':');
 			if (s_resid == NULL)
