@@ -269,7 +269,8 @@ packshow_bmpces(__unusedx char *spec)
 
 void
 parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
-    int (*packf)(const char *, const struct stat *, int, int, void *))
+    int (*packf)(const char *, const struct stat *, int, ino_t, int,
+    void *))
 {
 	char *sprio, *uprio, *bmapno, *next, *bend, *iosv, *ios;
 	char replrqspec[LINE_MAX], *endp, *bmapnos;
@@ -386,7 +387,7 @@ lookup(const char **tbl, int n, const char *name)
 int
 cmd_fattr1(const char *fn,
     __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx int level, void *arg)
+    __unusedx ino_t inum, __unusedx int level, void *arg)
 {
 	struct msctlmsg_fattr *mfa;
 	struct fattr_arg *a = arg;
@@ -447,7 +448,7 @@ cmd_fattr(int ac, char **av)
 int
 cmd_bmap_repl_policy_one(const char *fn,
     __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx int level, void *arg)
+    __unusedx ino_t inum, __unusedx int level, void *arg)
 {
 	struct msctlmsg_bmapreplpol *mfbrp;
 	struct repl_policy_arg *a = arg;
@@ -523,7 +524,8 @@ cmd_bmap_repl_policy(int ac, char **av)
 
 int
 cmd_replrq_one(const char *fn, const struct stat *stb,
-    __unusedx int info, __unusedx int level, void *arg)
+    __unusedx int info, __unusedx ino_t inum, __unusedx int level,
+    void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
@@ -571,7 +573,8 @@ cmd_replrq(int ac, char **av)
 
 int
 cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
-    int info, __unusedx int level, __unusedx void *arg)
+    int info, __unusedx ino_t inum, __unusedx int level,
+    __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
@@ -597,7 +600,7 @@ cmd_replst(int ac, char **av)
 	for (i = 1; i < ac; i++)
 		walk(av[i], cmd_replst_one, &arg);
 	if (ac == 1)
-		cmd_replst_one("", NULL, 0, 0, NULL);
+		cmd_replst_one("", NULL, 0, 0, 0, NULL);
 }
 
 int
@@ -836,7 +839,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
 	    msr->msr_flags & BIORQ_WAIT			? 'W' : '-',
 	    msr->msr_retries, msr->msr_last_sliod,
-	    msr->msr_expire.tv_sec, msr->msr_npages, 
+	    msr->msr_expire.tv_sec, msr->msr_npages,
 	    msr->msr_nrq, msr->msr_addr);
 }
 
@@ -998,7 +1001,7 @@ void
 parse_replst(char *arg)
 {
 	if (arg[0] == ':')
-		cmd_replst_one("", NULL, 0, 0, NULL);
+		cmd_replst_one("", NULL, 0, 0, 0, NULL);
 	else
 		walk(arg, cmd_replst_one, NULL);
 }

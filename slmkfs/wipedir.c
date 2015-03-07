@@ -42,7 +42,7 @@ extern int ion;
 
 int
 wipefs_user(const char *fn, const struct stat *stb, int info,
-    int level, __unusedx void *arg)
+    __unusedx ino_t inum, int level, __unusedx void *arg)
 {
 	const char *p;
 	int rc = 0;
@@ -67,7 +67,7 @@ wipefs_user(const char *fn, const struct stat *stb, int info,
 
 int
 wipefs_fidns(const char *fn, const struct stat *stb, int info,
-    int level, __unusedx void *arg)
+    __unusedx ino_t inum, int level, __unusedx void *arg)
 {
 	int rc = 0, skiplevel = ion ? 7 : 6;
 
