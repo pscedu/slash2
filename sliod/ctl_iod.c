@@ -60,7 +60,7 @@
 int
 sli_export(__unusedx const char *fn,
     __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx int level, __unusedx void *arg)
+    __unusedx ino_t inum, __unusedx int level, __unusedx void *arg)
 {
 #if 0
 	struct slictlmsg_fileop *sfop = arg;
@@ -127,9 +127,8 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
 	return (rc);
 }
 
-/**
- * sli_import - Import files resident on a sliod backfs into the SLASH2
- *	namespace.
+/*
+ * Import files resident on a sliod backfs into the SLASH2 namespace.
  * @fn: target file
  * @stb: file's attributes.
  * @arg: arg containing destination info, etc.
@@ -161,7 +160,8 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
  */
 int
 sli_import(const char *fn, const struct stat *stb,
-    __unusedx int info, __unusedx int level, void *arg)
+    __unusedx int info, __unusedx ino_t inum, __unusedx int level,
+    void *arg)
 {
 	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	int rc = 0, isdir, dolink = 0;
