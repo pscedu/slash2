@@ -330,7 +330,7 @@ df_setup(void)
 
 int
 dumpfid(const char *fn, __unusedx const struct stat *stb, int ftyp,
-    /*ino_t inum, */ int level, __unusedx void *arg)
+    ino_t inum, int level, __unusedx void *arg)
 {
 	struct file fil, *f = &fil;
 	struct slm_ino_od *ino;
@@ -349,8 +349,8 @@ dumpfid(const char *fn, __unusedx const struct stat *stb, int ftyp,
 	    ftyp != PFWT_D)
 		return (0);
 
-//	if (df_rank != (int)(inum % df_nprocs))
-//		return (level < 5 ? 0 : PFL_FILEWALK_RC_SKIP);
+	if (df_rank != (int)(inum % df_nprocs))
+		return (level < 5 ? 0 : PFL_FILEWALK_RC_SKIP);
 
 	memset(f, 0, sizeof(*f));
 	f->f_fd = -1;
