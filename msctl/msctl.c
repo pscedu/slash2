@@ -57,6 +57,7 @@
 
 #define walk(f, func, arg)						\
 	pfl_filewalk((f),						\
+	    PFL_FILEWALKF_NOCHDIR |					\
 	    (verbose   ? PFL_FILEWALKF_VERBOSE : 0) |			\
 	    (recursive ? PFL_FILEWALKF_RECURSIVE : 0), NULL, (func), (arg))
 
@@ -269,8 +270,7 @@ packshow_bmpces(__unusedx char *spec)
 
 void
 parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
-    int (*packf)(const char *, const struct stat *, int, ino_t, int,
-    void *))
+    int (*packf)(FTSENT *, void *))
 {
 	char *sprio, *uprio, *bmapno, *next, *bend, *iosv, *ios;
 	char replrqspec[LINE_MAX], *endp, *bmapnos;
@@ -385,15 +385,13 @@ lookup(const char **tbl, int n, const char *name)
 }
 
 int
-cmd_fattr1(const char *fn,
-    __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx ino_t inum, __unusedx int level, void *arg)
+cmd_fattr1(FTSENT *f, void *arg)
 {
 	struct msctlmsg_fattr *mfa;
 	struct fattr_arg *a = arg;
 
 	mfa = psc_ctlmsg_push(a->opcode, sizeof(*mfa));
-	mfa->mfa_fid = fn2fid(fn);
+	mfa->mfa_fid = fn2fid(f->fts_path);
 	mfa->mfa_attrid = a->attrid;
 	mfa->mfa_val = a->val;
 	return (0);
@@ -446,9 +444,7 @@ cmd_fattr(int ac, char **av)
 }
 
 int
-cmd_bmap_repl_policy_one(const char *fn,
-    __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx ino_t inum, __unusedx int level, void *arg)
+cmd_bmap_repl_policy_one(FTSENT *f, void *arg)
 {
 	struct msctlmsg_bmapreplpol *mfbrp;
 	struct repl_policy_arg *a = arg;
@@ -459,7 +455,7 @@ cmd_bmap_repl_policy_one(const char *fn,
 		mfbrp->mfbrp_pol = a->replpol;
 		mfbrp->mfbrp_bmapno = br->bmin;
 		mfbrp->mfbrp_nbmaps = br->bmax - br->bmin + 1;
-		mfbrp->mfbrp_fid = fn2fid(fn);
+		mfbrp->mfbrp_fid = fn2fid(f->fts_path);
 	}
 	return (0);
 }
@@ -523,18 +519,16 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 int
-cmd_replrq_one(const char *fn, const struct stat *stb,
-    __unusedx int info, __unusedx ino_t inum, __unusedx int level,
-    void *arg)
+cmd_replrq_one(FTSENT *f, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
 	int n;
 
-	if (!S_ISREG(stb->st_mode) && !S_ISDIR(stb->st_mode)) {
+	if (f->fts_info != FTS_F && f->fts_info != FTS_D) {
 		if (!recursive) {
 			errno = EINVAL;
-			warn("%s", fn);
+			warn("%s", f->fts_path);
 		}
 		return (0);
 	}
@@ -547,7 +541,7 @@ cmd_replrq_one(const char *fn, const struct stat *stb,
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
-	mrq->mrq_fid = fn2fid(fn);
+	mrq->mrq_fid = fn2fid(f->fts_path);
 	return (0);
 }
 
@@ -572,19 +566,16 @@ cmd_replrq(int ac, char **av)
 }
 
 int
-cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
-    int info, __unusedx ino_t inum, __unusedx int level,
-    __unusedx void *arg)
+cmd_replst_one(FTSENT *f, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
-	if (info != PFWT_F &&
-	    info != PFWT_D)
+	if (f && f->fts_info != FTS_F && f->fts_info != FTS_D)
 		return (0);
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
-	if (fn[0])
-		mrs->mrs_fid = fn2fid(fn);
+	if (f)
+		mrs->mrs_fid = fn2fid(f->fts_path);
 	else
 		mrs->mrs_fid = FID_ANY;
 	return (0);
@@ -600,7 +591,7 @@ cmd_replst(int ac, char **av)
 	for (i = 1; i < ac; i++)
 		walk(av[i], cmd_replst_one, &arg);
 	if (ac == 1)
-		cmd_replst_one("", NULL, 0, 0, 0, NULL);
+		cmd_replst_one(NULL, NULL);
 }
 
 int
@@ -1001,7 +992,7 @@ void
 parse_replst(char *arg)
 {
 	if (arg[0] == ':')
-		cmd_replst_one("", NULL, 0, 0, 0, NULL);
+		cmd_replst_one(NULL, NULL);
 	else
 		walk(arg, cmd_replst_one, NULL);
 }
