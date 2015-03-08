@@ -64,7 +64,8 @@ struct host {
 #define INOXSTAT_SZ	(INOSTAT_SZ + sizeof(struct slash_inode_extras_od) + 8)
 
 struct file {
-	const char		*f_fn;
+	const char		*f_basefn;
+	const char		*f_pathfn;
 	struct psc_listentry	 f_lentry;
 	int			 f_fd;
 	uint32_t		 f_nrepls;
@@ -248,7 +249,7 @@ pr_bmaps(FILE *outfp, struct file *f)
 	}
 
 	if (ferror(fp))
-		warn("%s: read", f->f_fn);
+		warn("%s: read", f->f_pathfn);
 
 	fclose(fp);
 }
@@ -267,7 +268,7 @@ addexclude(const char *fn)
 int
 load_data_fd(struct file *f, void *buf)
 {
-	f->f_fd = open(f->f_fn, O_RDONLY);
+	f->f_fd = open(f->f_basefn, O_RDONLY);
 	if (f->f_fd == -1)
 		return (0);
 	if (fgetxattr(f->f_fd, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
@@ -282,7 +283,7 @@ load_data_fd(struct file *f, void *buf)
 int
 load_data_inox(struct file *f, void *buf)
 {
-	if (getxattr(f->f_fn, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
+	if (getxattr(f->f_basefn, SLXAT_INOXSTAT, buf, INOXSTAT_SZ) !=
 	    INOXSTAT_SZ)
 		return (0);
 	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
@@ -294,7 +295,7 @@ load_data_inox(struct file *f, void *buf)
 int
 load_data_ino(struct file *f, void *buf)
 {
-	if (getxattr(f->f_fn, SLXAT_INOSTAT, buf, INOSTAT_SZ) !=
+	if (getxattr(f->f_basefn, SLXAT_INOSTAT, buf, INOSTAT_SZ) !=
 	    INOSTAT_SZ)
 		return (0);
 	psc_crc64_calc(&f->f_ino_mem_crc, &f->f_ino, sizeof(f->f_ino));
@@ -304,7 +305,7 @@ load_data_ino(struct file *f, void *buf)
 int
 load_data_stat(struct file *f, void *buf)
 {
-	if (getxattr(f->f_fn, SLXAT_STAT, buf, STAT_SZ) !=
+	if (getxattr(f->f_basefn, SLXAT_STAT, buf, STAT_SZ) !=
 	    STAT_SZ)
 		return (0);
 	return (1);
@@ -312,25 +313,8 @@ load_data_stat(struct file *f, void *buf)
 
 int (*load_data)(struct file *f, void *) = load_data_stat;
 
-void
-df_setup(void)
-{
-	if (df_outfn) {
-		char fn[PATH_MAX];
-
-		(void)FMTSTR(fn, sizeof(fn), df_outfn,
-		    FMTSTRCASE('n', "d", df_rank)
-		);
-		df_outfp = fopen(fn, "w");
-		if (df_outfp == NULL)
-			err(1, "open %s", fn);
-	} else
-		df_outfp = stdout;
-}
-
 int
-dumpfid(const char *fn, __unusedx const struct stat *stb, int ftyp,
-    ino_t inum, int level, __unusedx void *arg)
+dumpfid(FTSENT *fe, __unusedx void *arg)
 {
 	struct file fil, *f = &fil;
 	struct slm_ino_od *ino;
@@ -338,27 +322,35 @@ dumpfid(const char *fn, __unusedx const struct stat *stb, int ftyp,
 	struct path *p;
 	char modebuf[16];
 
-	p = searchpaths(&df_excludes, fn);
+	p = searchpaths(&df_excludes, fe->fts_path);
 	if (p) {
 		pll_remove(&df_excludes, p);
 		PSCFREE(p);
-		return (PFL_FILEWALK_RC_SKIP);
+		pfl_fts_set(fe, FTS_SKIP);
+		return (0);
 	}
 
-	if (ftyp != PFWT_F &&
-	    ftyp != PFWT_D)
+	if (fe->fts_info != FTS_F && fe->fts_info != FTS_D)
 		return (0);
 
-	if (df_rank != (int)(inum % df_nprocs))
-		return (level < 5 ? 0 : PFL_FILEWALK_RC_SKIP);
+	if (fe->fts_level < 5) {
+		if (df_rank != (int)(fe->fts_ino % df_nprocs))
+			return (0);
+	} else if (fe->fts_level == 5) {
+		if (df_rank != (int)(fe->fts_ino % df_nprocs)) {
+			pfl_fts_set(fe, FTS_SKIP);
+			return (0);
+		}
+	}
 
 	memset(f, 0, sizeof(*f));
 	f->f_fd = -1;
 	INIT_PSC_LISTENTRY(&f->f_lentry);
-	f->f_fn = fn;
+	f->f_basefn = fe->fts_level ? fe->fts_name : fe->fts_accpath;
+	f->f_pathfn = fe->fts_path;
 
 	if (!load_data(f, &f->f_data)) {
-		warn("%s", f->f_fn);
+		warn("%s", f->f_pathfn);
 		return (0);
 	}
 	sstb = &f->f_sstb;
@@ -372,7 +364,7 @@ dumpfid(const char *fn, __unusedx const struct stat *stb, int ftyp,
 	    PRFMTSTRCASE('d', "s",
 		f->f_ino_od_crc == f->f_ino_mem_crc ? "OK" : "BAD")
 	    PRFMTSTRCASE('F', PRIx64, sstb->sst_fg.fg_fid)
-	    PRFMTSTRCASE('f', "s", f->f_fn)
+	    PRFMTSTRCASE('f', "s", f->f_pathfn)
 	    PRFMTSTRCASE('G', PRIu64, sstb->sst_fg.fg_gen)
 	    PRFMTSTRCASE('g', "u", sstb->sst_gid)
 	    PRFMTSTRCASE('L', "#x", ino->ino_flags)
@@ -432,6 +424,25 @@ usage(void)
 	exit(1);
 }
 
+void
+dumpfids(char **av, int flags)
+{
+	if (df_outfn) {
+		char fn[PATH_MAX];
+
+		(void)FMTSTR(fn, sizeof(fn), df_outfn,
+		    FMTSTRCASE('n', "d", df_rank)
+		);
+		df_outfp = fopen(fn, "w");
+		if (df_outfp == NULL)
+			err(1, "open %s", fn);
+	} else
+		df_outfp = stdout;
+
+	for (; *av; av++)
+		pfl_filewalk(*av, flags, NULL, dumpfid, NULL);
+}
+
 #define NEED_INO	(1 << 0)
 #define NEED_INOX	(1 << 1)
 #define NEED_FD		(1 << 2)
@@ -439,13 +450,13 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int pid, status, walkflags, c, i, need = 0;
+	int i, pid, status, walkflags, c, need = 0;
 	char *endp;
 	FILE *fp;
 	long l;
 
 	pfl_init();
-	walkflags = PFL_FILEWALKF_RELPATH | PFL_FILEWALKF_NOSTAT;
+	walkflags = PFL_FILEWALKF_NOSTAT;
 	while ((c = getopt(argc, argv, "C:F:O:Rt:x:")) != -1) {
 		switch (c) {
 		case 'C':
@@ -515,25 +526,22 @@ main(int argc, char *argv[])
 	else if (need & NEED_INO)
 		load_data = load_data_ino;
 
-	for (i = 1; i < df_nprocs; i++) {
+	for (df_rank = 1; df_rank < df_nprocs; df_rank++) {
 		pid = fork();
 		switch (pid) {
 		case -1:
 			err(1, "fork");
 		case 0: /* child */
-			df_setup();
-			pfl_filewalk(*argv, walkflags, NULL, dumpfid,
-			    NULL);
+			dumpfids(argv, walkflags);
 			exit(0);
 			break;
 		}
 	}
-	df_setup();
-	pfl_filewalk(*argv, walkflags, NULL, dumpfid, NULL);
-	while (wait(&status) == 0)
-		;
-	if (errno != ECHILD)
-		err(1, "wait");
+	df_rank = 0;
+	dumpfids(argv, walkflags);
+	for (i = 1; i < df_nprocs; i++)
+		if (wait(&status) == -1)
+			err(1, "wait");
 	exit(0);
 
 //	PLL_FOREACH(h, &hosts) {
