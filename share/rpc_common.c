@@ -740,7 +740,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	locked = CONF_RLOCK();
 	if (*csvcp) {
+		CONF_URLOCK(locked);
 		csvc = *csvcp;
+		locked = CSVC_RLOCK(csvc);
 		goto restart;
 	}
 
@@ -816,6 +818,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		addlist = 1;
 
 	*csvcp = csvc;
+	CONF_URLOCK(locked);
+
+	locked = CSVC_RLOCK(csvc);
 
  restart:
 	if (sl_csvc_useable(csvc))
