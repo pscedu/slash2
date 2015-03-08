@@ -58,9 +58,7 @@
 	} while (0)
 
 int
-sli_export(__unusedx const char *fn,
-    __unusedx const struct stat *stb, __unusedx int info,
-    __unusedx ino_t inum, __unusedx int level, __unusedx void *arg)
+sli_export(__unusedx FTSENT *f, __unusedx void *arg)
 {
 #if 0
 	struct slictlmsg_fileop *sfop = arg;
@@ -159,9 +157,7 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
  * around.
  */
 int
-sli_import(const char *fn, const struct stat *stb,
-    __unusedx int info, __unusedx ino_t inum, __unusedx int level,
-    void *arg)
+sli_import(FTSENT *f, void *arg)
 {
 	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	int rc = 0, isdir, dolink = 0;
@@ -171,9 +167,11 @@ sli_import(const char *fn, const struct stat *stb,
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct sl_fidgen tfg, fg;
-	struct stat tstb;
-	const char *str;
+	struct stat tstb, *stb;
+	const char *str, *fn;
 
+	stb = f->fts_statp;
+	fn = f->fts_path;
 	tstb = *stb;
 
 	/*
