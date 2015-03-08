@@ -391,7 +391,7 @@ cmd_fattr1(FTSENT *f, void *arg)
 	struct fattr_arg *a = arg;
 
 	mfa = psc_ctlmsg_push(a->opcode, sizeof(*mfa));
-	mfa->mfa_fid = fn2fid(f->fts_path);
+	mfa->mfa_fid = fn2fid(f->fts_accpath);
 	mfa->mfa_attrid = a->attrid;
 	mfa->mfa_val = a->val;
 	return (0);
@@ -455,7 +455,7 @@ cmd_bmap_repl_policy_one(FTSENT *f, void *arg)
 		mfbrp->mfbrp_pol = a->replpol;
 		mfbrp->mfbrp_bmapno = br->bmin;
 		mfbrp->mfbrp_nbmaps = br->bmax - br->bmin + 1;
-		mfbrp->mfbrp_fid = fn2fid(f->fts_path);
+		mfbrp->mfbrp_fid = fn2fid(f->fts_accpath);
 	}
 	return (0);
 }
@@ -528,7 +528,7 @@ cmd_replrq_one(FTSENT *f, void *arg)
 	if (f->fts_info != FTS_F && f->fts_info != FTS_D) {
 		if (!recursive) {
 			errno = EINVAL;
-			warn("%s", f->fts_path);
+			warn("%s", f->fts_accpath);
 		}
 		return (0);
 	}
@@ -541,7 +541,7 @@ cmd_replrq_one(FTSENT *f, void *arg)
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
-	mrq->mrq_fid = fn2fid(f->fts_path);
+	mrq->mrq_fid = fn2fid(f->fts_accpath);
 	return (0);
 }
 
@@ -575,7 +575,7 @@ cmd_replst_one(FTSENT *f, __unusedx void *arg)
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
 	if (f)
-		mrs->mrs_fid = fn2fid(f->fts_path);
+		mrs->mrs_fid = fn2fid(f->fts_accpath);
 	else
 		mrs->mrs_fid = FID_ANY;
 	return (0);
