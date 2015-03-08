@@ -171,7 +171,7 @@ sli_import(FTSENT *f, void *arg)
 	const char *str, *fn;
 
 	stb = f->fts_statp;
-	fn = f->fts_accpath;
+	fn = f->fts_path;
 	tstb = *stb;
 
 	/*

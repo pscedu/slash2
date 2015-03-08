@@ -46,7 +46,7 @@ wipefs_user(FTSENT *f, __unusedx void *arg)
 	const char *p, *fn;
 	int rc = 0;
 
-	fn = f->fts_accpath;
+	fn = f->fts_path;
 	if (f->fts_level < 1)
 		return (0);
 	if (f->fts_info == FTS_D || f->fts_info == FTS_DP) {
@@ -71,7 +71,7 @@ wipefs_fidns(FTSENT *f, __unusedx void *arg)
 	int rc = 0, skiplevel = ion ? 7 : 6;
 	const char *fn;
 
-	fn = f->fts_accpath;
+	fn = f->fts_path;
 	if (f->fts_level < 1)
 		return (0);
 	if (f->fts_info == FTS_D || f->fts_info == FTS_DP) {
