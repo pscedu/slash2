@@ -249,8 +249,8 @@ mds_record_reclaim_prog(void)
 	psc_assert(size == (size_t)lastindex * RP_ENTSZ);
 }
 
-/**
- * mds_txg_handler - Tie system journal with ZFS transaction groups.
+/*
+ * Tie system journal with ZFS transaction groups.
  */
 void
 mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
@@ -481,21 +481,20 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 	    SLPRI_FG_ARGS(&re.fg));
 }
 
-/**
- * mds_distill_handler - Distill information from the system journal and
- *	write into namespace update or garbage reclaim logs.
+/*
+ * Distill information from the system journal and write into namespace
+ * update or garbage reclaim logs.
  *
- *	Writing the information to secondary logs allows us to recycle
- *	the space in the main system log as quickly as possible.  The
- *	distill process is continuous in order to make room for system
- *	logs.  Once in a secondary log, we can process them as we see
- *	fit.  Sometimes these secondary log files can hang over a long
- *	time because a peer MDS or an IO server is down or slow.
+ * Writing the information to secondary logs allows us to recycle the
+ * space in the main system log as quickly as possible.  The distill
+ * process is continuous in order to make room for system logs.  Once in
+ * a secondary log, we can process them as we see fit.  Sometimes these
+ * secondary log files can hang over a long time because a peer MDS or
+ * an IO server is down or slow.
  *
- *	We encode the cursor creation time and hostname into the log
- *	file names to minimize collisions.  If undetected, these
- *	collisions can lead to insidious bugs, especially when on-disk
- *	format changes.
+ * We encode the cursor creation time and hostname into the log file
+ * names to minimize collisions.  If undetected, these collisions can
+ * lead to insidious bugs, especially when on-disk format changes.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje,
@@ -671,15 +670,15 @@ slm_wk_rmdir_ino(void *p)
 	return (0);
 }
 
-/**
- * mdslog_namespace - Log a namespace operation before we attempt it.
- *	This makes sure that it will be propagated towards other MDSes
- *	and made permanent before we reply to the client.
+/*
+ * Log a namespace operation before we attempt it.  This makes sure that
+ * it will be propagated towards other MDSes and made permanent before
+ * we reply to the client.
  */
 void
-mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
-    uint64_t npfid, const struct srt_stat *sstb, int mask,
-    const char *name, const char *newname, void *arg)
+mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
+    const struct srt_stat *sstb, int mask, const char *name,
+    const char *newname, void *arg)
 {
 	struct slmds_jent_namespace *sjnm;
 	int chg, distill = 0;
@@ -828,9 +827,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	}
 }
 
-/**
- * mds_reclaim_lwm - Find the lowest garbage reclamation watermark of
- *	all IOSes.
+/*
+ * Find the lowest garbage reclamation watermark of all IOSes.
  */
 __static uint64_t
 mds_reclaim_lwm(int batchno)
@@ -899,9 +897,8 @@ mds_reclaim_hwm(int batchno)
 	return (value);
 }
 
-/**
- * mds_update_lwm - Find the lowest namespace update watermark of all
- *	peer MDSes.
+/*
+ * Find the lowest namespace update watermark of all peer MDSes.
  */
 __static uint64_t
 mds_update_lwm(int batchno)
@@ -996,9 +993,8 @@ mds_skip_reclaim_batch(uint64_t batchno)
 		mds_remove_logfile(batchno - 1, 0, 0);
 }
 
-/**
- * mds_send_batch_update - Send a batch of updates to peer MDSes
- *	that want them.
+/*
+ * Send a batch of updates to peer MDSes that want them.
  */
 int
 mds_send_batch_update(uint64_t batchno)
@@ -1162,9 +1158,9 @@ mds_send_batch_update(uint64_t batchno)
 	return (didwork);
 }
 
-/**
- * mds_update_cursor - Write some system information into our cursor
- *	file.  Note that every field must be protected by a spinlock.
+/*
+ * Write some system information into our cursor file.  Note that every
+ * field must be protected by a spinlock.
  */
 void
 mds_update_cursor(void *buf, uint64_t txg, int flag)
@@ -1219,12 +1215,11 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 	cursor->pjc_seqno_hwm = hwm;
 }
 
-/**
- * slmjcursorthr_main - Update the cursor file in the ZFS that records
- *	the current transaction group number and other system log
- *	status.  If there is no activity in system other that this write
- *	to update the cursor, our customized ZFS will extend the
- *	lifetime of the transaction group.
+/*
+ * Update the cursor file in the ZFS that records the current
+ * transaction group number and other system log status.  If there is no
+ * activity in system other that this write to update the cursor, our
+ * customized ZFS will extend the lifetime of the transaction group.
  */
 void
 slmjcursorthr_main(struct psc_thread *thr)
@@ -1661,8 +1656,8 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 	return (rarg.ndone);
 }
 
-/**
- * slmjreclaimthr_main - Send garbage collection to I/O servers.
+/*
+ * Send garbage collection to I/O servers.
  */
 void
 slmjreclaimthr_main(struct psc_thread *thr)
@@ -1698,8 +1693,8 @@ slmjreclaimthr_main(struct psc_thread *thr)
 	}
 }
 
-/**
- * slmjnsthr_main - Send local namespace updates to peer MDSes.
+/*
+ * Send local namespace updates to peer MDSes.
  */
 void
 slmjnsthr_main(struct psc_thread *thr)
@@ -1804,11 +1799,10 @@ slm_wkcb_wr_brepl(void *p)
 	return (0);
 }
 
-/**
- * mdslog_bmap_repl - Write a recently modified replication table to the
- *	journal.
- * Note:  bmap must be locked to prevent further changes from sneaking
- *	in before the repl table is committed to the journal.
+/*
+ * Write a recently modified replication table to the journal.
+ * Note: bmap must be locked to prevent further changes from sneaking in
+ * before the repl table is committed to the journal.
  */
 void
 mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
@@ -1843,8 +1837,8 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
 }
 
-/**
- * mdslog_bmap_crc - Commit bmap CRC changes to the journal.
+/*
+ * Commit bmap CRC changes to the journal.
  * @datap: CRC log structure.
  * @txg: transaction group ID.
  * Notes: bmap_crc_writes from the ION are sent here directly because
