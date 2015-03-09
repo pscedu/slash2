@@ -89,7 +89,7 @@ slc_acl_get_fcmh(const struct pscfs_clientctx *pfcc,
 	} _PFL_RVEND
 
 #define FOREACH_GROUP(g, i, pcrp)					\
-	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) ?		\
+	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) == 0 ?	\
 	    (pcrp)->pcr_gid : (pcrp)->pcr_gidv[(i) - 1]) || 1); (i)++)
 
 int
