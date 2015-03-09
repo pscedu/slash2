@@ -1751,7 +1751,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
-	int nr, i, j, rc, retry;
+	int nr, i, j, rc, newrq, retry = 0;
 	uint64_t fsz;
 	off_t roff;
 	uint32_t aoff, alen, raoff, raoff2, nbmaps;
@@ -1867,7 +1867,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			}
 			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
-			retry = 1;
+			newrq = 0;
 		} else {
 			/*
 			 * roff - (i * SLASH_BMAP_SIZE) should be zero
@@ -1876,13 +1876,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			r = msl_biorq_build(q, b, buf, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
-			retry = 0;
+			newrq = 1;
 		}
 
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
-		if (!retry)
+		if (newrq)
 			msl_fsrqinfo_biorq_add(q, r, i);
 
 		/*
@@ -1992,6 +1992,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		if (msl_fd_should_retry(mfh, pfr, rc)) {
 			mfsrq_clrerr(q);
+			retry = 1;
 			goto restart;
 		}
 		if (abs(rc) == SLERR_ION_OFFLINE)
