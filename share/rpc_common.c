@@ -622,7 +622,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
 	csvc->csvc_rqptl = rqptl;
 	csvc->csvc_rpptl = rpptl;
 	csvc->csvc_hldropf = hldropf;
-	csvc->csvc_hldroparg = hldroparg ? hldroparg : NULL;
+	csvc->csvc_hldroparg = hldroparg ? hldroparg : csvc;
 	csvc->csvc_import = slrpc_new_import(csvc);
 	return (csvc);
 }
