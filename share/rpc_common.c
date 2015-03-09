@@ -728,7 +728,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	uint32_t *stkversp = NULL;
 	int rc = 0, addlist = 0, locked = 0;
 	struct slashrpc_cservice *csvc;
-	struct sl_resm *resm;
+	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
 
@@ -749,7 +749,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	switch (peertype) {
 	case SLCONNT_CLI: 
 		hldropf = sl_imp_hldrop_cli;
-		hldropf = NULL;
+		hldroparg = NULL;
 		break;
 	case SLCONNT_IOD: 
 	case SLCONNT_MDS: 
