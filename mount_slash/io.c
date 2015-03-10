@@ -1648,18 +1648,6 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	return (rc);
 }
 
-void
-msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
-    int biorq_num)
-{
-	MFH_LOCK(q->mfsrq_mfh);
-	psc_assert(!q->mfsrq_biorq[biorq_num]);
-	q->mfsrq_biorq[biorq_num] = r;
-	q->mfsrq_ref++;
-	DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
-	MFH_ULOCK(q->mfsrq_mfh);
-}
-
 __static struct msl_fsrqinfo *
 msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
     char *buf, size_t size, off_t off, enum rw rw)
@@ -1882,8 +1870,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
-		if (newrq)
-			msl_fsrqinfo_biorq_add(q, r, i);
+		if (newrq) {
+			q->mfsrq_biorq[i] = r;
+			q->mfsrq_ref++;
+			DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
+		}
 
 		/*
 		 * No need to update roff and tsize for the last iteration.
