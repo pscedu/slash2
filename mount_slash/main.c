@@ -286,8 +286,6 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("access");
-
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -388,8 +386,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("creat");
 
 	psc_assert(oflags & O_CREAT);
 
@@ -540,8 +536,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("open");
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -731,8 +725,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("getattr");
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -1317,7 +1309,6 @@ void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	OPSTAT_INCR("unlink");
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 1));
 }
 
@@ -1574,8 +1565,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("readdir");
-
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -1710,8 +1699,6 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("lookup");
 
 	memset(&sstb, 0, sizeof(sstb));
 
@@ -1991,8 +1978,6 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("flush");
-
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	pfcc = pscfs_getclientctx(pfr);
@@ -2186,10 +2171,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	psc_waitq_wakeall(&msl_flush_attrq);
 
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("releasedir");
 		pscfs_reply_releasedir(pfr, 0);
 	} else {
-		OPSTAT_INCR("release");
 		pscfs_reply_release(pfr, 0);
 	}
 
@@ -2232,8 +2215,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	int sticky, rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("rename");
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2442,8 +2423,6 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("statfs");
 
 //	checkcreds
 
@@ -2938,8 +2917,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("write");
-
 	f = mfh->mfh_fcmh;
 
 	/* XXX EBADF if fd is not open for writing */
@@ -2965,8 +2942,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("read");
 
 	f = mfh->mfh_fcmh;
 
