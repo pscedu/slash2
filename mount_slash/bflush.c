@@ -380,8 +380,10 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	DEBUG_BIORQ(PLL_DIAG, r, "resched, rc = %d", rc);
 
 	BMAP_LOCK(b);
-	if (rc == -PFLERR_KEYEXPIRED) 
+	if (rc == -PFLERR_KEYEXPIRED) {
+		OPSTAT_INCR("bmap_flush_expired");
 		b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
+	}
 
 	BIORQ_LOCK(r);
 

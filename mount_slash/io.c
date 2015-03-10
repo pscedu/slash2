@@ -792,6 +792,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			BMAP_LOCK(b);
 			b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
 			BMAP_ULOCK(b);
+			OPSTAT_INCR("bmap_read_expired");
 		}
 		if ((r->biorq_flags & BIORQ_READAHEAD) == 0)
 			mfsrq_seterr(r->biorq_fsrqi, rc);
