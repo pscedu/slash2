@@ -1748,8 +1748,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
 	struct timespec ts0, ts1, tsd;
+	struct bmpc_ioreq *r = NULL;
 	struct fidc_membh *f;
-	struct bmpc_ioreq *r;
 	struct bmap *b;
 	int nr, i, j, rc, newrq, retry = 0;
 	uint64_t fsz;
