@@ -653,8 +653,7 @@ bmap_flushable(struct bmapc_memb *b)
 		/* assert: the bmap should a write bmap at this point */
 		PFL_GETTIMESPEC(&ts);
 		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-		if ((secs > 0 && secs < BMAP_CLI_EXTREQSECS) ||
-		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+		if (secs > 0 && secs < BMAP_CLI_EXTREQSECS) {
 			OPSTAT_INCR("flush_skip_expire");
 			flush = 0;
 		}
