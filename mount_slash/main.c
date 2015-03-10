@@ -3209,8 +3209,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("getxattr");
-
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3246,8 +3244,6 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("removexattr");
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
