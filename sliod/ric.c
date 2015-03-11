@@ -340,6 +340,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		psc_assert(iovs[i].iov_len > 0);
 	}
+	bmap_op_done(bmap);
+	bmap = NULL;
 
 	psc_assert(!tsize);
 
