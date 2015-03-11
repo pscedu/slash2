@@ -387,7 +387,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
+	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
 
 		bci = bmap_2_bci(r->biorq_bmap);
