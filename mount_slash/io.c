@@ -541,14 +541,12 @@ mfsrq_clrerr(struct msl_fsrqinfo *q)
 void
 mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 {
-	int lk;
-
-	lk = MFH_RLOCK(q->mfsrq_mfh);
+	MFH_LOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err == 0 && rc) {
 		q->mfsrq_err = rc;
 		DPRINTF_MFSRQ(PLL_WARN, q, "setting err=%d", rc);
 	}
-	MFH_URLOCK(q->mfsrq_mfh, lk);
+	MFH_ULOCK(q->mfsrq_mfh);
 }
 
 #define msl_complete_fsrq(q, len)					\
