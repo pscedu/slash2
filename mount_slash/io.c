@@ -244,9 +244,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	int i;
 
-	BIORQ_ULOCK(r);
 	BMAP_LOCK(b);
-	BIORQ_LOCK(r);
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
@@ -358,6 +356,8 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 		BIORQ_ULOCK(r);
 		return;
 	}
+	/* no locking is needed afterwards */
+	BIORQ_ULOCK(r);
 	msl_biorq_destroy(r);
 }
 
