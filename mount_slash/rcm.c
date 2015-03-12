@@ -265,7 +265,6 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_DEBUG, b, "seq=%"PRId64, mq->seq);
 
-	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_DIO)
 		goto out;
 
