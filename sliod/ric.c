@@ -517,7 +517,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			}
 		}
 		if (new) {
+			BMAP_ULOCK(b);
 			newsbd = psc_pool_get(bmap_rls_pool);
+			BMAP_LOCK(b);
 			memcpy(newsbd, sbd, sizeof(*sbd));
 
 			DEBUG_FCMH(PLL_DIAG, f,
