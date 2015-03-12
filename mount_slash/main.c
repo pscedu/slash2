@@ -1092,11 +1092,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (fp)
 		*fp = NULL;
 
-	if (strlen(name) == 0)
-		return (ENOENT);
-	if (strlen(name) > SL_NAME_MAX)
-		return (ENAMETOOLONG);
-
 #define MSL_FIDNS_RPATH	".slfidns"
 
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
@@ -1703,6 +1698,11 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	memset(&sstb, 0, sizeof(sstb));
 
 	pscfs_getcreds(pfr, &pcr);
+	if (strlen(name) == 0)
+		PFL_GOTOERR(out, rc = ENOENT);
+	if (strlen(name) > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = ENAMETOOLONG);
+
 	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb,
 	    NULL);
 	if (rc == ENOENT)
@@ -1710,6 +1710,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
+ out:
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
