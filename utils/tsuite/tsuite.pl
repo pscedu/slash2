@@ -90,16 +90,15 @@ require $ARGV[0];
 my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
-our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout,
+our ($rootdir, $giturl, @cli, $src, $intvtimeout, $runtimeout,
     $logbase, $global_env);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
-fatalx "svnroot not defined"	unless defined $svnroot;
+fatalx "giturl not defined"	unless defined $giturl;
 fatalx "cli not defined"	unless defined @cli;
 fatalx "intvtimeout not defined" unless defined $intvtimeout;
 fatalx "runtimeout not defined"	unless defined $runtimeout;
-fatalx "svnroot not defined"	unless defined $svnroot;
 fatalx "logbase not defined"	unless defined $logbase;
 fatalx "global_env not defined"	unless defined $global_env;
 
@@ -167,8 +166,8 @@ chdir $base		or fatal "chdir $base";
 my $build = 0;
 unless (defined($src)) {
 	$src = "$base/src";
-	execute "svn checkout -q $svnroot $src";
-	fatalx "svn failed" if $?;
+	execute "git clone $giturl $src";
+	fatalx "git failed" if $?;
 
 	$build = 1;
 }

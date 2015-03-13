@@ -27,7 +27,7 @@ INCLUDES+=		-I${SLASH_BASE}/include
 INCLUDES+=		-I${SLASH_BASE}
 INCLUDES+=		${SQLITE3_INCLUDES}
 
-DEFINES+=		-DSL_STK_VERSION=$$(svn info | awk '{ if ($$0 ~ /^Revision: /) print $$2 }')
+DEFINES+=		-DSL_STK_VERSION=$$(git log | grep -c ^commit)
 SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		${SLASH_BASE}/include

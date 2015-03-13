@@ -130,7 +130,7 @@ ENDCMD
 
 our $logbase= "/home/slog";
 our $rootdir = "/home/sltest";
-our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
+our $giturl = 'https://github.com/pscedu/slash2.git';
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration
 our $src = "/home/yanovich/code/advsys/p";
