@@ -46,14 +46,14 @@ start_time=$SECONDS
 set -e
 
 mydir=`pwd`
-for ((i=0; i < $3; i++))
-do
+for ((i=0; i < $3; i++)); do
 	dir=$2.$i
 
 	mkdir $dir
 	svn co -r $1 svn+ssh://frodo/cluster/svn/projects $dir
 	cd $dir
-	OBJBASE=$(pwd)/obj PSC_MAKE_STATUS=1 make>$output
+	make up
+	OBJBASE=$(pwd)/obj make >$output
 	cd $mydir
 done
 
