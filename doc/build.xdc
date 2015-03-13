@@ -41,7 +41,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		If any of these components is not necessary, you can create local
 		settings to override the build process by specifying only which
 		components should be built in
-		<oof:tt>slash_nara/mk/local.mk</oof:tt>.
+		<oof:tt>slash2/mk/local.mk</oof:tt>.
 	</oof:p>
 	<oof:p>
 		For example, to disable building of the MDS, specify only
@@ -49,14 +49,14 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		<oof:tt>local.mk</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> echo "SLASH_MODULES= ion cli" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLASH_MODULES= ion cli" &gt; slash2/mk/local.mk
 </oof:pre>
 	<oof:p>
 		Also, to enable the installer to pick up the SLASH2 configuration
 		file:
 	</oof:p>
 	<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> echo "SLCFGV=config/<oof:strong>$mysite.slcfg</oof:strong>:<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLCFGV=config/<oof:strong>$mysite.slcfg</oof:strong>:<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash2/mk/local.mk
 </oof:pre>
 
 	<oof:header size="2">Compilation Prerequisites</oof:header>

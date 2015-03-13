@@ -1,18 +1,26 @@
 SLASH2 Functionality Tests for Tsuite
+
 512-byte dd - this stresses the biorq subsystem in the client.
 dd if=/dev/zero of=$S2MP/outfile count=1M
+
 [svn] checkout and build of the SLASH2 tree.
-cd $S2MP && svn co svn+ssh://frodo/cluster/svn/projects && cd projects/slash_nara && make build
+cd $S2MP && svn co svn+ssh://frodo/cluster/svn/projects && cd projects/slash2 && make build
+
 Linux kernel untar and build
-Note: the build of the kernel has never completed successfully.
+
 md5s of all files should be compared against those from a local build.
+
 In multi-client configurations, the sizes and attributes of all resulting files should be compared.
+
 IOZone default test
+
 Stresses certain aspects of sliod and the client.
 Expect to see heavy backlog of CRC updates.
 cd $S2MP && iozone -a
+
 Simple append test
 fn=$S2MP/tf && echo line1 >> $fn && echo line2 >> $fn && echo line3 >> $fn && echo line4 >> $fn; wc -l $fn
+
 FIO tests
 Heavy create test: Stresses the fidcache on the client and mds and the bmap lease infrastructure on the mds and sliod. (Note: that all write lease releases occur through sliod). This is a good test for finding leaks in the fidcache which may be due to improperly unref'ing bmap's.
 Single threaded, large file create and readback. Fio tests data integrity on readback.

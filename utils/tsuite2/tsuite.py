@@ -45,7 +45,7 @@ class TSuite(object):
 
     self.src_dirs = {
       # "src" populated in init
-      "slbase"  : "%src%/slash_nara",
+      "slbase"  : "%src%/slash2",
       "tsbase"  : "%slbase%/../tsuite",
       "zpool"   : "%src%/zfs/src/cmd/zpool/zpool",
       "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",

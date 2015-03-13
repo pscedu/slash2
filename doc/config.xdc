@@ -130,7 +130,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 	<oof:header size="2">Setting up the master configuration file</oof:header>
 	<oof:p>
 		Example configurations are provided in
-		<oof:tt>projects/slash_nara/config</oof:tt>.
+		<oof:tt>projects/slash2/config</oof:tt>.
 		The <ref sect='5'>slcfg</ref> man page also contains more
 		information on this topic.
 	</oof:p>

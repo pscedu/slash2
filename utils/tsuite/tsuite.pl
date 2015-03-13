@@ -173,7 +173,7 @@ unless (defined($src)) {
 	$build = 1;
 }
 
-my $slbase = "$src/slash_nara";
+my $slbase = "$src/slash2";
 my $tsbase = "$slbase/utils/tsuite";
 my $clicmd = "$base/cli_cmd.sh";
 
@@ -309,7 +309,7 @@ parse_conf();
 if ($build) {
 	execute "cd $src/zfs && make build >/dev/null";
 	fatalx "make failed" if $?;
-	execute "cd $src/slash_nara && make build >/dev/null";
+	execute "cd $src/slash2 && make build >/dev/null";
 	fatalx "make failed" if $?;
 }
 
