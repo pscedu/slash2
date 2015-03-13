@@ -674,9 +674,6 @@ unify setting st_blksize for all of:
 
 use XATTR_MAXNAMELEN to check on xattr name length
 
-- online flag isn't getting reset when reconnecting (see pitt)
-
-
 unnecessary lock contention?
 mount_slash/io.c:
  728                                 MFH_LOCK(q->mfsrq_mfh);
