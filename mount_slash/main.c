@@ -1687,11 +1687,11 @@ void
 mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
-	struct srt_stat sstb;
-	struct stat stb;
 	struct fidc_membh *fp;
+	struct srt_stat sstb;
+	struct sl_fidgen fg;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure(pfr);
@@ -1712,7 +1712,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		stb.st_blksize = MSL_FS_BLKSIZ;
  out:
 	if (fp)
-	    fcmh_op_done(fp);
+		fcmh_op_done(fp);
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
