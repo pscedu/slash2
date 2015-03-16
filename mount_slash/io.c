@@ -865,8 +865,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	q = r->biorq_fsrqi;
 	msl_biorq_release(r);
 
-	MFH_LOCK(q->mfsrq_mfh);
 	mfsrq_seterr(q, rc);
+	MFH_LOCK(q->mfsrq_mfh);
 	psc_waitq_wakeall(&msl_fhent_aio_waitq);
 	MFH_ULOCK(q->mfsrq_mfh);
 
