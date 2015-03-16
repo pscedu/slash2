@@ -1691,6 +1691,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct stat stb;
+	struct fidc_membh *fp;
 	int rc;
 
 	msfsthr_ensure(pfr);
@@ -1703,14 +1704,15 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb,
-	    NULL);
+	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &fp);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
  out:
+	if (fp)
+	    fcmh_op_done(fp);
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
