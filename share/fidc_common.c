@@ -174,7 +174,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
     const struct sl_fidgen *fgp, int flags, struct fidc_membh **fp,
     void *arg)
 {
-	struct fidc_membh *tmp, *f, *fcmh_new;
+	struct fidc_membh *tmp, *f, *fnew;
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
 
@@ -182,7 +182,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	    fgp->fg_fid);
 
 	*fp = NULL;
-	fcmh_new = NULL; /* gcc */
+	fnew = NULL; /* gcc */
 
 	/* sanity checks */
 #ifndef _SLASH_CLIENT
@@ -242,8 +242,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
-			fcmh_put(fcmh_new);
-			fcmh_new = NULL;
+			fcmh_put(fnew);
+			fnew = NULL;
 		}
 
 		psc_assert(fgp->fg_fid == fcmh_2_fid(f));
@@ -264,7 +264,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		if (!try_create) {
 			psc_hashbkt_unlock(b);
 
-			fcmh_new = fcmh_get();
+			fnew = fcmh_get();
 			try_create = 1;
 
 			psc_hashbkt_lock(b);
@@ -284,7 +284,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * OK, we've got a new fcmh.  No need to lock it since it's not
 	 * yet visible to other threads.
 	 */
-	f = fcmh_new;
+	f = fnew;
 
 	memset(f, 0, fidcPoolMaster.pms_entsize);
 	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
