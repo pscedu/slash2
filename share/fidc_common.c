@@ -63,7 +63,7 @@ struct psc_hashtbl	  fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
-	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
+	psc_assert(RB_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(f->fcmh_refcnt == 0);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, f));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
@@ -288,10 +288,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	memset(f, 0, fidcPoolMaster.pms_entsize);
 	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
-	SPLAY_INIT(&f->fcmh_bmaptree);
+	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
 	psc_hashent_init(&fidcHtable, f);
 	psc_waitq_init(&f->fcmh_waitq);
+	psc_rwlock_init(&f->fcmh_rwlock);
 
 	COPYFG(&f->fcmh_fg, fgp);
 	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
