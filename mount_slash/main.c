@@ -162,9 +162,9 @@ msl_delete_namecache(struct fidc_membh *fp)
 	psc_hashbkt_put(&namecHtable, b);
 	OPSTAT_INCR("delete_name");
 }
- 
+
 void
-msl_insert_namecache(uint64_t pino, const char *name, 
+msl_insert_namecache(uint64_t pino, const char *name,
     struct fidc_membh *child)
 {
 	int len, found = 0;
@@ -3428,7 +3428,7 @@ msattrflushthr_main(struct psc_thread *thr)
 		}
 		if (fci == NULL) {
 			OPSTAT_INCR("flush_attr_wait");
-			psc_waitq_waitrel(&msl_flush_attrq,
+			psc_waitq_waitrel_ts(&msl_flush_attrq,
 			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
 		}
 	}
