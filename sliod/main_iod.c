@@ -38,6 +38,7 @@
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
+#include "pfl/fmtstr.h"
 #include "pfl/iostats.h"
 #include "pfl/listcache.h"
 #include "pfl/pfl.h"
@@ -143,7 +144,7 @@ slihealththr_main(struct psc_thread *thr)
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct slashrpc_cservice *csvc;
 	struct timespec ts;
-	char cmdbuf[];
+	char cmdbuf[BUFSIZ];
 	int rc;
 
 	(void)FMTSTR(cmdbuf, sizeof(cmdbuf), slcfg_local->cfg_selftest,
@@ -156,7 +157,7 @@ slihealththr_main(struct psc_thread *thr)
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
-		rc = pfl_system(cmdbuf);
+		rc = system(cmdbuf);
 
 		/*
 		 * Code		Description
