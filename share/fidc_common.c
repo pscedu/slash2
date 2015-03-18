@@ -49,7 +49,6 @@
 
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
-struct psc_listcache	  fidcBusyList;		/* active in use */
 struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
 struct psc_hashtbl	  fidcHtable;
 
@@ -364,8 +363,6 @@ fidc_init(int privsiz)
 	    NULL, fidc_reaper, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
-	lc_reginit(&fidcBusyList, struct fidc_membh, fcmh_lentry,
-	    "fcmhbusy");
 	lc_reginit(&fidcIdleList, struct fidc_membh, fcmh_lentry,
 	    "fcmhidle");
 
@@ -412,9 +409,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 	if ((type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) &&
 	    f->fcmh_flags & FCMH_CAC_IDLE) {
 		f->fcmh_flags &= ~FCMH_CAC_IDLE;
-		f->fcmh_flags |= FCMH_CAC_BUSY;
 		lc_remove(&fidcIdleList, f);
-		lc_add(&fidcBusyList, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
@@ -457,10 +452,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			return;
 		}
 
-		if (f->fcmh_flags & FCMH_CAC_BUSY) {
-			f->fcmh_flags &= ~FCMH_CAC_BUSY;
+		if (!(f->fcmh_flags & FCMH_CAC_IDLE)) {
 			f->fcmh_flags |= FCMH_CAC_IDLE;
-			lc_remove(&fidcBusyList, f);
 			lc_add(&fidcIdleList, f);
 			PFL_GETTIMESPEC(&f->fcmh_etime);
 			f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
@@ -515,7 +508,6 @@ void
 _dump_fcmh_flags_common(int *flags, int *seq)
 {
 	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_BUSY, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
