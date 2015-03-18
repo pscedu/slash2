@@ -112,6 +112,7 @@ struct uid_mapping {
 	struct pfl_hashentry	um_hentry;
 };
 
+struct psc_hashtbl		 namecHtable;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
@@ -144,6 +145,90 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
 int				 slc_posix_mkgrps = 1;
+
+void
+msl_delete_namecache(struct fidc_membh *fp)
+{
+	uint64_t pino;
+	struct psc_hashbkt *b;
+	struct fcmh_cli_info *fci;
+
+	fci = fcmh_get_pri(fp);
+	pino = fci->fci_pino;
+	if (!pino)
+		return;
+	b = psc_hashbkt_get(&namecHtable, &pino);
+	psc_hashbkt_del_item(&namecHtable, b, fci);
+	psc_hashbkt_put(&namecHtable, b);
+	OPSTAT_INCR("delete_name");
+}
+ 
+void
+msl_insert_namecache(uint64_t pino, const char *name, 
+    struct fidc_membh *child)
+{
+	int len, found = 0;
+	struct psc_hashbkt *b;
+	struct fidc_membh *fp;
+	struct fcmh_cli_info *fci;
+
+	psc_assert(pino);
+	b = psc_hashbkt_get(&namecHtable, &pino);
+	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
+		fp = fci_2_fcmh(fci);
+		if (fp->fcmh_flags & FCMH_DELETED)
+			continue;
+		if (fci->fci_pino != pino ||
+		    strcmp(fci->fci_name, name))
+			continue;
+
+		found = 1;
+		psc_assert(fcmh_2_fid(child) == fcmh_2_fid(fp));
+		break;
+	}
+	if (!found) {
+		fci = fcmh_get_pri(child);
+		len = strlen(name);
+		if (len < SL_NAME_SHORT) {
+			fci->fci_pino = pino;
+			fci->fci_name = fci->fci_sname;
+			memcpy(fci->fci_sname, name, len+1);
+			psc_hashent_init(&namecHtable, fci);
+			psc_hashbkt_add_item(&namecHtable, b, fci);
+			OPSTAT_INCR("insert_name");
+		}
+	}
+	psc_hashbkt_put(&namecHtable, b);
+}
+
+struct fidc_membh *
+msl_lookup_namecache(uint64_t pino, const char *name, int delete)
+{
+	struct psc_hashbkt *b;
+	struct fidc_membh *tmp;
+	struct fcmh_cli_info *fci;
+	struct fidc_membh *child = NULL;
+
+	psc_assert(pino);
+	b = psc_hashbkt_get(&namecHtable, &pino);
+	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
+		tmp = fci_2_fcmh(fci);
+		if (tmp->fcmh_flags & FCMH_DELETED)
+			continue;
+		if (fci->fci_pino == pino &&
+		    strcmp(fci->fci_name, name) == 0) {
+			child = tmp;
+			break;
+		}
+	}
+	if (delete && child) {
+		fci->fci_pino = 0;
+		OPSTAT_INCR("delete_name");
+		psc_hashbkt_del_item(&namecHtable, b, fci);
+	}
+	psc_hashbkt_put(&namecHtable, b);
+	return (child);
+}
 
 int
 uidmap_ext_cred(struct srt_creds *cr)
@@ -1710,6 +1795,9 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
+
+	if (!rc)
+		msl_insert_namecache(pinum, name, fp);
  out:
 	if (fp)
 		fcmh_op_done(fp);
@@ -2356,6 +2444,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	msl_lookup_namecache(opinum, oldname, 1);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
@@ -3417,6 +3507,9 @@ msl_init(void)
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_mgr_init();
+
+	psc_hashtbl_init(&namecHtable, 0, struct fcmh_cli_info, fci_pino,
+		fci_hentry, slcfg_local->cfg_fidcachesz, NULL, "name");
 
 	psc_poolmaster_init(&slc_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
