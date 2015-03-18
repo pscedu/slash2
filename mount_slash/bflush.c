@@ -796,8 +796,8 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	    MAX_OUTSTANDING_RPCS) {
 		account = 1;
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel(&slc_bflush_waitq, &slc_bflush_lock,
-		    &bmapFlushWaitSecs);
+		psc_waitq_waitrel_ts(&slc_bflush_waitq,
+		    &slc_bflush_lock, &bmapFlushWaitSecs);
 		spinlock(&slc_bflush_lock);
 	}
 	if (account) {
@@ -993,8 +993,8 @@ msflushthr_main(struct psc_thread *thr)
 
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel(&slc_bflush_waitq, &slc_bflush_lock,
-		    &bmapFlushWaitSecs);
+		psc_waitq_waitrel_ts(&slc_bflush_waitq,
+		    &slc_bflush_lock, &bmapFlushWaitSecs);
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 		freelock(&slc_bflush_lock);

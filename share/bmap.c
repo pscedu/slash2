@@ -156,8 +156,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 			 * We don't want to spin if we are waiting for a
 			 * flush to clear.
 			 */
-			psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock,
-			    100);
+			psc_waitq_waitrelf_us(&f->fcmh_waitq,
+			    PFL_WAITQWF_RWLOCK, &f->fcmh_rwlock, 100);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
