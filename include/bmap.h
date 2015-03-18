@@ -112,7 +112,7 @@ struct bmap {
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
 	psc_spinlock_t		 bcm_lock;
-	SPLAY_ENTRY(bmap)	 bcm_tentry;	/* bmap_cache splay tree entry */
+	RB_ENTRY(bmap)		 bcm_tentry;	/* entry in fcmh's bmap tree */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
 	pthread_t		 bcm_owner;	/* temporary processor */
 };
@@ -346,7 +346,6 @@ void	_dump_bmapodv(const struct pfl_callerinfo *, int,
 void	_dump_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
-
 #define bmap_getf(f, n, rw, fl, bp)	_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
 					(f), (n), (rw), (fl), (bp))
 
@@ -372,8 +371,8 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_WORK			/* 12: generic worker thread */
 };
 
-SPLAY_HEAD(bmap_cache, bmapc_memb);
-SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
+RB_HEAD(bmaptree, bmapc_memb);
+RB_PROTOTYPE(bmaptree, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
 	void	(*bmo_free)(void);

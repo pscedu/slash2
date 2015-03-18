@@ -228,7 +228,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
 
 			psclog_debug("fid="SLPRI_FID" off=%"PRId64" "
 			    "nlen=%u type=%#o dname=%.*s lookupname=%s "
-			    "len=%"PSCPRIdOFFT" dce=%p found=%d",
+			    "len=%d dce=%p found=%d",
 			    dirent->pfd_ino, dirent->pfd_off,
 			    dirent->pfd_namelen, dirent->pfd_type,
 			    dirent->pfd_namelen, dirent->pfd_name, name,

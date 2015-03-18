@@ -174,7 +174,7 @@ slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 			psc_hashbkt_lock(b);
 			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, b) {
 				if (scf->scf_fg.fg_gen == SLCTL_FCL_BUSY &&
-				    (f->fcmh_flags & FCMH_CAC_BUSY) == 0)
+				    (f->fcmh_flags & FCMH_CAC_IDLE))
 					continue;
 				rc = slctlmsg_fcmh_send(fd, mh, scf, f);
 				if (!rc)
@@ -211,13 +211,13 @@ slctlrep_getbmap(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
 		psc_hashbkt_lock(hb);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
-			FCMH_LOCK(f);
-			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+			psc_rwlock_rdlock(&f->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 				rc = slctlmsg_bmap_send(fd, mh, scb, b);
 				if (!rc)
 					break;
 			}
-			FCMH_ULOCK(f);
+			psc_rwlock_unlock(&f->fcmh_rwlock);
 			if (!rc)
 				break;
 		}

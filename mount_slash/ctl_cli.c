@@ -578,8 +578,8 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
 		psc_hashbkt_lock(hb);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
-			FCMH_LOCK(f);
-			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+			psc_rwlock_rdlock(&f->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 
 				BMAP_LOCK(b);
 
@@ -606,7 +606,7 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 				if (!rc)
 					break;
 			}
-			FCMH_ULOCK(f);
+			psc_rwlock_unlock(&f->fcmh_rwlock);
 			if (!rc)
 				break;
 		}
@@ -650,8 +650,8 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
 		psc_hashbkt_lock(hb);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
-			FCMH_LOCK(f);
-			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+			psc_rwlock_rdlock(&f->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 				BMAP_LOCK(b);
 				SPLAY_FOREACH(e, bmap_pagecachetree,
 				    &bmap_2_bmpc(b)->bmpc_tree) {
@@ -664,7 +664,7 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 				if (!rc)
 					break;
 			}
-			FCMH_ULOCK(f);
+			psc_rwlock_unlock(&f->fcmh_rwlock);
 			if (!rc)
 				break;
 		}

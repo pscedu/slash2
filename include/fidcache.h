@@ -59,7 +59,7 @@ struct sl_fcmh_ops {
  * fidc_membh - The primary cached file structure; all updates and
  * lookups into the inode are done through here.
  *
- * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
+ * fidc_membh tracks cached bmaps (bmaptree) and clients (via their
  * exports) which hold cached bmaps.
  *
  * Service specific private structures (i.e. fcmh_mds_info,
@@ -79,22 +79,22 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
-	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
+	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
+	struct psc_rwlock	 fcmh_rwlock;
 };
 
 /* fcmh_flags (cache) */
 #define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
 #define	FCMH_CAC_IDLE		(1 <<  1)	/* on idle list */
-#define	FCMH_CAC_BUSY		(1 <<  2)	/* on busy list */
-#define	FCMH_CAC_INITING	(1 <<  3)	/* initializing */
-#define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
-#define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
-#define	FCMH_HAVE_ATTRS		(1 <<  6)	/* has valid stat(2) info */
-#define	FCMH_GETTING_ATTRS	(1 <<  7)	/* fetching stat(2) info */
-#define	FCMH_CTOR_FAILED	(1 <<  8)	/* constructor func failed */
-#define	FCMH_BUSY		(1 <<  9)	/* fcmh being processed */
-#define	FCMH_DELETED		(1 << 10)	/* fcmh has been deleted */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_CAC_INITING	(1 <<  2)	/* initializing */
+#define	FCMH_CAC_WAITING	(1 <<  3)	/* being waited on */
+#define	FCMH_CAC_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
+#define	FCMH_HAVE_ATTRS		(1 <<  5)	/* has valid stat(2) info */
+#define	FCMH_GETTING_ATTRS	(1 <<  6)	/* fetching stat(2) info */
+#define	FCMH_CTOR_FAILED	(1 <<  7)	/* constructor func failed */
+#define	FCMH_BUSY		(1 <<  8)	/* fcmh being processed */
+#define	FCMH_DELETED		(1 <<  9)	/* fcmh has been deleted */
+#define	_FCMH_FLGSHFT		(1 << 10)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -230,13 +230,12 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
 	    "fcmh@%p f+g="SLPRI_FG" "					\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s "				\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
 	    (f)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_IDLE		? "i" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_BUSY		? "B" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\

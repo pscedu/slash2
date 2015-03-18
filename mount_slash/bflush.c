@@ -91,13 +91,12 @@ void
 bmap_free_all_locked(struct fidc_membh *f)
 {
 	struct bmap_cli_info *bci;
-	struct bmap *a, *b;
+	struct bmap *b;
 
 	FCMH_LOCK_ENSURE(f);
 
-	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
-		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
-		DEBUG_BMAP(PLL_DIAG, a, "mark bmap free");
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		DEBUG_BMAP(PLL_DIAG, b, "mark bmap free");
 
 		/*
 		 * The MDS truncates the SLASH2 metadata file on a full
@@ -114,11 +113,11 @@ bmap_free_all_locked(struct fidc_membh *f)
 		 * both MDS and client.  And the MDS cannot find a
 		 * replica for a bmap in the metafile.
 		 */
-		BMAP_LOCK(a);
-		bci = bmap_2_bci(a);
+		BMAP_LOCK(b);
+		bci = bmap_2_bci(b);
 		PFL_GETTIMESPEC(&bci->bci_etime);
-		a->bcm_flags |= BMAP_TOFREE;
-		BMAP_ULOCK(a);
+		b->bcm_flags |= BMAP_TOFREE;
+		BMAP_ULOCK(b);
 	}
 	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
 }

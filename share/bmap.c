@@ -48,13 +48,13 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-SPLAY_GENERATE(bmap_cache, bmap, bcm_tentry, bmap_cmp)
+RB_GENERATE(bmaptree, bmap, bcm_tentry, bmap_cmp)
 
 struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
 
 /*
- * Comparator for bmaps in the splay cache.
+ * Comparator for finding bmaps in the fcmh's tree of bmaps.
  * @a: a bmap
  * @b: another bmap
  */
@@ -75,9 +75,9 @@ bmap_remove(struct bmap *b)
 
 	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
-	(void)FCMH_RLOCK(f);
-
-	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
+	psc_rwlock_wrlock(&f->fcmh_rwlock);
+	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+	psc_rwlock_unlock(&f->fcmh_rwlock);
 
 	psc_pool_return(bmap_pool, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
@@ -125,23 +125,22 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 struct bmap *
 bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 {
-	struct bmap lb, *b, *b2 = NULL;
+	struct bmap lb, *b, *bnew = NULL;
 	int doalloc;
 
 	doalloc = *new_bmap;
 	lb.bcm_bmapno = n;
 
  restart:
-	if (sl_bmap_ops.bmo_free) // xxx rename to 'reap'
-		sl_bmap_ops.bmo_free();
-
-	FCMH_LOCK(f);
-
-	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
+	if (doalloc && bnew)
+		psc_rwlock_wrlock(&f->fcmh_rwlock);
+	else
+		psc_rwlock_rdlock(&f->fcmh_rwlock);
+	b = RB_FIND(bmaptree, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		if (!BMAP_TRYLOCK(b)) {
-			FCMH_ULOCK(f);
-			pscthr_yield();
+			psc_rwlock_unlock(&f->fcmh_rwlock);
+			usleep(30);
 			goto restart;
 		}
 
@@ -152,38 +151,41 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 			 */
 			DEBUG_BMAP(PLL_DIAG, b, "wait on to-free bmap");
 			BMAP_ULOCK(b);
-			FCMH_ULOCK(f);
-			pscthr_yield();
 
 			/*
 			 * We don't want to spin if we are waiting for a
 			 * flush to clear.
 			 */
-			usleep(100);
+			psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock,
+			    100);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 	}
-	if ((doalloc == 0) || b) {
-		FCMH_ULOCK(f);
-		if (b2)
-			psc_pool_return(bmap_pool, b2);
+	if (doalloc == 0 || b) {
+		psc_rwlock_unlock(&f->fcmh_rwlock);
+		if (bnew)
+			psc_pool_return(bmap_pool, bnew);
 		*new_bmap = 0;
 		return (b);
 	}
-	if (b2 == NULL) {
-		FCMH_ULOCK(f);
-		b2 = psc_pool_get(bmap_pool);
+	if (bnew == NULL) {
+		psc_rwlock_unlock(&f->fcmh_rwlock);
+
+		if (sl_bmap_ops.bmo_free) // XXX rename to 'reap'
+			sl_bmap_ops.bmo_free();
+
+		bnew = psc_pool_get(bmap_pool);
 		goto restart;
 	}
-	b = b2;
+	b = bnew;
 
 	*new_bmap = 1;
 	memset(b, 0, bmap_pool->ppm_master->pms_entsize);
 	INIT_PSC_LISTENTRY(&b->bcm_lentry);
 	INIT_SPINLOCK(&b->bcm_lock);
 
-	atomic_set(&b->bcm_opcnt, 0);
+	psc_atomic32_set(&b->bcm_opcnt, 0);
 	b->bcm_fcmh = f;
 	b->bcm_bmapno = n;
 
@@ -201,10 +203,12 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	BMAP_LOCK(b);
 
 	/* Add to the fcmh's bmap cache */
-	PSC_SPLAY_XINSERT(bmap_cache, &f->fcmh_bmaptree, b);
+	PSC_RB_XINSERT(bmaptree, &f->fcmh_bmaptree, b);
+
+	psc_rwlock_unlock(&f->fcmh_rwlock);
+
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
-	FCMH_ULOCK(f);
 	return (b);
 }
 

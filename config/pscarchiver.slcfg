@@ -42,73 +42,73 @@ site @PSCARCH {
 	#	0x201	lime
 	#	0x1ff8	sense345
 
-	resource sense0s0 { type = standalone_fs; id = 0x1000; nids = sense0-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense0s1 { type = standalone_fs; id = 0x1001; nids = sense0-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense0s2 { type = standalone_fs; id = 0x1002; nids = sense0-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense0s3 { type = standalone_fs; id = 0x1003; nids = sense0-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense0s4 { type = standalone_fs; id = 0x1004; nids = sense0-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense0s5 { type = standalone_fs; id = 0x1005; nids = sense0-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense0s6 { type = standalone_fs; id = 0x1006; nids = sense0-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
-	resource sense0s7 { type = standalone_fs; id = 0x1007; nids = sense0-sliod7; self_test = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; }
+	resource sense0s0 { type = standalone_fs; id = 0x1000; nids = sense0-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense0s1 { type = standalone_fs; id = 0x1001; nids = sense0-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense0s2 { type = standalone_fs; id = 0x1002; nids = sense0-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense0s3 { type = standalone_fs; id = 0x1003; nids = sense0-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense0s4 { type = standalone_fs; id = 0x1004; nids = sense0-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense0s5 { type = standalone_fs; id = 0x1005; nids = sense0-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense0s6 { type = standalone_fs; id = 0x1006; nids = sense0-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
+	resource sense0s7 { type = standalone_fs; id = 0x1007; nids = sense0-sliod7; self_test = "fshealthtest %r"; fsroot = /arc_sliod/7; }
 
-	resource sense1s0 { type = standalone_fs; id = 0x1100; nids = sense1-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense1s1 { type = standalone_fs; id = 0x1101; nids = sense1-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense1s2 { type = standalone_fs; id = 0x1102; nids = sense1-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense1s3 { type = standalone_fs; id = 0x1103; nids = sense1-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense1s4 { type = standalone_fs; id = 0x1104; nids = sense1-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense1s5 { type = standalone_fs; id = 0x1105; nids = sense1-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense1s6 { type = standalone_fs; id = 0x1106; nids = sense1-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
+	resource sense1s0 { type = standalone_fs; id = 0x1100; nids = sense1-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense1s1 { type = standalone_fs; id = 0x1101; nids = sense1-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense1s2 { type = standalone_fs; id = 0x1102; nids = sense1-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense1s3 { type = standalone_fs; id = 0x1103; nids = sense1-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense1s4 { type = standalone_fs; id = 0x1104; nids = sense1-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense1s5 { type = standalone_fs; id = 0x1105; nids = sense1-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense1s6 { type = standalone_fs; id = 0x1106; nids = sense1-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
 
-	resource sense2s0 { type = standalone_fs; id = 0x1200; nids = sense2-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense2s1 { type = standalone_fs; id = 0x1201; nids = sense2-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense2s2 { type = standalone_fs; id = 0x1202; nids = sense2-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense2s3 { type = standalone_fs; id = 0x1203; nids = sense2-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense2s4 { type = standalone_fs; id = 0x1204; nids = sense2-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense2s5 { type = standalone_fs; id = 0x1205; nids = sense2-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense2s6 { type = standalone_fs; id = 0x1206; nids = sense2-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
-	resource sense2s7 { type = standalone_fs; id = 0x1207; nids = sense2-sliod7; self_test = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; }
+	resource sense2s0 { type = standalone_fs; id = 0x1200; nids = sense2-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense2s1 { type = standalone_fs; id = 0x1201; nids = sense2-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense2s2 { type = standalone_fs; id = 0x1202; nids = sense2-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense2s3 { type = standalone_fs; id = 0x1203; nids = sense2-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense2s4 { type = standalone_fs; id = 0x1204; nids = sense2-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense2s5 { type = standalone_fs; id = 0x1205; nids = sense2-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense2s6 { type = standalone_fs; id = 0x1206; nids = sense2-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
+	resource sense2s7 { type = standalone_fs; id = 0x1207; nids = sense2-sliod7; self_test = "fshealthtest %r"; fsroot = /arc_sliod/7; }
 
-	resource sense3s0 { type = standalone_fs; id = 0x1300; nids = sense3-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense3s1 { type = standalone_fs; id = 0x1301; nids = sense3-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense3s2 { type = standalone_fs; id = 0x1302; nids = sense3-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense3s3 { type = standalone_fs; id = 0x1303; nids = sense3-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense3s4 { type = standalone_fs; id = 0x1304; nids = sense3-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense3s5 { type = standalone_fs; id = 0x1305; nids = sense3-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense3s6 { type = standalone_fs; id = 0x1306; nids = sense3-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
+	resource sense3s0 { type = standalone_fs; id = 0x1300; nids = sense3-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense3s1 { type = standalone_fs; id = 0x1301; nids = sense3-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense3s2 { type = standalone_fs; id = 0x1302; nids = sense3-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense3s3 { type = standalone_fs; id = 0x1303; nids = sense3-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense3s4 { type = standalone_fs; id = 0x1304; nids = sense3-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense3s5 { type = standalone_fs; id = 0x1305; nids = sense3-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense3s6 { type = standalone_fs; id = 0x1306; nids = sense3-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
 
-	resource sense4s0 { type = standalone_fs; id = 0x1400; nids = sense4-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense4s1 { type = standalone_fs; id = 0x1401; nids = sense4-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense4s2 { type = standalone_fs; id = 0x1402; nids = sense4-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense4s3 { type = standalone_fs; id = 0x1403; nids = sense4-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense4s4 { type = standalone_fs; id = 0x1404; nids = sense4-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense4s5 { type = standalone_fs; id = 0x1405; nids = sense4-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense4s6 { type = standalone_fs; id = 0x1406; nids = sense4-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
-	resource sense4s7 { type = standalone_fs; id = 0x1407; nids = sense4-sliod7; self_test = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; }
+	resource sense4s0 { type = standalone_fs; id = 0x1400; nids = sense4-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense4s1 { type = standalone_fs; id = 0x1401; nids = sense4-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense4s2 { type = standalone_fs; id = 0x1402; nids = sense4-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense4s3 { type = standalone_fs; id = 0x1403; nids = sense4-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense4s4 { type = standalone_fs; id = 0x1404; nids = sense4-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense4s5 { type = standalone_fs; id = 0x1405; nids = sense4-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense4s6 { type = standalone_fs; id = 0x1406; nids = sense4-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
+	resource sense4s7 { type = standalone_fs; id = 0x1407; nids = sense4-sliod7; self_test = "fshealthtest %r"; fsroot = /arc_sliod/7; }
 
-	resource sense5s0 { type = standalone_fs; id = 0x1500; nids = sense5-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
-	resource sense5s1 { type = standalone_fs; id = 0x1501; nids = sense5-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
-	resource sense5s2 { type = standalone_fs; id = 0x1502; nids = sense5-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
-	resource sense5s3 { type = standalone_fs; id = 0x1503; nids = sense5-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
-	resource sense5s4 { type = standalone_fs; id = 0x1504; nids = sense5-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
-	resource sense5s5 { type = standalone_fs; id = 0x1505; nids = sense5-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
-	resource sense5s6 { type = standalone_fs; id = 0x1506; nids = sense5-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
+	resource sense5s0 { type = standalone_fs; id = 0x1500; nids = sense5-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
+	resource sense5s1 { type = standalone_fs; id = 0x1501; nids = sense5-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
+	resource sense5s2 { type = standalone_fs; id = 0x1502; nids = sense5-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; }
+	resource sense5s3 { type = standalone_fs; id = 0x1503; nids = sense5-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; }
+	resource sense5s4 { type = standalone_fs; id = 0x1504; nids = sense5-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; }
+	resource sense5s5 { type = standalone_fs; id = 0x1505; nids = sense5-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
+	resource sense5s6 { type = standalone_fs; id = 0x1506; nids = sense5-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
 
-	resource sense6s0 { type = standalone_fs; id = 0x1600; nids = sense6-sliod0; self_test = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
-	resource sense6s1 { type = standalone_fs; id = 0x1601; nids = sense6-sliod1; self_test = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
-	resource sense6s2 { type = standalone_fs; id = 0x1602; nids = sense6-sliod2; self_test = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
-	resource sense6s3 { type = standalone_fs; id = 0x1603; nids = sense6-sliod3; self_test = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
-	resource sense6s4 { type = standalone_fs; id = 0x1604; nids = sense6-sliod4; self_test = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
-	resource sense6s5 { type = standalone_fs; id = 0x1605; nids = sense6-sliod5; self_test = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
-	resource sense6s6 { type = standalone_fs; id = 0x1606; nids = sense6-sliod6; self_test = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
-	resource sense6s7 { type = standalone_fs; id = 0x1607; nids = sense6-sliod7; self_test = "/usr/local/psc/sbin/st /arc_sliod/7"; fsroot = /arc_sliod/7; flags = "disable_bia"; }
+	resource sense6s0 { type = standalone_fs; id = 0x1600; nids = sense6-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
+	resource sense6s1 { type = standalone_fs; id = 0x1601; nids = sense6-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
+	resource sense6s2 { type = standalone_fs; id = 0x1602; nids = sense6-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
+	resource sense6s3 { type = standalone_fs; id = 0x1603; nids = sense6-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
+	resource sense6s4 { type = standalone_fs; id = 0x1604; nids = sense6-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
+	resource sense6s5 { type = standalone_fs; id = 0x1605; nids = sense6-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
+	resource sense6s6 { type = standalone_fs; id = 0x1606; nids = sense6-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
+	resource sense6s7 { type = standalone_fs; id = 0x1607; nids = sense6-sliod7; self_test = "fshealthtest %r"; fsroot = /arc_sliod/7; flags = "disable_bia"; }
 
-	resource sense7s0 { type = standalone_fs; id = 0x1700; nids = sense7-sliod0; self_test = "/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
-	resource sense7s1 { type = standalone_fs; id = 0x1701; nids = sense7-sliod1; self_test = "/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
-	resource sense7s2 { type = standalone_fs; id = 0x1702; nids = sense7-sliod2; self_test = "/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
-	resource sense7s3 { type = standalone_fs; id = 0x1703; nids = sense7-sliod3; self_test = "/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
-	resource sense7s4 { type = standalone_fs; id = 0x1704; nids = sense7-sliod4; self_test = "/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
-	resource sense7s5 { type = standalone_fs; id = 0x1705; nids = sense7-sliod5; self_test = "/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
-	resource sense7s6 { type = standalone_fs; id = 0x1706; nids = sense7-sliod6; self_test = "/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
+	resource sense7s0 { type = standalone_fs; id = 0x1700; nids = sense7-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
+	resource sense7s1 { type = standalone_fs; id = 0x1701; nids = sense7-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
+	resource sense7s2 { type = standalone_fs; id = 0x1702; nids = sense7-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
+	resource sense7s3 { type = standalone_fs; id = 0x1703; nids = sense7-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
+	resource sense7s4 { type = standalone_fs; id = 0x1704; nids = sense7-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
+	resource sense7s5 { type = standalone_fs; id = 0x1705; nids = sense7-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
+	resource sense7s6 { type = standalone_fs; id = 0x1706; nids = sense7-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
 
 	resource sense0 {
 		desc	= "sense0 sliods";

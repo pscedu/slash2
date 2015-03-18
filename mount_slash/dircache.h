@@ -142,9 +142,9 @@ struct dircache_expire {
 
 /* This is analogous to 'struct dirent' many of which reside in a page. */
 struct dircache_ent {
-	int			 dce_hash;
+	uint64_t		 dce_hash;
 	int			 dce_namelen;
-	off_t			 dce_len;
+	int			 dce_len;
 	const char		*dce_name;
 	int64_t			 dce_off;
 };
