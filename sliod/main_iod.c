@@ -143,7 +143,12 @@ slihealththr_main(struct psc_thread *thr)
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct slashrpc_cservice *csvc;
 	struct timespec ts;
+	char cmdbuf[];
 	int rc;
+
+	(void)FMTSTR(cmdbuf, sizeof(cmdbuf), slcfg_local->cfg_selftest,
+	    FMTSTRCASE('r', "s", slcfg_local->cfg_fsroot)
+	);
 
 	signal(SIGALRM, SIG_IGN);
 	PFL_GETTIMESPEC(&ts);
@@ -151,7 +156,7 @@ slihealththr_main(struct psc_thread *thr)
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
-		rc = system(slcfg_local->cfg_selftest);
+		rc = pfl_system(cmdbuf);
 
 		/*
 		 * Code		Description
