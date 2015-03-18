@@ -4,7 +4,7 @@
 
 # Global network config
 set port=1300;
-set net=tcp10;
+set nets="tcp9 10.10.101.*; tcp10 *.*.*.*";
 set pref_ios="io@JY";
 set pref_mds="md@JY";
 set fsuuid="4c0fa37db6e31718";
@@ -18,8 +18,7 @@ site @JY {
 	resource md {
 		type	= mds;
 		id	= 101;
-		#nids	= yuzu-ib;
-		nids	= lime-ib;
+		nids	= lime, lime-ib1-0.pvt; # yuzu-ib;
 		journal	= /dev/disk/by-id/scsi-1ATA_ST3500630AS_5QG0D167;
 	}
 
@@ -27,33 +26,62 @@ site @JY {
 		type	= standalone_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
-		nids	= citron-ib;
+		nids	= citron, citron-ib1-0.pvt;
 	}
 
 	resource orange {
 		type	= standalone_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
-		nids	= orange-ib;
+		nids	= orange, orange-ib1-0.pvt;
 	}
 
 	resource lemon {
 		type	= standalone_fs;
 		id	= 107;
 		fsroot	= /local/jy.s2/io;
-		nids	= lemon-ib;
+		nids	= lemon, lemon-ib1-0.pvt;
 	}
 
 	resource kiwi {
 		type	= standalone_fs;
 		id	= 108;
 		fsroot	= /local/jy.s2/io;
-		nids	= kiwi;
+		nids	= kiwi, kiwi-ib.pvt;
+	}
+
+	resource lavos {
+		type	= standalone_fs;
+		id	= 109;
+		fsroot	= /local/jy.s2/io;
+		nids	= lavos; # lavos-ib.pvt
+	}
+
+	resource omnitopia {
+		type	= standalone_fs;
+		id	= 110;
+		fsroot	= /local/jy.s2/io;
+		nids	= omnitopia; # omnitopia-ib.pvt
+	}
+
+	resource polybius {
+		type	= standalone_fs;
+		id	= 111;
+		fsroot	= /local/jy.s2/io;
+		nids	= polybius; # polybius-ib.pvt
+	}
+
+	resource zebes {
+		type	= standalone_fs;
+		id	= 112;
+		fsroot	= /local/jy.s2/io;
+		nids	= zebes; # zebes-ib.pvt
 	}
 
 	resource io {
 		type	= cluster_noshare_lfs;
 		id	= 1000;
-		ios	= lemon@JY, orange@JY, citron@JY, kiwi@JY;
+		ios	= lemon, orange, citron, kiwi,
+			  lavos, omnitopia, polybius, zebes;
 	}
 }
