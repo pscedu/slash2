@@ -254,7 +254,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE) 
+	if (r->biorq_flags & BIORQ_ONTREE)
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
@@ -1889,7 +1889,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Step 2: Trigger read-ahead or write-ahead if necessary.
 	 *
 	 */
-	if (retry) 
+	if (retry)
 		goto out1;
 	/*
 	 * We should always be able to ask for the next bmap
