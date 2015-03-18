@@ -57,6 +57,12 @@ struct fidc_membh;
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
+
+	uint64_t			 fci_pino;
+	char				*fci_name;
+	char				 fci_sname[SL_NAME_SHORT];
+	struct pfl_hashentry		 fci_hentry;
+
 	union {
 		struct {
 			struct srt_inode inode;

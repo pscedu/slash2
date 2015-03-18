@@ -214,6 +214,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	OPSTAT_INCR("slc_fcmh_ctor");
 
 	fci = fcmh_get_pri(f);
+	fci->fci_pino = 0;
 	slc_fcmh_refresh_age(f);
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
@@ -248,6 +249,7 @@ slc_fcmh_dtor(struct fidc_membh *f)
 	/* XXX consolidate into pool stats */
 	OPSTAT_INCR("slc_fcmh_dtor");
 
+	msl_delete_namecache(f);
 	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
 		dircache_purge(f);
 }
