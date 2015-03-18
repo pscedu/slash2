@@ -295,6 +295,12 @@ void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 
+void	 msl_delete_namecache(struct fidc_membh *);
+void	 msl_insert_namecache(uint64_t, const char *, struct fidc_membh *);
+
+struct fidc_membh *
+	 msl_lookup_namecache(uint64_t, const char *, int);
+
 #define bmap_flushq_wake(reason)						\
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (reason))
 
