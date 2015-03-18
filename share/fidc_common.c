@@ -62,7 +62,7 @@ struct psc_hashtbl	  fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
-	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
+	psc_assert(RB_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(f->fcmh_refcnt == 0);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, f));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
@@ -173,7 +173,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
     const struct sl_fidgen *fgp, int flags, struct fidc_membh **fp,
     void *arg)
 {
-	struct fidc_membh *tmp, *fcmh, *fcmh_new;
+	struct fidc_membh *tmp, *f, *fnew;
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
 
@@ -181,7 +181,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	    fgp->fg_fid);
 
 	*fp = NULL;
-	fcmh_new = NULL; /* gcc */
+	fnew = NULL; /* gcc */
 
 	/* sanity checks */
 #ifndef _SLASH_CLIENT
@@ -191,7 +191,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
  restart:
-	fcmh = NULL;
+	f = NULL;
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		/*
 		 * Note that generation number is only used to track
@@ -223,7 +223,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			psc_hashbkt_lock(b);
 			goto restart;
 		}
-		fcmh = tmp;
+		f = tmp;
 		break;
 	}
 
@@ -232,7 +232,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * haven't taken a reference yet.  Also, we need to keep the
 	 * bucket lock in case we need to insert a new item.
 	 */
-	if (fcmh) {
+	if (f) {
 		psc_hashbkt_put(&fidcHtable, b);
 
 		/*
@@ -241,20 +241,20 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
-			fcmh_put(fcmh_new);
-			fcmh_new = NULL;
+			fcmh_put(fnew);
+			fnew = NULL;
 		}
 
-		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
+		psc_assert(fgp->fg_fid == fcmh_2_fid(f));
 
 		/* keep me around after unlocking later */
-		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 		if (sl_fcmh_ops.sfop_modify)
-			sl_fcmh_ops.sfop_modify(fcmh, fgp);
+			sl_fcmh_ops.sfop_modify(f, fgp);
 
-		FCMH_ULOCK(fcmh);
-		*fp = fcmh;
+		FCMH_ULOCK(f);
+		*fp = f;
 		return (0);
 	}
 
@@ -263,7 +263,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		if (!try_create) {
 			psc_hashbkt_unlock(b);
 
-			fcmh_new = fcmh_get();
+			fnew = fcmh_get();
 			try_create = 1;
 
 			psc_hashbkt_lock(b);
@@ -283,19 +283,20 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * OK, we've got a new fcmh.  No need to lock it since it's not
 	 * yet visible to other threads.
 	 */
-	fcmh = fcmh_new;
+	f = fnew;
 
-	memset(fcmh, 0, fidcPoolMaster.pms_entsize);
-	INIT_PSC_LISTENTRY(&fcmh->fcmh_lentry);
-	SPLAY_INIT(&fcmh->fcmh_bmaptree);
-	INIT_SPINLOCK(&fcmh->fcmh_lock);
-	psc_hashent_init(&fidcHtable, fcmh);
-	psc_waitq_init(&fcmh->fcmh_waitq);
+	memset(f, 0, fidcPoolMaster.pms_entsize);
+	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
+	RB_INIT(&f->fcmh_bmaptree);
+	INIT_SPINLOCK(&f->fcmh_lock);
+	psc_hashent_init(&fidcHtable, f);
+	psc_waitq_init(&f->fcmh_waitq);
+	psc_rwlock_init(&f->fcmh_rwlock);
 
-	COPYFG(&fcmh->fcmh_fg, fgp);
-	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
+	COPYFG(&f->fcmh_fg, fgp);
+	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
 
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
+	DEBUG_FCMH(PLL_DEBUG, f, "new");
 
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
@@ -303,8 +304,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * leave it around for the reaper to free it.  Note that the
 	 * item is not on any list yet.
 	 */
-	fcmh->fcmh_flags |= FCMH_CAC_INITING;
-	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
+	f->fcmh_flags |= FCMH_CAC_INITING;
+	psc_hashbkt_add_item(&fidcHtable, b, f);
 	psc_hashbkt_put(&fidcHtable, b);
 
 	/*
@@ -314,35 +315,35 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * safe to not lock because we don't touch the state, and other
 	 * thread should be waiting for us.
 	 */
-	rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
+	rc = sl_fcmh_ops.sfop_ctor(f, flags);
 	if (rc) {
-		fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
+		f->fcmh_flags |= FCMH_CTOR_FAILED;
 		goto finish;
 	}
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
-		rc = sl_fcmh_ops.sfop_getattr(fcmh, arg);	/* msl_stat() */
+		rc = sl_fcmh_ops.sfop_getattr(f, arg);	/* msl_stat() */
 	}
 
  finish:
-	FCMH_LOCK(fcmh);
-	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
-	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
-		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
-		psc_waitq_wakeall(&fcmh->fcmh_waitq);
+	FCMH_LOCK(f);
+	f->fcmh_flags &= ~FCMH_CAC_INITING;
+	if (f->fcmh_flags & FCMH_CAC_WAITING) {
+		f->fcmh_flags &= ~FCMH_CAC_WAITING;
+		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
-	fcmh->fcmh_flags |= FCMH_CAC_IDLE;
-	lc_add(&fidcIdleList, fcmh);
+	f->fcmh_flags |= FCMH_CAC_IDLE;
+	lc_add(&fidcIdleList, f);
 
 	if (rc) {
-		fcmh->fcmh_flags |= FCMH_CAC_TOFREE;
+		f->fcmh_flags |= FCMH_CAC_TOFREE;
 	} else {
-		*fp = fcmh;
-		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		*fp = f;
+		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
 	return (rc);
 }
 

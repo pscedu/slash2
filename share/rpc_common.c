@@ -260,7 +260,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_lineno = __LINE__;
 	csvc->csvc_fn = __FILE__;
 
-	if (flags & CSVCF_NONBLOCK) {
+	if (flags & CSVCF_NONBLOCK || csvc->csvc_import == NULL) {
 		imp = slrpc_new_import(csvc);
 		oimp = csvc->csvc_import;
 		csvc->csvc_import = imp;
@@ -336,7 +336,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_owner = 0;
 	psc_atomic32_clearmask(&csvc->csvc_flags,
 	    CSVCF_BUSY);
-	slrpc_connect_finish(csvc, imp, NULL, rc == 0);
+	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_ULOCK(csvc);
 	return (rc);
 }

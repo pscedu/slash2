@@ -59,7 +59,7 @@ struct sl_fcmh_ops {
  * fidc_membh - The primary cached file structure; all updates and
  * lookups into the inode are done through here.
  *
- * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
+ * fidc_membh tracks cached bmaps (bmaptree) and clients (via their
  * exports) which hold cached bmaps.
  *
  * Service specific private structures (i.e. fcmh_mds_info,
@@ -79,7 +79,8 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
-	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
+	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
+	struct psc_rwlock	 fcmh_rwlock;
 };
 
 /* fcmh_flags (cache) */

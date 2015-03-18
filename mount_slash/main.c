@@ -1772,8 +1772,8 @@ void
 mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
+	struct fidc_membh *fp = NULL;
 	struct pscfs_creds pcr;
-	struct fidc_membh *fp;
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
 	struct stat stb;
@@ -1894,8 +1894,8 @@ msl_flush(struct msl_fhent *mfh, int all)
 
 	f = mfh->mfh_fcmh;
 
-	FCMH_LOCK(f);
-	SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+	psc_rwlock_rdlock(&f->fcmh_rwlock);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
 		if (!(b->bcm_flags & BMAP_TOFREE)) {
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
@@ -1903,7 +1903,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 		}
 		BMAP_ULOCK(b);
 	}
-	FCMH_ULOCK(f);
+	psc_rwlock_unlock(&f->fcmh_rwlock);
 
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
@@ -2806,8 +2806,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
+			FCMH_ULOCK(c);
+
 			/* Partial truncate.  Block and flush. */
-			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
+			psc_rwlock_rdlock(&c->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
 
@@ -2823,10 +2826,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				    "BMAP_OPCNT_TRUNCWAIT");
 				psc_dynarray_add(&a, b);
 			}
-			FCMH_ULOCK(c);
+			psc_rwlock_unlock(&c->fcmh_rwlock);
 
 			/*
-			 * XXX some writes can be cancelled, but no api
+			 * XXX some writes can be cancelled, but no API
 			 * exists yet.
 			 */
 			DYNARRAY_FOREACH(b, i, &a)
