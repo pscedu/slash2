@@ -57,7 +57,7 @@ struct slctlmsg_fcmh {
 
 /* fcmh classes, tucked in scf_fg.fg_gen */
 #define SLCTL_FCL_ALL		0	/* everything */
-#define SLCTL_FCL_BUSY		1	/* only FCMH_CAC_BUSY */
+#define SLCTL_FCL_BUSY		1	/* only FCMH_BUSY */
 
 struct slctlmsg_bmap {
 	struct sl_fidgen	scb_fg;
