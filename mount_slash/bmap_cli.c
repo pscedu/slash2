@@ -832,9 +832,9 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct psc_dynarray bcis = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
+	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	struct fcmh_cli_info *fci;
 	int i, nitems;
 
 	/*
@@ -929,7 +929,7 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		if (!i && nitems) {
 			spinlock(&bmapTimeoutLock);
-			psc_waitq_waitrel(&bmapTimeoutWaitq,
+			psc_waitq_waitrel_ts(&bmapTimeoutWaitq,
 			    &bmapTimeoutLock, &nto);
 			continue;
 		}

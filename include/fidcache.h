@@ -83,12 +83,12 @@ struct fidc_membh {
 	struct psc_rwlock	 fcmh_rwlock;
 };
 
-/* fcmh_flags (cache) */
-#define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
-#define	FCMH_CAC_IDLE		(1 <<  1)	/* on idle list */
-#define	FCMH_CAC_INITING	(1 <<  2)	/* initializing */
-#define	FCMH_CAC_WAITING	(1 <<  3)	/* being waited on */
-#define	FCMH_CAC_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
+/* fcmh_flags */
+#define	FCMH_FREE		(1 <<  0)	/* totally free item */
+#define	FCMH_IDLE		(1 <<  1)	/* on idle list */
+#define	FCMH_INITING		(1 <<  2)	/* initializing */
+#define	FCMH_WAITING		(1 <<  3)	/* being waited on */
+#define	FCMH_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
 #define	FCMH_HAVE_ATTRS		(1 <<  5)	/* has valid stat(2) info */
 #define	FCMH_GETTING_ATTRS	(1 <<  6)	/* fetching stat(2) info */
 #define	FCMH_CTOR_FAILED	(1 <<  7)	/* constructor func failed */
@@ -234,11 +234,11 @@ struct fidc_membh {
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
-	    (f)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_IDLE		? "i" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
+	    (f)->fcmh_flags & FCMH_FREE			? "F" : "",	\
+	    (f)->fcmh_flags & FCMH_IDLE			? "i" : "",	\
+	    (f)->fcmh_flags & FCMH_INITING		? "I" : "",	\
+	    (f)->fcmh_flags & FCMH_WAITING		? "W" : "",	\
+	    (f)->fcmh_flags & FCMH_TOFREE		? "T" : "",	\
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\

@@ -78,7 +78,7 @@ fcmh_destroy(struct fidc_membh *f)
 			sl_fcmh_ops.sfop_dtor(f);
 	}
 
-	f->fcmh_flags = FCMH_CAC_FREE;
+	f->fcmh_flags = FCMH_FREE;
 	fcmh_put(f);
 }
 
@@ -122,10 +122,10 @@ fidc_reap(int max, int only_expired)
 			}
 		}
 
-		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
+		psc_assert(f->fcmh_flags & FCMH_IDLE);
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
-		f->fcmh_flags |= FCMH_CAC_TOFREE;
+		f->fcmh_flags |= FCMH_TOFREE;
 		lc_remove(&fidcIdleList, f);
 		reap[nreap++] = f;
 		FCMH_ULOCK(f);
@@ -202,7 +202,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		FCMH_LOCK(tmp);
 
 		/* if the item is being freed, ignore it */
-		if (tmp->fcmh_flags & FCMH_CAC_TOFREE) {
+		if (tmp->fcmh_flags & FCMH_TOFREE) {
 			FCMH_ULOCK(tmp);
 			pscthr_yield();
 			continue;
@@ -212,10 +212,10 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 * If the item is being initialized, take a reference
 		 * and wait.
 		 */
-		if (tmp->fcmh_flags & FCMH_CAC_INITING) {
+		if (tmp->fcmh_flags & FCMH_INITING) {
 			psc_hashbkt_unlock(b);
 
-			tmp->fcmh_flags |= FCMH_CAC_WAITING;
+			tmp->fcmh_flags |= FCMH_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			fcmh_wait_nocond_locked(tmp);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
@@ -304,7 +304,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * leave it around for the reaper to free it.  Note that the
 	 * item is not on any list yet.
 	 */
-	f->fcmh_flags |= FCMH_CAC_INITING;
+	f->fcmh_flags |= FCMH_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, f);
 	psc_hashbkt_put(&fidcHtable, b);
 
@@ -328,17 +328,17 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
  finish:
 	FCMH_LOCK(f);
-	f->fcmh_flags &= ~FCMH_CAC_INITING;
-	if (f->fcmh_flags & FCMH_CAC_WAITING) {
-		f->fcmh_flags &= ~FCMH_CAC_WAITING;
+	f->fcmh_flags &= ~FCMH_INITING;
+	if (f->fcmh_flags & FCMH_WAITING) {
+		f->fcmh_flags &= ~FCMH_WAITING;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
-	f->fcmh_flags |= FCMH_CAC_IDLE;
+	f->fcmh_flags |= FCMH_IDLE;
 	lc_add(&fidcIdleList, f);
 
 	if (rc) {
-		f->fcmh_flags |= FCMH_CAC_TOFREE;
+		f->fcmh_flags |= FCMH_TOFREE;
 	} else {
 		*fp = f;
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
@@ -408,8 +408,8 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 	 * not move the fcmh to the busy list.
 	 */
 	if ((type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) &&
-	    f->fcmh_flags & FCMH_CAC_IDLE) {
-		f->fcmh_flags &= ~FCMH_CAC_IDLE;
+	    f->fcmh_flags & FCMH_IDLE) {
+		f->fcmh_flags &= ~FCMH_IDLE;
 		lc_remove(&fidcIdleList, f);
 	}
 	FCMH_URLOCK(f, locked);
@@ -441,11 +441,11 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			 * thread takes in psc_hashent_remove().  So
 			 * _fidc_lookup is guaranteed to obtain this
 			 * fcmh lock and skip the fcmh because of
-			 * FCMH_CAC_TOFREE before this thread calls
+			 * FCMH_TOFREE before this thread calls
 			 * fcmh_destroy().
 			 */
 			lc_remove(&fidcIdleList, f);
-			f->fcmh_flags |= FCMH_CAC_TOFREE;
+			f->fcmh_flags |= FCMH_TOFREE;
 			FCMH_ULOCK(f);
 
 			psc_hashent_remove(&fidcHtable, f);
@@ -453,8 +453,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			return;
 		}
 
-		if (!(f->fcmh_flags & FCMH_CAC_IDLE)) {
-			f->fcmh_flags |= FCMH_CAC_IDLE;
+		if (!(f->fcmh_flags & FCMH_IDLE)) {
+			f->fcmh_flags |= FCMH_IDLE;
 			lc_add(&fidcIdleList, f);
 			PFL_GETTIMESPEC(&f->fcmh_etime);
 			f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
@@ -508,14 +508,16 @@ dump_fidcache(void)
 void
 _dump_fcmh_flags_common(int *flags, int *seq)
 {
-	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
+	PFL_PRFLAG(FCMH_FREE, flags, seq);
+	PFL_PRFLAG(FCMH_IDLE, flags, seq);
+	PFL_PRFLAG(FCMH_INITING, flags, seq);
+	PFL_PRFLAG(FCMH_WAITING, flags, seq);
+	PFL_PRFLAG(FCMH_TOFREE, flags, seq);
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
 	PFL_PRFLAG(FCMH_BUSY, flags, seq);
+	PFL_PRFLAG(FCMH_DELETED, flags, seq);
 }
 
 __weak void
