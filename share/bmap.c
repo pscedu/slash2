@@ -150,6 +150,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 			 * can reload it back.
 			 */
 			DEBUG_BMAP(PLL_DIAG, b, "wait on to-free bmap");
+			BMAP_ULOCK(b);
 			/*
 			 * We don't want to spin if we are waiting for a
 			 * flush to clear.
