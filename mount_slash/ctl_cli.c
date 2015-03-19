@@ -535,6 +535,7 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	else
 		res = libsl_id2res(id)->res_name;
 	strlcpy(scb->scb_resname, res, sizeof(scb->scb_resname));
+	scb->scb_addr = (long)b;
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
