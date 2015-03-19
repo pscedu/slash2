@@ -402,13 +402,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 	DEBUG_FCMH(PLL_DEBUG, f, "took ref (type=%d)", type);
 
-	/*
-	 * Only 2 types of references may be long standing,
-	 * FCMH_OPCNT_OPEN and FCMH_OPCNT_BMAP.  Other ref types should
-	 * not move the fcmh to the busy list.
-	 */
-	if ((type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) &&
-	    f->fcmh_flags & FCMH_IDLE) {
+	if (f->fcmh_flags & FCMH_IDLE) {
 		f->fcmh_flags &= ~FCMH_IDLE;
 		lc_remove(&fidcIdleList, f);
 	}
@@ -453,12 +447,11 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			return;
 		}
 
-		if (!(f->fcmh_flags & FCMH_IDLE)) {
-			f->fcmh_flags |= FCMH_IDLE;
-			lc_add(&fidcIdleList, f);
-			PFL_GETTIMESPEC(&f->fcmh_etime);
-			f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
-		}
+		psc_assert(!(f->fcmh_flags & FCMH_IDLE));
+		f->fcmh_flags |= FCMH_IDLE;
+		lc_add(&fidcIdleList, f);
+		PFL_GETTIMESPEC(&f->fcmh_etime);
+		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 	}
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
