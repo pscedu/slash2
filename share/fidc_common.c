@@ -108,11 +108,7 @@ fidc_reap(int max, int only_expired)
 		if (!FCMH_TRYLOCK(f))
 			continue;
 
-		/* skip items in use */
-		if (f->fcmh_refcnt) {
-			FCMH_ULOCK(f);
-			continue;
-		}
+		psc_assert(!f->fcmh_refcnt);
 
 		if (only_expired) {
 			PFL_GETTIMESPEC(&crtime);
