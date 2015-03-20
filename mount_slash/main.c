@@ -1796,8 +1796,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	if (!rc)
-		msl_insert_namecache(pinum, name, fp);
+	//if (!rc)
+		//msl_insert_namecache(pinum, name, fp);
  out:
 	if (fp)
 		fcmh_op_done(fp);
@@ -2445,7 +2445,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_lookup_namecache(opinum, oldname, 1);
+	//msl_lookup_namecache(opinum, oldname, 1);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
