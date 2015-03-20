@@ -194,7 +194,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%5u %18s %7"PRIu64"   0x%#lx\n",
+	    "%5u %18s %7"PRIu64"   %#lx\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAP_RD		? 'R' : '-',
 	    scb->scb_flags & BMAP_WR		? 'W' : '-',
