@@ -330,9 +330,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
-	f->fcmh_flags |= FCMH_IDLE;
-	lc_add(&fidcIdleList, f);
-
 	if (rc) {
 		f->fcmh_flags |= FCMH_TOFREE;
 	} else {
