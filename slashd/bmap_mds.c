@@ -518,7 +518,7 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_REPLMODWR, &flags, &seq);
-	PFL_PRFLAG(BMAPF_IONASSIGN, &flags, &seq);
+	PFL_PRFLAG(BMAPF_IOS_ASSIGNED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

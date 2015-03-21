@@ -186,9 +186,9 @@ sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	int width;
 
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
-	if (w > 16)
+	if (width > 16)
 		printf("%-16s ", "addr");
-	printf("%-16s %6s %-12s %5s %18s\n",
+	printf("%-16s %6s %-9s %5s %18s %7s\n",
 	    "fid", "bmapno", "flags", "refs", "ios", "seqno");
 }
 
@@ -199,7 +199,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	int width;
 
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
-	if (w > 16)
+	if (width > 16)
 		printf("%16"PRIx64" ", scb->scb_addr);
 	printf("%016"SLPRIxFID" %6d "
 	    "%c%c%c%c%c%c%c%c%c "
@@ -226,14 +226,14 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	int w;
+	int width;
 
-	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
+	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	printf("%-16s %10s %6s %5s %5s "
 	    "%7s %3s %7s %4s %6s",
 	    "fid", "flags", "mode", "uid", "gid",
 	    "size", "ref", "fgen", "pgen", "ugen");
-	if (w > 6)
+	if (width > 6)
 		printf(" %6s", BLKSIZE_LABEL);
 	printf("\n");
 }
@@ -243,9 +243,9 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_fcmh *scf = m;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
-	int w;
+	int width;
 
-	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
+	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	psc_fmt_human(buf, scf->scf_size);
 	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
 	    "%6o %5u %5u %7s "
@@ -265,7 +265,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
 	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
 	    scf->scf_ptruncgen, scf->scf_utimgen);
-	if (w > 6)
+	if (width > 6)
 		printf(" %6"PRIu64, scf->scf_blksize);
 	printf("\n");
 }
