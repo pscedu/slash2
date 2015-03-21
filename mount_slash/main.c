@@ -202,7 +202,7 @@ msl_insert_namecache(uint64_t pino, const char *name,
 }
 
 struct fidc_membh *
-msl_lookup_namecache(uint64_t pino, const char *name, int delete)
+msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 {
 	struct psc_hashbkt *b;
 	struct fidc_membh *tmp;
@@ -221,7 +221,7 @@ msl_lookup_namecache(uint64_t pino, const char *name, int delete)
 			break;
 		}
 	}
-	if (delete && child) {
+	if (dodelete && child) {
 		fci->fci_pino = 0;
 		OPSTAT_INCR("delete_name");
 		psc_hashbkt_del_item(&namecHtable, b, fci);
