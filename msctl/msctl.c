@@ -837,10 +837,10 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 void
 ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %6s %3s %9s "
-	    "%8s %4s %4s %10s\n",
-	    "fid", "bno", "ref", "off",
-	    "flags", "nwtr", "naio", "lastacc");
+	printf("%-16s %6s %3s %4s %7s %7s "
+	    "%9s %3s %3s %8s\n",
+	    "fid", "bno", "ref", "err", "offset", "start",
+	    "flags", "nwr", "aio", "lastacc");
 }
 
 void
@@ -848,20 +848,22 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_bmpce *mpce = m;
 
-	printf("%016"SLPRIxFID" %6d %3d %9d "
-	    "%c%c%c%c%c%c%c%c "
-	    "%4d %4d "
-	    "%10"PRId64"\n",
+	printf("%016"SLPRIxFID" %6d %3d "
+	    "%4d %7x %7x "
+	    "%c%c%c%c%c%c%c%c%c "
+	    "%3d %3d "
+	    "%8"PRIx64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
-	    mpce->mpce_off,
+	    mpce->mpce_rc, mpce->mpce_off, mpce->mpce_start,
 	    mpce->mpce_flags & BMPCE_DATARDY	? 'd' : '-',
 	    mpce->mpce_flags & BMPCE_FAULTING	? 'f' : '-',
 	    mpce->mpce_flags & BMPCE_LRU	? 'l' : '-',
-	    mpce->mpce_flags & BMPCE_TOFREE	? 'T' : '-',
-	    mpce->mpce_flags & BMPCE_EIO	? 'E' : '-',
-	    mpce->mpce_flags & BMPCE_READA	? 'a' : '-',
+	    mpce->mpce_flags & BMPCE_TOFREE	? 't' : '-',
+	    mpce->mpce_flags & BMPCE_EIO	? 'e' : '-',
 	    mpce->mpce_flags & BMPCE_AIOWAIT	? 'w' : '-',
 	    mpce->mpce_flags & BMPCE_DISCARD	? 'D' : '-',
+	    mpce->mpce_flags & BMPCE_PINNED	? 'p' : '-',
+	    mpce->mpce_flags & BMPCE_READAHEAD	? 'r' : '-',
 	    mpce->mpce_nwaiters, mpce->mpce_npndgaios,
 	    mpce->mpce_laccess.tv_sec);
 }

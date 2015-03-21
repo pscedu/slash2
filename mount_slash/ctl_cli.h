@@ -88,16 +88,17 @@ struct msctlmsg_biorq {
 	struct pfl_timespec	msr_expire;
 	 int32_t		msr_npages;
 	 int32_t		msr_nrq;
-	    long                msr_addr;
+	long			msr_addr;
 };
 
 struct msctlmsg_bmpce {
 	slfid_t			mpce_fid;
 	sl_bmapno_t		mpce_bno;
 	 int32_t		mpce_ref;
+	 int32_t		mpce_rc;
 	uint32_t		mpce_flags;
 	uint32_t		mpce_off;
-//	void			*bmpce_owner;
+	uint32_t		mpce_start;
 	struct pfl_timespec	mpce_laccess;
 	 int32_t		mpce_nwaiters;
 	 int32_t		mpce_npndgaios;

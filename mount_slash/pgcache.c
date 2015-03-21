@@ -529,12 +529,14 @@ dump_bmpce_flags(uint32_t flags)
 	int seq = 0;
 
 	PFL_PRFLAG(BMPCE_DATARDY, &flags, &seq);
+	PFL_PRFLAG(BMPCE_FAULTING, &flags, &seq);
 	PFL_PRFLAG(BMPCE_LRU, &flags, &seq);
 	PFL_PRFLAG(BMPCE_TOFREE, &flags, &seq);
 	PFL_PRFLAG(BMPCE_EIO, &flags, &seq);
-	PFL_PRFLAG(BMPCE_READA, &flags, &seq);
 	PFL_PRFLAG(BMPCE_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BMPCE_DISCARD, &flags, &seq);
+	PFL_PRFLAG(BMPCE_PINNED, &flags, &seq);
+	PFL_PRFLAG(BMPCE_READAHEAD, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
@@ -551,7 +553,10 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_EXPIRE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DESTROY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
+	PFL_PRFLAG(BIORQ_FREEBUF, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
+	PFL_PRFLAG(BIORQ_ONTREE, &flags, &seq);
+	PFL_PRFLAG(BIORQ_READAHEAD, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

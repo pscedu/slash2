@@ -79,11 +79,10 @@ struct bmap_pagecache_entry {
 #define BMPCE_LRU		(1 <<  2)
 #define BMPCE_TOFREE		(1 <<  3)
 #define BMPCE_EIO		(1 <<  4)	/* I/O error */
-#define BMPCE_READA		(1 <<  5)	/* brought in by readahead logic */
-#define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
-#define BMPCE_DISCARD		(1 <<  7)	/* don't cache after I/O */
-#define BMPCE_PINNED		(1 <<  8)	/* do not modify */
-#define BMPCE_READAHEAD		(1 <<  9)	/* populated from readahead */
+#define BMPCE_AIOWAIT		(1 <<  5)	/* wait on async read */
+#define BMPCE_DISCARD		(1 <<  6)	/* don't cache after I/O */
+#define BMPCE_PINNED		(1 <<  7)	/* do not modify */
+#define BMPCE_READAHEAD		(1 <<  8)	/* populated from readahead */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -124,11 +123,12 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	    (b)->bmpce_flags & BMPCE_FAULTING		? "f" : "",	\
 	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
-	    (b)->bmpce_flags & BMPCE_TOFREE		? "T" : "",	\
-	    (b)->bmpce_flags & BMPCE_EIO		? "E" : "",	\
-	    (b)->bmpce_flags & BMPCE_READA		? "a" : "",	\
+	    (b)->bmpce_flags & BMPCE_TOFREE		? "t" : "",	\
+	    (b)->bmpce_flags & BMPCE_EIO		? "e" : "",	\
 	    (b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
 	    (b)->bmpce_flags & BMPCE_DISCARD		? "D" : "",	\
+	    (b)->bmpce_flags & BMPCE_PINNED		? "p" : "",	\
+	    (b)->bmpce_flags & BMPCE_READAHEAD		? "r" : "",	\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic32_read(&(b)->bmpce_ref),				\
