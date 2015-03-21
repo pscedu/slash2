@@ -425,7 +425,7 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	NULL,				/* bmo_free() */
+	NULL,				/* bmo_reapf() */
 	iod_bmap_init,			/* bmo_init_privatef() */
 	iod_bmap_retrieve,		/* bmo_retrievef() */
 	NULL,				/* bmo_mode_chngf() */

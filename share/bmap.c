@@ -73,8 +73,6 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
-	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
-
 	psc_rwlock_wrlock(&f->fcmh_rwlock);
 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
 	psc_rwlock_unlock(&f->fcmh_rwlock);
@@ -171,8 +169,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	if (bnew == NULL) {
 		psc_rwlock_unlock(&f->fcmh_rwlock);
 
-		if (sl_bmap_ops.bmo_free) // XXX rename to 'reap'
-			sl_bmap_ops.bmo_free();
+		if (sl_bmap_ops.bmo_reapf)
+			sl_bmap_ops.bmo_reapf();
 
 		bnew = psc_pool_get(bmap_pool);
 		goto restart;
@@ -360,9 +358,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_DIO, flags, seq);
 	PFL_PRFLAG(BMAP_DIOCB, flags, seq);
 	PFL_PRFLAG(BMAP_TOFREE, flags, seq);
-	PFL_PRFLAG(BMAP_FLUSHQ, flags, seq);
-	PFL_PRFLAG(BMAP_TIMEOQ, flags, seq);
-	PFL_PRFLAG(BMAP_IONASSIGN, flags, seq);
 	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
 	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
 	PFL_PRFLAG(BMAP_BUSY, flags, seq);

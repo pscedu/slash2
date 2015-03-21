@@ -97,6 +97,7 @@ struct bmap_mds_info {
 #define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 #define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 5)	/* res state changes have been written */
+#define BMAPF_IOS_ASSIGNED	(_BMAP_FLSHFT << 6)
 
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen

@@ -518,6 +518,7 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_REPLMODWR, &flags, &seq);
+	PFL_PRFLAG(BMAPF_IONASSIGN, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
@@ -544,7 +545,7 @@ dump_bml_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	NULL,				/* bmo_free() */
+	NULL,				/* bmo_reapf() */
 	mds_bmap_init,			/* bmo_init_privatef() */
 	mds_bmap_read,			/* bmo_retrievef() */
 	NULL,				/* bmo_mode_chngf() */

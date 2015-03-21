@@ -33,7 +33,7 @@
 #include "slashrpc.h"
 
 /* number of bmaps to allow before reaper kicks into gear */
-#define	BMAP_CACHE_MAX			1024
+#define	BMAP_CACHE_MAX		1024
 
 /**
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
@@ -56,10 +56,12 @@ struct bmap_cli_info {
 #define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease request has failed */
 #define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 3)	/* lease has expired, new one is needed */
 #define BMAP_CLI_SCHED		(_BMAP_FLSHFT << 4)	/* bmap flush in progress */
-#define BMAP_CLI_BENCH		(_BMAP_FLSHFT << 5)
+#define BMAPF_BENCH		(_BMAP_FLSHFT << 5)
+#define BMAPF_FLUSHQ		(_BMAP_FLSHFT << 6)
+#define BMAPF_TIMEOQ		(_BMAP_FLSHFT << 7)	/* on timeout queue */
 
 /* XXX change horribly named flags */
-#define BMAP_CLI_MAX_LEASE	60 /* seconds */
+#define BMAP_CLI_MAX_LEASE	60			/* seconds */
 #define BMAP_CLI_EXTREQSECS	20
 #define BMAP_CLI_TIMEO_INC	1
 

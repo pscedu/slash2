@@ -236,7 +236,6 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 		wake = 1;
 		psc_waitq_wakeall(&slc_bflush_waitq);
 	}
-
 	freelock(&slc_bflush_lock);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
@@ -893,7 +892,7 @@ bmap_flush(void)
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
+		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 
 		if ((b->bcm_flags & BMAP_CLI_SCHED) ||
 		    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {

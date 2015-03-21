@@ -33,10 +33,10 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/str.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 #include "pfl/fmt.h"
+#include "pfl/str.h"
 
 #include "ctl.h"
 #include "ctlcli.h"
@@ -183,18 +183,27 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %6s %-12s %5s %18s %7s %6s\n",
-	    "fid", "bmapno", "flags", "refs", "ios", "seqno", "addr");
+	int width;
+
+	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
+	if (w > 16)
+		printf("%-16s ", "addr");
+	printf("%-16s %6s %-12s %5s %18s\n",
+	    "fid", "bmapno", "flags", "refs", "ios", "seqno");
 }
 
 void
 sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_bmap *scb = m;
+	int width;
 
+	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
+	if (w > 16)
+		printf("%16"PRIx64" ", scb->scb_addr);
 	printf("%016"SLPRIxFID" %6d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%5u %18s %7"PRIu64"   %#lx\n",
+	    "%c%c%c%c%c%c%c%c%c "
+	    "%5u %18s %7"PRIu64"\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAP_RD		? 'R' : '-',
 	    scb->scb_flags & BMAP_WR		? 'W' : '-',
@@ -202,13 +211,10 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAP_DIO		? 'D' : '-',
 	    scb->scb_flags & BMAP_DIOCB		? 'C' : '-',
 	    scb->scb_flags & BMAP_TOFREE	? 'F' : '-',
-	    scb->scb_flags & BMAP_FLUSHQ	? 'f' : '-',
-	    scb->scb_flags & BMAP_TIMEOQ	? 'T' : '-',
-	    scb->scb_flags & BMAP_IONASSIGN	? 'A' : '-',
 	    scb->scb_flags & BMAP_MDCHNG	? 'G' : '-',
 	    scb->scb_flags & BMAP_WAITERS	? 'w' : '-',
 	    scb->scb_flags & BMAP_BUSY		? 'B' : '-',
-	    scb->scb_opcnt, scb->scb_resname, scb->scb_seq, scb->scb_addr);
+	    scb->scb_opcnt, scb->scb_resname, scb->scb_seq);
 }
 
 #ifdef _SLASH_MDS

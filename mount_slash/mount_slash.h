@@ -317,6 +317,7 @@ int	 msl_pages_fetch(struct bmpc_ioreq *);
 #define BMAPFLSH_TIMEOA		(1 << 2)
 #define BMAPFLSH_TRUNCATE	(1 << 3)
 #define BMAPFLSH_RPCDONE	(1 << 4)
+#define BMAPFLSH_REAP		(1 << 5)
 
 enum {
 	SLC_FAULT_READAHEAD_CB_EIO,

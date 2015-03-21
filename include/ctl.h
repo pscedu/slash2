@@ -71,7 +71,7 @@ struct slctlmsg_bmap {
 	uint64_t		scb_seq;
 	uint64_t		scb_key;
 	char			scb_resname[RES_NAME_MAX];
-	    long                scb_addr;
+	uint64_t		scb_addr;
 };
 
 #endif /* _SL_CTL_H_ */

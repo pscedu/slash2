@@ -47,16 +47,18 @@ struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
  * Avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
  */
 void
-msl_bmap_free(void)
+msl_bmap_reap(void)
 {
-	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
+	bmap_flushq_wake(BMAPFLSH_REAP);
 	/* XXX make BMAP_CACHE_MAX dynamic? */
 	while (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAX) {
 		spinlock(&bmapTimeoutLock);
 		psc_waitq_wakeall(&bmapTimeoutWaitq);
 		freelock(&bmapTimeoutLock);
+
 		OPSTAT_INCR("bmap_alloc_stall");
-		sleep(1);
+		psc_waitq_waitrel_us(&slc_bmaptimeoutq.plc_wq_empty,
+		    NULL, 100);
 	}
 }
 
@@ -711,7 +713,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 	 * Take the reaper ref cnt early and place the bmap onto the
 	 * reap list
 	 */
-	b->bcm_flags |= BMAP_TIMEOQ;
+	b->bcm_flags |= BMAPF_TIMEOQ;
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
 		b->bcm_flags |= BMAP_DIO;
 
@@ -852,7 +854,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
-			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
+			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
@@ -880,7 +882,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
 			 */
-			psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
+			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
@@ -889,7 +891,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
-			b->bcm_flags &= ~BMAP_TIMEOQ;
+			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&slc_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAP_WR) {
@@ -1099,7 +1101,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
+	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
@@ -1145,6 +1147,10 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_CLI_REASSIGNREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEFAILED, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXPIRED, &flags, &seq);
+	PFL_PRFLAG(BMAP_CLI_SCHED, &flags, &seq);
+	PFL_PRFLAG(BMAPF_BENCH, &flags, &seq);
+	PFL_PRFLAG(BMAPF_FLUSHQ, &flags, &seq);
+	PFL_PRFLAG(BMAPF_TIMEOQ, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");
@@ -1152,7 +1158,7 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	msl_bmap_free,			/* bmo_free() */
+	msl_bmap_reap,			/* bmo_reapf() */
 	msl_bmap_init,			/* bmo_init_privatef() */
 	msl_bmap_retrieve,		/* bmo_retrievef() */
 	msl_bmap_modeset,		/* bmo_mode_chngf() */

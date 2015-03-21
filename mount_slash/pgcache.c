@@ -347,7 +347,8 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	}
 	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
-		psc_waitq_wait(&bmpc->bmpc_waitq, &b->bcm_lock);
+		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
+		    100);
 		BMAP_LOCK(b);
 		goto retry;
 	}
@@ -373,7 +374,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs);
 		psc_dynarray_add(&a, r);
 		/*
-		 * Avoid another thread from reaching here and 
+		 * Avoid another thread from reaching here and
 		 * destroying the same biorq again.
 		 */
 		BIORQ_LOCK(r);

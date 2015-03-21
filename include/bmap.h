@@ -126,13 +126,10 @@ struct bmap {
 #define BMAP_DIO		(1 <<  3)	/* direct I/O, no client caching */
 #define BMAP_DIOCB		(1 <<  4)
 #define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
-#define BMAP_FLUSHQ		(1 <<  6)
-#define BMAP_TIMEOQ		(1 <<  7)	/* on timeout queue */
-#define BMAP_IONASSIGN		(1 <<  8)	/* has been assigned to an ION for writes */
-#define BMAP_MDCHNG		(1 <<  9)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAP_WAITERS		(1 << 10)	/* has bcm_fcmh waiters */
-#define BMAP_BUSY		(1 << 11)	/* temporary processing lock */
-#define _BMAP_FLSHFT		(1 << 12)
+#define BMAP_MDCHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAP_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+#define BMAP_BUSY		(1 <<  8)	/* temporary processing lock */
+#define _BMAP_FLSHFT		(1 <<  9)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -148,7 +145,7 @@ struct bmap {
 #define BMAP_TRYLOCK(b)		trylock(&(b)->bcm_lock)
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+				"%s%s%s%s%s%s%s%s%s%s "			\
 				"fid:"SLPRI_FID" opcnt=%d : "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -159,9 +156,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
 	(b)->bcm_flags & BMAP_DIOCB	? "C" : "",			\
 	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
-	(b)->bcm_flags & BMAP_FLUSHQ	? "f" : "",			\
-	(b)->bcm_flags & BMAP_TIMEOQ	? "T" : "",			\
-	(b)->bcm_flags & BMAP_IONASSIGN	? "A" : "",			\
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
@@ -375,7 +369,7 @@ RB_HEAD(bmaptree, bmapc_memb);
 RB_PROTOTYPE(bmaptree, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
-	void	(*bmo_free)(void);
+	void	(*bmo_reapf)(void);
 	void	(*bmo_init_privatef)(struct bmapc_memb *);
 	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw, int);
 	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw, int);
