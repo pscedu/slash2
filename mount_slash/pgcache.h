@@ -116,7 +116,7 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s "				\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s "			\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_PTIMESPEC" "					\
 	    "ref=%u : " fmt,						\
