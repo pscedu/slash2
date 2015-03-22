@@ -2038,8 +2038,8 @@ msreadaheadthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&a);
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			e = bmpce_lookup(b, BMPCE_READAHEAD |
-			    BMPCE_EXCL, rarq->rarq_off + i * BMPC_BUFSZ,
-			    &f->fcmh_waitq);
+			    BMPCEF_EXCL, rarq->rarq_off + i *
+			    BMPC_BUFSZ, &f->fcmh_waitq);
 			if (e)
 				psc_dynarray_add(&a, e);
 		}
