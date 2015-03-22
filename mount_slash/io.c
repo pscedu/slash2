@@ -134,15 +134,17 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 
 		if (e->bmpce_flags & BMPCE_DATARDY) {
 			if (!checkonly)
-				pfl_opstat_add(slc_rdcache_iostats, nbytes);
+				pfl_opstat_add(slc_rdcache_iostats,
+				    nbytes);
 			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			if (!checkonly) {
-				pfl_opstat_add(slc_rdcache_iostats, nbytes);
-				OPSTAT_INCR("read_part_valid");
+				pfl_opstat_add(slc_rdcache_iostats,
+				    nbytes);
+				OPSTAT_INCR("read-part-valid");
 			}
 			return (1);
 		}
@@ -313,7 +315,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	msl_biorq_del(r);
 
-	OPSTAT_INCR("biorq_destroy");
+	OPSTAT_INCR("biorq-destroy");
 	psc_pool_return(slc_biorq_pool, r);
 }
 
@@ -486,7 +488,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	if (cbf == msl_read_cb) {
 		int naio = 0;
 
-		OPSTAT_INCR("read_cb_add");
+		OPSTAT_INCR("aio-register-read");
 		r = av->pointer_arg[MSL_CBARG_BIORQ];
 		DYNARRAY_FOREACH(e, i, a) {
 			BMPCE_LOCK(e);
@@ -506,7 +508,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 
 	} else if (cbf == msl_dio_cb) {
 
-		OPSTAT_INCR("dio_cb_add");
+		OPSTAT_INCR("aio-register-dio");
 
 		r = av->pointer_arg[MSL_CBARG_BIORQ];
 		if (r->biorq_flags & BIORQ_WRITE)
@@ -533,7 +535,7 @@ mfsrq_clrerr(struct msl_fsrqinfo *q)
 		DPRINTF_MFSRQ(PLL_WARN, q, "clearing err=%d",
 		    q->mfsrq_err);
 		q->mfsrq_err = 0;
-		OPSTAT_INCR("offline_retry_clear_err");
+		OPSTAT_INCR("offline-retry-clear-err");
 	}
 	MFH_URLOCK(q->mfsrq_mfh, lk);
 }
@@ -586,11 +588,11 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		if (q->mfsrq_err) {
-			OPSTAT_INCR("fsrq_read_err");
+			OPSTAT_INCR("fsrq-read-err");
 			pscfs_reply_read(pfr, NULL, 0,
 			    abs(q->mfsrq_err));
 		} else {
-			OPSTAT_INCR("fsrq_read_ok");
+			OPSTAT_INCR("fsrq-read-ok");
 
 			if (q->mfsrq_len == 0) {
 				pscfs_reply_read(pfr, NULL, 0, 0);
@@ -618,9 +620,9 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		}
 	} else {
 		if (q->mfsrq_err)
-			OPSTAT_INCR("fsrq_write_err");
+			OPSTAT_INCR("fsrq-write-err");
 		else {
-			OPSTAT_INCR("fsrq_write_ok");
+			OPSTAT_INCR("fsrq-write-ok");
 			msl_update_attributes(q);
 			psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 		}
@@ -790,7 +792,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			BMAP_LOCK(b);
 			b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
 			BMAP_ULOCK(b);
-			OPSTAT_INCR("bmap_read_expired");
+			OPSTAT_INCR("bmap-read-expired");
 		}
 		if ((r->biorq_flags & BIORQ_READAHEAD) == 0)
 			mfsrq_seterr(r->biorq_fsrqi, rc);
@@ -883,7 +885,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	OPSTAT_INCR("dio_cb0");
+	OPSTAT_INCR("dio-cb0");
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	if (rc == -SLERR_AIOWAIT)
@@ -922,10 +924,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	if (r->biorq_flags & BIORQ_WRITE) {
 		op = SRMT_WRITE;
-		OPSTAT_INCR("dio_write");
+		OPSTAT_INCR("dio-write");
 	} else {
 		op = SRMT_READ;
-		OPSTAT_INCR("dio_read");
+		OPSTAT_INCR("dio-read");
 	}
 
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &csvc);
@@ -975,7 +977,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
 			msl_biorq_release(r);
-			OPSTAT_INCR("dio_add_req_fail");
+			OPSTAT_INCR("dio-add-req-fail");
 			PFL_GOTOERR(out, rc);
 		}
 		rq = NULL;
@@ -1004,7 +1006,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
 		pscrpc_nbreqset_destroy(nbs);
-		OPSTAT_INCR("biorq_restart");
+		OPSTAT_INCR("biorq-restart");
 
 		/*
 		 * Async I/O registered by sliod; we must wait for a
@@ -1090,7 +1092,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	uint32_t off = 0;
 	int rc = 0, i;
 
-	OPSTAT_INCR("read_rpc_launch");
+	OPSTAT_INCR("read-rpc-launch");
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1159,7 +1161,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		msl_biorq_release(r);
-		OPSTAT_INCR("read_add_req_fail");
+		OPSTAT_INCR("read-add-req-fail");
 		PFL_GOTOERR(out, rc);
 	}
 
@@ -1210,7 +1212,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		    msl_biorq_page_valid(r, i, 0)) {
 			BMPCE_ULOCK(e);
 			if (r->biorq_flags & BIORQ_READAHEAD)
-				OPSTAT_INCR("readahead_gratuitous");
+				OPSTAT_INCR("readahead-gratuitous");
 			continue;
 		}
 
@@ -1313,7 +1315,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			msl_fsrq_aiowait_tryadd_locked(e, r);
 			aiowait = 1;
 			BMPCE_ULOCK(e);
-			OPSTAT_INCR("aio_placed");
+			OPSTAT_INCR("aio-placed");
 			break;
 		}
 		BMPCE_ULOCK(e);
@@ -1321,7 +1323,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 
 	PFL_GETTIMESPEC(&ts1);
 	timespecsub(&ts1, &ts0, &tsd);
-	OPSTAT_ADD("biorq_fetch_wait_usecs",
+	OPSTAT_ADD("biorq-fetch-wait-usecs",
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 	if (rc == 0 && perfect_ra)
@@ -1615,7 +1617,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 		if (mfh->mfh_predio_off > raoff)
 			raoff = mfh->mfh_predio_off;
 		else
-			OPSTAT_INCR("read_ahead_overrun");
+			OPSTAT_INCR("readahead-overrun");
 	}
 
 	rapages = MIN(mfh->mfh_predio_nseq * 2,
@@ -1664,9 +1666,9 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	mfh_incref(q->mfsrq_mfh);
 
 	if (rw == SL_READ)
-		OPSTAT_INCR("fsrq_read");
+		OPSTAT_INCR("fsrq-read");
 	else
-		OPSTAT_INCR("fsrq_write");
+		OPSTAT_INCR("fsrq-write");
 
 	DPRINTF_MFSRQ(PLL_DIAG, q, "created");
 	return (q);
@@ -1832,7 +1834,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("getbmap_wait_usecs",
+		OPSTAT_ADD("getbmap-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 		/*
