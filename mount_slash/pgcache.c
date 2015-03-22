@@ -126,11 +126,11 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 				BMAP_ULOCK(b);
 				pscthr_yield();
 				BMAP_LOCK(b);
-				OPSTAT_INCR("bmpce_eio");
+				OPSTAT_INCR("bmpce-eio");
 				continue;
 			}
 			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
-			OPSTAT_INCR("bmpce_hit");
+			OPSTAT_INCR("bmpce-hit");
 			psc_atomic32_inc(&e->bmpce_ref);
 			break;
 		}
@@ -156,7 +156,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 		}
 	}
 	if (e2) {
-		OPSTAT_INCR("bmpce_gratuitous");
+		OPSTAT_INCR("bmpce-gratuitous");
 		psc_pool_return(bmpce_pool, e2);
 	}
 	return (e);
@@ -253,7 +253,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
-//	OPSTAT_SET_MAX("biorq_max", slc_biorq_pool->ppm_total -
+//	OPSTAT_SET_MAX("biorq-max", slc_biorq_pool->ppm_total -
 //	    slc_biorq_pool->ppm_used);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "creating");
@@ -293,7 +293,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		psc_assert(e->bmpce_flags & BMPCE_LRU);
 		psc_assert(!psc_atomic32_read(&e->bmpce_ref));
 
-		OPSTAT_INCR("bmpce_bmap_reap");
+		OPSTAT_INCR("bmpce-bmap-reap");
 		pll_remove(&bmpc->bmpc_lru, e);
 		bmpce_free(e, bmpc);
 	}
@@ -391,7 +391,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 	}
-	OPSTAT_INCR("biorq_destroy_batch");
+	OPSTAT_INCR("biorq-destroy-batch");
 	psc_dynarray_free(&a);
 }
 
@@ -429,7 +429,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			BMPCE_ULOCK(e);
 			continue;
 		}
-		OPSTAT_INCR("bmpce_reap");
+		OPSTAT_INCR("bmpce-reap");
 		pll_remove(&bmpc->bmpc_lru, e);
 		bmpce_free(e, bmpc);
 		if (++freed >= nfree)
@@ -484,7 +484,7 @@ bmpce_reap(struct psc_poolmgr *m)
 			    psc_atomic32_read(&m->ppm_nwaiters));
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else {
-			OPSTAT_INCR("bmpce_reap_spin");
+			OPSTAT_INCR("bmpce-reap-spin");
 			psclog_debug("skip bmpc=%p, nothing on lru",
 			    bmpc);
 		}
@@ -519,7 +519,7 @@ bmpc_global_init(void)
 	    "bmpclru");
 
 	/* make it visible */
-	OPSTAT_INCR("biorq_max");
+	OPSTAT_INCR("biorq-max");
 }
 
 #if PFL_DEBUG > 0
