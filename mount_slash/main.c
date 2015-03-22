@@ -1035,18 +1035,15 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
+	pscfs_inum_t pinum = fcmh_2_fid(p);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct fidc_membh *f = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc;
-	pscfs_inum_t pinum = fcmh_2_fid(p);
 
  retry:
-
-	OPSTAT_INCR("lookup_rpc");
-
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3111,7 +3108,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		    &iov, 1);
 	}
 
-	OPSTAT_INCR("listxattr_rpc");
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -3267,7 +3263,6 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 		rq->rq_bulk_abortable = 1;
 	}
 
-	OPSTAT_INCR("getxattr_rpc");
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
