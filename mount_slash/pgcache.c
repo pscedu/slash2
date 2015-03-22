@@ -106,7 +106,7 @@ bmpce_destroy(void *p)
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
+bmpce_lookup(struct bmapc_memb *b, int flags, uint32_t off,
     struct psc_waitq *wq)
 {
 	struct bmap_pagecache *bmpc;
@@ -129,9 +129,14 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 				OPSTAT_INCR("bmpce-eio");
 				continue;
 			}
-			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
-			OPSTAT_INCR("bmpce-hit");
-			psc_atomic32_inc(&e->bmpce_ref);
+			if (flags & BMPCEF_EXCL)
+				e = NULL;
+			else {
+				DEBUG_BMPCE(PLL_DIAG, e,
+				    "add reference");
+				OPSTAT_INCR("bmpce-hit");
+				psc_atomic32_inc(&e->bmpce_ref);
+			}
 			break;
 		}
 
@@ -149,6 +154,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off,
 			e->bmpce_start = e->bmpce_off;
 			e->bmpce_len = 0;
 			e->bmpce_waitq = wq;
+			e->bmpce_flags = flags;
 
 			PSC_SPLAY_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);

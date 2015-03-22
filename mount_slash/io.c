@@ -224,7 +224,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
-		e = bmpce_lookup_locked(b, bmpce_off,
+		e = bmpce_lookup(b, 0, bmpce_off,
 		    &b->bcm_fcmh->fcmh_waitq);
 
 		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
@@ -2016,6 +2016,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 {
 	struct bmap_pagecache_entry *e;
 	struct readaheadrq *rarq;
+	struct psc_dynarray a;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
@@ -2034,21 +2035,20 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAP_DIO)
 			goto end;
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0,
-			BIORQ_READ | BIORQ_READAHEAD);
-		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
-
+		psc_dynarray_reset(&a);
 		for (i = 0; i < rarq->rarq_npages; i++) {
-			e = bmpce_lookup_locked(b,
-			    rarq->rarq_off + i * BMPC_BUFSZ,
+			e = bmpce_lookup(b, BMPCE_READAHEAD |
+			    BMPCE_EXCL, rarq->rarq_off + i * BMPC_BUFSZ,
 			    &f->fcmh_waitq);
-
-			BMPCE_LOCK(e);
-			e->bmpce_flags |= BMPCE_READAHEAD;
-			BMPCE_ULOCK(e);
-
-			psc_dynarray_add(&r->biorq_pages, e);
+			if (e)
+				psc_dynarray_add(&a, e);
 		}
+		if (!psc_dynarray_len(&a))
+			goto end;
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, BIORQ_READ |
+		    BIORQ_READAHEAD);
+		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
+		r->biorq_pages = a;
 		BMAP_ULOCK(b);
 		msl_launch_read_rpcs(r);
 		msl_biorq_release(r);

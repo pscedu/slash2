@@ -83,6 +83,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_DISCARD		(1 <<  6)	/* don't cache after I/O */
 #define BMPCE_PINNED		(1 <<  7)	/* do not modify */
 #define BMPCE_READAHEAD		(1 <<  8)	/* populated from readahead */
+#define BMPCEF_EXCL		(1 <<  9)	/* lookup() must create, otherwise NULL */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -288,7 +289,7 @@ struct bmpc_ioreq *
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
-	 bmpce_lookup_locked(struct bmapc_memb *, uint32_t, struct psc_waitq *);
+	 bmpce_lookup(struct bmapc_memb *, int, uint32_t, struct psc_waitq *);
 
 void	 bmpce_release_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *);
