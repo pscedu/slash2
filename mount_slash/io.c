@@ -90,7 +90,6 @@ psc_atomic32_t		 slc_readahead_pipesz = PSC_ATOMIC32_INIT(MS_READAHEAD_PIPESZ);
 
 struct pfl_iostats_rw	 slc_dio_iostats;
 struct pfl_opstat	*slc_rdcache_iostats;
-struct pfl_opstat	*slc_readahead_hit_iostats;
 struct pfl_opstat	*slc_readahead_issue_iostats;
 
 struct pfl_iostats_grad	 slc_iosyscall_iostats[8];
@@ -1327,7 +1326,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 	if (rc == 0 && perfect_ra)
-		pfl_opstat_add(slc_readahead_hit_iostats, r->biorq_len);
+		OPSTAT_ADD("readahead-hit", r->biorq_len);
 
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
