@@ -247,11 +247,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 		if (sl_fcmh_ops.sfop_modify)
-			sl_fcmh_ops.sfop_modify(f, fgp);
+			rc = sl_fcmh_ops.sfop_modify(f, fgp);
 
 		FCMH_ULOCK(f);
 		*fp = f;
-		return (0);
+		return (rc);
 	}
 
 	/* We have failed to find a match in the cache */
