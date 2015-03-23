@@ -2035,7 +2035,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAP_DIO)
 			goto end;
 
-		psc_dynarray_reset(&a);
+		memset(&a, 0, sizeof(a));
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			e = bmpce_lookup(b, BMPCE_READAHEAD |
 			    BMPCEF_EXCL, rarq->rarq_off + i *
