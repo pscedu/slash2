@@ -431,7 +431,6 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			 * FCMH_TOFREE before this thread calls
 			 * fcmh_destroy().
 			 */
-			lc_remove(&fidcIdleList, f);
 			f->fcmh_flags |= FCMH_TOFREE;
 			FCMH_ULOCK(f);
 
