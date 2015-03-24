@@ -3589,6 +3589,8 @@ msl_init(void)
 }
 
 struct pscfs slc_pscfs = {
+	PSCFS_INIT,
+	"slash2",
 	mslfsop_access,
 	mslfsop_release,
 	mslfsop_release,	/* releasedir */
