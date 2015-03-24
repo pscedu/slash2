@@ -112,7 +112,7 @@ struct uid_mapping {
 	struct pfl_hashentry	um_hentry;
 };
 
-struct psc_hashtbl		 namecHtable;
+struct psc_hashtbl		 slc_namei_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
@@ -149,19 +149,19 @@ int				 slc_posix_mkgrps = 1;
 void
 msl_delete_namecache(struct fidc_membh *fp)
 {
-	uint64_t pino;
-	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
+	uint64_t pino;
 
 	fci = fcmh_get_pri(fp);
 	pino = fci->fci_pino;
 	if (!pino)
 		return;
-	b = psc_hashbkt_get(&namecHtable, &pino);
-	psc_hashbkt_del_item(&namecHtable, b, fci);
-	psc_hashbkt_put(&namecHtable, b);
+
+	psc_hashent_remove(&slc_namei_hashtbl, fci);
+
 	OPSTAT_INCR("delete_name");
-	psclog_info("delete: pino = %lx, name = %s", pino, fci->fci_name);
+	psclog_diag("delete: pino = %lx, name = %s", pino,
+	    fci->fci_name);
 }
 
 void
@@ -174,8 +174,8 @@ msl_insert_namecache(uint64_t pino, const char *name,
 	struct fcmh_cli_info *fci;
 
 	psc_assert(pino);
-	b = psc_hashbkt_get(&namecHtable, &pino);
-	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
+	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
+	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
 		fp = fci_2_fcmh(fci);
 		if (fci->fci_pino != pino ||
 		    strcmp(fci->fci_name, name))
@@ -191,14 +191,16 @@ msl_insert_namecache(uint64_t pino, const char *name,
 		if (len < SL_NAME_SHORT) {
 			fci->fci_pino = pino;
 			fci->fci_name = fci->fci_sname;
-			memcpy(fci->fci_sname, name, len+1);
-			psc_hashent_init(&namecHtable, fci);
-			psc_hashbkt_add_item(&namecHtable, b, fci);
+			memcpy(fci->fci_sname, name, len + 1);
+			psc_hashent_init(&slc_namei_hashtbl, fci);
+			psc_hashbkt_add_item(&slc_namei_hashtbl, b,
+			    fci);
 			OPSTAT_INCR("insert_name");
-			psclog_info("insert: pino = %lx, name = %s, b = %p", pino, fci->fci_name, b);
+			psclog_diag("insert: pino = %lx, name = %s, b = %p",
+			    pino, fci->fci_name, b);
 		}
 	}
-	psc_hashbkt_put(&namecHtable, b);
+	psc_hashbkt_put(&slc_namei_hashtbl, b);
 }
 
 struct fidc_membh *
@@ -210,8 +212,8 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 	struct fidc_membh *child = NULL;
 
 	psc_assert(pino);
-	b = psc_hashbkt_get(&namecHtable, &pino);
-	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
+	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
+	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
 		tmp = fci_2_fcmh(fci);
 		if (fci->fci_pino == pino &&
 		    strcmp(fci->fci_name, name) == 0) {
@@ -222,10 +224,11 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 	if (dodelete && child) {
 		fci->fci_pino = 0;
 		OPSTAT_INCR("delete_name");
-		psc_hashbkt_del_item(&namecHtable, b, fci);
-		psclog_info("delete: pino = %lx, name = %s", pino, fci->fci_name);
+		psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
+		psclog_diag("delete: pino = %lx, name = %s", pino,
+		    fci->fci_name);
 	}
-	psc_hashbkt_put(&namecHtable, b);
+	psc_hashbkt_put(&slc_namei_hashtbl, b);
 	return (child);
 }
 
@@ -3507,8 +3510,9 @@ msl_init(void)
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_mgr_init();
 
-	psc_hashtbl_init(&namecHtable, 0, struct fcmh_cli_info, fci_pino,
-		fci_hentry, slcfg_local->cfg_fidcachesz, NULL, "name");
+	psc_hashtbl_init(&slc_namei_hashtbl, 0, struct fcmh_cli_info,
+	    fci_pino, fci_hentry, slcfg_local->cfg_fidcachesz, NULL,
+	    "namei");
 
 	psc_poolmaster_init(&slc_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
