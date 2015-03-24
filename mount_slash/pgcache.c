@@ -205,6 +205,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 		pll_remove(&bmpc->bmpc_lru, e);
 	}
 
+	/* XXX we could keep partially written page as well */
 	if ((e->bmpce_flags & BMPCE_DATARDY) &&
 	   !(e->bmpce_flags & BMPCE_EIO) &&
 	   !(e->bmpce_flags & BMPCE_DISCARD)) {
