@@ -249,7 +249,7 @@ slc_fcmh_dtor(struct fidc_membh *f)
 	/* XXX consolidate into pool stats */
 	OPSTAT_INCR("slc_fcmh_dtor");
 
-	//msl_delete_namecache(f);
+	msl_delete_namecache(f);
 	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
 		dircache_purge(f);
 }

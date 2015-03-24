@@ -161,6 +161,7 @@ msl_delete_namecache(struct fidc_membh *fp)
 	psc_hashbkt_del_item(&namecHtable, b, fci);
 	psc_hashbkt_put(&namecHtable, b);
 	OPSTAT_INCR("delete_name");
+	psclog_info("delete: pino = %lx, name = %s", pino, fci->fci_name);
 }
 
 void
@@ -176,8 +177,6 @@ msl_insert_namecache(uint64_t pino, const char *name,
 	b = psc_hashbkt_get(&namecHtable, &pino);
 	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
 		fp = fci_2_fcmh(fci);
-		if (fp->fcmh_flags & FCMH_DELETED)
-			continue;
 		if (fci->fci_pino != pino ||
 		    strcmp(fci->fci_name, name))
 			continue;
@@ -196,6 +195,7 @@ msl_insert_namecache(uint64_t pino, const char *name,
 			psc_hashent_init(&namecHtable, fci);
 			psc_hashbkt_add_item(&namecHtable, b, fci);
 			OPSTAT_INCR("insert_name");
+			psclog_info("insert: pino = %lx, name = %s, b = %p", pino, fci->fci_name, b);
 		}
 	}
 	psc_hashbkt_put(&namecHtable, b);
@@ -213,8 +213,6 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 	b = psc_hashbkt_get(&namecHtable, &pino);
 	PSC_HASHBKT_FOREACH_ENTRY(&namecHtable, fci, b) {
 		tmp = fci_2_fcmh(fci);
-		if (tmp->fcmh_flags & FCMH_DELETED)
-			continue;
 		if (fci->fci_pino == pino &&
 		    strcmp(fci->fci_name, name) == 0) {
 			child = tmp;
@@ -225,6 +223,7 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 		fci->fci_pino = 0;
 		OPSTAT_INCR("delete_name");
 		psc_hashbkt_del_item(&namecHtable, b, fci);
+		psclog_info("delete: pino = %lx, name = %s", pino, fci->fci_name);
 	}
 	psc_hashbkt_put(&namecHtable, b);
 	return (child);
@@ -1357,6 +1356,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				slc_fcmh_setattrf(c, &mp->cattr,
 				    FCMH_SETATTRF_SAVELOCAL);
 			} else {
+				msl_lookup_namecache(pinum, name, 1);
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete_marked");
@@ -1793,8 +1793,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	//if (!rc)
-		//msl_insert_namecache(pinum, name, fp);
+	if (!rc)
+		msl_insert_namecache(pinum, name, fp);
  out:
 	if (fp)
 		fcmh_op_done(fp);
@@ -2442,7 +2442,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	//msl_lookup_namecache(opinum, oldname, 1);
+	msl_lookup_namecache(opinum, oldname, 1);
+	msl_lookup_namecache(npinum, newname, 1);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
