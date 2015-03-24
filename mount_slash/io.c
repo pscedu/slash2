@@ -1363,6 +1363,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
 		}
+		e->bmpce_flags |= BMPCEF_ACCESSED;
 
 		/*
 		 * Re-check RBW sanity.  The waitq pointer within the
@@ -1468,6 +1469,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
 
 		BMPCE_LOCK(e);
+		e->bmpce_flags |= BMPCEF_ACCESSED;
 		src = e->bmpce_base;
 		if (!i && toff > e->bmpce_off) {
 			psc_assert(toff - e->bmpce_off < BMPC_BUFSZ);

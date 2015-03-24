@@ -84,6 +84,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_PINNED		(1 <<  7)	/* do not modify */
 #define BMPCE_READAHEAD		(1 <<  8)	/* populated from readahead */
 #define BMPCEF_EXCL		(1 <<  9)	/* lookup() must create, otherwise NULL */
+#define BMPCEF_ACCESSED		(1 << 10)
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
