@@ -104,7 +104,7 @@ bmpce_destroy(void *p)
 
 	if ((e->bmpce_flags & (BMPCE_READAHEAD | BMPCEF_ACCESSED)) ==
 	    BMPCE_READAHEAD)
-		OPST_ADD("readahead-waste", e->bmpce_len);
+		OPSTAT_ADD("readahead-waste", e->bmpce_len);
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 }
 
