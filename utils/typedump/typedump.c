@@ -945,7 +945,7 @@ main(int argc, char *argv[])
 	printf("NULL 1MB buf CRC is %"PSCPRIxCRC64"\n", crc);
 
 	psc_crc64_calc(&crc, &bmapod, sizeof(bmapod));
-	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
+	printf("NULL bmapod CRC is %#"PRIx64"\n", crc);
 
 	PRVAL(offsetof(struct bmap_mds_info, bmi_upd));
 
