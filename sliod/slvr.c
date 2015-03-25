@@ -798,7 +798,7 @@ slvr_remove(struct slvr *s)
 		psc_pool_return(sl_bufs_pool, tmp);
 	}
 
-	if ((slvr->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
+	if ((s->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
 	    SLVRF_READAHEAD)
 		OPSTAT_INCR("readahead-waste");
 
@@ -1146,7 +1146,7 @@ slvr_cache_init(void)
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,
 		    "iocbpndg");
 
-		pscthr_init(SLITHRT_ASYNC_IO, sliaiothr_main, NULL, 0,
+		pscthr_init(SLITHRT_AIO, sliaiothr_main, NULL, 0,
 		    "sliaiothr");
 	}
 
