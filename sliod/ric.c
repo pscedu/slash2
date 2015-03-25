@@ -89,7 +89,7 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 }
 
 void
-slvrs_wrunlock(struct slvr **slvrs, int nslvrs)
+slvrs_wrunlock(struct slvr **slvrs, int nslvrs, int setflags)
 {
 	struct slvr *s;
 	int i;
@@ -97,6 +97,8 @@ slvrs_wrunlock(struct slvr **slvrs, int nslvrs)
 	for (i = 0; i < nslvrs; i++) {
 		s = slvrs[i];
 		SLVR_LOCK(s);
+		if (setflags)
+			s->slvr_flags |= setflags;
 		s->slvr_flags &= ~SLVR_WRLOCK;
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
@@ -113,6 +115,8 @@ slvrs_wrlock(struct slvr **slvrs, int nslvrs)
 	for (i = 0; i < nslvrs; i++) {
 		s = slvrs[i];
 		SLVR_LOCK(s);
+		if (setflags)
+			s->slvr_flags |= setflags;
 		if (s->slvr_flags & SLVR_WRLOCK) {
 			/*
 			 * Drat!  One of our slivers is locked by
@@ -123,7 +127,7 @@ slvrs_wrlock(struct slvr **slvrs, int nslvrs)
 			 * dining philosophers starvation.
 			 */
 			SLVR_ULOCK(s);
-			slvrs_wrunlock(slvrs, i);
+			slvrs_wrunlock(slvrs, i, 0);
 			goto restart;
 		}
 		s->slvr_flags |= SLVR_WRLOCK;
@@ -398,7 +402,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	rc = mp->rc = slrpc_bulkserver(rq,
 	    rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE,
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	slvrs_wrunlock(slvr, nslvrs);
+	slvrs_wrunlock(slvr, nslvrs, rc ? 0 : SLVR_ACCESSED);
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc=%d",
 		    rw == SL_WRITE ? "write" : "read", rc);
