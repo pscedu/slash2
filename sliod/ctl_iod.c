@@ -539,21 +539,25 @@ struct psc_ctlop slictlops[] = {
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* ASYNC_IO	*/ NULL,
+/* AIO		*/ NULL,
 /* BMAPRLS	*/ NULL,
+/* BREAP	*/ NULL,
 /* CONN		*/ NULL,
+/* CRUD		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
-/* CRUD		*/ NULL,
+/* FREAP	*/ NULL,
+/* HEALTH	*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
+/* OPSTIMER	*/ NULL,
+/* READAHEAD	*/ NULL,
 /* REPLPND	*/ NULL,
 /* RIC		*/ NULL,
 /* RII		*/ sliriithr_get,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,
-/* OPSTIMER	*/ NULL,
 /* USKLNDPL	*/ NULL
 };
 

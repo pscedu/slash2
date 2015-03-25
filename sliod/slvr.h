@@ -76,7 +76,8 @@ struct slvr {
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO in repldst */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
 #define SLVR_WRLOCK		(1 <<  9)	/* exclusive locking for concurrent writing */
-#define SLVR_READAHEAD		(1 << 10)	/* loaded via readahead prediction */
+#define SLVRF_READAHEAD		(1 << 10)	/* loaded via readahead prediction */
+#define SLVRF_ACCESSED		(1 << 11)	/* actually used by a client */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)

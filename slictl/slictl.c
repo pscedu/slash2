@@ -234,21 +234,25 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* ASYNC_IO	*/ NULL,
+/* AIO		*/ NULL,
 /* BMAPRLS	*/ NULL,
+/* BREAP	*/ NULL,
 /* CONN		*/ NULL,
+/* CRUD		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
-/* CRUD		*/ NULL,
+/* FREAP	*/ NULL,
+/* HEALTH	*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
+/* OPSTIMER	*/ NULL,
+/* READAHEAD	*/ NULL,
 /* REPLPND	*/ NULL,
 /* RIC		*/ sliricthr_pr,
 /* RII		*/ sliriithr_pr,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,
-/* OPSTIMER	*/ NULL,
 /* USKLNDPL	*/ NULL
 };
 
