@@ -1594,7 +1594,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 			PFL_GOTOERR(fail, rc);
 
 		iov.iov_len = total;
-		iov.iov_base = reclaim_prg.log_buf;
+		iov.iov_base = r;
 
 		mq->batchno = si->si_batchno;
 		mq->xid = rarg.xid;
