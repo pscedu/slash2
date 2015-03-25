@@ -39,25 +39,25 @@ struct fidc_membh;
 
 /* sliod thread types */
 enum {
-	SLITHRT_ASYNC_IO,	/* asynchronous I/O handlers */
+	SLITHRT_AIO,		/* asynchronous I/O handlers */
 	SLITHRT_BMAPRLS,	/* notify MDS of completed write bmaps */
 	SLITHRT_BREAP,		/* bmap reaper */
-	SLITHRT_FREAP,		/* file reaper */
 	SLITHRT_CONN,		/* connection monitor */
+	SLITHRT_CRUD,		/* CRC update sender */
 	SLITHRT_CTL,		/* control processor */
 	SLITHRT_CTLAC,		/* control acceptor */
-	SLITHRT_CRUD,		/* CRC update sender */
+	SLITHRT_FREAP,		/* file reaper */
 	SLITHRT_HEALTH,		/* underlying file system health checker */
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_NBRQ,		/* non blocking RPC request processor */
+	SLITHRT_OPSTIMER,	/* iostats updater */
+	SLITHRT_READAHEAD,	/* sliver read-ahead */
 	SLITHRT_REPLPND,	/* process enqueued replication work */
 	SLITHRT_RIC,		/* service RPC requests from CLI */
 	SLITHRT_RII,		/* service RPC requests from ION */
 	SLITHRT_RIM,		/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,	/* sliver CRC updaters */
-	SLITHRT_READ_AHEAD,	/* sliver read-ahead */
 	SLITHRT_STATFS,		/* statvfs(2) updater */
-	SLITHRT_OPSTIMER,	/* iostats updater */
 	SLITHRT_USKLNDPL	/* userland socket Lustre net dev poll thr */
 };
 
