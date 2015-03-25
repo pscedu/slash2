@@ -706,9 +706,9 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	}
 
 	if (s->slvr_flags & SLVR_DATARDY) {
-		if ((flags & SLVR_READAHEAD) == 0 &&
-		    s->slvr_flags & SLVR_READAHEAD)
-			OPSTAT_INCR("readahead_hit");
+		if ((flags & SLVRF_READAHEAD) == 0 &&
+		    s->slvr_flags & SLVRF_READAHEAD)
+			OPSTAT_INCR("readahead-hit");
 		goto out;
 	}
 
@@ -728,8 +728,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
-	if (flags & SLVR_READAHEAD)
-		s->slvr_flags |= SLVR_READAHEAD;
+	if (flags & SLVRF_READAHEAD)
+		s->slvr_flags |= SLVRF_READAHEAD;
 
 	SLVR_ULOCK(s);
 
@@ -797,6 +797,10 @@ slvr_remove(struct slvr *s)
 		s->slvr_slab = NULL;
 		psc_pool_return(sl_bufs_pool, tmp);
 	}
+
+	if ((slvr->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
+	    SLVRF_READAHEAD)
+		OPSTAT_INCR("readahead-waste");
 
 	psc_pool_return(slvr_pool, s);
 }
@@ -1086,7 +1090,8 @@ slirathr_main(struct psc_thread *thr)
 			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
 			    SL_READ);
 			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
-			    SLVR_READAHEAD);
+			    SLVRF_READAHEAD);
+
 			/*
 			 * FixMe: This cause asserts on flags when we
 			 * encounter AIOWAIT. We need a unified way to
@@ -1146,7 +1151,7 @@ slvr_cache_init(void)
 	}
 
 	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
-		pscthr_init(SLITHRT_READ_AHEAD, slirathr_main, NULL, 0,
+		pscthr_init(SLITHRT_READAHEAD, slirathr_main, NULL, 0,
 		    "slirathr%d", i);
 
 	sl_buffer_cache_init();
