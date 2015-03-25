@@ -1609,19 +1609,19 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rq->rq_async_args.pointer_arg[CBARG_RARG] = &rarg;
 		rq->rq_async_args.pointer_arg[CBARG_RES] = res;
 		rc = SL_NBRQSETX_ADD(nbset, csvc, rq);
-		if (rc) {
+		if (!rc)
+			continue;
  fail:
-			if (rq)
-				pscrpc_req_finished(rq);
-			if (csvc)
-				sl_csvc_decref(csvc);
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
 
-			OPSTAT_INCR("reclaim_rpc_fail");
-			psclog(rc == SLERR_ION_OFFLINE ? PLL_INFO :
-			    PLL_WARN, "reclaim RPC failure: "
-			    "batchno=%"PRId64" dst=%s rc=%d",
-			    batchno, res->res_name, rc);
-		}
+		OPSTAT_INCR("reclaim_rpc_fail");
+		psclog(rc == SLERR_ION_OFFLINE ? PLL_INFO :
+		    PLL_WARN, "reclaim RPC failure: "
+		    "batchno=%"PRId64" dst=%s rc=%d",
+		    batchno, res->res_name, rc);
 	}
 
 	pscrpc_nbreqset_flush(nbset);
