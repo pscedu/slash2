@@ -605,12 +605,15 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOS_ASSIGNED);
 	if (!resm) {
+		struct sl_resource *r;
+
 		b->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
 
-		psclog_warnx("unable to contact ION %#x for lease",
-		    pios);
+		r = libsl_id2res(iosid);
+		psclog_warnx("unable to contact ION %#x (%s) for lease",
+		    pios, r ? r->res_name : NULL);
 
 		return (-SLERR_ION_OFFLINE);
 	}
