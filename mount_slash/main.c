@@ -1191,8 +1191,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (fp)
 		*fp = NULL;
 
-#define MSL_FIDNS_RPATH	".slfidns"
-
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 
 		slfid_t	fid;
@@ -1811,7 +1809,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	if (!rc)
+	/* check fp to special case for MSL_FIDNS_RPATH */
+	if (!rc && fp)
 		msl_insert_namecache(pinum, name, fp);
 
  out:

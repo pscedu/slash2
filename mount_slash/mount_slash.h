@@ -123,6 +123,8 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define MS_READAHEAD_MAXPGS		64
 #define MS_READAHEAD_PIPESZ		128
 
+#define MSL_FIDNS_RPATH			".slfidns"
+
 /*
  * Maximum number of bmaps that may span an I/O request.  We currently
  * limit FUSE to 128MB I/Os and bmaps are by default 128MB, meaning any
