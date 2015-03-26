@@ -146,7 +146,7 @@ struct psc_hashtbl		 slc_uidmap_int;
 
 int				 slc_posix_mkgrps = 1;
 
-int				 disable_namecache = 0;
+int				 disable_namecache = 1;
 
 void
 msl_delete_namecache(struct fidc_membh *fp)
