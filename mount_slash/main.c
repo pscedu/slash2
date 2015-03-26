@@ -1359,7 +1359,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				slc_fcmh_setattrf(c, &mp->cattr,
 				    FCMH_SETATTRF_SAVELOCAL);
 			} else {
-				msl_lookup_namecache(pinum, name, 1);
+				//msl_lookup_namecache(pinum, name, 1);
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete_marked");
@@ -1796,8 +1796,9 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	if (!rc)
-		msl_insert_namecache(pinum, name, fp);
+	//if (!rc)
+		//msl_insert_namecache(pinum, name, fp);
+
  out:
 	if (fp)
 		fcmh_op_done(fp);
@@ -2445,8 +2446,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_lookup_namecache(opinum, oldname, 1);
-	msl_lookup_namecache(npinum, newname, 1);
+	//msl_lookup_namecache(opinum, oldname, 1);
+	//msl_lookup_namecache(npinum, newname, 1);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
