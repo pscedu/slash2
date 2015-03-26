@@ -146,11 +146,16 @@ struct psc_hashtbl		 slc_uidmap_int;
 
 int				 slc_posix_mkgrps = 1;
 
+int				 disable_namecache = 0;
+
 void
 msl_delete_namecache(struct fidc_membh *fp)
 {
 	struct fcmh_cli_info *fci;
 	uint64_t pino;
+
+	if (disable_namecache)
+		return;
 
 	fci = fcmh_get_pri(fp);
 	pino = fci->fci_pino;
@@ -173,6 +178,9 @@ msl_insert_namecache(uint64_t pino, const char *name,
 	struct fidc_membh *fp;
 	struct fcmh_cli_info *fci;
 
+	if (disable_namecache)
+		return;
+
 	psc_assert(pino);
 	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
 	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
@@ -185,20 +193,24 @@ msl_insert_namecache(uint64_t pino, const char *name,
 		psc_assert(fcmh_2_fid(child) == fcmh_2_fid(fp));
 		break;
 	}
-	if (!found) {
+	len = strlen(name);
+	if (!found && len < SL_NAME_SHORT) {
 		fci = fcmh_get_pri(child);
-		len = strlen(name);
-		if (len < SL_NAME_SHORT) {
-			fci->fci_pino = pino;
-			fci->fci_name = fci->fci_sname;
-			memcpy(fci->fci_sname, name, len + 1);
-			psc_hashent_init(&slc_namei_hashtbl, fci);
-			psc_hashbkt_add_item(&slc_namei_hashtbl, b,
-			    fci);
-			OPSTAT_INCR("insert_name");
+		if (fci->fci_pino) {
+			psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
+			psclog_diag("update: pino = %lx, name = %s, b = %p",
+			    pino, fci->fci_name, b);
+			OPSTAT_INCR("update_name");
+		} else {
 			psclog_diag("insert: pino = %lx, name = %s, b = %p",
 			    pino, fci->fci_name, b);
+			OPSTAT_INCR("insert_name");
 		}
+		fci->fci_pino = pino;
+		fci->fci_name = fci->fci_sname;
+		memcpy(fci->fci_sname, name, len + 1);
+		psc_hashent_init(&slc_namei_hashtbl, fci);
+		psc_hashbkt_add_item(&slc_namei_hashtbl, b, fci);
 	}
 	psc_hashbkt_put(&slc_namei_hashtbl, b);
 }
@@ -210,6 +222,9 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 	struct fidc_membh *tmp;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *child = NULL;
+
+	if (disable_namecache)
+		return NULL;
 
 	psc_assert(pino);
 	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
@@ -1359,7 +1374,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				slc_fcmh_setattrf(c, &mp->cattr,
 				    FCMH_SETATTRF_SAVELOCAL);
 			} else {
-				//msl_lookup_namecache(pinum, name, 1);
+				msl_lookup_namecache(pinum, name, 1);
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete_marked");
@@ -1796,8 +1811,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	//if (!rc)
-		//msl_insert_namecache(pinum, name, fp);
+	if (!rc)
+		msl_insert_namecache(pinum, name, fp);
 
  out:
 	if (fp)
@@ -2449,8 +2464,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	//msl_lookup_namecache(opinum, oldname, 1);
-	//msl_lookup_namecache(npinum, newname, 1);
+	msl_lookup_namecache(opinum, oldname, 1);
+	msl_lookup_namecache(npinum, newname, 1);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
