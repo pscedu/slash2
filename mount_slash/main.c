@@ -2326,6 +2326,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	    strlen(newname) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
+	if (FID_GET_SITEID(opinum) != FID_GET_SITEID(npinum))
+		PFL_GOTOERR(out, rc = EXDEV);
+
 	pscfs_getcreds(pfr, &pcr);
 
 	rc = msl_load_fcmh(pfr, opinum, &op);
