@@ -192,7 +192,7 @@ struct bmpc_ioreq {
 #define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
 #define DEBUGS_BIORQ(level, ss, r, fmt, ...)				\
-	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s "	\
+	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s%s%s%s "	\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p pfr=%p "				\
 	    "sliod=%x npages=%d "					\
@@ -203,8 +203,11 @@ struct bmpc_ioreq {
 	    (r)->biorq_flags & BIORQ_DIO		? "d" : "",	\
 	    (r)->biorq_flags & BIORQ_EXPIRE		? "x" : "",	\
 	    (r)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
-	    (r)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
+	    (r)->biorq_flags & BIORQ_FLUSHRDY		? "l" : "",	\
+	    (r)->biorq_flags & BIORQ_FREEBUF		? "f" : "",	\
 	    (r)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
+	    (r)->biorq_flags & BIORQ_ONTREE		? "t" : "",	\
+	    (r)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
 	    (r)->biorq_ref, (r)->biorq_off, (r)->biorq_len,		\
 	    (r)->biorq_retries, (r)->biorq_buf, (r)->biorq_fsrqi,	\
 	    (r)->biorq_fsrqi ? mfsrq_2_pfr((r)->biorq_fsrqi) : NULL,	\
