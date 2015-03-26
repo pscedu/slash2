@@ -103,7 +103,7 @@ dump_rpe(size_t n, const struct reclaim_prog_entry *rpe)
 }
 
 int
-dump_reclaim_prog_log(void *buf, off_t *size, unsigned int id, int op,
+proc_reclaim_prog_log(void *buf, off_t *size, unsigned int id, int op,
     uint64_t batchno)
 {
 	int found = 0, modified = 0;
@@ -209,7 +209,7 @@ main(int argc, char *argv[])
 	if (reclaim_log)
 		dump_reclaim_log(buf, sbuf.st_size);
 	if (reclaim_prog_log) {
-		modified = dump_reclaim_prog_log(buf, &sbuf.st_size, id,
+		modified = proc_reclaim_prog_log(buf, &sbuf.st_size, id,
 		    op, batchno);
 		if (modified) {
 			if (ftruncate(fd, 0) == -1)
