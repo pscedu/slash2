@@ -1226,7 +1226,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		if (endp == name || *endp != '\0')
 			return (ENOENT);
 
-		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
 		rc = msl_load_fcmh(pfr, fid, &c);
 		if (rc)
 			return (-rc);
