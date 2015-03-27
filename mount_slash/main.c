@@ -181,6 +181,9 @@ msl_insert_namecache(uint64_t pino, const char *name,
 	if (disable_namecache)
 		return;
 
+	if (FID_GET_INUM(pino) == SLFID_NS)
+		return;
+
 	psc_assert(pino);
 	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
 	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
