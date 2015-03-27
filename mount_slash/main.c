@@ -1198,6 +1198,9 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 		slfid_t	fid;
 
+		if (pcrp->pcr_uid)
+			return (EACCES);
+
 		fid = SLFID_NS;
 		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
 		if (fgp) {
