@@ -585,10 +585,10 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
  *	attaching a resm_mds_info to the bmap, used for establishing
  *	connection to the ION.
  * @bml: the bmap lease
- * @pios: the preferred I/O system
+ * @iosid: the preferred I/O system
  */
 __static int
-mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
+mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
@@ -601,7 +601,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	psc_assert(!bmi->bmi_assign);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	resm = slm_resm_select(b, pios, NULL, 0);
+	resm = slm_resm_select(b, iosid, NULL, 0);
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOS_ASSIGNED);
 	if (!resm) {
@@ -613,7 +613,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 		r = libsl_id2res(iosid);
 		psclog_warnx("unable to contact ION %#x (%s) for lease",
-		    pios, r ? r->res_name : NULL);
+		    iosid, r ? r->res_name : NULL);
 
 		return (-SLERR_ION_OFFLINE);
 	}
