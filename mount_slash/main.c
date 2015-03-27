@@ -1194,6 +1194,10 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (fp)
 		*fp = NULL;
 
+	/*
+	 * The parent inode number is either the super root or the site
+	 * root when the global mount is not enabled by the MDS.
+	 */
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 
 		slfid_t	fid;
