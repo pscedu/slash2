@@ -1226,7 +1226,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		if (pcrp->pcr_uid)
 			return (EACCES);
 
-		fid = strtoll(name, &endp, 16);
+		fid = strtoll(name, &endp, 0);
 		if (endp == name || *endp != '\0')
 			return (ENOENT);
 
