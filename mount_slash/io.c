@@ -702,6 +702,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_FAULTING) {
 				e->bmpce_flags &= ~BMPCE_FAULTING;
+				BMPCE_WAKE(e);
 				BMPCE_ULOCK(e);
 				continue;
 			}
@@ -1175,12 +1176,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	psc_dynarray_free(a);
-	PSCFREE(a);
 	PSCFREE(iovs);
 
-	for (i = 0; i < npages; i++) {
-		e = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
+	DYNARRAY_FOREACH(e, i, a) {
 		/* Didn't get far enough for the waitq to be removed. */
 		psc_assert(e->bmpce_waitq);
 
@@ -1192,6 +1190,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
+
+	psc_dynarray_free(a);
+	PSCFREE(a);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "RPC launch failed (rc=%d)", rc);
 	return (rc);
@@ -1253,6 +1254,14 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			j = i + 1;
 		}
 		off = e->bmpce_off + BMPC_BUFSZ;
+	}
+
+	DYNARRAY_FOREACH_CONT(e, i, &pages) {
+		BMPCE_LOCK(e);
+		e->bmpce_flags &= ~BMPCE_FAULTING;
+		e->bmpce_flags |= BMPCE_EIO;
+		BMPCE_WAKE(e);
+		BMPCE_ULOCK(e);
 	}
 
 	psc_dynarray_free(&pages);
