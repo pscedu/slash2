@@ -1326,7 +1326,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 	if (rc == 0 && perfect_ra)
-		OPSTAT_ADD("readahead-hit", r->biorq_len);
+		OPSTAT2_ADD("readahead-hit", r->biorq_len);
 
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
