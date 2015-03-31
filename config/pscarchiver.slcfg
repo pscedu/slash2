@@ -30,17 +30,36 @@ site @PSCARCH {
 		zpool_name	= "arc_s2ssd_prod";
 	}
 
-	# used IDs:
-	#	0x005	firehose1
-	#	0x006	firehose2
-	#	0x007	firehose3
-	#	0x008	firehose4
-	#	0x010	brashear
-	#	0x100	tahini-uo (removed 4/2/14)
-	#	0x101	tahini-ue (removed 4/2/14)
-	#	0x200	peel0
-	#	0x201	lime
-	#	0x1ff8	sense345
+	# previously used IDs:
+	# id		name		type	removed
+	#--------------------------------------------------
+	# 0x0005	firehose1	SA
+	# 0x0006	firehose2	SA
+	# 0x0007	firehose3	SA
+	# 0x0008	firehose4	SA
+	# 0x0010	brashear	SA
+	# 0x0100	tahini-uo	SA	4/2/14
+	# 0x0101	tahini-ue	SA	4/2/14
+	# 0x0200	peel0		SA
+	# 0x0201	lime		SA
+	# 0x1ff8	sense345	SA	3/8/15
+	# 0x1600	sense6s0	SA	3/8/15
+	# 0x1601	sense6s1	SA	3/8/15
+	# 0x1602	sense6s2	SA	3/8/15
+	# 0x1603	sense6s3	SA	3/8/15
+	# 0x1604	sense6s4	SA	3/8/15
+	# 0x1605	sense6s5	SA	3/8/15
+	# 0x1606	sense6s6	SA	3/8/15
+	# 0x1607	sense6s7	SA	3/8/15
+	# 0x1700	sense7s0	SA	3/8/15
+	# 0x1701	sense7s1	SA	3/8/15
+	# 0x1702	sense7s2	SA	3/8/15
+	# 0x1703	sense7s3	SA	3/8/15
+	# 0x1704	sense7s4	SA	3/8/15
+	# 0x1705	sense7s5	SA	3/8/15
+	# 0x1706	sense7s6	SA	3/8/15
+	# 0x1ff6	sense6		CNOS	3/8/15
+	# 0x1ff7	sense7		CNOS	3/8/15
 
 	resource sense0s0 { type = standalone_fs; id = 0x1000; nids = sense0-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; }
 	resource sense0s1 { type = standalone_fs; id = 0x1001; nids = sense0-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; }
@@ -93,23 +112,6 @@ site @PSCARCH {
 	resource sense5s5 { type = standalone_fs; id = 0x1505; nids = sense5-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; }
 	resource sense5s6 { type = standalone_fs; id = 0x1506; nids = sense5-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; }
 
-	resource sense6s0 { type = standalone_fs; id = 0x1600; nids = sense6-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
-	resource sense6s1 { type = standalone_fs; id = 0x1601; nids = sense6-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
-	resource sense6s2 { type = standalone_fs; id = 0x1602; nids = sense6-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
-	resource sense6s3 { type = standalone_fs; id = 0x1603; nids = sense6-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
-	resource sense6s4 { type = standalone_fs; id = 0x1604; nids = sense6-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
-	resource sense6s5 { type = standalone_fs; id = 0x1605; nids = sense6-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
-	resource sense6s6 { type = standalone_fs; id = 0x1606; nids = sense6-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
-	resource sense6s7 { type = standalone_fs; id = 0x1607; nids = sense6-sliod7; self_test = "fshealthtest %r"; fsroot = /arc_sliod/7; flags = "disable_bia"; }
-
-	resource sense7s0 { type = standalone_fs; id = 0x1700; nids = sense7-sliod0; self_test = "fshealthtest %r"; fsroot = /arc_sliod/0; flags = "disable_bia"; }
-	resource sense7s1 { type = standalone_fs; id = 0x1701; nids = sense7-sliod1; self_test = "fshealthtest %r"; fsroot = /arc_sliod/1; flags = "disable_bia"; }
-	resource sense7s2 { type = standalone_fs; id = 0x1702; nids = sense7-sliod2; self_test = "fshealthtest %r"; fsroot = /arc_sliod/2; flags = "disable_bia"; }
-	resource sense7s3 { type = standalone_fs; id = 0x1703; nids = sense7-sliod3; self_test = "fshealthtest %r"; fsroot = /arc_sliod/3; flags = "disable_bia"; }
-	resource sense7s4 { type = standalone_fs; id = 0x1704; nids = sense7-sliod4; self_test = "fshealthtest %r"; fsroot = /arc_sliod/4; flags = "disable_bia"; }
-	resource sense7s5 { type = standalone_fs; id = 0x1705; nids = sense7-sliod5; self_test = "fshealthtest %r"; fsroot = /arc_sliod/5; flags = "disable_bia"; }
-	resource sense7s6 { type = standalone_fs; id = 0x1706; nids = sense7-sliod6; self_test = "fshealthtest %r"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
-
 	resource sense0 {
 		desc	= "sense0 sliods";
 		type	= cluster_noshare_lfs;
@@ -152,20 +154,6 @@ site @PSCARCH {
 		ios	= sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6;
 	}
 
-	resource sense6 {
-		desc	= "sense6 sliods";
-		type	= cluster_noshare_lfs;
-		id	= 0x1ff6;
-		ios	= sense6s0, sense6s1, sense6s2, sense6s3, sense6s4, sense6s5, sense6s6, sense6s7;
-	}
-
-	resource sense7 {
-		desc	= "sense7 sliods";
-		type	= cluster_noshare_lfs;
-		id	= 0x1ff7;
-		ios	= sense7s0, sense7s1, sense7s2, sense7s3, sense7s4, sense7s5, sense7s6;
-	}
-
 	resource sense {
 		desc	= "sense";
 		type	= cluster_noshare_lfs;
@@ -175,8 +163,6 @@ site @PSCARCH {
 			  sense2s0, sense2s1, sense2s2, sense2s3, sense2s4, sense2s5, sense2s6, sense2s7,
 			  sense3s0, sense3s1, sense3s2, sense3s3, sense3s4, sense3s5, sense3s6,
 			  sense4s0, sense4s1, sense4s2, sense4s3, sense4s4, sense4s5, sense4s6, sense4s7,
-			  sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6,
-			  sense6s0, sense6s1, sense6s2, sense6s3, sense6s4, sense6s5, sense6s6, sense6s7,
-			  sense7s0, sense7s1, sense7s2, sense7s3, sense7s4, sense7s5, sense7s6;
+			  sense5s0, sense5s1, sense5s2, sense5s3, sense5s4, sense5s5, sense5s6;
 	}
 }
