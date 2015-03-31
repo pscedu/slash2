@@ -125,12 +125,20 @@ bmpce_lookup(struct bmapc_memb *b, int flags, uint32_t off,
 		    &search);
 		if (e) {
 			if (e->bmpce_flags & BMPCE_EIO) {
-				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
-				BMAP_ULOCK(b);
-				pscthr_yield();
-				BMAP_LOCK(b);
-				OPSTAT_INCR("bmpce-eio");
-				continue;
+				if (e->bmpce_flags & BMPCE_READAHEAD) {
+					BMPCE_LOCK(e);
+					e->bmpce_flags &= ~BMPCE_EIO;
+					BMPCE_ULOCK(e);
+				} else {
+					DEBUG_BMPCE(PLL_WARN, e,
+					    "skip an EIO page");
+					psc_waitq_waitrel_us(
+					    &b->bcm_fcmh->fcmh_waitq,
+					    &b->bcm_lock, 100);
+					BMAP_LOCK(b);
+					OPSTAT_INCR("bmpce-eio");
+					continue;
+				}
 			}
 			if (flags & BMPCEF_EXCL)
 				e = NULL;
