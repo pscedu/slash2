@@ -154,9 +154,9 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		    mq->fg.fg_fid, mq->bmapno, mp->rc);
 		goto out;
 	}
-	BMAP_ULOCK(b);
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
+	BMAP_ULOCK(b);
 
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	if (rv && rv != -SLERR_AIOWAIT)
