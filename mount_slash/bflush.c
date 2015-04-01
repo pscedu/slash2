@@ -400,10 +400,12 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	if (!(r->biorq_flags & BIORQ_ONTREE)) {
 		bmpc = bmap_2_bmpc(b);
-		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
+		pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
-	OPSTAT_INCR("bmap_flush_resched");
+	OPSTAT_INCR("bmap-flush-resched");
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
@@ -472,9 +474,12 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		psc_assert(b == r->biorq_bmap);
+		// XXX BIORQ_LOCK(r);
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
+		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 	}
 	BMAP_ULOCK(b);
 
@@ -624,6 +629,8 @@ bmap_flushable(struct bmapc_memb *b)
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	struct timespec ts;
+
+	// BMAP_LOCK_ENSURE(b);
 
 	bmpc = bmap_2_bmpc(b);
 

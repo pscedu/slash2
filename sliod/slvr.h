@@ -55,6 +55,7 @@ struct slvr {
 	uint16_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	 int32_t		 slvr_err;
+	pthread_t		 slvr_owner;	/* holder of WRLOCK */
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;

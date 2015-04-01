@@ -255,11 +255,12 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE)
+	if (r->biorq_flags & BIORQ_ONTREE) {
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
+	}
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		if ((b->bcm_flags & BMAPF_FLUSHQ) &&
 		    RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
 			b->bcm_flags &= ~BMAPF_FLUSHQ;
@@ -702,6 +703,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_FAULTING) {
 				e->bmpce_flags &= ~BMPCE_FAULTING;
+				BMPCE_WAKE(e);
 				BMPCE_ULOCK(e);
 				continue;
 			}
@@ -739,8 +741,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	}
 
 	/* AIOWAIT is removed no matter what. */
-	e->bmpce_flags &= ~BMPCE_AIOWAIT;
-	e->bmpce_flags &= ~BMPCE_FAULTING;
+	e->bmpce_flags &= ~(BMPCE_AIOWAIT | BMPCE_FAULTING);
 	DEBUG_BMPCE(PLL_DIAG, e, "rpc_done");
 
 	BMPCE_WAKE(e);
@@ -864,9 +865,10 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 	}
 
 	q = r->biorq_fsrqi;
+	mfsrq_seterr(q, rc);
 	msl_biorq_release(r);
 
-	mfsrq_seterr(q, rc);
+	// XXX if (was_aio) {
 	MFH_LOCK(q->mfsrq_mfh);
 	psc_waitq_wakeall(&msl_fhent_aio_waitq);
 	MFH_ULOCK(q->mfsrq_mfh);
@@ -1175,12 +1177,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	psc_dynarray_free(a);
-	PSCFREE(a);
 	PSCFREE(iovs);
 
-	for (i = 0; i < npages; i++) {
-		e = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
+	DYNARRAY_FOREACH(e, i, a) {
 		/* Didn't get far enough for the waitq to be removed. */
 		psc_assert(e->bmpce_waitq);
 
@@ -1192,6 +1191,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
+
+	psc_dynarray_free(a);
+	PSCFREE(a);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "RPC launch failed (rc=%d)", rc);
 	return (rc);
@@ -1236,8 +1238,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	j = 0;
 	DYNARRAY_FOREACH(e, i, &pages) {
 		/*
-		 * Note that i > j imples i > 0.  Due to cached pages, the pages
-		 * in the array are not necessarily contiguous.
+		 * Note that i > j implies i > 0.  Due to cached pages,
+		 * the pages in the array are not necessarily contiguous.
 		 */
 		if (i > j && e->bmpce_off != off) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j);
@@ -1253,6 +1255,14 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			j = i + 1;
 		}
 		off = e->bmpce_off + BMPC_BUFSZ;
+	}
+
+	DYNARRAY_FOREACH_CONT(e, i, &pages) {
+		BMPCE_LOCK(e);
+		e->bmpce_flags &= ~BMPCE_FAULTING;
+		e->bmpce_flags |= BMPCE_EIO;
+		BMPCE_WAKE(e);
+		BMPCE_ULOCK(e);
 	}
 
 	psc_dynarray_free(&pages);
@@ -1734,6 +1744,8 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
+	int nr, i, j, rc, retry = 0, bsize, npages, rapages, rapages2;
+	uint32_t aoff, alen, raoff, raoff2, nbmaps;
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
@@ -1741,11 +1753,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct bmpc_ioreq *r = NULL;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int nr, i, j, rc, retry = 0;
 	uint64_t fsz;
 	off_t roff;
-	uint32_t aoff, alen, raoff, raoff2, nbmaps;
-	int bsize, npages, rapages, rapages2;
 
 	f = mfh->mfh_fcmh;
 
@@ -1894,6 +1903,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	if (retry)
 		goto out1;
+
 	/*
 	 * We should always be able to ask for the next bmap
 	 * because a future write can extend the length of a
@@ -1919,9 +1929,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		    (nbmaps - 1);
 
 	/*
-	 * XXX: Enlarge the original request to include some
+	 * XXX: Enlarging the original request to include some
 	 * readhead pages within the same bmap can save extra
-	 * RPCs.  And the cost of waiting them all should be
+	 * RPCs.  And the cost of waiting for them all should be
 	 * minimal.
 	 */
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff,
@@ -1934,14 +1944,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	    mfh->mfh_predio_off);
 
 	/*
-	 * Enqueue read ahead for next sequential region of file
+	 * Enqueue readahead for next sequential region of file
 	 * space.
 	 */
 	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno,
 	    raoff, rapages);
 
 	/*
-	 * Enqueue read ahead into next bmap if our prediction
+	 * Enqueue readahead into next bmap if our prediction
 	 * would extend into that space.
 	 *
 	 * XXX: There used to be a dequeue logic that removes
@@ -1951,8 +1961,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (rapages2 && b->bcm_bmapno < nbmaps - 1)
 		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
 		    b->bcm_bmapno + 1, raoff2, rapages2);
- out1:
 
+ out1:
 	/*
 	 * Step 3: launch biorqs if necessary
 	 *
@@ -1982,6 +1992,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (msl_fd_should_retry(mfh, pfr, rc)) {
 			mfsrq_clrerr(q);
 			retry = 1;
+			usleep(1000);
 			goto restart;
 		}
 		if (abs(rc) == SLERR_ION_OFFLINE)
@@ -2004,7 +2015,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	msl_complete_fsrq(q, 0);
 
-	/* Step 5: finish up biorqs. */
+	/* Step 6: finish up biorqs. */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
