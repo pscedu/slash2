@@ -100,6 +100,7 @@ slvrs_wrunlock(struct slvr **slvrs, int nslvrs, int setflags)
 		if (setflags)
 			s->slvr_flags |= setflags;
 		s->slvr_flags &= ~SLVR_WRLOCK;
+		s->slvr_owner = 0;
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 	}
@@ -129,6 +130,7 @@ slvrs_wrlock(struct slvr **slvrs, int nslvrs)
 			goto restart;
 		}
 		s->slvr_flags |= SLVR_WRLOCK;
+		s->slvr_owner = pthread_self();
 		SLVR_ULOCK(s);
 	}
 }
