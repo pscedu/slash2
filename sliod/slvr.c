@@ -745,6 +745,10 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		SLVR_LOCK(s);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
+		if (flags & SLVR_WRLOCK) {
+			s->slvr_flags |= SLVR_WRLOCK;
+			s->slvr_owner = pthread_self();
+		}
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 
