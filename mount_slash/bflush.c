@@ -346,7 +346,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
-	rc = SL_NBRQSETX_ADD(sl_nbrqset_flush, csvc, rq);
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		bwc_unpin_pages(bwc);
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);

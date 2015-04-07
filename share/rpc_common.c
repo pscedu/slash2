@@ -50,7 +50,6 @@
 #define CBARG_NEWIMPORT	3
 
 struct pscrpc_nbreqset	*sl_nbrqset;
-struct pscrpc_nbreqset	*sl_nbrqset_flush;
 
 struct psc_poolmaster	 sl_csvc_poolmaster;
 struct psc_poolmgr	*sl_csvc_pool;

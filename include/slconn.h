@@ -385,7 +385,6 @@ extern struct psc_dynarray	 sl_lnet_prids;
 extern struct psc_lockedlist	 sl_clients;
 extern struct sl_expcli_ops	 sl_expcli_ops;
 extern struct pscrpc_nbreqset	*sl_nbrqset;
-extern struct pscrpc_nbreqset	*sl_nbrqset_flush;
 extern struct slrpc_ops		 slrpc_ops;
 
 #endif /* _SLCONN_H_ */
