@@ -901,7 +901,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	int i, op, n, rc;
 	size_t len, off, size;
 	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_nbreqset *nbs = NULL;
+	struct pscrpc_request_set *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
@@ -936,7 +936,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		PFL_GOTOERR(out, rc);
 
   retry:
-	nbs = pscrpc_nbreqset_init(NULL);
+	nbs = pscrpc_prep_set();
 
 	/*
 	 * The buffer associated with the request hasn't been segmented
@@ -990,7 +990,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 */
 	psc_assert(off == size);
 
-	rc = pscrpc_nbreqset_flush(nbs);
+	rc = pscrpc_set_wait(nbs);
 
 	if (rc == -SLERR_AIOWAIT) {
 		q = r->biorq_fsrqi;
@@ -1006,7 +1006,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
-		pscrpc_nbreqset_destroy(nbs);
+		pscrpc_set_destroy(nbs);
 		OPSTAT_INCR("biorq-restart");
 
 		/*
@@ -1030,7 +1030,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_req_finished(rq);
 
 	if (nbs)
-		pscrpc_nbreqset_destroy(nbs);
+		pscrpc_set_destroy(nbs);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -2043,6 +2043,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		fidc_lookup(&rarq->rarq_fg, 0, &f);
 		if (f == NULL)
 			goto end;
+		/* XXX async */
 		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
 			goto end;
 		if (b->bcm_flags & BMAP_DIO)
