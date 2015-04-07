@@ -758,11 +758,17 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	SLVR_LOCK(s);
 
  out:
-	if (!rc && s->slvr_flags & SLVR_FAULTING) {
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
-		SLVR_WAKEUP(s);
+	if (rc == 0) {
+		if (flags & SLVR_WRLOCK) {
+			s->slvr_flags |= SLVR_WRLOCK;
+			s->slvr_owner = pthread_self();
+		}
+		if (s->slvr_flags & SLVR_FAULTING) {
+			s->slvr_flags |= SLVR_DATARDY;
+			s->slvr_flags &= ~SLVR_FAULTING;
+			DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
+			SLVR_WAKEUP(s);
+		}
 	}
 	SLVR_ULOCK(s);
 	return (rc);
