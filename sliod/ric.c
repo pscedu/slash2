@@ -107,35 +107,6 @@ slvrs_wrunlock(struct slvr **slvrs, int nslvrs, int setflags)
 }
 
 void
-slvrs_wrlock(struct slvr **slvrs, int nslvrs)
-{
-	struct slvr *s;
-	int i;
-
- restart:
-	for (i = 0; i < nslvrs; i++) {
-		s = slvrs[i];
-		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_WRLOCK) {
-			/*
-			 * Drat!  One of our slivers is locked by
-			 * another thread.  Release all wrlocks on
-			 * slivers acquired so far and retry from the
-			 * beginning to avoid deadlock.  Slivers should
-			 * always be ordered in file space to avoid
-			 * dining philosophers starvation.
-			 */
-			SLVR_ULOCK(s);
-			slvrs_wrunlock(slvrs, i, 0);
-			goto restart;
-		}
-		s->slvr_flags |= SLVR_WRLOCK;
-		s->slvr_owner = pthread_self();
-		SLVR_ULOCK(s);
-	}
-}
-
-void
 readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
     uint32_t off, uint32_t size)
 {
@@ -308,7 +279,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		rv = slvr_io_prep(slvr[i], roff, len[i], rw, 0);
+		rv = slvr_io_prep(slvr[i], roff, len[i], rw,
+		    SLVR_WRLOCK);
 
 #if 0
 		/* if last sliver, bound to EOF */
@@ -398,7 +370,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * We must return an error code to the RPC itself if we don't
 	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
-	slvrs_wrlock(slvr, nslvrs);
 	rc = mp->rc = slrpc_bulkserver(rq,
 	    rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE,
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
