@@ -49,7 +49,7 @@
 #define CBARG_OLDIMPORT	2
 #define CBARG_NEWIMPORT	3
 
-struct pscrpc_nbreqset	*sl_nbrqset;
+struct pscrpc_request_set *sl_nbrqset;
 
 struct psc_poolmaster	 sl_csvc_poolmaster;
 struct psc_poolmgr	*sl_csvc_pool;
@@ -748,12 +748,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	}
 
 	switch (peertype) {
-	case SLCONNT_CLI: 
+	case SLCONNT_CLI:
 		hldropf = sl_imp_hldrop_cli;
 		hldroparg = NULL;
 		break;
-	case SLCONNT_IOD: 
-	case SLCONNT_MDS: 
+	case SLCONNT_IOD:
+	case SLCONNT_MDS:
 		peernid = slrpc_getpeernid(exp, peernids);
 		resm = libsl_nid2resm(peernid);
 

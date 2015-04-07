@@ -1403,7 +1403,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 	int i, ri, rc, total, nios;
 	uint64_t batchno, next_batchno;
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_nbreqset *nbset;
+	struct pscrpc_request_set *set;
 	struct resprof_mds_info *rpmi;
 	struct srt_reclaim_entry *r;
 	struct srm_reclaim_req *mq;
@@ -1483,7 +1483,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 	INIT_SPINLOCK(&rarg.lock);
 	rarg.count = size / R_ENTSZ;
 
-	nbset = pscrpc_nbreqset_init(NULL);
+	set = pscrpc_prep_set();
 
 	/* Find the xid associated with the last log entry. */
 	r = PSC_AGP(reclaim_prg.log_buf, (rarg.count - 1) * R_ENTSZ);
@@ -1608,7 +1608,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[CBARG_RARG] = &rarg;
 		rq->rq_async_args.pointer_arg[CBARG_RES] = res;
-		rc = SL_NBRQSETX_ADD(nbset, csvc, rq);
+		rc = SL_NBRQSETX_ADD(set, csvc, rq);
 		if (!rc)
 			continue;
  fail:
@@ -1624,8 +1624,8 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		    batchno, res->res_name, rc);
 	}
 
-	pscrpc_nbreqset_flush(nbset);
-	pscrpc_nbreqset_destroy(nbset);
+	pscrpc_set_wait(set);
+	pscrpc_set_destroy(set);
 
 	/*
 	 * Record the progress first before potentially removing old log
