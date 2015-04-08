@@ -994,6 +994,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	pscfs_getcreds(pfr, &pcr);
 
+	rc = fcmh_checkcreds(p, pfr, pcrp, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
