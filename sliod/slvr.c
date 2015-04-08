@@ -652,6 +652,7 @@ void
 slvr_repl_prep(struct slvr *s)
 {
 	SLVR_LOCK(s);
+	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 
 	if (s->slvr_flags & SLVR_DATARDY) {
 		/*
