@@ -741,7 +741,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	}
 
 	/* AIOWAIT is removed no matter what. */
-	e->bmpce_flags &= ~(BMPCE_AIOWAIT | BMPCE_FAULTING);
+	e->bmpce_flags &= ~(BMPCE_AIOWAIT | BMPCE_FAULTING | BMPCE_PINNED);
 	DEBUG_BMPCE(PLL_DIAG, e, "rpc_done");
 
 	BMPCE_WAKE(e);
@@ -1107,6 +1107,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
 		BMPCE_LOCK(e);
+		while (e->bmpce_flags & BMPCE_PINNED) {
+			BMPCE_WAIT(e);
+			BMPCE_LOCK(e);
+		}
+		e->bmpce_flags |= BMPCE_PINNED;
+
 		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
@@ -1186,7 +1192,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_LOCK(e);
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
-		e->bmpce_flags &= ~BMPCE_FAULTING;
+		e->bmpce_flags &= ~(BMPCE_FAULTING | BMPCE_PINNED);
 		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
