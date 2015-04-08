@@ -1107,6 +1107,15 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
 		BMPCE_LOCK(e);
+		/*
+		 * Don't disturb the page if its content is already used
+		 * to calculate the RPC signature. Otherwise, the IOS will
+		 * complain.
+		 *
+		 * In theory, this should not be needed by the normal read
+		 * path (not readahead path) because we always flush pending
+		 * writes before read. But traces say otherwise.
+		 */
 		while (e->bmpce_flags & BMPCE_PINNED) {
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
