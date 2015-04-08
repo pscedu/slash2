@@ -783,6 +783,7 @@ __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
 	s->slvr_flags &= ~SLVR_LRU;
+	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
 
 	lc_remove(&sli_lruslvrs, s);
 	lc_addqueue(&sli_crcqslvrs, s);
