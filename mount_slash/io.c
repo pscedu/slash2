@@ -1114,7 +1114,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		 *
 		 * In theory, this should not be needed by the normal read
 		 * path (not readahead path) because we always flush pending
-		 * writes before read. But traces say otherwise.
+		 * writes before read. However, because requests are taken 
+		 * off the tree before sending RPC, so pages can be still wait
+		 * in the queue. 
 		 */
 		while (e->bmpce_flags & BMPCE_PINNED) {
 			BMPCE_WAIT(e);
