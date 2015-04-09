@@ -298,8 +298,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
 
 		BMAP_ULOCK(bmap);
-		rv = slvr_io_prep(slvr[i], roff, len[i], rw,
-		    SLVR_WRLOCK);
+		rv = slvr_io_prep(slvr[i], roff, len[i], rw, 0);
 		BMAP_LOCK(bmap);
 
 #if 0
