@@ -269,6 +269,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		}
 	}
 
+	if (flags & BIORQ_WRITE)
+		bmpc->bmpc_pndg_writes++;
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
 //	OPSTAT_SET_MAX("biorq-max", slc_biorq_pool->ppm_total -
@@ -333,7 +335,6 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
-	int expired;
 
 	/*
 	 * XXX if `all' is false, we should not wait for any new biorqs
@@ -344,32 +345,28 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK_ENSURE(b);
 
- retry:
-	/* XXX even if the tree is empty, we might still have writes in progress */
-	expired = 0;
-	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
-		BIORQ_LOCK(r);
-		expired++;
-		/*
-		 * A biorq can only be added at the end of the list.
-		 * So when we encounter an already expired biorq
-		 * we can stop since we've already processed it and
-		 * all biorqs before it.
-		 */
-		if (r->biorq_flags & BIORQ_EXPIRE) {
+	while (bmpc->bmpc_pndg_writes) {
+		OPSTAT_INCR("biorq_flush_wait");
+		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+			BIORQ_LOCK(r);
+			/*
+			 * A biorq can only be added at the end of the 
+			 * list. So when we encounter an already expired 
+			 * biorq we can stop since we've already processed 
+			 * it and all biorqs before it.
+			 */
+			if (r->biorq_flags & BIORQ_EXPIRE) {
+				BIORQ_ULOCK(r);
+				break;
+			}
+			r->biorq_flags |= BIORQ_EXPIRE;
+			DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 			BIORQ_ULOCK(r);
-			break;
 		}
-		r->biorq_flags |= BIORQ_EXPIRE;
-		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
-		BIORQ_ULOCK(r);
-	}
-	if (expired) {
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
 		    100);
 		BMAP_LOCK(b);
-		goto retry;
 	}
 }
 
