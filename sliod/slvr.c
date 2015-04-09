@@ -703,6 +703,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = s->slvr_err;
+		// psc_assert(rc);
 		goto out;
 	}
 
@@ -734,6 +735,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 
 	SLVR_ULOCK(s);
 
+	psc_rwlock_rdlock(&s->slvr_rwlock);
+
 	/*
 	 * Execute read to fault in needed blocks after dropping the
 	 * lock.  All should be protected by the FAULTING bit.
@@ -742,38 +745,17 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	if (rc)
 		return (rc);
 
-	if (rw == SL_READ) {
-		SLVR_LOCK(s);
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
-		if (flags & SLVR_WRLOCK) {
-			s->slvr_flags |= SLVR_WRLOCK;
-			s->slvr_owner = pthread_self();
-		}
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-
-		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-
-		return (0);
-	}
-
 	SLVR_LOCK(s);
 
+	if (rw == SL_READ)
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+
  out:
-	if (rc == 0) {
-		if (flags & SLVR_WRLOCK) {
-			s->slvr_flags |= SLVR_WRLOCK;
-			s->slvr_owner = pthread_self();
-		}
-		if (s->slvr_flags & SLVR_FAULTING) {
-			s->slvr_flags |= SLVR_DATARDY;
-			s->slvr_flags &= ~SLVR_FAULTING;
-			DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
-			SLVR_WAKEUP(s);
-		}
+	if (!rc && (s->slvr_flags & SLVR_FAULTING)) {
+		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags &= ~SLVR_FAULTING;
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
+		SLVR_WAKEUP(s);
 	}
 	SLVR_ULOCK(s);
 	return (rc);
@@ -809,6 +791,8 @@ slvr_remove(struct slvr *s)
 		s->slvr_slab = NULL;
 		psc_pool_return(sl_bufs_pool, tmp);
 	}
+
+	psc_rwlock_destroy(&s->slvr_rwlock);
 
 	if ((s->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
 	    SLVRF_READAHEAD)
@@ -852,6 +836,8 @@ slvr_rio_done(struct slvr *s)
 {
 	SLVR_RLOCK(s);
 
+	if (psc_rwlock_hasrdlock(&s->slvr_rwlock))
+		psc_rwlock_unlock(&s->slvr_rwlock);
 	s->slvr_pndgreads--;
 	DEBUG_SLVR(PLL_DIAG, s, "read decref");
 	if (slvr_lru_tryunpin_locked(s))
@@ -873,6 +859,8 @@ slvr_wio_done(struct slvr *s, int repl)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_pndgwrts > 0);
 
+	if (psc_rwlock_haswrlock(&s->slvr_rwlock))
+		psc_rwlock_unlock(&s->slvr_rwlock);
 	s->slvr_pndgwrts--;
 	DEBUG_SLVR(PLL_DIAG, s, "write decref");
 
@@ -952,6 +940,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
+		psc_rwlock_init(&s->slvr_rwlock);
 
 		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;

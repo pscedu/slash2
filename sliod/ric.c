@@ -89,20 +89,37 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 }
 
 void
-slvrs_wrunlock(struct slvr **slvrs, int nslvrs, int setflags)
+slvrs_lock(struct slvr **slvrs, int nslvrs, enum rw rw)
+{
+	struct slvr *s;
+	int i;
+
+	if (rw == SL_READ)
+		return;
+
+	for (i = 0; i < nslvrs; i++) {
+		s = slvrs[i];
+		if (psc_rwlock_hasrdlock(&s->slvr_rwlock))
+			psc_rwlock_unlock(&s->slvr_rwlock);
+		psc_rwlock_wrlock(&s->slvr_rwlock);
+	}
+}
+
+void
+slvrs_unlock(struct slvr **slvrs, int nslvrs, int setflags)
 {
 	struct slvr *s;
 	int i;
 
 	for (i = 0; i < nslvrs; i++) {
 		s = slvrs[i];
-		SLVR_LOCK(s);
-		if (setflags)
+		if (setflags) {
+			SLVR_LOCK(s);
 			s->slvr_flags |= setflags;
-		s->slvr_flags &= ~SLVR_WRLOCK;
-		s->slvr_owner = 0;
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
+			SLVR_ULOCK(s);
+		}
+		if (psc_rwlock_hasrdlock(&s->slvr_rwlock))
+			psc_rwlock_unlock(&s->slvr_rwlock);
 	}
 }
 
@@ -373,10 +390,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * We must return an error code to the RPC itself if we don't
 	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
+	slvrs_lock(slvr, nslvrs, rw);
 	rc = mp->rc = slrpc_bulkserver(rq,
 	    rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE,
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	slvrs_wrunlock(slvr, nslvrs, rc ? 0 : SLVRF_ACCESSED);
+	slvrs_unlock(slvr, nslvrs, rc ? 0 : SLVRF_ACCESSED);
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc=%d",
 		    rw == SL_WRITE ? "write" : "read", rc);
