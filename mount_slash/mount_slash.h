@@ -257,8 +257,22 @@ struct readaheadrq {
 	int				rarq_npages;
 };
 
-#define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
-#define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_WRITE)
+struct uid_mapping {
+	/* these are 64-bit as limitation of hash API */
+	uint64_t			um_key;
+	uint64_t			um_val;
+	struct pfl_hashentry		um_hentry;
+};
+
+struct gid_mapping {
+	uint64_t			gm_key;
+	uint64_t			gm_val;
+	gid_t				gm_gidv[NGROUPS_MAX];
+	struct pfl_hashentry		gm_hentry;
+};
+
+#define msl_read(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_READ)
+#define msl_write(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_WRITE)
 
 #define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
@@ -303,15 +317,21 @@ void	 msl_insert_namecache(uint64_t, const char *, struct fidc_membh *);
 struct fidc_membh *
 	 msl_lookup_namecache(uint64_t, const char *, int);
 
-#define bmap_flushq_wake(reason)						\
+void	 slc_getuprog(pid_t, char *, size_t);
+void	 slc_setprefios(sl_ios_id_t);
+int	 msl_pages_fetch(struct bmpc_ioreq *);
+
+int	 uidmap_ext_cred(struct srt_creds *);
+int	 gidmap_int_cred(struct pscfs_creds *);
+int	 uidmap_ext_stat(struct srt_stat *);
+int	 uidmap_int_stat(struct srt_stat *);
+void	 parse_mapfile(void);
+
+#define bmap_flushq_wake(reason)					\
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (reason))
 
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
-
-void	 slc_getuprog(pid_t, char *, size_t);
-void	 slc_setprefios(sl_ios_id_t);
-int	 msl_pages_fetch(struct bmpc_ioreq *);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)

@@ -65,6 +65,8 @@
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 {
+	uidmap_int_stat(sstb);
+
 	if (flags & FCMH_SETATTRF_HAVELOCK)
 		FCMH_LOCK_ENSURE(f);
 	else
@@ -89,9 +91,9 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
 
 	/*
- 	 * Always update for roots because we might have faked them
- 	 * with readdir at the super root.
- 	 */
+	 * Always update for roots because we might have faked them
+	 * with readdir at the super root.
+	 */
 	if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
 
