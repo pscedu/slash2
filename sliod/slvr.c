@@ -1101,8 +1101,11 @@ slirathr_main(struct psc_thread *thr)
 		for (i = 0; i < 4; i++) {
 			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
 			    SL_READ);
+
+			BMAP_ULOCK(b);
 			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVRF_READAHEAD);
+			BMAP_LOCK(b);
 
 			/*
 			 * FixMe: This cause asserts on flags when we
