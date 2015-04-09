@@ -176,6 +176,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
+	PRTYPE(struct gid_mapping);
 	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct mio_fh);
@@ -377,6 +378,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	PRTYPE(struct srt_update_entry);
+	PRTYPE(struct uid_mapping);
 	/* end structs */
 
 	/* start constants */
@@ -666,7 +668,6 @@ main(int argc, char *argv[])
 	PRVAL(SLVR_LRU);
 	PRVAL(SLVR_PINNED);
 	PRVAL(SLVR_REPLWIRE);
-	PRVAL(SLVR_WRLOCK);
 	PRVAL(SL_BITS_PER_REPLICA);
 	PRVAL(SL_DEF_REPLICAS);
 	PRVAL(SL_DEF_SNAPSHOTS);
