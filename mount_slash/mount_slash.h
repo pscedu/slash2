@@ -221,8 +221,6 @@ struct msl_fsrqinfo {
 #define DPRINTF_MFSRQ(level, q, fmt, ...)				\
 	DPRINTFS_MFSRQ((level), SLSS_FCMH, (q), fmt, ## __VA_ARGS__)
 
-void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *, int);
-
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
 	int				 rpci_flags;
