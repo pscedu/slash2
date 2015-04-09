@@ -597,13 +597,6 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 					break;
 				}
 
-				RB_FOREACH(r, bmpc_biorq_tree,
-				    &bmpc->bmpc_new_biorqs) {
-					rc = msctlmsg_biorq_send(fd, mh,
-					    msr, r);
-					if (!rc)
-						break;
-				}
 				BMAP_ULOCK(b);
 				if (!rc)
 					break;
