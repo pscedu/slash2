@@ -686,7 +686,10 @@ ssize_t
 slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
     int flags)
 {
+	struct bmap *b = slvr_2_bmap(s);
 	ssize_t rc = 0;
+
+	BMAP_ULOCK(b);
 
 	SLVR_LOCK(s);
 
@@ -743,7 +746,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	rc = slvr_fsbytes_rio(s, off, len);
 	if (rc)
-		return (rc);
+		goto error;
 
 	SLVR_LOCK(s);
 
@@ -758,6 +761,9 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		SLVR_WAKEUP(s);
 	}
 	SLVR_ULOCK(s);
+
+ error:
+	BMAP_LOCK(b);
 	return (rc);
 }
 
@@ -1091,10 +1097,8 @@ slirathr_main(struct psc_thread *thr)
 			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
 			    SL_READ);
 
-			BMAP_ULOCK(b);
 			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVRF_READAHEAD);
-			BMAP_LOCK(b);
 
 			/*
 			 * FixMe: This cause asserts on flags when we

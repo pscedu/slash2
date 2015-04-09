@@ -297,9 +297,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
 
-		BMAP_ULOCK(bmap);
 		rv = slvr_io_prep(slvr[i], roff, len[i], rw, 0);
-		BMAP_LOCK(bmap);
 
 #if 0
 		/* if last sliver, bound to EOF */
