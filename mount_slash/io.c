@@ -741,7 +741,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	}
 
 	/* AIOWAIT is removed no matter what. */
-	e->bmpce_flags &= ~(BMPCE_AIOWAIT | BMPCE_FAULTING);
+	e->bmpce_flags &= ~(BMPCE_AIOWAIT | BMPCE_FAULTING | BMPCE_PINNED);
 	DEBUG_BMPCE(PLL_DIAG, e, "rpc_done");
 
 	BMPCE_WAKE(e);
@@ -901,7 +901,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	int i, op, n, rc;
 	size_t len, off, size;
 	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_nbreqset *nbs = NULL;
+	struct pscrpc_request_set *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
@@ -936,7 +936,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		PFL_GOTOERR(out, rc);
 
   retry:
-	nbs = pscrpc_nbreqset_init(NULL);
+	nbs = pscrpc_prep_set();
 
 	/*
 	 * The buffer associated with the request hasn't been segmented
@@ -990,7 +990,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 */
 	psc_assert(off == size);
 
-	rc = pscrpc_nbreqset_flush(nbs);
+	rc = pscrpc_set_wait(nbs);
 
 	if (rc == -SLERR_AIOWAIT) {
 		q = r->biorq_fsrqi;
@@ -1006,7 +1006,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
-		pscrpc_nbreqset_destroy(nbs);
+		pscrpc_set_destroy(nbs);
 		OPSTAT_INCR("biorq-restart");
 
 		/*
@@ -1030,7 +1030,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_req_finished(rq);
 
 	if (nbs)
-		pscrpc_nbreqset_destroy(nbs);
+		pscrpc_set_destroy(nbs);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1107,6 +1107,23 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		e = psc_dynarray_getpos(bmpces, i + startpage);
 
 		BMPCE_LOCK(e);
+		/*
+		 * Don't disturb the page if its content is already used
+		 * to calculate the RPC signature. Otherwise, the IOS will
+		 * complain.
+		 *
+		 * In theory, this should not be needed by the normal read
+		 * path (not readahead path) because we always flush pending
+		 * writes before read. However, because requests are taken 
+		 * off the tree before sending RPC, so pages can be still wait
+		 * in the queue. 
+		 */
+		while (e->bmpce_flags & BMPCE_PINNED) {
+			BMPCE_WAIT(e);
+			BMPCE_LOCK(e);
+		}
+		e->bmpce_flags |= BMPCE_PINNED;
+
 		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
@@ -1186,7 +1203,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_LOCK(e);
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
-		e->bmpce_flags &= ~BMPCE_FAULTING;
+		e->bmpce_flags &= ~(BMPCE_FAULTING | BMPCE_PINNED);
 		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
@@ -2043,6 +2060,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		fidc_lookup(&rarq->rarq_fg, 0, &f);
 		if (f == NULL)
 			goto end;
+		/* XXX async */
 		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
 			goto end;
 		if (b->bcm_flags & BMAP_DIO)

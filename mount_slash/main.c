@@ -994,6 +994,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	pscfs_getcreds(pfr, &pcr);
 
+	rc = fcmh_checkcreds(p, pfr, pcrp, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
@@ -3562,14 +3566,9 @@ msl_init(void)
 	slrpc_initcli();
 	slc_rpc_initsvc();
 
-	sl_nbrqset = pscrpc_nbreqset_init(NULL);
-	sl_nbrqset_flush = pscrpc_nbreqset_init(NULL);
-
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 1,
+	sl_nbrqset = pscrpc_prep_set();
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 8,
 	    "msnbrqthr%d");
-
-	pscrpc_nbreapthr_spawn(sl_nbrqset_flush, MSTHRT_NBRQ, 1,
-	    "msnbflushthr%d");
 
 	/* Start up service threads. */
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");

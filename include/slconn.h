@@ -384,8 +384,7 @@ int	 slrpc_bulk_checkmsg(struct pscrpc_request *, struct pscrpc_msg *, struct io
 extern struct psc_dynarray	 sl_lnet_prids;
 extern struct psc_lockedlist	 sl_clients;
 extern struct sl_expcli_ops	 sl_expcli_ops;
-extern struct pscrpc_nbreqset	*sl_nbrqset;
-extern struct pscrpc_nbreqset	*sl_nbrqset_flush;
+extern struct pscrpc_request_set*sl_nbrqset;
 extern struct slrpc_ops		 slrpc_ops;
 
 #endif /* _SLCONN_H_ */

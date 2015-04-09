@@ -652,6 +652,7 @@ void
 slvr_repl_prep(struct slvr *s)
 {
 	SLVR_LOCK(s);
+	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 
 	if (s->slvr_flags & SLVR_DATARDY) {
 		/*
@@ -745,6 +746,10 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		SLVR_LOCK(s);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
+		if (flags & SLVR_WRLOCK) {
+			s->slvr_flags |= SLVR_WRLOCK;
+			s->slvr_owner = pthread_self();
+		}
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 
@@ -778,6 +783,7 @@ __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
 	s->slvr_flags &= ~SLVR_LRU;
+	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
 
 	lc_remove(&sli_lruslvrs, s);
 	lc_addqueue(&sli_crcqslvrs, s);

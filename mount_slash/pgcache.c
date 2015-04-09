@@ -345,6 +345,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	BMAP_LOCK_ENSURE(b);
 
  retry:
+	/* XXX even if the tree is empty, we might still have writes in progress */
 	expired = 0;
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
