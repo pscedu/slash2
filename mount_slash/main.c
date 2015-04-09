@@ -114,7 +114,7 @@ sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
-int				 use_mapfile;
+int				 slc_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
@@ -292,7 +292,7 @@ msfsthr_teardown(void *arg)
 void
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
-	pscfs_getcreds(pfr, &pcr);
+	pscfs_getcreds(pfr, pcr);
 	gidmap_int_cred(pcr);
 }
 
@@ -941,7 +941,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(p, pfr, pcrp, W_OK);
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3642,7 +3642,7 @@ opt_lookup(const char *opt)
 		const char	*name;
 		int		*var;
 	} *io, opts[] = {
-		{ "mapfile",	&use_mapfile },
+		{ "mapfile",	&slc_use_mapfile },
 		{ NULL,		NULL }
 	};
 
@@ -3765,7 +3765,7 @@ main(int argc, char *argv[])
 	slcfg_local->cfg_fidcachesz = 1024;
 	slcfg_parse(cfg);
 	parse_allowexe();
-	if (use_mapfile) {
+	if (slc_use_mapfile) {
 		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,

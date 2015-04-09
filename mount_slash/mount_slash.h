@@ -266,7 +266,8 @@ struct uid_mapping {
 
 struct gid_mapping {
 	uint64_t			gm_key;
-	uint64_t			gm_val;
+	gid_t				gm_gid;
+	int				gm_ngid;
 	gid_t				gm_gidv[NGROUPS_MAX];
 	struct pfl_hashentry		gm_hentry;
 };
@@ -352,6 +353,11 @@ extern const char		*ctlsockfn;
 extern sl_ios_id_t		 prefIOS;
 extern struct sl_resm		*slc_rmc_resm;
 extern char			 mountpoint[];
+extern int			 slc_use_mapfile;
+
+extern struct psc_hashtbl	 slc_uidmap_ext;
+extern struct psc_hashtbl	 slc_uidmap_int;
+extern struct psc_hashtbl	 slc_gidmap_int;
 
 extern struct pfl_iostats_rw	 slc_dio_iostats;
 extern struct pfl_opstat	*slc_rdcache_iostats;
