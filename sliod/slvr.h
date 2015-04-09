@@ -55,7 +55,6 @@ struct slvr {
 	uint16_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	 int32_t		 slvr_err;
-	pthread_t		 slvr_owner;	/* holder of WRLOCK */
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
@@ -63,6 +62,7 @@ struct slvr {
 	struct sl_buffer	*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
+	struct psc_rwlock	 slvr_rwlock;
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
 };
 
@@ -76,9 +76,8 @@ struct slvr {
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO in repldst */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
-#define SLVR_WRLOCK		(1 <<  9)	/* exclusive locking for concurrent writing */
-#define SLVRF_READAHEAD		(1 << 10)	/* loaded via readahead prediction */
-#define SLVRF_ACCESSED		(1 << 11)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  9)	/* loaded via readahead prediction */
+#define SLVRF_ACCESSED		(1 << 10)	/* actually used by a client */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
