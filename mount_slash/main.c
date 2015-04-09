@@ -991,7 +991,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, -rc);
+	    pscfs_attr_timeout, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
