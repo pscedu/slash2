@@ -627,7 +627,6 @@ slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 		SLVR_LOCK(s);
 		s->slvr_err = rc;
 		s->slvr_flags |= SLVR_DATAERR;
-		s->slvr_flags &= ~SLVR_FAULTING;
 		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd",
 		    rc);
 		SLVR_WAKEUP(s);
@@ -710,19 +709,17 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
+	/*
+	 * Mark the sliver until we are done read and write with it.
+	 */
+	s->slvr_flags |= SLVR_FAULTING;
+
 	if (s->slvr_flags & SLVR_DATARDY) {
 		if ((flags & SLVRF_READAHEAD) == 0 &&
 		    s->slvr_flags & SLVRF_READAHEAD)
 			OPSTAT_INCR("readahead-hit");
 		goto out;
 	}
-
-	/*
-	 * Importing data into the sliver is now our responsibility,
-	 * other I/O into this region will block until SLVR_FAULTING is
-	 * released.
-	 */
-	s->slvr_flags |= SLVR_FAULTING;
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
@@ -754,12 +751,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
  out:
-	if (!rc && (s->slvr_flags & SLVR_FAULTING)) {
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
-		SLVR_WAKEUP(s);
-	}
 	SLVR_ULOCK(s);
 
  error:
@@ -1078,7 +1069,7 @@ slirathr_main(struct psc_thread *thr)
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	struct slvr *s;
-	int i, slvrno;
+	int i, rc, slvrno;
 
 	while (pscthr_run(thr)) {
 		f = NULL;
@@ -1097,9 +1088,21 @@ slirathr_main(struct psc_thread *thr)
 			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
 			    SL_READ);
 
-			slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
+			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVRF_READAHEAD);
+			SLVR_LOCK(s);
+			if (rc) {
+				s->slvr_err = rc;
+				s->slvr_flags |= SLVR_DATAERR;
+				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
+			} else {
+				s->slvr_flags |= SLVR_DATARDY;
+				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
 
+			}
+			s->slvr_flags &= ~SLVR_FAULTING;
+			SLVR_WAKEUP(s);
+			SLVR_ULOCK(s);
 			/*
 			 * FixMe: This cause asserts on flags when we
 			 * encounter AIOWAIT. We need a unified way to

@@ -314,7 +314,7 @@ slislvrthr_proc(struct slvr *s)
 	 * writes.  This section directly below may race with
 	 * slvr_wio_done().
 	 */
-	if (s->slvr_pndgwrts > 0) {
+	if (s->slvr_pndgwrts > 0 || s->slvr_pndgreads > 0) {
 		s->slvr_flags |= SLVR_LRU;
 		lc_addqueue(&sli_lruslvrs, s);
 
