@@ -1124,6 +1124,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		 * off the tree before sending RPC, so pages can be still wait
 		 * in the queue. 
 		 */
+		psc_assert(!(e->bmpce_flags & BMPCE_PINNED));
 		while (e->bmpce_flags & BMPCE_PINNED) {
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
