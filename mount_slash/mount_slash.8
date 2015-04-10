@@ -37,7 +37,6 @@ file system
 .Op Fl I Ar iosystem
 .Op Fl M Ar mds
 .Op Fl o Ar mountopt
-.Op Fl p Ar #prefetch
 .Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
@@ -73,21 +72,23 @@ The options are as follows:
 .It Ic mapfile
 Use the mapfile
 .Pa /var/lib/slash/mapfile
-.Pq or wherever the data directory is configured
+.Pq or wherever the data directory is configured; see Fl D
 for translating local user account IDs to global SLASH2 user IDs and
 vice versa as necessary.
+The concept of
+.Dq global
+simply means the user account IDs present on the MDS.
 .Pp
-The format of each line in this file is simply:
+The format of each line in this file is:
 .Bd -literal -offset 4n
-local-UID remote-UID
+.Ic user local Ar uid Ic remote Ar uid
+.Ed
+.Pp
+Group mappings may also specified:
+.Bd -literal -offset 4n
+.Ic group local-uids Ar uid ... Ic remote Ar gid
 .Ed
 .El
-.It Fl p Ar #prefetch
-Specify the maximum number of file
-.Xr stat 2
-buffers to fetch when performing
-.Tn READDIR RPC Ns s .
-The default is as many as can fit.
 .It Fl Q
 Enable root squash.
 Root squash mode disables traditional superuser access and instead
