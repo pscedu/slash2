@@ -3658,7 +3658,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dQUVX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
+	    "usage: %s [-dQUV] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
 	    "\t[-o mountopt] [-S socket] node\n",
 	    progname);
 	exit(1);
