@@ -22,9 +22,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 
 #include "pfl/hashtbl.h"
 
@@ -56,7 +57,7 @@ gidmap_int_cred(struct pscfs_creds *cr)
 	if (!slc_use_mapfile)
 		return (0);
 
-	q.gm_key = cr->pcr_gid;
+	q.gm_key = cr->pcr_uid;
 	gm = psc_hashtbl_search(&slc_gidmap_int, NULL, NULL, &q.gm_key);
 	if (gm == NULL)
 		return (0);
@@ -99,7 +100,8 @@ uidmap_int_stat(struct srt_stat *sstb)
 
 #define PARSESTR(start, run)						\
 	do {								\
-		for ((run) = (start); isalpha(*run); (run)++)		\
+		for ((run) = (start); isalpha(*run) || *(run) == '-';	\
+		    (run)++)						\
 			;						\
 		if (!isspace(*(run)))					\
 			goto malformed;					\
@@ -234,14 +236,14 @@ parse_mapfile(void)
 		start = buf;
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
-		    mapfile_parse_user(start))
+		    mapfile_parse_user(run))
 			continue;
-		else if (strcmp(start, "group") &&
-		    mapfile_parse_group(start))
+		else if (strcmp(start, "group") == 0 &&
+		    mapfile_parse_group(run))
 			continue;
 
  malformed:
-		warn("%s: %d: malformed line", fn, ln);
+		warnx("%s: %d: malformed line", fn, ln);
 	}
 	if (ferror(fp))
 		warn("%s", fn);
