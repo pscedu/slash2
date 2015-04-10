@@ -1114,22 +1114,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 
 		BMPCE_LOCK(e);
 		/*
-		 * Don't disturb the page if its content is already used
-		 * to calculate the RPC signature. Otherwise, the IOS will
-		 * complain.
-		 *
-		 * In theory, this should not be needed by the normal read
-		 * path (not readahead path) because we always flush pending
-		 * writes before read. However, because requests are taken 
-		 * off the tree before sending RPC, so pages can be still wait
-		 * in the queue. 
+		 * A read must wait until all pending writes are flushed. So
+		 * we should never see a pinned down page here.
 		 */
 		psc_assert(!(e->bmpce_flags & BMPCE_PINNED));
-		while (e->bmpce_flags & BMPCE_PINNED) {
-			BMPCE_WAIT(e);
-			BMPCE_LOCK(e);
-		}
-		e->bmpce_flags |= BMPCE_PINNED;
 
 		psc_assert(e->bmpce_flags & BMPCE_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
