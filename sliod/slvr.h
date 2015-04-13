@@ -62,7 +62,6 @@ struct slvr {
 	struct sl_buffer	*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
-	struct psc_rwlock	 slvr_rwlock;
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
 };
 
