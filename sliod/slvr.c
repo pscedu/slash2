@@ -699,7 +699,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 
-	DEBUG_SLVR(PLL_WARN, s,
+	DEBUG_SLVR(PLL_DIAG, s,
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
@@ -1084,10 +1084,10 @@ slirathr_main(struct psc_thread *thr)
 			if (rc) {
 				s->slvr_err = rc;
 				s->slvr_flags |= SLVR_DATAERR;
-				DEBUG_SLVR(PLL_WARN, s, "FAULTING --> DATAERR");
+				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
 			} else {
 				s->slvr_flags |= SLVR_DATARDY;
-				DEBUG_SLVR(PLL_WARN, s, "FAULTING --> DATARDY");
+				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
 
 			}
 			s->slvr_flags &= ~SLVR_FAULTING;

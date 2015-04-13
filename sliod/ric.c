@@ -392,10 +392,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (rc) {
 			s->slvr_err = rc;
 			s->slvr_flags |= SLVR_DATAERR;
-			DEBUG_SLVR(PLL_WARN, s, "FAULTING --> DATAERR");
+			DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
 		} else {
 			s->slvr_flags |= SLVR_DATARDY;
-			DEBUG_SLVR(PLL_WARN, s, "FAULTING --> DATARDY");
+			DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
 		}
 		s->slvr_flags &= ~SLVR_FAULTING;
 		SLVR_WAKEUP(s);
