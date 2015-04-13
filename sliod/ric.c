@@ -152,7 +152,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	int rc, nslvrs = 0, i, needaio = 0;
 	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
 	struct fcmh_iod_info *fii;
-	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
+	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct pfl_iostats_grad *ist;
@@ -424,6 +424,19 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
  out:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
+		s = slvr[i];
+		SLVR_LOCK(s);
+		if (rc) {
+			s->slvr_err = rc;
+			s->slvr_flags |= SLVR_DATAERR;
+			DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
+		} else {
+			s->slvr_flags |= SLVR_DATARDY;
+			DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
+		}
+		s->slvr_flags &= ~SLVR_FAULTING;
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
 		if (rw == SL_READ)
 			slvr_rio_done(slvr[i]);
 		else
