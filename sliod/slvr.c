@@ -699,14 +699,12 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 
-	DEBUG_SLVR(s->slvr_flags & SLVR_DATAERR ?
-	    PLL_ERROR : PLL_DIAG, s,
+	DEBUG_SLVR(PLL_DIAG, s,
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = s->slvr_err;
-		// psc_assert(rc);
 		goto out;
 	}
 
