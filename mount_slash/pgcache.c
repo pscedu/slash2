@@ -269,8 +269,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		}
 	}
 
-	if (flags & BIORQ_WRITE)
-		bmpc->bmpc_pndg_writes++;
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
 //	OPSTAT_SET_MAX("biorq-max", slc_biorq_pool->ppm_total -

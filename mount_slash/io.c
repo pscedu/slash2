@@ -261,8 +261,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	}
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		if ((b->bcm_flags & BMAPF_FLUSHQ) &&
-		    RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
+		psc_assert(bmpc->bmpc_pndg_writes > 0);
+		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+		bmpc->bmpc_pndg_writes--;
+		if (!bmpc->bmpc_pndg_writes) {
 			b->bcm_flags &= ~BMAPF_FLUSHQ;
 			// XXX locking violation
 			lc_remove(&slc_bmapflushq, b);
@@ -273,12 +275,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
-
-	if (r->biorq_flags & BIORQ_WRITE) {
-		if (bmpc->bmpc_pndg_writes <= 0)
-			psc_fatalx("bmpc %p has negative pending writes", bmpc);
-		bmpc->bmpc_pndg_writes--;
-	}
 
 	psc_waitq_wakeall(&bmpc->bmpc_waitq);
 
@@ -1063,6 +1059,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
+	bmpc->bmpc_pndg_writes++;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
