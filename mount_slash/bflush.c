@@ -322,7 +322,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
 
-	if (b->bcm_flags & BMAPF_BENCH)
+	if (b->bcm_flags & BMAP_CLI_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
@@ -899,7 +899,7 @@ bmap_flush(void)
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHQ);
 
 		if ((b->bcm_flags & BMAP_CLI_SCHED) ||
 		    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {

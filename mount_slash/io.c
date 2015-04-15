@@ -262,10 +262,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		psc_assert(bmpc->bmpc_pndg_writes > 0);
-		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHQ);
 		bmpc->bmpc_pndg_writes--;
 		if (!bmpc->bmpc_pndg_writes) {
-			b->bcm_flags &= ~BMAPF_FLUSHQ;
+			b->bcm_flags &= ~BMAP_CLI_FLUSHQ;
 			// XXX locking violation
 			lc_remove(&slc_bmapflushq, b);
 			DEBUG_BMAP(PLL_DIAG, b,
@@ -1065,8 +1065,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 	BIORQ_ULOCK(r);
 
-	if (!(b->bcm_flags & BMAPF_FLUSHQ)) {
-		b->bcm_flags |= BMAPF_FLUSHQ;
+	if (!(b->bcm_flags & BMAP_CLI_FLUSHQ)) {
+		b->bcm_flags |= BMAP_CLI_FLUSHQ;
 		lc_addtail(&slc_bmapflushq, b);
 		DEBUG_BMAP(PLL_DIAG, b, "add to slc_bmapflushq");
 	}
