@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd November 26, 2014
+.Dd April 16, 2015
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -204,17 +204,17 @@ behavior.
 .\"			Note that file names are unavailable in this mode.
 .\"			.Pp
 .\"			The following legend lists the states a bmap may be in:
-.\"			.Bl -column "scheduled for replicati" "one-ti" -offset 3n
-.\"			.It Sy State                   Ta Sy Indicator
+.\"			.Bl -column "Indicator" "one-ti" -offset 3n
+.\"			.It Sy Indicator Ta Sy State
 .\"			.It ====================================
-.\"			.It active                     Ta Li +
-.\"			.It inactive                   Ta Li -
-.\"			.It queued for replication     Ta Li q
-.\"			.It replicating                Ta Li s
-.\"			.It garbage                    Ta Li g
-.\"			.It garbage being reclaimed    Ta Li x
-.\"			.It truncated                  Ta Li t
-.\"			.It resolving truncation       Ta Li p
+.\"			.It Li + Ta active
+.\"			.It Li - Ta inactive
+.\"			.It Li q Ta queued for replication
+.\"			.It Li s Ta replicating
+.\"			.It Li g Ta garbage
+.\"			.It Li x Ta garbage being reclaimed
+.\"			.It Li t Ta truncated
+.\"			.It Li p Ta resolving truncation
 .\"			.El
 .\"			.Pp
 .\"			See
@@ -389,17 +389,17 @@ arguments are specified all pending replications will be queried.
 Note that file names are unavailable in this mode.
 .Pp
 The following legend lists the states a bmap may be in:
-.Bl -column "scheduled for replicati" "one-ti" -offset 3n
-.It Sy State                   Ta Sy Indicator
+.Bl -column "Indicator" "one-ti" -offset 3n
+.It Sy Indicator Ta Sy State
 .It ====================================
-.It active                     Ta Li +
-.It inactive                   Ta Li -
-.It queued for replication     Ta Li q
-.It replicating                Ta Li s
-.It garbage                    Ta Li g
-.It garbage being reclaimed    Ta Li x
-.It truncated                  Ta Li t
-.It resolving truncation       Ta Li p
+.It Li + Ta active
+.It Li - Ta inactive
+.It Li q Ta queued for replication
+.It Li s Ta replicating
+.It Li g Ta garbage
+.It Li x Ta garbage being reclaimed
+.It Li t Ta truncated
+.It Li p Ta resolving truncation
 .El
 .Pp
 See
