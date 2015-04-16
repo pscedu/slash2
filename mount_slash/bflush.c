@@ -183,9 +183,9 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 			usleep(1000);
 		else
 			usleep(1000000);
-		OPSTAT_INCR("offline_retry");
+		OPSTAT_INCR("offline-retry");
 	} else
-		OPSTAT_INCR("offline_no_retry");
+		OPSTAT_INCR("offline-no-retry");
 
 	if (pfr->pfr_interrupted)
 		retry = 0;
@@ -260,7 +260,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	psclog_diag("Reply to write RPC from %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
-	OPSTAT_INCR("write_callback");
+	OPSTAT_INCR("write-callback");
 
 	bwc_unpin_pages(bwc);
 
@@ -314,7 +314,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		DEBUG_REQ(PLL_ERROR, rq,
 		    "negative timeout: off=%u sz=%u op=%u",
 		    mq->offset, mq->size, mq->op);
-		OPSTAT_INCR("flush_rpc_expire");
+		OPSTAT_INCR("flush-rpc-expire");
 		goto out;
 	}
 
@@ -353,7 +353,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto out;
 	}
 
-	OPSTAT_INCR("write_rpc");
+	OPSTAT_INCR("write-rpc");
 	return (0);
 
  out:
@@ -370,16 +370,16 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
-	struct bmap_cli_info *bci;
-	int delta;
 	struct bmapc_memb *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
+	struct bmap_cli_info *bci;
+	int delta;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched, rc = %d", rc);
 
 	BMAP_LOCK(b);
 	if (rc == -PFLERR_KEYEXPIRED) {
-		OPSTAT_INCR("bmap_flush_expired");
+		OPSTAT_INCR("bmap-flush-expired");
 		b->bcm_flags |= BMAPF_LEASEEXPIRED;
 	}
 
@@ -609,7 +609,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 
 		tot_reqsz -= bwc->bwc_iovs[i].iov_len;
 		bwc->bwc_niovs++;
-		OPSTAT_INCR("write_coalesce");
+		OPSTAT_INCR("write-coalesce");
 	}
 	psc_atomic32_setmax(&slc_write_coalesce_max, bwc->bwc_niovs);
 
@@ -739,11 +739,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				} else {
 					bwc->bwc_size += sz;
 				}
-				OPSTAT_INCR("bmap_flush_coalesce_contig");
+				OPSTAT_INCR("bmap-flush-coalesce-contig");
 			}
 			/*
-			 * All subsequent requests that do not extend our range
-			 * should be collapsed here.
+			 * All subsequent requests that do not extend
+			 * our range should be collapsed here.
 			 */
 			psc_dynarray_add(&bwc->bwc_biorqs, curr);
 
@@ -757,7 +757,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * If the current set is expired send it out
 			 * now.
 			 */
-			OPSTAT_INCR("bmap_flush_coalesce_expire");
+			OPSTAT_INCR("bmap-flush-coalesce-expire");
 			break;
 
 		} else {
@@ -769,7 +769,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
 			psc_dynarray_add(&bwc->bwc_biorqs, curr);
-			OPSTAT_INCR("bmap_flush_coalesce_restart");
+			OPSTAT_INCR("bmap-flush-coalesce-restart");
 		}
 	}
 
@@ -809,7 +809,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("flush_wait_usecs",
+		OPSTAT_ADD("flush-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
 	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
@@ -986,7 +986,7 @@ msflushthr_main(struct psc_thread *thr)
 		/* wait until some work appears */
 		lc_peekheadwait(&slc_bmapflushq);
 
-		OPSTAT_INCR("bmap_flush");
+		OPSTAT_INCR("bmap-flush");
 
 		PFL_GETTIMESPEC(&tmp1);
 		while (bmap_flush())

@@ -135,7 +135,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	bmapno = mq->sbd.sbd_bmapno;
 
 	if (mq->flags & SRM_IOF_DIO)
-		OPSTAT_INCR("handle_dio");
+		OPSTAT_INCR("handle-dio");
 
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
@@ -199,7 +199,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
 		mp->rc = -PFLERR_KEYEXPIRED;
-		OPSTAT_INCR("key_expire");
+		OPSTAT_INCR("key-expire");
 		return (mp->rc);
 	}
 
@@ -309,7 +309,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (aiocbr == NULL)
 			PFL_GOTOERR(out, 0);
 		if (mq->flags & SRM_IOF_DIO) {
-			OPSTAT_INCR("aio_dio");
+			OPSTAT_INCR("aio-dio");
 			aiocbr->aiocbr_flags |= SLI_AIOCBSF_DIO;
 		}
 
@@ -334,7 +334,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 */
 				slvr[i]->slvr_aioreply = aiocbr;
 				psc_assert(slvr[i]->slvr_flags & SLVR_FAULTING);
-				OPSTAT_INCR("aio_insert");
+				OPSTAT_INCR("aio-insert");
 				SLVR_ULOCK(slvr[i]);
 				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
@@ -437,7 +437,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR("release_bmap");
+	OPSTAT_INCR("release-bmap");
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
@@ -535,11 +535,11 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 		break;
 	case SRMT_READ:
-		OPSTAT_INCR("handle_read");
+		OPSTAT_INCR("handle-read");
 		rc = sli_ric_handle_read(rq);
 		break;
 	case SRMT_WRITE:
-		OPSTAT_INCR("handle_write");
+		OPSTAT_INCR("handle-write");
 		rc = sli_ric_handle_write(rq);
 		break;
 	case SRMT_RELEASEBMAP:

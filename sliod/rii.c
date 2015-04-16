@@ -176,7 +176,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
 			s->slvr_aioreply = aiocbr;
-			OPSTAT_INCR("aio_insert");
+			OPSTAT_INCR("aio-insert");
 			SLVR_ULOCK(s);
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
@@ -340,11 +340,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < (int)nitems(w->srw_slvr));
 
 	if (rc == -SLERR_AIOWAIT)
-		OPSTAT_INCR("issue_replread_aio");
+		OPSTAT_INCR("issue-replread-aio");
 	else if (rc)
-		OPSTAT_INCR("issue_replread_error");
+		OPSTAT_INCR("issue-replread-error");
 	else
-		OPSTAT_INCR("issue_replread_cb");
+		OPSTAT_INCR("issue-replread-cb");
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -427,9 +427,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 		replwk_queue(w);
 		sli_replwkrq_decref(w, rc);
-		OPSTAT_INCR("issue_replread_error");
+		OPSTAT_INCR("issue-replread-error");
 	} else {
-		OPSTAT_INCR("issue_replread");
+		OPSTAT_INCR("issue-replread");
 	}
 	if (rq)
 		pscrpc_req_finished(rq);

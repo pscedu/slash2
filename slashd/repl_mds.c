@@ -278,8 +278,8 @@ mds_brepls_check(uint8_t *repls, int nr)
  *
  * Notes: the locks are acquired in the following order:
  *	(*) FCMH_BUSY
- *	(*) BMAP_BUSY
- *	(*) BMAP_WRLOCK
+ *	(*) BMAPF_BUSY
+ *	(*) BMAPOD_WRLOCK
  */
 int
 _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
