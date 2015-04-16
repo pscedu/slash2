@@ -96,7 +96,7 @@ void
 _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 {
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
-	    !(b->bcm_flags & BMAP_MDS_REPLMODWR)) {
+	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
 		/* we took a write lock but did not modify; undo */
 		BMAPOD_MODIFY_DONE(b, 0);
 		BMAP_UNBUSY(b);
@@ -312,12 +312,12 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 			BMAP_LOCK(b);
 			BMAP_BUSY_ENSURE(b);
 			psc_assert((b->bcm_flags &
-			    BMAP_MDS_REPLMODWR) == 0);
+			    BMAPF_REPLMODWR) == 0);
 			BMAP_ULOCK(b);
 		} else {
 			BMAP_WAIT_BUSY(b);
 			psc_assert((b->bcm_flags &
-			    BMAP_MDS_REPLMODWR) == 0);
+			    BMAPF_REPLMODWR) == 0);
 			BMAP_ULOCK(b);
 			BMAPOD_MODIFY_START(b);
 			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
@@ -659,7 +659,7 @@ slm_repl_upd_write(struct bmapc_memb *b, int rel)
 		FCMH_UNBUSY(b->bcm_fcmh);
 
 		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAP_MDS_REPLMODWR;
+		b->bcm_flags &= ~BMAPF_REPLMODWR;
 		BMAP_UNBUSY(b);
 
 		UPD_UNBUSY(upd);

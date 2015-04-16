@@ -194,7 +194,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	    mp))
 		goto out;
 
-	OPSTAT_INCR("repl_readaio");
+	OPSTAT_INCR("repl-readaio");
 
 	s = a->aiocbr_slvrs[0];
 
@@ -241,7 +241,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rc)
 		goto out;
 
-	OPSTAT_INCR("slvr_aio_reply");
+	OPSTAT_INCR("slvr-aio-reply");
 
 	mq->rc = slvr_aio_chkslvrs(a);
 
@@ -304,7 +304,6 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
-	OPSTAT_INCR("iocb_free");
 	psc_pool_return(sli_iocb_pool, iocb);
 }
 
@@ -357,7 +356,7 @@ sli_aio_iocb_new(struct slvr *s)
 {
 	struct sli_iocb *iocb;
 
-	OPSTAT_INCR("iocb_get");
+	OPSTAT_INCR("iocb-get");
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
 	INIT_LISTENTRY(&iocb->iocb_lentry);
@@ -504,7 +503,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 
 	errno = 0;
 	if (rw == SL_READ) {
-		OPSTAT_INCR("fsio_read");
+		OPSTAT_INCR("fsio-read");
 
 		if (slcfg_local->cfg_async_io)
 			return (sli_aio_register(s));
@@ -528,7 +527,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 
 		if (rc == -1) {
 			save_errno = errno;
-			OPSTAT_INCR("fsio_read_fail");
+			OPSTAT_INCR("fsio-read-fail");
 		} else if (rc) {
 			int crc_rc;
 
@@ -546,21 +545,21 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			SLVR_ULOCK(s);
 
 			if (crc_rc == PFLERR_BADCRC) {
-				OPSTAT_INCR("fsio_read_crc_bad");
+				OPSTAT_INCR("fsio-read-crc-bad");
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
 				    nblks, foff);
 			} else {
-				OPSTAT_INCR("fsio_read_crc_good");
+				OPSTAT_INCR("fsio-read-crc-good");
 			}
 		}
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("read_wait_usecs",
+		OPSTAT_ADD("read-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	} else {
-		OPSTAT_INCR("fsio_write");
+		OPSTAT_INCR("fsio-write");
 
 		sblk = off / SLASH_SLVR_BLKSZ;
 		psc_assert((off % SLASH_SLVR_BLKSZ) == 0);
@@ -580,7 +579,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		    foff);
 		if (rc == -1) {
 			save_errno = errno;
-			OPSTAT_INCR("fsio_write_fail");
+			OPSTAT_INCR("fsio-write-fail");
 		} else
 			pfl_opstat_add(sli_backingstore_iostats.wr, rc);
 	}

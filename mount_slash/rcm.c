@@ -244,7 +244,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR("bmap_dio");
+	OPSTAT_INCR("bmap-dio");
 	psclog_info("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->bno, mq->seq);
 
@@ -265,16 +265,16 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_DEBUG, b, "seq=%"PRId64, mq->seq);
 
-	if (b->bcm_flags & BMAP_DIO)
+	if (b->bcm_flags & BMAPF_DIO)
 		goto out;
 
 	/* Verify that the sequence number matches. */
 	bci = bmap_2_bci(b);
 	if (bci->bci_sbd.sbd_seq != mq->seq)
-		PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);	/* 507 */
+		PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
 
 	/* All new read and write I/O's will get BIORQ_DIO. */
-	b->bcm_flags |= BMAP_DIO;
+	b->bcm_flags |= BMAPF_DIO;
 	BMAP_ULOCK(b);
 
 	msl_bmap_cache_rls(b);

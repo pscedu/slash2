@@ -715,7 +715,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	f = b->bcm_fcmh;
 
 	/* skip, there is more important work to do */
-	if (b->bcm_flags & BMAP_MDS_REPLMODWR)
+	if (b->bcm_flags & BMAPF_REPLMODWR)
 		return;
 
 //	if (IN_PTRUNC)

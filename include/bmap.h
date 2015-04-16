@@ -120,16 +120,16 @@ struct bmap {
 #define bmapc_memb bmap
 
 /* shared bmap_flags */
-#define BMAP_RD			(1 <<  0)	/* XXX use enum rw */
-#define BMAP_WR			(1 <<  1)	/* XXX use enum rw */
-#define BMAP_INIT		(1 <<  2)	/* initializing from disk/network */
-#define BMAP_DIO		(1 <<  3)	/* direct I/O, no client caching */
-#define BMAP_DIOCB		(1 <<  4)
-#define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
-#define BMAP_MDCHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAP_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
-#define BMAP_BUSY		(1 <<  8)	/* temporary processing lock */
-#define _BMAP_FLSHFT		(1 <<  9)
+#define BMAPF_RD		(1 <<  0)
+#define BMAPF_WR		(1 <<  1)
+#define BMAPF_INIT		(1 <<  2)	/* initializing from disk/network */
+#define BMAPF_DIO		(1 <<  3)	/* direct I/O, no client caching */
+#define BMAPF_DIOCB		(1 <<  4)
+#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 <<  9)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -150,16 +150,16 @@ struct bmap {
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
 	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
-	(b)->bcm_flags & BMAP_RD	? "R" : "",			\
-	(b)->bcm_flags & BMAP_WR	? "W" : "",			\
-	(b)->bcm_flags & BMAP_INIT	? "I" : "",			\
-	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
-	(b)->bcm_flags & BMAP_DIOCB	? "C" : "",			\
-	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
-	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
-	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
-	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
-	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
+	(b)->bcm_flags & BMAPF_RD	? "R" : "",			\
+	(b)->bcm_flags & BMAPF_WR	? "W" : "",			\
+	(b)->bcm_flags & BMAPF_INIT	? "I" : "",			\
+	(b)->bcm_flags & BMAPF_DIO	? "D" : "",			\
+	(b)->bcm_flags & BMAPF_DIOCB	? "C" : "",			\
+	(b)->bcm_flags & BMAPF_TOFREE	? "F" : "",			\
+	(b)->bcm_flags & BMAPF_MODECHNG	? "G" : "",			\
+	(b)->bcm_flags & BMAPF_WAITERS	? "w" : "",			\
+	(b)->bcm_flags & BMAPF_BUSY	? "B" : "",			\
+	(b)->bcm_flags & ~(_BMAPF_SHIFT - 1) ? "+" : "",		\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : FID_ANY,		\
 	psc_atomic32_read(&(b)->bcm_opcnt)
 
@@ -175,7 +175,7 @@ struct bmap {
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		while (cond) {						\
-			(b)->bcm_flags |= BMAP_WAITERS;			\
+			(b)->bcm_flags |= BMAPF_WAITERS;		\
 			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
 			    &(b)->bcm_lock);				\
 			BMAP_LOCK(b);					\
@@ -185,9 +185,9 @@ struct bmap {
 #define bmap_wake_locked(b)						\
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
-		if ((b)->bcm_flags & BMAP_WAITERS) {			\
+		if ((b)->bcm_flags & BMAPF_WAITERS) {			\
 			psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
-			(b)->bcm_flags &= ~BMAP_WAITERS;		\
+			(b)->bcm_flags &= ~BMAPF_WAITERS;		\
 		}							\
 	} while (0)
 
@@ -197,9 +197,9 @@ struct bmap {
 									\
 		(void)BMAP_RLOCK(b);					\
 		bmap_wait_locked((b),					\
-		    ((b)->bcm_flags & BMAP_BUSY) &&			\
+		    ((b)->bcm_flags & BMAPF_BUSY) &&			\
 		    (b)->bcm_owner != _pthr);				\
-		(b)->bcm_flags |= BMAP_BUSY;				\
+		(b)->bcm_flags |= BMAPF_BUSY;				\
 		(b)->bcm_owner = _pthr;					\
 		DEBUG_BMAP(PLL_DEBUG, (b), "set BUSY");			\
 	} while (0)
@@ -209,7 +209,7 @@ struct bmap {
 		(void)BMAP_RLOCK(b);					\
 		BMAP_BUSY_ENSURE(b);					\
 		(b)->bcm_owner = 0;					\
-		(b)->bcm_flags &= ~BMAP_BUSY;				\
+		(b)->bcm_flags &= ~BMAPF_BUSY;				\
 		DEBUG_BMAP(PLL_DEBUG, (b), "cleared BUSY");		\
 		bmap_wake_locked(b);					\
 		BMAP_ULOCK(b);						\
@@ -217,7 +217,7 @@ struct bmap {
 
 #define BMAP_BUSY_ENSURE(b)						\
 	do {								\
-		psc_assert((b)->bcm_flags & BMAP_BUSY);			\
+		psc_assert((b)->bcm_flags & BMAPF_BUSY);		\
 		psc_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
 

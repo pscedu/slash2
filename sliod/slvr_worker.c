@@ -169,7 +169,7 @@ slicrudthr_main(struct psc_thread *thr)
 			 * maintained.
 			 */
 			if (bcr_2_bmap(bcr)->bcm_flags &
-			    BMAP_IOD_INFLIGHT) {
+			    BMAPF_CRUD_INFLIGHT) {
 				BII_ULOCK(bcr->bcr_bii);
 				continue;
 			}
@@ -180,7 +180,7 @@ slicrudthr_main(struct psc_thread *thr)
 				psc_dynarray_add(bcrs, bcr);
 				bcr->bcr_bii->bii_bcr = NULL;
 				bcr_2_bmap(bcr)->bcm_flags |=
-				    BMAP_IOD_INFLIGHT;
+				    BMAPF_CRUD_INFLIGHT;
 			}
 
 			BII_ULOCK(bcr->bcr_bii);
@@ -215,7 +215,7 @@ slicrudthr_main(struct psc_thread *thr)
 			DYNARRAY_FOREACH(bcr, i, bcrs) {
 				BII_LOCK(bcr->bcr_bii);
 				bcr_2_bmap(bcr)->bcm_flags &=
-				    ~BMAP_IOD_INFLIGHT;
+				    ~BMAPF_CRUD_INFLIGHT;
 				//bcr->bcr_bii->bii_bcr = NULL;
 				BII_ULOCK(bcr->bcr_bii);
 			}
@@ -257,8 +257,8 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 		    mp ? "" : " (unknown, no buf)");
 
 		BII_LOCK(bii);
-		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_INFLIGHT);
-		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAPF_CRUD_INFLIGHT);
+		bii_2_bmap(bii)->bcm_flags &= ~BMAPF_CRUD_INFLIGHT;
 
 		if (rq->rq_status) {
 			BII_ULOCK(bii);

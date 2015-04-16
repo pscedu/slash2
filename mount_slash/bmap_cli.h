@@ -51,14 +51,14 @@ struct bmap_cli_info {
 };
 
 /* mount_slash specific bcm_flags */
-#define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 0)	/* requesting a lease ext */
-#define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 1)
-#define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease request has failed */
-#define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 3)	/* lease has expired, new one is needed */
-#define BMAP_CLI_SCHED		(_BMAP_FLSHFT << 4)	/* bmap flush in progress */
-#define BMAP_CLI_BENCH		(_BMAP_FLSHFT << 5)
-#define BMAP_CLI_FLUSHQ		(_BMAP_FLSHFT << 6)
-#define BMAP_CLI_TIMEOQ		(_BMAP_FLSHFT << 7)	/* on timeout queue */
+#define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* requesting a lease ext */
+#define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)
+#define BMAPF_LEASEFAILED	(_BMAPF_SHIFT << 2)	/* lease request has failed */
+#define BMAPF_LEASEEXPIRED	(_BMAPF_SHIFT << 3)	/* lease has expired, new one is needed */
+#define BMAPF_SCHED		(_BMAPF_SHIFT << 4)	/* bmap flush in progress */
+#define BMAPF_BENCH		(_BMAPF_SHIFT << 5)
+#define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 6)
+#define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 7)	/* on timeout queue */
 
 /* XXX change horribly named flags */
 #define BMAP_CLI_MAX_LEASE	60			/* seconds */

@@ -262,10 +262,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		psc_assert(bmpc->bmpc_pndg_writes > 0);
-		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHQ);
+		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 		bmpc->bmpc_pndg_writes--;
 		if (!bmpc->bmpc_pndg_writes) {
-			b->bcm_flags &= ~BMAP_CLI_FLUSHQ;
+			b->bcm_flags &= ~BMAPF_FLUSHQ;
 			// XXX locking violation
 			lc_remove(&slc_bmapflushq, b);
 			DEBUG_BMAP(PLL_DIAG, b,
@@ -792,7 +792,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
 			BMAP_LOCK(b);
-			b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
+			b->bcm_flags |= BMAPF_LEASEEXPIRED;
 			BMAP_ULOCK(b);
 			OPSTAT_INCR("bmap-read-expired");
 		}
@@ -1050,7 +1050,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAP_WR);
+	psc_assert(b->bcm_flags & BMAPF_WR);
 
 	/*
 	 * The BIORQ_FLUSHRDY bit prevents the request from being
@@ -1065,8 +1065,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 	BIORQ_ULOCK(r);
 
-	if (!(b->bcm_flags & BMAP_CLI_FLUSHQ)) {
-		b->bcm_flags |= BMAP_CLI_FLUSHQ;
+	if (!(b->bcm_flags & BMAPF_FLUSHQ)) {
+		b->bcm_flags |= BMAPF_FLUSHQ;
 		lc_addtail(&slc_bmapflushq, b);
 		DEBUG_BMAP(PLL_DIAG, b, "add to slc_bmapflushq");
 	}
@@ -1134,7 +1134,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAP_WR, &csvc);
+	    r->biorq_bmap->bcm_flags & BMAPF_WR, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2055,7 +2055,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		/* XXX async */
 		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
 			goto end;
-		if (b->bcm_flags & BMAP_DIO)
+		if (b->bcm_flags & BMAPF_DIO)
 			goto end;
 
 		memset(&a, 0, sizeof(a));

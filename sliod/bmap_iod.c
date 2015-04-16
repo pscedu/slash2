@@ -417,7 +417,7 @@ dump_bmap_flags(uint32_t flags)
 	int seq = 0;
 
 	_dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_INFLIGHT, &flags, &seq);
+	PFL_PRFLAG(BMAPF_CRUD_INFLIGHT, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

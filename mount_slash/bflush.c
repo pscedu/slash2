@@ -116,7 +116,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		BMAP_LOCK(b);
 		bci = bmap_2_bci(b);
 		PFL_GETTIMESPEC(&bci->bci_etime);
-		b->bcm_flags |= BMAP_TOFREE;
+		b->bcm_flags |= BMAPF_TOFREE;
 		BMAP_ULOCK(b);
 	}
 	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
@@ -322,7 +322,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
 
-	if (b->bcm_flags & BMAP_CLI_BENCH)
+	if (b->bcm_flags & BMAPF_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
@@ -380,7 +380,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	BMAP_LOCK(b);
 	if (rc == -PFLERR_KEYEXPIRED) {
 		OPSTAT_INCR("bmap_flush_expired");
-		b->bcm_flags |= BMAP_CLI_LEASEEXPIRED;
+		b->bcm_flags |= BMAPF_LEASEEXPIRED;
 	}
 
 	BIORQ_LOCK(r);
@@ -664,8 +664,8 @@ bmap_flushable(struct bmapc_memb *b)
 		PFL_GETTIMESPEC(&ts);
 		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 		if ((secs > 0 && secs < BMAP_CLI_EXTREQSECS) ||
-		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
-			OPSTAT_INCR("flush_skip_expire");
+		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+			OPSTAT_INCR("flush-skip-expire");
 			flush = 0;
 		}
 	}
@@ -840,9 +840,9 @@ msbwatchthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			DEBUG_BMAP(PLL_DEBUG, b, "begin");
-			if ((b->bcm_flags & BMAP_TOFREE) ||
-			    (b->bcm_flags & BMAP_CLI_LEASEFAILED) ||
-			    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
+			if ((b->bcm_flags & BMAPF_TOFREE) ||
+			    (b->bcm_flags & BMAPF_LEASEFAILED) ||
+			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -859,11 +859,11 @@ msbwatchthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR("lease_refresh");
+		OPSTAT_INCR("lease-refresh");
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			/*
-			 * XXX: If BMAP_TOFREE is set after the above
+			 * XXX: If BMAPF_TOFREE is set after the above
 			 * loop but before this one.  The bmap reaper
 			 * logic will assert on the bmap reference count
 			 * not being zero.  And this has been seen
@@ -899,18 +899,18 @@ bmap_flush(void)
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHQ);
+		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 
-		if ((b->bcm_flags & BMAP_CLI_SCHED) ||
-		    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
+		if ((b->bcm_flags & BMAPF_SCHED) ||
+		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 			BMAP_ULOCK(b);
 			continue;
 		}
 
 		if (bmap_flushable(b) ||
-		   (b->bcm_flags & BMAP_TOFREE) ||
-		   (b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
-			b->bcm_flags |= BMAP_CLI_SCHED;
+		   (b->bcm_flags & BMAPF_TOFREE) ||
+		   (b->bcm_flags & BMAPF_LEASEFAILED)) {
+			b->bcm_flags |= BMAPF_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 		}
@@ -930,8 +930,8 @@ bmap_flush(void)
 		 * processed by the write back flush mechanism.
 		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAP_TOFREE | BMAP_CLI_LEASEFAILED)) {
-			b->bcm_flags &= ~BMAP_CLI_SCHED;
+		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_LEASEFAILED)) {
+			b->bcm_flags &= ~BMAPF_SCHED;
 			bmpc_biorqs_destroy_locked(b,
 			    bmap_2_bci(b)->bci_error);
 			goto next;
@@ -958,7 +958,7 @@ bmap_flush(void)
 
  next:
 		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAP_CLI_SCHED;
+		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 

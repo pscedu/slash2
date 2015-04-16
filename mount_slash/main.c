@@ -158,7 +158,7 @@ msl_delete_namecache(struct fidc_membh *fp)
 
 	psc_hashent_remove(&slc_namei_hashtbl, fci);
 
-	OPSTAT_INCR("delete_name");
+	OPSTAT_INCR("delete-name");
 	psclog_diag("delete: pino = %lx, name = %s", pino,
 	    fci->fci_name);
 }
@@ -197,11 +197,11 @@ msl_insert_namecache(uint64_t pino, const char *name,
 			psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
 			psclog_diag("update: pino = %lx, name = %s, b = %p",
 			    pino, fci->fci_name, b);
-			OPSTAT_INCR("update_name");
+			OPSTAT_INCR("update-name");
 		} else {
 			psclog_diag("insert: pino = %lx, name = %s, b = %p",
 			    pino, fci->fci_name, b);
-			OPSTAT_INCR("insert_name");
+			OPSTAT_INCR("insert-name");
 		}
 		fci->fci_pino = pino;
 		fci->fci_name = fci->fci_sname;
@@ -235,7 +235,7 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 	}
 	if (dodelete && child) {
 		fci->fci_pino = 0;
-		OPSTAT_INCR("delete_name");
+		OPSTAT_INCR("delete-name");
 		psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
 		psclog_diag("delete: pino = %lx, name = %s", pino,
 		    fci->fci_name);
@@ -1204,7 +1204,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	cfid = dircache_lookup(p, name, &nextoff);
 	FCMH_ULOCK(p);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
-		OPSTAT_INCR("dircache_lookup_miss");
+		OPSTAT_INCR("dircache-lookup-miss");
 		lookup_cache_tally_miss(p, nextoff);
 		remote = 1;
 	}
@@ -1330,10 +1330,10 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				msl_lookup_namecache(pinum, name, 1);
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
-				OPSTAT_INCR("delete_marked");
+				OPSTAT_INCR("delete-marked");
 			}
 		} else
-			OPSTAT_INCR("delete_skipped");
+			OPSTAT_INCR("delete-skipped");
 	}
 
 	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid=%d "
@@ -1642,7 +1642,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			// XXX need to wake up if csvc fails
-			OPSTAT_INCR("dircache_wait");
+			OPSTAT_INCR("dircache-wait");
 			fcmh_wait_nocond_locked(d);
 			goto restart;
 		}
@@ -1655,7 +1655,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DIRCACHEPGF_EOF) {
 			FCMH_ULOCK(d);
-			OPSTAT_INCR("dircache_hit_eof");
+			OPSTAT_INCR("dircache-hit-eof");
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
@@ -1705,7 +1705,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_base + poff, len, 0);
 				p->dcp_flags |= DIRCACHEPGF_READ;
 				if (hit)
-					OPSTAT_INCR("dircache_hit");
+					OPSTAT_INCR("dircache-hit");
 
 				issue = 0;
 				break;
@@ -1717,7 +1717,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (issue) {
 		hit = 0;
 		rc = msl_readdir_issue(pfcc, d, off, size, 1);
-		OPSTAT_INCR("dircache_issue");
+		OPSTAT_INCR("dircache-issue");
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1862,7 +1862,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 	psc_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
-		if (!(b->bcm_flags & BMAP_TOFREE)) {
+		if (!(b->bcm_flags & BMAPF_TOFREE)) {
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 			psc_dynarray_add(&a, b);
 		}
@@ -1980,7 +1980,7 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	OPSTAT_INCR("flush_attr");
+	OPSTAT_INCR("flush-attr");
 
 	rc = msl_setattr(pfcc, f, to_set, &attr, NULL, NULL);
 
@@ -2748,7 +2748,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			DEBUG_FCMH(PLL_DIAG, c,
 			    "full truncate, free bmaps");
 
-			OPSTAT_INCR("truncate_full");
+			OPSTAT_INCR("truncate-full");
 			bmap_free_all_locked(c);
 			FCMH_ULOCK(c);
 
@@ -2763,7 +2763,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			OPSTAT_INCR("truncate_part");
+			OPSTAT_INCR("truncate-part");
 
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
@@ -2985,7 +2985,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
  out:
 	if (rc) {
 		pscfs_reply_write(pfr, size, rc);
-		OPSTAT_INCR("fsrq_write_err");
+		OPSTAT_INCR("fsrq-write-err");
 	}
 	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
@@ -3006,7 +3006,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq_read_noreg");
+		OPSTAT_INCR("fsrq-read-noreg");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
@@ -3015,7 +3015,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
  out:
 	if (rc) {
 		pscfs_reply_read(pfr, NULL, 0, rc);
-		OPSTAT_INCR("fsrq_read_err");
+		OPSTAT_INCR("fsrq-read-err");
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (end): rc=%d sz=%zu "
@@ -3386,7 +3386,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			break;
 		}
 		if (fci == NULL) {
-			OPSTAT_INCR("flush_attr_wait");
+			OPSTAT_INCR("flush-attr-wait");
 			psc_waitq_waitrel_ts(&msl_flush_attrq,
 			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
 		}

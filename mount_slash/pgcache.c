@@ -261,7 +261,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_last_sliod = IOS_ID_ANY;
 
 	BMAP_LOCK_ENSURE(b);
-	if (b->bcm_flags & BMAP_DIO) {
+	if (b->bcm_flags & BMAPF_DIO) {
 		r->biorq_flags |= BIORQ_DIO;
 		if (flags & BIORQ_READ) {
 			r->biorq_flags |= BIORQ_FREEBUF;
@@ -344,13 +344,13 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 	BMAP_LOCK_ENSURE(b);
 
 	while (bmpc->bmpc_pndg_writes) {
-		OPSTAT_INCR("biorq_flush_wait");
+		OPSTAT_INCR("biorq-flush-wait");
 		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 			BIORQ_LOCK(r);
 			/*
-			 * A biorq can only be added at the end of the 
-			 * list. So when we encounter an already expired 
-			 * biorq we can stop since we've already processed 
+			 * A biorq can only be added at the end of the
+			 * list. So when we encounter an already expired
+			 * biorq we can stop since we've already processed
 			 * it and all biorqs before it.
 			 */
 			if (r->biorq_flags & BIORQ_EXPIRE) {
@@ -387,6 +387,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	while (!RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
 		r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs);
 		psc_dynarray_add(&a, r);
+
 		/*
 		 * Avoid another thread from reaching here and
 		 * destroying the same biorq again.
@@ -394,7 +395,8 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 		BIORQ_LOCK(r);
 		assert(r->biorq_flags & BIORQ_FLUSHRDY);
 		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
+		    r);
 		pll_remove(&bmpc->bmpc_new_biorqs_exp, r);
 		BIORQ_ULOCK(r);
 	}

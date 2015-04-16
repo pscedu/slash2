@@ -205,15 +205,15 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    "%c%c%c%c%c%c%c%c%c "
 	    "%5u %18s %7"PRIu64"\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
-	    scb->scb_flags & BMAP_RD		? 'R' : '-',
-	    scb->scb_flags & BMAP_WR		? 'W' : '-',
-	    scb->scb_flags & BMAP_INIT		? 'I' : '-',
-	    scb->scb_flags & BMAP_DIO		? 'D' : '-',
-	    scb->scb_flags & BMAP_DIOCB		? 'C' : '-',
-	    scb->scb_flags & BMAP_TOFREE	? 'F' : '-',
-	    scb->scb_flags & BMAP_MDCHNG	? 'G' : '-',
-	    scb->scb_flags & BMAP_WAITERS	? 'w' : '-',
-	    scb->scb_flags & BMAP_BUSY		? 'B' : '-',
+	    scb->scb_flags & BMAPF_RD		? 'R' : '-',
+	    scb->scb_flags & BMAPF_WR		? 'W' : '-',
+	    scb->scb_flags & BMAPF_INIT		? 'I' : '-',
+	    scb->scb_flags & BMAPF_DIO		? 'D' : '-',
+	    scb->scb_flags & BMAPF_DIOCB	? 'C' : '-',
+	    scb->scb_flags & BMAPF_TOFREE	? 'F' : '-',
+	    scb->scb_flags & BMAPF_MODECHNG	? 'G' : '-',
+	    scb->scb_flags & BMAPF_WAITERS	? 'w' : '-',
+	    scb->scb_flags & BMAPF_BUSY		? 'B' : '-',
 	    scb->scb_opcnt, scb->scb_resname, scb->scb_seq);
 }
 

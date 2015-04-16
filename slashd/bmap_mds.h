@@ -91,13 +91,10 @@ struct bmap_mds_info {
 #define bmi_2_ondisk(bmi)	((struct bmap_ondisk *)&(bmi)->bmi_corestate)
 
 /* MDS-specific bcm_flags */
-#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
-#define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
-#define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
-#define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
-#define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
-#define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 5)	/* res state changes have been written */
-#define BMAP_MDS_IOSASSIGNED	(_BMAP_FLSHFT << 6)
+#define BMAPF_CRC_UP		(_BMAPF_SHIFT << 0)	/* CRC update in progress */
+#define BMAPF_NOION		(_BMAPF_SHIFT << 1)	/* IOS could not be contacted for lease request */
+#define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 2)	/* res state changes have been written */
+#define BMAPF_IOSASSIGNED	(_BMAPF_SHIFT << 3)	/* write request bound an IOS to this bmap */
 
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
@@ -189,8 +186,8 @@ struct bmap_timeo_table {
 #define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX
 
 struct bmap_mds_lease {
-	 int32_t		  bml_refcnt;
 	uint64_t		  bml_seq;
+	 int32_t		  bml_refcnt;
 	sl_ios_id_t		  bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;

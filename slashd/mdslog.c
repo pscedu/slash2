@@ -1827,7 +1827,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	b->bcm_fcmh->fcmh_owner = 0;
 	(void)BMAP_RLOCK(b);
 	b->bcm_owner = 0;
-	b->bcm_flags |= BMAP_MDS_REPLMODWR;
+	b->bcm_flags |= BMAPF_REPLMODWR;
 	BMAP_ULOCK(b);
 
 	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
@@ -1859,7 +1859,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 	BMAPOD_READ_DONE(bmap, 0);
 
-	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
+	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
 
 	/*
 	 * See if we need to distill the file enlargement information.
@@ -1896,7 +1896,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 	/* Signify that the update has occurred. */
 	BMAP_LOCK(bmap);
-	bmap->bcm_flags &= ~BMAP_MDS_CRC_UP;
+	bmap->bcm_flags &= ~BMAPF_CRC_UP;
 	BMAP_ULOCK(bmap);
 }
 

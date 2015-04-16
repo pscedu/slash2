@@ -111,7 +111,7 @@ mds_replay_bmap(void *jent, int op)
 		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
-		b->bcm_flags |= BMAP_MDS_REPLMODWR;
+		b->bcm_flags |= BMAPF_REPLMODWR;
 		// bmi_sys_prio =
 		// bmi_usr_prio =
 		slm_repl_upd_write(b, 1);

@@ -94,7 +94,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
-		b->bcm_flags |= BMAP_TOFREE;
+		b->bcm_flags |= BMAPF_TOFREE;
 		DEBUG_BMAP(PLL_DIAG, b, "free bmap now");
 		BMAP_ULOCK(b);
 
@@ -142,7 +142,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 			goto restart;
 		}
 
-		if (b->bcm_flags & BMAP_TOFREE) {
+		if (b->bcm_flags & BMAPF_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
@@ -190,7 +190,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	 * Signify that the bmap is newly initialized and therefore may
 	 * not contain certain structures.
 	 */
-	b->bcm_flags = BMAP_INIT;
+	b->bcm_flags = BMAPF_INIT;
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
@@ -228,7 +228,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	if (bp)
 		*bp = NULL;
 	if (rw)
-		bmaprw = rw == SL_WRITE ? BMAP_WR : BMAP_RD;
+		bmaprw = rw == SL_WRITE ? BMAPF_WR : BMAPF_RD;
 
 	new_bmap = flags & BMAPGETF_CREATE;
 	b = bmap_lookup_cache(f, n, &new_bmap);
@@ -257,19 +257,20 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 
 		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAP_INIT;
+		b->bcm_flags &= ~BMAPF_INIT;
 		bmap_wake_locked(b);
 	} else {
 		/*
-		 * Wait while BMAP_INIT is set.
+		 * Wait while BMAPF_INIT is set.
 		 *
 		 * Others wishing to access this bmap in the same mode
-		 * must wait until MDCHNG ops have completed.  If the
+		 * must wait until MODECHNG ops have completed.  If the
 		 * desired mode is present then a thread may proceed
 		 * without blocking here so long as it only accesses
 		 * structures which pertain to its mode.
 		 */
-		bmap_wait_locked(b, b->bcm_flags & (BMAP_INIT | BMAP_MDCHNG));
+		bmap_wait_locked(b, b->bcm_flags &
+		    (BMAPF_INIT | BMAPF_MODECHNG));
 
 		/*
 		 * Not all lookups are done with the intent of changing
@@ -282,9 +283,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    sl_bmap_ops.bmo_mode_chngf) {
 
-			b->bcm_flags |= BMAP_MDCHNG;
+			b->bcm_flags |= BMAPF_MODECHNG;
 
-			DEBUG_BMAP(PLL_INFO, b,
+			DEBUG_BMAP(PLL_DIAG, b,
 			    "about to mode change (rw=%d)", rw);
 
 			BMAP_ULOCK(b);
@@ -292,7 +293,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
 
 			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAP_MDCHNG;
+			b->bcm_flags &= ~BMAPF_MODECHNG;
 			if (!rc)
 				b->bcm_flags |= bmaprw;
 			bmap_wake_locked(b);
@@ -352,15 +353,15 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 void
 _dump_bmap_flags_common(uint32_t *flags, int *seq)
 {
-	PFL_PRFLAG(BMAP_RD, flags, seq);
-	PFL_PRFLAG(BMAP_WR, flags, seq);
-	PFL_PRFLAG(BMAP_INIT, flags, seq);
-	PFL_PRFLAG(BMAP_DIO, flags, seq);
-	PFL_PRFLAG(BMAP_DIOCB, flags, seq);
-	PFL_PRFLAG(BMAP_TOFREE, flags, seq);
-	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
-	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
-	PFL_PRFLAG(BMAP_BUSY, flags, seq);
+	PFL_PRFLAG(BMAPF_RD, flags, seq);
+	PFL_PRFLAG(BMAPF_WR, flags, seq);
+	PFL_PRFLAG(BMAPF_INIT, flags, seq);
+	PFL_PRFLAG(BMAPF_DIO, flags, seq);
+	PFL_PRFLAG(BMAPF_DIOCB, flags, seq);
+	PFL_PRFLAG(BMAPF_TOFREE, flags, seq);
+	PFL_PRFLAG(BMAPF_MODECHNG, flags, seq);
+	PFL_PRFLAG(BMAPF_WAITERS, flags, seq);
+	PFL_PRFLAG(BMAPF_BUSY, flags, seq);
 }
 
 __weak void

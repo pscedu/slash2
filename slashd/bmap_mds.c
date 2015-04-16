@@ -55,7 +55,7 @@ bmap_2_mfh(struct bmap *b)
  *	bounds of the file causing a new bmap to be created.
  * Notes:  Bmap creation race conditions are prevented because the bmap
  *	handle already exists at this time with
- *	bcm_flags == BMAP_INIT.
+ *	bcm_flags == BMAPF_INIT.
  *
  *	This causes other threads to block on the waitq until
  *	read/creation has completed.
@@ -349,7 +349,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	int rc, fl, idx, vfsid;
 	uint32_t i;
 
-	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
+	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
 
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
@@ -512,13 +512,10 @@ dump_bmap_flags(uint32_t flags)
 	int seq = 0;
 
 	_dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_CRC_UP, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_CRCWRT, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_NOION, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_REPLMODWR, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_IOSASSIGNED, &flags, &seq);
+	PFL_PRFLAG(BMAPF_CRC_UP, &flags, &seq);
+	PFL_PRFLAG(BMAPF_NOION, &flags, &seq);
+	PFL_PRFLAG(BMAPF_REPLMODWR, &flags, &seq);
+	PFL_PRFLAG(BMAPF_IOSASSIGNED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
