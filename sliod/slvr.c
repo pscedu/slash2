@@ -615,24 +615,15 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 ssize_t
 slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 {
-	ssize_t rc = 0;
+	ssize_t rc;
 
+	/* 
+	 * If we hit -SLERR_AIOWAIT, the AIO callback handler 
+	 * slvr_fsaio_done() will set the state of the sliver
+	 * (DATARDY or DATAERR). Otherwise, our caller should 
+ 	 * set them.
+ 	 */
 	rc = slvr_fsio(s, off, size, SL_READ);
-
-	if (rc && rc != -SLERR_AIOWAIT) {
-		/*
-		 * There was a problem; unblock any waiters and tell
-		 * them the bad news.
-		 */
-		SLVR_LOCK(s);
-		s->slvr_err = rc;
-		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd",
-		    rc);
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-	}
-
 	return (rc);
 }
 
