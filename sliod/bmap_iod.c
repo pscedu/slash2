@@ -41,7 +41,7 @@
 struct bmap_iod_minseq	 bimSeq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
-struct psc_listcache	 bmapRlsQ;
+struct psc_listcache	 sli_bmap_releaseq;
 
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
@@ -224,8 +224,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 
 		nrls = 0;
-		LIST_CACHE_LOCK(&bmapRlsQ);
-		LIST_CACHE_FOREACH_SAFE(bii, tmp, &bmapRlsQ) {
+		LIST_CACHE_LOCK(&sli_bmap_releaseq);
+		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 
 			b = bii_2_bmap(bii);
 			if (!BMAP_TRYLOCK(b))
@@ -247,7 +247,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 					break;
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
-				lc_remove(&bmapRlsQ, bii);
+				lc_remove(&sli_bmap_releaseq, bii);
 				psc_dynarray_add(&a, b);
 			} else
 				BMAP_ULOCK(b);
@@ -255,7 +255,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (nrls >= MAX_BMAP_RELEASE)
 				break;
 		}
-		LIST_CACHE_ULOCK(&bmapRlsQ);
+		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		DYNARRAY_FOREACH(b, i, &a)
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
@@ -304,8 +304,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 void
 slibmaprlsthr_spawn(void)
 {
-	lc_reginit(&bmapRlsQ, struct bmap_iod_info, bii_lentry,
-	    "bmaprlsq");
+	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
+	    "breleaseq");
 
 	pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
 	    "slibmaprlsthr");
@@ -329,7 +329,7 @@ iod_bmap_init(struct bmapc_memb *b)
 	 * cache to prevent extra reads and CRC table fetches.
 	 */
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-	lc_addtail(&bmapRlsQ, bii);
+	lc_addtail(&sli_bmap_releaseq, bii);
 }
 
 void
