@@ -1488,8 +1488,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		if (e->sstb.sst_fid == FID_ANY ||
 		    e->sstb.sst_fid == 0) {
 			DEBUG_SSTB(PLL_WARN, &e->sstb,
-			    "invalid readdir prefetch FID "
-			    "parent@%p="SLPRI_FID, d, fcmh_2_fid(d));
+			    "invalid readdir prefetch FID ent=%d"
+			    "parent@%p="SLPRI_FID, i, d, fcmh_2_fid(d));
 			continue;
 		}
 
