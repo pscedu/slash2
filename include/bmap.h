@@ -113,7 +113,7 @@ struct bmap {
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
 	psc_spinlock_t		 bcm_lock;
 	RB_ENTRY(bmap)		 bcm_tentry;	/* entry in fcmh's bmap tree */
-	struct psc_listentry	 bcm_lentry;	/* free pool */
+	struct psc_listentry	 bcm_lentry;	/* free pool and flush queue */
 	pthread_t		 bcm_owner;	/* temporary processor */
 };
 
