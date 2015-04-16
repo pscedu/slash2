@@ -159,7 +159,7 @@ msl_delete_namecache(struct fidc_membh *fp)
 	psc_hashent_remove(&slc_namei_hashtbl, fci);
 
 	OPSTAT_INCR("delete-name");
-	psclog_diag("delete: pino = %lx, name = %s", pino,
+	psclog_diag("delete: pino=%"PRIx64" name='%s'", pino,
 	    fci->fci_name);
 }
 
@@ -195,11 +195,11 @@ msl_insert_namecache(uint64_t pino, const char *name,
 		fci = fcmh_get_pri(child);
 		if (fci->fci_pino) {
 			psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
-			psclog_diag("update: pino = %lx, name = %s, b = %p",
+			psclog_diag("update: pino = %"PRIx64", name = %s, b = %p",
 			    pino, fci->fci_name, b);
 			OPSTAT_INCR("update-name");
 		} else {
-			psclog_diag("insert: pino = %lx, name = %s, b = %p",
+			psclog_diag("insert: pino = %"PRIx64", name = %s, b = %p",
 			    pino, fci->fci_name, b);
 			OPSTAT_INCR("insert-name");
 		}
@@ -237,7 +237,7 @@ msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
 		fci->fci_pino = 0;
 		OPSTAT_INCR("delete-name");
 		psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
-		psclog_diag("delete: pino = %lx, name = %s", pino,
+		psclog_diag("delete: pino = %"PRIx64", name = %s", pino,
 		    fci->fci_name);
 	}
 	psc_hashbkt_put(&slc_namei_hashtbl, b);
