@@ -156,9 +156,10 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	}
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
-	BMAP_ULOCK(b);
 
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
+	BMAP_ULOCK(b);
+
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
 
@@ -191,6 +192,13 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	SLVR_LOCK(s);
 	SLVR_WAIT(s, s->slvr_pndgwrts > 0);
 	s->slvr_blkgreads++;
+	if (rv) {
+		s->slvr_err = rv;
+		s->slvr_flags |= SLVR_DATAERR;
+	} else {
+		s->slvr_flags |= SLVR_DATARDY;
+	}
+	s->slvr_flags &= ~SLVR_FAULTING;
 	SLVR_ULOCK(s);
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
