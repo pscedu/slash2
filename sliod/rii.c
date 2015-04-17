@@ -160,46 +160,44 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	BMAP_ULOCK(b);
 
-	if (rv && rv != -SLERR_AIOWAIT)
-		PFL_GOTOERR(out, mp->rc = rv);
-
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
 	if (rv == -SLERR_AIOWAIT) {
-		/*
-		 * Ran into an async I/O.  We may have already issued
-		 * the AIO.  So the sliver may be already ready at this
-		 * point.
-		 */
 		aiocbr = sli_aio_replreply_setup(rq, s, &iov);
-
 		SLVR_LOCK(s);
-		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
+		if (s->slvr_flags & SLVR_FAULTING) {
 			s->slvr_aioreply = aiocbr;
 			OPSTAT_INCR("aio-insert");
 			SLVR_ULOCK(s);
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
 			PFL_GOTOERR(out, mp->rc = rv);
+		} else {
+			/*
+			 * AIO has already completed ahead of us.
+			 */
+			OPSTAT_INCR("aio-race");
+			rv = s->slvr_err;
+			SLVR_ULOCK(s);
+			sli_aio_aiocbr_release(aiocbr);
 		}
-		SLVR_ULOCK(s);
-		sli_aio_aiocbr_release(aiocbr);
-		/* XXX: SLVR_DATAERR */
-		rv = 0;
-	}
-
-	SLVR_LOCK(s);
-	SLVR_WAIT(s, s->slvr_pndgwrts > 0);
-	s->slvr_blkgreads++;
-	if (rv) {
-		s->slvr_err = rv;
-		s->slvr_flags |= SLVR_DATAERR;
 	} else {
-		s->slvr_flags |= SLVR_DATARDY;
+		SLVR_LOCK(s);
+		SLVR_WAIT(s, s->slvr_pndgwrts > 0);
+		if (rv) {
+			s->slvr_err = rv;
+			s->slvr_flags |= SLVR_DATAERR;
+		} else {
+			s->slvr_blkgreads++;
+			s->slvr_flags |= SLVR_DATARDY;
+		}
+		s->slvr_flags &= ~SLVR_FAULTING;
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
 	}
-	s->slvr_flags &= ~SLVR_FAULTING;
-	SLVR_ULOCK(s);
+	if (rv)
+		PFL_GOTOERR(out, mp->rc = rv);
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
 
