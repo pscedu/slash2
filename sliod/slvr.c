@@ -653,7 +653,6 @@ slvr_repl_prep(struct slvr *s)
 		 */
 		DEBUG_SLVR(PLL_WARN, s,
 		    "MDS requested repldst of active slvr");
-		SLVR_WAIT(s, s->slvr_pndgwrts > 1 || s->slvr_pndgreads);
 		s->slvr_flags &= ~SLVR_DATARDY;
 	}
 

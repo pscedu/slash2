@@ -184,7 +184,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		}
 	} else {
 		SLVR_LOCK(s);
-		SLVR_WAIT(s, s->slvr_pndgwrts > 0);
 		if (rv) {
 			s->slvr_err = rv;
 			s->slvr_flags |= SLVR_DATAERR;
