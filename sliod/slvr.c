@@ -566,10 +566,6 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		foff = slvr_2_fileoff(s, sblk);
 		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
-		SLVR_LOCK(s);
-		SLVR_WAIT(s, s->slvr_blkgreads > 0);
-		SLVR_ULOCK(s);
-
 		/*
 		 * We incremented pndgwrts so any blocking reads should
 		 * wait for this counter to reach zero.

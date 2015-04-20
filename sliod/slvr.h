@@ -51,8 +51,7 @@ struct bmap_iod_info;
 struct slvr {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
 	uint16_t		 slvr_flags;	/* see SLVR_* flags */
-	uint16_t		 slvr_blkgreads;/* # blocking reads in progress */
-	uint16_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
+	uint16_t		 slvr_pndgwrts;	/* # writes in progess */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	 int32_t		 slvr_err;
 	psc_spinlock_t		 slvr_lock;

@@ -188,7 +188,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 			s->slvr_err = rv;
 			s->slvr_flags |= SLVR_DATAERR;
 		} else {
-			s->slvr_blkgreads++;
 			s->slvr_flags |= SLVR_DATARDY;
 		}
 		s->slvr_flags &= ~SLVR_FAULTING;
@@ -211,9 +210,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	 */
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 
-	SLVR_LOCK(s);
-	s->slvr_blkgreads--;
-	SLVR_WAKEUP(s);
 	slvr_rio_done(s);
 
  out:
