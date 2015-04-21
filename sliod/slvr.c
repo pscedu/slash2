@@ -83,8 +83,7 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 	uint64_t crc;
 
 	SLVR_LOCK_ENSURE(s);
-	psc_assert((s->slvr_flags & SLVR_PINNED) &&
-		   (s->slvr_flags & SLVR_FAULTING ||
+	psc_assert((s->slvr_flags & SLVR_FAULTING ||
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
@@ -779,10 +778,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	if (s->slvr_refcnt || s->slvr_flags & SLVR_CRCDIRTY)
 		return (0);
 
-	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-
-	s->slvr_flags &= ~SLVR_PINNED;
 
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -822,7 +818,6 @@ void
 slvr_wio_done(struct slvr *s, int repl)
 {
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_refcnt > 0);
 
 	s->slvr_refcnt--;
@@ -874,7 +869,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			goto retry;
 		}
 
-		s->slvr_flags |= SLVR_PINNED;
 		s->slvr_refcnt++;
 
 		SLVR_ULOCK(s);
@@ -893,7 +887,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		s = tmp1;
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
-		s->slvr_flags = SLVR_PINNED;
 		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
@@ -955,7 +948,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		if (s->slvr_flags & SLVR_PINNED) {
+		if (s->slvr_refcnt) {
 			SLVR_ULOCK(s);
 			continue;
 		}
@@ -1137,7 +1130,6 @@ dump_sliver_flags(int fl)
 	int seq = 0;
 
 	PFL_PRFLAG(SLVR_FAULTING, &fl, &seq);
-	PFL_PRFLAG(SLVR_PINNED, &fl, &seq);
 	PFL_PRFLAG(SLVR_DATARDY, &fl, &seq);
 	PFL_PRFLAG(SLVR_DATAERR, &fl, &seq);
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);

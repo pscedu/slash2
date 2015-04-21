@@ -309,7 +309,6 @@ slislvrthr_proc(struct slvr *s)
 	}
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
 	/*
