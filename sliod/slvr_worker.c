@@ -327,6 +327,7 @@ slislvrthr_proc(struct slvr *s)
 	b = bii_2_bmap(bii);
 
 	s->slvr_flags |= SLVR_LRU;
+	s->slvr_flags &= ~SLVR_CRCDIRTY;
 	lc_addqueue(&sli_lruslvrs, s);
 	slvr_lru_tryunpin_locked(s);
 

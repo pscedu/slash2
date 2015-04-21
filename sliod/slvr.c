@@ -123,7 +123,6 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 		psc_crc64_calc(&crc, slvr_2_buf(s, 0), SLASH_SLVR_SIZE);
 #endif
 
-		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
 		*crcp = crc;
@@ -736,6 +735,7 @@ __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
 	s->slvr_flags &= ~SLVR_LRU;
+	s->slvr_flags |= SLVR_CRCDIRTY;
 	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
 
 	lc_remove(&sli_lruslvrs, s);
@@ -827,10 +827,8 @@ slvr_wio_done(struct slvr *s, int repl)
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
 	if (s->slvr_flags & SLVR_DATAERR || repl) {
-		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		slvr_lru_tryunpin_locked(s);
 	} else {
-		s->slvr_flags |= SLVR_CRCDIRTY;
 		if (s->slvr_flags & SLVR_LRU)
 			slvr_schedule_crc_locked(s);
 	}
