@@ -303,26 +303,14 @@ slislvrthr_proc(struct slvr *s)
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
+	if (s->slvr_flags & SLVR_FAULTING) {
+		SLVR_ULOCK(s);
+		return;
+	}
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
-
-	/*
-	 * Try our best to determine whether we should hold off the
-	 * CRC operation strivonly CRC slivers which have no pending
-	 * writes.  This section directly below may race with
-	 * slvr_wio_done().
-	 */
-	if (s->slvr_pndgwrts > 0 || s->slvr_pndgreads > 0) {
-		s->slvr_flags |= SLVR_LRU;
-		lc_addqueue(&sli_lruslvrs, s);
-
-		DEBUG_SLVR(PLL_DIAG, s, "descheduled due to pndg writes");
-
-		SLVR_ULOCK(s);
-		return;
-	}
 
 	/*
 	 * OK, we've got a sliver to work on.  From this point until we

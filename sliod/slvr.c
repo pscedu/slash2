@@ -91,13 +91,6 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
 			return (SLERR_CRCABSENT);
 
-		/*
-		 * This thread holds faulting status so all others are
-		 * waiting on us which means that exclusive access to
-		 * slvr contents is ours until we set SLVR_DATARDY.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 
@@ -783,13 +776,10 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
-	    s->slvr_flags & SLVR_CRCDIRTY)
+	if (s->slvr_refcnt || s->slvr_flags & SLVR_CRCDIRTY)
 		return (0);
 
-	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-
 	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
 
 	s->slvr_flags &= ~SLVR_PINNED;
@@ -801,7 +791,8 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	lc_move2tail(&sli_lruslvrs, s);
+	if (s->slvr_flags & SLVR_LRU)
+		lc_move2tail(&sli_lruslvrs, s);
 	return (1);
 }
 
@@ -813,8 +804,8 @@ slvr_rio_done(struct slvr *s)
 {
 	SLVR_RLOCK(s);
 
-	s->slvr_pndgreads--;
-	DEBUG_SLVR(PLL_DIAG, s, "read decref");
+	s->slvr_refcnt--;
+	DEBUG_SLVR(PLL_DIAG, s, "decref");
 	if (slvr_lru_tryunpin_locked(s))
 		DEBUG_SLVR(PLL_DIAG, s, "decref, unpinned");
 	else
@@ -832,10 +823,10 @@ slvr_wio_done(struct slvr *s, int repl)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_pndgwrts > 0);
+	psc_assert(s->slvr_refcnt > 0);
 
-	s->slvr_pndgwrts--;
-	DEBUG_SLVR(PLL_DIAG, s, "write decref");
+	s->slvr_refcnt--;
+	DEBUG_SLVR(PLL_DIAG, s, "decref");
 
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
@@ -844,7 +835,7 @@ slvr_wio_done(struct slvr *s, int repl)
 		slvr_lru_tryunpin_locked(s);
 	} else {
 		s->slvr_flags |= SLVR_CRCDIRTY;
-		if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
+		if (s->slvr_flags & SLVR_LRU)
 			slvr_schedule_crc_locked(s);
 	}
 
@@ -884,14 +875,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		}
 
 		s->slvr_flags |= SLVR_PINNED;
-
-		if (rw == SL_WRITE) {
-			if (++s->slvr_pndgwrts == 0)
-				psc_fatalx("max pndgwrts limit reached");
-		} else {
-			if (++s->slvr_pndgreads == 0)
-				psc_fatalx("max pndgreads limit reached");
-		}
+		s->slvr_refcnt++;
 
 		SLVR_ULOCK(s);
 	} else {
@@ -916,11 +900,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 
 		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;
-
-		if (rw == SL_WRITE)
-			s->slvr_pndgwrts = 1;
-		else
-			s->slvr_pndgreads = 1;
+		s->slvr_refcnt = 1;
 
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);

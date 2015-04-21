@@ -73,8 +73,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 * It should be either 1 or 2 (when aio replies early),
 		 * but just be paranoid in case peer will resend.
 		 */
-		psc_assert(s->slvr_pndgwrts > 0);
-		s->slvr_pndgwrts--;
+		psc_assert(s->slvr_refcnt > 0);
+		s->slvr_refcnt--;
 		s->slvr_flags &= ~SLVR_REPLWIRE;
 
 		DEBUG_SLVR(PLL_DIAG, s, "aio wait");
