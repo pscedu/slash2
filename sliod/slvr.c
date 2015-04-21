@@ -750,6 +750,7 @@ slvr_remove(struct slvr *s)
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
+	OPSTAT_INCR("slvr-put");
 	lc_remove(&sli_lruslvrs, s);
 
 	bii = slvr_2_bii(s);
@@ -883,6 +884,8 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		}
 
 		alloc = 0;
+
+		OPSTAT_INCR("slvr-get");
 
 		s = tmp1;
 		memset(s, 0, sizeof(*s));
