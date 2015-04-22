@@ -303,10 +303,6 @@ slislvrthr_proc(struct slvr *s)
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
-	if (s->slvr_flags & SLVR_FAULTING) {
-		SLVR_ULOCK(s);
-		return;
-	}
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
@@ -327,14 +323,12 @@ slislvrthr_proc(struct slvr *s)
 	b = bii_2_bmap(bii);
 
 	s->slvr_flags |= SLVR_LRU;
-	s->slvr_flags &= ~SLVR_CRCDIRTY;
-	if (s->slvr_refcnt)
-		lc_addhead(&sli_lruslvrs, s);
-	else
-		lc_addtail(&sli_lruslvrs, s);
+	s->slvr_flags &= ~(SLVR_CRCDIRTY | SLVR_FAULTING);
+	lc_addtail(&sli_lruslvrs, s);
 
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 	OPSTAT_INCR("slvr-requeue");
+	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
 	BII_LOCK(bii);
@@ -422,7 +416,12 @@ slislvrthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
 				continue;
+			if (s->slvr_refcnt) {
+				SLVR_ULOCK(s);
+				continue;
+			}
 			if (timespeccmp(&expire, &s->slvr_ts, >)) {
+				s->slvr_flags |= SLVR_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
 			}

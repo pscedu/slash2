@@ -86,28 +86,7 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 	psc_assert((s->slvr_flags & SLVR_FAULTING ||
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
-	if (s->slvr_flags & SLVR_FAULTING) {
-		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
-			return (SLERR_CRCABSENT);
-
-		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
-		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-
-			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			    SLASH_SLVR_SIZE);
-
-			if (crc != slvr_2_crc(s)) {
-				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-				    "CRC failure: slvr=%hu, crc="
-				    "%"PSCPRIxCRC64,
-				    s->slvr_num, slvr_2_crc(s));
-				return (PFLERR_BADCRC);
-			}
-		} else {
-			return (0);
-		}
-
-	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
+	if (s->slvr_flags & SLVR_CRCDIRTY) {
 		/*
 		 * SLVR_CRCDIRTY means that DATARDY has been set and
 		 * that a write dirtied the buffer and invalidated the
@@ -132,6 +111,26 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 		DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
 		    "CRC update: slvr=%hu, crc=%"PSCPRIxCRC64,
 		    s->slvr_num, slvr_2_crc(s));
+	} else if (s->slvr_flags & SLVR_FAULTING) {
+		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
+			return (SLERR_CRCABSENT);
+
+		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
+		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
+
+			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
+			    SLASH_SLVR_SIZE);
+
+			if (crc != slvr_2_crc(s)) {
+				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
+				    "CRC failure: slvr=%hu, crc="
+				    "%"PSCPRIxCRC64,
+				    s->slvr_num, slvr_2_crc(s));
+				return (PFLERR_BADCRC);
+			}
+		} else {
+			return (0);
+		}
 	}
 
 	return (-1);
