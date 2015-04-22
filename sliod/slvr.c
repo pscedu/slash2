@@ -771,14 +771,15 @@ slvr_remove(struct slvr *s)
 	psc_pool_return(slvr_pool, s);
 }
 
-int
+void
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
 	if (s->slvr_refcnt || s->slvr_flags & SLVR_CRCDIRTY)
-		return (0);
+		return;
 
+	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
 
 	/*
@@ -788,9 +789,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	if (s->slvr_flags & SLVR_LRU)
-		lc_move2tail(&sli_lruslvrs, s);
-	return (1);
+	lc_move2tail(&sli_lruslvrs, s);
 }
 
 /*
@@ -803,11 +802,7 @@ slvr_rio_done(struct slvr *s)
 
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
-	if (slvr_lru_tryunpin_locked(s))
-		DEBUG_SLVR(PLL_DIAG, s, "decref, unpinned");
-	else
-		DEBUG_SLVR(PLL_DIAG, s, "decref, ops still pending or "
-		    "dirty");
+	slvr_lru_tryunpin_locked(s);
 
 	SLVR_ULOCK(s);
 }
