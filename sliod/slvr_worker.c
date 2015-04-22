@@ -328,10 +328,13 @@ slislvrthr_proc(struct slvr *s)
 
 	s->slvr_flags |= SLVR_LRU;
 	s->slvr_flags &= ~SLVR_CRCDIRTY;
-	lc_addqueue(&sli_lruslvrs, s);
-	slvr_lru_tryunpin_locked(s);
+	if (s->slvr_refcnt)
+		lc_addhead(&sli_lruslvrs, s);
+	else
+		lc_addtail(&sli_lruslvrs, s);
 
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
+	OPSTAT_INCR("slvr-requeue");
 	SLVR_ULOCK(s);
 
 	BII_LOCK(bii);
