@@ -27,8 +27,8 @@
  * of file regions (bmaps).
  */
 
-#ifndef _SL_BMPC_H_
-#define _SL_BMPC_H_
+#ifndef _MSL_PGCACHE_H_
+#define _MSL_PGCACHE_H_
 
 #include <time.h>
 
@@ -58,33 +58,38 @@ struct msl_fsrqinfo;
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
 struct bmap_pagecache_entry {
-	int			 bmpce_rc;
-	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
-	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
-	uint32_t		 bmpce_off;	/* relative to inside bmap	*/
-	uint32_t		 bmpce_start;	/* region where data are valid  */
-	uint32_t		 bmpce_len;
-	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
+	struct bmap		*bmpce_bmap;
+	int16_t			 bmpce_rc;
+	int16_t			 bmpce_ref;	/* reference count */
+	uint16_t		 bmpce_flags;	/* BMPCEF_* flag bits */
+#if BMPC_BUFSZ > 65536
+#error bump bmpce_len
+#endif
+	uint16_t		 bmpce_len;
+	uint32_t		 bmpce_off;	/* relative to inside bmap */
+	uint32_t		 bmpce_start;	/* region where data are valid */
+	psc_spinlock_t		 bmpce_lock;
 	void			*bmpce_base;	/* statically allocated pg contents */
-	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
-	struct pfl_timespec	 bmpce_laccess;	/* last page access		*/
+	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
 	struct psc_lockedlist	 bmpce_pndgaios;
-	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
-	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/
+	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
+	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
 };
 
 /* bmpce_flags */
-#define BMPCE_DATARDY		(1 <<  0)
-#define BMPCE_FAULTING		(1 <<  1)
-#define BMPCE_LRU		(1 <<  2)
-#define BMPCE_TOFREE		(1 <<  3)
-#define BMPCE_EIO		(1 <<  4)	/* I/O error */
-#define BMPCE_AIOWAIT		(1 <<  5)	/* wait on async read */
-#define BMPCE_DISCARD		(1 <<  6)	/* don't cache after I/O */
-#define BMPCE_PINNED		(1 <<  7)	/* do not modify */
-#define BMPCE_READAHEAD		(1 <<  8)	/* populated from readahead */
-#define BMPCEF_EXCL		(1 <<  9)	/* lookup() must create, otherwise NULL */
-#define BMPCEF_ACCESSED		(1 << 10)
+#define BMPCEF_DATARDY		(1 <<  0)	/* data loaded in memory */
+#define BMPCEF_FAULTING		(1 <<  1)	/* loading via RPC */
+#define BMPCEF_TOFREE		(1 <<  2)	/* eviction in progress */
+#define BMPCEF_EIO		(1 <<  3)	/* I/O error */
+#define BMPCEF_AIOWAIT		(1 <<  4)	/* wait on async read */
+#define BMPCEF_DISCARD		(1 <<  5)	/* don't cache after I/O is done */
+#define BMPCEF_PINNED		(1 <<  6)	/* do not modify */
+#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
+#define BMPCEF_EXCL		(1 <<  8)	/* lookup() must create, otherwise NULL */
+#define BMPCEF_ACCESSED		(1 <<  9)	/* bmpce was used before reap (readahead) */
+#define BMPCEF_IDLE		(1 << 10)	/* on idle_pages list */
+#define BMPCEF_REAPED		(1 << 11)	/* reaper has selected us */
+#define BMPCEF_READALC		(1 << 12)	/* on readahead_pages list */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -95,7 +100,6 @@ struct bmap_pagecache_entry {
 
 #define BMPCE_WAIT(e)		psc_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
 
-/* XXX: introduce a flag to avoid unconditional wakeup */
 #define BMPCE_WAKE(e)							\
 	do {								\
 		if ((e)->bmpce_waitq) {					\
@@ -117,24 +121,25 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s "			\
-	    "o=%#x b=%p "						\
-	    "ts="PSCPRI_PTIMESPEC" "					\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "off=%#09x base=%p "					\
 	    "ref=%u : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
-	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
-	    (b)->bmpce_flags & BMPCE_FAULTING		? "f" : "",	\
-	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
-	    (b)->bmpce_flags & BMPCE_TOFREE		? "t" : "",	\
-	    (b)->bmpce_flags & BMPCE_EIO		? "e" : "",	\
-	    (b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
-	    (b)->bmpce_flags & BMPCE_DISCARD		? "D" : "",	\
-	    (b)->bmpce_flags & BMPCE_PINNED		? "p" : "",	\
-	    (b)->bmpce_flags & BMPCE_READAHEAD		? "r" : "",	\
+	    (b)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
+	    (b)->bmpce_flags & BMPCEF_FAULTING		? "f" : "",	\
+	    (b)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
+	    (b)->bmpce_flags & BMPCEF_EIO		? "e" : "",	\
+	    (b)->bmpce_flags & BMPCEF_AIOWAIT		? "w" : "",	\
+	    (b)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
+	    (b)->bmpce_flags & BMPCEF_PINNED		? "p" : "",	\
+	    (b)->bmpce_flags & BMPCEF_READAHEAD		? "r" : "",	\
+	    (b)->bmpce_flags & BMPCEF_EXCL		? "x" : "",	\
+	    (b)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
+	    (b)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
+	    (b)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
+	    (b)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
-	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
-	    psc_atomic32_read(&(b)->bmpce_ref),				\
-	    ## __VA_ARGS__)
+	    (b)->bmpce_ref, ## __VA_ARGS__)
 
 static __inline int
 bmpce_cmp(const void *x, const void *y)
@@ -144,9 +149,9 @@ bmpce_cmp(const void *x, const void *y)
 	return (CMP(a->bmpce_off, b->bmpce_off));
 }
 
-SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
-SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
-		bmpce_cmp)
+RB_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
+RB_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
+    bmpce_cmp)
 
 struct bmpc_ioreq {
 	char			*biorq_buf;
@@ -240,8 +245,6 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
-	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
-	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 	struct psc_waitq		 bmpc_waitq;
 
 	/*
@@ -255,7 +258,6 @@ struct bmap_pagecache {
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* for flushing/expiring */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* pending I/O requests */
-	struct psc_listentry		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
 struct bmpc_write_coalescer {
@@ -270,9 +272,10 @@ struct bmpc_write_coalescer {
 };
 
 static __inline void
-bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op, uint32_t off)
+bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op,
+    uint32_t off)
 {
-	psc_assert(psc_atomic32_read(&bmpce->bmpce_ref) > 0);
+	psc_assert(bmpce->bmpce_ref > 0);
 	psc_assert(bmpce->bmpce_off == off);
 }
 
@@ -284,7 +287,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op, uint32_t of
 #define bmpc_biorqs_flush_wait(b)	bmpc_biorqs_flush((b), 0)
 
 void	 bmpc_global_init(void);
-void	 bmpc_freeall_locked(struct bmap_pagecache *);
+void	 bmpc_freeall(struct bmap *);
 void	 bmpc_biorqs_flush(struct bmapc_memb *, int);
 void	 bmpc_biorqs_destroy_locked(struct bmapc_memb *, int);
 
@@ -292,38 +295,26 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, uint32_t, uint32_t, int);
 
+#define bmpce_lookup(b, fl, off, wq)	_bmpce_lookup(PFL_CALLERINFO(), (b), (fl), (off), (wq))
+
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
-	 bmpce_lookup(struct bmapc_memb *, int, uint32_t, struct psc_waitq *);
-
-void	 bmpce_release_locked(struct bmap_pagecache_entry *,
-	    struct bmap_pagecache *);
+	 _bmpce_lookup(const struct pfl_callerinfo *, struct bmapc_memb *, int, uint32_t, struct psc_waitq *);
+void	 bmpce_release(struct bmap_pagecache_entry *);
 
 void	 bwc_release(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;
-extern struct psc_listcache	 bmpcLru;
 
-extern struct timespec		bmapFlushDefMaxAge;
-
-static __inline void
-bmpc_lru_del(struct bmap_pagecache *bmpc)
-{
-	lc_remove(&bmpcLru, bmpc);
-}
+extern struct timespec		msl_bflush_maxage;
 
 static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
-	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
 
 	/* Double check the exclusivity of these lists... */
-
-	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
-	    bmpce_lentry, NULL);
-
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
 	pll_init(&bmpc->bmpc_new_biorqs_exp, struct bmpc_ioreq,
@@ -332,9 +323,6 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	psc_waitq_init(&bmpc->bmpc_waitq);
 
 	RB_INIT(&bmpc->bmpc_new_biorqs);
-
-	PFL_GETTIMESPEC(&bmpc->bmpc_oldest);
-	lc_addtail(&bmpcLru, bmpc);
 }
 
-#endif /* _SL_BMPC_H_ */
+#endif /* _MSL_PGCACHE_H_ */

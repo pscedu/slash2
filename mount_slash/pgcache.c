@@ -49,14 +49,15 @@ struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
-struct psc_listcache	 bmpcLru;
+struct psc_listcache	 msl_idle_pages;
+struct psc_listcache	 msl_readahead_pages;
 
-SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
+RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
 RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
-/**
- * bwc_init - Initialize write coalescer pool entry.
+/*
+ * Initialize write coalescer pool entry.
  */
 int
 bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
@@ -76,8 +77,8 @@ bwc_release(struct bmpc_write_coalescer *bwc)
 	psc_pool_return(bwc_pool, bwc);
 }
 
-/**
- * bmpce_init - Initialize a bmap page cache entry.
+/*
+ * Initialize a bmap page cache entry.
  */
 int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
@@ -102,135 +103,199 @@ bmpce_destroy(void *p)
 {
 	struct bmap_pagecache_entry *e = p;
 
-	if ((e->bmpce_flags & (BMPCE_READAHEAD | BMPCEF_ACCESSED)) ==
-	    BMPCE_READAHEAD)
-		OPSTAT_ADD("readahead-waste", e->bmpce_len);
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup(struct bmapc_memb *b, int flags, uint32_t off,
-    struct psc_waitq *wq)
+_bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
+    int flags, uint32_t off, struct psc_waitq *wq)
 {
+	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
+	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
-
-	BMAP_LOCK_ENSURE(b);
 
 	bmpc = bmap_2_bmpc(b);
-	search.bmpce_off = off;
+	q.bmpce_off = off;
+
+	psc_rwlock_rdlock(&bci->bci_rwlock);
 
 	for (;;) {
-		e = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
-		    &search);
+		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
-			if (e->bmpce_flags & BMPCE_EIO) {
-				if (e->bmpce_flags & BMPCE_READAHEAD) {
+			if (e->bmpce_flags & BMPCEF_TOFREE)
+				goto retry;
+
+			if (e->bmpce_flags & BMPCEF_EIO) {
+				if (e->bmpce_flags & BMPCEF_READAHEAD) {
 					BMPCE_LOCK(e);
-					e->bmpce_flags &= ~BMPCE_EIO;
+					e->bmpce_flags &= ~BMPCEF_EIO;
 					BMPCE_ULOCK(e);
 				} else {
 					DEBUG_BMPCE(PLL_WARN, e,
-					    "skip an EIO page");
-					psc_waitq_waitrel_us(
-					    &b->bcm_fcmh->fcmh_waitq,
-					    &b->bcm_lock, 100);
-					BMAP_LOCK(b);
+					    "skipping an EIO page");
 					OPSTAT_INCR("bmpce-eio");
+ retry:
+					psc_waitq_waitrelf_us(
+					    &b->bcm_fcmh->fcmh_waitq,
+					    PFL_WAITQWF_RWLOCK,
+					    &bci->bci_rwlock, 100);
+					if (wrlock)
+						psc_rwlock_wrlock(
+						    &bci->bci_rwlock);
+					else
+						psc_rwlock_rdlock(
+						    &bci->bci_rwlock);
 					continue;
 				}
 			}
 			if (flags & BMPCEF_EXCL)
 				e = NULL;
 			else {
+				BMPCE_LOCK(e);
+				if (e->bmpce_ref == 1 &&
+				    !(e->bmpce_flags & BMPCEF_REAPED)) {
+					if (e->bmpce_flags &
+					    BMPCEF_IDLE) {
+						e->bmpce_flags &=
+						    ~BMPCEF_IDLE;
+						remove_idle = 1;
+					} else if (e->bmpce_flags &
+					    BMPCEF_READALC) {
+						e->bmpce_flags &=
+						    ~BMPCEF_READALC;
+						remove_readalc = 1;
+					} else
+						e->bmpce_ref++;
+				} else
+					e->bmpce_ref++;
 				DEBUG_BMPCE(PLL_DIAG, e,
 				    "add reference");
+				BMPCE_ULOCK(e);
+
 				OPSTAT_INCR("bmpce-hit");
-				psc_atomic32_inc(&e->bmpce_ref);
 			}
 			break;
 		}
 
 		if (e2 == NULL) {
-			BMAP_ULOCK(b);
+			psc_rwlock_unlock(&bci->bci_rwlock);
 			e2 = psc_pool_get(bmpce_pool);
-			BMAP_LOCK(b);
+			wrlock = 1;
+			psc_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
 			e = e2;
 			e2 = NULL;
-			e->bmpce_off = search.bmpce_off;
-
-			psc_atomic32_set(&e->bmpce_ref, 1);
-			e->bmpce_start = e->bmpce_off;
+			e->bmpce_off = off;
+			e->bmpce_ref = 1;
 			e->bmpce_len = 0;
+			e->bmpce_start = off;
 			e->bmpce_waitq = wq;
 			e->bmpce_flags = flags;
+			e->bmpce_bmap = b;
 
-			PSC_SPLAY_XINSERT(bmap_pagecachetree,
+			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
+
+			DEBUG_BMPCE(PLL_DIAG, e, "creating");
 			break;
 		}
 	}
+	psc_rwlock_unlock(&bci->bci_rwlock);
+
 	if (e2) {
 		OPSTAT_INCR("bmpce-gratuitous");
 		psc_pool_return(bmpce_pool, e2);
 	}
+
+	if (remove_idle)
+		lc_remove(&msl_idle_pages, e);
+	else if (remove_readalc)
+		lc_remove(&msl_readahead_pages, e);
+
 	return (e);
 }
 
 void
-bmpce_free(struct bmap_pagecache_entry *e,
-    struct bmap_pagecache *bmpc)
+bmpce_free(struct bmap_pagecache_entry *e)
 {
-	psc_assert(psc_atomic32_read(&e->bmpce_ref) == 0);
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(e->bmpce_bmap);
+	struct bmap_cli_info *bci = bmap_2_bci(e->bmpce_bmap);
+	int locked;
 
-	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+	psc_assert(e->bmpce_ref == 0);
+	e->bmpce_flags |= BMPCEF_TOFREE;
+
+	BMPCE_ULOCK(e);
+
+	locked = psc_rwlock_haswrlock(&bci->bci_rwlock);
+	if (!locked)
+		psc_rwlock_wrlock(&bci->bci_rwlock);
+	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+	if (!locked)
+		psc_rwlock_unlock(&bci->bci_rwlock);
+
+	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
+	    BMPCEF_READAHEAD)
+		OPSTAT2_ADD("readahead-waste", BMPC_BUFSZ);
 
 	bmpce_init(bmpce_pool, e);
 	psc_pool_return(bmpce_pool, e);
 }
 
 void
-bmpce_release_locked(struct bmap_pagecache_entry *e,
-    struct bmap_pagecache *bmpc)
+bmpce_release(struct bmap_pagecache_entry *e)
 {
-	int ref;
-
 	LOCK_ENSURE(&e->bmpce_lock);
 
-	ref = psc_atomic32_read(&e->bmpce_ref);
-	if (ref <= 0)
-		psc_fatalx("bmpce = %p, ref = %d", e, ref);
+	psc_assert(e->bmpce_ref > 0);
 
-	psc_atomic32_dec(&e->bmpce_ref);
+	if (e->bmpce_ref == 1 && (e->bmpce_flags & (BMPCEF_DATARDY |
+	    BMPCEF_EIO | BMPCEF_DISCARD)) == BMPCEF_DATARDY) {
+		BMPCE_ULOCK(e);
+
+		if (e->bmpce_flags & BMPCEF_READAHEAD) {
+			LIST_CACHE_LOCK(&msl_readahead_pages);
+			BMPCE_LOCK(e);
+
+			if (e->bmpce_ref == 1) {
+				DEBUG_BMPCE(PLL_DIAG, e,
+				    "add to readahead");
+				lc_add(&msl_readahead_pages, e);
+				e->bmpce_flags |= BMPCEF_READALC;
+				BMPCE_ULOCK(e);
+				LIST_CACHE_ULOCK(&msl_readahead_pages);
+				return;
+			}
+			LIST_CACHE_ULOCK(&msl_readahead_pages);
+		} else {
+			LIST_CACHE_LOCK(&msl_idle_pages);
+			BMPCE_LOCK(e);
+
+			if (e->bmpce_ref == 1) {
+				DEBUG_BMPCE(PLL_DIAG, e, "add to idle");
+				lc_add(&msl_idle_pages, e);
+				e->bmpce_flags |= BMPCEF_IDLE;
+				BMPCE_ULOCK(e);
+				LIST_CACHE_ULOCK(&msl_idle_pages);
+				return;
+			}
+			LIST_CACHE_ULOCK(&msl_idle_pages);
+		}
+	}
+
+	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
-	if (ref > 1) {
+	if (e->bmpce_ref > 0) {
 		BMPCE_ULOCK(e);
 		return;
 	}
+
+	/* sanity checks */
 	psc_assert(pll_empty(&e->bmpce_pndgaios));
 
-	if (e->bmpce_flags & BMPCE_LRU) {
-		e->bmpce_flags &= ~BMPCE_LRU;
-		pll_remove(&bmpc->bmpc_lru, e);
-	}
-
-	/* XXX we could keep partially written page as well */
-	if ((e->bmpce_flags & BMPCE_DATARDY) &&
-	   !(e->bmpce_flags & BMPCE_EIO) &&
-	   !(e->bmpce_flags & BMPCE_DISCARD)) {
-		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
-		PFL_GETPTIMESPEC(&e->bmpce_laccess);
-		e->bmpce_flags |= BMPCE_LRU;
-
-		// XXX locking order violation?
-		pll_add(&bmpc->bmpc_lru, e);
-
-		BMPCE_ULOCK(e);
-		return;
-	}
-	bmpce_free(e, bmpc);
+	bmpce_free(e);
 }
 
 struct bmpc_ioreq *
@@ -249,7 +314,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	INIT_SPINLOCK(&r->biorq_lock);
 
 	PFL_GETTIMESPEC(&issue);
-	timespecadd(&issue, &bmapFlushDefMaxAge, &r->biorq_expire);
+	timespecadd(&issue, &msl_bflush_maxage, &r->biorq_expire);
 
 	r->biorq_off = off;
 	r->biorq_ref = 1;
@@ -260,7 +325,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
 
-	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_DIO) {
 		r->biorq_flags |= BIORQ_DIO;
 		if (flags & BIORQ_READ) {
@@ -279,17 +343,19 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	return (r);
 }
 
-/**
- * bmpc_freeall_locked - Called when a bmap is being released.  Iterate
- *	across the tree freeing each bmpce.  Prior to being invoked, all
- *	bmpce's must be idle (i.e. have zero refcnts) and be present on
- *	bmpc_lru.
+/*
+ * Called when a bmap is being released.  Iterate across the tree
+ * freeing each bmpce.  Prior to being invoked, all bmpce's must be idle
+ * (i.e. have zero refcnts).
  */
 void
-bmpc_freeall_locked(struct bmap_pagecache *bmpc)
+bmpc_freeall(struct bmap *b)
 {
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
 
+	//BMAP_LOCK_ENSURE(b);
 	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
@@ -301,22 +367,25 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	}
 
 	/* Remove any LRU pages still associated with the bmap. */
-	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
+	psc_rwlock_wrlock(&bci->bci_rwlock);
+	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
 	    e = next) {
-		next = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree,
-		    e);
+		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 		BMPCE_LOCK(e);
-
-		psc_assert(e->bmpce_flags & BMPCE_LRU);
-		psc_assert(!psc_atomic32_read(&e->bmpce_ref));
-
-		OPSTAT_INCR("bmpce-bmap-reap");
-		pll_remove(&bmpc->bmpc_lru, e);
-		bmpce_free(e, bmpc);
+		e->bmpce_flags |= BMPCEF_DISCARD;
+		psc_assert(!(e->bmpce_flags & BMPCEF_REAPED));
+		if (e->bmpce_flags & BMPCEF_IDLE) {
+			lc_remove(&msl_idle_pages, e);
+			bmpce_release(e);
+		} else if (e->bmpce_flags & BMPCEF_READALC) {
+			lc_remove(&msl_readahead_pages, e);
+			bmpce_release(e);
+		} else
+			psc_fatalx("impossible");
 	}
-	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
-	psc_assert(pll_empty(&bmpc->bmpc_lru));
+	psc_rwlock_unlock(&bci->bci_rwlock);
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 }
 
 /*
@@ -412,109 +481,65 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	psc_dynarray_free(&a);
 }
 
-static __inline int
-bmpc_lru_cmp(const void *x, const void *y)
+void
+bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
+    int flag, struct psc_poolmgr *m)
 {
-	const struct bmap_pagecache *a = x, *b = y;
+	struct bmap_pagecache_entry *e, *t;
 
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
-		return (-1);
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
-		return (1);
-	return (0);
-}
-
-/**
- * bmpc_lru_tryfree - Attempt to free 'nfree' blocks from the provided
- *    bmap_pagecache structure.
- * @bmpc:   bmap_pagecache
- * @nfree:  number of blocks to free.
- */
-__static int
-bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
-{
-	struct bmap_pagecache_entry *e, *tmp;
-	int freed = 0;
-
-	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
-		if (!BMPCE_TRYLOCK(e))
-			continue;
-
-		psc_assert(e->bmpce_flags & BMPCE_LRU);
-		if (psc_atomic32_read(&e->bmpce_ref)) {
-			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
-			BMPCE_ULOCK(e);
-			continue;
+	LIST_CACHE_LOCK(lc);
+	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
+		BMPCE_LOCK(e);
+		if ((e->bmpce_flags & (flag |
+		    BMPCEF_REAPED)) == flag) {
+			e->bmpce_flags &= ~flag;
+			e->bmpce_flags |= BMPCEF_DISCARD | BMPCEF_REAPED;
+			lc_remove(lc, e);
+			psc_dynarray_add(a, e);
+			DEBUG_BMPCE(PLL_DIAG, e, "reaping from %s",
+			    lc->plc_name);
 		}
-		OPSTAT_INCR("bmpce-reap");
-		pll_remove(&bmpc->bmpc_lru, e);
-		bmpce_free(e, bmpc);
-		if (++freed >= nfree)
+		BMPCE_ULOCK(e);
+
+		if (psc_dynarray_len(a) >=
+		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
-
-	/*
-	 * Save CPU: assume that the head of the list is the oldest
-	 * entry.
-	 *
-	 * XXX I don't see much point in distinguishing between pages
-	 * of different bmaps.  They are from the same file after all.
-	 */
-	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
-		e = pll_peekhead(&bmpc->bmpc_lru);
-		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
-		    sizeof(struct timespec));
-		lc_remove(&bmpcLru, bmpc);
-		lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
-	}
-
-	return (freed);
+	if (!psc_dynarray_len(a) && lc_nitems(lc))
+		OPSTAT_INCR("bmpce-reap-spin");
+	LIST_CACHE_ULOCK(lc);
 }
 
-/**
- * bmpc_reap - Reap bmpce from the LRU list.  Sometimes we free bmpce
- *	directly into the pool, so we can't wait here forever.
+/*
+ * Reap pages from the idle and/or readahead lists.  The readahead list
+ * is only considered if we are desperate and unable to reap anything
+ * else.  In such situations (i.e. when no pages are readily available),
+ * no more readahead should be issued.
  */
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
-	struct bmap_pagecache *bmpc;
-	struct bmap *b;
-	int nfreed = 0;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_pagecache_entry *e;
+	int nfreed, i;
 
-	LIST_CACHE_LOCK(&bmpcLru);
-	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_debug("bmpc=%p npages=%d age="PSCPRI_TIMESPEC" "
-		    "waiters=%d",
-		    bmpc, pll_nitems(&bmpc->bmpc_lru),
-		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
-		    psc_atomic32_read(&m->ppm_nwaiters));
+	if (m->ppm_flags & PPMF_DESPERATE)
+		bmpce_reap_list(&a, &msl_readahead_pages,
+		    BMPCEF_READALC, m);
 
-		b = bmpc_2_bmap(bmpc);
-		if (!BMAP_TRYLOCK(b))
-			continue;
+	if (psc_dynarray_len(&a) >= psc_atomic32_read(&m->ppm_nwaiters))
+		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
 
-		/* First check for LRU items. */
-		if (pll_nitems(&bmpc->bmpc_lru)) {
-			DEBUG_BMAP(PLL_DIAG, b, "try free");
-			nfreed += bmpc_lru_tryfree(bmpc,
-			    psc_atomic32_read(&m->ppm_nwaiters));
-			DEBUG_BMAP(PLL_DIAG, b, "try free done");
-		} else {
-			OPSTAT_INCR("bmpce-reap-spin");
-			psclog_debug("skip bmpc=%p, nothing on lru",
-			    bmpc);
-		}
+	nfreed = psc_dynarray_len(&a);
 
-		BMAP_ULOCK(b);
-
-		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
-			break;
+	DYNARRAY_FOREACH(e, i, &a) {
+		BMPCE_LOCK(e);
+		bmpce_release(e);
 	}
-	LIST_CACHE_ULOCK(&bmpcLru);
 
-	psclog_diag("nfreed=%d, waiters=%d", nfreed,
-	    psc_atomic32_read(&m->ppm_nwaiters));
+	psc_dynarray_free(&a);
+
+	OPSTAT_ADD("bmpce-reap", nfreed);
 
 	return (nfreed);
 }
@@ -532,8 +557,10 @@ bmpc_global_init(void)
 	    64, 0, bwc_init, NULL, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
-	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
-	    "bmpclru");
+	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
+	    bmpce_lentry, "idlepages");
+	lc_reginit(&msl_readahead_pages, struct bmap_pagecache_entry,
+	    bmpce_lentry, "readapages");
 
 	/* make it visible */
 	OPSTAT_INCR("biorq-max");
@@ -545,15 +572,19 @@ dump_bmpce_flags(uint32_t flags)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(BMPCE_DATARDY, &flags, &seq);
-	PFL_PRFLAG(BMPCE_FAULTING, &flags, &seq);
-	PFL_PRFLAG(BMPCE_LRU, &flags, &seq);
-	PFL_PRFLAG(BMPCE_TOFREE, &flags, &seq);
-	PFL_PRFLAG(BMPCE_EIO, &flags, &seq);
-	PFL_PRFLAG(BMPCE_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BMPCE_DISCARD, &flags, &seq);
-	PFL_PRFLAG(BMPCE_PINNED, &flags, &seq);
-	PFL_PRFLAG(BMPCE_READAHEAD, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_DATARDY, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_FAULTING, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_TOFREE, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_EIO, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_AIOWAIT, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_PINNED, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_EXCL, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_REAPED, &flags, &seq);
+	PFL_PRFLAG(BMPCEF_READALC, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
