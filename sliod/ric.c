@@ -368,9 +368,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/*
-	 * Write the sliver back to the filesystem but only the blocks
-	 * which are marked '0' in the bitmap.  Here we don't care about
-	 * buffer offsets since we're block aligned now.
+	 * Write the sliver back to the filesystem.
 	 */
 	if (rw == SL_WRITE) {
 		mp->rc = sli_ric_write_sliver(mq->offset, mq->size,
