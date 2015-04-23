@@ -54,7 +54,7 @@
 #include "slconfig.h"
 
 struct timespec			 bmapFlushWaitSecs = { 1, 0L };
-struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
+struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
 
@@ -202,11 +202,11 @@ bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		pg = bwc->bwc_bmpces[i];
 		BMPCE_LOCK(pg);
-		while (pg->bmpce_flags & BMPCE_PINNED) {
+		while (pg->bmpce_flags & BMPCEF_PINNED) {
 			BMPCE_WAIT(pg);
 			BMPCE_LOCK(pg);
 		}
-		pg->bmpce_flags |= BMPCE_PINNED;
+		pg->bmpce_flags |= BMPCEF_PINNED;
 		BMPCE_ULOCK(pg);
 	}
 }
@@ -220,7 +220,7 @@ bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		pg = bwc->bwc_bmpces[i];
 		BMPCE_LOCK(pg);
-		pg->bmpce_flags &= ~BMPCE_PINNED;
+		pg->bmpce_flags &= ~BMPCEF_PINNED;
 		BMPCE_WAKE(pg);
 		BMPCE_ULOCK(pg);
 	}

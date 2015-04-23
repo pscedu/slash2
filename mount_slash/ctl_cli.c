@@ -621,11 +621,10 @@ msctlmsg_bmpce_send(int fd, struct psc_ctlmsghdr *mh,
 	memset(mpce, 0, sizeof(*mpce));
 	mpce->mpce_fid = b->bcm_fcmh->fcmh_sstb.sst_fid;
 	mpce->mpce_bno = b->bcm_bmapno;
-	mpce->mpce_ref = psc_atomic32_read(&e->bmpce_ref);
+	mpce->mpce_ref = e->bmpce_ref;
 	mpce->mpce_flags = e->bmpce_flags;
 	mpce->mpce_off = e->bmpce_off;
 //	mpce->mpce_start = e->bmpce_start;
-	mpce->mpce_laccess = e->bmpce_laccess;
 	mpce->mpce_nwaiters =e->bmpce_waitq ?
 	    psc_waitq_nwaiters(e->bmpce_waitq) : 0;
 	mpce->mpce_npndgaios = pll_nitems(&e->bmpce_pndgaios);
@@ -637,6 +636,7 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_bmpce *mpce = m;
 	struct bmap_pagecache_entry *e;
+	struct bmap_cli_info *bci;
 	struct psc_hashbkt *hb;
 	struct fidc_membh *f;
 	struct bmap *b;
@@ -647,15 +647,16 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
 			psc_rwlock_rdlock(&f->fcmh_rwlock);
 			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-				BMAP_LOCK(b);
-				SPLAY_FOREACH(e, bmap_pagecachetree,
+				bci = bmap_2_bci(b);
+				psc_rwlock_rdlock(&bci->bci_rwlock);
+				RB_FOREACH(e, bmap_pagecachetree,
 				    &bmap_2_bmpc(b)->bmpc_tree) {
 					rc = msctlmsg_bmpce_send(fd, mh,
 					    mpce, b, e);
 					if (!rc)
 						break;
 				}
-				BMAP_ULOCK(b);
+				psc_rwlock_unlock(&bci->bci_rwlock);
 				if (!rc)
 					break;
 			}

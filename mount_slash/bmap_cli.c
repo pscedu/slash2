@@ -74,7 +74,7 @@ msl_bmap_init(struct bmap *b)
 	DEBUG_BMAP(PLL_DIAG, b, "start initing");
 	bci = bmap_2_bci(b);
 	bmpc_init(&bci->bci_bmpc);
-
+	psc_rwlock_init(&bci->bci_rwlock);
 	INIT_PSC_LISTENTRY(&bci->bci_lentry);
 }
 
@@ -679,15 +679,16 @@ void
 msl_bmap_cache_rls(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e;
 
-	BMAP_LOCK(b);
-	SPLAY_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
+	psc_rwlock_rdlock(&bci->bci_rwlock);
+	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCE_DISCARD;
+		e->bmpce_flags |= BMPCEF_DISCARD;
 		BMPCE_ULOCK(e);
 	}
-	BMAP_ULOCK(b);
+	psc_rwlock_unlock(&bci->bci_rwlock);
 }
 
 void
@@ -1107,34 +1108,20 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
-	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
-
-	/* Mind lock ordering; remove from LRU first. */
-	if (b->bcm_flags & BMAPF_DIO &&
-	    psclist_disjoint(&bmpc->bmpc_lentry)) {
-		psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
-		psc_assert(pll_empty(&bmpc->bmpc_lru));
-	} else {
-		bmpc_lru_del(bmpc);
-	}
-
 	/*
 	 * Assert that this bmap can no longer be scheduled by the write
 	 * back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
 
-	/*
-	 * Assert that this thread cannot be seen by the page cache
-	 * reaper (it was lc_remove'd above by bmpc_lru_del()).
-	 */
-	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
+	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 
-	bmpc_freeall_locked(bmpc);
-
-	psc_waitq_destroy(&bmpc->bmpc_waitq);
+	bmpc_freeall(b);
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
+
+	psc_waitq_destroy(&bmpc->bmpc_waitq);
 }
 
 #if PFL_DEBUG > 0
