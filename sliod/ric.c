@@ -321,20 +321,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		for (i = 0; i < nslvrs; i++) {
 			SLVR_LOCK(slvr[i]);
-			if (slvr[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_DIAG, slvr[i],
-				    "aio early ready, rw=%s",
-				    rw == SL_WRITE ? "wr" : "rd");
-				SLVR_ULOCK(slvr[i]);
-			} else {
+			if (slvr[i]->slvr_flags & SLVR_FAULTING) {
 				/*
 				 * Attach the reply to the first sliver
 				 * waiting for aio and return AIOWAIT to
 				 * client later.
 				 */
 				slvr[i]->slvr_aioreply = aiocbr;
-				psc_assert(slvr[i]->slvr_flags & SLVR_FAULTING);
-				OPSTAT_INCR("aio-insert");
+				OPSTAT_INCR("aio-return");
 				SLVR_ULOCK(slvr[i]);
 				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
@@ -342,10 +336,22 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				    MSG_ABORT_BULK);
 				goto aio_out;
 			}
+			if (!rc)
+				rc = slvr[i]->slvr_err; 
+			DEBUG_SLVR(PLL_DIAG, slvr[i],
+			    "aio early ready, rw=%s",
+			    rw == SL_WRITE ? "wr" : "rd");
+			SLVR_ULOCK(slvr[i]);
 		}
+		OPSTAT_INCR("aio-abort");
 
 		/* All slvrs are ready. */
 		sli_aio_aiocbr_release(aiocbr);
+		if (rc) {
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
+			goto aio_out;
+		}
 	}
 
 	/*
