@@ -527,7 +527,7 @@ bmpce_reap(struct psc_poolmgr *m)
 		bmpce_reap_list(&a, &msl_readahead_pages,
 		    BMPCEF_READALC, m);
 
-	if (psc_dynarray_len(&a) >= psc_atomic32_read(&m->ppm_nwaiters))
+	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
 		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
 
 	nfreed = psc_dynarray_len(&a);
