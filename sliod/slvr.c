@@ -735,6 +735,7 @@ slvr_schedule_crc_locked(struct slvr *s)
 {
 	s->slvr_flags &= ~SLVR_LRU;
 	s->slvr_flags |= SLVR_CRCDIRTY;
+	PFL_GETTIMESPEC(&s->slvr_ts);
 	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
 
 	lc_remove(&sli_lruslvrs, s);
@@ -798,6 +799,7 @@ void
 slvr_rio_done(struct slvr *s)
 {
 	SLVR_RLOCK(s);
+	psc_assert(s->slvr_refcnt > 0);
 
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
@@ -817,8 +819,6 @@ slvr_wio_done(struct slvr *s, int repl)
 
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
-
-	PFL_GETTIMESPEC(&s->slvr_ts);
 
 	if (s->slvr_flags & SLVR_DATAERR || repl) {
 		slvr_lru_tryunpin_locked(s);
