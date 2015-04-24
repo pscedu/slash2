@@ -84,10 +84,14 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+/*
+ * Cap max_write at 1048576, which is the same as LNET_MTU, because our flush
+ * mechanism assumes that each request can be flushed within ONE RPC.
+ */
 #ifdef HAVE_FUSE_BIG_WRITES
-# define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
+# define STD_MOUNT_OPTIONS	"allow_other,max_write=1048576,big_writes"
 #else
-# define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
+# define STD_MOUNT_OPTIONS	"allow_other,max_write=1048576"
 #endif
 
 #define MSL_FS_BLKSIZ		(256 * 1024)
