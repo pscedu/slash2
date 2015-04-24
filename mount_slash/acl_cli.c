@@ -40,9 +40,9 @@ acl_t
 slc_acl_get_fcmh(const struct pscfs_clientctx *pfcc,
     const struct pscfs_creds *pcr, struct fidc_membh *f)
 {
+	char trybuf[64] = { 0 };
 	void *buf = NULL;
 	size_t retsz = 0;
-	char trybuf[16];
 	ssize_t rc;
 	acl_t a;
 
@@ -54,10 +54,14 @@ slc_acl_get_fcmh(const struct pscfs_clientctx *pfcc,
 		buf = PSCALLOC(retsz);
 		rc = slc_getxattr(pfcc, pcr, ACL_EA_ACCESS, buf, retsz,
 		    f, &retsz);
+		if (rc) {
+			PSCFREE(buf);
+			return (NULL);
+		}
 	} else
 		return (NULL);
 
-	a = pfl_acl_from_xattr(buf, rc);
+	a = pfl_acl_from_xattr(buf, retsz);
 
 	if (buf != trybuf)
 		PSCFREE(buf);
