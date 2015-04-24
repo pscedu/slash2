@@ -90,6 +90,7 @@ struct bmap_pagecache_entry {
 #define BMPCEF_IDLE		(1 << 10)	/* on idle_pages list */
 #define BMPCEF_REAPED		(1 << 11)	/* reaper has selected us */
 #define BMPCEF_READALC		(1 << 12)	/* on readahead_pages list */
+#define BMPCEF_FREED		(1 << 13)	/* on readahead_pages list */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
