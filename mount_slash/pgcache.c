@@ -123,9 +123,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
-			if (e->bmpce_flags & BMPCEF_TOFREE)
-				goto retry;
-
 			if (e->bmpce_flags & BMPCEF_EIO) {
 				if (e->bmpce_flags & BMPCEF_READAHEAD) {
 					BMPCE_LOCK(e);
@@ -153,6 +150,11 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 				e = NULL;
 			else {
 				BMPCE_LOCK(e);
+				if (e->bmpce_flags & BMPCEF_TOFREE) {
+					BMPCE_ULOCK(e);
+					goto retry;
+				}
+
 				if (e->bmpce_ref == 1 &&
 				    !(e->bmpce_flags & BMPCEF_REAPED)) {
 					if (e->bmpce_flags &
@@ -209,10 +211,13 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 		psc_pool_return(bmpce_pool, e2);
 	}
 
-	if (remove_idle)
+	if (remove_idle) {
+		DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
 		lc_remove(&msl_idle_pages, e);
-	else if (remove_readalc)
+	} else if (remove_readalc) {
+		DEBUG_BMPCE(PLL_DIAG, e, "removing from readalc");
 		lc_remove(&msl_readahead_pages, e);
+	}
 
 	return (e);
 }
@@ -240,7 +245,10 @@ bmpce_free(struct bmap_pagecache_entry *e)
 	    BMPCEF_READAHEAD)
 		OPSTAT2_ADD("readahead-waste", BMPC_BUFSZ);
 
+	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
+
 	bmpce_init(bmpce_pool, e);
+	e->bmpce_flags = BMPCEF_FREED;
 	psc_pool_return(bmpce_pool, e);
 }
 
@@ -367,6 +375,7 @@ bmpc_freeall(struct bmap *b)
 	}
 
 	/* Remove any LRU pages still associated with the bmap. */
+ restart:
 	psc_rwlock_wrlock(&bci->bci_rwlock);
 	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
 	    e = next) {
@@ -374,18 +383,24 @@ bmpc_freeall(struct bmap *b)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
-		psc_assert(!(e->bmpce_flags & BMPCEF_REAPED));
+		if (e->bmpce_flags & BMPCEF_REAPED) {
+			BMPCE_ULOCK(e);
+			psc_rwlock_unlock(&bci->bci_rwlock);
+			goto restart;
+		}
 		if (e->bmpce_flags & BMPCEF_IDLE) {
+			DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
 			lc_remove(&msl_idle_pages, e);
 			bmpce_release(e);
 		} else if (e->bmpce_flags & BMPCEF_READALC) {
+			DEBUG_BMPCE(PLL_DIAG, e,
+			    "removing from readalc");
 			lc_remove(&msl_readahead_pages, e);
 			bmpce_release(e);
 		} else
 			psc_fatalx("impossible");
 	}
 	psc_rwlock_unlock(&bci->bci_rwlock);
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 }
 
 /*
