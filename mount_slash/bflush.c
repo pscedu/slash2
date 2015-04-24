@@ -474,7 +474,11 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		psc_assert(b == r->biorq_bmap);
-		// XXX BIORQ_LOCK(r);
+		/*
+ 		 * No need to lock because we have already replied to 
+ 		 * the user space. Furthermore, we flush each biorq in 
+ 		 * one RPC. So the callback handler won't race with us.
+		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
