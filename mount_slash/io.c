@@ -224,11 +224,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		e = bmpce_lookup(b, 0, bmpce_off,
 		    &b->bcm_fcmh->fcmh_waitq);
-
-		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "bmpce_foff = %"PRIx64,
-		    r, e, i, npages,
-		    (off_t)(bmpce_off + bmap_foff(b)));
+		DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
+		    "i=%d npages=%d foff=%"PRIx64, e, i, npages,
+		    bmpce_off + bmap_foff(b));
 
 		psc_dynarray_add(&r->biorq_pages, e);
 	}
@@ -1347,9 +1345,10 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			break;
 		}
 
-		if (e->bmpce_flags & BMPCEF_READAHEAD)
-			OPSTAT2_ADD("readahead-hit", BMPC_BUFSZ);
-		else
+		if (e->bmpce_flags & BMPCEF_READAHEAD) {
+			if (!(r->biorq_flags & BIORQ_READAHEAD))
+				OPSTAT2_ADD("readahead-hit", BMPC_BUFSZ);
+		} else
 			perfect_ra = 0;
 
 		if (r->biorq_flags & BIORQ_WRITE) {
@@ -1377,7 +1376,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	OPSTAT_ADD("biorq-fetch-wait-usecs",
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
-	if (rc == 0 && perfect_ra)
+	if (rc == 0 && !aiowait && perfect_ra)
 		OPSTAT2_ADD("readahead-perfect", r->biorq_len);
 
  out:
