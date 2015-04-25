@@ -169,13 +169,16 @@ slrpc_connect_finish(struct slashrpc_cservice *csvc,
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
-		pscrpc_abort_inflight(imp);
-		pscrpc_drop_conns(&imp->imp_connection->c_peer);
-		pscrpc_import_put(imp);
 		csvc->csvc_nfails++;
 	}
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
+
+	if (!success) {
+		pscrpc_abort_inflight(imp);
+		pscrpc_drop_conns(&imp->imp_connection->c_peer);
+		pscrpc_import_put(imp);
+	}
 }
 
 /*
