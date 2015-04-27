@@ -739,7 +739,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 	b->bcm_flags &= ~BMAPF_INIT;
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b,
+	DEBUG_BMAP(PLL_DIAG, b,
 	    "reap init: nseq=%"PRId64", etime="PSCPRI_TIMESPEC,
 	    bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
