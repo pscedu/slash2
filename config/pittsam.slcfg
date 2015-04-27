@@ -51,9 +51,21 @@ site @PSC {
 	resource sense51s5 { type = standalone_fs; id = 15; nids = sense51-66-io5.psc.edu; fsroot = /sense51_pool5/slio; self_test = "fshealthtest -u 90 %r"; }
 	resource sense51s6 { type = standalone_fs; id = 16; nids = sense51-66-io6.psc.edu; fsroot = /sense51_pool6/slio; self_test = "fshealthtest -u 90 %r"; }
 
-	resource sense51 {
+	resource dxcsbb3s0 { type = standalone_fs; id = 20; nids = dxcsbb03-io0.psc.edu; fsroot = /sbb3_pool0/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s1 { type = standalone_fs; id = 21; nids = dxcsbb03-io1.psc.edu; fsroot = /sbb3_pool1/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s2 { type = standalone_fs; id = 22; nids = dxcsbb03-io2.psc.edu; fsroot = /sbb3_pool2/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s3 { type = standalone_fs; id = 23; nids = dxcsbb03-io3.psc.edu; fsroot = /sbb3_pool3/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s4 { type = standalone_fs; id = 24; nids = dxcsbb03-io4.psc.edu; fsroot = /sbb3_pool4/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s5 { type = standalone_fs; id = 25; nids = dxcsbb03-io5.psc.edu; fsroot = /sbb3_pool5/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s6 { type = standalone_fs; id = 26; nids = dxcsbb03-io6.psc.edu; fsroot = /sbb3_pool6/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource dxcsbb3s7 { type = standalone_fs; id = 27; nids = dxcsbb03-io7.psc.edu; fsroot = /sbb3_pool7/slio; self_test = "fshealthtest -u 90 %r"; }
+
+	resource io {
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0, sense51s1, sense51s2, sense51s3, sense51s4, sense51s5, sense51s6;
+		ios	= sense51s0, sense51s1, sense51s2, sense51s3,
+			  sense51s4, sense51s5, sense51s6,
+			  dxcsbb3s0, dxcsbb3s1, dxcsbb3s2, dxcsbb3s3,
+			  dxcsbb3s4, dxcsbb3s5, dxcsbb3s6, dxcsbb3s7;
 	}
 }
