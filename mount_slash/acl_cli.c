@@ -124,8 +124,7 @@ sl_checkacls(acl_t a, struct srt_stat *sstb,
 
 		case ACL_GROUP_OBJ:
 			FOREACH_GROUP(g, i, pcrp)
-				if (g == sstb->sst_gid && ACL_AUTH(e,
-				    accmode)) {
+				if (g == sstb->sst_gid) {
 					ACL_SET_PRECEDENCE(3, prec, e,
 					    authz);
 					break;
@@ -134,7 +133,7 @@ sl_checkacls(acl_t a, struct srt_stat *sstb,
 		case ACL_GROUP:
 			gp = acl_get_qualifier(e);
 			FOREACH_GROUP(g, i, pcrp)
-				if (g == *gp && ACL_AUTH(e, accmode)) {
+				if (g == *gp) {
 					ACL_SET_PRECEDENCE(4, prec, e,
 					    authz);
 					break;
