@@ -3475,7 +3475,7 @@ msl_init(void)
 	dircache_mgr_init();
 
 	psc_hashtbl_init(&slc_namei_hashtbl, 0, struct fcmh_cli_info,
-	    fci_pino, fci_hentry, slcfg_local->cfg_fidcachesz, NULL,
+	    fci_pino, fci_hentry, 3 * slcfg_local->cfg_fidcachesz - 1, NULL,
 	    "namei");
 
 	psc_poolmaster_init(&slc_async_req_poolmaster,
