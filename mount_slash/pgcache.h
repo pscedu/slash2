@@ -87,10 +87,10 @@ struct bmap_pagecache_entry {
 #define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
 #define BMPCEF_EXCL		(1 <<  8)	/* lookup() must create, otherwise NULL */
 #define BMPCEF_ACCESSED		(1 <<  9)	/* bmpce was used before reap (readahead) */
-#define BMPCEF_IDLE		(1 << 10)	/* on idle_pages list */
-#define BMPCEF_REAPED		(1 << 11)	/* reaper has selected us */
-#define BMPCEF_READALC		(1 << 12)	/* on readahead list cache */
-#define BMPCEF_FREED		(1 << 13)	/* on readahead_pages list */
+#define BMPCEF_IDLE		(1 << 10)	/* on idle_pages listcache */
+#define BMPCEF_REAPED		(1 << 11)	/* reaper has removed us from LRU listcache */
+#define BMPCEF_READALC		(1 << 12)	/* on readahead_pages listcache */
+#define BMPCEF_FREED		(1 << 13)	/* memory for page returned to system (sanity check) */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
