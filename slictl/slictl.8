@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd November 26, 2014
+.Dd April 27, 2015
 .Dt SLICTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -351,18 +351,18 @@ The default is
 .\"		bmap		=> "Block map structures",
 .\"	},
 .\"	listcaches => {
-.\"		bmapReapQ	=> "Bmaps to be processed by reaper",
-.\"		bmapRlsQ	=> "Bmaps awaiting release by\n.Tn MDS\nresponse",
-.\"		bmpcLru		=> "Reapable bmap structures",
-.\"		crcqSlvrs	=> "Bmap slivers awaiting checksum",
-.\"		fcmhbusy	=> "Files with pending activity e.g.\\&\n.Tn I/O",
-.\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
-.\"		lruSlvrs	=> "Reapable bmap slivers",
+.\"		bcr_ready	=> "Bmap CRC update tranmission queue",
+.\"		breleaseq	=> "Bmaps awaiting release by MDS response",
+.\"		crcqslvrs	=> "Bmap slivers awaiting checksumming",
+.\"		fcmhidle	=> "Recently used files",
+.\"		lruslvrs	=> "Recently used bmap slivers",
+.\"		readaheadq	=> "Readahead I/O work queue",
 .\"		replwkpnd	=> "Pending replication work",
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> "files\n.Po file\n.Tn ID\ncache\n.Pc",
-.\"		resnid		=> "network resources\n.Pq network Tn ID",
+.\"		res		=> "network resources\n.Pq network Tn ID",
+.\"		rpcconn		=> "network resources\n.Pq network Tn ID",
 .\"	}
 .It Fl s Ar showspec
 Show values.
@@ -408,7 +408,10 @@ files
 .Tn ID
 cache
 .Pc
-.It Cm resnid
+.It Cm res
+network resources
+.Pq network Tn ID
+.It Cm rpcconn
 network resources
 .Pq network Tn ID
 .El
@@ -473,25 +476,18 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
-.It Cm bmapReapQ
-Bmaps to be processed by reaper
-.It Cm bmapRlsQ
-Bmaps awaiting release by
-.Tn MDS
-response
-.It Cm bmpcLru
-Reapable bmap structures
-.It Cm crcqSlvrs
-Bmap slivers awaiting checksum
-.It Cm fcmhbusy
-Files with pending activity e.g.\&
-.Tn I/O
+.It Cm bcr_ready
+Bmap CRC update tranmission queue
+.It Cm breleaseq
+Bmaps awaiting release by MDS response
+.It Cm crcqslvrs
+Bmap slivers awaiting checksumming
 .It Cm fcmhidle
-Clean
-.Pq reapable
-files
-.It Cm lruSlvrs
-Reapable bmap slivers
+Recently used files
+.It Cm lruslvrs
+Recently used bmap slivers
+.It Cm readaheadq
+Readahead I/O work queue
 .It Cm replwkpnd
 Pending replication work
 .El
@@ -642,7 +638,7 @@ All threads
 .It Ev CTL_SOCK_FILE
 Override the default control socket file path.
 .El
-.\" }% 
+.\" }%
 .Sh FILES
 .Bl -tag -width Pa
 .It Pa /var/run/sliod. Ns Ic %h Ns Pa .sock
