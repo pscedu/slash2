@@ -374,8 +374,11 @@ bmpc_freeall(struct bmap *b)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
 
-	/* Remove any LRU pages still associated with the bmap. */
  restart:
+	/* 
+	 * Remove any LRU pages still associated with the bmap.
+	 * Only readahead pages can be encountered here.
+	 */
 	psc_rwlock_wrlock(&bci->bci_rwlock);
 	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
 	    e = next) {
