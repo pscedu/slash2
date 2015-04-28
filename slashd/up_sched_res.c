@@ -128,9 +128,9 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 	struct bmap *b;
 
 	if (bp && bp->rc == 0)
-		OPSTAT_INCR("repl_schedwk");
+		OPSTAT_INCR("repl-schedwk");
 	else
-		OPSTAT_INCR("repl_schedwk_fail");
+		OPSTAT_INCR("repl-schedwk-fail");
 
 	dst_resm = res_getmemb(br->br_res);
 

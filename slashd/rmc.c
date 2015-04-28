@@ -178,10 +178,9 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 	int vfsid;
 
-	OPSTAT_INCR("getattr");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_diag("lookup: pfid="SLPRI_FID, mq->fg.fg_fid);
+	psclog_diag("pfid="SLPRI_FID, mq->fg.fg_fid);
 
 	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
 		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
@@ -224,7 +223,6 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 
-	OPSTAT_INCR("bmap_chwrmode");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
@@ -271,7 +269,6 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 	struct srm_leasebmapext_rep *mp;
 	struct fidc_membh *f;
 
-	OPSTAT_INCR("lease_renew");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
@@ -350,15 +347,14 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
+	if (mq->rw == SL_WRITE)
+		OPSTAT_INCR("get_bmap_lease_write");
+	else if (mq->rw == SL_READ)
+		OPSTAT_INCR("get_bmap_lease_read");
+	else {
 		mp->rc = -EINVAL;
 		return (0);
 	}
-
-	if (mq->rw == SL_WRITE)
-		OPSTAT_INCR("get_bmap_lease_write");
-	else
-		OPSTAT_INCR("get_bmap_lease_read");
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -386,7 +382,6 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	struct srm_link_rep *mp;
 	int vfsid;
 
-	OPSTAT_INCR("link");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -424,7 +419,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	struct srm_lookup_rep *mp;
 	int vfsid;
 
-	OPSTAT_INCR("lookup");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -442,12 +436,11 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
-
 		uint64_t fid;
 		struct sl_site *site;
 
+		mp->rc = -ENOENT;
 		CONF_LOCK();
-		mp->rc = ENOENT;
 		CONF_FOREACH_SITE(site) {
 			if (strcmp(mq->name, site->site_name) != 0)
 				continue;
@@ -568,7 +561,6 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 	int vfsid;
 
-	OPSTAT_INCR("mkdir");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
 		mp->rc = -EACCES;
@@ -589,7 +581,6 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	struct slash_creds cr;
 	int vfsid;
 
-	OPSTAT_INCR("mknod");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -630,14 +621,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	void *mfh;
 	int vfsid;
 
-	OPSTAT_INCR("create");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
-		mp->rc = EACCES;
+		mp->rc = -EACCES;
 		return (0);
 	}
 
@@ -1144,8 +1134,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_rep *mp;
 	int eof, num;
 
-	OPSTAT_INCR("readdir");
-
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->size > LNET_MTU)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
@@ -1175,7 +1163,6 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	int rc = 0, vfsid;
 	size_t len;
 
-	OPSTAT_INCR("readlink");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -1211,13 +1198,6 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
-{
-	OPSTAT_INCR("bmap_release");
-	return (mds_handle_rls_bmap(rq, 0));
-}
-
-int
 slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[SL_NAME_MAX + 1], to[SL_NAME_MAX + 1];
@@ -1231,7 +1211,6 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	chfg[0].fg_fid = FID_ANY;
 	chfg[1].fg_fid = FID_ANY;
 
-	OPSTAT_INCR("rename");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->opfg.fg_fid, &vfsid);
 	if (mp->rc)
@@ -1331,14 +1310,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	uint32_t i;
 	int vfsid;
 
-	OPSTAT_INCR("setattr");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount) {
-		mp->rc = EACCES;
+		mp->rc = -EACCES;
 		return (0);
 	}
 
@@ -1370,7 +1348,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * updates from the sliod may be pending for
 			 * this generation.
 			 */
-			OPSTAT_INCR("truncate_full");
+			OPSTAT_INCR("truncate-full");
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
 			mq->attr.sst_blocks = 0;
 			for (i = 0; i < fcmh_2_nrepls(f); i++)
@@ -1380,7 +1358,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 		} else if (mq->attr.sst_size < fcmh_2_fsz(f)) {
 
-			OPSTAT_INCR("truncate_shrink");
+			OPSTAT_INCR("truncate-shrink");
 			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			/* partial truncate */
@@ -1391,9 +1369,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 
 		} else if (mq->attr.sst_size > fcmh_2_fsz(f))
-			OPSTAT_INCR("truncate_extend");
+			OPSTAT_INCR("truncate-extend");
 		else
-			OPSTAT_INCR("truncate_same");
+			OPSTAT_INCR("truncate-same");
 	}
 
 	if (to_set) {
@@ -1538,7 +1516,6 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct statvfs sfb;
 	double adj;
 
-	OPSTAT_INCR("statfs");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->fid, &vfsid);
 	if (mp->rc)
@@ -1659,7 +1636,6 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 
-	OPSTAT_INCR("symlink");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (slm_symlink(rq, mq, mp, SRMC_BULK_PORTAL));
 }
@@ -1675,14 +1651,13 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	chfg.fg_fid = FID_ANY;
 
-	OPSTAT_INCR("unlink");
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->pfid == SLFID_ROOT && use_global_mount) {
-		mp->rc = EACCES;
+		mp->rc = -EACCES;
 		return (0);
 	}
 
@@ -1744,8 +1719,6 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	struct iovec iov;
 	size_t outsize;
 
-	OPSTAT_INCR("listxattr");
-
 	iov.iov_base = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1798,8 +1771,6 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	iov.iov_base = NULL;
 
-	OPSTAT_INCR("setxattr");
-
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (rc)
@@ -1842,8 +1813,6 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	size_t outsize;
 
 	iov.iov_base = NULL;
-
-	OPSTAT_INCR("getxattr");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->size > SL_NAME_MAX)
@@ -1889,8 +1858,6 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 	struct srm_removexattr_rep *mp;
 	struct fidc_membh *f = NULL;
 	int vfsid;
-
-	OPSTAT_INCR("removexattr");
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
@@ -1990,7 +1957,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_getbmap(rq);
 		break;
 	case SRMT_RELEASEBMAP:
-		rc = slm_rmc_handle_rls_bmap(rq);
+		rc = mds_handle_rls_bmap(rq, 0);
 		break;
 	case SRMT_GET_INODE:
 		rc = slm_rmc_handle_getinode(rq);
