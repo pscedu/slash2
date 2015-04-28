@@ -869,14 +869,12 @@ msbreleasethr_main(struct psc_thread *thr)
 			/*
 			 * Evict bmaps that are not even expired if
 			 * # of bmaps on timeoutq exceeds 25% of max
-			 * allowed before we start reaping.
+			 * allowed.
 			 */
-			if (nitems - psc_dynarray_len(&bcis) <=
-			    BMAP_CACHE_MAX / 4 &&
+			if (nitems <= BMAP_CACHE_MAX / 4 &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
-				DEBUG_BMAP(PLL_DIAG, b, "skip due to expire");
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
 				BMAP_ULOCK(b);
-				// XXX break?
 				continue;
 			}
 
@@ -886,6 +884,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
+			nitems--;
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
