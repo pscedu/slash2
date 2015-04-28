@@ -850,6 +850,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		OPSTAT_INCR("bmap-release");
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
+		PFL_GETTIMESPEC(&crtime);
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -870,7 +871,6 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed before we start reaping.
 			 */
-			PFL_GETTIMESPEC(&crtime);
 			if (nitems - psc_dynarray_len(&bcis) <=
 			    BMAP_CACHE_MAX / 4 &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
