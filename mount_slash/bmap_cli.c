@@ -851,6 +851,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		OPSTAT_INCR("bmap-release");
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		PFL_GETTIMESPEC(&crtime);
+		nto.tv_sec = BMAP_CLI_MAX_LEASE;
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -866,18 +867,22 @@ msbreleasethr_main(struct psc_thread *thr)
 				continue;
 			}
 
+			if (timespeccmp(&crtime, &bci->bci_etime, >=))
+				goto evict;
+			if (nto.tv_sec > bci->bci_etime.tv_sec - crtime.tv_sec)
+				nto.tv_sec = bci->bci_etime.tv_sec - crtime.tv_sec;
 			/*
 			 * Evict bmaps that are not even expired if
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed.
 			 */
-			if (nitems <= BMAP_CACHE_MAX / 4 &&
-			    timespeccmp(&crtime, &bci->bci_etime, <)) {
+			if (nitems <= BMAP_CACHE_MAX / 4) {
 				DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
 				BMAP_ULOCK(b);
 				continue;
 			}
 
+ evict:
 			/*
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
@@ -932,6 +937,8 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		if (!i && nitems) {
 			spinlock(&bmapTimeoutLock);
+			if (!nto.tv_sec)
+				nto.tv_sec = BMAP_CLI_TIMEO_INC;
 			psc_waitq_waitrel_ts(&bmapTimeoutWaitq,
 			    &bmapTimeoutLock, &nto);
 			continue;
