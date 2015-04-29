@@ -839,7 +839,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, nitems;
+	int i, use_nto, nitems;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -851,6 +851,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		OPSTAT_INCR("bmap-release");
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		PFL_GETTIMESPEC(&crtime);
+		use_nto = 0;
 		nto.tv_sec = BMAP_CLI_MAX_LEASE;
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
@@ -869,18 +870,20 @@ msbreleasethr_main(struct psc_thread *thr)
 
 			if (timespeccmp(&crtime, &bci->bci_etime, >=))
 				goto evict;
-			if (nto.tv_sec > bci->bci_etime.tv_sec - crtime.tv_sec)
-				nto.tv_sec = bci->bci_etime.tv_sec - crtime.tv_sec;
 			/*
 			 * Evict bmaps that are not even expired if
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed.
 			 */
-			if (nitems <= BMAP_CACHE_MAX / 4) {
-				DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
-				BMAP_ULOCK(b);
-				continue;
-			}
+			if (nitems > BMAP_CACHE_MAX / 4)
+				goto evict;
+
+			use_nto = 1;
+			if (nto.tv_sec > bci->bci_etime.tv_sec - crtime.tv_sec)
+				nto.tv_sec = bci->bci_etime.tv_sec - crtime.tv_sec;
+			DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
+			BMAP_ULOCK(b);
+			continue;
 
  evict:
 			/*
@@ -930,12 +933,9 @@ msbreleasethr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
-		i = psc_dynarray_len(&bcis);
-
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
-
-		if (!i && nitems) {
+		if (use_nto) {
 			spinlock(&bmapTimeoutLock);
 			if (!nto.tv_sec)
 				nto.tv_sec = BMAP_CLI_TIMEO_INC;
@@ -943,7 +943,6 @@ msbreleasethr_main(struct psc_thread *thr)
 			    &bmapTimeoutLock, &nto);
 			continue;
 		}
-		/* XXX This causes CPU spinning if trylock() fails */
 		lc_peekheadwait(&slc_bmaptimeoutq);
 	}
 	psc_dynarray_free(&rels);
