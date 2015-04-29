@@ -792,6 +792,24 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	lc_move2tail(&sli_lruslvrs, s);
 }
 
+void
+slvr_io_done(struct slvr *s, int rc)
+{
+	SLVR_LOCK(s);
+	s->slvr_flags &= ~(SLVR_FAULTING | SLVR_DATARDY);
+	if (rc) {
+		s->slvr_err = rc;
+		s->slvr_flags |= SLVR_DATAERR;
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
+	} else {
+		s->slvr_flags |= SLVR_DATARDY;
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
+
+	}
+	SLVR_WAKEUP(s);
+	SLVR_ULOCK(s);
+}
+
 /*
  * Called after a read on the given sliver has completed.
  */
@@ -1033,19 +1051,8 @@ slirathr_main(struct psc_thread *thr)
 
 			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVRF_READAHEAD);
-			SLVR_LOCK(s);
-			if (rc) {
-				s->slvr_err = rc;
-				s->slvr_flags |= SLVR_DATAERR;
-				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
-			} else {
-				s->slvr_flags |= SLVR_DATARDY;
-				DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
 
-			}
-			s->slvr_flags &= ~SLVR_FAULTING;
-			SLVR_WAKEUP(s);
-			SLVR_ULOCK(s);
+			slvr_io_done(s, rc);
 			/*
 			 * FixMe: This cause asserts on flags when we
 			 * encounter AIOWAIT. We need a unified way to
