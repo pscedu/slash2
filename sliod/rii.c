@@ -182,18 +182,9 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 			SLVR_ULOCK(s);
 			sli_aio_aiocbr_release(aiocbr);
 		}
-	} else {
-		SLVR_LOCK(s);
-		if (rv) {
-			s->slvr_err = rv;
-			s->slvr_flags |= SLVR_DATAERR;
-		} else {
-			s->slvr_flags |= SLVR_DATARDY;
-		}
-		s->slvr_flags &= ~SLVR_FAULTING;
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-	}
+	} else 
+		slvr_io_done(s, rv);
+
 	if (rv)
 		PFL_GOTOERR(out, mp->rc = rv);
 
