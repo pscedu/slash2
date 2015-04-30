@@ -69,7 +69,7 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_pool_reap(sl_bufs_pool, 1);
+		psc_pool_reap(sl_bufs_pool, 0);
 		sleep(10);
 	}
 }
