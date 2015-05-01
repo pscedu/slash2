@@ -350,6 +350,12 @@ sli_aio_iocb_new(struct slvr *s)
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
 	INIT_LISTENTRY(&iocb->iocb_lentry);
+	/*
+	 * XXX Take a reference count here to avoid complicated
+	 * logic used to decide who owns the last reference count.
+	 * That way, the I/O path can be unified for both AIO
+	 * and non-AIO cases.
+	 */
 	iocb->iocb_slvr = s;
 	iocb->iocb_cbf = slvr_fsaio_done;
 
