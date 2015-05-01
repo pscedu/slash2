@@ -50,7 +50,7 @@ msl_bmap_reap(void)
 	/* XXX make BMAP_CACHE_MAX dynamic? */
 
 	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAXk
+	if (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAX)
 		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 }
 
@@ -823,12 +823,12 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbreleasethr_main(struct psc_thread *thr)
 {
-	struct timespec crtime, nto = { BMAP_CLI_TIMEO_INC, 0 };
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
+	struct timespec crtime;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
 	int i, nitems;
