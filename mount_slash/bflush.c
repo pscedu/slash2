@@ -116,7 +116,6 @@ bmap_free_all_locked(struct fidc_membh *f)
 		BMAP_LOCK(b);
 		bci = bmap_2_bci(b);
 		PFL_GETTIMESPEC(&bci->bci_etime);
-		b->bcm_flags |= BMAPF_TOFREE;
 		BMAP_ULOCK(b);
 	}
 	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
@@ -237,6 +236,9 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 		psc_waitq_wakeall(&slc_bflush_waitq);
 	}
 	freelock(&slc_bflush_lock);
+	
+	if (reason == BMAPFLSH_TRUNCATE)
+		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }

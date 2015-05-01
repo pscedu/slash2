@@ -40,26 +40,18 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
-struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
-
 /*
- * Avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
+ * XXX Avoid ENOMEM
  */
 void
 msl_bmap_reap(void)
 {
 	bmap_flushq_wake(BMAPFLSH_REAP);
 	/* XXX make BMAP_CACHE_MAX dynamic? */
-	while (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAX) {
-		spinlock(&bmapTimeoutLock);
-		psc_waitq_wakeall(&bmapTimeoutWaitq);
-		freelock(&bmapTimeoutLock);
 
-		OPSTAT_INCR("bmap-alloc-stall");
-		psc_waitq_waitrel_us(&slc_bmaptimeoutq.plc_wq_empty,
-		    NULL, 100);
-	}
+	/* wake up the reaper if we are out of resources */
+	if (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAXk
+		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 }
 
 /*
@@ -848,9 +840,9 @@ msbreleasethr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
-		OPSTAT_INCR("bmap-release");
-		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		PFL_GETTIMESPEC(&crtime);
+		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
+		lc_peekheadwait(&slc_bmaptimeoutq);
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -890,6 +882,7 @@ msbreleasethr_main(struct psc_thread *thr)
 				break;
 		}
 		LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
@@ -929,15 +922,6 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
-
-		if (!i && nitems) {
-			spinlock(&bmapTimeoutLock);
-			psc_waitq_waitrel_ts(&bmapTimeoutWaitq,
-			    &bmapTimeoutLock, &nto);
-			continue;
-		}
-		/* XXX This causes CPU spinning if trylock() fails */
-		lc_peekheadwait(&slc_bmaptimeoutq);
 	}
 	psc_dynarray_free(&rels);
 	psc_dynarray_free(&bcis);
