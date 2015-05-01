@@ -3511,7 +3511,6 @@ msl_init(void)
 	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
 	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
 	slc_rdcache_iostats = pfl_opstat_init("rd-cache-hit");
-	slc_readahead_issue_iostats = pfl_opstat_init("readahead-issue");
 
 	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
 	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
