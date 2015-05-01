@@ -1151,7 +1151,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
 	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
-	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLWIRE, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);

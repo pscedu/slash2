@@ -68,7 +68,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	if (rc == -SLERR_AIOWAIT) {
 		SLVR_LOCK(s);
-		s->slvr_flags |= SLVR_AIOWAIT;
 		/*
 		 * It should be either 1 or 2 (when aio replies early),
 		 * but just be paranoid in case peer will resend.
@@ -91,7 +90,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	}
 
 	SLVR_LOCK(s);
-	s->slvr_flags &= ~(SLVR_FAULTING | SLVR_AIOWAIT);
+	s->slvr_flags &= ~SLVR_FAULTING;
 	if (rc) {
 		s->slvr_err = rc;
 		s->slvr_flags |= SLVR_DATAERR;
