@@ -89,17 +89,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		rc = slvr_fsbytes_wio(s, 0, slvrsiz);
 	}
 
-	SLVR_LOCK(s);
-	s->slvr_flags &= ~SLVR_FAULTING;
-	if (rc) {
-		s->slvr_err = rc;
-		s->slvr_flags |= SLVR_DATAERR;
-	} else
-		s->slvr_flags |= SLVR_DATARDY;
-	DEBUG_SLVR(PLL_DIAG, s, "aio return");
-	SLVR_WAKEUP(s);
-	SLVR_ULOCK(s);
-
+	slvr_io_done(s, rc);
 	slvr_wio_done(s, 1);
 
 	spinlock(&w->srw_lock);
