@@ -74,7 +74,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 */
 		psc_assert(s->slvr_refcnt > 0);
 		s->slvr_refcnt--;
-		s->slvr_flags &= ~SLVR_REPLWIRE;
+		s->slvr_flags &= ~SLVR_FAULTING;
 
 		DEBUG_SLVR(PLL_DIAG, s, "aio wait");
 		SLVR_WAKEUP(s);
@@ -261,11 +261,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_WRITE);
 
-	SLVR_LOCK(s);
-	/* Block until the callback handler has finished. */
-	SLVR_WAIT(s, s->slvr_flags & SLVR_REPLWIRE);
-	SLVR_ULOCK(s);
-
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
 	     slvridx++)
@@ -369,9 +364,10 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	BMAP_LOCK(w->srw_bcm);
 	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
-	BMAP_ULOCK(w->srw_bcm);
 
-	slvr_repl_prep(s);
+	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
+	psc_assert(!rc);
+	BMAP_ULOCK(w->srw_bcm);
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
