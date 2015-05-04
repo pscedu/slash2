@@ -71,9 +71,8 @@ struct slvr {
 #define SLVR_LRU		(1 <<  4)	/* cached but not dirty */
 #define SLVR_CRCDIRTY		(1 <<  5)	/* CRC does not match cached buffer */
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
-#define SLVR_REPLWIRE		(1 <<  7)	/* prevent AIO race in repldst */
-#define SLVRF_READAHEAD		(1 <<  8)	/* loaded via readahead prediction */
-#define SLVRF_ACCESSED		(1 <<  9)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead prediction */
+#define SLVRF_ACCESSED		(1 <<  8)	/* actually used by a client */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -124,7 +123,7 @@ struct slvr {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu ref=%u "		\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "bii=%p slab=%p bmap=%p fid="SLPRI_FID" iocb=%p flgs="	\
-	    "%s%s%s%s%s%s%s%s :: " fmt,					\
+	    "%s%s%s%s%s%s%s :: " fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_refcnt,			\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
 	    (s)->slvr_bii, (s)->slvr_slab,				\
@@ -139,7 +138,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
-	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
 	    ##__VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2

@@ -628,32 +628,6 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
 }
 
 /*
- * Prepare a sliver as a replication target.
- */
-void
-slvr_repl_prep(struct slvr *s)
-{
-	SLVR_LOCK(s);
-	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
-
-	if (s->slvr_flags & SLVR_DATARDY) {
-		/*
-		 * The slvr is about to be overwritten by this
-		 * replication request.  For sanity's sake, wait
-		 * for pending IO competion and set 'faulting'
-		 * before proceeding.
-		 */
-		DEBUG_SLVR(PLL_WARN, s,
-		    "MDS requested repldst of active slvr");
-		s->slvr_flags &= ~SLVR_DATARDY;
-	}
-
-	s->slvr_flags |= SLVR_FAULTING | SLVR_REPLWIRE;
-
-	SLVR_ULOCK(s);
-}
-
-/*
  * Prepare a sliver for an incoming I/O.  This may entail faulting 32k
  * aligned regions in from the underlying fs.
  *
@@ -1157,7 +1131,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
 	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
-	PFL_PRFLAG(SLVR_REPLWIRE, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
 	printf("\n");
