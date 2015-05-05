@@ -216,7 +216,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 	struct iovec iov;
 	struct slvr *s;
-	int slvridx = 0;
+	int rc, slvridx = 0;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
@@ -260,6 +260,10 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	}
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_WRITE);
+
+	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
+	psc_assert(!rc);
+	BMAP_ULOCK(b);
 
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
