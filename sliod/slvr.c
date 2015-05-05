@@ -660,7 +660,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = s->slvr_err;
-		goto out;
+		goto out1;
 	}
 
 	/*
@@ -672,7 +672,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		if ((flags & SLVRF_READAHEAD) == 0 &&
 		    s->slvr_flags & SLVRF_READAHEAD)
 			OPSTAT_INCR("readahead-hit");
-		goto out;
+		goto out1;
 	}
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
@@ -681,7 +681,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		 * All blocks will be dirtied by the incoming network
 		 * IO.
 		 */
-		goto out;
+		goto out1;
 	}
 
 	if (flags & SLVRF_READAHEAD)
@@ -694,18 +694,11 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * lock.  All should be protected by the FAULTING bit.
 	 */
 	rc = slvr_fsbytes_rio(s, off, len);
-	if (rc)
-		goto error;
+	goto out2;
 
-	SLVR_LOCK(s);
-
-	if (rw == SL_READ)
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
- out:
+ out1:
 	SLVR_ULOCK(s);
-
- error:
+ out2:
 	BMAP_LOCK(b);
 	return (rc);
 }
