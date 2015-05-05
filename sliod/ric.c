@@ -257,7 +257,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	roff = mq->offset - slvrno * SLASH_SLVR_SIZE;
 	for (i = 0, tsize = mq->size; i < nslvrs; i++, roff = 0) {
 
-		slvr[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap), rw);
+		slvr[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap));
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);

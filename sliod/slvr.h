@@ -169,12 +169,12 @@ struct sli_iocb {
 	int			  iocb_rc;
 };
 
-#define slvr_lookup(n, bii, rw)						\
-	_slvr_lookup(PFL_CALLERINFO(), (n), (bii), (rw))
+#define slvr_lookup(n, bii)						\
+	_slvr_lookup(PFL_CALLERINFO(), (n), (bii))
 
 struct slvr *
 	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
-	    struct bmap_iod_info *, enum rw);
+	    struct bmap_iod_info *);
 void	slvr_cache_init(void);
 int	slvr_do_crc(struct slvr *, uint64_t *);
 ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);

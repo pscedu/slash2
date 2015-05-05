@@ -144,7 +144,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
+	s = slvr_lookup(mq->slvrno, bmap_2_bii(b));
 
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	BMAP_ULOCK(b);
@@ -259,7 +259,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
-	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_WRITE);
+	s = slvr_lookup(mq->slvrno, bmap_2_bii(b));
 
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
 	psc_assert(!rc);
@@ -367,7 +367,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	BMAP_LOCK(w->srw_bcm);
 	w->srw_slvr[slvridx] = s =
-	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
+	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm));
 
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
 	psc_assert(!rc);

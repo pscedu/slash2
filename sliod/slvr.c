@@ -841,7 +841,7 @@ slvr_wio_done(struct slvr *s, int repl)
  */
 struct slvr *
 _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
-    struct bmap_iod_info *bii, enum rw rw)
+    struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
 	struct sl_buffer *tmp2 = NULL;
@@ -907,11 +907,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		lc_addtail(&sli_lruslvrs, s);
 
 	}
-	if (rw == SL_WRITE)
-		DEBUG_SLVR(PLL_DIAG, s, "write incref");
-	else
-		DEBUG_SLVR(PLL_DIAG, s, "read incref");
-
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
 		psc_pool_return(sl_bufs_pool, tmp2);
@@ -1033,8 +1028,7 @@ slirathr_main(struct psc_thread *thr)
 		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
 			goto skip;
 		for (i = 0; i < 4; i++) {
-			s = slvr_lookup(slvrno + i, bmap_2_bii(b),
-			    SL_READ);
+			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
 
 			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
 			    SLVRF_READAHEAD);
