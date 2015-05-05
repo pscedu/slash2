@@ -393,12 +393,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
  out:
 	if (rc) {
-		SLVR_LOCK(s);
-		s->slvr_err = rc;
-		s->slvr_flags |= SLVR_DATAERR;
-		s->slvr_flags &= ~SLVR_FAULTING;
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
+		slvr_io_done(s, rc);
 		slvr_wio_done(s, 1);
 
 		spinlock(&w->srw_lock);
