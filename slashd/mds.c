@@ -1616,6 +1616,13 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		pfl_workq_putitem(wk);
 	}
 
+	/*
+	 * As a security precaution, most systems disable setuid or
+	 * setgid when a file is modified by nonsuperuser.  Since
+	 * we fully trust clients and cannot distinguish between
+	 * superuser or nonsuperuser, be overzealous and simply
+	 * turn them off after any modification.
+	 */
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 		struct srt_stat sstb;
 
