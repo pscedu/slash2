@@ -1,0 +1,130 @@
+#!/usr/bin/perl -W
+# $Id: arc-import 24251 2014-08-21 22:34:37Z yanovich $
+
+use Cwd;
+use Errno qw(EEXIST);
+use Getopt::Std;
+use File::Basename;
+use warnings;
+use strict;
+require "syscall.ph";
+
+$ENV{PSC_TIMEOUT} = 10;
+
+my $mp = "/arc";
+
+sub usage {
+	warn "usage: $0 [-v] file ...\n";
+	exit 1;
+}
+
+my %opts;
+getopts("v", \%opts) or usage;
+
+my %pfids;
+
+sub getppath {
+	my ($inum) = @_;
+	return "$mp/dmf_s2obj/" .
+	    substr($inum, -1, 1) . "/" .
+	    substr($inum, -2, 1) . "/" .
+	    substr($inum, -3, 1) . "/";
+}
+
+sub getfid {
+	my ($fn) = @_;
+	return $pfids{$fn} if exists $pfids{$fn};
+	my @stb = stat $fn;
+	unless (@stb) {
+		warn "stat $fn: $!\n";
+		return;
+	}
+	return $pfids{$fn} = sprintf "%#016lx", $stb[1];
+}
+
+sub sysexec {
+	print join (' ', @_), "\n" if $opts{v};
+	system(@_);
+}
+
+for (@ARGV) {
+	# example pathname: /usr/users/2/username/file/path/etc, where 2
+	# is a symbolic link to /usr/ue/2.
+	chomp;
+	unless (-e $_) {
+		warn "$_: $!\n";
+		next;
+	}
+	my $fn = Cwd::realpath($_);
+	unless ($fn =~ m!^/usr/(u[eo])/!) {
+		warn "skipping import of file outside archiver root: $fn\n";
+		next;
+	}
+	my $eo = $1;
+	my @op;
+	push @op, "-v" if $opts{v};
+
+	my $s2fn = $fn;
+	$s2fn =~ s!^/usr/(u[eo])/\d+/!users/!;
+	if (-d $fn) {
+		sysexec "slictl-$eo", "import", @op, $fn, $s2fn;
+	} else {
+		# gather attrs of file
+		my @stb = stat $fn;
+		unless (@stb) {
+			warn "stat $fn: $!\n";
+			next;
+		}
+		my $dmf_inum = sprintf "%08lx", $stb[1];
+		my $pfn = getppath($dmf_inum);
+		my $pfid = getfid($pfn);
+
+		# import file into DMU-inum namespace inside SLASH2
+		sysexec "slictl-$eo", "import", @op, "-F", $pfid, $fn,
+		    "$dmf_inum-$eo";
+
+		# gather attrs of parent directory
+		my $s2dir = dirname("$mp/$s2fn");
+		my $dstb = "\x00" x (18 * 8);
+		if (syscall(&SYS_stat, $s2dir, $dstb) == -1) {
+			warn "stat $s2dir: $!\n";
+			next;
+		}
+		my @dstb = unpack(
+		    "q" .	#  0: st_dev		8
+		    "q" .	#  1: st_ino		8
+		    "q" .	#  2: st_nlink		8
+		    "i" .	#  3: st_mode		4
+		    "i" .	#  4: st_uid		4
+		    "i" .	#  5: st_gid		4
+		    "i" .	#  6: _pad0		4
+		    "q" .	#  7: st_rdev		8
+		    "q" .	#  8: st_size		8
+		    "q" .	#  9: st_atime		8
+		    "Q" .	# 10: st_atimensec	8
+		    "q" .	# 11: st_mtime		8
+		    "Q" .	# 12: st_mtimensec	8
+		    "q" .	# 13: st_ctime		8
+		    "Q" .	# 14: st_ctimensec	8
+		    "q" .	# 15: st_blksize	8
+		    "q" .	# 16: st_blocks		8
+		    "qqq"	# 17: _pad1		24
+		, $dstb);
+
+		# create hard link(2) for user's namespace
+		my $ifn = $pfn . "$dmf_inum-$eo";
+		unless (unlink "$mp/$s2fn") {
+			warn "unlink $mp/$s2fn: $!\n" unless $! == EEXIST;
+		}
+		link($ifn, "$mp/$s2fn") or
+		    warn "link $ifn $mp/$s2fn: $!\n";
+
+		# restore utim on parent dir
+		my $ts = pack("qQqQ", @dstb[9 .. 12] );
+		if (@dstb) {
+			if (syscall(&SYS_utimes, $s2dir, $ts) == -1) {
+				warn "utimes $s2dir: $!\n";
+			}
+		}
+	}
+}

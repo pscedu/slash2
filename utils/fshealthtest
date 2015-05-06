@@ -1,0 +1,86 @@
+#!/bin/sh
+# $Id$
+#
+# file system self test
+#
+# exit codes:
+# 0: healthy
+# 1: serious error
+# 2: degraded
+
+warn()
+{
+	echo "$@" >&2
+}
+
+die()
+{
+	warn "$0: $@"
+	exit 1
+}
+
+usage()
+{
+	warn "usage: $0 [-u util] target_dir"
+	exit 1
+}
+
+util=0
+while getopts "u:" c; do
+	case $c in
+	u) util=$OPTARG;;
+	*) usage ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+[ $# -eq 1 ] || usage
+fs=$1
+set -e
+
+# phase 1: check for degraded or unavailable file systems
+set -- $(mount | grep -w "$fs")
+if [ x"$4" = x"type" ]; then
+	# $1            $2 $3             $4   $5
+	# sense51_pool4 on /sense51_pool4 type zfs
+	fstype=$5
+else
+	# FreeBSD
+	# $1           $2 $3           $4
+	# sense4_pool0 on /arc_sliod/0 (zfs
+	fstype=$(echo $4 | tr -d '(')
+fi
+
+case $fstype in
+zfs)	pool=$1
+	stat=$(zpool list -H $pool | awk '{print $7}')
+	case $stat in
+	ONLINE)	;;
+	DEGRADED)	exit 2 ;;
+	# SCRUB)	exit 2 ;;
+	*)		exit 1 ;
+	esac
+esac
+
+if [ $util -gt 0 ]; then
+	# phase 2: disable if X% full
+	fs_util=$(df $fs | awk '{print $5}' | tr -d % | tail -1)
+	[ $fs_util -le $util ] || exit 1
+fi
+
+# phase 3: do a simple I/O test and verify correctness
+[ -d $fs ]
+mkdir -p $fs/.selftest
+[ \! -f $fs/.selftest/fault_inject ]
+
+sum="a5b5761d31a2c201170f62c33acab475"
+
+fn=$fs/.selftest/$(date +%s)
+
+md5=md5sum
+type md5sum >/dev/null 2>&1 || md5="md5 -q"
+
+dd if=/dev/zero of=$fn bs=579 count=4k 2>/dev/null
+tsum=$($md5 $fn | awk '{print $1}')
+rm $fn
+[ x$sum = x$tsum ]
