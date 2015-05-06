@@ -828,7 +828,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
-	struct timespec crtime;
+	struct timespec nto, crtime;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
 	int i, nitems;
@@ -844,6 +844,8 @@ msbreleasethr_main(struct psc_thread *thr)
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		lc_peekheadwait(&slc_bmaptimeoutq);
 		OPSTAT_INCR("release-wakeup");
+		timespecadd(&crtime, &msl_bmap_max_lease, &nto);
+
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -858,18 +860,26 @@ msbreleasethr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			if (timespeccmp(&crtime, &bci->bci_etime, >=))
+				goto evict;
 
 			/*
 			 * Evict bmaps that are not even expired if
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed.
 			 */
-			if (nitems <= BMAP_CACHE_MAX / 4 &&
-			    timespeccmp(&crtime, &bci->bci_etime, <)) {
-				DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
-				BMAP_ULOCK(b);
-				continue;
+			if (nitems > BMAP_CACHE_MAX / 4)
+				goto evict;
+
+			if (timespeccmp(&bci->bci_etime, &nto, <)) {
+				nto.tv_sec = bci->bci_etime.tv_sec;
+				nto.tv_nsec = bci->bci_etime.tv_nsec;
 			}
+
+			DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
+			BMAP_ULOCK(b);
+			continue;
+ evict:
 
 			/*
 			 * A bmap should be taken off the flush queue
@@ -923,6 +933,13 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
+
+		PFL_GETTIMESPEC(&crtime);
+		if (timespeccmp(&crtime, &nto, <)) {
+			LIST_CACHE_LOCK(&slc_bmaptimeoutq);
+			psc_waitq_waitabs(&slc_bmaptimeoutq.plc_wq_empty,
+				&slc_bmaptimeoutq.plc_lock, &nto);
+		}
 	}
 	psc_dynarray_free(&rels);
 	psc_dynarray_free(&bcis);
