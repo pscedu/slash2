@@ -843,6 +843,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		PFL_GETTIMESPEC(&crtime);
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 		lc_peekheadwait(&slc_bmaptimeoutq);
+		OPSTAT_INCR("release-wakeup");
 		nitems = lc_nitems(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
