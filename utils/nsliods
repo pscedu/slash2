@@ -1,0 +1,4 @@
+#!/bin/sh
+# $Id$
+
+zpool list -H | grep sense | wc -l

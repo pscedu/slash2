@@ -1,0 +1,13 @@
+#!/bin/sh
+# $Id: slash2_check 23728 2014-05-05 03:05:40Z yanovich $
+
+PATH=$PATH:$(dirname $0)
+PATH=$PATH:/usr/local/bin
+PATH=$PATH:/usr/local/psc/sbin
+PATH=$PATH:/local/psc/sbin
+export PYTHONPATH=/usr/local/sbin:$PYTHONPATH
+
+name=slash2_check
+
+screen -S $name -X redisplay >/dev/null 2>&1 || \
+  screen -S $name -dm sh -c 'slash2_check.py >/tmp/slash2_check.out 2>&1'
