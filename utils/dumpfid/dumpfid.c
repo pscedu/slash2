@@ -48,6 +48,20 @@
 #include "slashd/inode.h"
 #include "slashd/mdsio.h"
 
+#define df_warnx(msg, ...)						\
+	do {								\
+		flockfile(stderr);					\
+		warnx(msg, ##__VA_ARGS__);				\
+		funlockfile(stderr);					\
+	} while (0)
+
+#define df_warn(msg, ...)						\
+	do {								\
+		flockfile(stderr);					\
+		warn(msg, ##__VA_ARGS__);				\
+		funlockfile(stderr);					\
+	} while (0)
+
 struct path {
 	const char		*p_fn;
 	struct psc_listentry	 p_lentry;
@@ -90,6 +104,7 @@ struct file {
 struct psc_lockedlist		 df_hosts = PLL_INIT(&df_hosts, struct host, h_lentry);
 int				 df_rank;
 int				 df_nprocs = 1;
+int				 df_onlyfiles;
 struct psc_lockedlist		 df_excludes = PLL_INIT(&df_excludes, struct path, p_lentry);
 const char			*df_outfn;
 FILE				*df_outfp;
@@ -214,15 +229,15 @@ pr_bmaps(FILE *outfp, struct file *f)
 		return;
 
 	if (lseek(f->f_fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
-		warn("seek");
+		df_warn("seek");
 	fd = dup(f->f_fd);
 	if (fd == -1) {
-		warn("dup");
+		df_warn("dup");
 		return;
 	}
 	fp = fdopen(fd, "r");
 	if (fp == NULL) {
-		warn("fdopen");
+		df_warn("fdopen");
 		close(fd);
 		return;
 	}
@@ -232,7 +247,7 @@ pr_bmaps(FILE *outfp, struct file *f)
 		if (rc == 0)
 			break;
 		if (rc != sizeof(bd)) {
-			warn("read");
+			df_warn("read");
 			break;
 		}
 
@@ -249,7 +264,7 @@ pr_bmaps(FILE *outfp, struct file *f)
 	}
 
 	if (ferror(fp))
-		warn("%s: read", f->f_pathfn);
+		df_warn("%s: read", f->f_pathfn);
 
 	fclose(fp);
 }
@@ -330,9 +345,6 @@ dumpfid(FTSENT *fe, __unusedx void *arg)
 		return (0);
 	}
 
-	if (fe->fts_info != FTS_F && fe->fts_info != FTS_D)
-		return (0);
-
 	if (fe->fts_level < 5) {
 		if (df_rank != (int)(fe->fts_ino % df_nprocs))
 			return (0);
@@ -343,6 +355,10 @@ dumpfid(FTSENT *fe, __unusedx void *arg)
 		}
 	}
 
+	if (fe->fts_info != FTS_F && (fe->fts_info != FTS_D ||
+	    df_onlyfiles))
+		return (0);
+
 	memset(f, 0, sizeof(*f));
 	f->f_fd = -1;
 	INIT_PSC_LISTENTRY(&f->f_lentry);
@@ -350,8 +366,8 @@ dumpfid(FTSENT *fe, __unusedx void *arg)
 	f->f_pathfn = fe->fts_path;
 
 	if (!load_data(f, &f->f_data)) {
-		warn("%s", f->f_pathfn);
-		return (0);
+		df_warn("%s", f->f_pathfn);
+		goto out;
 	}
 	sstb = &f->f_sstb;
 	ino = &f->f_ino;
@@ -385,6 +401,7 @@ dumpfid(FTSENT *fe, __unusedx void *arg)
 		f->f_inox_mem_crc == f->f_inox_od_crc ? "OK" : "BAD")
 	);
 
+ out:
 	if (f->f_fd != -1)
 		close(f->f_fd);
 	return (0);
@@ -457,10 +474,13 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	walkflags = PFL_FILEWALKF_NOSTAT;
-	while ((c = getopt(argc, argv, "C:F:O:Rt:x:")) != -1) {
+	while ((c = getopt(argc, argv, "C:F:fO:Rt:x:")) != -1) {
 		switch (c) {
 		case 'C':
 			addhost(optarg);
+			break;
+		case 'f':
+			df_onlyfiles = 1;
 			break;
 		case 'F':
 			df_dispfmt = optarg;
