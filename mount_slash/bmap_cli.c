@@ -929,8 +929,6 @@ msbreleasethr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
-		i = psc_dynarray_len(&bcis);
-
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 
