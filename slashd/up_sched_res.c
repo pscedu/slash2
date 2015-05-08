@@ -699,7 +699,7 @@ return;
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, pass, iosidx;
+	int rc, off, val, pass;
 	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
@@ -738,7 +738,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	 * Scan residency states (through file's inode table) of bmap
 	 * for an update.
 	 */
-	iosidx = -1;
 	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
@@ -769,6 +768,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 			/* look for a repl source */
 			for (pass = 0; pass < 2; pass++) {
 				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
+					if (src_res_i.ri_rnd_idx ==
+					    dst_res_i.ri_rnd_idx)
+						continue;
+
 					src_res = libsl_id2res(
 					    fcmh_getrepl(f,
 					    src_res_i.ri_rnd_idx).bs_id);
@@ -778,7 +781,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 					 * replicas.
 					 */
 					if (src_res == NULL ||
-					    src_res_i.ri_rnd_idx == iosidx ||
 					    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 					    SL_BITS_PER_REPLICA *
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
