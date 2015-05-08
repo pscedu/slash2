@@ -699,7 +699,7 @@ return;
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, pass;
+	int rc, off, val, pass, valid_exists = 0;
 	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
@@ -786,6 +786,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;
 
+					valid_exists = 1;
+
 					si = res2iosinfo(src_res);
 
 					psclog_debug("attempt to "
@@ -827,6 +829,25 @@ upd_proc_bmap(struct slm_update_data *upd)
 					    dst_res))
 						return;
 				}
+			}
+			if (!valid_exists) {
+				int tract[NBREPLST], retifset[NBREPLST];
+
+				DEBUG_BMAPOD(PLL_DIAG, b, "no source "
+				    "replicas exist; canceling "
+				    "impossible replication request; "
+				    "dst_ios=%s", dst_res->res_name);
+
+				brepls_init(tract, -1);
+				tract[BREPLST_REPL_QUEUED] =
+				    BREPLST_GARBAGE;
+
+				brepls_init(retifset, 0);
+				tract[BREPLST_REPL_QUEUED] = 1;
+
+				if (mds_repl_bmap_apply(b, tract,
+				    retifset, off))
+					mds_bmap_write_logrepls(b);
 			}
 			break;
 
