@@ -649,6 +649,8 @@ slmctlthr_main(const char *fn)
 	    0, &mdsBmapTimeoTbl.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &mdsBmapTimeoTbl.btt_minseq);
+	psc_ctlparam_register_var("sys.bwqueuesz", PFLCTL_PARAMT_INT,
+	    0, &slm_bwqueuesz);
 
 	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
 }

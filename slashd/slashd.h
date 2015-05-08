@@ -208,9 +208,6 @@ struct rpmi_mds {
 #define res2rpmi_mds(res)	((struct rpmi_mds *)res2rpmi(res)->rpmi_info)
 #define res2mdsinfo(res)	res2rpmi_mds(res)
 
-/* bandwidth */
-#define BW_QUEUESZ		(8 * 32 * 1024)		/* max allowable in queue */
-
 /* bandwidth and reserved in one direction */
 struct bw_dir {
 	int32_t			 bwd_queued;		/* bandwidth in reserve queue */

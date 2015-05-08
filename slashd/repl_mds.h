@@ -80,5 +80,6 @@ void	 mds_brepls_check(uint8_t *, int);
 #define mds_repl_iosv_remove(vfsid, ih, ios, idx, nios)		_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_DEL)
 
 extern struct psc_listcache	 slm_replst_workq;
+extern int			 slm_bwqueuesz;
 
 #endif /* _SL_MDS_REPL_H_ */

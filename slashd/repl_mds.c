@@ -63,9 +63,15 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct sl_mds_iosinfo	 slm_null_si = {
+struct sl_mds_iosinfo	 slm_null_iosinfo = {
 	.si_flags = SIF_PRECLAIM_NOTSUP
 };
+
+/*
+ * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
+ * bwqueue.
+ */
+int slm_bwqueuesz = 8 * 32 * 1024;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -587,7 +593,7 @@ slm_repl_upd_write(struct bmapc_memb *b, int rel)
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 		r = libsl_id2res(resid);
-		si = r ? res2iosinfo(r) : &slm_null_si;
+		si = r ? res2iosinfo(r) : &slm_null_iosinfo;
 
 		if (vold == vnew)
 			;
@@ -983,8 +989,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	return (rc);
 }
 
+
 #define HAS_BW(bwd, amt)						\
-	((bwd)->bwd_queued + (bwd)->bwd_inflight < BW_QUEUESZ)
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_bwqueuesz)
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
