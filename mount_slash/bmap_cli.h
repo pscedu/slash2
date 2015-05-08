@@ -35,6 +35,8 @@
 /* number of bmaps to allow before reaper kicks into gear */
 #define	BMAP_CACHE_MAX		1024
 
+extern int bmap_max_cache;
+
 /*
  * Private data associated with a bmap used by a SLASH2 client.
  */

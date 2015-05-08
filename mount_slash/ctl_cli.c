@@ -805,6 +805,9 @@ msctlthr_spawn(void)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_var("sys.bmap-max-cache",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &bmap_max_cache);
+
 
 	/* XXX: add max_fs_iosz */
 

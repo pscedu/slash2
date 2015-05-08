@@ -40,6 +40,8 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+int bmap_max_cache = BMAP_CACHE_MAX;
+
 /*
  * XXX Avoid ENOMEM
  */
@@ -47,10 +49,9 @@ void
 msl_bmap_reap(void)
 {
 	bmap_flushq_wake(BMAPFLSH_REAP);
-	/* XXX make BMAP_CACHE_MAX dynamic? */
 
 	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&slc_bmaptimeoutq) > BMAP_CACHE_MAX)
+	if (lc_nitems(&slc_bmaptimeoutq) > bmap_max_cache)
 		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 }
 
@@ -868,7 +869,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed.
 			 */
-			if (nitems > BMAP_CACHE_MAX / 4)
+			if (nitems > bmap_max_cache / 4)
 				goto evict;
 
 			if (timespeccmp(&bci->bci_etime, &nto, <)) {

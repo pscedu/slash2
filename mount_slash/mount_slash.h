@@ -375,4 +375,6 @@ extern psc_atomic32_t		 slc_max_nretries;
 extern psc_atomic32_t		 slc_max_readahead;
 extern psc_atomic32_t		 slc_readahead_pipesz;
 
+extern int			 bmap_max_cache;
+
 #endif /* _MOUNT_SLASH_H_ */
