@@ -86,7 +86,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
-		OPSTAT_INCR("dircache-unused");
+		OPSTAT_INCR("dircache-unused-page");
 
 	while (p->dcp_refcnt)
 		fcmh_wait_nocond_locked(d);
@@ -388,7 +388,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	off_t adj;
 	int i;
 
-	OPSTAT_INCR("dircache-reg-entry");
+	OPSTAT_INCR("dircache-register-entry");
 
 	dce = base0 = PSCALLOC(nents * sizeof(*dce));
 
