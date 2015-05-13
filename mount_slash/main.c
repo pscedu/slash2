@@ -285,13 +285,13 @@ fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
 gid_t
 newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 {
-//	if (p->fcmh_sstb->st_mode & S_ISVTX)
+//	if (p->fcmh_sstb.sst_mode & S_ISVTX)
 //		return (pcr.pcr_gid);
-	if (p->fcmh_sstb->st_mode & S_ISGID)
+	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		return (p->fcmh_sstb.sst_gid);
 	if (msl_newent_inherit_groups)
 		return (p->fcmh_sstb.sst_gid);
-	return (pcr.pcr_gid);
+	return (pcr->pcr_gid);
 }
 
 __static void
