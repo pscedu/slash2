@@ -142,7 +142,7 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 struct psc_hashtbl		 slc_gidmap_int;
 
-int				 slc_posix_mkgrps = 1;
+int				 msl_newent_inherit_groups = 1;
 
 int				 disable_namecache = 1;
 
@@ -280,6 +280,18 @@ fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
 	(void)pfr;
 #endif
 	return (fcmh_checkcreds_ctx(f, pfcc, pcrp, accmode));
+}
+
+gid_t
+newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
+{
+//	if (p->fcmh_sstb->st_mode & S_ISVTX)
+//		return (pcr.pcr_gid);
+	if (p->fcmh_sstb->st_mode & S_ISGID)
+		return (p->fcmh_sstb.sst_gid);
+	if (msl_newent_inherit_groups)
+		return (p->fcmh_sstb.sst_gid);
+	return (pcr.pcr_gid);
 }
 
 __static void
@@ -483,9 +495,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->prefios[0] = prefIOS;
-	mq->creds.scr_uid = pcr.pcr_uid;
-	mq->creds.scr_gid = slc_posix_mkgrps ?
-	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
+	mq->owner.scr_uid = pcr.pcr_uid;
+	mq->owner.scr_gid = newent_select_group(p, &pcr);
 	rc = uidmap_ext_cred(&mq->creds);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -945,6 +956,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	if (p->fcmh_sstb.sst_mode & S_ISGID)
+		mode |= S_ISGID;
+
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
@@ -953,8 +967,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
-	mq->sstb.sst_gid = slc_posix_mkgrps ?
-	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
+	mq->sstb.sst_gid = newent_select_group(p, &pcr);
 	rc = uidmap_ext_stat(&mq->sstb);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1411,8 +1424,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	mq->creds.scr_uid = pcr.pcr_uid;
-	mq->creds.scr_gid = slc_posix_mkgrps ?
-	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
+	mq->creds.scr_gid = newent_select_group(p, &pcr);
 	rc = uidmap_ext_cred(&mq->creds);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2549,7 +2561,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		PFL_GOTOERR(out, rc);
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
-	mq->sstb.sst_gid = pcr.pcr_gid;
+	mq->sstb.sst_gid = newent_select_group(p, &pcr);
 	rc = uidmap_ext_stat(&mq->sstb);
 	if (rc)
 		PFL_GOTOERR(out, rc);
