@@ -797,9 +797,6 @@ struct srm_create_rep {
 	struct srt_bmapdesc	sbd;
 } __packed;
 
-struct srm_destroy_req {
-} __packed;
-
 struct srm_getattr_req {
 	struct sl_fidgen	fg;
 	sl_ios_id_t		iosid;
