@@ -829,8 +829,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("link");
-
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(newname) > SL_NAME_MAX)
@@ -925,8 +923,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("mkdir");
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1368,7 +1364,6 @@ void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	OPSTAT_INCR("rmdir");
 	pscfs_reply_rmdir(pfr, msl_delete(pfr, pinum, name, 0));
 }
 
@@ -1386,8 +1381,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("mknod");
 
 	if (!S_ISFIFO(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
@@ -1789,8 +1782,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("readlink");
-
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1828,6 +1819,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 			iov.iov_len = mp->len;
 			rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
 			    &iov, 1);
+			if (rc == 0)
+				OPSTAT_INCR("readlink-bulk");
 		}
 	}
 	if (!rc)
@@ -2532,8 +2525,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("symlink");
-
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(buf) >= SL_PATH_MAX ||
@@ -2655,8 +2646,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct timespec ts;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("setattr");
 
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_UID;
@@ -2936,10 +2925,8 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 	mfh = data;
 	f = mfh->mfh_fcmh;
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsyncdir");
 		// XXX flush all fcmh attrs under dir
 	} else {
-		OPSTAT_INCR("fsync");
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
 		MFH_LOCK(mfh);
@@ -3041,8 +3028,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	msfsthr_ensure(pfr);
 
-	OPSTAT_INCR("listxattr");
-
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3086,6 +3071,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		// XXX sanity check mp->size
 		iov.iov_len = mp->size;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (rc == 0)
+			OPSTAT_INCR("listxattr-bulk");
 	}
 	if (!rc) {
 		FCMH_LOCK(f);
@@ -3119,8 +3106,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	int rc;
 
 	msfsthr_ensure(pfr);
-
-	OPSTAT_INCR("setxattr");
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3240,6 +3225,8 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	if (!rc && size) {
 		iov.iov_len = mp->valuelen;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (rc == 0)
+			OPSTAT_INCR("getxattr-bulk");
 	}
 	if (!rc)
 		*retsz = mp->valuelen;
