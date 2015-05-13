@@ -637,8 +637,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	cr.scr_uid = mq->creds.scr_uid;
-	cr.scr_gid = mq->creds.scr_gid;
+	cr.scr_uid = mq->owner.scr_uid;
+	cr.scr_gid = mq->owner.scr_gid;
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
