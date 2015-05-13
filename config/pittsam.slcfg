@@ -51,21 +51,30 @@ site @PSC {
 	resource sense51s5 { type = standalone_fs; id = 15; nids = sense51-66-io5.psc.edu; fsroot = /sense51_pool5/slio; self_test = "fshealthtest -u 90 %r"; }
 	resource sense51s6 { type = standalone_fs; id = 16; nids = sense51-66-io6.psc.edu; fsroot = /sense51_pool6/slio; self_test = "fshealthtest -u 90 %r"; }
 
-	resource dxcsbb3s0 { type = standalone_fs; id = 20; nids = dxcsbb03-io0.psc.edu; fsroot = /sbb3_pool0/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s1 { type = standalone_fs; id = 21; nids = dxcsbb03-io1.psc.edu; fsroot = /sbb3_pool1/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s2 { type = standalone_fs; id = 22; nids = dxcsbb03-io2.psc.edu; fsroot = /sbb3_pool2/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s3 { type = standalone_fs; id = 23; nids = dxcsbb03-io3.psc.edu; fsroot = /sbb3_pool3/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s4 { type = standalone_fs; id = 24; nids = dxcsbb03-io4.psc.edu; fsroot = /sbb3_pool4/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s5 { type = standalone_fs; id = 25; nids = dxcsbb03-io5.psc.edu; fsroot = /sbb3_pool5/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s6 { type = standalone_fs; id = 26; nids = dxcsbb03-io6.psc.edu; fsroot = /sbb3_pool6/slio; self_test = "fshealthtest -u 90 %r"; }
-	resource dxcsbb3s7 { type = standalone_fs; id = 27; nids = dxcsbb03-io7.psc.edu; fsroot = /sbb3_pool7/slio; self_test = "fshealthtest -u 90 %r"; }
+	resource sbb1s0 { type = standalone_fs; id = 0x100; nids = dxcsbb01.psc.edu, 10.200.0.110; self_test = "fshealthtest %r"; fsroot = /sbb1_pool0/slio; }
+	resource sbb1s1 { type = standalone_fs; id = 0x101; nids = dxcsbb01-io1.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool1/slio; }
+	resource sbb1s2 { type = standalone_fs; id = 0x102; nids = dxcsbb01-io2.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool2/slio; }
+	resource sbb1s3 { type = standalone_fs; id = 0x103; nids = dxcsbb01-io3.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool3/slio; }
+	resource sbb1s4 { type = standalone_fs; id = 0x104; nids = dxcsbb01-io4.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool4/slio; }
+	resource sbb1s5 { type = standalone_fs; id = 0x105; nids = dxcsbb01-io5.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool5/slio; }
+	resource sbb1s6 { type = standalone_fs; id = 0x106; nids = dxcsbb01-io6.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool6/slio; }
+	resource sbb1s7 { type = standalone_fs; id = 0x107; nids = dxcsbb01-io7.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb1_pool7/slio; }
+
+	resource sbb2s0 { type = standalone_fs; id = 0x200; nids = dxcsbb02.psc.edu, 10.200.0.120; self_test = "fshealthtest %r"; fsroot = /sbb2_pool0/slio; }
+	resource sbb2s1 { type = standalone_fs; id = 0x201; nids = dxcsbb02-io1.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool1/slio; }
+	resource sbb2s2 { type = standalone_fs; id = 0x202; nids = dxcsbb02-io2.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool2/slio; }
+	resource sbb2s3 { type = standalone_fs; id = 0x203; nids = dxcsbb02-io3.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool3/slio; }
+	resource sbb2s4 { type = standalone_fs; id = 0x204; nids = dxcsbb02-io4.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool4/slio; }
+	resource sbb2s5 { type = standalone_fs; id = 0x205; nids = dxcsbb02-io5.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool5/slio; }
+	resource sbb2s6 { type = standalone_fs; id = 0x206; nids = dxcsbb02-io6.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool6/slio; }
+	resource sbb2s7 { type = standalone_fs; id = 0x207; nids = dxcsbb02-io7.psc.edu; self_test = "fshealthtest %r"; fsroot = /sbb2_pool7/slio; }
 
 	resource io {
 		type	= cluster_noshare_lfs;
 		id	= 100;
 		ios	= sense51s0, sense51s1, sense51s2, sense51s3,
 			  sense51s4, sense51s5, sense51s6,
-			  dxcsbb3s0, dxcsbb3s1, dxcsbb3s2, dxcsbb3s3,
-			  dxcsbb3s4, dxcsbb3s5, dxcsbb3s6, dxcsbb3s7;
+			  sbb1s0, sbb1s1, sbb1s2, sbb1s3, sbb1s4, sbb1s5, sbb1s6, sbb1s7,
+			  sbb2s0, sbb2s1, sbb2s2, sbb2s3, sbb2s4, sbb2s5, sbb2s6, sbb2s7;
 	}
 }
