@@ -1819,6 +1819,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 			iov.iov_len = mp->len;
 			rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
 			    &iov, 1);
+			if (rc == 0)
+				OPSTAT_INCR("readlink-bulk");
 		}
 	}
 	if (!rc)
@@ -3069,6 +3071,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		// XXX sanity check mp->size
 		iov.iov_len = mp->size;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (rc == 0)
+			OPSTAT_INCR("listxattr-bulk");
 	}
 	if (!rc) {
 		FCMH_LOCK(f);
@@ -3221,6 +3225,8 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	if (!rc && size) {
 		iov.iov_len = mp->valuelen;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (rc == 0)
+			OPSTAT_INCR("getxattr-bulk");
 	}
 	if (!rc)
 		*retsz = mp->valuelen;
