@@ -497,7 +497,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = prefIOS;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_cred(&mq->creds);
+	rc = uidmap_ext_cred(&mq->owner);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	strlcpy(mq->name, name, sizeof(mq->name));
