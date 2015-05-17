@@ -301,7 +301,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_ctl_req);
-	PRTYPE(struct srm_destroy_req);
 	PRTYPE(struct srm_forward_rep);
 	PRTYPE(struct srm_forward_req);
 	PRTYPE(struct srm_generic_rep);
@@ -443,6 +442,7 @@ main(int argc, char *argv[])
 	PRVAL(BML_TIMEOQ);
 	PRVAL(BML_WRITE);
 	PRVAL(BMPCEF_ACCESSED);
+	PRVAL(BMPCEF_AIOWAIT);
 	PRVAL(BMPCEF_DATARDY);
 	PRVAL(BMPCEF_DISCARD);
 	PRVAL(BMPCEF_EIO);
