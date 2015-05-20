@@ -42,7 +42,7 @@ uidmap_ext_cred(struct srt_creds *cr)
 		return (0);
 
 	q.um_key = cr->scr_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q.um_key);
+	um = psc_hashtbl_search(&slc_uidmap_ext, &q.um_key);
 	if (um == NULL)
 		return (0);
 	cr->scr_uid = um->um_val;
@@ -58,7 +58,7 @@ gidmap_int_cred(struct pscfs_creds *cr)
 		return (0);
 
 	q.gm_key = cr->pcr_uid;
-	gm = psc_hashtbl_search(&slc_gidmap_int, NULL, NULL, &q.gm_key);
+	gm = psc_hashtbl_search(&slc_gidmap_int, &q.gm_key);
 	if (gm == NULL)
 		return (0);
 	cr->pcr_gid = gm->gm_gid;
@@ -75,7 +75,7 @@ uidmap_ext_stat(struct srt_stat *sstb)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q.um_key);
+	um = psc_hashtbl_search(&slc_uidmap_ext, &q.um_key);
 	if (um == NULL)
 		return (0);
 	sstb->sst_uid = um->um_val;
@@ -91,7 +91,7 @@ uidmap_int_stat(struct srt_stat *sstb)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_int, NULL, NULL, &q.um_key);
+	um = psc_hashtbl_search(&slc_uidmap_int, &q.um_key);
 	if (um == NULL)
 		return (0);
 	sstb->sst_uid = um->um_val;
@@ -198,8 +198,7 @@ mapfile_parse_group(char *start)
 		goto malformed;
 
 	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&slc_gidmap_int, NULL, NULL,
-		    &remote);
+		gm = psc_hashtbl_search(&slc_gidmap_int, &remote);
 		if (gm) {
 			gm->gm_gidv[gm->gm_ngid++] = remote;
 		} else {

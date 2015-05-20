@@ -2427,8 +2427,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	}
 
 	key = (uint64_t)fmt;
-	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, NULL, NULL,
-	    &key);
+	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
 	if (sth == NULL) {
 		sth = PSCALLOC(sizeof(*sth));
 		psc_hashent_init(&dbh->dbh_sth_hashtbl, sth);
