@@ -154,7 +154,7 @@ fn2fid(const char *fn)
 #endif
 
 	fid = stb.st_ino;
-	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
+	ffp = psc_hashtbl_search(&fnfidpairs, &fid);
 
 	if (ffp)
 		return (ffp->ffp_fid);
@@ -174,7 +174,7 @@ fid2fn(slfid_t fid, struct stat *stb)
 	static char fn[PATH_MAX];
 	struct fnfidpair *ffp;
 
-	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
+	ffp = psc_hashtbl_search(&fnfidpairs, &fid);
 	if (ffp) {
 		if (stb)
 			*stb = ffp->ffp_stb;
@@ -900,7 +900,7 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (*endp != ':')
 		goto out;
 	fid = strtoull(p, NULL, 16);
-	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
+	ffp = psc_hashtbl_search(&fnfidpairs, &fid);
 	if (ffp == NULL)
 		goto out;
 	warnx("%s%s", ffp->ffp_fn, endp);
