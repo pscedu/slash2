@@ -861,6 +861,7 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	struct slm_exp_cli *mexpc;
 	int i;
 
+return;
 	if (eof)
 		return;
 	psc_assert(size);
