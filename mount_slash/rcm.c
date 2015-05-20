@@ -312,12 +312,12 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		if (mq->size)
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-		OPSTAT_INCR("readdir_drop");
+		OPSTAT_INCR("readdir-drop");
 		PFL_GOTOERR(out2, 0);
 	}
 
 	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
-		OPSTAT_INCR("readdir_stale");
+		OPSTAT_INCR("readdir-stale");
 		PFL_GOTOERR(out1, mp->rc = -PFLERR_STALE);
 	}
 
