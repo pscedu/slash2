@@ -295,6 +295,8 @@ struct sl_expcli_ops {
 
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
+		static struct pfl_opstat *_opst_err, *_opst_ok;		\
+									\
 		(mp) = NULL;						\
 		(error) = 0;						\
 		if ((rq)->rq_repmsg)					\
@@ -315,6 +317,20 @@ struct sl_expcli_ops {
 			sl_csvc_disconnect(csvc);			\
 		if ((error) == 0 && slrpc_ops.slrpc_rep_in)		\
 			slrpc_ops.slrpc_rep_in((csvc), (rq));		\
+									\
+		if (error) {						\
+			if (_opst_err == NULL)				\
+				_opst_err = pfl_opstat_initf(		\
+				    OPSTF_BASE10, "rpc.cb.%s.err",	\
+				    strstr(__func__, "_handle_") + 8);	\
+			pfl_opstat_incr(_opst_err);			\
+		} else {						\
+			if (_opst_ok == NULL)				\
+				_opst_ok = pfl_opstat_initf(		\
+				    OPSTF_BASE10, "rpc.cb.%s.ok",	\
+				    strstr(__func__, "_handle_") + 8);	\
+			pfl_opstat_incr(_opst_ok);			\
+		}							\
 	} while (0)
 
 #define SL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
