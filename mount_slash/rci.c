@@ -141,7 +141,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
-	if (car->car_cbf == msl_read_cb) {
+	if (car->car_cbf == msl_read_cleanup) {
 		struct bmap_pagecache_entry *e;
 		struct psc_dynarray *a;
 		int i;
@@ -170,7 +170,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		PSCFREE(iovs);
 
-	} else if (car->car_cbf == msl_dio_cb) {
+	} else if (car->car_cbf == msl_dio_cleanup) {
 
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 

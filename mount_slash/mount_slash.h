@@ -283,12 +283,13 @@ void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
 
-int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 
-ssize_t	slc_getxattr(const struct pscfs_clientctx *,
+int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
+int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
+
+ssize_t	 slc_getxattr(const struct pscfs_clientctx *,
 	    const struct pscfs_creds *, const char *, void *, size_t,
 	    struct fidc_membh *, size_t *);
 
