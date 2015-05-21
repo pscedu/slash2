@@ -482,7 +482,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	 */
 	memcpy(&car->car_argv, av, sizeof(*av));
 
-	if (cbf == msl_read_cb) {
+	if (cbf == msl_read_cleanup) {
 		int naio = 0;
 
 		OPSTAT_INCR("aio-register-read");
@@ -503,7 +503,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
-	} else if (cbf == msl_dio_cb) {
+	} else if (cbf == msl_dio_cleanup) {
 
 		OPSTAT_INCR("aio-register-dio");
 
@@ -787,7 +787,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
  *	copied out to the applicaton buffers.
  */
 int
-msl_read_cb(struct pscrpc_request *rq, int rc,
+msl_read_cleanup(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -848,12 +848,12 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 }
 
 /*
- * Thin layer around msl_read_cb(), which does the real READ completion
+ * Thin layer around msl_read_cleanup(), which does the real READ completion
  * processing, in case an AIOWAIT is discovered.  Upon completion of the
- * AIO, msl_read_cb() is called.
+ * AIO, msl_read_cleanup() is called.
  */
 int
-msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
@@ -863,13 +863,13 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	if (rc == -SLERR_AIOWAIT)
-		return (msl_req_aio_add(rq, msl_read_cb, args));
+		return (msl_req_aio_add(rq, msl_read_cleanup, args));
 
-	return (msl_read_cb(rq, rc, args));
+	return (msl_read_cleanup(rq, rc, args));
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, int rc,
+msl_dio_cleanup(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
@@ -909,18 +909,17 @@ msl_dio_cb(struct pscrpc_request *rq, int rc,
 }
 
 int
-msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	OPSTAT_INCR("dio-cb0");
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	if (rc == -SLERR_AIOWAIT)
-		return (msl_req_aio_add(rq, msl_dio_cb, args));
+		return (msl_req_aio_add(rq, msl_dio_cleanup, args));
 
-	return (msl_dio_cb(rq, rc, args));
+	return (msl_dio_cleanup(rq, rc, args));
 }
 
 __static int
@@ -982,7 +981,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			PFL_GOTOERR(out, rc);
 
 		rq->rq_bulk_abortable = 1; // for aio?
-		rq->rq_interpret_reply = msl_dio_cb0;
+		rq->rq_interpret_reply = msl_dio_cb;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 		iovs[i].iov_base = r->biorq_buf + off;
@@ -1190,7 +1189,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
-	rq->rq_interpret_reply = msl_read_cb0;
+	rq->rq_interpret_reply = msl_read_cb;
 
 	biorq_incref(r);
 

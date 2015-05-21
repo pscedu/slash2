@@ -56,12 +56,12 @@ struct psc_listcache		 bcr_ready;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
 struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 
-/**
- * slvr_worker_crcup_genrq - Send an RPC containing CRC updates for
- *	slivers to the metadata server.  To avoid potential woes caused
- *	by out-of-order deliveries, we should allow at most one inflight
- *	CRC update RPC at any time.  Note that this does not prevent us
- *	from having multiple threads to do the CRC calculation.
+/*
+ * Send an RPC containing CRC updates for slivers to the MDS.  To avoid
+ * potential woes caused by out-of-order deliveries, we allow at most
+ * only one inflight CRC update RPC at any time.  Note that this does
+ * not prevent us from having multiple threads to do the CRC
+ * calculation.
  */
 __static int
 slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
@@ -238,8 +238,6 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 	struct bcrcupd *bcr;
 	int i;
 
-	OPSTAT_INCR("crc-update-cb");
-
 	a = args->pointer_arg[0];
 	csvc = args->pointer_arg[1];
 	psc_assert(a);
@@ -288,9 +286,8 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 	return (1);
 }
 
-/**
- * slislvrthr_proc - Attempt to setup a bmap CRC update RPC for dirty
- *	part(s) of a sliver.
+/*
+ * Attempt to setup a bmap CRC update RPC for dirty part(s) of a sliver.
  */
 __static void
 slislvrthr_proc(struct slvr *s)
@@ -389,10 +386,10 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
-/**
- * slislvrthr_main - Guts of the sliver bmap CRC update RPC generator
- *	thread.  RPCs are constructed from slivers on the queue after
- *	the minimal expiration is reached and shipped off to the MDS.
+/*
+ * Guts of the sliver bmap CRC update RPC generator thread.  RPCs are
+ * constructed from slivers on the queue after the minimal expiration is
+ * reached and shipped off to the MDS.
  */
 void
 slislvrthr_main(struct psc_thread *thr)

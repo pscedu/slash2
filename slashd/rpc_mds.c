@@ -359,7 +359,7 @@ batchrq_sched_waitreply(struct batchrq *br)
 }
 
 int
-batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
+sl_batchrqsend_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 {
 	struct batchrq *br = av->pointer_arg[0];
 	int rc;
@@ -403,7 +403,7 @@ batchrq_send(struct batchrq *br)
 	if (rc)
 		goto err;
 
-	rq->rq_interpret_reply = batchrq_send_cb;
+	rq->rq_interpret_reply = sl_batchrqsend_cb;
 	rq->rq_async_args.pointer_arg[0] = br;
 	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
 	if (rc) {

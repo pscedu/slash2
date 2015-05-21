@@ -35,12 +35,13 @@
 
 #include <stdint.h>
 
-#include "pfl/err.h"
 #include "pfl/atomic.h"
+#include "pfl/err.h"
 #include "pfl/export.h"
 #include "pfl/iostats.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
+#include "pfl/str.h"
 
 #include "slerr.h"
 
@@ -319,16 +320,26 @@ struct sl_expcli_ops {
 			slrpc_ops.slrpc_rep_in((csvc), (rq));		\
 									\
 		if (error) {						\
-			if (_opst_err == NULL)				\
+			if (_opst_err == NULL) {			\
+				const char *_cbname;			\
+									\
+				_cbname = pfl_strrastr(__func__, '_',	\
+				    3);					\
 				_opst_err = pfl_opstat_initf(		\
 				    OPSTF_BASE10, "rpc.cb.%s.err",	\
-				    strstr(__func__, "_handle_") + 8);	\
+				    _cbname + strspn(_cbname, "_"));	\
+			}						\
 			pfl_opstat_incr(_opst_err);			\
 		} else {						\
-			if (_opst_ok == NULL)				\
+			if (_opst_ok == NULL) {				\
+				const char *_cbname;			\
+									\
+				_cbname = pfl_strrastr(__func__, '_',	\
+				    3);					\
 				_opst_ok = pfl_opstat_initf(		\
 				    OPSTF_BASE10, "rpc.cb.%s.ok",	\
-				    strstr(__func__, "_handle_") + 8);	\
+				    _cbname + strspn(_cbname, "_"));	\
+			}						\
 			pfl_opstat_incr(_opst_ok);			\
 		}							\
 	} while (0)

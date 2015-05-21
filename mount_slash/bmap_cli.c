@@ -168,7 +168,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 }
 
 __static int
-msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
+msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -216,7 +216,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 }
 
 __static int
-msl_bmap_lease_get_cb(struct pscrpc_request *rq,
+msl_rmc_bmlget_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -251,7 +251,7 @@ msl_bmap_lease_get_cb(struct pscrpc_request *rq,
 }
 
 __static int
-msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
+msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -374,7 +374,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
+	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		OPSTAT_INCR("bmap-reassign-send");
@@ -477,7 +477,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
+	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		OPSTAT_INCR("bmap-lease-ext-send");
@@ -608,7 +608,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 	if (flags & BMAPGETF_ASYNC) {
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = bmap;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_bmap_lease_get_cb;
+		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc)
 			sl_csvc_decref(csvc);
@@ -666,7 +666,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 /*
  * Called from rcm.c (SRMT_BMAPDIO).
  *
- * @b:  the bmap whose cached pages should be released.
+ * @b: the bmap whose cached pages should be released.
  */
 void
 msl_bmap_cache_rls(struct bmap *b)
@@ -745,7 +745,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 }
 
 int
-msl_bmap_release_cb(struct pscrpc_request *rq,
+msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -797,7 +797,7 @@ msl_bmap_release(struct sl_resm *resm)
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
-	rq->rq_interpret_reply = msl_bmap_release_cb;
+	rq->rq_interpret_reply = msl_rmc_bmaprelease_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 
@@ -993,7 +993,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	mw = msl_getmw();
 
 	/*
-	 * Occassionally stir the order of replicas to distribute load.
+	 * Occasionally stir the order of replicas to distribute load.
 	 */
 	FCMH_LOCK(b->bcm_fcmh);
 	if (++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {

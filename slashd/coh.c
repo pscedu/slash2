@@ -101,7 +101,7 @@ slmcoh_releasebml(void *p)
 }
 
 int
-mdscoh_cb(struct pscrpc_request *rq,
+slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
 {
 	struct slashrpc_cservice *csvc =
@@ -110,8 +110,6 @@ mdscoh_cb(struct pscrpc_request *rq,
 	struct srm_bmap_dio_req *mq;
 	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
-
-	OPSTAT_INCR("coherent_cb");
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
@@ -184,7 +182,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	mq->dio = 1;
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
-	rq->rq_interpret_reply = mdscoh_cb;
+	rq->rq_interpret_reply = slm_rcm_bmapdio_cb;
 	psc_assert(SL_NBRQSET_ADD(csvc, rq) == 0);
 
 	OPSTAT_INCR("coherent_req");

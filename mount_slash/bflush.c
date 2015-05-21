@@ -22,6 +22,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Logic for bmap flushing: sending RPCs of dirty data modified by
+ * clients to the IO systems they are bound to.  Write coalescing
+ * (bwc) occurs to reduce RPC overhead.
+ */
+
 #define PSC_SUBSYS SLSS_BMAP
 #include "slsubsys.h"
 
@@ -236,7 +242,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 		psc_waitq_wakeall(&slc_bflush_waitq);
 	}
 	freelock(&slc_bflush_lock);
-	
+
 	if (reason == BMAPFLSH_TRUNCATE)
 		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 
@@ -244,7 +250,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 }
 
 __static int
-bmap_flush_rpc_cb(struct pscrpc_request *rq,
+msl_ric_bflush_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -259,10 +265,9 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
-	psclog_diag("Reply to write RPC from %d: %d",
-	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
-
-	OPSTAT_INCR("write-callback");
+	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
+	    bwc, m->resm_res_id,
+	    psc_atomic32_read(&rmci->rmci_infl_rpcs), rc);
 
 	bwc_unpin_pages(bwc);
 
@@ -274,7 +279,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE, bwc->bwc_size);
+	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE,
+	    bwc->bwc_size);
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
@@ -344,7 +350,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	 */
 	bwc_pin_pages(bwc);
 
-	rq->rq_interpret_reply = bmap_flush_rpc_cb;
+	rq->rq_interpret_reply = msl_ric_bflush_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
@@ -355,7 +361,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto out;
 	}
 
-	OPSTAT_INCR("write-rpc");
 	return (0);
 
  out:
@@ -364,10 +369,10 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (rc);
 }
 
-/**
- * bmap_flush_resched - Called in error contexts where the biorq must be
- *    rescheduled by putting it back to the new request queue.  Typically
- *    this is from a write RPC cb.
+/*
+ * Called in error contexts where the biorq must be rescheduled by
+ * putting it back to the new request queue.  Typically this is from a
+ * write RPC cb.
  */
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
@@ -377,7 +382,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	struct bmap_cli_info *bci;
 	int delta;
 
-	DEBUG_BIORQ(PLL_DIAG, r, "resched, rc = %d", rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "resched rc=%d", rc);
 
 	BMAP_LOCK(b);
 	if (rc == -PFLERR_KEYEXPIRED) {
@@ -387,7 +392,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
+	if (rc == -ENOSPC || r->biorq_retries >=
+	    SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
 
 		bci = bmap_2_bci(r->biorq_bmap);
@@ -477,9 +483,9 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		psc_assert(b == r->biorq_bmap);
 		/*
- 		 * No need to lock because we have already replied to 
- 		 * the user space. Furthermore, we flush each biorq in 
- 		 * one RPC. So the callback handler won't race with us.
+		 * No need to lock because we have already replied to
+		 * the user space. Furthermore, we flush each biorq in
+		 * one RPC. So the callback handler won't race with us.
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
@@ -506,11 +512,10 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	bwc_release(bwc);
 }
 
-/**
- * bmap_flush_coalesce_size - This function determines the size of the
- *	region covered by an array of requests.  Note that these
- *	requests can overlap in various ways.  But they have already
- *	been ordered based on their offsets.
+/*
+ * This function determines the size of the region covered by an array
+ * of requests.  Note that these requests can overlap in various ways.
+ * But they have already been ordered based on their offsets.
  */
 __static void
 bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
@@ -578,10 +583,9 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	    (e->biorq_off - r->biorq_off) + e->biorq_len);
 }
 
-/**
- * bmap_flush_coalesce_map - Scan the given list of bio requests and
- *	construct I/O vectors out of them.  One I/O vector is limited to
- *	one page.
+/*
+ * Scan the given list of bio requests and construct I/O vectors out of
+ * them.  One iovec is limited to one page.
  */
 __static void
 bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
@@ -623,10 +627,10 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	psc_assert(!tot_reqsz);
 }
 
-/**
- * bmap_flushable - Check if we can flush the given bmpc (either an I/O
- *	request has expired or we have accumulated a big enough I/O).
- *	This function must be non-blocking.
+/*
+ * Check if we can flush the given bmpc (either an I/O request has
+ * expired or we have accumulated a big enough I/O).  This function must
+ * be non-blocking.
  */
 __static int
 bmap_flushable(struct bmapc_memb *b)
@@ -686,10 +690,10 @@ bwc_desched(struct bmpc_write_coalescer *bwc)
 	bwc->bwc_soff = bwc->bwc_size = 0;
 }
 
-/**
- * bmap_flush_trycoalesce - Scan the given array of I/O requests for
- *	candidates to flush.  We *only* flush when (1) a request has
- *	aged out or (2) we can construct a large enough I/O.
+/*
+ * Scan the given array of I/O requests for candidates to flush.  We
+ * only flush when (1) a request has aged out or (2) we can construct a
+ * large enough I/O.
  */
 __static struct bmpc_write_coalescer *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
@@ -714,8 +718,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(curr);
 
-		DEBUG_BIORQ(PLL_DIAG, curr, "biorq #%d (expired=%d)", idx,
-		    expired);
+		DEBUG_BIORQ(PLL_DIAG, curr, "biorq #%d (expired=%d)",
+		    idx, expired);
 
 		if (idx)
 			/* Assert 'lowest to highest' ordering. */
@@ -882,8 +886,8 @@ msbwatchthr_main(struct psc_thread *thr)
 	}
 }
 
-/**
- * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.
+/*
+ * Send out SRMT_WRITE RPCs to the I/O server.
  */
 __static int
 bmap_flush(void)
