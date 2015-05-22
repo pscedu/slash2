@@ -10,15 +10,13 @@ set port=4078;
 set nets="tcp7 10.201.*.*; tcp8 *.*.*.*";
 
 set pref_mds="md0@PITT";
-set pref_ios="sense51@PITT";
+set pref_ios="io@PITT";
 set fsuuid="98bb0e98163f7745";
 
 site @PITT {
-	site_desc	= "Pitt SaM SuperCell";
 	site_id		= 0;
 
 	resource md0 {
-		desc	= "SAM metadata";
 		type	= mds;
 		id	= 1;
 		nids	= supercell-mds0-priv.frank.sam.pitt.edu,
@@ -29,7 +27,6 @@ site @PITT {
 	}
 
 	resource ice {
-		desc	= "SAM IceBreaker cache";
 		type	= standalone_fs;
 		id	= 201;
 		nids	= supercell0-priv.frank.sam.pitt.edu,
@@ -38,18 +35,23 @@ site @PITT {
 		self_test = "fshealthtest %r";
 	}
 
-#	resource pan {
-#		type	= standalone_fs;
-#		id	= 202;
-#		nids	= panasas-gw0-priv.frank.sam.pitt.edu,
-#			  panasas-gw0.frank.sam.pitt.edu;
-#		fsroot	= /data/supercell0;
-#		self_test = "fshealthtest %r";
-#	}
+	resource pan {
+		type	= standalone_fs;
+		id	= 202;
+		nids	= supercell1-priv.frank.sam.pitt.edu,
+			  supercell1.frank.sam.pitt.edu;
+		fsroot	= /data/supercell1;
+		self_test = "fshealthtest %r";
+	}
+
+	resource io {
+		type	= cluster_noshare_lfs;
+		id	= 0x1000;
+		ios	= ice, pan;
+	}
 }
 
 site @PSC {
-	site_desc	= "Pittsburgh Supercomputing Center";
 	site_id		= 1;
 
 	resource sense51s0 { type = standalone_fs; id = 10; nids = sense51-66.psc.edu;     fsroot = /sense51_pool0/slio; self_test = "fshealthtest -u 90 %r"; }
