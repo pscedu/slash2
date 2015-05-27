@@ -291,13 +291,13 @@ def versionEval(thost,tname,cmd,returncode,textout,texterrors):
 	dprint("DEBUG: reporting %s/%s running version %s of SLASH2 code" % (thost,tname,version))
 
 	# Log a message with the SLASH2 version number
-	#try :
-	#	syslog.openlog('slash2_version',0,syslog.LOG_DAEMON)
-	#	syslog.syslog(syslog.LOG_INFO, hn + "/" + tname + " running version " + \
-	#			version + " of SLASH2 software")
-	#	syslog.closelog()
-	#except :
-	#	print "ERROR: unable to send slash2_version message to log server"
+	try :
+		syslog.openlog('slash2_version',0,syslog.LOG_DAEMON)
+		syslog.syslog(syslog.LOG_INFO, hn + "/" + tname + " running version " + \
+				version + " of SLASH2 software")
+		syslog.closelog()
+	except :
+		print "ERROR: unable to send slash2_version message to log server"
 
 ###### Function to evaluate output of a zpool test and inform Nagios
 def zpoolEval(thost,tname,cmd,returncode,textout,texterrors):
