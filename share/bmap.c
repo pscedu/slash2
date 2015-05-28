@@ -327,6 +327,7 @@ int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
     sl_ios_id_t ios_id)
 {
+	psc_assert(rw == SL_READ || rw == SL_WRITE);
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
 		if (sbd->sbd_ios != ios_id &&
@@ -336,15 +337,13 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 			    ios_id);
 			//return (EBADF);
 		}
-	} else if (rw == SL_WRITE) {
+	}
+	if (rw == SL_WRITE) {
 		if (sbd->sbd_ios != ios_id) {
 			psclog_errorx("wr ios %#x != %#x", sbd->sbd_ios,
 			    ios_id);
 			return (EBADF);
 		}
-	} else {
-		psclog_errorx("invalid rw mode: %d", rw);
-		return (EBADF);
 	}
 	return (0);
 }
