@@ -1,0 +1,24 @@
+ slashd-pittsam[22016]: [1433019680:141201 slmusklndplthr9:7fffd35fe700:def rpc_common.c sl_exp_hldrop_cli 1155] pthread_mutex_unlock: Invalid argument
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread 0x7fffd35fe700 (LWP 22026)]
+0x0000003337832625 in raise () from /lib64/libc.so.6
+(gdb) bt
+#0  0x0000003337832625 in raise () from /lib64/libc.so.6
+#1  0x0000003337833e05 in abort () from /lib64/libc.so.6
+#2  0x00000000005e67e7 in pfl_abort () at /opt/psc/src/pfl/init.c:105
+#3  0x00000000005faa8c in _psclogv (pci=0x7fffc0000ad0, level=0, options=0, fmt=0x751858 "pthread_mutex_unlock: %s",
+    ap=0x7fffd35fd6f0) at /opt/psc/src/pfl/log.c:402
+#4  0x00000000005fac8c in _psc_fatal (pci=0x7fffc0000ad0, level=0, options=0, fmt=0x751858 "pthread_mutex_unlock: %s")
+    at /opt/psc/src/pfl/log.c:435
+#5  0x000000000060b88a in _psc_mutex_reqlock (pci=0x7fffc0000ad0, mut=0x3618bd8) at /opt/psc/src/pfl/pthrutil.c:121
+#6  0x00000000005731a6 in sl_exp_hldrop_cli (exp=0xc4b030) at /opt/psc/src/slash2/share/rpc_common.c:1155
+#7  0x00000000004345cf in pscrpc_drop_conns (peer=0x7ffff49a6880) at /opt/psc/src/pfl/connection.c:155
+#8  0x0000000000455f5e in pscrpc_drop_callback (ev=0x7ffff49a6870) at /opt/psc/src/pfl/events.c:422
+#9  0x0000000000455f85 in pscrpc_master_callback (ev=0x7ffff49a6870) at /opt/psc/src/pfl/events.c:443
+#10 0x00000000004b708f in lnet_enq_event_locked (eq=0xc866d0, ev=0x7fffd35fd9b0) at /opt/psc/src/lnet-lite/lnet/lib-msg.c:81
+#11 0x0000000000431e1f in usocklnd_destroy_peer (peer=0xc93040) at /opt/psc/src/lnet-lite/ulnds/socklnd/conn.c:641
+#12 0x0000000000430117 in usocklnd_peer_decref (peer=0xc93040) at /opt/psc/src/lnet-lite/ulnds/socklnd/usocklnd.h:271
+#13 0x0000000000430e84 in usocklnd_check_peer_stale (ni=0xc86a70, id=...) at /opt/psc/src/lnet-lite/ulnds/socklnd/conn.c:225
+#14 0x0000000000430d58 in usocklnd_tear_peer_conn (conn=0xca2840) at /opt/psc/src/lnet-lite/ulnds/socklnd/conn.c:192
+
