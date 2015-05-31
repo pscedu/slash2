@@ -73,6 +73,8 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
+	BMAP_ULOCK(b);
+
 	psc_rwlock_wrlock(&f->fcmh_rwlock);
 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
 	psc_rwlock_unlock(&f->fcmh_rwlock);
