@@ -340,9 +340,8 @@ msfsthr_ensure(struct pscfs_req *pfr)
 	mft->mft_pfr = pfr;
 }
 
-/**
- * msl_create_fcmh - Create a FID cache member handle based on the
- *	statbuf provided.
+/*
+ * Create a FID cache member handle based on the statbuf provided.
  * @pfr: pscfs request.
  * @fg: FID + generation of file.
  * @fp: value-result fcmh.
@@ -1097,7 +1096,7 @@ slc_wk_issue_readdir(void *p)
 	return (0);
 }
 
-/**
+/*
  * Register a 'miss' in the FID namespace lookup cache.
  * If we reach a threshold, we issue an asynchronous READDIR in hopes
  * that we will hit subsequent requests.
@@ -1853,8 +1852,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 #define msl_flush_all(mfh)	msl_flush((mfh), 1)
 #define msl_flush_wait(mfh)	msl_flush((mfh), 0)
 
-/**
- * msl_flush - Perform main data flush operation.
+/*
+ * Perform main data flush operation.
  * @mfh: handle corresponding to process file descriptor.
  * Note that this function is called (at least) once for each open.
  */
