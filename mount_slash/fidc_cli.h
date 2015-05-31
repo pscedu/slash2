@@ -117,13 +117,14 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 }
 
 /* Client-specific fcmh_flags */
-#define FCMH_CLI_INITDIRCACHE	(_FCMH_FLGSHFT << 0)	/* dircache initialized */
-#define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 1)	/* truncate in progress */
-#define FCMH_CLI_DIRTY_DSIZE	(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
-#define FCMH_CLI_DIRTY_MTIME	(_FCMH_FLGSHFT << 3)	/* has dirty mtime */
-#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 4)	/* on dirty queue */
+#define FCMH_CLI_INITDIRCACHE		(_FCMH_FLGSHFT << 0)	/* dircache initialized */
+#define FCMH_CLI_TRUNC			(_FCMH_FLGSHFT << 1)	/* truncate in progress */
+#define FCMH_CLI_DIRTY_DSIZE		(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
+#define FCMH_CLI_DIRTY_MTIME		(_FCMH_FLGSHFT << 3)	/* has dirty mtime */
+#define FCMH_CLI_DIRTY_QUEUE		(_FCMH_FLGSHFT << 4)	/* on dirty queue */
+#define FCMH_CLI_HAVE_XATTRSIZE		(_FCMH_FLGSHFT << 5)
 
-#define FCMH_CLI_DIRTY_ATTRS	(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
+#define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE		0

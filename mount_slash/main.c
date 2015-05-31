@@ -767,7 +767,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	if (!rc) {
 		slc_fcmh_setattrf(f, &mp->attr,
 		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);
-		fci->fci_xattrsize = mp->xattrsize;
+		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 	}
 
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
@@ -1016,7 +1016,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
-	pscfs_inum_t pinum = fcmh_2_fid(p);
+	slfid_t pfid = fcmh_2_fid(p);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct fidc_membh *f = NULL;
@@ -1029,7 +1029,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	mq->pfg.fg_fid = pinum;
+	mq->pfg.fg_fid = pfid;
 	mq->pfg.fg_gen = FGEN_ANY;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1056,17 +1056,17 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	FCMH_LOCK(f);
 	slc_fcmh_setattrf(f, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
-	fcmh_2_fci(f)->fci_xattrsize = mp->xattrsize;
+	msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 
 	if (sstb)
 		*sstb = f->fcmh_sstb;
 
-	// XXX add to dircache
+	//msl_insert_namecache(pfid, name, fp);
 
  out:
 	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
-	    pinum, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
+	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
 	if (rc == 0 && fp) {
 		*fp = f;
@@ -1510,7 +1510,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 			slc_fcmh_setattrf(f, &e->sstb,
 			    FCMH_SETATTRF_SAVELOCAL |
 			    FCMH_SETATTRF_HAVELOCK);
-			fcmh_2_fci(f)->fci_xattrsize = e->xattrsize;
+			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
 		}
 	}
@@ -3029,7 +3029,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 {
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc = NULL;
-	struct srm_listxattr_rep *mp = NULL;
+	struct srm_listxattr_rep tmp, *mp = NULL;
 	struct srm_listxattr_req *mq;
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
@@ -3051,6 +3051,22 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	/* Check if xattrsize is cached and useful. */
+	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
+		struct timeval now;
+
+		PFL_GETTIMEVAL(&now);
+		fci = fcmh_2_fci(f);
+		FCMH_LOCK(f);
+		if (timercmp(&now, &fci->fci_age, <) &&
+		    (size == 0 || fci->fci_xattrsize == 0)) {
+			tmp.size = fci->fci_xattrsize;
+			mp = &tmp;
+			PFL_GOTOERR(out, 0);
+		}
+		FCMH_ULOCK(f);
+	}
 
 	if (size)
 		buf = PSCALLOC(size);
@@ -3085,10 +3101,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		if (rc == 0)
 			OPSTAT_INCR("listxattr-bulk");
 	}
-	if (!rc) {
-		FCMH_LOCK(f);
-		fcmh_2_fci(f)->fci_xattrsize = mp->size;
-	}
+	if (!rc)
+		msl_fcmh_stash_xattrsize(f, mp->size);
 
  out:
 	if (f)
@@ -3152,11 +3166,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		goto retry;
 	if (!rc)
 		rc = mp->rc;
-	if (!rc) {
-		FCMH_LOCK(f);
-		// XXX we should just load the new attr in
-		fcmh_2_fci(f)->fci_xattrsize = 1;
-	}
+	if (!rc)
+		msl_fcmh_stash_xattrsize(f, 1);
 
  out:
 	if (f)
@@ -3190,7 +3201,7 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 //	if (rc)
 //		PFL_GOTOERR(out, rc);
 
-	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
+	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);

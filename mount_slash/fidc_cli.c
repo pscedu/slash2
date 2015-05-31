@@ -63,7 +63,8 @@
  *     (2) This function should only be used by a client.
  */
 void
-slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
+slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
+    int flags)
 {
 	uidmap_int_stat(sstb);
 
@@ -141,6 +142,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(f);
+	f->fcmh_flags &= ~FCMH_CLI_HAVE_XATTRSIZE;
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
@@ -249,6 +251,17 @@ slc_fcmh_dtor(struct fidc_membh *f)
 	msl_delete_namecache(f);
 	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
 		dircache_purge(f);
+}
+
+void
+msl_fcmh_stash_xattrsize(struct fidc_membh *f, uint64_t xattrsize)
+{
+	int locked;
+
+	locked = FCMH_RLOCK(f);
+	fcmh_2_fci(f)->fci_xattrsize = xattrsize;
+	f->fcmh_flags |= FCMH_CLI_HAVE_XATTRSIZE;
+	FCMH_URLOCK(f, locked);
 }
 
 #if PFL_DEBUG > 0
