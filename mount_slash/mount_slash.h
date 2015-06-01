@@ -26,6 +26,7 @@
 #define _MOUNT_SLASH_H_
 
 #include <sys/types.h>
+#include <sys/statvfs.h>
 
 #include "pfl/atomic.h"
 #include "pfl/fs.h"
@@ -221,12 +222,22 @@ struct msl_fsrqinfo {
 #define DPRINTF_MFSRQ(level, q, fmt, ...)				\
 	DPRINTFS_MFSRQ((level), SLSS_FCMH, (q), fmt, ## __VA_ARGS__)
 
+/*
+ * Client-specific private data for sl_resource, shared for both MDS and IOS
+ * types.
+ */
 struct resprof_cli_info {
+	struct psc_spinlock		 rpci_lock;
 	struct psc_dynarray		 rpci_pinned_bmaps;
+	struct statvfs			 rpci_sfb;
+	struct timespec			 rpci_sfb_time;
 	int				 rpci_flags;
 };
 
 #define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
+
+#define RPCI_LOCK(rpci)			spinlock(&(rpci)->rpci_lock)
+#define RPCI_ULOCK(rpci)		freelock(&(rpci)->rpci_lock)
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)

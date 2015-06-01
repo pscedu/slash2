@@ -2492,14 +2492,31 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct resprof_cli_info *rpci;
+	struct sl_resource *pref_ios;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
+	struct timespec expire;
 	struct statvfs sfb;
-	int rc;
+	int rc = 0;
 
 	msfsthr_ensure(pfr);
 
-//	checkcreds
+//	slc_getfscreds(pfr, &pcr);
+//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
+
+	pref_ios = msl_get_pref_ios();
+	PFL_GETTIMESPEC(&expire);
+#define MSL_STATFS_EXPIRE_S 1
+	expire.tv_sec += MSL_STATFS_EXPIRE_S;
+	rpci = res2rpci(pref_ios);
+	RPCI_LOCK(rpci);
+	if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
+		memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
+		RPCI_ULOCK(rpci);
+		PFL_GOTOERR(out, 0);
+	}
+	RPCI_ULOCK(rpci);
 
  retry:
 	MSL_RMC_NEWREQ_PFCC(NULL, NULL, csvc, SRMT_STATFS, rq, mq, mp,
@@ -2507,7 +2524,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
-	mq->iosid = msl_pref_ios;
+	mq->iosid = pref_ios->res_id;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2522,7 +2539,13 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
 
+	RPCI_LOCK(rpci);
+	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
+	rpci->rpci_sfb_time = expire;
+	RPCI_ULOCK(rpci);
+
  out:
+	sl_resource_put(pref_ios);
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
 	if (rq)
