@@ -27,6 +27,7 @@
 
 #include <stddef.h>
 
+#include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/random.h"
 #include "pfl/rpc.h"
@@ -228,20 +229,22 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	if (!rc) {
-		f = bmap->bcm_fcmh;
+	if (rc) {
+		BMAP_LOCK(b);
+		bmap_2_bci(b)->bci_error = rc;
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	} else {
+		f = b->bcm_fcmh;
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		FCMH_LOCK(f);
 
 		BMAP_LOCK(bmap);
-		msl_bmap_reap_init(bmap, &mp->sbd, 1);
+		msl_bmap_reap_init(b, &mp->sbd, 1);
 		slc_fcmh_load_inode(f, &mp->ino);
 
 		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);
-		OPSTAT_INCR("bmap-get-async-ok");
-	} else
-		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+	}
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rc=%d repls=%d ios=%#x seq=%"PRId64,
 	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
@@ -446,7 +449,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		return (rc);
 	}
 
-	/* if we are aren't in the expiry window, bail */
+	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 	if (secs >= BMAP_CLI_EXTREQSECS &&
@@ -572,11 +575,11 @@ slc_reptbl_cmp(const void *a, const void *b, void *arg)
 int
 msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 {
-	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
+	struct psc_compl compl;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
@@ -588,7 +591,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-	OPSTAT_INCR("bmap_retrieve");
+	// XXX respect ASYNC
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -597,7 +600,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 		PFL_GOTOERR(out, rc);
 
 	mq->fg = f->fcmh_fg;
-	mq->prefios[0] = msl_pref_ios; /* Tell MDS of our preferred ION */
+	mq->prefios[0] = msl_pref_ios;
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETINODE;
@@ -605,37 +608,33 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    bmap->bcm_bmapno, rw == SL_READ ? "read" : "write");
 
-	if (flags & BMAPGETF_ASYNC) {
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = bmap;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc)
-			sl_csvc_decref(csvc);
-		else
-			OPSTAT_INCR("bmap_get_async");
-		return (rc);
+	if ((flags & BMAPGETF_ASYNC) == 0) {
+		psc_compl_init(&compl);
+		rq->rq_compl = &compl;
 	}
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = bmap;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_interpret_reply = msl_rmc_bmlget_cb;
+	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
+	if ((flags & BMAPGETF_ASYNC) || rc)
+		return (rc);
 
-	FCMH_LOCK(f);
+	psc_compl_wait(&compl);
+	psc_compl_destroy(&compl);
 
-	BMAP_LOCK(bmap);
-	msl_bmap_reap_init(bmap, &mp->sbd, 0);
+	if (rc == -SLERR_BMAP_DIOWAIT) {
+		/* Retry for bmap to be DIO ready. */
+		DEBUG_BMAP(PLL_NOTICE, bmap,
+		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
-	slc_fcmh_load_inode(f, &mp->ino);
-
-	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
-	    rw, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
-
-	psc_waitq_wakeall(&f->fcmh_waitq);
-	FCMH_ULOCK(f);
+		sleep(1);
+		if (++nretries > BMAP_CLI_MAX_LEASE)
+			return (-ETIMEDOUT);
+		goto retry;
+	}
 
  out:
 	if (rq) {
@@ -647,18 +646,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-//	if (rc && slc_rmc_retry(pfr, &rc))
-//		goto retry;
-	if (rc == -SLERR_BMAP_DIOWAIT) {
-		/* Retry for bmap to be DIO ready. */
-		DEBUG_BMAP(PLL_NOTICE, bmap,
-		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
-
-		sleep(1);
-		if (++nretries > BMAP_CLI_MAX_LEASE)
-			return (-ETIMEDOUT);
+	if (rc && slc_rmc_retry(NULL, &rc))
 		goto retry;
-	}
 
 	return (rc);
 }
