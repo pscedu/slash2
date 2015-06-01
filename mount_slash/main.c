@@ -3088,6 +3088,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	/* Check if xattrsize is cached and useful. */
 	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
+		struct fcmh_cli_info *fci;
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
