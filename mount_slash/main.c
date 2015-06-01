@@ -146,6 +146,17 @@ int				 msl_newent_inherit_groups = 1;
 
 int				 disable_namecache = 1;
 
+struct sl_resource *
+msl_get_pref_ios(void)
+{
+	return (libsl_id2res(msl_pref_ios));
+}
+
+void
+sl_resource_put(__unusedx struct sl_resource *res)
+{
+}
+
 void
 msl_delete_namecache(struct fidc_membh *fp)
 {
