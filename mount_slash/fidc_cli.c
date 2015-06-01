@@ -155,7 +155,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 }
 
 void
-slc_fcmh_load_inode(struct fidc_membh *f, struct srt_inode *ino)
+msl_fcmh_stash_inode(struct fidc_membh *f, struct srt_inode *ino)
 {
 	struct fcmh_cli_info *fci;
 	int i;
@@ -195,7 +195,7 @@ slc_fcmh_fetch_inode(struct fidc_membh *f)
 		goto out;
 
 	FCMH_LOCK(f);
-	slc_fcmh_load_inode(f, &mp->ino);
+	msl_fcmh_stash_inode(f, &mp->ino);
 	FCMH_ULOCK(f);
 
  out:

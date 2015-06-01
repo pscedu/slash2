@@ -240,7 +240,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 
 		BMAP_LOCK(bmap);
 		msl_bmap_reap_init(b, &mp->sbd, 1);
-		slc_fcmh_load_inode(f, &mp->ino);
+		msl_fcmh_stash_inode(f, &mp->ino);
 
 		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);

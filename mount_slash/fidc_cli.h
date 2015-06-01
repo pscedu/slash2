@@ -143,15 +143,14 @@ int	fcmh_checkcreds_ctx(struct fidc_membh *,
 	    int);
 
 int	slc_fcmh_fetch_inode(struct fidc_membh *);
-void	slc_fcmh_load_inode(struct fidc_membh *, struct srt_inode *);
+void	msl_fcmh_stash_inode(struct fidc_membh *, struct srt_inode *);
 
 #define fidc_lookup_load(fid, fcmhp, pfcc)				\
 	_fidc_lookup_load(PFL_CALLERINFOSS(SLSS_FCMH), (fid),		\
 	    (fcmhp), (pfcc))
 
-/**
- * fidc_lookup_load - Create the fcmh if it doesn't exist,
- *	loading its attributes from the MDS.
+/*
+ * Create the fcmh if it doesn't exist, loading its attributes from the MDS.
  */
 #define _pfl_callerinfo pci
 static __inline int
