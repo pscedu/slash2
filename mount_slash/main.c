@@ -114,7 +114,7 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
 
-sl_ios_id_t			 prefIOS = IOS_ID_ANY;
+sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
@@ -493,7 +493,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mode;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
-	mq->prefios[0] = prefIOS;
+	mq->prefios[0] = msl_pref_ios;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
 	rc = uidmap_ext_cred(&mq->owner);
@@ -753,7 +753,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 			break;
 
 		mq->fg = f->fcmh_fg;
-		mq->iosid = prefIOS;
+		mq->iosid = msl_pref_ios;
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	} while (rc && slc_rmc_retry_pfcc(pfcc, &rc));
@@ -2496,7 +2496,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
-	mq->iosid = prefIOS;
+	mq->iosid = msl_pref_ios;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -3452,14 +3452,14 @@ slc_setprefios(sl_ios_id_t id)
 	int j;
 
 //	CONF_LOCK();
-	r = libsl_id2res(prefIOS);
+	r = libsl_id2res(msl_pref_ios);
 	if (r) {
 		r->res_flags &= ~RESF_PREFIOS;
 		if (RES_ISCLUSTER(r))
 			DYNARRAY_FOREACH(ri, j, &r->res_peers)
 				ri->res_flags &= ~RESF_PREFIOS;
 	}
-	prefIOS = id;
+	msl_pref_ios = id;
 	r = libsl_id2res(id);
 	r->res_flags |= RESF_PREFIOS;
 	if (RES_ISCLUSTER(r))

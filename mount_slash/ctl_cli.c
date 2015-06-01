@@ -495,7 +495,7 @@ msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 {
 	struct sl_resource *r;
 
-	r = libsl_id2res(prefIOS);
+	r = libsl_id2res(msl_pref_ios);
 	if (r)
 		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
 	else

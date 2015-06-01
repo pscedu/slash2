@@ -115,7 +115,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 		PFL_GOTOERR(out, rc);
 
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
-	mq->prefios[0] = prefIOS;
+	mq->prefios[0] = msl_pref_ios;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -370,7 +370,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
 	    sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
 	mq->nreassigns = bci->bci_nreassigns;
-	mq->pios = prefIOS;
+	mq->pios = msl_pref_ios;
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
@@ -597,7 +597,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 		PFL_GOTOERR(out, rc);
 
 	mq->fg = f->fcmh_fg;
-	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
+	mq->prefios[0] = msl_pref_ios; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETINODE;

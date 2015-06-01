@@ -349,7 +349,7 @@ enum {
 };
 
 extern const char		*ctlsockfn;
-extern sl_ios_id_t		 prefIOS;
+extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*slc_rmc_resm;
 extern char			 mountpoint[];
 extern int			 slc_use_mapfile;
