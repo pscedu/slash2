@@ -724,7 +724,13 @@ slvr_remove(struct slvr *s)
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
 	OPSTAT_INCR("slvr-put");
-	lc_remove(&sli_lruslvrs, s);
+
+	SLVR_LOCK(s);
+	if (s->slvr_flags & SLVR_LRU)
+		lc_remove(&sli_lruslvrs, s);
+	else
+		lc_remove(&sli_crcqslvrs, s);
+	SLVR_ULOCK(s);
 
 	bii = slvr_2_bii(s);
 
@@ -742,6 +748,37 @@ slvr_remove(struct slvr *s)
 		OPSTAT_INCR("readahead-waste");
 
 	psc_pool_return(slvr_pool, s);
+}
+
+void
+slvr_remove_all(struct fidc_membh *f)
+{
+	int i;
+	struct bmap *b;
+	struct slvr *s;
+	struct bmap_iod_info *bii;
+	static struct psc_dynarray a;
+
+	/*
+ 	 * Use two loops to avoid entangled with some background operations.
+ 	 */
+	psc_dynarray_init(&a);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+
+		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
+		psc_dynarray_add(&a, b);
+
+		bii = bmap_2_bii(b);
+		while (!SPLAY_EMPTY(&bii->bii_slvrs)) {
+			s = SPLAY_MIN(biod_slvrtree, &bii->bii_slvrs);
+			OPSTAT_INCR("slvr-remove");
+			slvr_remove(s);
+		}
+	}
+	DYNARRAY_FOREACH(b, i, &a)
+		bmap_op_done_type(b, BMAP_OPCNT_SLVR);
+
+	psc_dynarray_free(&a);
 }
 
 void
