@@ -221,8 +221,8 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmap *bmap = args->pointer_arg[MSL_CBARG_BMAP];
-	struct bmap_cli_info *bci = bmap_2_bci(bmap);
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct srm_leasebmap_rep *mp;
 	struct fidc_membh *f;
 	int rc;
@@ -238,7 +238,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		FCMH_LOCK(f);
 
-		BMAP_LOCK(bmap);
+		BMAP_LOCK(b);
 		msl_bmap_reap_init(b, &mp->sbd, 1);
 		msl_fcmh_stash_inode(f, &mp->ino);
 
@@ -246,7 +246,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		FCMH_ULOCK(f);
 	}
 
-	DEBUG_BMAP(PLL_DIAG, bmap, "rc=%d repls=%d ios=%#x seq=%"PRId64,
+	DEBUG_BMAP(PLL_DIAG, b, "rc=%d repls=%d ios=%#x seq=%"PRId64,
 	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
 	sl_csvc_decref(csvc);
