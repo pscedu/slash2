@@ -237,17 +237,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 
-	if (flags & BMAPGETF_ASYNC) {
-		BMAP_ULOCK(b);
-		if (new_bmap) {
-			b->bcm_flags |= bmaprw;
-			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
-		}
-		if (!new_bmap || rc)
-			bmap_op_done(b);
-		return (0);
-	}
-
 	if (new_bmap) {
 		b->bcm_flags |= bmaprw;
 		BMAP_ULOCK(b);
@@ -256,10 +245,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 
-		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAPF_INIT;
-		bmap_wake_locked(b);
-	} else {
+		if ((flags & BMAPGETF_ASYNC) == 0) {
+			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_INIT;
+			bmap_wake_locked(b);
+		}
+	} else if ((flags & BMAPGETF_ASYNC) == 0) {
 		/*
 		 * Wait while BMAPF_INIT is set.
 		 *

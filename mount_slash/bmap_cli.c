@@ -178,8 +178,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 	struct srm_reassignbmap_rep *mp;
 	int rc;
 
-	psc_assert(&rq->rq_async_args == args);
-
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
 
@@ -217,43 +215,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 }
 
 __static int
-msl_rmc_bmlget_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
-	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct srm_leasebmap_rep *mp;
-	struct fidc_membh *f;
-	int rc;
-
-	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-
-	if (rc) {
-		BMAP_LOCK(b);
-		bmap_2_bci(b)->bci_error = rc;
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-	} else {
-		f = b->bcm_fcmh;
-		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
-		FCMH_LOCK(f);
-
-		BMAP_LOCK(b);
-		msl_bmap_reap_init(b, &mp->sbd, 1);
-		msl_fcmh_stash_inode(f, &mp->ino);
-
-		psc_waitq_wakeall(&f->fcmh_waitq);
-		FCMH_ULOCK(f);
-	}
-
-	DEBUG_BMAP(PLL_DIAG, b, "rc=%d repls=%d ios=%#x seq=%"PRId64,
-	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
-
-	sl_csvc_decref(csvc);
-	return (rc);
-}
-
-__static int
 msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
@@ -270,11 +231,9 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	PFL_GETTIMESPEC(&ts);
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc) {
-		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-		    sizeof(struct srt_bmapdesc));
+		memcpy(&bci->bci_sbd, &mp->sbd, sizeof(bci->bci_sbd));
 
-		timespecadd(&ts, &msl_bmap_max_lease,
-		    &bmap_2_bci(b)->bci_etime);
+		timespecadd(&ts, &msl_bmap_max_lease, &bci->bci_etime);
 
 		OPSTAT_INCR("bmap-lease-ext-done");
 	} else {
@@ -285,7 +244,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 		 */
 		psc_assert(!(b->bcm_flags & BMAPF_LEASEFAILED));
 		bci->bci_etime = ts;
-		bmap_2_bci(b)->bci_error = rc;
+		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
 		OPSTAT_INCR("bmap-lease-ext-fail");
 	}
@@ -565,6 +524,50 @@ slc_reptbl_cmp(const void *a, const void *b, void *arg)
 	return (CMP(xv, yv));
 }
 
+__static int
+msl_rmc_bmlget_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMLGET_CBARG_CSVC];
+	struct psc_compl *compl = args->pointer_arg[MSL_BMLGET_CBARG_COMPL];
+	struct bmap *b = args->pointer_arg[MSL_BMLGET_CBARG_BMAP];
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct srm_leasebmap_rep *mp;
+	struct fidc_membh *f;
+	int rc;
+
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+
+	if (rc) {
+		BMAP_LOCK(b);
+		bci->bci_error = rc;
+		BMAP_ULOCK(b);
+	} else {
+		f = b->bcm_fcmh;
+		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
+		FCMH_LOCK(f);
+
+		BMAP_LOCK(b);
+		msl_bmap_reap_init(b, &mp->sbd);
+		msl_fcmh_stash_inode(f, &mp->ino);
+
+		psc_waitq_wakeall(&f->fcmh_waitq);
+		FCMH_ULOCK(f);
+	}
+
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+	    "rc=%d repls=%d ios=%#x seq=%"PRId64,
+	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
+
+	if (compl)
+		psc_compl_ready(compl, 1);
+	else
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+
+	sl_csvc_decref(csvc);
+	return (rc);
+}
+
 /*
  * Perform a blocking 'LEASEBMAP' operation to retrieve one or more
  * bmaps from the MDS.
@@ -573,7 +576,7 @@ slc_reptbl_cmp(const void *a, const void *b, void *arg)
  * @rw: read or write access
  */
 int
-msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
+msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -584,10 +587,10 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 
-	psc_assert(bmap->bcm_flags & BMAPF_INIT);
-	psc_assert(bmap->bcm_fcmh);
+	psc_assert(b->bcm_flags & BMAPF_INIT);
+	psc_assert(b->bcm_fcmh);
 
-	f = bmap->bcm_fcmh;
+	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
 
  retry:
@@ -601,33 +604,47 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw, int flags)
 
 	mq->fg = f->fcmh_fg;
 	mq->prefios[0] = msl_pref_ios;
-	mq->bmapno = bmap->bcm_bmapno;
+	mq->bmapno = b->bcm_bmapno;
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETINODE;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
-	    bmap->bcm_bmapno, rw == SL_READ ? "read" : "write");
+	    b->bcm_bmapno, rw == SL_READ ? "read" : "write");
 
 	if ((flags & BMAPGETF_ASYNC) == 0) {
 		psc_compl_init(&compl);
-		rq->rq_compl = &compl;
+		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_COMPL] =
+		    &compl;
 	}
 
-	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = bmap;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
+	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlget_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc)
+	if (rc) {
+		if ((flags & BMAPGETF_ASYNC) == 0)
+			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
-	if ((flags & BMAPGETF_ASYNC) || rc)
+	}
+	if ((flags & BMAPGETF_ASYNC) || rc) {
+		if (flags & BMAPGETF_ASYNC)
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+		else
+			psc_compl_destroy(&compl);
 		return (rc);
+	}
 
 	psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
 
+	rq = NULL;
+	csvc = NULL;
+
 	if (rc == -SLERR_BMAP_DIOWAIT) {
+		// XXX async path is broken here
+
 		/* Retry for bmap to be DIO ready. */
-		DEBUG_BMAP(PLL_NOTICE, bmap,
+		DEBUG_BMAP(PLL_NOTICE, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		sleep(1);
@@ -674,7 +691,7 @@ msl_bmap_cache_rls(struct bmap *b)
 }
 
 void
-msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
+msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
@@ -715,8 +732,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd, int async)
 			b->bcm_flags |= BMAPF_DIO;
 	}
 
-	if (!async)
-		bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
 	b->bcm_flags &= ~BMAPF_INIT;
 	BMAP_ULOCK(b);
@@ -815,10 +831,10 @@ msbreleasethr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
+	struct timespec nto, crtime;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
-	struct timespec nto, crtime;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
 	int i, nitems;

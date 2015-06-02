@@ -350,19 +350,20 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 					(f), (n), (rw), BMAPGETF_CREATE, (bp))
 
 enum bmap_opcnt_types {
-	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */
-	BMAP_OPCNT_LEASE,		/*  1: */
-	BMAP_OPCNT_BIORQ,		/*  2: */
-	BMAP_OPCNT_REPLWK,		/*  3: repl work inside ION */
-	BMAP_OPCNT_REAPER,		/*  4: client bmap timeout */
-	BMAP_OPCNT_SLVR,		/*  5: */
-	BMAP_OPCNT_BCRSCHED,		/*  6: */
-	BMAP_OPCNT_TRUNCWAIT,		/*  7: */
-	BMAP_OPCNT_LEASEEXT,		/*  8: */
-	BMAP_OPCNT_REASSIGN,		/*  9: */
-	BMAP_OPCNT_FLUSH,		/* 10: */
-	BMAP_OPCNT_UPSCH,		/* 11: peer update scheduler */
-	BMAP_OPCNT_WORK			/* 12: generic worker thread */
+	BMAP_OPCNT_ASYNC,		/* asynchronous callback */
+	BMAP_OPCNT_BCRSCHED,		/* bmap CRC update list */
+	BMAP_OPCNT_BIORQ,		/* IO request */
+	BMAP_OPCNT_FLUSH,		/* flusher queue */
+	BMAP_OPCNT_LEASE,		/* */
+	BMAP_OPCNT_LEASEEXT,		/* */
+	BMAP_OPCNT_LOOKUP,		/* bmap_get */
+	BMAP_OPCNT_REAPER,		/* client bmap timeout */
+	BMAP_OPCNT_REASSIGN,		/* */
+	BMAP_OPCNT_REPLWK,		/* repl work inside ION */
+	BMAP_OPCNT_SLVR,		/* IOD sliver */
+	BMAP_OPCNT_TRUNCWAIT,		/* */
+	BMAP_OPCNT_UPSCH,		/* peer update scheduler */
+	BMAP_OPCNT_WORK			/* generic worker thread */
 };
 
 RB_HEAD(bmaptree, bmapc_memb);
