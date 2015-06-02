@@ -122,10 +122,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct pfl_iostats_grad *ist;
 	struct sl_fidgen *fgp;
-	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
+	struct bmap *bmap;
 	uint64_t seqno;
 	ssize_t rv;
 
@@ -412,16 +412,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
  * XXX  We probably need a way to make sure that all data have been
  * written before fsync().
  */
-static int
+__static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
+	int rc, new, fsync_time = 0;
 	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
-	int rc, new, fsync_time = 0;
+	struct bmap *b;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);

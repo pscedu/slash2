@@ -64,7 +64,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
-	struct bmapc_memb *b = NULL;
+	struct bmap *b = NULL;
 	struct bmap_mds_info *bmi;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -207,8 +207,8 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	int iosidx, tract[NBREPLST];
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
 	sl_bmapno_t bno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -276,15 +276,15 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
+	struct bmap_mds_info *bmi;
 	struct slash_creds cr;
-	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
+	struct bmap *b;
 	sl_bmapno_t bno;
-	void *mfh;
 	int64_t fsiz;
 	uint32_t i;
-	struct bmap_mds_info *bmi;
+	void *mfh;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);

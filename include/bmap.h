@@ -321,12 +321,12 @@ struct bmap {
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	 bmap_free_all_locked(struct fidc_membh *);
-void	 bmap_biorq_waitempty(struct bmapc_memb *);
+void	 bmap_biorq_waitempty(struct bmap *);
 void	_bmap_op_done(const struct pfl_callerinfo *,
-	    struct bmapc_memb *, const char *, ...);
+	    struct bmap *, const char *, ...);
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
-	    sl_bmapno_t, enum rw, int, struct bmapc_memb **);
-struct bmapc_memb *
+	    sl_bmapno_t, enum rw, int, struct bmap **);
+struct bmap *
 	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int *);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
@@ -336,9 +336,9 @@ void	 dump_bmap_repls(uint8_t *);
 void	_dump_bmap_flags_common(uint32_t *, int *);
 
 void	_dump_bmapodv(const struct pfl_callerinfo *, int,
-	    struct bmapc_memb *, const char *, va_list);
+	    struct bmap *, const char *, va_list);
 void	_dump_bmapod(const struct pfl_callerinfo *, int,
-	    struct bmapc_memb *, const char *, ...);
+	    struct bmap *, const char *, ...);
 
 #define bmap_getf(f, n, rw, fl, bp)	_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
 					(f), (n), (rw), (fl), (bp))
@@ -366,28 +366,28 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_WORK			/* generic worker thread */
 };
 
-RB_HEAD(bmaptree, bmapc_memb);
-RB_PROTOTYPE(bmaptree, bmapc_memb, bcm_tentry, bmap_cmp);
+RB_HEAD(bmaptree, bmap);
+RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
 	void	(*bmo_reapf)(void);
-	void	(*bmo_init_privatef)(struct bmapc_memb *);
-	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw, int);
-	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw, int);
-	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
+	void	(*bmo_init_privatef)(struct bmap *);
+	int	(*bmo_retrievef)(struct bmap *, enum rw, int);
+	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);
+	void	(*bmo_final_cleanupf)(struct bmap *);
 };
 
 extern struct bmap_ops sl_bmap_ops;
 
 static __inline void *
-bmap_get_pri(struct bmapc_memb *b)
+bmap_get_pri(struct bmap *b)
 {
 	psc_assert(b);
 	return (b + 1);
 }
 
 static __inline const void *
-bmap_get_pri_const(const struct bmapc_memb *b)
+bmap_get_pri_const(const struct bmap *b)
 {
 	psc_assert(b);
 	return (b + 1);

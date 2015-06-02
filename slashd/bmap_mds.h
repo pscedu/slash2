@@ -116,7 +116,7 @@ struct bmap_mds_info {
 #define BMAPOD_WRLOCK(bmi)	_psc_rwlock_wrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 
 static __inline struct bmap_mds_info *
-bmap_2_bmi(struct bmapc_memb *b)
+bmap_2_bmi(struct bmap *b)
 {
 	return (bmap_get_pri(b));
 }
@@ -243,9 +243,9 @@ struct bmap_ios_assign {
 /* bia_flags */
 #define BIAF_DIO		(1 << 0)
 
-int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
-int	 mds_bmap_write(struct bmapc_memb *, void *, void *);
-int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void *);
+int	 mds_bmap_read(struct bmap *, enum rw, int);
+int	 mds_bmap_write(struct bmap *, void *, void *);
+int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmap *, void *);
 
 #define mds_bmap_write_rel(b, logf)	_mds_bmap_write_rel(PFL_CALLERINFOSS(SLSS_BMAP), (b), (logf))
 
@@ -260,14 +260,14 @@ int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
 	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,
 	    uint8_t *, int);
 int	 mds_bmap_load_fg(const struct sl_fidgen *, sl_bmapno_t,
-	    struct bmapc_memb **);
+	    struct bmap **);
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
-	    struct bmapc_memb **);
+	    struct bmap **);
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
-void	 mds_bmap_ensure_valid(struct bmapc_memb *);
+void	 mds_bmap_ensure_valid(struct bmap *);
 
-struct bmap_mds_lease * mds_bmap_getbml(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
+struct bmap_mds_lease * mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
@@ -276,7 +276,7 @@ void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
-int64_t	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
+int64_t	 slm_bmap_calc_repltraffic(struct bmap *);
 
 void	 mds_bia_odtable_startup_cb(void *, struct pfl_odt_receipt *, void *);
 
@@ -284,10 +284,10 @@ extern struct psc_poolmaster	 slm_bml_poolmaster;
 extern struct psc_poolmgr	*slm_bml_pool;
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
-static __inline struct bmapc_memb *
+static __inline struct bmap *
 bmi_2_bmap(struct bmap_mds_info *bmi)
 {
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	psc_assert(bmi);
 	b = (void *)bmi;

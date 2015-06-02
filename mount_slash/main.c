@@ -465,8 +465,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct fcmh_cli_info *fci;
 	struct bmap_cli_info *bci;
 	struct pscfs_creds pcr;
-	struct bmapc_memb *b;
 	struct stat stb;
+	struct bmap *b;
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
@@ -1873,7 +1873,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int i, rc = 0;
 
 	f = mfh->mfh_fcmh;
@@ -2780,7 +2780,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		struct bmapc_memb *b;
+		struct bmap *b;
 
 		if (!stb->st_size) {
 			DEBUG_FCMH(PLL_DIAG, c,

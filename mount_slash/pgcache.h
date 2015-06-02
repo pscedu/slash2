@@ -173,7 +173,7 @@ struct bmpc_ioreq {
 	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_new_biorqs_exp */
 	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios	*/
 	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* indexed on offset for write coalescing */
-	struct bmapc_memb	*biorq_bmap;	/* backpointer to our bmap	*/
+	struct bmap		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
 };
 
@@ -289,18 +289,18 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op,
 
 void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
-void	 bmpc_biorqs_flush(struct bmapc_memb *, int);
-void	 bmpc_biorqs_destroy_locked(struct bmapc_memb *, int);
+void	 bmpc_biorqs_flush(struct bmap *, int);
+void	 bmpc_biorqs_destroy_locked(struct bmap *, int);
 
 struct bmpc_ioreq *
-	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
+	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,
 	    char *, uint32_t, uint32_t, int);
 
 #define bmpce_lookup(b, fl, off, wq)	_bmpce_lookup(PFL_CALLERINFO(), (b), (fl), (off), (wq))
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
-	 _bmpce_lookup(const struct pfl_callerinfo *, struct bmapc_memb *, int, uint32_t, struct psc_waitq *);
+	 _bmpce_lookup(const struct pfl_callerinfo *, struct bmap *, int, uint32_t, struct psc_waitq *);
 void	 bmpce_release(struct bmap_pagecache_entry *);
 
 void	 bwc_release(struct bmpc_write_coalescer *);

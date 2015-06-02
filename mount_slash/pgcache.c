@@ -307,7 +307,7 @@ bmpce_release(struct bmap_pagecache_entry *e)
 }
 
 struct bmpc_ioreq *
-bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
+bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     uint32_t off, uint32_t len, int flags)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
@@ -416,7 +416,7 @@ bmpc_freeall(struct bmap *b)
  *	while waiting for old ones to clear.
  */
 void
-bmpc_biorqs_flush(struct bmapc_memb *b, int all)
+bmpc_biorqs_flush(struct bmap *b, int all)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
@@ -456,7 +456,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int all)
 }
 
 void
-bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
+bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;

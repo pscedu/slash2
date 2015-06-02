@@ -34,7 +34,7 @@
 
 #include "slashd/mdsio.h"
 
-struct bmapc_memb;
+struct bmap;
 struct fidc_membh;
 struct srm_bmap_crcup;
 struct srt_stat;
@@ -199,7 +199,7 @@ struct slmds_jent_namespace {
  * bmap lookups.
  */
 struct sl_mds_crc_log {
-	struct bmapc_memb		*scl_bmap;
+	struct bmap			*scl_bmap;
 	struct srm_bmap_crcup		*scl_crcup;
 	sl_ios_id_t			 scl_iosid;
 };
@@ -226,12 +226,12 @@ void	mdslog_ino_repls(void *, uint64_t, int);
 void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *, void *);
 
-void	mdslogfill_bmap_repls(struct bmapc_memb *, struct slmds_jent_bmap_repls *);
+void	mdslogfill_bmap_repls(struct bmap *, struct slmds_jent_bmap_repls *);
 void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
 
 void	mds_journal_init(uint64_t);
 
-int	mds_bmap_crc_update(struct bmapc_memb *, sl_ios_id_t, struct srm_bmap_crcup *);
+int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t, struct srm_bmap_crcup *);
 
 void	mds_reserve_slot(int);
 void	mds_unreserve_slot(int);

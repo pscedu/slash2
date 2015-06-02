@@ -38,15 +38,15 @@ struct slm_replst_workreq {
 	struct psclist_head	 rsw_lentry;
 };
 
-typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
+typedef void (*brepl_walkcb_t)(struct bmap *, int, int, void *);
 
 #define mds_repl_inv_except(b, idx)	_mds_repl_inv_except((b), (idx), 0)
 
 int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t, sl_replica_t *, int, int, int);
-int	_mds_repl_bmap_apply(struct bmapc_memb *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
-int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
+int	_mds_repl_bmap_apply(struct bmap *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
+int	_mds_repl_bmap_walk(struct bmap *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 int	 mds_repl_delrq(const struct sl_fidgen *, sl_bmapno_t, sl_replica_t *, int);
-int	_mds_repl_inv_except(struct bmapc_memb *, int, int);
+int	_mds_repl_inv_except(struct bmap *, int, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
 
@@ -55,8 +55,8 @@ int	 resmpair_bw_adj(struct sl_resm *, struct sl_resm *, int64_t, int *);
 #define slm_repl_bmap_rel(b)		 slm_repl_bmap_rel_type((b), BMAP_OPCNT_LOOKUP)
 #define slm_repl_bmap_rel_type(b, type) _slm_repl_bmap_rel_type((b), (type))
 
-void	 slm_repl_upd_write(struct bmapc_memb *, int);
-void	_slm_repl_bmap_rel_type(struct bmapc_memb *, int);
+void	 slm_repl_upd_write(struct bmap *, int);
+void	_slm_repl_bmap_rel_type(struct bmap *, int);
 
 void	 mds_brepls_check(uint8_t *, int);
 

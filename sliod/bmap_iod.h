@@ -145,10 +145,10 @@ extern struct psc_poolmgr	*bmap_crcupd_pool;
 
 extern struct psc_listcache	 bcr_ready;
 
-static __inline struct bmapc_memb *
+static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)
 {
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	psc_assert(bii);
 	b = (void *)bii;

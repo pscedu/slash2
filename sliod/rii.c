@@ -113,8 +113,8 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	const struct srm_repl_read_req *mq;
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct srm_repl_read_rep *mp;
-	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
 	struct iovec iov;
 	struct slvr *s;
 	int rv;
@@ -212,7 +212,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	const struct srm_repl_read_req *mq;
 	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
-	struct bmapc_memb *b = NULL;
+	struct bmap *b = NULL;
 	struct fidc_membh *f;
 	struct iovec iov;
 	struct slvr *s;

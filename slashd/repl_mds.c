@@ -99,7 +99,7 @@ iosidx_in(int idx, const int *iosidx, int nios)
 }
 
 void
-_slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
+_slm_repl_bmap_rel_type(struct bmap *b, int type)
 {
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
 	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
@@ -288,7 +288,7 @@ mds_brepls_check(uint8_t *repls, int nr)
  *	(*) BMAPOD_WRLOCK
  */
 int
-_mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
+_mds_repl_bmap_apply(struct bmap *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
@@ -394,7 +394,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
  * @nios: # I/O system indexes specified.
  */
 int
-_mds_repl_bmap_walk(struct bmapc_memb *b, const int *tract,
+_mds_repl_bmap_walk(struct bmap *b, const int *tract,
     const int *retifset, int flags, const int *iosidx, int nios,
     brepl_walkcb_t cbf, void *cbarg)
 {
@@ -448,7 +448,7 @@ struct iosidv {
 };
 
 void
-mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
+mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
 {
 	struct iosidv *qv = arg;
 
@@ -476,7 +476,7 @@ mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
  *	stored in the inode during log replay.
  */
 int
-_mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
+_mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct iosidv qv;
@@ -551,7 +551,7 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	} while (0)
 
 void
-slm_repl_upd_write(struct bmapc_memb *b, int rel)
+slm_repl_upd_write(struct bmap *b, int rel)
 {
 	struct {
 		sl_replica_t	 iosv[SL_MAX_REPLICAS];
@@ -686,7 +686,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc, i;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);
@@ -861,8 +861,8 @@ struct slm_repl_valid {
  *	replicas aren't removed.
  */
 void
-slm_repl_countvalid_cb(__unusedx struct bmapc_memb *b, int iosidx,
-    int val, void *arg)
+slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
+    void *arg)
 {
 	struct slm_repl_valid *t = arg;
 	int j;
@@ -889,7 +889,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	    retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);

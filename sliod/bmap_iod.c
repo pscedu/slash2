@@ -215,7 +215,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *bii, *tmp;
 	struct bmap_iod_rls *brls;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int nrls, rc, i;
 
 	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
@@ -312,7 +312,7 @@ slibmaprlsthr_spawn(void)
 }
 
 void
-iod_bmap_init(struct bmapc_memb *b)
+iod_bmap_init(struct bmap *b)
 {
 	struct bmap_iod_info *bii;
 
@@ -333,7 +333,7 @@ iod_bmap_init(struct bmapc_memb *b)
 }
 
 void
-iod_bmap_finalcleanup(struct bmapc_memb *b)
+iod_bmap_finalcleanup(struct bmap *b)
 {
 	struct bmap_iod_info *bii;
 
@@ -354,7 +354,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
  *	problem).
  */
 int
-iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
+iod_bmap_retrieve(struct bmap *b, enum rw rw, __unusedx int flags)
 {
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmap_full_req *mq;

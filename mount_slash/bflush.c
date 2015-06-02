@@ -291,7 +291,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 __static int
 bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
-    struct slashrpc_cservice *csvc, struct bmapc_memb *b)
+    struct slashrpc_cservice *csvc, struct bmap *b)
 {
 	struct pscrpc_request *rq = NULL;
 	struct resm_cli_info *rmci;
@@ -377,7 +377,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
-	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
 	struct bmap_cli_info *bci;
 	int delta;
@@ -464,10 +464,10 @@ __static void
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
 	struct slashrpc_cservice *csvc;
-	struct bmpc_ioreq *r;
-	struct bmapc_memb *b;
-	int i, rc;
 	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r;
+	struct bmap *b;
+	int i, rc;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
@@ -633,7 +633,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
  * be non-blocking.
  */
 __static int
-bmap_flushable(struct bmapc_memb *b)
+bmap_flushable(struct bmap *b)
 {
 	int secs, samples = 0, flush = 0, force = 0;
 	struct bmap_pagecache *bmpc;
@@ -834,7 +834,7 @@ __static void
 msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
-	struct bmapc_memb *b, *tmpb;
+	struct bmap *b, *tmpb;
 	struct timespec ts;
 	int i;
 
@@ -896,9 +896,9 @@ bmap_flush(void)
 	    bmaps = DYNARRAY_INIT;
 	struct bmpc_write_coalescer *bwc;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
-	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m = NULL;
+	struct bmpc_ioreq *r;
+	struct bmap *b, *tmpb;
 	int i, j, didwork = 0;
 
 	LIST_CACHE_LOCK(&slc_bmapflushq);
@@ -1050,7 +1050,7 @@ msbmapthr_spawn(void)
 
 	psc_waitq_init(&slc_bflush_waitq);
 
-	lc_reginit(&slc_bmapflushq, struct bmapc_memb,
+	lc_reginit(&slc_bmapflushq, struct bmap,
 	    bcm_lentry, "bmapflushq");
 
 	lc_reginit(&slc_bmaptimeoutq, struct bmap_cli_info,
