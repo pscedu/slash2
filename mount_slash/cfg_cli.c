@@ -38,6 +38,7 @@ slcfg_init_res(struct sl_resource *res)
 
 	rpci = res2rpci(res);
 	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
+	INIT_SPINLOCK(&rpci->rpci_lock);
 }
 
 void
