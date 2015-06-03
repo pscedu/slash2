@@ -507,7 +507,12 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
-		BMPCE_LOCK(e);
+		/*
+		 * This avoids a deadlock with bmpc_freeall(). In general,
+		 * a background reaper should be nice to other uses.
+		 */
+		if (!BMPCE_TRYLOCK(e))
+			continue;
 		if ((e->bmpce_flags & (flag |
 		    BMPCEF_REAPED)) == flag) {
 			e->bmpce_flags &= ~flag;
