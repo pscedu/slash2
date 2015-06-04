@@ -113,7 +113,7 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	uint64_t seqno = BMAPSEQ_ANY;
+	uint64_t seqno;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmapminseq_req *mq;
@@ -152,9 +152,7 @@ bim_getcurseq(void)
 		if (rc)
 			goto out;
 
-		seqno = mp->seqno;
-
-		rc = bim_updateseq(seqno);
+		rc = bim_updateseq(mp->seqno);
  out:
 		if (rq) {
 			pscrpc_req_finished(rq);
