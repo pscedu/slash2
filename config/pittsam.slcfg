@@ -40,7 +40,7 @@ site @PITT {
 		id	= 202;
 		nids	= supercell1-priv.frank.sam.pitt.edu,
 			  supercell1.frank.sam.pitt.edu;
-		fsroot	= /data/supercell1;
+		fsroot	= /data/supercell1/slio;
 		self_test = "fshealthtest %r";
 	}
 
