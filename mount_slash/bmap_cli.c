@@ -551,7 +551,6 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		msl_bmap_reap_init(b, &mp->sbd);
 		msl_fcmh_stash_inode(f, &mp->ino);
 
-		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);
 	}
 
@@ -562,6 +561,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 	if (compl)
 		psc_compl_ready(compl, 1);
 	else
+		/* will do bmap_wake_locked() for anyone waiting for us */
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 
 	sl_csvc_decref(csvc);
