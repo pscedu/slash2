@@ -378,6 +378,7 @@ extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
 extern struct psc_listcache	 slc_attrtimeoutq;
 extern struct psc_listcache	 slc_bmapflushq;
 extern struct psc_listcache	 slc_bmaptimeoutq;
+extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;

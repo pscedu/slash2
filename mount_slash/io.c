@@ -96,7 +96,7 @@ struct pfl_iostats_grad	 slc_iorpc_iostats[8];
 
 struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
-struct psc_listcache	 slc_readaheadq;
+struct psc_listcache	 msl_readaheadq;
 
 void
 msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
@@ -164,7 +164,7 @@ readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	rarq->rarq_bno = bno;
 	rarq->rarq_off = off;
 	rarq->rarq_npages = npages;
-	lc_add(&slc_readaheadq, rarq);
+	lc_add(&msl_readaheadq, rarq);
 }
 
 /*
@@ -2077,7 +2077,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		f = NULL;
 		b = NULL;
 
-		rarq = lc_getwait(&slc_readaheadq);
+		rarq = lc_getwait(&msl_readaheadq);
 		fidc_lookup(&rarq->rarq_fg, 0, &f);
 		if (f == NULL)
 			goto end;
@@ -2127,7 +2127,7 @@ msreadaheadthr_spawn(void)
 	slc_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &slc_readaheadrq_poolmaster);
 
-	lc_reginit(&slc_readaheadq, struct readaheadrq, rarq_lentry,
+	lc_reginit(&msl_readaheadq, struct readaheadrq, rarq_lentry,
 	    "readaheadq");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {

@@ -2999,7 +2999,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lc_kill(&slc_bmapflushq);
 	lc_kill(&slc_bmaptimeoutq);
 	lc_kill(&slc_attrtimeoutq);
-	lc_kill(&slc_readaheadq);
+	lc_kill(&msl_readaheadq);
 	pscrpc_exit_portals();
 //	exit(0);
 }
