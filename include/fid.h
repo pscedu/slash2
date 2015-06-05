@@ -85,7 +85,7 @@ struct sl_fidgen;
 
 struct sl_fidgen {
 	slfid_t			fg_fid;
-	slfgen_t		fg_gen;
+	slfgen_t		fg_gen;		/* file truncations and directory modifications */
 };
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)
