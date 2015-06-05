@@ -1501,7 +1501,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 {
 	struct srt_readdir_ent *e;
 	struct fidc_membh *f;
-	int i;
+	int i, rc;
 
 	for (i = 0, e = iov[1].iov_base; i < nents; i++, e++) {
 		if (e->sstb.sst_fid == FID_ANY ||
@@ -1514,16 +1514,21 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 
-		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE, &f);
+		rc = fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE, &f);
+		if (rc)
+			continue;
 
-		if (f) {
-			FCMH_LOCK(f);
-			slc_fcmh_setattrf(f, &e->sstb,
-			    FCMH_SETATTRF_SAVELOCAL |
-			    FCMH_SETATTRF_HAVELOCK);
+		FCMH_LOCK(f);
+		/*
+		 * If we already have attributes, then don't use potentially
+		 * out-dated piggybacked attributes. It only makes sense to
+		 * do work when the above fidc_lookup() creates a new fcmh.
+		 */
+		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
+			slc_fcmh_setattrf(f, &e->sstb, FCMH_SETATTRF_HAVELOCK);
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
-			fcmh_op_done(f);
 		}
+		fcmh_op_done(f);
 	}
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
