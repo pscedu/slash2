@@ -123,14 +123,13 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 {
 	const struct slmctlmsg_replqueued *scrq = m;
 
-	printf("%-32s", scrq->scrq_resname);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_queued * BW_UNITSZ);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_ingress_assigned * BW_UNITSZ);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_queued * BW_UNITSZ);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_egress_assigned * BW_UNITSZ);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_queued * BW_UNITSZ);
-	printf(" "); psc_ctl_prhuman(scrq->scrq_aggr_assigned * BW_UNITSZ);
-	printf("\n");
+	printf("%-32s ", scrq->scrq_resname);
+	psc_ctl_prnumber(0, scrq->scrq_ingress_queued * BW_UNITSZ, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_ingress_assigned * BW_UNITSZ, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_egress_queued * BW_UNITSZ, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_egress_assigned * BW_UNITSZ, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_aggr_queued * BW_UNITSZ, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_aggr_assigned * BW_UNITSZ, 0, "\n");
 }
 
 void
@@ -175,14 +174,14 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	 * The following uses the formula from df.c in GNU coreutils.
 	 * However, we don't do integer arithmetic.
 	 */
-	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_frsize) :
-	    printf("%7s", "-");
+	b->sf_blocks ? psc_ctl_prnumber(0, b->sf_blocks * b->sf_frsize,
+	    0, "") : printf("%7s", "-");
 	printf(" ");
-	b->sf_blocks ? psc_ctl_prhuman((b->sf_blocks - b->sf_bfree) *
-	    b->sf_frsize) : printf("%7s", "-");
+	b->sf_blocks ? psc_ctl_prnumber(0, (b->sf_blocks - b->sf_bfree) *
+	    b->sf_frsize, 0, "") : printf("%7s", "-");
 	printf(" ");
-	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_frsize) :
-	    printf("%7s", "-");
+	b->sf_blocks ? psc_ctl_prnumber(0, b->sf_bavail * b->sf_frsize,
+	    0, "") : printf("%7s", "-");
 	printf(" ");
 
 	setcolor(col);
