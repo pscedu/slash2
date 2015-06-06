@@ -846,8 +846,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 				retifset[BREPLST_REPL_QUEUED] = 1;
 
 				if (mds_repl_bmap_apply(b, tract,
-				    retifset, off))
+				    retifset, off)) {
 					mds_bmap_write_logrepls(b);
+					return;
+				}
 			}
 			break;
 
