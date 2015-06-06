@@ -1116,6 +1116,9 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 {
 	struct sl_resource *r;
 
+	r = libsl_id2res(resid);
+	if (r == NULL)
+		return;
 	dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid, fid, bno, uid, gid, status, sys_prio, usr_prio, nonce "
@@ -1130,7 +1133,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,
 	    SQLITE_INTEGER, usr_prio,
 	    SQLITE_INTEGER, sl_sys_upnonce);
-	r = libsl_id2res(resid);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 }
 
