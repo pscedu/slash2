@@ -2078,6 +2078,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 		b = NULL;
 
 		rarq = lc_getwait(&msl_readaheadq);
+		if (rarq == NULL)
+			break;
+
 		fidc_lookup(&rarq->rarq_fg, 0, &f);
 		if (f == NULL)
 			goto end;
