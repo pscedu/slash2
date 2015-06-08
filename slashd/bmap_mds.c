@@ -65,9 +65,9 @@ bmap_2_mfh(struct bmap *b)
 __static void
 mds_bmap_initnew(struct bmap *b)
 {
-	struct bmap_mds_info * bmi;
-	struct bmap_ondisk *bod;
 	struct fidc_membh *f = b->bcm_fcmh;
+	struct bmap_mds_info *bmi;
+	struct bmap_ondisk *bod;
 	uint32_t pol;
 	int i;
 
