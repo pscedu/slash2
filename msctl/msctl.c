@@ -431,7 +431,8 @@ cmd_fattr(int ac, char **av)
 			arg.val = lookup(replpol_tab,
 			    nitems(replpol_tab), val);
 			if (arg.val == -1)
-				errx(1, "fattr: %s: invalid value", val);
+				errx(1, "fattr: %s: invalid value",
+				    val);
 			break;
 		}
 	} else
@@ -478,7 +479,7 @@ cmd_bmap_repl_policy(int ac, char **av)
 
 	val = strchr(bmapspec, '=');
 	if (val) {
-		val++;
+		*val++ = '\0';
 		arg.replpol = lookup(replpol_tab, nitems(replpol_tab),
 		    val);
 		if (arg.replpol == -1)
@@ -492,7 +493,8 @@ cmd_bmap_repl_policy(int ac, char **av)
 		if ((next = strchr(bmapno, ',')) != NULL)
 			*next++ = '\0';
 		l = strtol(bmapno, &endp, 10);
-		if (l < 0 || (sl_bmapno_t)l >= UINT32_MAX || endp == bmapno)
+		if (l < 0 || (sl_bmapno_t)l >= UINT32_MAX || endp ==
+		    bmapno)
 			errx(1, "%s: invalid bmap number", bmapno);
 
 		br = PSCALLOC(sizeof(*br));
