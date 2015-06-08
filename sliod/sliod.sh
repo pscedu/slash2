@@ -8,16 +8,17 @@ ctl=slictl
 
 usage()
 {
-	echo "usage: $0 [-dgv] [-F filter] [-P profile] [instance]" >&2
+	echo "usage: $0 [-dgOv] [-F filter] [-P profile] [instance]" >&2
 	exit 1
 }
 
 bkav=("$@")
-while getopts "dF:gP:v" c; do
+while getopts "dF:gOP:v" c; do
 	case $c in
 	d) nodaemonize=1	;;
 	F) filter=$OPTARG	;;
 	g) filter=mygdb		;;
+	O) once=1		;;
 	P) prof=$OPTARG		;;
 	v) verbose=1		;;
 	*) usage		;;
