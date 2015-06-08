@@ -947,7 +947,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		if (timespeccmp(&crtime, &nto, <)) {
 			LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 			psc_waitq_waitabs(&slc_bmaptimeoutq.plc_wq_empty,
-				&slc_bmaptimeoutq.plc_lock, &nto);
+			    &slc_bmaptimeoutq.plc_lock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
