@@ -517,7 +517,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = abs(mp->rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -989,7 +989,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = abs(mp->rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1048,7 +1048,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = abs(mp->rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
