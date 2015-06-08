@@ -1494,6 +1494,11 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	BMAP_ULOCK(b);
+
+	FCMH_WAIT_BUSY(f);
+	FCMH_ULOCK(f);
+
+	BMAP_WAIT_BUSY(b);
 	BHREPL_POLICY_SET(b, mq->pol);
 
 	mds_bmap_write_repls_rel(b);
