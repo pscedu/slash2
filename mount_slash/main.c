@@ -1523,6 +1523,10 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		 * If we already have attributes, then don't use potentially
 		 * out-dated piggybacked attributes. It only makes sense to
 		 * do work when the above fidc_lookup() creates a new fcmh.
+		 *
+		 * In theory, the MDS can return more recent attributes from
+		 * another client or an OSD. But this is an optimization path 
+		 * and our attributes age.
 		 */
 		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
 			slc_fcmh_setattrf(f, &e->sstb, FCMH_SETATTRF_HAVELOCK);
