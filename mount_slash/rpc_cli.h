@@ -124,6 +124,9 @@ int	slc_rmc_setmds(const char *);
 int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
 
+extern struct pscrpc_svc_handle	*msl_rci_svh;
+extern struct pscrpc_svc_handle	*msl_rcm_svh; 
+
 static __inline struct psc_multiwait *
 msl_getmw(void)
 {

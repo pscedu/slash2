@@ -38,6 +38,8 @@
 #include "slerr.h"
 
 struct sl_resm			*slc_rmc_resm;
+struct pscrpc_svc_handle	*msl_rci_svh;
+struct pscrpc_svc_handle	*msl_rcm_svh; 
 
 __static void
 slc_rci_init(void)
@@ -67,10 +69,10 @@ slc_rcm_init(void)
 void
 slc_rpc_initsvc(void)
 {
-	struct pscrpc_svc_handle *svh;
+	struct pscrpc_svc_handle *svh; 
 
 	/* Setup request service for CLI from MDS. */
-	svh = PSCALLOC(sizeof(*svh));
+	msl_rcm_svh = svh = PSCALLOC(sizeof(*svh));
 	svh->svh_nbufs = SRCM_NBUFS;
 	svh->svh_bufsz = SRCM_BUFSZ;
 	svh->svh_reqsz = SRCM_BUFSZ;
@@ -85,7 +87,7 @@ slc_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct msrcm_thread);
 
 	/* Setup request service for CLI from ION. */
-	svh = PSCALLOC(sizeof(*svh));
+	msl_rci_svh = svh = PSCALLOC(sizeof(*svh));
 	svh->svh_nbufs = SRCI_NBUFS;
 	svh->svh_bufsz = SRCI_BUFSZ;
 	svh->svh_reqsz = SRCI_BUFSZ;
