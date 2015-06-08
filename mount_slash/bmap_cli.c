@@ -554,9 +554,14 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		FCMH_ULOCK(f);
 	}
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "rc=%d repls=%d ios=%#x seq=%"PRId64,
-	    rc, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
+	if (mp)
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+		    "rc=%d repls=%d ios=%#x seq=%"PRId64,
+		    rc, mp->ino.nrepls, mp->sbd.sbd_ios,
+		    mp->sbd.sbd_seq);
+	else
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+		    "rc=%d mp=NULL");
 
 	if (compl)
 		psc_compl_ready(compl, 1);
