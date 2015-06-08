@@ -517,7 +517,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = abs(mp->rc);
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -989,7 +989,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = abs(mp->rc);
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1048,7 +1048,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = abs(mp->rc);
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1525,7 +1525,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		 * do work when the above fidc_lookup() creates a new fcmh.
 		 *
 		 * In theory, the MDS can return more recent attributes from
-		 * another client or an OSD. But this is an optimization path 
+		 * another client or an OSD. But this is an optimization path
 		 * and our attributes age.
 		 */
 		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
@@ -3003,14 +3003,46 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_connection *conn;
+	lnet_process_id_t peer;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j;
+
 	pscthr_killall();
 	pfl_wkthr_killall();
 	lc_kill(&slc_bmapflushq);
 	lc_kill(&slc_bmaptimeoutq);
 	lc_kill(&slc_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
+
+	LIST_CACHE_LOCK(&slc_bmaptimeoutq);
+	psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
+	LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+
+	psc_waitq_wakeall(&msl_flush_attrq);
+
+	CONF_FOREACH_RESM(s, r, i, m, j)
+		if (m->resm_csvc) {
+			csvc = m->resm_csvc;
+			CSVC_LOCK(csvc);
+			sl_csvc_incref(csvc);
+			sl_csvc_markfree(csvc);
+			sl_csvc_decref(csvc);
+			continue;
+		}
+	psc_compl_ready(&sl_nbrqset->set_compl, 1);
+	sleep(1);
+	pscrpc_set_destroy(sl_nbrqset);
+	peer.nid = LNET_NID_ANY;
+	pscrpc_drop_conns(&peer);
+exit(0);
+	pscrpc_svh_destroy(msl_rci_svh);
+	pscrpc_svh_destroy(msl_rcm_svh);
+
 	pscrpc_exit_portals();
-//	exit(0);
 }
 
 void
