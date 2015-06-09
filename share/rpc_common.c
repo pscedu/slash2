@@ -501,6 +501,7 @@ void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
+	struct pscrpc_connection *c;
 	int rc;
 
 	(void)CSVC_RLOCK(csvc);
@@ -515,6 +516,9 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		 */
 		if (csvc->csvc_peertype == SLCONNT_CLI)
 			pll_remove(&sl_clients, csvc);
+//		c = csvc->csvc_import->imp_connection;
+//		if (c)
+//			c->c_imp = NULL;
 		pscrpc_import_put(csvc->csvc_import);
 		DEBUG_CSVC(PLL_DIAG, csvc, "freed");
 		// XXX assert(mutex.nwaiters == 0)
@@ -547,28 +551,32 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc, int highlevel)
+    struct slashrpc_cservice *csvc, int flags)
 {
 	struct pscrpc_import *imp;
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	if (highlevel) {
-		while (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_BUSY) {
+	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
+		while (psc_atomic32_read(&csvc->csvc_flags) &
+		    CSVCF_BUSY) {
 			CSVC_WAIT(csvc);
 			CSVC_LOCK(csvc);
 		}
-	}
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
 	if (imp) {
+		// deactivate(imp) ?
 		pscrpc_abort_inflight(imp);
-		if (highlevel)
+		if (flags & SLRPC_DISCONNF_HIGHLEVEL)
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
-	csvc->csvc_import = slrpc_new_import(csvc);
+	if (flags & SLRPC_DISCONNF_RECON)
+		csvc->csvc_import = slrpc_new_import(csvc);
+	else
+		csvc->csvc_import = NULL;
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
 }
