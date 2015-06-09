@@ -107,6 +107,9 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FLUSH_ATTR_TIMEOUT	8
 
+#define fcmh_super_root(f)     (fcmh_2_fid(f) == SLFID_ROOT && \
+				fcmh_2_gen(f) == FGEN_ANY - 1  ? EPERM : 0)
+
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
 struct psc_hashtbl		 msl_namecache_hashtbl;
@@ -382,6 +385,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_super_root(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	rc = fcmh_reserved(p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -859,6 +865,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_super_root(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	rc = fcmh_reserved(p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
