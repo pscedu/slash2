@@ -103,6 +103,8 @@ struct sl_fidgen {
 #define SLFID_NS		2	/* /.slfidns */
 #define SLFID_MIN		3	/* minimum usable */
 
+#define FID_IS_RESERVED(fid)	((fid) < SLFID_MIN)
+
 #define SLPRI_FSID		"%#018"PRIx64
 #define FSID_LEN		16
 

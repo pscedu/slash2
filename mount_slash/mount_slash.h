@@ -322,12 +322,6 @@ void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 
-void	 msl_delete_namecache(struct fidc_membh *);
-void	 msl_insert_namecache(uint64_t, const char *, struct fidc_membh *);
-
-struct fidc_membh *
-	 msl_lookup_namecache(uint64_t, const char *, int);
-
 void	 slc_getuprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
