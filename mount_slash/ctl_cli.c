@@ -323,7 +323,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	FCMH_ULOCK(f);
 
 	if (rc == 0)
-		rc = slc_fcmh_fetch_inode(f);
+		rc = msl_fcmh_fetch_inode(f);
 
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",

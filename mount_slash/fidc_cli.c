@@ -168,7 +168,7 @@ msl_fcmh_stash_inode(struct fidc_membh *f, struct srt_inode *ino)
 }
 
 int
-slc_fcmh_fetch_inode(struct fidc_membh *f)
+msl_fcmh_fetch_inode(struct fidc_membh *f)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;

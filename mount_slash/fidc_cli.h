@@ -142,7 +142,7 @@ int	fcmh_checkcreds_ctx(struct fidc_membh *,
 	    const struct pscfs_clientctx *, const struct pscfs_creds *,
 	    int);
 
-int	slc_fcmh_fetch_inode(struct fidc_membh *);
+int	msl_fcmh_fetch_inode(struct fidc_membh *);
 void	msl_fcmh_stash_inode(struct fidc_membh *, struct srt_inode *);
 void	msl_fcmh_stash_xattrsize(struct fidc_membh *, uint64_t);
 
