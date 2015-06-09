@@ -184,7 +184,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
 		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
-		mp->attr.sst_fg.fg_gen = 1;
+		mp->attr.sst_fg.fg_gen = FGEN_ANY-1;
 		slm_root_attributes(&mp->attr);
 		return (0);
 	}
