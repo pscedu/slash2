@@ -109,7 +109,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
-struct psc_hashtbl		 slc_namei_hashtbl;
+struct psc_hashtbl		 msl_namecache_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
@@ -144,8 +144,6 @@ struct psc_hashtbl		 slc_gidmap_int;
 
 int				 msl_newent_inherit_groups = 1;
 
-int				 disable_namecache = 1;
-
 struct sl_resource *
 msl_get_pref_ios(void)
 {
@@ -155,108 +153,6 @@ msl_get_pref_ios(void)
 void
 sl_resource_put(__unusedx struct sl_resource *res)
 {
-}
-
-void
-msl_delete_namecache(struct fidc_membh *fp)
-{
-	struct fcmh_cli_info *fci;
-	uint64_t pino;
-
-	if (disable_namecache)
-		return;
-
-	fci = fcmh_get_pri(fp);
-	pino = fci->fci_pino;
-	if (!pino)
-		return;
-
-	psc_hashent_remove(&slc_namei_hashtbl, fci);
-
-	OPSTAT_INCR("delete-name");
-	psclog_diag("delete: pino=%"PRIx64" name='%s'", pino,
-	    fci->fci_name);
-}
-
-void
-msl_insert_namecache(uint64_t pino, const char *name,
-    struct fidc_membh *child)
-{
-	int len, found = 0;
-	struct psc_hashbkt *b;
-	struct fidc_membh *fp;
-	struct fcmh_cli_info *fci;
-
-	if (disable_namecache)
-		return;
-
-	if (FID_GET_INUM(pino) == SLFID_NS)
-		return;
-
-	psc_assert(pino);
-	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
-	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
-		fp = fci_2_fcmh(fci);
-		if (fci->fci_pino != pino ||
-		    strcmp(fci->fci_name, name))
-			continue;
-
-		found = 1;
-		psc_assert(fcmh_2_fid(child) == fcmh_2_fid(fp));
-		break;
-	}
-	len = strlen(name);
-	if (!found && len < SL_NAME_SHORT) {
-		fci = fcmh_get_pri(child);
-		if (fci->fci_pino) {
-			psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
-			psclog_diag("update: pino = %"PRIx64", name = %s, b = %p",
-			    pino, fci->fci_name, b);
-			OPSTAT_INCR("update-name");
-		} else {
-			psclog_diag("insert: pino = %"PRIx64", name = %s, b = %p",
-			    pino, fci->fci_name, b);
-			OPSTAT_INCR("insert-name");
-		}
-		fci->fci_pino = pino;
-		fci->fci_name = fci->fci_sname;
-		memcpy(fci->fci_sname, name, len + 1);
-		psc_hashent_init(&slc_namei_hashtbl, fci);
-		psc_hashbkt_add_item(&slc_namei_hashtbl, b, fci);
-	}
-	psc_hashbkt_put(&slc_namei_hashtbl, b);
-}
-
-struct fidc_membh *
-msl_lookup_namecache(uint64_t pino, const char *name, int dodelete)
-{
-	struct psc_hashbkt *b;
-	struct fidc_membh *tmp;
-	struct fcmh_cli_info *fci;
-	struct fidc_membh *child = NULL;
-
-	if (disable_namecache)
-		return NULL;
-
-	psc_assert(pino);
-	b = psc_hashbkt_get(&slc_namei_hashtbl, &pino);
-	PSC_HASHBKT_FOREACH_ENTRY(&slc_namei_hashtbl, fci, b) {
-		tmp = fci_2_fcmh(fci);
-		if (fci->fci_pino == pino &&
-		    strcmp(fci->fci_name, name) == 0) {
-			child = tmp;
-			break;
-		}
-	}
-	if (dodelete && child) {
-		fci->fci_pino = 0;
-		OPSTAT_INCR("delete-name");
-		psc_hashbkt_del_item(&slc_namei_hashtbl, b, fci);
-		psclog_diag("delete: pino = %"PRIx64", name = %s", pino,
-		    fci->fci_name);
-	}
-	psc_hashbkt_put(&slc_namei_hashtbl, b);
-	return (child);
 }
 
 int
@@ -556,16 +452,21 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(c);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
+	namecache_insert(p, name, fcmh_2_fid(c));
+
 	rc = msl_io_convert_errno(mp->rc2);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	fci = fcmh_2_fci(c);
-	// XXX bug fci->fci_inode.reptbl inherited?
-	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
-	fci->fci_inode.nrepls = 1;
-	// XXX bug fci->fci_inode.flags inherited?
-	// XXX bug fci->fci_inode.newreplpol inherited?
+	// fci_inode should be read from
+//	msl_fcmh_save_inode(c, &mp->ino);
+
+// XXX bug fci->fci_inode.reptbl inherited?
+fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
+fci->fci_inode.nrepls = 1;
+// XXX bug fci->fci_inode.flags inherited?
+// XXX bug fci->fci_inode.newreplpol inherited?
 	FCMH_ULOCK(c);
 
 	/*
@@ -584,7 +485,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	bci = bmap_2_bci(b);
 	// XXX this is wrong if the fcmh inherited from a dir with a
-	// repltbl!
+	// reptbl!
 	SL_REPL_SET_BMAP_IOS_STAT(bci->bci_repls, 0, BREPLST_VALID);
 
 	bmap_op_done(b);
@@ -887,7 +788,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc = EISDIR);
 
 
-	if (FID_GET_SITEID(fcmh_2_fid(p)) != FID_GET_SITEID(fcmh_2_fid(c)))
+	if (FID_GET_SITEID(fcmh_2_fid(p)) !=
+	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
  retry:
@@ -913,6 +815,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	namecache_insert(p, newname, fcmh_2_fid(c));
 
  out:
 	if (c)
@@ -1001,6 +904,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 
 	sl_internalize_stat(&mp->cattr, &stb);
+	namecache_insert(p, name, fcmh_2_fid(c));
 
  out:
 	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", "
@@ -1113,13 +1017,16 @@ slc_wk_issue_readdir(void *p)
  * that we will hit subsequent requests.
  */
 void
-lookup_cache_tally_miss(struct fidc_membh *p, off_t off)
+dircache_tally_lookup_miss(struct fidc_membh *p)
 {
+#if 0
 	struct fcmh_cli_info *pi = fcmh_2_fci(p);
 	struct slc_wkdata_readdir *wk = NULL;
 	struct timeval ts, delta;
 	struct dircache_page *np;
 	int ra = 0;
+
+	OPSTAT_INCR("dircache-lookup-miss");
 
 	FCMH_LOCK(p);
 	PFL_GETTIMEVAL(&ts);
@@ -1137,7 +1044,9 @@ lookup_cache_tally_miss(struct fidc_membh *p, off_t off)
 	if (!ra)
 		return;
 
-	np = dircache_new_page(p, off, 0);
+	if (dircache_hasoff(p, off)) {
+
+	np = dircache_new_page(p, 0, 0);
 	if (np == NULL)
 		return;
 
@@ -1149,6 +1058,7 @@ lookup_cache_tally_miss(struct fidc_membh *p, off_t off)
 	wk->off = off;
 	wk->size = 32 * 1024;
 	pfl_workq_putitem(wk);
+#endif
 }
 
 __static int
@@ -1160,7 +1070,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	struct fidc_membh *p, *c = NULL;
 	slfid_t cfid = FID_ANY;
 	int remote = 0, rc;
-	off_t nextoff;
 
 	if (fp)
 		*fp = NULL;
@@ -1223,15 +1132,12 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	FCMH_LOCK(p);
-	cfid = dircache_lookup(p, name, &nextoff);
-	FCMH_ULOCK(p);
+	cfid = namecache_lookup(pinum, name);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
-		OPSTAT_INCR("dircache-lookup-miss");
-		lookup_cache_tally_miss(p, nextoff);
+		if (cfid == FID_ANY)
+			dircache_tally_lookup_miss(p);
 		remote = 1;
 	}
-
 	fcmh_op_done(p);
 
 	if (remote)
@@ -1350,13 +1256,13 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				slc_fcmh_setattrf(c, &mp->cattr,
 				    FCMH_SETATTRF_SAVELOCAL);
 			} else {
-				msl_lookup_namecache(pinum, name, 1);
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete-marked");
 			}
 		} else
 			OPSTAT_INCR("delete-skipped");
+		namecache_delete(pinum, name);
 	}
 
 	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid=%d "
@@ -1463,6 +1369,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 	sl_internalize_stat(&mp->cattr, &stb);
+	namecache_insert(p, name, fcmh_2_fid(c));
 
  out:
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
@@ -1503,6 +1410,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	struct fidc_membh *f;
 	int i, rc;
 
+	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
 	for (i = 0, e = iov[1].iov_base; i < nents; i++, e++) {
 		if (e->sstb.sst_fid == FID_ANY ||
 		    e->sstb.sst_fid == 0) {
@@ -1525,7 +1433,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		 * do work when the above fidc_lookup() creates a new fcmh.
 		 *
 		 * In theory, the MDS can return more recent attributes from
-		 * another client or an OSD. But this is an optimization path 
+		 * another client or an OSD. But this is an optimization path
 		 * and our attributes age.
 		 */
 		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
@@ -1534,8 +1442,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		}
 		fcmh_op_done(f);
 	}
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
-	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
 }
 
 int
@@ -1564,10 +1470,14 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			iov[1].iov_base = mp->ents + mp->size;
 			msl_readdir_finish(d, p, mp->eof, mp->num,
 			    mp->size, iov);
+
+			OPSTAT_INCR("readdir-piggyback");
 		} else {
 			FCMH_LOCK(d);
 			p->dcp_refcnt--;
 			PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decr");
+
+			OPSTAT_INCR("readdir-wait-reply");
 		}
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -1585,6 +1495,8 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct pscrpc_request *rq = NULL;
 	struct dircache_page *p;
 	int rc;
+
+	OPSTAT_INCR("dircache-issue");
 
 	p = dircache_new_page(d, off, wait);
 	if (p == NULL)
@@ -1633,6 +1545,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
+	off_t raoff = 0;
 
 	msfsthr_ensure(pfr);
 
@@ -1705,7 +1618,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 				/* find starting entry */
 				poff = 0;
-				nd = psc_dynarray_len(p->dcp_dents_name);
+				nd = psc_dynarray_len(p->dcp_dents_off);
 				for (j = 0, pfd = p->dcp_base;
 				    j < nd; j++) {
 					if (off == thisoff)
@@ -1735,6 +1648,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				if (hit)
 					OPSTAT_INCR("dircache-hit");
 
+				if ((p->dcp_flags &
+				    DIRCACHEPGF_EOF) == 0) {
+					fcmh_op_start_type(d,
+					    FCMH_OPCNT_READAHEAD);
+					raoff = p->dcp_nextoff;
+				}
+
 				issue = 0;
 				break;
 			}
@@ -1743,9 +1663,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	FCMH_ULOCK(d);
 
 	if (issue) {
+		/*
+		 * The dircache_page was not found, or it was found but
+		 * had an error.  Issue a READDIR then wait for a reply.
+		 */
 		hit = 0;
 		rc = msl_readdir_issue(pfcc, d, off, size, 1);
-		OPSTAT_INCR("dircache-issue");
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1757,6 +1680,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (0)
  out:
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
+
+	if (raoff) {
+		msl_readdir_issue(NULL, d, raoff, size, 0);
+		fcmh_op_done_type(d, FCMH_OPCNT_READAHEAD);
+	}
 }
 
 void
@@ -1780,16 +1708,16 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &fp);
+	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb,
+	    &fp);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
-	/* check fp to special case for MSL_FIDNS_RPATH */
-	if (!rc && fp)
-		msl_insert_namecache(pinum, name, fp);
+	if (!rc)
+		namecache_insert(fp, name, fcmh_2_fid(fp));
 
  out:
 	if (fp)
@@ -2439,8 +2367,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_lookup_namecache(opinum, oldname, 1);
-	msl_lookup_namecache(npinum, newname, 1);
+	namecache_delete(opinum, oldname);
+	namecache_update(npinum, newname, mp->srr_cattr.sst_fid);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
@@ -2634,6 +2562,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 	sl_internalize_stat(&mp->cattr, &stb);
+	namecache_insert(p, name, fcmh_2_fid(c));
 
  out:
 	if (c)
@@ -2665,12 +2594,8 @@ msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
 	if (p->dcp_flags & DIRCACHEPGF_LOADING)
 		return;
 
-	/*
-	 * This hangs the client running 3.10.0-123.13.2.el7, but works fine
-	 * on Ubuntu 14.10 (3.16.0-23-generic).
-	 */
 	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
-	    d->dce_name, d->dce_namelen);
+	    d->dce_pfd->pfd_name, d->dce_pfd->pfd_namelen);
 }
 
 int
@@ -2915,19 +2840,20 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 
-#if 0
 	/*
-	 * Just because the attributes of a directory change, don't mean
-	 * that the dcache entries of its children are invalid.
+	 * If permissions changed for a directory, we need to
+	 * specifically invalidate all entries under the dir from the
+	 * cache in the kernel, otherwise there will be a window of
+	 * access where the new permissions are ignored until the cache
+	 * expires.
 	 */
-	if (fcmh_isdir(c)) {
+	if ((to_set & PSCFS_SETATTRF_MODE) && fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
 		mdie.mdie_pfr = pfr;
 		mdie.mdie_pinum = fcmh_2_fid(c);
 		dircache_walk(c, msl_dc_inv_entry, &mdie);
 	}
-#endif
 
  out:
 	if (c) {
@@ -3531,9 +3457,9 @@ msl_init(void)
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_mgr_init();
 
-	psc_hashtbl_init(&slc_namei_hashtbl, 0, struct fcmh_cli_info,
-	    fci_pino, fci_hentry, 3 * slcfg_local->cfg_fidcachesz - 1, NULL,
-	    "namei");
+	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
+	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
+	    dircache_ent_cmp, "namecache");
 
 	psc_poolmaster_init(&slc_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,

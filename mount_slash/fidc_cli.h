@@ -36,6 +36,24 @@ struct pscfs_clientctx;
 
 struct fidc_membh;
 
+struct fcmh_cli_info_file {
+	struct srt_inode	 inode;
+	uint64_t		 xattrsize;
+	int			 idxmap[SL_MAX_REPLICAS];
+	int			 mapstircnt;
+};
+
+struct fcmh_cli_info_dir {
+	struct psc_lockedlist	 pages;
+	struct psc_dynarray	 ents;		/* dircache ents not in a page */
+
+	/*
+	 * Predictive readdir when LOOKUPs aren't hitting dircache.
+	 */
+	struct timeval		 lookup_age;	/* async readdir  */
+	uint64_t		 lookup_misses;
+};
+
 /*
  * slfile mount_slash specific data, comes after slfile in memory.
  * @fci_resm: MDS resource who owns this file.
@@ -58,34 +76,16 @@ struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
 
-	uint64_t			 fci_pino;
-	char				*fci_name;
-	char				 fci_sname[SL_NAME_SHORT];
-	struct pfl_hashentry		 fci_hentry;
-
 	union {
-		struct {
-			struct srt_inode inode;
-			uint64_t	 xattrsize;
-			int		 idxmap[SL_MAX_REPLICAS];
-			int		 mapstircnt;
-		} f;
+		struct fcmh_cli_info_file f;
 #define fci_xattrsize		u.f.xattrsize
 #define fci_inode		u.f.inode
 #define fcif_idxmap		u.f.idxmap
 #define fcif_mapstircnt		u.f.mapstircnt
-		struct {
-			struct psc_lockedlist
-					 pages; // XXX tree?
 
-			/*
-			 * Predictive readdir when LOOKUPs aren't
-			 * hitting dircache.
-			 */
-			struct timeval	 lookup_age;	/* async readdir  */
-			uint64_t	 lookup_misses;
-		} d;
+		struct fcmh_cli_info_dir d;
 #define fci_dc_pages		u.d.pages
+#define fcid_ents		u.d.ents
 #define fcid_lookup_age		u.d.lookup_age
 #define fcid_lookup_misses	u.d.lookup_misses
 	} u;

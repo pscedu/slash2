@@ -23,13 +23,14 @@
  */
 
 /*
- * When a file directory file listing is requested, FUSE sends out a
- * READDIR RPC on the directory to get a listing of the names, then it
- * looks up each name for its inode, and requests attributes on each
- * inode.  Our code brings in all the name to inode translations and
- * attributes in one go.  This interface implements a simple,
- * non-coherent cache to avoid lookup and getattr RPCs on each
- * individual file.
+ * This API is akin to READDIRPLUS (which fetches READDIR entries plus
+ * 'struct stat' for each entry in anticipation that an application such
+ * as ls(1) will soon stat(2) each entry) but also provides:
+ *	- LRU for entries in case another READDIR for the same region
+ *	  occurs again soon.
+ *	- 'name to inode number' lookup cache (see namecache API)
+ * Since the file metadata attributes may differ in this cache versus
+ * the 'truth' (i.e. the MDS), this cache is not strictly coherent.
  */
 
 #ifndef _DIRCACHE_H_
@@ -82,10 +83,8 @@ struct dircache_page {
 	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
 	struct pfl_timespec	 dcp_remote_tm;	/* remote clock when populated */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
-	struct psc_dynarray	*dcp_dents_name;/* dircache_ents sorted by hash(basename) */
-	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
+	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by pfd_off */
 	void			*dcp_base;	/* pscfs_dirents */
-	void			*dcp_base0;	/* dircache_ents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
 	int			 dcp_refcnt;
 };
@@ -142,45 +141,36 @@ struct dircache_expire {
 
 /* This is analogous to 'struct dirent' many of which reside in a page. */
 struct dircache_ent {
-	uint64_t		 dce_hash;
-	int			 dce_namelen;
-	int			 dce_len;
-	const char		*dce_name;
-	int64_t			 dce_off;
+	uint64_t		 dce_key;
+	uint64_t		 dce_pfid;
+	struct pscfs_dirent	*dce_pfd;
+	struct psc_listentry	 dce_lentry;
+	struct psc_hashentry	 dce_hentry;
+};
+
+struct dircache_ent_query {
+	uint64_t		 dcq_key;
+	uint64_t		 dcq_pfid;
+	uint32_t		 dcq_namelen;
+	const char		*dcq_name;
 };
 
 /* The different interfaces below are used for searching and sorting. */
 static __inline int
-dce_cmp_name(const void *a, const void *b)
+dce_cmp_off_search(const void *a, const void *b)
 {
-	const struct dircache_ent *x = a, *y = b;
-	int rc;
+	const struct dircache_ent *y = b;
+	const off_t *xoff = a;
 
-	rc = CMP(x->dce_hash, y->dce_hash);
-	if (rc)
-		return (rc);
-	rc = CMP(x->dce_namelen, y->dce_namelen);
-	if (rc)
-		return (rc);
-	return (strncmp(x->dce_name, y->dce_name, y->dce_namelen));
+	return (CMP((uint64_t)*xoff, y->dce_pfd->pfd_off));
 }
 
-static __inline int
-dce_sort_cmp_name(const void *x, const void *y)
-{
-	const void * const *pa = x, *a = *pa;
-	const void * const *pb = y, *b = *pb;
-
-	return (dce_cmp_name(a, b));
-}
-
-/* The different interfaces below are used for searching and sorting. */
 static __inline int
 dce_cmp_off(const void *a, const void *b)
 {
 	const struct dircache_ent *x = a, *y = b;
 
-	return (CMP(x->dce_off, y->dce_off));
+	return (CMP(x->dce_pfd->pfd_off, y->dce_pfd->pfd_off));
 }
 
 static __inline int
@@ -203,12 +193,26 @@ struct dircache_page *
 int	dircache_hasoff(struct dircache_page *, off_t);
 int	_dircache_free_page(const struct pfl_callerinfo *,
 	    struct fidc_membh *, struct dircache_page *, int);
-slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
 	    size_t, void *, size_t, int);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
+int	dircache_ent_cmp(const void *, const void *);
+
+#define NAMECACHELOOKUPF_PEEK		0
+#define NAMECACHELOOKUPF_DELETE		1
+#define NAMECACHELOOKUPF_UPDATE		2
+
+#define namecache_delete(p, name)	_namecache_lookup((p), (name), 0, NAMECACHELOOKUPF_DELETE)
+#define namecache_lookup(p, name)	_namecache_lookup((p), (name), 0, NAMECACHELOOKUPF_PEEK)
+#define namecache_update(p, name, fid)	_namecache_lookup((p), (name), (fid), NAMECACHELOOKUPF_UPDATE)
+
+void	 namecache_purge(struct fidc_membh *);
+slfid_t	_namecache_lookup(uint64_t, const char *, uint64_t, int);
+void	 namecache_insert(struct fidc_membh *, const char *, uint64_t);
+
+struct psc_hashtbl msl_namecache_hashtbl;
 
 #endif /* _DIRCACHE_H_ */
