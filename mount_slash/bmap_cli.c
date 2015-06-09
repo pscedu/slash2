@@ -561,7 +561,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		    mp->sbd.sbd_seq);
 	else
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-		    "rc=%d mp=NULL");
+		    "rc=%d mp=NULL", rc);
 
 	if (compl)
 		psc_compl_ready(compl, 1);
