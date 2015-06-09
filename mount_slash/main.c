@@ -1221,7 +1221,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				PFL_GOTOERR(out, rc);
 
 			if (sstb.sst_uid != pcr.pcr_uid)
-				rc = EPERM;
+				rc = EACCES;
 		} else
 			FCMH_ULOCK(p);
 	} else {
@@ -2284,7 +2284,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			if (rc)
 				PFL_GOTOERR(out, rc);
 			if (srcsstb.sst_uid != pcr.pcr_uid)
-				PFL_GOTOERR(out, rc = EPERM);
+				PFL_GOTOERR(out, rc = EACCES);
 		}
 	}
 
@@ -2318,7 +2318,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				    NULL);
 				if (rc == 0 &&
 				    dstsstb.sst_uid != pcr.pcr_uid)
-					rc = EPERM;
+					rc = EACCES;
 				else
 					rc = 0;
 				if (rc)
@@ -2663,7 +2663,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 #endif
 		if (pcr.pcr_uid != c->fcmh_sstb.sst_uid)
-			PFL_GOTOERR(out, rc = EPERM);
+			PFL_GOTOERR(out, rc = EACCES);
 		if (pcr.pcr_gid != c->fcmh_sstb.sst_gid &&
 		    !inprocgrouplist(c->fcmh_sstb.sst_gid, &pcr))
 			stb->st_mode &= ~S_ISGID;
@@ -2675,7 +2675,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
 	    pcr.pcr_uid && pcr.pcr_uid != c->fcmh_sstb.sst_uid)
-		PFL_GOTOERR(out, rc = EPERM);
+		PFL_GOTOERR(out, rc = EACCES);
 
 	if (to_set & PSCFS_SETATTRF_ATIME_NOW)
 		stb->st_pfl_ctim = stb->st_pfl_atim;
@@ -2689,7 +2689,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
 		     pcr.pcr_uid != stb->st_uid))
-			PFL_GOTOERR(out, rc = EPERM);
+			PFL_GOTOERR(out, rc = EACCES);
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
@@ -2701,7 +2701,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
 		     !inprocgrouplist(stb->st_gid, &pcr)))
-			PFL_GOTOERR(out, rc = EPERM);
+			PFL_GOTOERR(out, rc = EACCES);
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
