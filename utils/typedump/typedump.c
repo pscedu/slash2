@@ -170,9 +170,12 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct bw_dir);
 	PRTYPE(struct dircache_ent);
+	PRTYPE(struct dircache_ent_query);
 	PRTYPE(struct dircache_expire);
 	PRTYPE(struct dircache_page);
 	PRTYPE(struct fcmh_cli_info);
+	PRTYPE(struct fcmh_cli_info_dir);
+	PRTYPE(struct fcmh_cli_info_file);
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
@@ -574,6 +577,9 @@ main(int argc, char *argv[])
 	PRVAL(MSL_READDIR_CBARG_PAGE);
 	PRVAL(MS_READAHEAD_MAXPGS);
 	PRVAL(MS_READAHEAD_PIPESZ);
+	PRVAL(NAMECACHELOOKUPF_DELETE);
+	PRVAL(NAMECACHELOOKUPF_PEEK);
+	PRVAL(NAMECACHELOOKUPF_UPDATE);
 	PRVAL(NBREPLST);
 	PRVAL(NBRPOL);
 	PRVAL(NPREFIOS);
@@ -677,7 +683,6 @@ main(int argc, char *argv[])
 	PRVAL(SL_MAX_IOSREASSIGN);
 	PRVAL(SL_MAX_REPLICAS);
 	PRVAL(SL_NAME_MAX);
-	PRVAL(SL_NAME_SHORT);
 	PRVAL(SL_NBITS_REPLST_BHDR);
 	PRVAL(SL_PATH_MAX);
 	PRVAL(SL_RES_BITS);
@@ -756,6 +761,7 @@ main(int argc, char *argv[])
 
 	/* start enums */
 	printf("\nenums:\n");
+	PRVAL(BMAP_OPCNT_ASYNC);
 	PRVAL(BMAP_OPCNT_BCRSCHED);
 	PRVAL(BMAP_OPCNT_BIORQ);
 	PRVAL(BMAP_OPCNT_FLUSH);
@@ -769,6 +775,9 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_OPCNT_TRUNCWAIT);
 	PRVAL(BMAP_OPCNT_UPSCH);
 	PRVAL(BMAP_OPCNT_WORK);
+	PRVAL(MSL_BMLGET_CBARG_BMAP);
+	PRVAL(MSL_BMLGET_CBARG_COMPL);
+	PRVAL(MSL_BMLGET_CBARG_CSVC);
 	PRVAL(MSTHRT_ATTR_FLUSH);
 	PRVAL(MSTHRT_BENCH);
 	PRVAL(MSTHRT_BRELEASE);
