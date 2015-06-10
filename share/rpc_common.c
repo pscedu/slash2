@@ -230,8 +230,8 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 	return (imp);
 }
 
-/**
- * slrpc_issue_connect - Attempt connection initiation with a peer.
+/*
+ * Attempt connection initiation with a peer.
  * @local: LNET NID to connect from.
  * @server: NID of server peer.
  * @csvc: client service to peer.
@@ -455,8 +455,8 @@ _sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
 	    &ts);
 }
 
-/**
- * sl_csvc_useable - Determine service connection useability.
+/*
+ * Determine service connection useability.
  * @csvc: client service.
  */
 int
@@ -471,10 +471,10 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
 }
 
-/**
- * sl_csvc_markfree - Mark that a connection will be freed when the last
- *	reference goes away.  This should never be performed on service
- *	connections to resms, only for service connections to clients.
+/*
+ * Mark that a connection will be freed when the last reference goes
+ * away.  This should never be performed on service connections to
+ * resms, only for service connections to clients.
  * @csvc: client service.
  */
 void
@@ -492,15 +492,15 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	CSVC_URLOCK(csvc, locked);
 }
 
-/**
- * sl_csvc_decref - Account for releasing the use of a remote service
- *	connection.
+/*
+ * Account for releasing the use of a remote service connection.
  * @csvc: client service.
  */
 void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
+	struct pscrpc_connection *c;
 	int rc;
 
 	(void)CSVC_RLOCK(csvc);
@@ -515,6 +515,9 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		 */
 		if (csvc->csvc_peertype == SLCONNT_CLI)
 			pll_remove(&sl_clients, csvc);
+//		c = csvc->csvc_import->imp_connection;
+//		if (c)
+//			c->c_imp = NULL;
 		pscrpc_import_put(csvc->csvc_import);
 		DEBUG_CSVC(PLL_DIAG, csvc, "freed");
 		// XXX assert(mutex.nwaiters == 0)
@@ -526,9 +529,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	CSVC_ULOCK(csvc);
 }
 
-/**
- * sl_csvc_incref - Account for starting to use a remote service
- *	connection.
+/*
+ * Account for starting to use a remote service connection.
  * @csvc: client service.
  * XXX if ABANDON is set, bail.
  */
@@ -540,35 +542,38 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
 }
 
-/**
- * sl_csvc_disconnect - Perform actual network disconnect to a remote
- *	service.
+/*
+ * Perform actual network disconnect to a remote service.
  * @csvc: client service.
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc, int highlevel)
+    struct slashrpc_cservice *csvc, int flags)
 {
 	struct pscrpc_import *imp;
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	if (highlevel) {
-		while (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_BUSY) {
+	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
+		while (psc_atomic32_read(&csvc->csvc_flags) &
+		    CSVCF_BUSY) {
 			CSVC_WAIT(csvc);
 			CSVC_LOCK(csvc);
 		}
-	}
 	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
 	if (imp) {
+		// deactivate(imp) ?
 		pscrpc_abort_inflight(imp);
-		if (highlevel)
+		if (flags & SLRPC_DISCONNF_HIGHLEVEL)
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
-	csvc->csvc_import = slrpc_new_import(csvc);
+	if (flags & SLRPC_DISCONNF_RECON)
+		csvc->csvc_import = slrpc_new_import(csvc);
+	else
+		csvc->csvc_import = NULL;
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
 }
@@ -589,8 +594,8 @@ sl_imp_hldrop_resm(void *arg)
 	sl_csvc_disconnect_ll(resm->resm_csvc);
 }
 
-/**
- * sl_csvc_disable - Mark a connection as no longer available.
+/*
+ * Mark a connection as no longer available.
  * @csvc: client service.
  */
 void
@@ -608,8 +613,8 @@ _sl_csvc_disable(const struct pfl_callerinfo *pci,
 	CSVC_URLOCK(csvc, locked);
 }
 
-/**
- * sl_csvc_create - Create a new client RPC service.
+/*
+ * Create a new client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
@@ -701,8 +706,8 @@ csvc_cli_cmp(const void *a, const void *b)
 	    cb->csvc_import->imp_connection->c_peer.nid));
 }
 
-/**
- * _sl_csvc_get - Acquire or create a client RPC service.
+/*
+ * Acquire or create a client RPC service.
  * @csvcp: value-result permanent storage for connection structures.
  * @flags: CSVCF_* flags the connection should take on, only used for
  *	csvc initialization.
@@ -974,8 +979,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	return (csvc);
 }
 
-/**
- * slconnthr_main - Logic for peer resource connection monitor.
+/*
+ * Logic for peer resource connection monitor.
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
  * CLI - needs to send PINGs to IONs
@@ -1116,9 +1121,8 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	PSCTHR_ULOCK(thr);
 }
 
-/**
- * sl_exp_hldrop_resm - Callback triggered when an export to a resource
- *	member fails.
+/*
+ * Callback triggered when an export to a resource member fails.
  * @exp: export to RPC peer.
  */
 void
@@ -1137,9 +1141,8 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 	}
 }
 
-/**
- * sl_exp_hldrop_cli - Callback triggered when an export to a CLIENT
- *	fails.
+/*
+ * Callback triggered when an export to a CLIENT fails.
  * @exp: export to RPC CLI peer.
  */
 void
@@ -1159,9 +1162,8 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 	PSCFREE(exp->exp_private);
 }
 
-/**
- * sl_exp_getpri_cli - Get pscrpc_export private data specific to CLIENT
- *	peer.
+/*
+ * Get pscrpc_export private data specific to CLIENT peer.
  * @exp: RPC export to CLI peer.
  */
 void *
@@ -1235,9 +1237,11 @@ slrpc_bulk_checkmsg(struct pscrpc_request *rq, struct pscrpc_msg *m,
 	return (slrpc_bulk_check(rq, saf->saf_bulkhash, iov, n));
 }
 
-/**
- * slrpc_bulkserver - Perform high level SLASH2 bulk RPC setup.
+/*
+ * Perform high level SLASH2 bulk RPC setup.
+ *
  * Notes:
+ *
  *	This entails performing the "authbuf" message hashing to ensure
  *	integrity.  Bulk RPCs contain an additional hash comprised of:
  *
