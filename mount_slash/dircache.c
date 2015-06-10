@@ -164,8 +164,10 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 		pll_remove(&fci->fci_dc_pages, p);
 
 	if (p->dcp_dents_off) {
-		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off)
+		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off) {
 			psc_hashent_remove(&msl_namecache_hashtbl, dce);
+			psc_pool_return(dircache_ent_pool, dce);
+		}
 		psc_dynarray_free(p->dcp_dents_off);
 	}
 	PSCFREE(p->dcp_dents_off);
