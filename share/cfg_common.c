@@ -115,20 +115,25 @@ libsl_id2res(sl_ios_id_t id)
 }
 
 struct sl_resm *
+libsl_try_ios2resm(sl_ios_id_t id)
+{
+	struct sl_resource *r;
+
+	r = libsl_id2res(id);
+	if (r == NULL)
+		return (r);
+	psc_assert(RES_ISFS(r));
+	return (res_getmemb(r));
+}
+
+struct sl_resm *
 libsl_ios2resm(sl_ios_id_t id)
 {
-	struct sl_resource *res = libsl_id2res(id);
+	struct sl_resm *m;
 
-	/*
-	 * May only be called on behalf of the following types of
-	 * resources.
-	 */
-	psc_assert((res->res_type == SLREST_STANDALONE_FS	||
-		    res->res_type == SLREST_ARCHIVAL_FS		||
-		    res->res_type == SLREST_PARALLEL_COMPNT) &&
-		   (psc_dynarray_len(&res->res_members) == 1));
-
-	return (psc_dynarray_getpos(&res->res_members, 0));
+	m = libsl_try_ios2resm(id);
+	psc_assert(m);
+	return (m);
 }
 
 struct sl_resm *
