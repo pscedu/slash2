@@ -961,7 +961,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = -mp->rc;
+		rc = mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
