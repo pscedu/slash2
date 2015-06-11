@@ -418,21 +418,18 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
     int nskip)
 {
 	int i, j, skip, off, val, nr, repls = 0;
-	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
-	struct slash_inode_extras_od *inox = NULL;
-	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct fidc_membh *f = b->bcm_fcmh;
 	struct sl_resm *resm = NULL;
 	sl_ios_id_t ios;
 
-	FCMH_LOCK(b->bcm_fcmh);
-	nr = fcmh_2_nrepls(b->bcm_fcmh);
-	FCMH_ULOCK(b->bcm_fcmh);
+	FCMH_LOCK(f);
+	nr = fcmh_2_nrepls(f);
+	FCMH_ULOCK(f);
 
-	if (nr > SL_DEF_REPLICAS) {
-		mds_inox_ensure_loaded(fcmh_2_inoh(b->bcm_fcmh));
-		inox = fcmh_2_inox(b->bcm_fcmh);
-	}
+	if (nr > SL_DEF_REPLICAS)
+		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
@@ -444,15 +441,15 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		if (val != BREPLST_VALID)
 			continue;
 
-		ios = (i < SL_DEF_REPLICAS) ? ino->ino_repls[i].bs_id :
-		    inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
-
-		psc_dynarray_add(&a, libsl_ios2resm(ios));
+		ios = fcmh_getrepl(f, i);
+		resm = libsl_ios2resm(ios);
+		if (resm)
+			psc_dynarray_add(&a, resm);
 	}
 
 	if (nskip) {
 		if (repls != 1) {
-			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
+			DEBUG_FCMH(PLL_WARN, f,
 			    "invalid reassign req");
 			DEBUG_BMAP(PLL_WARN, b,
 			    "invalid reassign req (repls=%d)", repls);
@@ -471,7 +468,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			}
 
 		if (ios == IOS_ID_ANY) {
-			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
+			DEBUG_FCMH(PLL_WARN, f,
 			    "invalid reassign req (res=%x)",
 			    resm->resm_res_id);
 			DEBUG_BMAP(PLL_WARN, b,
@@ -490,7 +487,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		return (NULL);
 	}
 
-	slm_get_ioslist(b->bcm_fcmh, pios, &a);
+	slm_get_ioslist(f, pios, &a);
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
@@ -504,6 +501,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		if (!skip && slm_try_sliodresm(resm))
 			break;
 	}
+
  out:
 	psc_dynarray_free(&a);
 	return (resm);
