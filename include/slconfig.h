@@ -291,6 +291,7 @@ struct sl_resource	*libsl_id2res(sl_ios_id_t);
 void			 libsl_init(int);
 char			*libsl_ios2name(sl_ios_id_t);
 struct sl_resm		*libsl_ios2resm(sl_ios_id_t);
+struct sl_resm		*libsl_try_ios2resm(sl_ios_id_t);
 struct sl_resm		*libsl_nid2resm(lnet_nid_t);
 void			 libsl_profile_dump(void);
 struct sl_site		*libsl_resid2site(sl_ios_id_t);
