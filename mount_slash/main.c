@@ -1078,7 +1078,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 {
 	struct fidc_membh *p, *c = NULL;
 	slfid_t cfid = FID_ANY;
-	int remote = 0, rc;
+	int rc;
 
 	if (fp)
 		*fp = NULL;
@@ -1145,12 +1145,10 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
 		if (cfid == FID_ANY)
 			dircache_tally_lookup_miss(p);
-		remote = 1;
+		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, fp);
+		return (rc);
 	}
 	fcmh_op_done(p);
-
-	if (remote)
-		return (msl_lookuprpc(pfr, p, name, fgp, sstb, fp));
 
 	/*
 	 * We should do a lookup based on name here because a rename
