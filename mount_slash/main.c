@@ -2664,7 +2664,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 #endif
 		if (pcr.pcr_uid != c->fcmh_sstb.sst_uid)
-			PFL_GOTOERR(out, rc = EACCES);
+			PFL_GOTOERR(out, rc = EPERM);
 		if (pcr.pcr_gid != c->fcmh_sstb.sst_gid &&
 		    !inprocgrouplist(c->fcmh_sstb.sst_gid, &pcr))
 			stb->st_mode &= ~S_ISGID;
