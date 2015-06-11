@@ -1076,7 +1076,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
-	struct fidc_membh *p, *c = NULL;
+	struct fidc_membh *p = NULL, *c = NULL;
 	slfid_t cfid = FID_ANY;
 	int rc;
 
@@ -1145,10 +1145,9 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
 		if (cfid == FID_ANY)
 			dircache_tally_lookup_miss(p);
-		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, fp);
-		return (rc);
+		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
+		PFL_GOTOERR(out, rc);
 	}
-	fcmh_op_done(p);
 
 	/*
 	 * We should do a lookup based on name here because a rename
@@ -1167,9 +1166,13 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	}
 
  out:
-	if (rc == 0 && fp)
+	if (rc == 0 && fp) {
 		*fp = c;
-	else if (c)
+		c = NULL;
+	}
+	if (p)
+		fcmh_op_done(p);
+	if (c)
 		fcmh_op_done(c);
 
 	psclog_diag("look for file: %s under inode: "SLPRI_FID" rc=%d",
