@@ -2687,7 +2687,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
 		     pcr.pcr_uid != stb->st_uid))
-			PFL_GOTOERR(out, rc = EACCES);
+			PFL_GOTOERR(out, rc = EPERM);
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
@@ -2699,7 +2699,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
 		     !inprocgrouplist(stb->st_gid, &pcr)))
-			PFL_GOTOERR(out, rc = EACCES);
+			PFL_GOTOERR(out, rc = EPERM);
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
