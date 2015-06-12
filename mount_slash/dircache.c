@@ -127,6 +127,48 @@ dircache_ent_cmp(const void *a, const void *b)
 	    da->dcq_namelen) == 0);
 }
 
+void
+dircache_ent_unlink(struct fidc_membh *d, struct dircache_ent *dce)
+{
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *dce2;
+	struct dircache_page *p;
+	struct psc_dynarray *a;
+
+	fci = fcmh_2_fci(d);
+	p = dce->dce_page;
+	FCMH_LOCK(d);
+	if (p) {
+		a = p->dcp_dents_off;
+
+		/* force expiration */
+		PFL_GETPTIMESPEC(&p->dcp_local_tm);
+		p->dcp_local_tm.tv_sec -= DIRCACHEPG_HARD_TIMEO;
+	} else {
+		a = &fci->fcid_ents;
+	}
+	psc_dynarray_removepos(a, dce->dce_index);
+	if (psc_dynarray_len(a) &&
+	    dce->dce_index != psc_dynarray_len(a)) {
+		dce2 = psc_dynarray_getpos(a, dce->dce_index);
+		dce2->dce_index = dce->dce_index;
+	}
+	FCMH_ULOCK(d);
+}
+
+void
+dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
+{
+	void *freedent = NULL;
+
+	if (dce->dce_page == NULL)
+		freedent = dce->dce_pfd;
+	dircache_ent_unlink(d, dce);
+	if (freedent)
+		PSCFREE(dce->dce_pfd);
+	psc_pool_return(dircache_ent_pool, dce);
+}
+
 /*
  * Release a page of dirents from cache.
  * @d: directory handle.
@@ -351,8 +393,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base, size_t size, int eof)
 {
 	struct pscfs_dirent *dirent = NULL;
+	struct dircache_ent *dce, *dce2;
 	struct psc_dynarray *da_off;
-	struct dircache_ent *dce;
+	struct psc_hashbkt *b;
 	off_t adj;
 	int i;
 
@@ -375,11 +418,14 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, adj);
 
 		dce = psc_pool_get(dircache_ent_pool);
+		memset(dce, 0, sizeof(*dce));
+		INIT_PSC_LISTENTRY(&dce->dce_lentry);
+		dce->dce_page = p;
 		dce->dce_pfd = dirent;
 		dce->dce_pfid = fcmh_2_fid(d);
 		dce->dce_key = dircache_ent_hash(dce->dce_pfid,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
-
+		dce->dce_index = psc_dynarray_len(da_off);
 		psc_dynarray_add(da_off, dce);
 
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
@@ -405,7 +451,17 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
-		psc_hashtbl_add_item(&msl_namecache_hashtbl, dce);
+		b = psc_hashbkt_get(&msl_namecache_hashtbl,
+		    &dce->dce_key);
+		dce2 = psc_hashbkt_search_cmp(&msl_namecache_hashtbl, b,
+		    dce, &dce->dce_key);
+		if (dce2) {
+			psc_hashbkt_del_item(&msl_namecache_hashtbl, b,
+			    dce2);
+			dircache_ent_zap(d, dce2);
+		}
+		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	}
 
 	psc_assert(p->dcp_dents_off == NULL);
@@ -467,19 +523,21 @@ dircache_ent_update(void *p, void *arg)
 /*
  * Perform a search in the namecache hash table for a FID based on
  * the parent directory FID and file basename.
- * @pfid: parent directory FID.
+ * @d: parent directory.
  * @name: basename to lookup.
+ * @cfid: for UPDATE type, new child FID for entry.
+ * @op: operation type (LOOKUP, DELETE, etc.).
  */
 slfid_t
-_namecache_lookup(uint64_t pfid, const char *name, uint64_t cfid,
+_namecache_lookup(struct fidc_membh *d, const char *name, uint64_t cfid,
     int op)
 {
-	size_t namelen;
 	void *cbf = NULL, *arg = NULL;
-	uint64_t key, rc = FID_ANY;
+	uint64_t pfid = fcmh_2_fid(d), key, rc = FID_ANY;
 	struct dircache_ent_query q;
 	struct dircache_ent *dce;
 	struct pscfs_dirent;
+	size_t namelen;
 	int flags = 0;
 
 	if (pfid == SLFID_NS)
@@ -513,8 +571,7 @@ _namecache_lookup(uint64_t pfid, const char *name, uint64_t cfid,
 		break;
 	case NAMECACHELOOKUPF_DELETE:
 		if (dce) {
-			psc_pool_return(dircache_ent_pool, dce);
-			dce = NULL;
+			dircache_ent_zap(d, dce);
 			OPSTAT_INCR("namecache-delete");
 		} else
 			OPSTAT_INCR("namecache-delete-miss");
@@ -548,12 +605,14 @@ namecache_insert(struct fidc_membh *d, const char *name, uint64_t cfid)
 	    NULL, NULL, &key);
 
 	if (dce) {
-		OPSTAT_INCR("namecache-insert-collison");
+		OPSTAT_INCR("namecache-insert-collision");
 		return;
 	}
 
 	entsz = PFL_DIRENT_SIZE(namelen);
 	new_dce = psc_pool_get(dircache_ent_pool);
+	memset(new_dce, 0, sizeof(*new_dce));
+	INIT_PSC_LISTENTRY(&new_dce->dce_lentry);
 	new_dce->dce_pfd = PSCALLOC(entsz);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &key);
@@ -576,7 +635,10 @@ namecache_insert(struct fidc_membh *d, const char *name, uint64_t cfid)
 		psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
 		    dce);
 		fci = fcmh_2_fci(d);
+		FCMH_LOCK(d);
+		dce->dce_index = psc_dynarray_len(&fci->fcid_ents);
 		psc_dynarray_add(&fci->fcid_ents, dce);
+		FCMH_ULOCK(d);
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	if (new_dce) {

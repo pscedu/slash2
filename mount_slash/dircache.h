@@ -143,9 +143,11 @@ struct dircache_expire {
 struct dircache_ent {
 	uint64_t		 dce_key;
 	uint64_t		 dce_pfid;
+	int			 dce_index;
+	struct dircache_page	*dce_page;
 	struct pscfs_dirent	*dce_pfd;
-	struct psc_listentry	 dce_lentry;
 	struct psc_hashentry	 dce_hentry;
+#define dce_lentry dce_hentry.phe_lentry
 };
 
 struct dircache_ent_query {
@@ -210,7 +212,7 @@ int	dircache_ent_cmp(const void *, const void *);
 #define namecache_update(p, name, fid)	_namecache_lookup((p), (name), (fid), NAMECACHELOOKUPF_UPDATE)
 
 void	 namecache_purge(struct fidc_membh *);
-slfid_t	_namecache_lookup(uint64_t, const char *, uint64_t, int);
+slfid_t	_namecache_lookup(struct fidc_membh *, const char *, uint64_t, int);
 void	 namecache_insert(struct fidc_membh *, const char *, uint64_t);
 
 struct psc_hashtbl msl_namecache_hashtbl;
