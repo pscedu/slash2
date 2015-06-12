@@ -1141,7 +1141,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	cfid = namecache_lookup(pinum, name);
+	cfid = namecache_lookup(p, name);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
 		if (cfid == FID_ANY)
 			dircache_tally_lookup_miss(p);
@@ -1272,7 +1272,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			}
 		} else
 			OPSTAT_INCR("delete-skipped");
-		namecache_delete(pinum, name);
+		namecache_delete(p, name);
 	}
 
 	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid=%d "
@@ -2377,8 +2377,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	namecache_delete(opinum, oldname);
-	namecache_update(npinum, newname, mp->srr_cattr.sst_fid);
+	namecache_delete(op, oldname);
+	namecache_update(np, newname, mp->srr_cattr.sst_fid);
 
 	/* refresh old parent attributes */
 	FCMH_LOCK(op);
