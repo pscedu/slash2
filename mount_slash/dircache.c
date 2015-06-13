@@ -211,8 +211,8 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 			psc_pool_return(dircache_ent_pool, dce);
 		}
 		psc_dynarray_free(p->dcp_dents_off);
+		PSCFREE(p->dcp_dents_off);
 	}
-	PSCFREE(p->dcp_dents_off);
 	PSCFREE(p->dcp_base);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
 	psc_pool_return(dircache_page_pool, p);
@@ -509,6 +509,7 @@ namecache_purge(struct fidc_membh *d)
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	FCMH_ULOCK(d);
+	psc_dynarray_free(&fci->fcid_ents);
 }
 
 void
