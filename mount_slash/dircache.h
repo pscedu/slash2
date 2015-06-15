@@ -142,7 +142,6 @@ struct dircache_expire {
 struct dircache_ent {
 	uint64_t		 dce_key;
 	uint64_t		 dce_pfid;
-	int			 dce_index;
 	struct dircache_page	*dce_page;
 	struct pscfs_dirent	*dce_pfd;
 	struct psc_hashentry	 dce_hentry;
