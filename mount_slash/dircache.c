@@ -152,7 +152,12 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	} else {
 		a = &fci->fcid_ents;
 	}
-	psc_dynarray_removeitem(a, dce);
+	psc_dynarray_removepos(a, dce->dce_index);
+	if (psc_dynarray_len(a) &&
+	    dce->dce_index != psc_dynarray_len(a)) {
+		dce2 = psc_dynarray_getpos(a, dce->dce_index);
+		dce2->dce_index = dce->dce_index;
+	}
 	FCMH_ULOCK(d);
 
 	if (freedent)
@@ -419,6 +424,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_pfid = fcmh_2_fid(d);
 		dce->dce_key = dircache_ent_hash(dce->dce_pfid,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
+		dce->dce_index = psc_dynarray_len(da_off);
 		psc_dynarray_add(da_off, dce);
 
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
@@ -429,15 +435,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	FCMH_LOCK(d);
 
 	if ((p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
+		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
+		p->dcp_refcnt--;
+		FCMH_ULOCK(d);
+
 		DYNARRAY_FOREACH(dce, i, da_off)
 			psc_pool_return(dircache_ent_pool, dce);
-
 		psc_dynarray_free(da_off);
 		PSCFREE(da_off);
 		PSCFREE(base);
-		p->dcp_refcnt--;
-		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
-		FCMH_ULOCK(d);
 		return;
 	}
 
@@ -628,6 +634,7 @@ namecache_insert(struct fidc_membh *d, const char *name, uint64_t cfid)
 		    dce);
 		fci = fcmh_2_fci(d);
 		FCMH_LOCK(d);
+		dce->dce_index = psc_dynarray_len(&fci->fcid_ents);
 		psc_dynarray_add(&fci->fcid_ents, dce);
 		FCMH_ULOCK(d);
 	}
