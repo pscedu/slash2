@@ -435,8 +435,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	FCMH_LOCK(d);
 
-	if ((p->dcp_flags & DIRCACHEPGF_LOADED) ||
-	    (p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
+	if ((p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
 		DYNARRAY_FOREACH(dce, i, da_off)
 			psc_pool_return(dircache_ent_pool, dce);
 
@@ -478,7 +477,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-	p->dcp_flags |= DIRCACHEPGF_LOADED;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	p->dcp_refcnt--;

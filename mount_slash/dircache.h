@@ -91,10 +91,9 @@ struct dircache_page {
 
 /* dcp_flags */
 #define DIRCACHEPGF_LOADING	(1 << 0)	/* stub is waiting for network load */
-#define DIRCACHEPGF_LOADED	(1 << 1)
-#define DIRCACHEPGF_EOF		(1 << 2)	/* denotes last page */
-#define DIRCACHEPGF_READ	(1 << 3)	/* page has been used */
-#define DIRCACHEPGF_FREEING	(1 << 4)	/* a thread is trying to free */
+#define DIRCACHEPGF_EOF		(1 << 1)	/* denotes last page */
+#define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
+#define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
 
 /*
  * This structure is used to decide when to evict a page.  It is

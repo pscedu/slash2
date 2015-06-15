@@ -1403,7 +1403,6 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-		p->dcp_flags |= DIRCACHEPGF_LOADED;
 		p->dcp_rc = rc;
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
