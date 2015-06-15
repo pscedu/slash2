@@ -57,6 +57,8 @@ struct psc_poolmgr	*dircache_ent_pool;
 
 struct psc_lockedlist msl_dircache_pages_lru;
 
+static int dircache_walk_disable = 0;
+
 /*
  * Reap old dircache_pages.
  */
@@ -225,6 +227,9 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 	int lk, n;
+
+	if (dircache_walk_disable)
+		return;
 
 	fci = fcmh_2_fci(d);
 	lk = FCMH_RLOCK(d);
