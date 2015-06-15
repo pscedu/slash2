@@ -2601,9 +2601,6 @@ msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
-	if (p->dcp_flags & DIRCACHEPGF_LOADING)
-		return;
-
 	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
 	    d->dce_pfd->pfd_name, d->dce_pfd->pfd_namelen);
 }
