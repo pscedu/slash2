@@ -1,22 +1,8 @@
-$Id$
+# SLASH2 File System
 
-SLASH2 File System
-------------------
+See [the SLASH2 Wiki](wiki) for more information.
 
-http://www.psc.edu/slash2
+# Copyright
 
-Copyright
--------------
-
+SLASH2 is licensed under GPLv2.
 See COPYING-GPL at the top of this distribution.
-
-Documentation
--------------
-
-For building documentation, run:
-
-  make doc
-
-For installation documentation, see, doc/build.txt
-For configuration documentation, see, doc/config.txt
-For running documentation, see, doc/run.txt
