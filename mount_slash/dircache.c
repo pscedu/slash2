@@ -128,12 +128,15 @@ dircache_ent_cmp(const void *a, const void *b)
 }
 
 void
-dircache_ent_unlink(struct fidc_membh *d, struct dircache_ent *dce)
+dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 {
+	void *freedent = NULL;
 	struct fcmh_cli_info *fci;
-	struct dircache_ent *dce2;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
+
+	if (dce->dce_page == NULL)
+		freedent = dce->dce_pfd;
 
 	fci = fcmh_2_fci(d);
 	p = dce->dce_page;
@@ -149,16 +152,7 @@ dircache_ent_unlink(struct fidc_membh *d, struct dircache_ent *dce)
 	}
 	psc_dynarray_removeitem(a, dce);
 	FCMH_ULOCK(d);
-}
 
-void
-dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
-{
-	void *freedent = NULL;
-
-	if (dce->dce_page == NULL)
-		freedent = dce->dce_pfd;
-	dircache_ent_unlink(d, dce);
 	if (freedent)
 		PSCFREE(dce->dce_pfd);
 	psc_pool_return(dircache_ent_pool, dce);
