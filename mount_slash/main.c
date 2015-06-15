@@ -3201,7 +3201,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 ssize_t
 slc_getxattr(const struct pscfs_clientctx *pfcc,
-    const struct pscfs_creds *pcrp, const char *name, void *buf,
+    __unusedx const struct pscfs_creds *pcrp, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	int rc = 0, locked = 0;
