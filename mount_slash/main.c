@@ -2943,7 +2943,6 @@ void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_connection *conn;
 	lnet_process_id_t peer;
 	struct sl_resource *r;
 	struct sl_resm *m;
