@@ -1,6 +1,7 @@
 # SLASH2 File System
 
-See [the SLASH2 Wiki](wiki) for more information.
+See [the SLASH2 Wiki](/pscedu/slash2/wiki) for more information.
+
 
 # Copyright
 
