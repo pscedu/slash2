@@ -246,7 +246,7 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 			cbf(p, dce, cbarg);
 	}
 	DYNARRAY_FOREACH(dce, n, &fci->fcid_ents)
-		cbf(p, dce, cbarg);
+		cbf(NULL, dce, cbarg);
 	FCMH_URLOCK(d, lk);
 }
 
