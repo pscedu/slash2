@@ -119,6 +119,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, W_OK);
+		/* Allow owner to replicate read-only files. */
 		if (rc == EACCES &&
 		    f->fcmh_sstb.sst_uid == pcr.pcr_uid)
 			rc = 0;

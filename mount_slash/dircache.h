@@ -138,7 +138,11 @@ struct dircache_expire {
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
-/* This is analogous to 'struct dirent' many of which reside in a page. */
+/*
+ * This is essentially a pointer to a pscfs_dirent.  Many of these
+ * reside in one dircache_page but may exist totally independently if
+ * brought in through certain namespace operations.
+ */
 struct dircache_ent {
 	uint64_t		 dce_key;
 	uint64_t		 dce_pfid;
