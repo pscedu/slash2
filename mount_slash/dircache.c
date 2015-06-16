@@ -136,6 +136,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
+	struct dircache_ent *dce2;
 
 	if (dce->dce_page == NULL)
 		freedent = dce->dce_pfd;
