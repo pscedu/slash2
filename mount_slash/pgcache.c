@@ -146,7 +146,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 					continue;
 				}
 			}
-			if (flags & BMPCEF_EXCL)
+			if (flags & BMPCEF_READAHEAD)
 				e = NULL;
 			else {
 				BMPCE_LOCK(e);
@@ -605,7 +605,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_PINNED, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_EXCL, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_REAPED, &flags, &seq);

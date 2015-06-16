@@ -85,12 +85,11 @@ struct bmap_pagecache_entry {
 #define BMPCEF_DISCARD		(1 <<  5)	/* don't cache after I/O is done */
 #define BMPCEF_PINNED		(1 <<  6)	/* do not modify */
 #define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
-#define BMPCEF_EXCL		(1 <<  8)	/* lookup() must create, otherwise NULL */
-#define BMPCEF_ACCESSED		(1 <<  9)	/* bmpce was used before reap (readahead) */
-#define BMPCEF_IDLE		(1 << 10)	/* on idle_pages listcache */
-#define BMPCEF_REAPED		(1 << 11)	/* reaper has removed us from LRU listcache */
-#define BMPCEF_READALC		(1 << 12)	/* on readahead_pages listcache */
-#define BMPCEF_FREED		(1 << 13)	/* memory for page returned to system (sanity check) */
+#define BMPCEF_ACCESSED		(1 <<  8)	/* bmpce was used before reap (readahead) */
+#define BMPCEF_IDLE		(1 <<  9)	/* on idle_pages listcache */
+#define BMPCEF_REAPED		(1 << 10)	/* reaper has removed us from LRU listcache */
+#define BMPCEF_READALC		(1 << 11)	/* on readahead_pages listcache */
+#define BMPCEF_FREED		(1 << 12)	/* memory for page returned to system (sanity check) */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -122,7 +121,7 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "			\
 	    "off=%#09x base=%p "					\
 	    "ref=%u : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
@@ -134,7 +133,6 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
 	    (b)->bmpce_flags & BMPCEF_PINNED		? "p" : "",	\
 	    (b)->bmpce_flags & BMPCEF_READAHEAD		? "r" : "",	\
-	    (b)->bmpce_flags & BMPCEF_EXCL		? "x" : "",	\
 	    (b)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
 	    (b)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
 	    (b)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
