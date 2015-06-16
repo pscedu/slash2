@@ -2071,21 +2071,19 @@ msreadaheadthr_main(struct psc_thread *thr)
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
-	int i;
+	int i, rc;
 
 	while (pscthr_run(thr)) {
-		f = NULL;
-		b = NULL;
 
 		rarq = lc_getwait(&msl_readaheadq);
 		if (rarq == NULL)
 			break;
 
-		fidc_lookup(&rarq->rarq_fg, 0, &f);
-		if (f == NULL)
+		rc = fidc_lookup(&rarq->rarq_fg, 0, &f);
+		if (rc)
 			goto end;
-		/* XXX async */
-		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
+		rc = bmap_get(f, rarq->rarq_bno, SL_READ, &b);
+		if (rc)
 			goto end;
 		if (b->bcm_flags & BMAPF_DIO)
 			goto end;
