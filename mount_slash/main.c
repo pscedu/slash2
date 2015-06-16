@@ -1404,6 +1404,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_rc = rc;
+		OPSTAT_INCR("namecache-load_error");
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 		fcmh_wake_locked(d);
