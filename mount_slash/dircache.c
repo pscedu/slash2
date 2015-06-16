@@ -57,7 +57,7 @@ struct psc_poolmgr	*dircache_ent_pool;
 
 struct psc_lockedlist msl_dircache_pages_lru;
 
-static int dircache_walk_disable = 0;
+static int dircache_walk_disable = 1;
 
 /*
  * Reap old dircache_pages.
