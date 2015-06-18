@@ -324,10 +324,13 @@ a.sidebar-nav-item:focus {
 
 /* Meta data line below post title */
 .post-date {
-  display: block;
   margin-top: -.5rem;
   margin-bottom: 1rem;
   color: #9a9a9a;
+}
+
+.post-author {
+  color: #268bd2;
 }
 
 /* Related posts */
