@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Global mount support of slash2
+title: Global mount support for SLASH2
 author: zhihui
 type: progress
 ---
