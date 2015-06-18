@@ -6,8 +6,8 @@ relative_permalinks: true
 
 # Setup
 title:               SLASH2
-tagline:             'distributed WAN file system'
-description:         '.'
+tagline:             'distributed WAN file system blog'
+description:         'Posts'
 url:                 http://slash2.psc.edu/
 baseurl:             'https://pscedu.github.io/slash2/'
 paginate:            5
