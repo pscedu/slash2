@@ -9,7 +9,7 @@ title:               SLASH2
 tagline:             distributed WAN file system
 url:                 http://slash2.psc.edu
 paginate:            1
-baseurl:             "http://pscedu.github.io/slash2/"
+baseurl:             "https://pscedu.github.io/slash2/"
 
 # Assets
 #
