@@ -23,3 +23,19 @@ layout: default
     {% endfor %}
   </ul>
 </div>
+
+<div class="related">
+  <h2>All Posts</h2>
+  <ul class="related-posts">
+    {% for post in site.posts limit:30 %}
+      <li>
+        <h3>
+          <a href="{{ site.baseurl }}{{ post.url }}">
+            {{ post.title }}
+            <small>{{ post.date | date_to_string }}</small>
+          </a>
+        </h3>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
