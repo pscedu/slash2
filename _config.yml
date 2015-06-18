@@ -6,25 +6,17 @@ relative_permalinks: true
 
 # Setup
 title:               SLASH2
-tagline:             distributed WAN file system
-url:                 http://slash2.psc.edu
-paginate:            1
-baseurl:             "https://pscedu.github.io/slash2/"
-
-# Assets
-#
-# We specify the directory for Jekyll so we can use @imports.
-sass:
-  sass_dir:          _sass
-  style:            :compressed
+tagline:             'distributed WAN file system'
+description:         '.'
+url:                 http://slash2.psc.edu/
+baseurl:             'https://pscedu.github.io/slash2/'
+paginate:            5
 
 # About/contact
 author:
   name:              Pittsburgh Supercomputing Center
-  url:               https://psc.edu
+  url:               http://www.psc.edu/
   email:             remarks@psc.edu
 
 # Custom vars
 version:             1.0.0
-github:
-  repo:              https://github.com/pscedu/slash2
