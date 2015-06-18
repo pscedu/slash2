@@ -500,7 +500,7 @@ void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
-	struct pscrpc_connection *c;
+//	struct pscrpc_connection *c;
 	int rc;
 
 	(void)CSVC_RLOCK(csvc);
