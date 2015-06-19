@@ -18,9 +18,11 @@ That way, we don't have to read over the network anymore if an
 application is only interested in writing data or if a read can be
 satisfied by previously written data.
 Two caveats:
+
 * if a read has to go over the network, pending writes must be flushed
-  first
+  first.
 * if a read over the network is in progress, a new write has to wait.
+
 So the order matters.
 
 On the read side, we used to have two problems.
