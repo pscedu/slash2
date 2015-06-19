@@ -8,7 +8,9 @@ layout: default
 	<div class='post-info'>
 		<span class="post-date">{{ page.date | date_to_string }}</span>
 		by
-		<span class="post-author">{{ post.author }}</span>
+		1:<span class="post-author">{{ post.author }}</span>
+		2:<span class="post-author">{{ page.author }}</span>
+		3:<span class="post-author">{{ author }}</span>
 	</div>
 
   {{ content }}
