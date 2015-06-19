@@ -12,6 +12,7 @@ h2 {
 	padding-left: 1em; 
 	font-size: smaller;
 	margin-bottom: .5em;
+	border-bottom: 1px dotted #eef;
 }
 
 pre {
