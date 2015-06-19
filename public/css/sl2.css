@@ -41,3 +41,11 @@ pre {
 	background-color: #fff;
 	padding: 1em;
 }
+
+.sidebar-item {
+	background-color: #fff;
+}
+
+.sidebar-item a {
+	color: #5a8fa5;
+}
