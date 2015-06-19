@@ -13,9 +13,10 @@ title: Home
     </h2>
 
     <span class="post-date">{{ post.date | date_to_string }}</span>
-    <span class="post-author">by {{ post.author }}</span>
+		by
+    <span class="post-author">{{ post.author }}</span>
 		<br clear="both" />
-
+		<br /> 
     {{ post.content }}
   </div>
   {% endfor %}

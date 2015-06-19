@@ -5,8 +5,10 @@ layout: default
 <div class="post">
   <h2 class="post-title">{{ page.title }}</h2>
   <span class="post-date">{{ page.date | date_to_string }}</span>
-  <span class="post-author">by {{ post.author }}</span>
+	by
+  <span class="post-author">{{ post.author }}</span>
 	<br clear="both" />
+	<br />
   {{ content }}
 </div>
 
