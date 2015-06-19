@@ -62,6 +62,7 @@ Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
 slashd/mds.c:
+
 ```c_cpp
 __static void
 slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
@@ -84,7 +85,7 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 }
 ```
 
-<pre>
+```
 slashd/slashd.h:
    450	static __inline int
    451	slm_get_rpmi_idx(struct sl_resource *res)
@@ -100,7 +101,7 @@ slashd/slashd.h:
    461		RPMI_URLOCK(rpmi, locked);
    462		return (n);
    463	}
-</pre>
+```
 
 In theory, this should work, but any servers that are unavailable will
 give an unfair advantage to the first server in the list after a run of
