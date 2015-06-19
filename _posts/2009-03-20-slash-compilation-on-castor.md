@@ -8,7 +8,7 @@ type: progress
 Here are some changes I had to <tt>make</tt> for building on Fedora Core 10.
 Note that a symlink was made in <tt>/usr/src/kernels</tt>.
 
-<pre class='code'>
+<pre>
 (psc@castor:projects)$ ls -al /usr/src/kernels/slash2-devel-kernel
 lrwxrwxrwx 1 root root 30 Mar 20 13:04 /usr/src/kernels/slash2-devel-kernel -> 2.6.27.19-170.2.35.fc10.x86_64/
 

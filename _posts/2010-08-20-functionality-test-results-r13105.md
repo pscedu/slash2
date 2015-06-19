@@ -12,7 +12,7 @@ type: progress
 <li>CREATE+STAT - NOTRUN</li>
 </ul>
 
-<pre class='code'>
+<pre>
 Program received signal SIGSEGV, Segmentation fault.
 [Switching to Thread 0x7ffebbfff710 (LWP 537)]
 0x00000000004a2e26 in mds_bmap_directio (b=0x15e0c20, rw=SL_READ, np=0x15d3bd8)

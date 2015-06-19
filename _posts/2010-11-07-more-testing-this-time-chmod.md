@@ -5,7 +5,7 @@ author: pauln
 type: progress
 ---
 
-<pre class='code'>
+<pre>
 (pauln@born-of-fire:pauln)$ (cd /s2/pjd-fstest-20080816/ && sudo prove -f tests/chmod/00.t)
 tests/chmod/00.t .. 46/58 
 not ok 56

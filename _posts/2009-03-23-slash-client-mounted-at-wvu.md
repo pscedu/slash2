@@ -10,7 +10,7 @@ finally have mounted <tt>wolverine</tt>'s SLASH2 export at WVU.
 
 Here's a <tt>df(1)</tt> command and <tt>gdb</tt> stack trace for the first bug:
 
-<pre class='code'>
+<pre>
 (root@castor:mount_slash)# df
 Filesystem           1K-blocks      Used Available Use% Mounted on
 /dev/sda3             68959192   5880592  59575628   9% /

@@ -5,7 +5,7 @@ author: pauln
 type: progress
 ---
 
-<pre class='code'>
+<pre>
 (pauln@orange:s2reg)$ ./kernel_full.sh
 
 real	2m23.859s

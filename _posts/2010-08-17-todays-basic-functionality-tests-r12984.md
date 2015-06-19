@@ -15,7 +15,7 @@ type: progress
 This is NOT working at log level 5.
 Note these tests used the <tt>bessemer@PSC</tt> I/O backend, with 2 I/O nodes.
 
-<pre class='code'>
+<pre>
 group 8peReadWrite {
   files_per_dir = 4;
   tree_depth    = 0;
@@ -57,7 +57,7 @@ group 8peReadWrite {
 
 All blocks were written:
 
-<pre class='code'>
+<pre>
 (pauln@lemon:TGFIO_tests)$ grep "block# 4095"  ./largeio.test1.outc
 1282068769.436847 PE_00002 do_io() :: bl_wr 0000.090650 MB/s 0011.031429 block# 4095 bwait 00.000000
 1282068775.774260 PE_00003 do_io() :: bl_wr 0000.088850 MB/s 0011.254921 block# 4095 bwait 00.000000
@@ -69,7 +69,7 @@ However, all files should be 4294967296.  At least the clients agree on
 the size which points to the mds or sliod as the culprit.
 
 Orange:
-<pre class='code'>
+<pre>
 -rw-r--r-- 1 pauln staff 4215275520 Aug 17 14:07 fio_f.pe0.largeioc.0.0
 -rw-r--r-- 1 pauln staff 4294967296 Aug 17 14:07 fio_f.pe1.largeioc.0.0
 -rw-r--r-- 1 pauln staff 4202037232 Aug 17 14:07 fio_f.pe2.largeioc.0.0
@@ -77,7 +77,7 @@ Orange:
 </pre>
 
 Lemon:
-<pre class='code'>
+<pre>
 -rw-r--r-- 1 pauln staff 4215275520 Aug 17 14:07 fio_f.pe0.largeioc.0.0
 -rw-r--r-- 1 pauln staff 4294967296 Aug 17 14:07 fio_f.pe1.largeioc.0.0
 -rw-r--r-- 1 pauln staff 4202037232 Aug 17 14:07 fio_f.pe2.largeioc.0.0
@@ -91,7 +91,7 @@ This test <b>is</b> working at log level 5 on clients and servers.
 both correct, with the 3rd party client timing out his size attributes
 after 8 seconds.
 
-<pre class='code'>
+<pre>
 group 8peReadWrite {
   files_per_dir = 1;
   tree_depth    = 0;

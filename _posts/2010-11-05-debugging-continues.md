@@ -7,7 +7,7 @@ type: progress
 
 Working on the mkdir test suite..
 
-<pre class='code'>
+<pre>
 (pauln@born-of-fire:pjd-fstest-20080816)$ prove tests/mkdir/
 tests/mkdir/00.t .. 29/36 stat returned -1
 [: 61: Illegal number: ENOENT

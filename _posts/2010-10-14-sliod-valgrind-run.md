@@ -5,7 +5,7 @@ author: pauln
 type: progress
 ---
 
-<pre class='code'>
+<pre>
 ==15268== 
 ==15268== HEAP SUMMARY:
 ==15268==     in use at exit: 163,287,806 bytes in 40,358 blocks

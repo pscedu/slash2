@@ -30,7 +30,7 @@ write leases are invalidated too.
 This would solve the problem of the
 odtable entry key.
 
-<pre class='code'>
+<pre>
 [1282675290:846711 slmrmithr03:7617:bmap:mds_handle_rls_bmap:1011] bmap@0x15e0c10 b:1 m:0 i:80000002d9347 opcnt=4 release 4294969716 nid=562995062530842 pid=2147502232 bml=0x15d4820
 [1282675290:846742 slmrmithr03:7617:bmap:mds_bmap_bml_release:774] bmap@0x15e0c10 b:1 m:0 i:80000002d9347 opcnt=4 bml=0x15d4820 seq=4294969716 key=-3267403435540628159
 [1282675290:846761 slmrmithr03:7617:bmap:mds_bmap_dupls_find:464] bmap@0x15e0c10 b:1 m:1024 i:80000002d9347 opcnt=4 bml=0x15d4c40 tmp=0x15d4c40 (wlease=1 rlease=0) (nwtrs=1 nrdrs=0)

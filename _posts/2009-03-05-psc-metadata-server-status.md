@@ -8,7 +8,7 @@ type: progress
 <tt>wolverine</tt> (128.182.58.80) is configured as a SLASH2 metadata server.
 Below is a dump of the ZFS configuration:
 
-<pre class='code'>
+<pre>
 (pauln@wolverine:zpool)$ sudo ./zpool status
   pool: wolverine_pool
  state: ONLINE
@@ -28,7 +28,7 @@ errors: No known data errors
 To date I've been able to successfully run a 10 million file create test (and unlink).
 Here's the <tt>fio</tt> test config:
 
-<pre class='code'>
+<pre>
 group 8peReadWrite {
   files_per_dir = 1024;
   tree_depth    = 8;

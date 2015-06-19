@@ -7,7 +7,7 @@ type: progress
 
 Both this and the one below look to be caused by the reentrancy problem fixed in Zest about 2 weeks ago.
 
-<pre class='code'>
+<pre>
 [root@castor mount_slash]# fg
 PSC_LOG_LEVEL=2 SLASH_MDS_NID="128.182.58.80@tcp10" LNET_NETWORKS="tcp10(eth1)" USOCK_CPORT=1300 gdb ./mount_slash
 

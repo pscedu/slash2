@@ -11,7 +11,7 @@ The test from grapefruit completed successfully - all 5 million files were creat
 The same test from lime, which is a slightly faster node, hung during the unlink phase.
 I think due to a deadlock in the client.  Here's what I got from <tt>gstack(1)</tt>:
 
-<pre class='code'>
+<pre>
 Thread 6 (Thread 1291950400 (LWP 27028)):
 #0  0x00002ba18e7d44a1 in nanosleep () from /lib64/libpthread.so.0
 #1  0x00000000004234b9 in spinlock ()

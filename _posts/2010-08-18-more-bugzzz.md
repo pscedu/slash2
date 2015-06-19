@@ -7,7 +7,7 @@ type: progress
 
 Read-before-writes being issued from the client needlessly:
 
-<pre class='code'>
+<pre>
 [1282083602:849976 sliricthr01:14541:gen:sli_ric_handle_io:162] fcmh@0x71af20 fg:0x080000002d8eb0:0 DA ref:2 sz=76546032 :: bmapno=1 size=32768 off=98304 rw=42  sbd_seq=4294967302 biod_cur_seqkey[0]=0
 [1282083602:962496 sliricthr03:14543:gen:sli_ric_handle_io:162] fcmh@0x71af20 fg:0x080000002d8eb0:0 DA ref:2 sz=76546032 :: bmapno=1 size=32768 off=229376 rw=42  sbd_seq=4294967302 biod_cur_seqkey[0]=4294967302
 [1282083602:983695 sliricthr02:14542:gen:sli_ric_handle_io:162] fcmh@0x71af20 fg:0x080000002d8eb0:0 DA ref:2 sz=76546032 :: bmapno=1 size=32768 off=360448 rw=42  sbd_seq=4294967302 biod_cur_seqkey[0]=4294967302

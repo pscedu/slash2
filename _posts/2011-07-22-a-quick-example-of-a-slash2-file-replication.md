@@ -8,7 +8,7 @@ type: progress
 This example was given during the <a href="http://teragrid.org/tg11/ ">TG'11</a> <a href="papers/tg_2011_slash2.pdf">talk</a> but I thought it may be of interest so I'm copying the results here.
 
 First, create a file to replicate:
-<pre class='code'>
+<pre>
 (pauln@peel0:~)$ dd if=/dev/zero of=/p0_archive/pauln/big_file count=2k bs=1M
 2048+0 records in
 2048+0 records out
@@ -16,7 +16,7 @@ First, create a file to replicate:
 </pre>
 
 Next, view its status with <a href="mdoc.pwl?q=msctl;sect=8">msctl</a>:
-<pre class='code'>
+<pre>
 (pauln@peel0:msctl)$ ./msctl -r /p0_archive/pauln/big_file
 file-replication-status                                       #valid #bmap %prog
 ================================================================================
@@ -27,14 +27,14 @@ new-bmap-repl-policy: one-time
 </pre>
 
 Request replication of the entire file:
-<pre class='code'>
+<pre>
 (pauln@peel0:msctl)$ date && ./msctl -Q archlime@PSCARCH:*:/p0_archive/pauln/big_file
 Wed Jul 20 02:51:56 EDT 2011
 (pauln@peel0:msctl)$
 </pre>
 
 Now check the status with <a href="mdoc.pwl?q=msctl;sect=8">msctl</a>:
-<pre class='code'>
+<pre>
 (pauln@peel0:msctl)$ date && ./msctl -r /p0_archive/pauln/big_file
 Wed Jul 20 02:51:57 EDT 2011
 file-replication-status                                        #valid #bmap %prog

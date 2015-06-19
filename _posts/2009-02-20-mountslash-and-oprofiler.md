@@ -5,7 +5,7 @@ author: pauln
 type: progress
 ---
 
-<pre class="code">
+<pre>
 Every 1.0s: /usr/local/oprof/bin/opreport -l /home/pauln/Code/p...  Fri Feb 20 19:02:29 2009
 
 CPU: Core 2, speed 1861.91 MHz (estimated)

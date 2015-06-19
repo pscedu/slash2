@@ -7,7 +7,7 @@ type: progress
 
 Testing a patch which fixes an attribute bug which prevents a parent directory from having its time attrs updated in the slash2 client and mds fcmh cache.
 
-<pre class='code'>
+<pre>
 (pauln@born-of-fire:pauln)$ (cd /s2/pjd-fstest-20080816/ && sudo prove -r tests/mkdir)
 tests/mkdir/00.t .. ok     
 tests/mkdir/01.t .. ok   

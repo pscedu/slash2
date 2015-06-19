@@ -7,7 +7,7 @@ type: progress
 
 The fuse handlers for these calls are located in <tt>mount_slash/main.c</tt>.
 
-<pre class='code'>
+<pre>
 Works  Fs Call       Handler
 -----  -----------   ------------
 Y      mount()       fuse native.

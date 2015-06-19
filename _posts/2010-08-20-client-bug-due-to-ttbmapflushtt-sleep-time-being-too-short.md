@@ -7,7 +7,7 @@ type: progress
 
 To be clear this isn't exactly a bug but it does cause some CPU abuse:
 
-<pre class='code'>
+<pre>
 [1282327206:159214 msbflushthr:23667:bmap:bmap_flush:754] bmap@0x882110 b:3 m:8259 i:80000002d907b opcnt=19 restore to dirty list
 [1282327206:161331 msbflushthr:23667:bmap:bmap_flush:639] bmap@0x881330 b:1 m:8259 i:80000002d907b opcnt=65 try flush (outstandingRpcCnt=75)
 [1282327206:161347 msbflushthr:23667:bmap:bmap_flush:639] bmap@0x882110 b:3 m:8259 i:80000002d907b opcnt=19 try flush (outstandingRpcCnt=75)

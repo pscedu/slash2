@@ -5,7 +5,7 @@ author: pauln
 type: progress
 ---
 
-<pre class='code'>
+<pre>
 # this should fail.. but the last chmod succeeds even though there are 
 #  no execute permissions on the directory.
 (pauln@born-of-fire:pauln)$ mkdir c
