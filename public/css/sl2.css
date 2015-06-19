@@ -51,6 +51,10 @@ pre {
 	background-color: #fff !important;
 }
 
+.sidebar-nav-item:hover {
+	background-color: #eef !important;
+}
+
 a.sidebar-nav-item {
 	color: #5a8fa5 !important;
 }
