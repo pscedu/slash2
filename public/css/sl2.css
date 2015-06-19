@@ -62,7 +62,7 @@ a.sidebar-nav-item {
 
 .sidebar img {
 	margin: .8em !important;
-	max-width: 0 !important;
+	max-width: 180px !important;
 }
 
 pre {
