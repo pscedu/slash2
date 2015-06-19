@@ -16,13 +16,14 @@
       `layout: page` in the front-matter. See readme for usage.
     {% endcomment %}
 
-    {% assign posts_list = site.posts | sort:"url" %}
+    {% assign posts_list = site.posts | sort:"url" | reverse %}
     {% for node in posts_list %}
       {% if node.title != null %}
 				{% capture turl %}{{ site.baseurl }}{{ node.url }}{% endcapture %}
+				{{ node.date }}
 				{% if node.layout == "post" %}
 					<a class="sidebar-nav-item{% if page.url == turl %} active{% endif %}"
-						href="{{ turl }}">{{ node.date }} {{ node.title }}</a>
+						href="{{ turl }}">{{ node.title }} {{ node.author }}</a>
 				{% endif %}
       {% endif %}
     {% endfor %}
