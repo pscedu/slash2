@@ -13,7 +13,7 @@ title: Home
     </h2>
 
 		<div class='post-info'>
-			<span class="post-date">{{ post.date | date_to_string }}</span>
+			<span class="post-date">{{ post.date | date: "%b %-d, %Y" }}</span>
 			by
 			<span class="post-author">{{ post.author }}</span>
 		</div>

@@ -6,7 +6,7 @@ layout: default
   <h2 class="post-title">{{ page.title }}</h2>
 
 	<div class='post-info'>
-		<span class="post-date">{{ page.date | date_to_string }}</span>
+		<span class="post-date">{{ page.date | date: "%b %-d, %Y" }}</span>
 		by
 		<span class="post-author">{{ page.author }}</span>
 	</div>
