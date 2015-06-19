@@ -35,3 +35,8 @@ pre {
 .sidebar-nav-author {
 	color: #99f;
 }
+
+.sidebar-hdr {
+	text-align: center;
+	background-color: #fff;
+}
