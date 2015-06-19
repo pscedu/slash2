@@ -40,12 +40,13 @@ pre {
 	text-align: center;
 	background-color: #fff;
 	padding: 1em;
+	width: 100%;
 }
 
 .sidebar-nav-item {
 	background-color: #fff !important;
 }
 
-.sidebar-nav-item a {
+a.sidebar-nav-item {
 	color: #5a8fa5 !important;
 }
