@@ -69,4 +69,5 @@ pre {
 	overflow-x: auto !important;
 	word-wrap: initial !important;
 	word-break: normal !important;
+	white-space: pre;
 }
