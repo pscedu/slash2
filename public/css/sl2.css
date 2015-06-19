@@ -11,14 +11,14 @@
 }
 
 pre {
-	border: 1px dotted #839496;
+	border: 1px dotted #93a1a1;
 }
 
 .highlight .lineno {
-	color: #ccc;
+	color: #93a1a1;
 	display: inline-block;
 	padding: 0 5px;
-	border-right: 1px solid #ccc;
+	border-right: 1px dotted #93a1a1;
 }
 
 .highlight pre code {
