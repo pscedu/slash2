@@ -4,11 +4,11 @@
 
 <!-- Toggleable sidebar -->
 <div class="sidebar" id="sidebar">
-  <div class="sidebar-item">
-    <p><a href='http://psc.edu/'><img style='background-color: #fff;
+  <div class="sidebar-item" style='text-align: center'>
+    <a href='http://psc.edu/'><img style='background-color: #fff;
 		  padding: .8em;
 			border: 1px solid #369' width='180'
-			src='{{ site.baseurl }}/public/psc.svg' alt='PSC' /></a></p>
+			src='{{ site.baseurl }}/public/psc.svg' alt='PSC' /></a>
   </div>
 
   <nav class="sidebar-nav">
@@ -30,7 +30,8 @@
 
 				{% if node.layout == "post" %}
 					<a class="sidebar-nav-item{% if page.url == turl %} active{% endif %}"
-						href="{{ turl }}">{{ node.title }} {{ node.author }}</a>
+						href="{{ turl }}">{{ node.title }} <span
+							class='sidebar-nav-author'>by {{ node.author }}</span></a>
 				{% endif %}
       {% endif %}
     {% endfor %}
