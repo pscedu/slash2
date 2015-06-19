@@ -8,15 +8,16 @@ title: Home
   <div class="post">
     <h2 class="post-title">
       <a href="{{ site.baseurl }}/{{ post.url }}">
-        {{ post.title }}
+	{{ post.title }}
       </a>
     </h2>
 
-    <span class="post-date">{{ post.date | date_to_string }}</span>
-		by
-    <span class="post-author">{{ post.author }}</span>
-		<br clear="both" />
-		<br /> 
+		<div class='post-info'>
+			<span class="post-date">{{ post.date | date_to_string }}</span>
+			by
+			<span class="post-author">{{ post.author }}</span>
+		</div>
+
     {{ post.content }}
   </div>
   {% endfor %}
