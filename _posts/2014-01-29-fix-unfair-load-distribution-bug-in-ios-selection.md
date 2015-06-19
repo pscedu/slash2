@@ -57,47 +57,47 @@ There was an obvious problem with preferred treatment to sense2s5.
 Examining the code, I see that we copy the list of I/O systems starting
 from a position <em>P</em> in the list.
 When we reach the end of the list, we start over from the beginning up
-to position <em>P</em>.  
+to position <em>P</em>.
 Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
 <pre>
 slashd/mds.c:
-   314  __static void
-   315  slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
-   316  {
-   317          struct resprof_mds_info *rpmi = res2rpmi(r);
-   318          struct sl_resm *m;
-   319          int i, idx;
+   314	__static void
+   315	slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
+   316	{
+   317		struct resprof_mds_info *rpmi = res2rpmi(r);
+   318		struct sl_resm *m;
+   319		int i, idx;
    320
-   321          RPMI_LOCK(rpmi);
-   322          idx = slm_get_rpmi_idx(r);
-   323          RPMI_ULOCK(rpmi);
+   321		RPMI_LOCK(rpmi);
+   322		idx = slm_get_rpmi_idx(r);
+   323		RPMI_ULOCK(rpmi);
    324
-   325          for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
-   326                  if (idx >= psc_dynarray_len(&r->res_members))
-   327                      idx = 0;
+   325		for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
+   326			if (idx >= psc_dynarray_len(&r->res_members))
+   327				idx = 0;
    328
-   329                  m = psc_dynarray_getpos(&r->res_members, idx);
-   330                  psc_dynarray_add_ifdne(a, m);
-   331          }
-   332  }
+   329			m = psc_dynarray_getpos(&r->res_members, idx);
+   330			psc_dynarray_add_ifdne(a, m);
+   331		}
+   332	}
 
 slashd/slashd.h:
-   450  static __inline int
-   451  slm_get_rpmi_idx(struct sl_resource *res)
-   452  {
-   453          struct resprof_mds_info *rpmi;
-   454          int locked, n;
+   450	static __inline int
+   451	slm_get_rpmi_idx(struct sl_resource *res)
+   452	{
+   453		struct resprof_mds_info *rpmi;
+   454		int locked, n;
    455
-   456          rpmi = res2rpmi(res);
-   457          locked = RPMI_RLOCK(rpmi);
-   458          if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
-   459                  rpmi->rpmi_cnt = 0;
-   460          n = rpmi->rpmi_cnt++;
-   461          RPMI_URLOCK(rpmi, locked);
-   462          return (n);
-   463  }
+   456		rpmi = res2rpmi(res);
+   457		locked = RPMI_RLOCK(rpmi);
+   458		if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+   459			rpmi->rpmi_cnt = 0;
+   460		n = rpmi->rpmi_cnt++;
+   461		RPMI_URLOCK(rpmi, locked);
+   462		return (n);
+   463	}
 </pre>
 
 In theory, this should work, but any servers that are unavailable will
