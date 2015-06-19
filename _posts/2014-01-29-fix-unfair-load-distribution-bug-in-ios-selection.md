@@ -62,9 +62,8 @@ Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
 slashd/mds.c:
-
-{% highlight c %}
-void
+{% highlight c linenos %}
+__static void
 slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 {
 	struct resprof_mds_info *rpmi = res2rpmi(r);
@@ -83,41 +82,22 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 		psc_dynarray_add_ifdne(a, m);
 	}
 }
+
+static __inline int
+slm_get_rpmi_idx(struct sl_resource *res)
+{
+	struct resprof_mds_info *rpmi;
+	int locked, n;
+
+	rpmi = res2rpmi(res);
+	locked = RPMI_RLOCK(rpmi);
+	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+		rpmi->rpmi_cnt = 0;
+	n = rpmi->rpmi_cnt++;
+	RPMI_URLOCK(rpmi, locked);
+	return (n);
+}
 {% endhighlight %}
-
-```cpp
-static __inline int
-slm_get_rpmi_idx(struct sl_resource *res)
-{
-	struct resprof_mds_info *rpmi;
-	int locked, n;
-
-	rpmi = res2rpmi(res);
-	locked = RPMI_RLOCK(rpmi);
-	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
-		rpmi->rpmi_cnt = 0;
-	n = rpmi->rpmi_cnt++;
-	RPMI_URLOCK(rpmi, locked);
-	return (n);
-}
-```
-
-```
-static __inline int
-slm_get_rpmi_idx(struct sl_resource *res)
-{
-	struct resprof_mds_info *rpmi;
-	int locked, n;
-
-	rpmi = res2rpmi(res);
-	locked = RPMI_RLOCK(rpmi);
-	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
-		rpmi->rpmi_cnt = 0;
-	n = rpmi->rpmi_cnt++;
-	RPMI_URLOCK(rpmi, locked);
-	return (n);
-}
-```
 
 In theory, this should work, but any servers that are unavailable will
 give an unfair advantage to the first server in the list after a run of
