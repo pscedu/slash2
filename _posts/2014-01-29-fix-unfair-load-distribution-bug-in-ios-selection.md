@@ -86,21 +86,20 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 ```
 
 ```
-slashd/slashd.h:
-   450	static __inline int
-   451	slm_get_rpmi_idx(struct sl_resource *res)
-   452	{
-   453		struct resprof_mds_info *rpmi;
-   454		int locked, n;
-   455
-   456		rpmi = res2rpmi(res);
-   457		locked = RPMI_RLOCK(rpmi);
-   458		if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
-   459			rpmi->rpmi_cnt = 0;
-   460		n = rpmi->rpmi_cnt++;
-   461		RPMI_URLOCK(rpmi, locked);
-   462		return (n);
-   463	}
+static __inline int
+slm_get_rpmi_idx(struct sl_resource *res)
+{
+	struct resprof_mds_info *rpmi;
+	int locked, n;
+
+	rpmi = res2rpmi(res);
+	locked = RPMI_RLOCK(rpmi);
+	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+		rpmi->rpmi_cnt = 0;
+	n = rpmi->rpmi_cnt++;
+	RPMI_URLOCK(rpmi, locked);
+	return (n);
+}
 ```
 
 In theory, this should work, but any servers that are unavailable will
