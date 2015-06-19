@@ -19,10 +19,10 @@
     {% assign posts_list = site.posts | sort:"url" %}
     {% for node in posts_list %}
       {% if node.title != null %}
-    		{% assign turl = site.baseurl + node.url %}
+				{% capture turl %}{{ site.baseurl }}{{ node.url }}{% endcapture %}
 				{% if node.layout == "post" %}
 					<a class="sidebar-nav-item{% if page.url == turl %} active{% endif %}"
-						href="{{ turl }}">{{ node.date + ' ' + node.title }}</a>
+						href="{{ turl }}">{{ node.date }} {{ node.title }}</a>
 				{% endif %}
       {% endif %}
     {% endfor %}
