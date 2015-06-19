@@ -9,3 +9,7 @@
 .post-info {
 	margin-bottom: .5em;
 }
+
+pre {
+	overflow: auto;
+}
