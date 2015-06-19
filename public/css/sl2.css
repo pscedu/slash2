@@ -1,3 +1,7 @@
+body {
+	background-color: #fdf6e3;
+}
+
 h2 {
 	color: #cb4b16 !important;
 }
@@ -79,4 +83,10 @@ pre {
 	word-wrap: initial !important;
 	word-break: normal !important;
 	white-space: pre;
+}
+
+tt {
+	display: inline-block;
+	background-color: #eee8d5;
+	font-size: 95%;
 }
