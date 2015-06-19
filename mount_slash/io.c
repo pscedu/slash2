@@ -2067,7 +2067,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 {
 	struct bmap_pagecache_entry *e;
 	struct readaheadrq *rarq;
-	struct psc_dynarray a;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	struct bmap *b;
@@ -2089,20 +2088,16 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		BMAP_ULOCK(b);
 
-		memset(&a, 0, sizeof(a));
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0,
+			BIORQ_READ | BIORQ_READAHEAD);
+		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
+
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			e = bmpce_lookup(b, BMPCEF_READAHEAD, 
 				rarq->rarq_off + i * BMPC_BUFSZ, 
 				&f->fcmh_waitq);
-			if (e)
-				psc_dynarray_add(&a, e);
+			psc_dynarray_add(&r->biorq_pages, e);
 		}
-		if (!psc_dynarray_len(&a))
-			goto end;
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, BIORQ_READ |
-		    BIORQ_READAHEAD);
-		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
-		r->biorq_pages = a;
 		msl_launch_read_rpcs(r);
 		msl_biorq_release(r);
 

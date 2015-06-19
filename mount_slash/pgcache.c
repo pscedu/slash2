@@ -146,37 +146,33 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 					continue;
 				}
 			}
-			if (flags & BMPCEF_READAHEAD)
-				e = NULL;
-			else {
-				BMPCE_LOCK(e);
-				if (e->bmpce_flags & BMPCEF_TOFREE) {
-					BMPCE_ULOCK(e);
-					goto retry;
-				}
+			BMPCE_LOCK(e);
+			if (e->bmpce_flags & BMPCEF_TOFREE) {
+				BMPCE_ULOCK(e);
+				goto retry;
+			}
 
-				if (e->bmpce_ref == 1 &&
-				    !(e->bmpce_flags & BMPCEF_REAPED)) {
-					if (e->bmpce_flags &
-					    BMPCEF_IDLE) {
-						e->bmpce_flags &=
-						    ~BMPCEF_IDLE;
-						remove_idle = 1;
+			if (e->bmpce_ref == 1 &&
+			    !(e->bmpce_flags & BMPCEF_REAPED)) {
+				if (e->bmpce_flags &
+				    BMPCEF_IDLE) {
+					e->bmpce_flags &=
+					    ~BMPCEF_IDLE;
+					remove_idle = 1;
 					} else if (e->bmpce_flags &
-					    BMPCEF_READALC) {
-						e->bmpce_flags &=
-						    ~BMPCEF_READALC;
-						remove_readalc = 1;
-					} else
-						e->bmpce_ref++;
+				    BMPCEF_READALC) {
+					e->bmpce_flags &=
+					    ~BMPCEF_READALC;
+					remove_readalc = 1;
 				} else
 					e->bmpce_ref++;
-				DEBUG_BMPCE(PLL_DIAG, e,
-				    "add reference");
-				BMPCE_ULOCK(e);
+			} else
+				e->bmpce_ref++;
+			DEBUG_BMPCE(PLL_DIAG, e,
+			    "add reference");
+			BMPCE_ULOCK(e);
 
-				OPSTAT_INCR("bmpce-hit");
-			}
+			OPSTAT_INCR("bmpce-hit");
 			break;
 		}
 
