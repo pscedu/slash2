@@ -22,7 +22,12 @@
     {% for node in posts_list %}
       {% if node.title != null %}
 				{% capture turl %}{{ site.baseurl }}{{ node.url }}{% endcapture %}
-				{{ node.date }}
+
+				{% if node.date != lastdate %}
+				<span class='sidebar-nav-date'>{{ node.date }}</span>
+					{% assign lastdate = node.date %}
+				{% endif %}
+
 				{% if node.layout == "post" %}
 					<a class="sidebar-nav-item{% if page.url == turl %} active{% endif %}"
 						href="{{ turl }}">{{ node.title }} {{ node.author }}</a>

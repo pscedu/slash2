@@ -24,3 +24,8 @@ pre {
 .highlight pre code {
 	overflow-x: auto;
 }
+
+.sidebar-nav-date {
+	display: block;
+	text-align: center;
+}
