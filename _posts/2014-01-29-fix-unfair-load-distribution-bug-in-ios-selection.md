@@ -13,43 +13,42 @@ Performance was varying wildly with single threaded I/O tests (<tt>rsync
 I took a look at the leases the MDS was assigning to gain some insight:
 
 <pre>
-yanovich@illusion2$ slmctl -sbml | awk '{print $3, $5}' | sort | uniq -c
-      1
-      6 <any> R---TB-----
-      1 io-system flags
-      5 sense2s2@PSCARCH -W--TB-----
-      9 sense2s4@PSCARCH -W--TB-----
-    182 sense2s5@PSCARCH -W--TB-----
-      5 sense2s6@PSCARCH -W--TB-----
-      7 sense2s7@PSCARCH -W--TB-----
-      5 sense3s0@PSCARCH -W--TB-----
-      6 sense3s1@PSCARCH -W--TB-----
-      6 sense3s2@PSCARCH -W--TB-----
-      6 sense3s3@PSCARCH -W--TB-----
-      5 sense3s4@PSCARCH -W--TB-----
-      5 sense3s5@PSCARCH -W--TB-----
-      6 sense3s6@PSCARCH -W--TB-----
-      6 sense4s0@PSCARCH -W--TB-----
-      6 sense4s1@PSCARCH -W--TB-----
-      5 sense4s2@PSCARCH -W--TB-----
-      5 sense4s3@PSCARCH -W--TB-----
-      5 sense4s4@PSCARCH -W--TB-----
-      5 sense4s5@PSCARCH -W--TB-----
-      6 sense4s6@PSCARCH -W--TB-----
-     11 sense5s0@PSCARCH -W--TB-----
-      5 sense5s1@PSCARCH -W--TB-----
-      5 sense5s2@PSCARCH -W--TB-----
-      6 sense5s3@PSCARCH -W--TB-----
-     11 sense5s5@PSCARCH -W--TB-----
-      5 sense5s6@PSCARCH -W--TB-----
-      7 sense6s0@PSCARCH -W--TB-----
-      6 sense6s1@PSCARCH -W--TB-----
-      6 sense6s2@PSCARCH -W--TB-----
-      6 sense6s3@PSCARCH -W--TB-----
-      6 sense6s4@PSCARCH -W--TB-----
-      6 sense6s5@PSCARCH -W--TB-----
-      6 sense6s6@PSCARCH -W--TB-----
-      6 sense6s7@PSCARCH -W--TB-----
+yanovich@illusion2$ slmctl -sbml | awk '{print $3, $5}' | sort | uniq -c | column -t
+      1 io-system		flags
+      6 &lt;any&gt;		R---TB-----
+      5 sense2s2@PSCARCH	-W--TB-----
+      9 sense2s4@PSCARCH	-W--TB-----
+    182 sense2s5@PSCARCH	-W--TB-----
+      5 sense2s6@PSCARCH	-W--TB-----
+      7 sense2s7@PSCARCH	-W--TB-----
+      5 sense3s0@PSCARCH	-W--TB-----
+      6 sense3s1@PSCARCH	-W--TB-----
+      6 sense3s2@PSCARCH	-W--TB-----
+      6 sense3s3@PSCARCH	-W--TB-----
+      5 sense3s4@PSCARCH	-W--TB-----
+      5 sense3s5@PSCARCH	-W--TB-----
+      6 sense3s6@PSCARCH	-W--TB-----
+      6 sense4s0@PSCARCH	-W--TB-----
+      6 sense4s1@PSCARCH	-W--TB-----
+      5 sense4s2@PSCARCH	-W--TB-----
+      5 sense4s3@PSCARCH	-W--TB-----
+      5 sense4s4@PSCARCH	-W--TB-----
+      5 sense4s5@PSCARCH	-W--TB-----
+      6 sense4s6@PSCARCH	-W--TB-----
+     11 sense5s0@PSCARCH	-W--TB-----
+      5 sense5s1@PSCARCH	-W--TB-----
+      5 sense5s2@PSCARCH	-W--TB-----
+      6 sense5s3@PSCARCH	-W--TB-----
+     11 sense5s5@PSCARCH	-W--TB-----
+      5 sense5s6@PSCARCH	-W--TB-----
+      7 sense6s0@PSCARCH	-W--TB-----
+      6 sense6s1@PSCARCH	-W--TB-----
+      6 sense6s2@PSCARCH	-W--TB-----
+      6 sense6s3@PSCARCH	-W--TB-----
+      6 sense6s4@PSCARCH	-W--TB-----
+      6 sense6s5@PSCARCH	-W--TB-----
+      6 sense6s6@PSCARCH	-W--TB-----
+      6 sense6s7@PSCARCH	-W--TB-----
 </pre>
 
 This command counts the number of occurrences of leases issued to each
