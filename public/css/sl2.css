@@ -1,5 +1,5 @@
 h2 {
-	color: #268bd2 !important;
+	color: #cb4b16 !important;
 }
 
 .post-date, .post-author {
@@ -12,7 +12,8 @@ h2 {
 	padding-left: 1em; 
 	font-size: smaller;
 	margin-bottom: .5em;
-	border-bottom: 1px dotted #eef;
+	border-left: 3px solid #6a9fb5;
+	border-bottom: 1px dotted #6a9fb5;
 }
 
 pre {
