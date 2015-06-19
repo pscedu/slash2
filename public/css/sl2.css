@@ -42,10 +42,10 @@ pre {
 	padding: 1em;
 }
 
-.sidebar-item {
-	background-color: #fff;
+.sidebar-nav-item {
+	background-color: #fff !important;
 }
 
-.sidebar-item a {
+.sidebar-nav-item a {
 	color: #5a8fa5;
 }
