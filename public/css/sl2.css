@@ -1,14 +1,16 @@
 h2 {
-	color: #268bd2;
+	color: #268bd2 !important;
 }
 
 .post-date, .post-author {
 	display: inline !important;
-	color: #4a5a6a;
+	color: #4a6a8a;
 }
 
 .post-info {
 	color: #9a9a9a;
+	padding-left: 1em; 
+	font-size: smaller;
 	margin-bottom: .5em;
 }
 
