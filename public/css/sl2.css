@@ -11,5 +11,16 @@
 }
 
 pre {
-	border: 1px dotted #666;
+	border: 1px dotted #839496;
+}
+
+.highlight .lineno {
+	color: #ccc;
+	display: inline-block;
+	padding: 0 5px;
+	border-right: 1px solid #ccc;
+}
+
+.highlight pre code {
+	overflow-x: auto;
 }
