@@ -61,7 +61,7 @@ to position <em>P</em>.
 Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
-```ruby
+```c
 require 'redcarpet'
 markdown = Redcarpet.new("Hello World!")
 puts markdown.to_html
