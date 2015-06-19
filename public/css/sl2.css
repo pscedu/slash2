@@ -36,7 +36,8 @@ pre {
 	color: #99f;
 }
 
-.sidebar-hdr {
+#sidebar-hdr {
 	text-align: center;
 	background-color: #fff;
+	padding: 1em;
 }
