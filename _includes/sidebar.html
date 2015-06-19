@@ -30,8 +30,7 @@
 
 				{% if node.layout == "post" %}
 					<a class="sidebar-nav-item{% if page.url == turl %} active{% endif %}"
-						href="{{ turl }}">{{ node.title }} <span
-							class='sidebar-nav-author'>by {{ node.author }}</span></a>
+						href="{{ turl }}">{{ node.title }}</span></a>
 				{% endif %}
       {% endif %}
     {% endfor %}
