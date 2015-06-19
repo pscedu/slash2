@@ -66,5 +66,5 @@ a.sidebar-nav-item {
 
 pre {
 	overflow-x: auto !important;
-	word-wrap: initial;
+	word-wrap: initial !important;
 }
