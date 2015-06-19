@@ -69,8 +69,8 @@ puts markdown.to_html
 
 slashd/mds.c:
 
-```cpp
-__static void
+```c
+void
 slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 {
 	struct resprof_mds_info *rpmi = res2rpmi(r);
@@ -91,7 +91,7 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 }
 ```
 
-```cpp 
+```cpp
 static __inline int
 slm_get_rpmi_idx(struct sl_resource *res)
 {
