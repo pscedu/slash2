@@ -62,7 +62,7 @@ Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
 slashd/mds.c:
-'''c
+```c
 __static void
 slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 {
@@ -82,6 +82,7 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 		psc_dynarray_add_ifdne(a, m);
 	}
 }
+```
 
 <pre>
 slashd/slashd.h:
