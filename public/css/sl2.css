@@ -11,10 +11,5 @@
 }
 
 pre {
-	overflow: auto;
-}
-
-p code {
-	display: block;
-	white-space: pre;
+	border: 1px dotted #666;
 }
