@@ -1,12 +1,14 @@
-.post-date {
-	display: inline !important;
-}
-
-.post-author {
+h2 {
 	color: #268bd2;
 }
 
+.post-date, .post-author {
+	display: inline !important;
+	color: #4a5a6a;
+}
+
 .post-info {
+	color: #9a9a9a;
 	margin-bottom: .5em;
 }
 
@@ -28,7 +30,7 @@ pre {
 .sidebar-nav-date {
 	display: block;
 	text-align: center;
-	color: #aadff5;
+	color: #baeff5;
 	background-color: #6a9fb5;
 	padding: .25em !important;
 }
