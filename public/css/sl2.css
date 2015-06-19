@@ -1,3 +1,7 @@
+.post-date {
+	display: inline !important;
+}
+
 .post-author {
-  color: #268bd2;
+	color: #268bd2;
 }
