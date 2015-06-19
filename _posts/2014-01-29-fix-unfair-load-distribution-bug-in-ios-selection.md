@@ -5,7 +5,12 @@ author: yanovich
 type: progress
 ---
 
-I noticed an interesting problem on the <a href="http://www.psc.edu/DataSupercell">DSC</a> deployment the other day.  Performance was varying wildly with single threaded I/O tests (<tt>rsync -P</tt>).  I took a look at the leases the MDS was assigning to gain some insight:
+I noticed an interesting problem on the <a
+href="http://www.psc.edu/DataSupercell">DSC</a> deployment the other
+day.
+Performance was varying wildly with single threaded I/O tests (<tt>rsync
+-P</tt>).
+I took a look at the leases the MDS was assigning to gain some insight:
 
 <pre>
 yanovich@illusion2$ slmctl -sbml | awk '{print $3, $5}' | sort | uniq -c
@@ -47,7 +52,15 @@ yanovich@illusion2$ slmctl -sbml | awk '{print $3, $5}' | sort | uniq -c
       6 sense6s7@PSCARCH -W--TB-----
 </pre>
 
-This command counts the number of occurrences of leases issued to each I/O system.  There was an obvious problem with preferred treatment to sense2s5.  Examining the code, I see that we copy the list of I/O systems starting from a position <em>P</em> in the list.  When we reach the end of the list, we start over from the beginning up to position <em>P</em>.  Then, we increment <em>P</em> next time in an approach to round-robin selection of I/O systems:
+This command counts the number of occurrences of leases issued to each
+I/O system.
+There was an obvious problem with preferred treatment to sense2s5.
+Examining the code, I see that we copy the list of I/O systems starting
+from a position <em>P</em> in the list.
+When we reach the end of the list, we start over from the beginning up
+to position <em>P</em>.  
+Then, we increment <em>P</em> next time in an approach to round-robin
+selection of I/O systems:
 
 <pre>
 slashd/mds.c:
@@ -88,6 +101,10 @@ slashd/slashd.h:
    463  }
 </pre>
 
-In theory, this should work, but any servers that are unavailable will give an unfair advantage to the first server in the list after a run of such unavailable servers, as this first server will get hammered <em>N + 1</em> times if there are <em>N</em> unavailable servers.
+In theory, this should work, but any servers that are unavailable will
+give an unfair advantage to the first server in the list after a run of
+such unavailable servers, as this first server will get hammered <em>N +
+1</em> times if there are <em>N</em> unavailable servers.
 
-This solution was to add the list and shuffle it, resulting in a much nicer load distribution.
+This solution was to add the list and shuffle it, resulting in a much
+nicer load distribution.
