@@ -28,7 +28,8 @@ pre {
 .sidebar-nav-date {
 	display: block;
 	text-align: center;
-	background-color: #468;
+	background-color: #a3b1b1;
+	padding: .25em;
 }
 
 .sidebar-nav-author {
