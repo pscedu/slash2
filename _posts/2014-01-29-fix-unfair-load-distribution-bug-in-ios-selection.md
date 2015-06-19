@@ -61,28 +61,29 @@ to position <em>P</em>.
 Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
-<pre>
 slashd/mds.c:
-   314	__static void
-   315	slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
-   316	{
-   317		struct resprof_mds_info *rpmi = res2rpmi(r);
-   318		struct sl_resm *m;
-   319		int i, idx;
-   320
-   321		RPMI_LOCK(rpmi);
-   322		idx = slm_get_rpmi_idx(r);
-   323		RPMI_ULOCK(rpmi);
-   324
-   325		for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
-   326			if (idx >= psc_dynarray_len(&r->res_members))
-   327				idx = 0;
-   328
-   329			m = psc_dynarray_getpos(&r->res_members, idx);
-   330			psc_dynarray_add_ifdne(a, m);
-   331		}
-   332	}
+'''c
+__static void
+slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
+{
+	struct resprof_mds_info *rpmi = res2rpmi(r);
+	struct sl_resm *m;
+	int i, idx;
 
+	RPMI_LOCK(rpmi);
+	idx = slm_get_rpmi_idx(r);
+	RPMI_ULOCK(rpmi);
+
+	for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
+		if (idx >= psc_dynarray_len(&r->res_members))
+			idx = 0;
+
+		m = psc_dynarray_getpos(&r->res_members, idx);
+		psc_dynarray_add_ifdne(a, m);
+	}
+}
+
+<pre>
 slashd/slashd.h:
    450	static __inline int
    451	slm_get_rpmi_idx(struct sl_resource *res)
