@@ -12,9 +12,9 @@ h2 {
 	padding-left: 1em; 
 	font-size: smaller;
 	margin-bottom: .5em;
-	border-left: 3px solid #6a9fb5;
+	border-left: 4px solid #6a9fb5;
 	border-bottom: 1px solid #6a9fb5;
-	border-top: 1px solid #aadff5;
+	border-top: 1px solid #6a9fb5;
 }
 
 pre {
