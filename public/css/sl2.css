@@ -66,5 +66,5 @@ img {
 
 pre {
 	overflow-x: auto !important;
-	word-wrap: normal;
+	word-wrap: initial;
 }
