@@ -24,7 +24,7 @@
 				{% capture turl %}{{ site.baseurl }}{{ node.url }}{% endcapture %}
 
 				{% if node.date != lastdate %}
-				<span class='sidebar-nav-date'>{{ node.date }}</span>
+				<span class='sidebar-nav-date'>{{ node.date | date: "%b %-d, %Y" }}</span>
 					{% assign lastdate = node.date %}
 				{% endif %}
 
