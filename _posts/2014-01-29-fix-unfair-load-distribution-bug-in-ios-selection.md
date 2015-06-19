@@ -61,6 +61,12 @@ to position <em>P</em>.
 Then, we increment <em>P</em> next time in an approach to round-robin
 selection of I/O systems:
 
+```ruby
+require 'redcarpet'
+markdown = Redcarpet.new("Hello World!")
+puts markdown.to_html
+```
+
 slashd/mds.c:
 
 ```c_cpp
@@ -82,6 +88,23 @@ slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 		m = psc_dynarray_getpos(&r->res_members, idx);
 		psc_dynarray_add_ifdne(a, m);
 	}
+}
+```
+
+```c
+static __inline int
+slm_get_rpmi_idx(struct sl_resource *res)
+{
+	struct resprof_mds_info *rpmi;
+	int locked, n;
+
+	rpmi = res2rpmi(res);
+	locked = RPMI_RLOCK(rpmi);
+	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+		rpmi->rpmi_cnt = 0;
+	n = rpmi->rpmi_cnt++;
+	RPMI_URLOCK(rpmi, locked);
+	return (n);
 }
 ```
 
