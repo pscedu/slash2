@@ -87,6 +87,9 @@ pre {
 
 tt {
 	display: inline-block;
+	padding-left: .15em;
+	padding-right: .15em;
+	border-radius: .3em;
 	background-color: #eee8d5;
 	font-size: 95%;
 }
