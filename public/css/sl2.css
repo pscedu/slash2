@@ -13,3 +13,7 @@
 pre {
 	overflow: auto;
 }
+
+p code {
+	white-space: pre;
+}
