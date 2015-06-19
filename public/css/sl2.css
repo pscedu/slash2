@@ -9,7 +9,8 @@ h2 {
 
 .post-info {
 	color: #9a9a9a;
-	padding-left: 1em; 
+	padding: .25em !important;
+	padding-left: 1em !important; 
 	font-size: smaller;
 	margin-bottom: .5em;
 	border-left: 4px solid #6a9fb5;
