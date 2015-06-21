@@ -393,7 +393,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK | X_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
