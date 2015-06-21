@@ -196,7 +196,7 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 
 /**
  * slm_rmi_handle_bmap_ptrunc - Handle a BMAP_PTRUNC reply from ION.
- *	This means a client has trashed some partial truncation garbage.
+ *	This means an ION has trashed some partial truncation garbage.
  *	Note: if a sliod resolved a ptrunc CRC recalculation, this path
  *	is not taken; CRCWRT is issued as notification instead.
  * @rq: request.
