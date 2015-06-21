@@ -381,8 +381,10 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
 	CSVC_ULOCK(csvc);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc)
+	if (rc) {
+		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
+	}
 	return (rc);
 }
 
