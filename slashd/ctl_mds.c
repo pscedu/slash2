@@ -508,7 +508,7 @@ slmctlparam_nextfid_set(const char *val)
 			rc = -1;
 		else
 			slm_next_fid = l | ((uint64_t)nodeSite->site_id <<
-			    SLASH_FID_SITE_SHFT);
+			    SLASH_FID_MDSID_SHFT);
 	}
 	freelock(&slm_fid_lock);
 	return (rc);
