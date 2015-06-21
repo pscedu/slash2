@@ -579,6 +579,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
  *
  * @b: the bmap ID to retrieve.
  * @rw: read or write access
+ * @flags: access flags (BMAPGETF_*).
  */
 int
 msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
@@ -587,10 +588,19 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
-	struct psc_compl compl;
+	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
+	struct msfs_thread *mft;
+	struct psc_thread *thr;
+	struct psc_compl compl;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
+
+	thr = pscthr_get();
+	if (thr->pscthr_type == MSTHRT_FS) {
+		mft = thr->pscthr_private;
+		pfr = mft->mft_pfr;
+	}
 
 	psc_assert(b->bcm_flags & BMAPF_INIT);
 	psc_assert(b->bcm_fcmh);
@@ -668,7 +678,7 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-	if (rc && slc_rmc_retry(NULL, &rc))
+	if (rc && pfr && slc_rmc_retry(pfr, &rc))
 		goto retry;
 
 	return (rc);
