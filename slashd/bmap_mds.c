@@ -50,17 +50,18 @@ bmap_2_mfh(struct bmap *b)
 	return (fh);
 }
 
-/**
- * mds_bmap_initnew - Called when a read request offset exceeds the
- *	bounds of the file causing a new bmap to be created.
- * Notes:  Bmap creation race conditions are prevented because the bmap
- *	handle already exists at this time with
- *	bcm_flags == BMAPF_INIT.
+/*
+ * Called when a read request offset exceeds the bounds of the file
+ * causing a new bmap to be created.
  *
- *	This causes other threads to block on the waitq until
- *	read/creation has completed.
- * More Notes:  this bmap is not written to disk until a client actually
- *	writes something to it.
+ * Note: bmap creation race conditions are prevented because the bmap
+ * handle already exists at this time with bcm_flags == BMAPF_INIT.
+ *
+ * This causes other threads to block on the waitq until read/creation
+ * has completed.
+ *
+ * Note: this bmap is not written to disk until a client actually writes
+ * something to it.
  */
 __static void
 mds_bmap_initnew(struct bmap *b)
@@ -163,8 +164,8 @@ slm_bmap_resetnonce(struct bmap *b)
 	}
 }
 
-/**
- * mds_bmap_read - Retrieve a bmap from the on-disk inode file.
+/*
+ * Retrieve a bmap from the on-disk inode file.
  * @b: bmap.
  * Returns zero on success, negative errno code on failure.
  */
@@ -258,9 +259,9 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	return (0);
 }
 
-/**
- * mds_bmap_write - Update the on-disk data of bmap.  Note we must
- *	reserve journal log space if logf is given.
+/*
+ * Update the on-disk data of bmap.  Note we must reserve journal log
+ * space if @logf is given.
  */
 int
 mds_bmap_write(struct bmap *b, void *logf, void *logarg)
@@ -333,9 +334,9 @@ mds_bmap_destroy(struct bmap *b)
 	upd_destroy(&bmi->bmi_upd);
 }
 
-/**
- * mds_bmap_crc_update - Handle CRC updates for one bmap by pushing
- *	the updates to ZFS and then log it.
+/*
+ * Handle CRC updates for one bmap by pushing the updates to ZFS and
+ * then log it.
  */
 int
 mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
@@ -387,6 +388,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	}
 
 	if (_mds_repl_inv_except(bmap, idx, 1)) {
+		/* XXX why are we writing the bmap twice??? */
 		mds_bmap_write_logrepls(bmap);
 	} else {
 		BMAPOD_MODIFY_DONE(bmap, 0);
@@ -411,8 +413,8 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
 }
 
-/**
- * mds_bmap_write_rel - Release a bmap after use.
+/*
+ * Release a bmap after use.
  */
 int
 _mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
