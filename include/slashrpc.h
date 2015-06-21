@@ -823,7 +823,7 @@ struct srm_io_req {
 	uint32_t		utimgen;	/* utimes(2) generation # */
 	uint32_t		flags:31;	/* see SRM_IOF_* */
 	uint32_t		op:1;		/* read/write */
-	uint32_t		size;		/* I/O length, always <1MB */
+	uint32_t		size;		/* I/O length; always < LNET_MTU */
 	uint32_t		offset;		/* relative within bmap */
 	 int32_t		rc;		/* async I/O return code */
 	uint64_t		id;		/* async I/O identifier */
@@ -835,7 +835,7 @@ struct srm_io_req {
 #define SRMIOP_WR		1
 
 /* I/O flags */
-#define SRM_IOF_APPEND		(1 << 0)	/* ignore offset, send WRITE to EOF */
+#define SRM_IOF_APPEND		(1 << 0)	/* ignore offset; position WRITE at EOF */
 #define SRM_IOF_DIO		(1 << 1)	/* direct I/O; no caching */
 #define SRM_IOF_BENCH		(1 << 2)	/* for benchmarking only; junk data */
 
