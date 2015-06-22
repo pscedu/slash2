@@ -249,16 +249,17 @@ struct fidc_membh {
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
 /* types of references */
-#define	FCMH_OPCNT_BMAP			(1 << 0)	/* bcm_fcmh backpointer */
-#define	FCMH_OPCNT_LOOKUP_FIDC		(1 << 1)	/* fidc_lookup() */
-#define	FCMH_OPCNT_NEW			(1 << 2)
-#define	FCMH_OPCNT_OPEN			(1 << 3)	/* CLI: pscfs file info */
-#define	FCMH_OPCNT_WAIT			(1 << 4)	/* dup ref during initialization */
-#define	FCMH_OPCNT_WORKER		(1 << 5)	/* MDS: generic worker */
-#define	FCMH_OPCNT_DIRTY_QUEUE		(1 << 6)	/* CLI: attribute flushing */
-#define	FCMH_OPCNT_UPSCH		(1 << 7)	/* MDS: temporarily held by upsch engine */
-#define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
-#define	FCMH_OPCNT_READAHEAD		(1 << 9)	/* IOD/CLI: readahead */
+#define	FCMH_OPCNT_BMAP			(1 <<  0)	/* bcm_fcmh backpointer */
+#define	FCMH_OPCNT_LOOKUP_FIDC		(1 <<  1)	/* fidc_lookup() */
+#define	FCMH_OPCNT_NEW			(1 <<  2)
+#define	FCMH_OPCNT_OPEN			(1 <<  3)	/* CLI: pscfs file info */
+#define	FCMH_OPCNT_WAIT			(1 <<  4)	/* dup ref during initialization */
+#define	FCMH_OPCNT_WORKER		(1 <<  5)	/* MDS: generic worker */
+#define	FCMH_OPCNT_DIRTY_QUEUE		(1 <<  6)	/* CLI: attribute flushing */
+#define	FCMH_OPCNT_UPSCH		(1 <<  7)	/* MDS: temporarily held by upsch engine */
+#define	FCMH_OPCNT_READDIR		(1 <<  8)	/* CLI: readahead readdir RPC */
+#define	FCMH_OPCNT_READAHEAD		(1 <<  9)	/* IOD/CLI: readahead */
+#define	FCMH_OPCNT_DIRCACHE		(1 << 10)	/* CLI: async dircache */
 
 void	fidc_init(int);
 
