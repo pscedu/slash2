@@ -42,6 +42,7 @@
 #include "pfl/lock.h"
 #include "pfl/pool.h"
 #include "pfl/str.h"
+#include "pfl/workthr.h"
 
 #include "dircache.h"
 #include "fidcache.h"
@@ -55,9 +56,20 @@ struct psc_poolmgr	*dircache_page_pool;
 struct psc_poolmaster	 dircache_ent_poolmaster;
 struct psc_poolmgr	*dircache_ent_pool;
 
-struct psc_lockedlist msl_dircache_pages_lru;
+struct psc_lockedlist	 msl_dircache_pages_lru;
 
-static int dircache_walk_disable = 1;
+void
+dircache_init(struct fidc_membh *d)
+{
+	struct fcmh_cli_info *fci = fcmh_2_fci(d);
+
+	if ((d->fcmh_flags & FCMH_CLI_INITDIRCACHE) == 0) {
+		pll_init(&fci->fci_dc_pages, struct dircache_page,
+		    dcp_lentry, &d->fcmh_lock);
+		psc_rwlock_init(&fci->fcid_dircache_rwlock);
+		d->fcmh_flags |= FCMH_CLI_INITDIRCACHE;
+	}
+}
 
 /*
  * Reap old dircache_pages.
@@ -143,7 +155,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 
 	fci = fcmh_2_fci(d);
 	p = dce->dce_page;
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 	if (p) {
 		a = p->dcp_dents_off;
 
@@ -159,7 +171,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 		dce2 = psc_dynarray_getpos(a, dce->dce_index);
 		dce2->dce_index = dce->dce_index;
 	}
-	FCMH_ULOCK(d);
+	DIRCACHE_ULOCK(d);
 
 	if (freedent)
 		PSCFREE(dce->dce_pfd);
@@ -180,7 +192,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	struct dircache_ent *dce;
 	int i;
 
-	FCMH_LOCK_ENSURE(d);
+	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
 	if (p->dcp_flags & DIRCACHEPGF_FREEING)
@@ -195,7 +207,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 		OPSTAT_INCR("dircache-unused-page");
 
 	while (p->dcp_refcnt)
-		fcmh_wait_nocond_locked(d);
+		DIRCACHE_WAIT(d);
 
 	// XXX this conjoint conditional should not be here
 	if (psclist_conjoint(&p->dcp_lentry,
@@ -214,7 +226,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
 	psc_pool_return(dircache_page_pool, p);
 
-	fcmh_wake_locked(d);
+	DIRCACHE_WAKE(d);
 
 	return (1);
 }
@@ -225,29 +237,50 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
  * @cbf: callback to run.
  * @cbarg: callback argument.
  */
-void
-dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
-    struct dircache_ent *, void *), void *cbarg)
+int
+dircache_walk_wkcb(void *arg)
 {
+	struct slc_wkdata_dircache *wk = arg;
 	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
-	int lk, n;
+	int n;
 
-	if (dircache_walk_disable)
-		return;
-
-	fci = fcmh_2_fci(d);
-	lk = FCMH_RLOCK(d);
+	fci = fcmh_2_fci(wk->d);
+	DIRCACHE_RDLOCK(wk->d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
 			continue;
 		DYNARRAY_FOREACH(dce, n, p->dcp_dents_off)
-			cbf(p, dce, cbarg);
+			wk->cbf(p, dce, wk->cbarg);
 	}
 	DYNARRAY_FOREACH(dce, n, &fci->fcid_ents)
-		cbf(NULL, dce, cbarg);
-	FCMH_URLOCK(d, lk);
+		wk->cbf(NULL, dce, wk->cbarg);
+	DIRCACHE_ULOCK(wk->d);
+
+	fcmh_op_done_type(wk->d, FCMH_OPCNT_DIRCACHE);
+
+	if (wk->compl)
+		psc_compl_ready(wk->compl, 1);
+
+	return (0);
+}
+
+void
+dircache_walk_async(struct fidc_membh *d, void (*cbf)(
+    struct dircache_page *, struct dircache_ent *, void *), void *cbarg,
+    struct psc_compl *compl)
+{
+	struct slc_wkdata_dircache *wk;
+
+	wk = pfl_workq_getitem(dircache_walk_wkcb,
+	    struct slc_wkdata_dircache);
+	fcmh_op_start_type(d, FCMH_OPCNT_DIRCACHE);
+	wk->d = d;
+	wk->cbf = cbf;
+	wk->cbarg = cbarg;
+	wk->compl = compl;
+	pfl_workq_putitem(wk);
 }
 
 /*
@@ -261,10 +294,10 @@ dircache_purge(struct fidc_membh *d)
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(d);
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		dircache_free_page(d, p);
-	FCMH_ULOCK(d);
+	DIRCACHE_ULOCK(d);
 }
 
 /*
@@ -309,7 +342,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 
 	newp = psc_pool_get(dircache_page_pool);
 
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 
  restart:
 	DIRCACHEPG_INITEXP(&dexp);
@@ -328,7 +361,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 			}
 
 			if (wait) {
-				fcmh_wait_nocond_locked(d);
+				DIRCACHE_WAIT(d);
 				goto restart;
 			}
 			continue;
@@ -360,7 +393,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "incref");
 
  out:
-	FCMH_ULOCK(d);
+	DIRCACHE_ULOCK(d);
 
 	if (newp)
 		psc_pool_return(dircache_page_pool, newp);
@@ -433,12 +466,12 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 
 	if ((p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
 		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
 		p->dcp_refcnt--;
-		FCMH_ULOCK(d);
+		DIRCACHE_ULOCK(d);
 
 		DYNARRAY_FOREACH(dce, i, da_off)
 			psc_pool_return(dircache_ent_pool, dce);
@@ -481,8 +514,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
-	fcmh_wake_locked(d);
-	FCMH_ULOCK(d);
+	DIRCACHE_WAKE(d);
+	DIRCACHE_ULOCK(d);
 }
 
 /*
@@ -500,13 +533,11 @@ namecache_purge(struct fidc_membh *d)
 	int i;
 
 	fci = fcmh_get_pri(d);
-	FCMH_LOCK(d);
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
 		psc_hashent_remove(&msl_namecache_hashtbl, dce);
 		PSCFREE(dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
-	FCMH_ULOCK(d);
 	psc_dynarray_free(&fci->fcid_ents);
 }
 
@@ -516,7 +547,14 @@ dircache_ent_update(void *p, void *arg)
 	struct dircache_ent *dce = p;
 
 	dce->dce_pfd->pfd_ino = *(uint64_t *)arg;
-	OPSTAT_INCR("namecache-update");
+}
+
+void
+dircache_ent_peek(void *p, void *arg)
+{
+	struct dircache_ent *dce = p;
+
+	*(uint64_t *)arg = dce->dce_pfd->pfd_ino;
 }
 
 /*
@@ -528,23 +566,26 @@ dircache_ent_update(void *p, void *arg)
  * @op: operation type (LOOKUP, DELETE, etc.).
  */
 slfid_t
-_namecache_lookup(struct fidc_membh *d, const char *name, uint64_t cfid,
-    int op)
+_namecache_lookup(int op, struct fidc_membh *d, const char *name,
+    uint64_t cfid)
 {
 	void *cbf = NULL, *arg = NULL;
-	uint64_t pfid = fcmh_2_fid(d), key, rc = FID_ANY;
+	uint64_t pfid, key, rc = FID_ANY;
+	struct dircache_ent *dce, *new_dce;
 	struct dircache_ent_query q;
-	struct dircache_ent *dce;
-	struct pscfs_dirent;
-	size_t namelen;
+	struct fcmh_cli_info *fci;
+	struct psc_hashbkt *b;
+	size_t entsz, namelen;
 	int flags = 0;
 
+	pfid = fcmh_2_fid(d);
 	if (pfid == SLFID_NS)
 		return (FID_ANY);
 	psc_assert(pfid == SLFID_ROOT || pfid >= SLFID_MIN);
 
 	switch (op) {
 	case NAMECACHELOOKUPF_UPDATE:
+	case NAMECACHELOOKUPF_CLOBBER:
 		cbf = dircache_ent_update;
 		arg = &cfid;
 		break;
@@ -552,7 +593,10 @@ _namecache_lookup(struct fidc_membh *d, const char *name, uint64_t cfid,
 		flags |= PHLF_DEL;
 		break;
 	case NAMECACHELOOKUPF_PEEK:
+		cbf = dircache_ent_peek;
 		arg = &rc;
+		/* FALLTHRU */
+	default:
 		break;
 	}
 
@@ -567,45 +611,30 @@ _namecache_lookup(struct fidc_membh *d, const char *name, uint64_t cfid,
 	case NAMECACHELOOKUPF_PEEK:
 		if (dce)
 			OPSTAT_INCR("namecache-hit");
-		break;
+		return (rc);
 	case NAMECACHELOOKUPF_DELETE:
 		if (dce) {
 			dircache_ent_zap(d, dce);
 			OPSTAT_INCR("namecache-delete");
 		} else
 			OPSTAT_INCR("namecache-delete-miss");
+		return (rc);
+	case NAMECACHELOOKUPF_UPDATE:
+		if (dce)
+			OPSTAT_INCR("namecache-update");
+		return (rc);
+	case NAMECACHELOOKUPF_CLOBBER:
+		if (dce) {
+			OPSTAT_INCR("namecache-update");
+			return (rc);
+		}
 		break;
-	}
-
-	return (rc);
-}
-
-void
-namecache_insert(struct fidc_membh *d, const char *name, uint64_t cfid)
-{
-	struct dircache_ent *dce, *new_dce;
-	struct dircache_ent_query q;
-	struct fcmh_cli_info *fci;
-	struct psc_hashbkt *b;
-	size_t entsz, namelen;
-	uint64_t pfid, key;
-	int flags = 0;
-
-	pfid = fcmh_2_fid(d);
-	if (pfid == SLFID_NS)
-		return;
-	psc_assert(pfid == SLFID_ROOT || pfid >= SLFID_MIN);
-
-	q.dcq_pfid = pfid;
-	q.dcq_name = name;
-	q.dcq_namelen = namelen = strlen(name);
-	q.dcq_key = key = dircache_ent_hash(pfid, name, namelen);
-	dce = _psc_hashtbl_search(&msl_namecache_hashtbl, flags, &q,
-	    NULL, NULL, &key);
-
-	if (dce) {
-		OPSTAT_INCR("namecache-insert-collision");
-		return;
+	case NAMECACHELOOKUPF_INSERT:
+		if (dce) {
+			OPSTAT_INCR("namecache-insert-collision");
+			return (rc);
+		}
+		break;
 	}
 
 	entsz = PFL_DIRENT_SIZE(namelen);
@@ -634,16 +663,17 @@ namecache_insert(struct fidc_membh *d, const char *name, uint64_t cfid)
 		psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
 		    dce);
 		fci = fcmh_2_fci(d);
-		FCMH_LOCK(d);
+		DIRCACHE_WRLOCK(d);
 		dce->dce_index = psc_dynarray_len(&fci->fcid_ents);
 		psc_dynarray_add(&fci->fcid_ents, dce);
-		FCMH_ULOCK(d);
+		DIRCACHE_ULOCK(d);
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	if (new_dce) {
 		PSCFREE(new_dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, new_dce);
 	}
+	return (rc);
 }
 
 void
@@ -667,5 +697,5 @@ dircache_dbgpr(struct fidc_membh *d)
 	void *p = NULL;
 
 	printf("pages %d\n", pll_nitems(&fcmh_2_fci(d)->fci_dc_pages));
-	dircache_walk(d, dircache_ent_dbgpr, &p);
+	//dircache_walk(d, dircache_ent_dbgpr, &p);
 }

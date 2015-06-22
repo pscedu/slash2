@@ -570,7 +570,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	/*
 	 * PSCFS direct_io does not work with mmap(MAP_SHARED), which is
 	 * what the kernel uses under the hood when running executables,
-	 * so disable it for this case.
+	 * so don't enable DIO on executable files so they can be
+	 * executed.
 	 */
 	if ((c->fcmh_sstb.sst_mode &
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
@@ -985,7 +986,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (sstb)
 		*sstb = f->fcmh_sstb;
 
-	//msl_insert_namecache(pfid, name, fp);
+	namecache_clobber(p, name, fcmh_2_fid(f));
 
  out:
 	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
@@ -1151,8 +1152,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	/*
 	 * We should do a lookup based on name here because a rename
-	 * does not change the file ID and we would get a success in a
-	 * stat RPC.  Note the call is looking based on a name here, not
+	 * does not change the FID and we would get a success in a STAT
+	 * RPC.  Note the call is looking based on a name here, not
 	 * based on FID.
 	 */
 	rc = msl_stat(c, pfr);
@@ -1175,7 +1176,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (c)
 		fcmh_op_done(c);
 
-	psclog_diag("look for file: %s under inode: "SLPRI_FID" rc=%d",
+	psclog_diag("lookup basename='%s' pfid="SLPRI_FID" rc=%d",
 	    name, pinum, rc);
 
 	return (rc);
@@ -1398,18 +1399,18 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 void
 msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 {
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_rc = rc;
-		OPSTAT_INCR("namecache-load_error");
+		OPSTAT_INCR("namecache-load-error");
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-		fcmh_wake_locked(d);
+		DIRCACHE_WAKE(d);
 	}
-	FCMH_ULOCK(d);
+	DIRCACHE_ULOCK(d);
 }
 
 void
@@ -1483,9 +1484,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 			OPSTAT_INCR("readdir-piggyback");
 		} else {
-			FCMH_LOCK(d);
+			DIRCACHE_WRLOCK(d);
 			p->dcp_refcnt--;
 			PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decr");
+			DIRCACHE_ULOCK(d);
 
 			OPSTAT_INCR("readdir-wait-reply");
 		}
@@ -1536,8 +1538,9 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	sl_csvc_decref(csvc);
 
  out:
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 	dircache_free_page(d, p);
+	DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (rc);
 }
@@ -1582,7 +1585,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	FCMH_LOCK(d);
+	DIRCACHE_WRLOCK(d);
 	fci = fcmh_2_fci(d);
 
  restart:
@@ -1594,7 +1597,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			// XXX need to wake up if csvc fails
 			OPSTAT_INCR("dircache-wait");
-			fcmh_wait_nocond_locked(d);
+			DIRCACHE_WAIT(d);
 			goto restart;
 		}
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
@@ -1605,7 +1608,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		/* We found the last page; return EOF. */
 		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DIRCACHEPGF_EOF) {
-			FCMH_ULOCK(d);
+			DIRCACHE_ULOCK(d);
 			OPSTAT_INCR("dircache-hit-eof");
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1616,7 +1619,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
 				if (!slc_rmc_retry(pfr, &rc)) {
-					FCMH_ULOCK(d);
+					DIRCACHE_ULOCK(d);
 					pscfs_reply_readdir(pfr, NULL,
 					    0, rc);
 					return;
@@ -1670,7 +1673,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 		}
 	}
-	FCMH_ULOCK(d);
+	DIRCACHE_ULOCK(d);
 
 	if (issue) {
 		/*
@@ -1683,7 +1686,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
-		FCMH_LOCK(d);
+		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}
 
@@ -1725,9 +1728,6 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
-
-	if (!rc)
-		namecache_insert(fp, name, fcmh_2_fid(fp));
 
  out:
 	if (fp)
@@ -2596,8 +2596,8 @@ struct msl_dc_inv_entry_data {
 };
 
 void
-msl_dc_inv_entry(__unusedx struct dircache_page *p, struct dircache_ent *d,
-    void *arg)
+msl_dc_inv_entry(__unusedx struct dircache_page *p,
+    struct dircache_ent *d, void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
@@ -2638,6 +2638,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_GID;
 
+	if (to_set == 0)
+		goto out;
+
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2646,9 +2649,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		psc_assert(c == mfh->mfh_fcmh);
 
 	FCMH_WAIT_BUSY(c);
-
-	if (to_set == 0)
-		goto out;
 
 	slc_getfscreds(pfr, &pcr);
 
@@ -2744,7 +2744,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 * sizes match.
 			 */
 			goto out;
-
 		} else {
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
@@ -2849,25 +2848,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		rc = 0;
 		break;
 	}
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	FCMH_LOCK(c);
-
-	/*
-	 * If permissions changed for a directory, we need to
-	 * specifically invalidate all entries under the dir from the
-	 * cache in the kernel, otherwise there will be a window of
-	 * access where the new permissions are ignored until the cache
-	 * expires.
-	 */
-	if ((to_set & PSCFS_SETATTRF_MODE) && fcmh_isdir(c)) {
-		struct msl_dc_inv_entry_data mdie;
-
-		mdie.mdie_pfr = pfr;
-		mdie.mdie_pinum = fcmh_2_fid(c);
-		dircache_walk(c, msl_dc_inv_entry, &mdie);
-	}
 
  out:
 	if (c) {
@@ -2890,15 +2870,43 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 			if (rc) {
 				if (flush_mtime)
-					c->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
+					c->fcmh_flags |=
+					    FCMH_CLI_DIRTY_MTIME;
 				if (flush_size)
-					c->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
+					c->fcmh_flags |=
+					    FCMH_CLI_DIRTY_DSIZE;
 			}
 		}
 		FCMH_UNBUSY(c);
+
+		/*
+		 * If permissions changed for a directory, we need to
+		 * specifically invalidate all entries under the dir from
+		 * the cache in the kernel, otherwise there will be a
+		 * window of access where the new permissions are
+		 * ignored until the cache expires.
+		 *
+		 * Technically this invalidation should occur before
+		 * returning to the syscall but FUSE will deadlock if we
+		 * do it before.
+		 *
+		 * XXX Something may have been evicted from our cache
+		 * but still held by the kernel.  Whenever we evict, we
+		 * should clear the kernel cache too.
+		 */
+		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
+		    fcmh_isdir(c)) {
+			struct msl_dc_inv_entry_data mdie;
+
+			mdie.mdie_pfr = pfr;
+			mdie.mdie_pinum = fcmh_2_fid(c);
+			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
+			    NULL);
+		}
+
 		fcmh_op_done(c);
 	}
-	/* XXX if there is no fcmh, what do we do?? */
+
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 	if (rq)
 		pscrpc_req_finished(rq);

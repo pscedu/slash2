@@ -23,6 +23,17 @@
  */
 
 /*
+ * dircache - directory entry (dent) caching layer.
+ *
+ * When readdir(3) is issued, FUSE invokes the READDIR handler to fetch
+ * directory entries.  An RPC is sent that bulks together stat(2)'s in a
+ * READDIR+ fashion as some libraries and applications shortly perform
+ * stat(2) operations on each entry after readdir(3) returns.
+ *
+ * This implementation fosters a compromise between read-ahead for
+ * larger directories as well as memory exhaustion for much larger
+ * directories in the form of a simple, non-coherent cache.
+ *
  * This API is akin to READDIRPLUS (which fetches READDIR entries plus
  * 'struct stat' for each entry in anticipation that an application such
  * as ls(1) will soon stat(2) each entry) but also provides:
@@ -51,18 +62,7 @@
 #include "sltypes.h"
 #include "fidc_cli.h"
 
-/*
- * dircache - directory entry (dent) caching layer.
- *
- * When readdir(3) is issued, FUSE invokes the READDIR handler to fetch
- * directory entries.  An RPC is sent that bulks together stat(2)'s in a
- * READDIR+ fashion as some libraries and applications shortly perform
- * stat(2) operations on each entry after readdir(3) returns.
- *
- * This implementation fosters a compromise between read-ahead for
- * larger directories as well as memory exhaustion for much larger
- * directories in the form of a simple, non-coherent cache.
- */
+struct psc_compl;
 
 struct fidc_membh;
 
@@ -94,6 +94,20 @@ struct dircache_page {
 #define DIRCACHEPGF_EOF		(1 << 1)	/* denotes last page */
 #define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
 #define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
+
+#define DIRCACHE_WRLOCK(d)	psc_rwlock_wrlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_RDLOCK(d)	psc_rwlock_rdlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_ULOCK(d)	psc_rwlock_unlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_WAKE(d)	psc_waitq_wakeall(&(d)->fcmh_waitq)
+#define DIRCACHE_WR_ENSURE(d)	psc_assert(psc_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
+
+#define DIRCACHE_WAIT(d)						\
+	do {								\
+		DIRCACHE_WR_ENSURE(d);					\
+		psc_waitq_waitf(&(d)->fcmh_waitq, PFL_WAITQWF_RWLOCK,	\
+		    fcmh_2_dc_rwlock(d));				\
+		DIRCACHE_WRLOCK(d);					\
+	} while (0)
 
 /*
  * This structure is used to decide when to evict a page.  It is
@@ -160,6 +174,14 @@ struct dircache_ent_query {
 	const char		*dcq_name;
 };
 
+struct slc_wkdata_dircache {
+	struct fidc_membh	 *d;
+	void			(*cbf)(struct dircache_page *,
+				    struct dircache_ent *, void *);
+	void			 *cbarg;
+	struct psc_compl	 *compl;
+};
+
 /* The different interfaces below are used for searching and sorting. */
 static __inline int
 dce_cmp_off_search(const void *a, const void *b)
@@ -199,24 +221,31 @@ int	dircache_hasoff(struct dircache_page *, off_t);
 int	_dircache_free_page(const struct pfl_callerinfo *,
 	    struct fidc_membh *, struct dircache_page *, int);
 void	dircache_mgr_init(void);
+void	dircache_init(struct fidc_membh *);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
 	    size_t, void *, size_t, int);
-void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
-	    struct dircache_ent *, void *), void *);
+void	dircache_walk_async(struct fidc_membh *, void (*)(
+	    struct dircache_page *, struct dircache_ent *, void *),
+	    void *, struct psc_compl *);
 int	dircache_ent_cmp(const void *, const void *);
 
-#define NAMECACHELOOKUPF_PEEK		0
-#define NAMECACHELOOKUPF_DELETE		1
-#define NAMECACHELOOKUPF_UPDATE		2
+enum {
+	NAMECACHELOOKUPF_CLOBBER,
+	NAMECACHELOOKUPF_DELETE,
+	NAMECACHELOOKUPF_INSERT,
+	NAMECACHELOOKUPF_PEEK,
+	NAMECACHELOOKUPF_UPDATE
+};
 
-#define namecache_delete(p, name)	_namecache_lookup((p), (name), 0, NAMECACHELOOKUPF_DELETE)
-#define namecache_lookup(p, name)	_namecache_lookup((p), (name), 0, NAMECACHELOOKUPF_PEEK)
-#define namecache_update(p, name, fid)	_namecache_lookup((p), (name), (fid), NAMECACHELOOKUPF_UPDATE)
+#define namecache_delete(p, name)	_namecache_lookup(NAMECACHELOOKUPF_DELETE, (p), (name), 0)
+#define namecache_lookup(p, name)	_namecache_lookup(NAMECACHELOOKUPF_PEEK, (p), (name), 0)
+#define namecache_update(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_UPDATE, (p), (name), (fid))
+#define namecache_clobber(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_CLOBBER, (p), (name), (fid))
+#define namecache_insert(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_INSERT, (p), (name), (fid))
 
 void	 namecache_purge(struct fidc_membh *);
-slfid_t	_namecache_lookup(struct fidc_membh *, const char *, uint64_t, int);
-void	 namecache_insert(struct fidc_membh *, const char *, uint64_t);
+slfid_t	_namecache_lookup(int, struct fidc_membh *, const char *, uint64_t);
 
 struct psc_hashtbl msl_namecache_hashtbl;
 

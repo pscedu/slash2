@@ -144,12 +144,8 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
-	if (fcmh_isdir(f) &&
-	    (f->fcmh_flags & FCMH_CLI_INITDIRCACHE) == 0) {
-		pll_init(&fci->fci_dc_pages, struct dircache_page,
-		    dcp_lentry, &f->fcmh_lock);
-		f->fcmh_flags |= FCMH_CLI_INITDIRCACHE;
-	}
+	if (fcmh_isdir(f))
+		dircache_init(f);
 }
 
 void
