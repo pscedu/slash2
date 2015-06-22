@@ -1137,10 +1137,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 
 	rc = fcmh_checkcreds(p, pfr, pcrp, X_OK);
-	if (rc) {
-		fcmh_op_done(p);
+	if (rc)
 		PFL_GOTOERR(out, rc);
-	}
 
 	cfid = namecache_lookup(p, name);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
