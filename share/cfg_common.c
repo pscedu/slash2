@@ -131,13 +131,8 @@ libsl_ios2resm(sl_ios_id_t id)
 {
 	struct sl_resm *m;
 
-	/*
- 	 * If an IOS is decommissioned (e.g., tahini), we might still have
- 	 * files tagged with the IOS of such an IOS. Instead of crashing,
- 	 * this should cause an errno sent back the client that is trying
- 	 * to access a file.
- 	 */ 
 	m = libsl_try_ios2resm(id);
+	psc_assert(m);
 	return (m);
 }
 
