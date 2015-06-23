@@ -52,6 +52,10 @@ struct slvr {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
 	uint16_t		 slvr_flags;	/* see SLVR_* flags */
 	uint32_t		 slvr_refcnt;
+	/*
+	 * KISS: A sliver marked with an error must be freed. Otherwise, we
+	 * run the risk of turning a transient error into a longer-time error.
+	 */ 	
 	 int32_t		 slvr_err;
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
