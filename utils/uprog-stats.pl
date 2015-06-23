@@ -1,6 +1,9 @@
 #!/usr/bin/perl -W
 # $Id: uprog-stats.pl 25252 2015-01-21 04:43:07Z yanovich $
 
+# This program was written to aggregate usage stats from SLASH2 logs
+# in a breakdown of top applications.
+
 # example usage:
 # { cd /var/log/arc/ ; bzcat mount_slash-* ; cat mount_slash ; } | \
 #    perl uprog-stats.pl
@@ -32,7 +35,7 @@ while (<>) {
 		fsize=(\d+) \s .* \s
 		rd=(\d+) \s wr=(\d+) \s
 		prog=(.*)/x or next;
-	$uprog =~ s!.*/!!;
+	$uprog =~ s!^\S*/!!;
 	$uprog = "?" unless $uprog;
 	update_stat \%bytes_rd, $uprog, $rd;
 	update_stat \%bytes_wr, $uprog, $wr;
