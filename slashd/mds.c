@@ -442,7 +442,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			continue;
 
 		ios = fcmh_getrepl(f, i).bs_id;
-		resm = libsl_ios2resm(ios);
+		resm = libsl_try_ios2resm(ios);
 		if (resm)
 			psc_dynarray_add(&a, resm);
 	}
