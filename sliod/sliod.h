@@ -58,7 +58,8 @@ enum {
 	SLITHRT_RIM,		/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,	/* sliver CRC updaters */
 	SLITHRT_STATFS,		/* statvfs(2) updater */
-	SLITHRT_USKLNDPL	/* userland socket Lustre net dev poll thr */
+	SLITHRT_USKLNDPL,	/* userland socket Lustre net dev poll thr */
+	SLITHRT_WORKER		/* generic worker thread */
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */

@@ -47,6 +47,7 @@
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
+#include "pfl/workthr.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -306,6 +307,9 @@ main(int argc, char *argv[])
 	if (slcfg_local->cfg_selftest)
 		pscthr_init(SLITHRT_HEALTH, slihealththr_main, NULL, 0,
 		    "slihealththr");
+
+	pfl_workq_init(128);
+	pfl_wkthr_spawn(SLITHRT_WORKER, 4, "sliwkthr%d");
 
 	slrpc_initcli();
 
