@@ -719,7 +719,6 @@ __static void
 slvr_remove(struct slvr *s)
 {
 	struct bmap_iod_info *bii;
-	struct sl_buffer *tmp = s->slvr_slab;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
@@ -738,15 +737,12 @@ slvr_remove(struct slvr *s)
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
-	if (tmp) {
-		s->slvr_slab = NULL;
-		psc_pool_return(sl_bufs_pool, tmp);
-	}
-
 	if ((s->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
 	    SLVRF_READAHEAD)
 		OPSTAT_INCR("readahead-waste");
 
+	if (s->slvr_slab)
+		psc_pool_return(sl_bufs_pool, s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
