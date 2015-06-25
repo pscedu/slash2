@@ -73,9 +73,9 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
-	psc_rwlock_wrlock(&f->fcmh_rwlock);
+	pfl_rwlock_wrlock(&f->fcmh_rwlock);
 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-	psc_rwlock_unlock(&f->fcmh_rwlock);
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 	psc_pool_return(bmap_pool, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
@@ -131,13 +131,13 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 
  restart:
 	if (doalloc && bnew)
-		psc_rwlock_wrlock(&f->fcmh_rwlock);
+		pfl_rwlock_wrlock(&f->fcmh_rwlock);
 	else
-		psc_rwlock_rdlock(&f->fcmh_rwlock);
+		pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	b = RB_FIND(bmaptree, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		if (!BMAP_TRYLOCK(b)) {
-			psc_rwlock_unlock(&f->fcmh_rwlock);
+			pfl_rwlock_unlock(&f->fcmh_rwlock);
 			usleep(30);
 			goto restart;
 		}
@@ -160,14 +160,14 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 	}
 	if (doalloc == 0 || b) {
-		psc_rwlock_unlock(&f->fcmh_rwlock);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
 		if (bnew)
 			psc_pool_return(bmap_pool, bnew);
 		*new_bmap = 0;
 		return (b);
 	}
 	if (bnew == NULL) {
-		psc_rwlock_unlock(&f->fcmh_rwlock);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 		if (sl_bmap_ops.bmo_reapf)
 			sl_bmap_ops.bmo_reapf();
@@ -202,7 +202,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	/* Add to the fcmh's bmap cache */
 	PSC_RB_XINSERT(bmaptree, &f->fcmh_bmaptree, b);
 
-	psc_rwlock_unlock(&f->fcmh_rwlock);
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 

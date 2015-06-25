@@ -46,7 +46,7 @@ struct fcmh_cli_info_file {
 struct fcmh_cli_info_dir {
 	struct psc_lockedlist	 pages;
 	struct psc_dynarray	 ents;		/* dircache ents not in a page */
-	struct psc_rwlock	 dircache_rwlock;
+	struct pfl_rwlock	 dircache_rwlock;
 
 	/*
 	 * Predictive readdir when LOOKUPs aren't hitting dircache.

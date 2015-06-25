@@ -1823,7 +1823,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 
 	f = mfh->mfh_fcmh;
 
-	psc_rwlock_rdlock(&f->fcmh_rwlock);
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
 		if (!(b->bcm_flags & BMAPF_TOFREE)) {
@@ -1832,7 +1832,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 		}
 		BMAP_ULOCK(b);
 	}
-	psc_rwlock_unlock(&f->fcmh_rwlock);
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
@@ -2753,7 +2753,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			FCMH_ULOCK(c);
 
 			/* Partial truncate.  Block and flush. */
-			psc_rwlock_rdlock(&c->fcmh_rwlock);
+			pfl_rwlock_rdlock(&c->fcmh_rwlock);
 			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
@@ -2770,7 +2770,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				    "BMAP_OPCNT_TRUNCWAIT");
 				psc_dynarray_add(&a, b);
 			}
-			psc_rwlock_unlock(&c->fcmh_rwlock);
+			pfl_rwlock_unlock(&c->fcmh_rwlock);
 
 			/*
 			 * XXX some writes can be cancelled, but no API

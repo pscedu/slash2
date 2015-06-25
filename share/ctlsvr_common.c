@@ -211,13 +211,13 @@ slctlrep_getbmap(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
 		psc_hashbkt_lock(hb);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
-			psc_rwlock_rdlock(&f->fcmh_rwlock);
+			pfl_rwlock_rdlock(&f->fcmh_rwlock);
 			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 				rc = slctlmsg_bmap_send(fd, mh, scb, b);
 				if (!rc)
 					break;
 			}
-			psc_rwlock_unlock(&f->fcmh_rwlock);
+			pfl_rwlock_unlock(&f->fcmh_rwlock);
 			if (!rc)
 				break;
 		}

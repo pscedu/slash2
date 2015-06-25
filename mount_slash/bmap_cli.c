@@ -68,7 +68,7 @@ msl_bmap_init(struct bmap *b)
 	DEBUG_BMAP(PLL_DIAG, b, "start initing");
 	bci = bmap_2_bci(b);
 	bmpc_init(&bci->bci_bmpc);
-	psc_rwlock_init(&bci->bci_rwlock);
+	pfl_rwlock_init(&bci->bci_rwlock);
 	INIT_PSC_LISTENTRY(&bci->bci_lentry);
 }
 
@@ -696,13 +696,13 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e;
 
-	psc_rwlock_rdlock(&bci->bci_rwlock);
+	pfl_rwlock_rdlock(&bci->bci_rwlock);
 	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
 		BMPCE_ULOCK(e);
 	}
-	psc_rwlock_unlock(&bci->bci_rwlock);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
 void

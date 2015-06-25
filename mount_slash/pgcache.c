@@ -118,7 +118,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 	bmpc = bmap_2_bmpc(b);
 	q.bmpce_off = off;
 
-	psc_rwlock_rdlock(&bci->bci_rwlock);
+	pfl_rwlock_rdlock(&bci->bci_rwlock);
 
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
@@ -138,10 +138,10 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 					    PFL_WAITQWF_RWLOCK,
 					    &bci->bci_rwlock, 100);
 					if (wrlock)
-						psc_rwlock_wrlock(
+						pfl_rwlock_wrlock(
 						    &bci->bci_rwlock);
 					else
-						psc_rwlock_rdlock(
+						pfl_rwlock_rdlock(
 						    &bci->bci_rwlock);
 					continue;
 				}
@@ -177,10 +177,10 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 		}
 
 		if (e2 == NULL) {
-			psc_rwlock_unlock(&bci->bci_rwlock);
+			pfl_rwlock_unlock(&bci->bci_rwlock);
 			e2 = psc_pool_get(bmpce_pool);
 			wrlock = 1;
-			psc_rwlock_wrlock(&bci->bci_rwlock);
+			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
 			e = e2;
@@ -200,7 +200,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 			break;
 		}
 	}
-	psc_rwlock_unlock(&bci->bci_rwlock);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
 
 	if (e2) {
 		OPSTAT_INCR("bmpce-gratuitous");
@@ -230,12 +230,12 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	BMPCE_ULOCK(e);
 
-	locked = psc_rwlock_haswrlock(&bci->bci_rwlock);
+	locked = pfl_rwlock_haswrlock(&bci->bci_rwlock);
 	if (!locked)
-		psc_rwlock_wrlock(&bci->bci_rwlock);
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 	if (!locked)
-		psc_rwlock_unlock(&bci->bci_rwlock);
+		pfl_rwlock_unlock(&bci->bci_rwlock);
 
 	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
 	    BMPCEF_READAHEAD)
@@ -377,7 +377,7 @@ bmpc_freeall(struct bmap *b)
 	 * don't treat readahead pages specially, this code ca
 	 * go away some day.
 	 */
-	psc_rwlock_wrlock(&bci->bci_rwlock);
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
 	    e = next) {
 		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
@@ -386,7 +386,7 @@ bmpc_freeall(struct bmap *b)
 		e->bmpce_flags |= BMPCEF_DISCARD;
 		if (e->bmpce_flags & BMPCEF_REAPED) {
 			BMPCE_ULOCK(e);
-			psc_rwlock_unlock(&bci->bci_rwlock);
+			pfl_rwlock_unlock(&bci->bci_rwlock);
 			goto restart;
 		}
 		if (e->bmpce_flags & BMPCEF_IDLE) {
@@ -401,7 +401,7 @@ bmpc_freeall(struct bmap *b)
 		} else
 			psc_fatalx("impossible");
 	}
-	psc_rwlock_unlock(&bci->bci_rwlock);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
 /*

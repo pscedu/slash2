@@ -80,7 +80,7 @@ struct fidc_membh {
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
 	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
-	struct psc_rwlock	 fcmh_rwlock;
+	struct pfl_rwlock	 fcmh_rwlock;
 };
 
 /* fcmh_flags */

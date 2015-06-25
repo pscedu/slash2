@@ -287,7 +287,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	INIT_SPINLOCK(&f->fcmh_lock);
 	psc_hashent_init(&fidcHtable, f);
 	psc_waitq_init(&f->fcmh_waitq);
-	psc_rwlock_init(&f->fcmh_rwlock);
+	pfl_rwlock_init(&f->fcmh_rwlock);
 
 	COPYFG(&f->fcmh_fg, fgp);
 	fcmh_op_start_type(f, FCMH_OPCNT_NEW);

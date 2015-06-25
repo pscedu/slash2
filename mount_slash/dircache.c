@@ -66,7 +66,7 @@ dircache_init(struct fidc_membh *d)
 	if ((d->fcmh_flags & FCMH_CLI_INITDIRCACHE) == 0) {
 		pll_init(&fci->fci_dc_pages, struct dircache_page,
 		    dcp_lentry, &d->fcmh_lock);
-		psc_rwlock_init(&fci->fcid_dircache_rwlock);
+		pfl_rwlock_init(&fci->fcid_dircache_rwlock);
 		d->fcmh_flags |= FCMH_CLI_INITDIRCACHE;
 	}
 }

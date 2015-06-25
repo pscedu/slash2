@@ -95,11 +95,11 @@ struct dircache_page {
 #define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
 #define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
 
-#define DIRCACHE_WRLOCK(d)	psc_rwlock_wrlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_RDLOCK(d)	psc_rwlock_rdlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_ULOCK(d)	psc_rwlock_unlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_RDLOCK(d)	pfl_rwlock_rdlock(fcmh_2_dc_rwlock(d))
+#define DIRCACHE_ULOCK(d)	pfl_rwlock_unlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_WAKE(d)	psc_waitq_wakeall(&(d)->fcmh_waitq)
-#define DIRCACHE_WR_ENSURE(d)	psc_assert(psc_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
+#define DIRCACHE_WR_ENSURE(d)	psc_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
 
 #define DIRCACHE_WAIT(d)						\
 	do {								\
