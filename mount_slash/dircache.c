@@ -694,8 +694,13 @@ dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
 void
 dircache_dbgpr(struct fidc_membh *d)
 {
+	struct slc_wkdata_dircache wk;
 	void *p = NULL;
 
 	printf("pages %d\n", pll_nitems(&fcmh_2_fci(d)->fci_dc_pages));
-	//dircache_walk(d, dircache_ent_dbgpr, &p);
+	memset(&wk, 0, sizeof(wk));
+	wk.d = d;
+	wk.cbf = dircache_ent_dbgpr;
+	wk.cbarg = &p;
+	dircache_walk_wkcb(&wk);
 }
