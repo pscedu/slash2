@@ -558,7 +558,8 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 PFLCTL_SVR_DEFS;

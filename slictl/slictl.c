@@ -253,7 +253,8 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
