@@ -55,8 +55,8 @@ struct psc_hashtbl	  fidcHtable;
 #define	fcmh_get()	psc_pool_get(fidcPool)
 #define	fcmh_put(f)	psc_pool_return(fidcPool, (f))
 
-/**
- * fcmh_dtor - Destructor for FID cache member handles.
+/*
+ * Destructor for FID cache member handles.
  * @f: fcmh being destroyed.
  */
 void
@@ -140,7 +140,7 @@ fidc_reap(int max, int only_expired)
 	return (i);
 }
 
-/**
+/*
  * Reap some fcmhs from the idle list due to memory pressure.
  */
 int
@@ -150,9 +150,8 @@ fidc_reaper(struct psc_poolmgr *m)
 	    psc_atomic32_read(&m->ppm_nwaiters)), 0));
 }
 
-/**
- * _fidc_lookup - Search the FID cache for a member by its FID,
- *	optionally creating it.
+/*
+ * Search the FID cache for a member by its FID, optionally creating it.
  *
  * @pci: thread caller information.
  * @fgp: FID and GEN #.
@@ -160,8 +159,9 @@ fidc_reaper(struct psc_poolmgr *m)
  * @fp: value-result fcmh return.
  * @arg: argument to GETATTR.
  *
- * Note:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
- *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ * Note: Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
+ * ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ *
  * Note: Returns positive errno.
  */
 int
@@ -233,7 +233,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		/*
 		 * Test to see if we jumped here from fidcIdleList.
-		 * Note an unlucky thread could find that the fid does
+		 * Note an unlucky thread could find that the FID does
 		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
@@ -340,8 +340,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	return (rc);
 }
 
-/**
- * fidc_init - Initialize the FID cache.
+/*
+ * Initialize the FID cache.
  */
 void
 fidc_init(int privsiz)
@@ -376,12 +376,11 @@ fcmh_getsize(struct fidc_membh *h)
 	return (size);
 }
 
-/**
- * _fcmh_op_start_type: We only move a cache item to the busy list if we
- *	know that the reference being taken is a long one.  For
- *	short-lived references, we avoid moving the cache item around.
- *	Also, we only move a cache item back to the idle list when the
- *	_last_ reference is dropped.
+/*
+ * We only move a cache item to the busy list if we know that the
+ * reference being taken is a long one.  For short-lived references, we
+ * avoid moving the cache item around.  Also, we only move a cache item
+ * back to the idle list when the _last_ reference is dropped.
  */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
