@@ -264,18 +264,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		rv = slvr_io_prep(slvr[i], roff, len[i], rw, 0);
 
-#if 0
-		/* if last sliver, bound to EOF */
-		if (bmapno == f->fcmh_sstb.sst_size / SLASH_BMAP_SIZE &&
-		    slvrno == SLASH_SLVRS_PER_BMAP - 1) {
-			size_t adj;
-
-			adj = f->fcmh_sstb.sst_size % SLASH_SLVR_SIZE;
-			if (adj > len[i])
-				len[i] -= adj;
-		}
-#endif
-
 		DEBUG_SLVR(rv && rv != -SLERR_AIOWAIT ?
 		    PLL_WARN : PLL_DIAG, slvr[i],
 		    "post io_prep rw=%s rv=%zd",
@@ -288,6 +276,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/*
 		 * mq->offset is the offset into the bmap, here we must
 		 * translate it into the offset of the sliver.
+		 *
+		 * The client should not send us any read request that goes
+		 * beyond the EOF. Otherwise, we are in trouble here because
+		 * reading beyond EOF should return 0 bytes.
 		 */
 		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
