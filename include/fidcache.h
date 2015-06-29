@@ -278,12 +278,11 @@ int	_fidc_lookup(const struct pfl_callerinfo *,
 	    const struct sl_fidgen *, int,
 	    struct fidc_membh **, void *);
 
-#define fidc_lookup(fgp, lkfl, fcmhp)			\
-	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
-	    (fcmhp), NULL)
+#define fidc_lookup(fgp, lkfl, fp)					\
+	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl), (fp),	\
+	    NULL)
 
-#define fidc_lookup_fg(fgp, fp)						\
-	fidc_lookup((fgp), 0, (fp))
+#define fidc_lookup_fg(fgp, fp)		fidc_lookup((fgp), 0, (fp))
 
 #define fidc_lookup_fid(fid, fp)					\
 	_PFL_RVSTART {							\
