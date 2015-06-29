@@ -126,11 +126,22 @@ dircache_mgr_init(void)
 }
 
 /*
- * Perform a dircache_ent_query to dircache_ent comparison for use by
- * the hash table API to disambiguate entries with the same hash key.
+ * Perform a dircache_ent comparison for use by the hash table API to
+ * disambiguate entries with the same hash key.
  */
 int
 dircache_ent_cmp(const void *a, const void *b)
+{
+	const struct dircache_ent *da = a, *db = b;
+
+	return (da->dce_pfid == db->dce_pfid &&
+	    da->dce_pfd->pfd_namelen == db->dce_pfd->pfd_namelen &&
+	    strncmp(da->dce_pfd->pfd_name, db->dce_pfd->pfd_name,
+	    da->dce_pfd->pfd_namelen) == 0);
+}
+
+int
+dircache_entq_cmp(const void *a, const void *b)
 {
 	const struct dircache_ent_query *da = a;
 	const struct dircache_ent *db = b;
@@ -145,17 +156,18 @@ void
 dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 {
 	void *freedent = NULL;
+	struct dircache_ent *dce2;
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
-	struct dircache_ent *dce2;
+	int locked;
 
 	if (dce->dce_page == NULL)
 		freedent = dce->dce_pfd;
 
 	fci = fcmh_2_fci(d);
 	p = dce->dce_page;
-	DIRCACHE_WRLOCK(d);
+	locked = DIRCACHE_REQWRLOCK(d);
 	if (p) {
 		a = p->dcp_dents_off;
 
@@ -171,7 +183,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 		dce2 = psc_dynarray_getpos(a, dce->dce_index);
 		dce2->dce_index = dce->dce_index;
 	}
-	DIRCACHE_ULOCK(d);
+	DIRCACHE_UREQLOCK(d, locked);
 
 	if (freedent)
 		PSCFREE(dce->dce_pfd);
@@ -485,13 +497,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
 		    &dce->dce_key);
-		dce2 = psc_hashbkt_search_cmp(&msl_namecache_hashtbl, b,
-		    dce, &dce->dce_key);
-		if (dce2) {
-			psc_hashbkt_del_item(&msl_namecache_hashtbl, b,
-			    dce2);
+		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b,
+		    PHLF_DEL, NULL, dce, NULL, NULL, &dce->dce_key);
+		if (dce2)
 			dircache_ent_zap(d, dce2);
-		}
 		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	}
@@ -604,8 +613,8 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 	q.dcq_name = name;
 	q.dcq_namelen = namelen = strlen(name);
 	q.dcq_key = key = dircache_ent_hash(pfid, name, namelen);
-	dce = _psc_hashtbl_search(&msl_namecache_hashtbl, flags, &q,
-	    cbf, arg, &key);
+	dce = psc_hashtbl_search_cmpf(&msl_namecache_hashtbl, flags,
+	    dircache_entq_cmp, &q, cbf, arg, &key);
 
 	switch (op) {
 	case NAMECACHELOOKUPF_PEEK:
@@ -644,8 +653,8 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 	new_dce->dce_pfd = PSCALLOC(entsz);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &key);
-	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, flags, &q,
-	    NULL, NULL, &key);
+	dce = psc_hashbkt_search_cmpf(&msl_namecache_hashtbl, b,
+	    dircache_entq_cmp, &q, NULL, NULL, &key);
 	if (dce) {
 		OPSTAT_INCR("namecache-insert-race");
 	} else {
@@ -660,8 +669,7 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 		dce->dce_pfid = pfid;
 		strncpy(dce->dce_pfd->pfd_name, name, namelen);
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
-		psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
-		    dce);
+		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 		fci = fcmh_2_fci(d);
 		DIRCACHE_WRLOCK(d);
 		dce->dce_index = psc_dynarray_len(&fci->fcid_ents);
