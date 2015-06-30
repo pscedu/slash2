@@ -2072,7 +2072,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 	int i, rc;
 
 	while (pscthr_run(thr)) {
-
 		rarq = lc_getwait(&msl_readaheadq);
 		if (rarq == NULL)
 			break;
@@ -2087,13 +2086,13 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		BMAP_ULOCK(b);
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0,
-			BIORQ_READ | BIORQ_READAHEAD);
+		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, BIORQ_READ |
+		    BIORQ_READAHEAD);
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {
-			e = bmpce_lookup(b, BMPCEF_READAHEAD, 
-				rarq->rarq_off + i * BMPC_BUFSZ, 
+			e = bmpce_lookup(b, BMPCEF_READAHEAD,
+				rarq->rarq_off + i * BMPC_BUFSZ,
 				&f->fcmh_waitq);
 			psc_dynarray_add(&r->biorq_pages, e);
 		}
