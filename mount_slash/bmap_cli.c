@@ -716,6 +716,12 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 
 	bci->bci_sbd = *sbd;
 	/*
+	 * Occasionally, the client would send a write request with seqno
+	 * of 0 and rejected by the IOS with -501. So let us assert here
+	 * until we find the root cause or can fail more gracefully.
+	 */
+	psc_assert(bci->bci_sbd.sbd_seq);
+	/*
 	 * Record the start time,
 	 *  XXX the directio status of the bmap needs to be returned by
 	 *	the MDS so we can set the proper expiration time.
