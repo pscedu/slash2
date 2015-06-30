@@ -50,9 +50,9 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
-/**
- * fcmh_setattrf - Update the high-level app stat(2)-like attribute
- *	buffer for a FID cache member.
+/*
+ * Update the high-level app stat(2)-like attribute buffer for a FID
+ * cache member.
  * @f: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
@@ -90,24 +90,29 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	 * updates?
 	 */
 	if ((f->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
-		flags &= ~FCMH_SETATTRF_SAVELOCAL;
+		flags |= FCMH_SETATTRF_CLOBBER;
 
 	/*
 	 * Always update for roots because we might have faked them
 	 * with readdir at the super root.
 	 */
 	if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
-		flags &= ~FCMH_SETATTRF_SAVELOCAL;
+		flags |= FCMH_SETATTRF_CLOBBER;
 
 	psc_assert(sstb->sst_gen != FGEN_ANY);
 	psc_assert(f->fcmh_fg.fg_fid == sstb->sst_fid);
 
 	/*
-	 * If generation numbers match, take the highest of the values.
-	 * Otherwise, disregard local values and blindly accept whatever
-	 * the MDS tells us.
+	 * The default behavior is to save st_size and st_mtim since we
+	 * might have done I/O that the MDS does not know about.
 	 */
-	if (flags & FCMH_SETATTRF_SAVELOCAL) {
+	if ((flags & FCMH_SETATTRF_CLOBBER) == 0 &&
+	    fcmh_isreg(f)) {
+		/*
+		 * If generation numbers match, take the highest of the
+		 * values.  Otherwise, disregard local values and
+		 * blindly accept whatever the MDS tells us.
+		 */
 		if (fcmh_2_ptruncgen(f) == sstb->sst_ptruncgen &&
 		    fcmh_2_gen(f) == sstb->sst_gen &&
 		    fcmh_2_fsz(f) > sstb->sst_size)

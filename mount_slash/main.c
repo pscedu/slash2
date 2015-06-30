@@ -432,7 +432,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
+
+	namecache_insert(p, name, fcmh_2_fid(c));
 
 #if 0
 	if (oflags & O_APPEND) {
@@ -456,13 +457,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    sizeof(mfh->mfh_open_atime));
 
 	FCMH_LOCK(c);
+	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
+	    FCMH_SETATTRF_CLOBBER);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
-
-	namecache_insert(p, name, fcmh_2_fid(c));
-
-	rc = msl_io_convert_errno(mp->rc2);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	fci = fcmh_2_fci(c);
 	// fci_inode should be read from
@@ -474,6 +471,10 @@ fci->fci_inode.nrepls = 1;
 // XXX bug fci->fci_inode.flags inherited?
 // XXX bug fci->fci_inode.newreplpol inherited?
 	FCMH_ULOCK(c);
+
+	rc = msl_io_convert_errno(mp->rc2);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	/*
 	 * Instantiate a bmap and load it with the piggybacked lease
@@ -497,6 +498,10 @@ fci->fci_inode.nrepls = 1;
 	bmap_op_done(b);
 
  out:
+	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, mfh, PSCFS_CREATEF_DIO, rc);
+
 	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x "
 	    "flag=%#o rc=%d", pinum, name, mode, oflags, rc);
 
@@ -504,11 +509,6 @@ fci->fci_inode.nrepls = 1;
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-
-	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, mfh, PSCFS_CREATEF_DIO, rc);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -684,20 +684,17 @@ msl_stat(struct fidc_membh *f, void *arg)
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
 		rc = EBADF;
 	if (!rc) {
-		slc_fcmh_setattrf(f, &mp->attr,
-		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);
+		slc_fcmh_setattr_locked(f, &mp->attr);
 		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 	}
-
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 	fcmh_wake_locked(f);
-
-	if (rq)
-		pscrpc_req_finished(rq);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attrs retrieved via rpc rc=%d", rc);
 
 	FCMH_ULOCK(f);
+	if (rq)
+		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -816,24 +813,28 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	namecache_insert(p, newname, fcmh_2_fid(c));
+
 	slc_fcmh_setattr(p, &mp->pattr);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_SAVELOCAL |
-	    FCMH_SETATTRF_HAVELOCK);
+	slc_fcmh_setattr_locked(c, &mp->cattr);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
-	namecache_insert(p, newname, fcmh_2_fid(c));
+	FCMH_ULOCK(c);
 
  out:
-	if (c)
-		fcmh_op_done(c);
-	if (p)
-		fcmh_op_done(p);
-
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 
+	psclog_diag("link cfid="SLPRI_FID" pfid="SLPRI_FID" "
+	    " name='%s' rc=%d",
+	    c_inum, p_inum, newname, rc);
+
+	if (c)
+		fcmh_op_done(c);
+	if (p)
+		fcmh_op_done(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -911,12 +912,19 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 
-	sl_internalize_stat(&mp->cattr, &stb);
 	namecache_insert(p, name, fcmh_2_fid(c));
 
+	FCMH_LOCK(c);
+	slc_fcmh_setattr_locked(c, &mp->cattr);
+	sl_internalize_stat(&mp->cattr, &stb);
+	FCMH_ULOCK(c);
+
  out:
+	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, rc);
+
 	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", "
 	    "mode=%#o, name='%s', rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
@@ -925,11 +933,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-
-	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -978,15 +981,14 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
+	namecache_clobber(p, name, fcmh_2_fid(f));
+
 	FCMH_LOCK(f);
-	slc_fcmh_setattrf(f, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
-	    FCMH_SETATTRF_HAVELOCK);
+	slc_fcmh_setattr_locked(f, &mp->attr);
 	msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 
 	if (sstb)
 		*sstb = f->fcmh_sstb;
-
-	namecache_clobber(p, name, fcmh_2_fid(f));
 
  out:
 	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
@@ -1255,15 +1257,12 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!rc) {
 		int tmprc;
 
-		FCMH_LOCK(p);
-		slc_fcmh_setattr_locked(p, &mp->pattr);
-		FCMH_ULOCK(p);
+		slc_fcmh_setattr(p, &mp->pattr);
 
 		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!tmprc) {
 			if (mp->valid) {
-				slc_fcmh_setattrf(c, &mp->cattr,
-				    FCMH_SETATTRF_SAVELOCAL);
+				slc_fcmh_setattr(c, &mp->cattr);
 			} else {
 				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
@@ -1367,7 +1366,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
+	psclog_info("mknod pfid="SLPRI_FID" mode=%#o name='%s' rc=%d "
+	    "mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	slc_fcmh_setattr(p, &mp->pattr);
@@ -1376,14 +1376,18 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
-	sl_internalize_stat(&mp->cattr, &stb);
 	namecache_insert(p, name, fcmh_2_fid(c));
+
+	FCMH_LOCK(c);
+	slc_fcmh_setattr_locked(c, &mp->cattr);
+	sl_internalize_stat(&mp->cattr, &stb);
+	FCMH_ULOCK(c);
 
  out:
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
+
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -1431,24 +1435,14 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 
-		rc = fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE, &f);
+		rc = fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE,
+		    &f);
 		if (rc)
 			continue;
 
 		FCMH_LOCK(f);
-		/*
-		 * If we already have attributes, then don't use potentially
-		 * out-dated piggybacked attributes. It only makes sense to
-		 * do work when the above fidc_lookup() creates a new fcmh.
-		 *
-		 * In theory, the MDS can return more recent attributes from
-		 * another client or an OSD. But this is an optimization path
-		 * and our attributes age.
-		 */
-		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
-			slc_fcmh_setattrf(f, &e->sstb, FCMH_SETATTRF_HAVELOCK);
-			msl_fcmh_stash_xattrsize(f, e->xattrsize);
-		}
+		slc_fcmh_setattr_locked(f, &e->sstb);
+		msl_fcmh_stash_xattrsize(f, e->xattrsize);
 		fcmh_op_done(f);
 	}
 }
@@ -1876,7 +1870,8 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 			PFL_GOTOERR(out, rc);
 	}
 
-	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x", to_set);
+	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x",
+	    to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -1890,9 +1885,8 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if ((to_set & (PSCFS_SETATTRF_MTIME |
-	    PSCFS_SETATTRF_DATASIZE)) == 0)
-		flags |= FCMH_SETATTRF_SAVELOCAL;
+	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
+		flags |= FCMH_SETATTRF_CLOBBER;
 
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
@@ -2129,7 +2123,8 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 		} else
 			pid = pscfs_getclientctx(pfr)->pfcc_pid;
 
-		slc_getuprog(pid, mft->mft_uprog, sizeof(mft->mft_uprog));
+		slc_getuprog(pid, mft->mft_uprog,
+		    sizeof(mft->mft_uprog));
 	}
 
 	return (pld->pld_uprog = mft->mft_uprog);
@@ -2376,25 +2371,19 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		PFL_GOTOERR(out, rc);
 
 	namecache_delete(op, oldname);
-	namecache_update(np, newname, mp->srr_cattr.sst_fid);
+	namecache_clobber(np, newname, mp->srr_cattr.sst_fid);
 
 	/* refresh old parent attributes */
-	FCMH_LOCK(op);
-	slc_fcmh_setattr_locked(op, &mp->srr_opattr);
-	FCMH_ULOCK(op);
+	slc_fcmh_setattr(op, &mp->srr_opattr);
 
-	if (np != op) {
+	if (np != op)
 		/* refresh new parent attributes */
-		FCMH_LOCK(np);
-		slc_fcmh_setattr_locked(np, &mp->srr_npattr);
-		FCMH_ULOCK(np);
-	}
+		slc_fcmh_setattr(np, &mp->srr_npattr);
 
 	/* refresh moved file's attributes */
 	if (mp->srr_cattr.sst_fid != FID_ANY &&
 	    fidc_lookup_fg(&mp->srr_cattr.sst_fg, &ch) == 0) {
-		slc_fcmh_setattrf(ch, &mp->srr_cattr,
-		    FCMH_SETATTRF_SAVELOCAL);
+		slc_fcmh_setattr(ch, &mp->srr_cattr);
 		fcmh_op_done(ch);
 	}
 
@@ -2405,8 +2394,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
 	    fidc_lookup_fg(&mp->srr_clattr.sst_fg, &ch) == 0) {
-		slc_fcmh_setattrf(ch, &mp->srr_clattr,
-		    FCMH_SETATTRF_SAVELOCAL);
+		slc_fcmh_setattr(ch, &mp->srr_clattr);
 		fcmh_op_done(ch);
 	}
 
@@ -2417,15 +2405,14 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 
  out:
+	pscfs_reply_rename(pfr, rc);
+
 	if (child)
 		fcmh_op_done(child);
 	if (op)
 		fcmh_op_done(op);
 	if (np && np != op)
 		fcmh_op_done(np);
-
-	pscfs_reply_rename(pfr, rc);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2568,20 +2555,22 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
-	sl_internalize_stat(&mp->cattr, &stb);
 	namecache_insert(p, name, fcmh_2_fid(c));
 
- out:
-	if (c)
-		fcmh_op_done(c);
-	if (p)
-		fcmh_op_done(p);
+	FCMH_LOCK(c);
+	slc_fcmh_setattr_locked(c, &mp->cattr);
+	sl_internalize_stat(&mp->cattr, &stb);
+	FCMH_ULOCK(c);
 
+ out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 
+	if (c)
+		fcmh_op_done(c);
+	if (p)
+		fcmh_op_done(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2879,9 +2868,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		/*
 		 * If permissions changed for a directory, we need to
-		 * specifically invalidate all entries under the dir from
-		 * the cache in the kernel, otherwise there will be a
-		 * window of access where the new permissions are
+		 * specifically invalidate all entries under the dir
+		 * from the cache in the kernel, otherwise there will be
+		 * a window of access where the new permissions are
 		 * ignored until the cache expires.
 		 *
 		 * Technically this invalidation should occur before
@@ -2898,8 +2887,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			mdie.mdie_pfr = pfr;
 			mdie.mdie_pinum = fcmh_2_fid(c);
-			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
-			    NULL);
+//			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
+//			    NULL);
 		}
 
 		fcmh_op_done(c);
@@ -3262,7 +3251,6 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 		    &iov, 1);
 		rq->rq_bulk_abortable = 1;
 	}
-
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
@@ -3309,6 +3297,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	/* XXX skip this allocation if xattrsize=0 */
 	if (size)
 		buf = PSCALLOC(size);
 
