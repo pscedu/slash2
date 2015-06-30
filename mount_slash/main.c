@@ -3088,7 +3088,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		    (size == 0 || fci->fci_xattrsize == 0)) {
 			tmp.size = fci->fci_xattrsize;
 			mp = &tmp;
-			PFL_GOTOERR(out, 0);
+			PFL_GOTOERR(out, rc = 0);
 		}
 		FCMH_ULOCK(f);
 	}
