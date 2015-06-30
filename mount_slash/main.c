@@ -1150,6 +1150,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
+	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
+
 	/*
 	 * We should do a lookup based on name here because a rename
 	 * does not change the FID and we would get a success in a STAT
