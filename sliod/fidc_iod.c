@@ -179,6 +179,15 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 
 	OPSTAT_INCR("reopen");
 
+	if (fg->fg_gen == FGEN_ANY) {
+		OPSTAT_INCR("generation-bogus");
+		return (EBADF);
+	}
+	if (fg->fg_gen < fcmh_2_gen(f)) {
+		OPSTAT_INCR("generation-stale");
+		return (ESTALE);
+	}
+
 	/*
 	 * If our generation number is still unknown try to set it here.
 	 */
