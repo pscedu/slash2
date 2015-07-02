@@ -194,12 +194,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 	if (fcmh_2_gen(f) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
 		fcmh_2_gen(f) = fg->fg_gen;
 
-	if (fg->fg_gen == FGEN_ANY) {
-		/*
-		 * No-op.  The caller's operation is generation number
-		 * agnostic (such as rlsbmap).
-		 */
-	} else if (fg->fg_gen > fcmh_2_gen(f)) {
+	if (fg->fg_gen > fcmh_2_gen(f)) {
 		struct sl_fidgen oldfg;
 		char fidfn[PATH_MAX];
 
@@ -250,16 +245,6 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 			f->fcmh_flags |= FCMH_IOD_BACKFILE;
 		}
 
-	} else if (fg->fg_gen < fcmh_2_gen(f)) {
-		/*
-		 * For now, requests from old generations (i.e. old
-		 * bdbufs) will be honored.  Clients which issue full
-		 * truncates will release their bmaps, and associated
-		 * cache pages, prior to issuing a truncate request to
-		 * the MDS.
-		 */
-		DEBUG_FCMH(PLL_INFO, f, "request from old gen "
-		    "("SLPRI_FGEN")", fg->fg_gen);
 	}
 	return (rc);
 }
