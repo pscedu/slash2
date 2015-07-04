@@ -129,10 +129,9 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 
 #define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 
-/* fcmh_setattr() flags */
-#define FCMH_SETATTRF_NONE		0
-#define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite local updates (file size, etc) */
-#define FCMH_SETATTRF_HAVELOCK		(1 << 1)
+/* slc_fcmh_setattr() flags */
+#define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
+#define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
 void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 
