@@ -123,15 +123,14 @@ slm_set_curr_slashfid(slfid_t slfid)
 	freelock(&slm_fid_lock);
 }
 
-/**
- * slm_get_next_slashfid - Return the next SLASH2 FID to use.  Note that
- *	from ZFS point of view, it is perfectly okay that we use the
- *	same SLASH2 FID to refer to different files/directories.
- *	However, doing so can confuse our clients (think identity
- *	theft).  So we must make sure that we never reuse a SLASH2 FID,
- *	even after a crash.
+/*
+ * Return the next SLASH2 FID to use.  Note that from ZFS point of view,
+ * it is perfectly okay that we use the same SLASH2 FID to refer to
+ * different files/directories.  However, doing so can confuse our
+ * clients (think identity theft).  So we must make sure that we never
+ * reuse a SLASH2 FID, even after a crash.
  *
- *	The siteid has already been baked into the initial cursor file.
+ * The siteid has already been baked into the initial cursor file.
  */
 int
 slm_get_next_slashfid(slfid_t *fidp)
@@ -208,9 +207,9 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmc_handle_bmap_chwrmode - Handle a BMAPCHWRMODE request to
- *	upgrade a client bmap lease from READ-only to READ+WRITE.
+/*
+ * Handle a BMAPCHWRMODE request to upgrade a client bmap lease from
+ * READ-only to READ+WRITE.
  * @rq: RPC request.
  */
 int
@@ -396,8 +395,8 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_link(vfsid, fcmh_2_mfid(c),
-	    fcmh_2_mfid(p), mq->name, &rootcreds, mdslog_namespace);
+	mp->rc = mdsio_link(vfsid, fcmh_2_mfid(c), fcmh_2_mfid(p),
+	    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(c, &mp->cattr);
@@ -606,9 +605,9 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmc_handle_create - Handle a CREATE from CLI.  As an
- *	optimization, we bundle a write lease for bmap 0 in the reply.
+/*
+ * Handle a CREATE from CLI.  As an optimization, we bundle a write
+ * lease for bmap 0 in the reply.
  */
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
@@ -767,8 +766,9 @@ int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *,
 	size_t, off_t, size_t *, int *, int *, unsigned char *, size_t,
 	int);
 
-/**
- * Special case routine for processing READDIR request (non readahead).
+/*
+ * Issue a READDIR "request" to client, which actually contains the
+ * readdir contents the client requested.
  */
 int
 slm_rcm_issue_readdir_wk(void *p)
@@ -792,8 +792,10 @@ slm_rcm_issue_readdir_wk(void *p)
 
 	rq->rq_interpret_reply = slm_rcmc_readdir_cb;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_CSVC] = wk->csvc;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS] = wk->iov[0].iov_base;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR] = wk->iov[1].iov_base;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS] =
+	    wk->iov[0].iov_base;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR] =
+	    wk->iov[1].iov_base;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_EXP] =
 	    pscrpc_export_get(wk->exp);
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
@@ -966,7 +968,7 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
-/**
+/*
  * Perform a READDIR and setup an async RPC to send it to a client.
  */
 int
@@ -1083,11 +1085,13 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		iov[0].iov_len = *outsize;
 
 		/*
-		 * If this is a request for the root, we fake part of the
-		 * readdir contents by returning the file system names here.
+		 * If this is a request for the root, we fake part of
+		 * the readdir contents by returning the file system
+		 * names here.
 		 */
 		if (fgp->fg_fid == SLFID_ROOT)
-			slm_rmc_handle_readdir_roots(&iov[0], &iov[1], *nents);
+			slm_rmc_handle_readdir_roots(&iov[0], &iov[1],
+			    *nents);
 	}
 
 	if (piggybuf &&
@@ -1096,8 +1100,8 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		memcpy(piggybuf + *outsize, iov[1].iov_base,
 		    *nents * sizeof(struct srt_readdir_ent));
 	} else {
-		struct slm_wkdata_readdir *wk;
 		struct slashrpc_cservice *csvc;
+		struct slm_wkdata_readdir *wk;
 
 		csvc = slm_getclcsvc(exp);
 		if (csvc == NULL)
