@@ -431,10 +431,9 @@ reimport
    - ENOSTR = ETIMEDOUT between BSD and Linux, and the client
      will not treat ENOSTR as an RPC error
 - msctl repl-policy read isnt implemented
-- user quotas??
-   - track user database when crc updates come in with st_blocks
+- idea to support user quotas?
+   - track user database when CRC updates come in with st_blocks
      and fail new write assignments when over quota
-- atime??
 - Not all items on the flush queue are flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
@@ -575,7 +574,7 @@ peer-54321-128.182.99.29@tcp10-snd          46.1M
 - zfs snapshot
    -> tie callback into something that COW's all odtables+journal
 
-- add crcalg=old option
+- add crcalg={none,basic,fastcry} option?
 
 - this breaks:
 	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
@@ -621,16 +620,13 @@ st_blocks
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
 
-- use global mount to supported distributed MDS, no forwarding after initial contact,
-  no division of a pool into multiple file systems.
+- use global mount to supported distributed MDS, no forwarding after
+  initial contact, no division of a pool into multiple file systems.
 
 
 
 ls /slfs/.slfidns/0x101010 should return ENOENT not ERANGE
    (bad site ID?)
-
-zfs
-- trimthr is taking 100% CPU on MDS
 
 slashd
 - rcm mutex csvc decref crash from repl-status
@@ -672,9 +668,21 @@ unify setting st_blksize for all of:
 - mkdir
 - symlink
 
+leaks:
+  slmctl -sc refcnt leaks
+  rpcimp       A--      1    977    978 99.90%     64  <inf> 80          0   0   0
+  bchrq        A--     84    291    375 77.60%      8  <inf> 80       7095   0   0
+
+  rpcimp       A--      0   3136   3136   100%     64  <inf> 80          0   0   0
+
 - use XATTR_MAXNAMELEN to check on xattr name length
 - how do multiple user streams affect mount_slash readahead tracking?
+- synchronous bmap lease fetching in readahead is probably killing
+  readahead effectiveness
+- ensure readahead window can properly fill 10gE, 20gE, 40gE
 - bim_getcurseq() shouldnt hold a mutex during an RPC:
+- does mount_slash flush_attr_wait impose synchronous SETATTR flush
+  waiting on I/O path?
 - change IP addr for sliod in slcfg *on client slcfg only* and notice
   ERANGE returned to fuse
 - replace lockedlists with dynarrays:
