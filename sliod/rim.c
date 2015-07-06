@@ -190,6 +190,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 				f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 				OPSTAT_INCR("reclaim-close");
 			}
+			slvr_remove_all(f);
 			fcmh_op_done(f);
 		}
 
