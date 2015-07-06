@@ -297,7 +297,12 @@ API rename
 - write a ptrunc tester: or just use truncate(1) or a dd(1) that does truncate(2)
 - for -s connections, we arguably do not need to show members of the
   same resource we are part of since we will never connect to them
-- patch fuse.ko since fuse_notify_entry_inval() causes segfault
+- IOS that do not connect to an MDS (outside a site) will never be upsch
+  scheduled
+- use F_FREESP on Solaris to implement replication ejection
+- msattrflushthr_main should be async 
+- use-after-unlink also affects directories
+
 - client needs to track when MDS goes down and recheck pinned ptrunc
   bmaps for resolvement
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
@@ -690,7 +695,9 @@ leaks:
 - replace lockedlists with dynarrays:
 	- sli_replwk_active
 	- msctl_replsts
-- lnet export refcnt leak: export@0xefbee0 ref=5664 
+- lnet export refcnt leak: export@0xefbee0 ref=5664
+- get rid of fmid_dino_mfid and fmid_dino_mfh
+- write FSUUID into sliod and check
 
 unnecessary lock contention?
 mount_slash/io.c:
