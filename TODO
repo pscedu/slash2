@@ -672,7 +672,16 @@ unify setting st_blksize for all of:
 - mkdir
 - symlink
 
-use XATTR_MAXNAMELEN to check on xattr name length
+- use XATTR_MAXNAMELEN to check on xattr name length
+- how do multiple user streams affect mount_slash readahead tracking?
+- bim_getcurseq() shouldnt hold a mutex during an RPC:
+- change IP addr for sliod in slcfg *on client slcfg only* and notice
+  ERANGE returned to fuse
+- replace lockedlists with dynarrays:
+	- sli_replwk_active
+	- msctl_replsts
+- lnet export refcnt leak: export@0xefbee0 ref=5664
+
 
 unnecessary lock contention?
 mount_slash/io.c:
