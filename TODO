@@ -685,11 +685,12 @@ leaks:
   waiting on I/O path?
 - change IP addr for sliod in slcfg *on client slcfg only* and notice
   ERANGE returned to fuse
+    - also, attrflush threads sends SETSIZE RPC to MDS, even though
+      no data is received by IOS
 - replace lockedlists with dynarrays:
 	- sli_replwk_active
 	- msctl_replsts
-- lnet export refcnt leak: export@0xefbee0 ref=5664
-
+- lnet export refcnt leak: export@0xefbee0 ref=5664 
 
 unnecessary lock contention?
 mount_slash/io.c:
