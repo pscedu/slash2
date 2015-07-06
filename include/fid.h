@@ -85,7 +85,12 @@ struct sl_fidgen;
 
 struct sl_fidgen {
 	slfid_t			fg_fid;
-	slfgen_t		fg_gen;		/* file truncations and directory modifications */
+	/* 
+	 * Used to track full file truncations and directory modifications.
+	 * Note that changing the attributes of a directory alone does not
+	 * change its generation number.
+	 */ 
+	slfgen_t		fg_gen;		
 };
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)

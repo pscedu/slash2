@@ -124,7 +124,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	OPSTAT_INCR("crc-update");
 	psc_atomic32_inc(&sli_ninfl_bcrcupd);
 
   out:

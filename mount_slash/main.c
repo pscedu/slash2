@@ -107,7 +107,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FLUSH_ATTR_TIMEOUT	8
 
-#define fcmh_super_root(f)     (fcmh_2_fid(f) == SLFID_ROOT && \
+#define fcmh_super_root(f)	(fcmh_2_fid(f) == SLFID_ROOT && \
 				fcmh_2_gen(f) == FGEN_ANY - 1  ? EPERM : 0)
 
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
@@ -2804,8 +2804,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			to_set |= PSCFS_SETATTRF_MTIME;
 			PFL_STB_MTIME_SET(c->fcmh_sstb.sst_mtime,
-				  c->fcmh_sstb.sst_mtime_ns,
-				  stb);
+			    c->fcmh_sstb.sst_mtime_ns, stb);
 		}
 	}
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
