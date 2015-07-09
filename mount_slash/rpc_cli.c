@@ -141,6 +141,8 @@ slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
 	int retry = 1;
 
 	switch (abs(*rc)) {
+	case PFLERR_TIMEDOUT:
+
 	case ECONNABORTED:
 	case ECONNREFUSED:
 	case ECONNRESET:

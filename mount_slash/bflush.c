@@ -156,6 +156,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	switch (rc) {
 	case -ENOTCONN:
 	case -PFLERR_KEYEXPIRED:
+	case -PFLERR_TIMEDOUT:
 	case -SLERR_ION_OFFLINE:
 //	case -ECONNABORTED:
 //	case -ECONNREFUSED:
@@ -169,7 +170,6 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 #ifdef ENONET
 //	case -ENONET:
 #endif
-//	case -ETIMEDOUT:
 		break;
 	default:
 		retry = 0;
