@@ -826,7 +826,7 @@ slm_rcm_issue_readdir_wk(void *p)
 	return (0);
 }
 
-/**
+/*
  * Special interface routine for issuing a READDIR bulk reply from work
  * context.
  */
@@ -843,7 +843,7 @@ slm_readdir_ra_issue(void *p)
 	return (0);
 }
 
-/**
+/*
  * Determine if another READDIR (for readahead) should be done and setup
  * an async RPC to get it moving.
  *
@@ -922,7 +922,7 @@ return;
 	pfl_workq_putitem(wk);
 }
 
-/**
+/*
  * Callback run signifying client completion of receiving a bulk READDIR.
  */
 int
@@ -2064,7 +2064,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
  out:
 	mds_note_update(-1);
 	slrpc_rep_out(rq);
-	pscrpc_target_send_reply_msg(rq, -(abs(rc)), 0);
+	pscrpc_target_send_reply_msg(rq, -abs(rc), 0);
 	return (rc);
 }
 
