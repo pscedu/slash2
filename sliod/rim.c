@@ -213,7 +213,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 			    "xid=%"PRId64" rc=%d",
 			    fidfn, entryp->xid, rc);
 		} else
-			psclog_info("reclaimed %s "
+			psclog_diag("reclaimed %s "
 			    "xid=%"PRId64" successfully",
 			    fidfn, entryp->xid);
 
