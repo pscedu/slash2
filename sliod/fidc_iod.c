@@ -199,6 +199,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 		char fidfn[PATH_MAX];
 
 		DEBUG_FCMH(PLL_DIAG, f, "reopening new backing file");
+		slvr_remove_all(f);
 
 		/*
 		 * Need to reopen the backing file and possibly remove

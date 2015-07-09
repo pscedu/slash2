@@ -1,0 +1,2 @@
+SLASH_BASE=	${ROOTDIR}/slash2
+SLASHMK=	${SLASH_BASE}/mk/main.mk

@@ -190,6 +190,8 @@ void	slvr_io_done(struct slvr *, int);
 void	slvr_rio_done(struct slvr *);
 void	slvr_wio_done(struct slvr *, int);
 
+void	slvr_remove_all(struct fidc_membh *);
+
 void	slvr_schedule_crc(struct slvr *);
 void	slvr_worker_init(void);
 
