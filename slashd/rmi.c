@@ -53,10 +53,10 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-/**
- * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
- *	so the ION can load the CRCs for a bmap and verify them against
- *	the data he has for the region of data that bmap represents.
+/*
+ * Handle a BMAPGETCRCS request from ION, so the ION can load the CRCs
+ * for a bmap and verify them against the data he has for the region of
+ * data that bmap represents.
  * @rq: request.
  */
 int
@@ -94,11 +94,10 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmi_handle_bmap_crcwrt - Handle a BMAPCRCWRT request from ION,
- *	which receives the CRCs for the data contained in a bmap, checks
- *	their integrity during transmission, and records them in our
- *	metadata file system.
+/*
+ * Handle a BMAPCRCWRT request from ION, which receives the CRCs for the
+ * data contained in a bmap, checks their integrity during transmission,
+ * and records them in our metadata file system.
  * @rq: request.
  *
  * XXX should we check if an actual lease is out??
@@ -194,11 +193,11 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 	return (mds_handle_rls_bmap(rq, 1));
 }
 
-/**
- * slm_rmi_handle_bmap_ptrunc - Handle a BMAP_PTRUNC reply from ION.
- *	This means an ION has trashed some partial truncation garbage.
- *	Note: if a sliod resolved a ptrunc CRC recalculation, this path
- *	is not taken; CRCWRT is issued as notification instead.
+/*
+ * Handle a BMAP_PTRUNC reply from ION.  This means an ION has trashed
+ * some partial truncation garbage.  Note: if a sliod resolved a ptrunc
+ * CRC recalculation, this path is not taken; CRCWRT is issued as
+ * notification instead.
  * @rq: request.
  */
 int
@@ -501,8 +500,8 @@ slm_rmi_handle_symlink(struct pscrpc_request *rq)
 	return (slm_symlink(rq, mq, mp, SRMI_BULK_PORTAL));
 }
 
-/**
- * slm_rmi_handle_ping - Handle a PING request from ION.
+/*
+ * Handle a PING request from ION.
  * @rq: request.
  */
 int
@@ -547,8 +546,8 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmi_handler - Handle a request for MDS from ION.
+/*
+ * Handle a request for MDS from ION.
  * @rq: request.
  */
 int

@@ -55,9 +55,8 @@ slm_rmm_apply_update(__unusedx struct srt_update_entry *entryp)
 	psc_fatal("obsolete code path");
 }
 
-/**
- * slm_rmm_handle_namespace_update - Handle a NAMESPACE_UPDATE request
- *	from another MDS.
+/*
+ * Handle a NAMESPACE_UPDATE request from another MDS.
  */
 int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
@@ -119,9 +118,8 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * slm_rmm_handle_namespace_forward - Handle a NAMESPACE_FORWARD request
- *	from another MDS.
+/*
+ * Handle a NAMESPACE_FORWARD request from another MDS.
  */
 int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
@@ -248,8 +246,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmm_handler - Handle a request for MDS from another MDS.
+/*
+ * Handle a request for MDS from another MDS.
  */
 int
 slm_rmm_handler(struct pscrpc_request *rq)
@@ -286,10 +284,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
-/**
- * slm_rmm_forward_namespace - Forward a name space operation to a
- * remote MDS first before replicating the operation locally by our
- * callers.
+/*
+ * Forward a name space operation to a remote MDS first before
+ * replicating the operation locally by our callers.
  */
 int
 slm_rmm_forward_namespace(int op, struct sl_fidgen *fg,

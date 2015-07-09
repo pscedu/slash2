@@ -266,9 +266,8 @@ mds_brepls_check(uint8_t *repls, int nr)
 	psc_fatalx("no valid replica states exist");
 }
 
-/**
- * mds_repl_bmap_apply - Apply a translation matrix of residency states
- *	to a bmap.
+/*
+ * Apply a translation matrix of residency states to a bmap.
  * @b: bmap.
  * @tract: translation actions, indexed by current bmap state with
  *	corresponding values to the new state that should be assigned.
@@ -376,9 +375,9 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	return (rc);
 }
 
-/**
- * mds_repl_bmap_walk - Walk the bmap replication bits, performing any
- *	specified translations and returning any queried states.
+/*
+ * Walk the bmap replication bits, performing any specified translations
+ * and returning any queried states.
  * @b: bmap.
  * @tract: translation actions; for each array slot, set states of the type
  *	corresponding to the array index to the array value.  For example:
@@ -457,14 +456,13 @@ mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
 		    idx);
 }
 
-/**
- * mds_repl_inv_except - For the given bmap, change the status of
- *	all its replicas marked "valid" to "invalid" except for the
- *	replica specified.
+/*
+ * For the given bmap, change the status of all its replicas marked
+ * "valid" to "invalid" except for the replica specified.
  *
- *	This is a high-level convenience call provided to easily update
- *	status after an ION has received some new I/O, which would make
- *	all other existing copies of the bmap on any other replicas old.
+ * This is a high-level convenience call provided to easily update
+ * status after an ION has received some new I/O, which would make all
+ * other existing copies of the bmap on any other replicas old.
  * @b: the bmap.
  * @iosidx: the index of the only ION resource in the inode replica
  *	table that should be marked "valid".
@@ -674,10 +672,10 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 }
 
-/**
- * mds_repl_addrq - Handle a request to do replication from a client.
- *	May also reinitialize some parameters of the replication, such
- *	as priority, if the request already exists.
+/*
+ * Handle a request to do replication from a client.  May also
+ * reinitialize some parameters of the replication, such as priority, if
+ * the request already exists.
  */
 int
 mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
@@ -855,10 +853,9 @@ struct slm_repl_valid {
 	int *idx;
 };
 
-/**
- * slm_repl_countvalid_cb - Count the number of replicas that would
- *	exist after a potential DELRQ operation, to ensure the last
- *	replicas aren't removed.
+/*
+ * Count the number of replicas that would exist after a potential DELRQ
+ * operation, to ensure the last replicas aren't removed.
  */
 void
 slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,

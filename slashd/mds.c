@@ -146,10 +146,10 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	return (amt);
 }
 
-/**
- * mds_bmap_directio - Called when a new read or write lease is
- *	added to the bmap.  Maintains the DIO status of the bmap
- *	based on the numbers of readers and writers present.
+/*
+ * Called when a new read or write lease is added to the bmap.
+ * Maintains the DIO status of the bmap based on the numbers of readers
+ * and writers present.
  * @b: the locked bmap
  * @rw: read / write op
  * @np: value-result target ION network + process ID.
@@ -272,9 +272,9 @@ mds_sliod_alive(void *arg)
 	return (ok);
 }
 
-/**
- * slm_try_sliodresm - Given an I/O resource, iterate through its
- *	members looking for one which is suitable for assignment.
+/*
+ * Given an I/O resource, iterate through its members looking for one
+ * which is suitable for assignment.
  * @res: the resource
  * @prev_ios:  list of previously assigned resources (used for
  *	reassignment requests by the client).
@@ -402,9 +402,8 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	slm_res_shuffle(a, begin);
 }
 
-/**
- * slm_resm_select - Choose an I/O resource member for write bmap lease
- *	assignment.
+/*
+ * Choose an I/O resource member for write bmap lease assignment.
  * @b: The bmap which is being leased.
  * @pios: The preferred I/O resource specified by the client.
  * @to_skip: IONs to skip
@@ -576,11 +575,11 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	return (0);
 }
 
-/**
- * mds_bmap_ios_assign - Bind a bmap to an ION for writing.  The process
- *	involves a round-robin'ing of an I/O system's nodes and
- *	attaching a resm_mds_info to the bmap, used for establishing
- *	connection to the ION.
+/*
+ * Bind a bmap to an ION for writing.  The process involves a
+ * round-robin'ing of an I/O system's nodes and attaching a
+ * resm_mds_info to the bmap, used for establishing connection to the
+ * ION.
  * @bml: the bmap lease
  * @iosid: the preferred I/O system
  */
@@ -716,13 +715,12 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	return (0);
 }
 
-/**
- * mds_bmap_dupls_find - Find the first lease of a given client based on
- *	its {nid, pid} pair.  Also walk the chain of duplicate leases to
- *	count the number of read and write leases.  Note that only the
- *	first lease of a client is linked on the bmi->bmi_leases
- *	list, the rest is linked on a private chain and tagged with
- *	BML_CHAIN flag.
+/*
+ * Find the first lease of a given client based on its {nid, pid} pair.
+ * Also walk the chain of duplicate leases to count the number of read
+ * and write leases.  Note that only the first lease of a client is
+ * linked on the bmi->bmi_leases list, the rest is linked on a private
+ * chain and tagged with BML_CHAIN flag.
  */
 static __inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
@@ -764,9 +762,9 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 	return (bml);
 }
 
-/**
- * mds_bmap_bml_chwrmode - Attempt to upgrade a client-granted bmap
- *	lease from READ-only to READ+WRITE.
+/*
+ * Attempt to upgrade a client-granted bmap lease from READ-only to
+ * READ+WRITE.
  * @bml: bmap lease.
  * @prefios: client's preferred I/O system ID.
  */
@@ -837,9 +835,9 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	return (rc);
 }
 
-/**
- * mds_bmap_getbml - Obtain the lease handle for a bmap denoted
- *	by the specified issued sequence number.
+/*
+ * Obtain the lease handle for a bmap denoted by the specified issued
+ * sequence number.
  * @b: locked bmap.
  * @cli_nid: client network ID.
  * @cli_pid: client network process ID.
@@ -883,11 +881,10 @@ mds_bmap_getbml(struct bmap *b, uint64_t seq, uint64_t nid, uint32_t pid)
 	return (bml1);
 }
 
-/**
- * mds_bmap_bml_add - Add a read or write reference to the bmap's tree
- *	and refcnts.  This also calls into the directio_[check|set]
- *	calls depending on the number of read and/or write clients of
- *	this bmap.
+/*
+ * Add a read or write reference to the bmap's tree refcnts.  This also
+ * calls into the directio_[check|set] calls depending on the number of
+ * read and/or write clients of this bmap.
  * @bml: bmap lease.
  * @rw: read/write access for bmap.
  * @prefios: client preferred I/O system.
@@ -1099,10 +1096,10 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 	}
 }
 
-/**
- * mds_bmap_bml_release - Remove a bmap lease from the MDS.  This can be
- *	called from the bmap_timeo thread, from a client bmap_release
- *	RPC, or from the nbreqset cb context.
+/*
+ * Remove a bmap lease from the MDS.  This can be called from the
+ * bmap_timeo thread, from a client bmap_release RPC, or from the
+ * nbreqset cb context.
  * @bml: bmap lease.
  * Notes:  the bml must be removed from the timeotbl in all cases.
  *    otherwise we determine list removals on a case by case basis.
@@ -1290,7 +1287,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	return (rc);
 }
 
-/**
+/*
  * Handle an SRMT_RELEASEBMAP RPC from a client or an I/O server.
  */
 int
@@ -1454,8 +1451,8 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		fcmh_op_done(f);
 }
 
-/**
- * mds_bmap_crc_write - Process a CRC update request from an ION.
+/*
+ * Process a CRC update request from an ION.
  * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
  * @iosid:  the IOS ID of the I/O node which sent the request.  It is
  *	compared against the ID stored in the bml
@@ -1645,9 +1642,9 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	return (rc);
 }
 
-/**
- * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the
- *	bmap has been initialized (i.e. is not all zeroes).
+/*
+ * Load a bmap if disk I/O is successful and the bmap has been
+ * initialized (i.e. is not all zeroes).
  * @f: fcmh.
  * @bmapno: bmap index number to load.
  * @bp: value-result bmap pointer.
@@ -1732,19 +1729,19 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 	BMAP_URLOCK(b, locked);
 }
 
-/**
- * mds_bmap_load_cli - Routine called to retrieve a bmap, presumably so
- *	that it may be sent to a client.  It first checks for existence
- *	in the cache otherwise the bmap is retrieved from disk.
+/*
+ * Routine called to lease access to a bmap for a client.  It first
+ * checks for existence in the cache otherwise the bmap is retrieved
+ * from disk.
  *
- *	mds_bmap_load_cli() also manages the bmap_lease reference
- *	which is used to track the bmaps a particular client knows
- *	about.  mds_bmap_read() is used to retrieve the bmap from disk
- *	or create a new 'blank-slate' bmap if one does not exist.
- *	Finally, a read or write reference is placed on the bmap
- *	depending on the client request.  This is factored in with
- *	existing references to determine whether or not the bmap should
- *	be in DIO mode.
+ * This routine also manages the bmap_lease reference which is used to
+ * track the bmaps a particular client knows about.  mds_bmap_read() is
+ * used to retrieve the bmap from disk or create a new 'blank-slate'
+ * bmap if one does not exist.  Finally, a read or write reference is
+ * placed on the bmap depending on the client request.  This is factored
+ * in with existing references to determine whether or not the bmap
+ * should be in DIO mode.
+ *
  * @f: the FID cache handle for the inode.
  * @bmapno: bmap index number.
  * @flags: bmap lease flags (SRM_LEASEBMAPF_*).
@@ -1753,6 +1750,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
  * @sbd: value-result bmap descriptor to pass back to client.
  * @exp: RPC export to client.
  * @bmap: value-result bmap.
+ *
  * Note: the bmap is not locked during disk I/O; instead it is marked
  *	with a bit (i.e. INIT) and other threads block on its waitq.
  */
