@@ -70,7 +70,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 	    &iov, 1);
 	if (mp->rc)
-		return (mp->rc);
+		PFL_GOTOERR(out, mp->rc);
 
 	switch (mq->opc) {
 	case SRMT_REPL_SCHEDWK: {
@@ -126,6 +126,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 		mp->rc = -PFLERR_NOTSUP;
 		break;
 	}
+ out:
 	PSCFREE(buf);
 	return (mp->rc);
 }
