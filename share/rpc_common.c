@@ -1275,6 +1275,8 @@ slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
 		rc = slrpc_bulk_check(rq, saf->saf_bulkhash, iov, n);
 
  out:
+	if (rc == -ETIMEDOUT)
+		rc = -PFLERR_TIMEDOUT;
 	return (rc);
 }
 
