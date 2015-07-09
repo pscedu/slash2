@@ -67,8 +67,8 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 
 	iov.iov_len = mq->len;
 	iov.iov_base = buf = PSCALLOC(mq->len);
-	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
-	    &iov, 1);
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL, &iov,
+	    1);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -89,8 +89,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 		    (char *)pq < (char *)buf + mq->len;
 		    pq++, pp++)
 			sli_repl_addwk(SLI_REPLWKOP_REPL, pq->src_resid,
-			    &pq->fg, pq->bno, pq->bgen, pq->len, bchrp,
-			    pp);
+			    &pq->fg, pq->bno, pq->bgen, pq->len, bchrp, pp);
 		break;
 	    }
 
@@ -112,10 +111,8 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 			/* XXX clear out sliver pages in memory */
 
 			/* XXX lock */
-			if (fallocate(fcmh_2_fd(f),
-			    HAVE_FALLOC_FL_PUNCH_HOLE,
-			    pq->bno * SLASH_BMAP_SIZE,
-			    SLASH_BMAP_SIZE) == -1)
+			if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE,
+			    pq->bno * SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
 				mp->rc = -errno;
 
 			fcmh_op_done(f);
@@ -131,10 +128,9 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * sli_rim_handle_reclaim - Handle RECLAIM RPC from the MDS as a result
- *	of unlink or truncate to zero.  The MDS won't send us a new RPC
- *	until we reply, so we should be thread-safe.
+/*
+ * Handle RECLAIM RPC from the MDS as a result of unlink or truncate to zero.
+ * The MDS won't send us a new RPC until we reply, so we should be thread-safe.
  */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
@@ -174,8 +170,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
-	    &iov, 1);
+	rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL, &iov, 1);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -198,13 +193,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		sli_fg_makepath(&entryp->fg, fidfn);
 
 		/*
-		 * We do upfront garbage collection, so ENOENT should be
-		 * fine.  Also simply creating a file without any I/O
-		 * won't create a backing file on the I/O server.
+		 * We do upfront garbage collection, so ENOENT should be fine.
+		 * Also simply creating a file without any I/O won't create a
+		 * backing file on the I/O server.
 		 *
-		 * Anyway, we don't report an error back to MDS because
-		 * it can do nothing.  Reporting an error can stall mds
-		 * progress.
+		 * Anyway, we don't report an error back to MDS because it can
+		 * do nothing.  Reporting an error can stall MDS progress.
 		 */
 		OPSTAT_INCR("reclaim-file");
 		if (unlink(fidfn) == -1 && errno != ENOENT) {
@@ -244,8 +238,8 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY,
-	    &mq->fg, mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
+	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
 	return (0);
 }
 

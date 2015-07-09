@@ -363,8 +363,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * Write the sliver back to the filesystem.
 	 */
 	if (rw == SL_WRITE) {
-		mp->rc = sli_ric_write_sliver(mq->offset, mq->size,
-		    slvr, nslvrs);
+		mp->rc = sli_ric_write_sliver(mq->offset, mq->size, slvr,
+		    nslvrs);
 		goto out;
 	}
 
