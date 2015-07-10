@@ -88,7 +88,6 @@ int	 msl_bmap_lease_secs_remaining(struct bmap *);
 int	 msl_bmap_lease_tryext(struct bmap *, int);
 void	 msl_bmap_lease_tryreassign(struct bmap *);
 int	 msl_bmap_lease_secs_remaining(struct bmap *);
-int	 msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void	 bmap_biorq_expire(struct bmap *);
 

@@ -30,6 +30,5 @@ struct pscrpc_request;
 struct bmap_mds_lease;
 
 int	mdscoh_req(struct bmap_mds_lease *);
-int	mdscoh_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 #endif /* _MDSCOH_H_ */
