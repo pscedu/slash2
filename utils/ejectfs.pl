@@ -28,9 +28,24 @@ sub read_conf {
 }
 
 sub lru_retail {
-	$f->{next} if $f->{next};
-	$f->{next} =
-	$f->{prev} = @fids;
+	my $f = shift;
+	return if $f == $fid_lru_tail;
+	my $next = $f->{next};
+	my $prev = $f->{prev};
+	$fid_lru_head = $next if $f == $fid_lru_head;
+	$next->{prev} = $prev if $next;
+	$prev->{next} = $next if $prev;
+	$f->{next} = undef;
+	$f->{prev} = $fid_lru_tail;
+	$fid_lru_tail->{next} = $f if $fid_lru_tail;
+	$fid_lru_tail = $f;
+	$fid_lru_head = $f unless $fid_lru_head;
+}
+
+sub lru_shift {
+	my $f = $fid_lru_head;
+	$fid_lru_head = $f->{next} if $f;
+	return $f;
 }
 
 sub read_syslog {
@@ -58,7 +73,6 @@ sub read_syslog {
 				fid => $fid,
 			};
 			lru_retail($f);
-			$f->{idx} = @fids;
 		}
 	}
 	close SL;
@@ -93,16 +107,17 @@ sub watch_syslog {
 
 sub eject_old {
 	lock %fids;
-	lock @fids;
 
 	my $amt_reclaimed = 0;
 	do {
-		my $f = shift @fids;
+		lock %fids;
+		my $f = lru_shift;
 		delete $fids{$f->{fid}};
 
+		my @out = `msctl repl-status $cfg{fsroot}/.slfidns/$f->{fid}`;
 		`msctl repl-remove:$cfg{ios}:* $cfg{fsroot}/.slfidns/$f->{fid}`;
 
-	} while ($amt_reclaimed < EJECT_AMT);
+	} while ($amt_reclaimed < $cfg{eject_amt});
 }
 
 sub watch_statfs {
