@@ -64,7 +64,6 @@
 #include "slashd/fidc_mds.h"
 #include "slashd/inode.h"
 #include "slashd/journal_mds.h"
-#include "slashd/mdscoh.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
 #include "slashd/namespace.h"
