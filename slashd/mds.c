@@ -44,7 +44,6 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "journal_mds.h"
-#include "mdscoh.h"
 #include "mdsio.h"
 #include "mkfn.h"
 #include "pathnames.h"

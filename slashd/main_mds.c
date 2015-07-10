@@ -51,7 +51,6 @@
 #include "bmap_mds.h"
 #include "ctl_mds.h"
 #include "fidcache.h"
-#include "mdscoh.h"
 #include "mdsio.h"
 #include "pathnames.h"
 #include "repl_mds.h"
