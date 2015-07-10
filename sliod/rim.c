@@ -48,6 +48,7 @@
 #include "slconn.h"
 #include "slerr.h"
 #include "sliod.h"
+#include "slvr.h"
 
 uint64_t	current_reclaim_xid;
 uint64_t	current_reclaim_batchno;

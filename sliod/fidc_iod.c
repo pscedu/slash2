@@ -2,7 +2,7 @@
 /*
  * %PSCGPL_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2010-2015, Pittsburgh Supercomputing Center (PSC).
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@
 #include "slconn.h"
 #include "sltypes.h"
 #include "slutil.h"
+#include "slvr.h"
 
 int
 iod_inode_getinfo(struct sl_fidgen *fg, uint64_t *size,
