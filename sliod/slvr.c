@@ -611,12 +611,11 @@ slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 {
 	ssize_t rc;
 
-	/* 
-	 * If we hit -SLERR_AIOWAIT, the AIO callback handler 
-	 * slvr_fsaio_done() will set the state of the sliver
-	 * (DATARDY or DATAERR). Otherwise, our caller should 
- 	 * set them.
- 	 */
+	/*
+	 * If we hit -SLERR_AIOWAIT, the AIO callback handler
+	 * slvr_fsaio_done() will set the state of the sliver (DATARDY
+	 * or DATAERR). Otherwise, our caller should set them.
+	 */
 	rc = slvr_fsio(s, off, size, SL_READ);
 	return (rc);
 }
@@ -764,8 +763,8 @@ slvr_remove_all(struct fidc_membh *f)
 	if (!remove_all_slivers)
 		return;
 	/*
- 	 * Use two loops to avoid entangled with some background operations.
- 	 */
+	 * Use two loops to avoid entangled with some background operations.
+	 */
 	psc_dynarray_init(&a);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 
@@ -794,9 +793,9 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		return;
 
 	/*
- 	 * If we encounter an I/O on a sliver that is already on
- 	 * the CRC queue, take it off.
- 	 */
+	 * If we encounter an I/O on a sliver that is already on the CRC
+	 * queue, take it off.
+	 */
 	if (s->slvr_flags & SLVR_CRCDIRTY) {
 		if (s->slvr_flags & SLVR_DATAERR) {
 			s->slvr_flags |= SLVR_LRU;
