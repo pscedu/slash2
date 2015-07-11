@@ -8,14 +8,14 @@ use warnings;
 use bignum;
 
 my %opts;
-my @ios;
+my @ios :shared;
 my %cfg;
 my $syslog_filesize		= 999999999999;
 my $syslog_readthr;
-my $statfs :shared;
-my %fids :shared;		# list of files with multiple replicas
-my $fid_lru_head;
-my $fid_lru_tail;
+
+sub dprint {
+	warn @_, "\n" if $cfg{v};
+}
 
 sub read_conf {
 	my $cfgfn = shift;
@@ -28,23 +28,24 @@ sub read_conf {
 }
 
 sub lru_retail {
-	my $f = shift;
-	return if $f == $fid_lru_tail;
-	my $next = $f->{next};
+	my ($f, $ios) = shift;
+	return if $f == $ios->{fid_lru_tail};
+	my $next = $f->{next}[];
 	my $prev = $f->{prev};
-	$fid_lru_head = $next if $f == $fid_lru_head;
+	$ios->{fid_lru_head} = $next if $f == $ios->{fid_lru_head};
 	$next->{prev} = $prev if $next;
 	$prev->{next} = $next if $prev;
 	$f->{next} = undef;
-	$f->{prev} = $fid_lru_tail;
-	$fid_lru_tail->{next} = $f if $fid_lru_tail;
-	$fid_lru_tail = $f;
-	$fid_lru_head = $f unless $fid_lru_head;
+	$f->{prev} = $ios->{fid_lru_tail};
+	$ios->{fid_lru_tail}{next} = $f if $ios->{fid_lru_tail};
+	$ios->{fid_lru_tail} = $f;
+	$ios->{fid_lru_head} = $f unless $ios->{fid_lru_head};
 }
 
 sub lru_shift {
-	my $f = $fid_lru_head;
-	$fid_lru_head = $f->{next} if $f;
+	my $ios = shift;
+	my $f = $ios->{fid_lru_head};
+	$ios->{fid_lru_head} = $f->{next} if $f;
 	return $f;
 }
 
@@ -69,18 +70,35 @@ sub read_syslog {
 			lock %fids;
 
 			next if exists $fids{$fid};
-			my $f = $fids{$fid} = {
-				fid => $fid,
-			};
+			my $f = $fids{$fid} = newfid $fid;
 			lru_retail($f);
 		}
 	}
 	close SL;
 }
 
+sub newfid {
+	my $fid = shift;
+	return {
+		fid	=> $fid,
+		next	=> [ ],
+		prev	=> [ ],
+	};
+}
+
 sub scanfs {
-	open P, "msctl -R repl-status \Q$cfg{fsroot}\E |" or die "msctl: $!\n";
+	open P, "msctl -HR repl-status \Q$cfg{fsroot}\E |"
+	    or die "msctl: $!\n";
 	while (<P>) {
+		if (m[^(/.*)]) {
+			my $fn = $1;
+			$fn =~ s/new-bmap-repl-policy: .*//;
+			$fn =~ s/\s+$//;
+			my $fid = (stat $fn)[1];
+		} elsif (/^  (\S+)/) {
+			my $ios = $1;
+		} else {
+		}
 	}
 	close P;
 }
@@ -89,8 +107,8 @@ sub reload_syslog {
 	$syslog_readthr->kill('KILL')->detach() if $syslog_readthr;
 	$syslog_readthr = threads->create('read_syslog');
 
-	# XXX There is a race if we send a KILL before the signal handler is
-	# installed so we should ensure before returning.
+	# XXX There is a race if we send a KILL before the signal
+	# handler is installed so we should ensure before returning.
 }
 
 sub watch_syslog {
@@ -114,31 +132,59 @@ sub eject_old {
 		my $f = lru_shift;
 		delete $fids{$f->{fid}};
 
-		my @out = `msctl repl-status $cfg{fsroot}/.slfidns/$f->{fid}`;
-		`msctl repl-remove:$cfg{ios}:* $cfg{fsroot}/.slfidns/$f->{fid}`;
+		my $fn = "$cfg{fsroot}/.slfidns/$f->{fid}";
+		my @out = `msctl -H repl-status $fn`;
+		`msctl repl-remove:$cfg{ios}:* $fn`;
+
+		my $fsize = (stat $fn)[7];
+
+		my $ios;
+		my $nfound = 0;
+		shift @out;
+		foreach my $ln (@out) {
+			if ($ln =~ /^  (\S+)/) {
+				$ios = $1;
+			} elsif (my @m = $ln =~ /\+/g) {
+			}
+		}
+		$amt_reclaimed += $;
 
 	} while ($amt_reclaimed < $cfg{eject_amt});
 }
 
 sub watch_statfs {
 	for (;;) {
-		my $output = `df \Q$cfg{fsroot}\E`;
-		my $pct = $output =~ /(\d+)%/;
-		die "unable to parse `df` output: $output\n"
-		    unless $pct;
-		eject_old() if $pct > $cfg{hi_watermark};
+		foreach my $ios (@ios) {
+			system("msctl -p sys.pref_ios=$ios");
+			my $output = `df \Q$cfg{fsroot}\E`;
+			my $pct = $output =~ /(\d+)%/;
+			die "unable to parse `df` output: $output\n"
+			    unless $pct;
+			eject_old($ios) if $pct > $cfg{hi_watermark};
+		}
 		sleep 5;
 	}
 }
 
 sub usage {
-	die "usage: $0 -f config\n";
+	die "usage: $0 [-v] -f config\n";
 }
 
-getopts("f:", \%opts) or usage;
+getopts("f:v", \%opts) or usage;
 usage() unless $opts{f};
 
 read_conf($opts{f});
+my $idx = 0;
+foreach my $ios_name (split /[, \t]+/, $cfg{ios}) {
+	my $ios = {
+		idx		=> $idx++,
+		name		=> $ios_name,
+		fids		=> { },
+		fid_lru_head	=> undef,
+		fid_lru_tail	=> undef,
+	};
+	push @ios, $ios;
+}
 
 scanfs();
 threads->create('watch_syslog');
