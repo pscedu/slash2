@@ -82,14 +82,14 @@ msctl_getclientctx(__unusedx int s, struct pscfs_clientctx *pfcc)
 }
 
 char *
-fill_iosbuf(sl_replica_t *iosv, size_t n, char *buf, size_t len)
+fill_iosbuf(struct msctlmsg_replrq *mrq, char *buf, size_t len)
 {
 	size_t i, adj = 0;
 	int rc;
 
-	for (i = 0; i < n; i++) {
-		rc = snprintf(buf + adj, len - adj, "%s%u",
-		    i ? "," : "", iosv[i].bs_id);
+	for (i = 0; i < mrq->mrq_nios; i++) {
+		rc = snprintf(buf + adj, len - adj, "%s%s",
+		    i ? "," : "", mrq->mrq_iosv[i]);
 		if (rc == -1)
 			break;
 		adj += rc;
@@ -185,8 +185,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "repl-%s fid="SLPRI_FID" "
 		    "ios=%s bno=%d",
 		    mh->mh_type == MSCMT_ADDREPLRQ ? "add" : "remove",
-		    fcmh_2_fid(f), fill_iosbuf(mq->repls, mrq->mrq_nios,
-		    iosbuf, sizeof(iosbuf)), mrq->mrq_bmapno);
+		    fcmh_2_fid(f), fill_iosbuf(mrq, iosbuf,
+		    sizeof(iosbuf)), mrq->mrq_bmapno);
 		rc = 1;
 	}
 
