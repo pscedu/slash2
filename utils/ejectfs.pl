@@ -7,6 +7,8 @@ use threads::shared;
 use warnings;
 use bignum;
 
+use constant BMAP_SIZE => 128 * 1024 * 1024;
+
 my %opts;
 my %fids;
 my @ios :shared;
@@ -83,11 +85,15 @@ sub read_syslog {
 
 			lock %fids;
 
-			next if exists $fids{$fid};
-
-			my $f = $fids{$fid} = newfid $fid;
+			my $f;
+			if (exists $fids{$fid}) {
+				$f = $fids{$fid};
+			} else {
+				$f = $fids{$fid} = newfid $fid;
+			}
 			foreach my $ios (@t_ios) {
 				lru_retail($f, $ios{$ios});
+				$f->{refcnt}++;
 			}
 		}
 	}
@@ -99,6 +105,7 @@ sub newfid {
 	dprint "creating entry for $fid";
 	return {
 		fid	=> $fid,
+		refcnt	=> 0,
 		next	=> [ ],
 		prev	=> [ ],
 	};
@@ -108,15 +115,32 @@ sub scanfs {
 	open P, "msctl -HR repl-status \Q$cfg{fsroot}\E |"
 	    or die "msctl: $!\n";
 	my $ios;
+	my $fn;
+	my $f;
+	my $fid;
+	my %ios_seen;
 	while (<P>) {
 		if (m[^(/.*)]) {
-			my $fn = $1;
+			my %ios_seen = ();
+			my $f = undef;
+			$fn = $1;
 			$fn =~ s/new-bmap-repl-policy: .*//;
 			$fn =~ s/\s+$//;
-			my $fid = (stat $fn)[1];
+			$fid = (stat $fn)[1];
 		} elsif (/^  (\S+)/) {
 			$ios = $1;
 		} elsif (/[q+]/ && exists $ios{$ios}) {
+			next if $ios_seen{$ios};
+
+			lock %fids;
+			if (exists $fids{$fid} && !$f) {
+				warn "$fn: fid $fid already seen; " .
+				    "hard link perhaps?";
+				next;
+			}
+			$f = $fids{$fid} = newfid $fid unless $f;
+			lru_retail($f, $ios{$ios});
+			$f->{refcnt}++;
 		}
 	}
 	close P;
@@ -155,24 +179,39 @@ sub eject_old {
 		lock %fids;
 		my $f = lru_shift($ios);
 		last unless $f;
-		delete $fids{$f->{fid}};
+		delete $fids{$f->{fid}} unless --$f->{refcnt};
 
 		my $fn = "$cfg{fsroot}/.slfidns/$f->{fid}";
 		my @out = `msctl -H repl-status $fn`;
 		`msctl repl-remove:$cfg{ios}:* $fn`;
-
 		my $fsize = (stat $fn)[7];
 
 		my $ios;
-		my $sz = 0;
+		my $nbmaps = 0;
 		shift @out;
+		my $last_bmap = 0;
+		my $last_line;
 		foreach my $ln (@out) {
 			if ($ln =~ /^  (\S+)/) {
+				$last_bmap = 1 if $ios && $last_line &&
+				    $ios eq $ios->{name} &&
+				    $last_line =~ /\+$/;
 				$ios = $1;
 			} elsif (my @m = $ln =~ /\+/g) {
+				$nbmaps += @m if $ios eq $ios->{name};
 			}
+			$last_line = $ln;
 		}
+		$last_bmap = 1 if $ios && $last_line &&
+		    $ios eq $ios->{name} && $last_line =~ /\+$/;
+
+		my $sz = 0;
+		$sz += BMAP_SIZE * ($nbmaps - 1) if $nbmaps > 1;
+		$sz += $fsize % BMAP_SIZE if $last_bmap;
+
 		$amt_reclaimed += $sz;
+		dprint "  + reclaimed $sz (total $amt_reclaimed) " .
+		    "for $f->{fid}";
 
 	} while ($amt_reclaimed < $cfg{eject_amt});
 }
