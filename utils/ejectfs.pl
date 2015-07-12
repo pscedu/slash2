@@ -8,44 +8,53 @@ use warnings;
 use bignum;
 
 my %opts;
+my %fids;
 my @ios :shared;
+my %ios;
 my %cfg;
-my $syslog_filesize		= 999999999999;
+my $syslog_filesize = 999999999999;
 my $syslog_readthr;
 
 sub dprint {
-	warn @_, "\n" if $cfg{v};
+	my ($pkg, $fn, $ln, $sub) = caller(1);
+	warn "${0}[$fn:$ln:$sub]: ", @_, "\n" if $cfg{v};
 }
 
 sub read_conf {
 	my $cfgfn = shift;
+	dprint "parsing $cfgfn";
 	open CFG or die "open $cfgfn: $!\n";
 	while (<CFG>) {
 		my ($k, $v) = split /\s+/, $_, 1;
+		dprint "setting $k -> $v";
 		$cfg{$k} = $v;
 	}
 	close CFG;
 }
 
 sub lru_retail {
-	my ($f, $ios) = shift;
-	return if $f == $ios->{fid_lru_tail};
-	my $next = $f->{next}[];
-	my $prev = $f->{prev};
-	$ios->{fid_lru_head} = $next if $f == $ios->{fid_lru_head};
-	$next->{prev} = $prev if $next;
-	$prev->{next} = $next if $prev;
-	$f->{next} = undef;
-	$f->{prev} = $ios->{fid_lru_tail};
-	$ios->{fid_lru_tail}{next} = $f if $ios->{fid_lru_tail};
-	$ios->{fid_lru_tail} = $f;
-	$ios->{fid_lru_head} = $f unless $ios->{fid_lru_head};
+	my ($f, $ios) = @_;
+	foreach my $ios ($ios ? $ios : @ios) {
+		next if $f == $ios->{fid_lru_tail};
+		my $idx = $ios->{idx};
+		my $next = $f->{next}[$idx];
+		my $prev = $f->{prev}[$idx];
+		$ios->{fid_lru_head} = $next if $f == $ios->{fid_lru_head};
+		$next->{prev}[$idx] = $prev if $next;
+		$prev->{next}[$idx] = $next if $prev;
+		$f->{next}[$idx] = undef;
+		$f->{prev}[$idx] = $ios->{fid_lru_tail};
+		$ios->{fid_lru_tail}{next}[$idx] = $f if $ios->{fid_lru_tail};
+		$ios->{fid_lru_tail} = $f;
+		$ios->{fid_lru_head} = $f unless $ios->{fid_lru_head};
+	}
 }
 
 sub lru_shift {
 	my $ios = shift;
 	my $f = $ios->{fid_lru_head};
-	$ios->{fid_lru_head} = $f->{next} if $f;
+	$ios->{fid_lru_head} = $f->{next}[$ios->{idx}]
+	    if $f == $ios->{fid_lru_head};
 	return $f;
 }
 
@@ -60,18 +69,26 @@ sub read_syslog {
 		# file closed fid=0x0000000018d16e5b uid=50863 gid=15336 fsize=6795
 		# oatime=1432313046:416406351 mtime=1432313048:631661538 sessid=1118980
 		# otime=1435653422:657556064 rd=6795 wr=0 prog=/bin/bash
-		if (my $fid = / file closed fid=0x0*([a-f0-9]+) /) {
+		if (/ file closed fid=0x0*([a-f0-9]+) /) {
+			my $fid = $1;
 			lock %fids;
 
 			next unless exists $fids{$fid};
 			lru_retail($fids{$fid});
 
-		} elsif ($fid = / replicated 0x0*([a-f0-9]+) /) {
+		} elsif (/ repl-add fid=0x0*([a-f0-9]+) ios=(\S+) /) {
+			my $fid = $1;
+			my $ios_list = $2;
+			my @t_ios = split ',', $ios_list;
+
 			lock %fids;
 
 			next if exists $fids{$fid};
+
 			my $f = $fids{$fid} = newfid $fid;
-			lru_retail($f);
+			foreach my $ios (@t_ios) {
+				lru_retail($f, $ios{$ios});
+			}
 		}
 	}
 	close SL;
@@ -79,6 +96,7 @@ sub read_syslog {
 
 sub newfid {
 	my $fid = shift;
+	dprint "creating entry for $fid";
 	return {
 		fid	=> $fid,
 		next	=> [ ],
@@ -89,6 +107,7 @@ sub newfid {
 sub scanfs {
 	open P, "msctl -HR repl-status \Q$cfg{fsroot}\E |"
 	    or die "msctl: $!\n";
+	my $ios;
 	while (<P>) {
 		if (m[^(/.*)]) {
 			my $fn = $1;
@@ -96,8 +115,8 @@ sub scanfs {
 			$fn =~ s/\s+$//;
 			my $fid = (stat $fn)[1];
 		} elsif (/^  (\S+)/) {
-			my $ios = $1;
-		} else {
+			$ios = $1;
+		} elsif (/[q+]/ && exists $ios{$ios}) {
 		}
 	}
 	close P;
@@ -105,6 +124,7 @@ sub scanfs {
 
 sub reload_syslog {
 	$syslog_readthr->kill('KILL')->detach() if $syslog_readthr;
+	dprint "started syslog thread";
 	$syslog_readthr = threads->create('read_syslog');
 
 	# XXX There is a race if we send a KILL before the signal
@@ -124,12 +144,17 @@ sub watch_syslog {
 }
 
 sub eject_old {
+	my $ios = shift;
+
+	dprint "threshold reached; ejecting for $ios{name}";
+
 	lock %fids;
 
 	my $amt_reclaimed = 0;
 	do {
 		lock %fids;
-		my $f = lru_shift;
+		my $f = lru_shift($ios);
+		last unless $f;
 		delete $fids{$f->{fid}};
 
 		my $fn = "$cfg{fsroot}/.slfidns/$f->{fid}";
@@ -139,7 +164,7 @@ sub eject_old {
 		my $fsize = (stat $fn)[7];
 
 		my $ios;
-		my $nfound = 0;
+		my $sz = 0;
 		shift @out;
 		foreach my $ln (@out) {
 			if ($ln =~ /^  (\S+)/) {
@@ -147,7 +172,7 @@ sub eject_old {
 			} elsif (my @m = $ln =~ /\+/g) {
 			}
 		}
-		$amt_reclaimed += $;
+		$amt_reclaimed += $sz;
 
 	} while ($amt_reclaimed < $cfg{eject_amt});
 }
@@ -179,11 +204,12 @@ foreach my $ios_name (split /[, \t]+/, $cfg{ios}) {
 	my $ios = {
 		idx		=> $idx++,
 		name		=> $ios_name,
-		fids		=> { },
+		fids		=> [ ],
 		fid_lru_head	=> undef,
 		fid_lru_tail	=> undef,
 	};
 	push @ios, $ios;
+	$ios{$ios_name} = $ios;
 }
 
 scanfs();
