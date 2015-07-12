@@ -13,6 +13,6 @@ MODULES+=	lnet-hdrs pthread gcrypt pfl
 include ${SLASHMK}
 
 regen-hook:
-	${GENTYPES} -g '\b(MSCMT_\w+)\s' -g '\b(SLASH2?_\w+)\s+(?!["\s])' $(	\
-	    ) -g '^#define\s+(\w+)\b(?=[ \t()0-9<]+\s*(?:/\*.*?\*/|)$$)' $(	\
+	${GENTYPES} -g '\b(MSCMT_\w+)\s' -g '\b(SLASH2?_\w+)\s+(?!["\s])' $(strip	\
+	    ) -g '^#define\s+(\w+)\b(?=[ \t()0-9<]+\s*(?:/\*.*?\*/|)$$)' $(strip	\
 	    ) -h '../../*/*.h' typedump.c
