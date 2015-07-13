@@ -809,6 +809,8 @@ slm_rcm_issue_readdir_wk(void *p)
 	if (rc == 0)
 		rc = SL_NBRQSET_ADD(wk->csvc, rq);
 	if (rc) {
+		if (wk->iov[0].iov_len)
+			pscrpc_abort_bulk(rq->rq_bulk);
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(wk->csvc);
 		pscrpc_export_put(wk->exp);
