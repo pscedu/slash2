@@ -39,7 +39,7 @@
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
 #include "pfl/fmtstr.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/pfl.h"
 #include "pfl/random.h"

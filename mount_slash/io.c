@@ -46,7 +46,7 @@
 #include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"

@@ -37,7 +37,7 @@
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fs.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"

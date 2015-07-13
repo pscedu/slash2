@@ -38,7 +38,7 @@
 #include "pfl/atomic.h"
 #include "pfl/err.h"
 #include "pfl/export.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
 #include "pfl/str.h"

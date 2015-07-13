@@ -26,7 +26,7 @@
 #define _SLIOD_H_
 
 #include "pfl/cdefs.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/service.h"
 #include "pfl/thread.h"
 

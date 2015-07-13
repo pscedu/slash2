@@ -30,7 +30,7 @@
 #include <stdio.h>
 
 #include "pfl/ctlsvr.h"
-#include "pfl/iostats.h"
+#include "pfl/opstats.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
