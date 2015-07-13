@@ -497,8 +497,7 @@ fci->fci_inode.nrepls = 1;
 
 	bmap_op_done(b);
 
-	if ((c->fcmh_sstb.sst_mode &
-	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0)
 		rflags |= PSCFS_CREATEF_DIO;
 
  out:
@@ -577,8 +576,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode &
-	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
