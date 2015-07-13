@@ -366,7 +366,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	struct bmap *b;
-	int rc = 0;
+	int rc = 0, rflags = 0;
 
 	msfsthr_ensure(pfr);
 
@@ -497,10 +497,14 @@ fci->fci_inode.nrepls = 1;
 
 	bmap_op_done(b);
 
+	if ((c->fcmh_sstb.sst_mode &
+	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+		rflags |= PSCFS_CREATEF_DIO;
+
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, mfh, PSCFS_CREATEF_DIO, rc);
+	    pscfs_attr_timeout, mfh, rflags, rc);
 
 	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x "
 	    "flag=%#o rc=%d", pinum, name, mode, oflags, rc);
