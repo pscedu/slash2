@@ -811,7 +811,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
