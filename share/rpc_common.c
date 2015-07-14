@@ -568,7 +568,8 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	if (imp) {
 		// deactivate(imp) ?
 		pscrpc_abort_inflight(imp);
-		if (flags & SLRPC_DISCONNF_HIGHLEVEL)
+		if (flags & SLRPC_DISCONNF_HIGHLEVEL &&
+		    imp->imp_connection)
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
@@ -700,6 +701,7 @@ csvc_cli_cmp(const void *a, const void *b)
 {
 	const struct slashrpc_cservice *ca = a, *cb = b;
 
+	/* XXX race */
 	if (ca->csvc_import->imp_connection == NULL ||
 	    cb->csvc_import->imp_connection == NULL)
 		return (CMP(ca, cb));
