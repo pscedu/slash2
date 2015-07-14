@@ -761,7 +761,6 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 #define RCM_READDIR_CBARGI_DECR		1
 
 int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-void slm_rcm_try_readdir_ra(struct pscrpc_export *, struct sl_fidgen *, int, off_t, size_t);
 int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *,
 	size_t, off_t, size_t *, int *, int *, unsigned char *, size_t,
 	int);
@@ -814,9 +813,6 @@ slm_rcm_issue_readdir_wk(void *p)
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(wk->csvc);
 		pscrpc_export_put(wk->exp);
-	} else {
-		slm_rcm_try_readdir_ra(wk->exp, &wk->fg, wk->eof,
-		    wk->nextoff, wk->size);
 	}
 
  out:
@@ -829,141 +825,23 @@ slm_rcm_issue_readdir_wk(void *p)
 }
 
 /*
- * Special interface routine for issuing a READDIR bulk reply from work
- * context.
- */
-int
-slm_readdir_ra_issue(void *p)
-{
-	struct slm_wkdata_readdir *wk = p;
-	size_t outsize;
-	int nents, eof;
-
-	slm_readdir_issue(wk->exp, &wk->fg, wk->size, wk->off, &outsize,
-	    &nents, &eof, NULL, 0, 1);
-	pscrpc_export_put(wk->exp);
-	return (0);
-}
-
-/*
- * Determine if another READDIR (for readahead) should be done and setup
- * an async RPC to get it moving.
- *
- * This routine is called in a number of places:
- *  (o) after a READDIR completes, immediately schedule a readahead if
- *	within limits;
- *  (o) when client acknowledges READDIR received;
- */
-void
-slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
-    int eof, off_t off, size_t size)
-{
-#define READDIR_RA_PAST_TIMEO 3
-	struct timespec now, expire = { READDIR_RA_PAST_TIMEO, 0 };
-	struct slm_readdir_ra_past *inact = NULL, *act = NULL, *cv;
-	struct slm_wkdata_readdir *wk;
-	struct slm_exp_cli *mexpc;
-	int i;
-
-return;
-	if (eof)
-		return;
-	psc_assert(size);
-
-	EXPORT_LOCK(exp);
-	PFL_GETTIMESPEC(&now);
-	mexpc = sl_exp_getpri_cli(exp, 0);
-	if (mexpc == NULL) {
-		EXPORT_ULOCK(exp);
-		return;
-	}
-	for (i = 0, cv = mexpc->mexpc_readdir_past;
-	    i < nitems(mexpc->mexpc_readdir_past) || (cv = NULL);
-	    i++, cv++) {
-		/* expire old entries */
-		if (timespeccmp(&cv->crap_exp, &now, <))
-			cv->crap_fid = FID_ANY;
-
-		/*
-		 * Found an inactive slot; save in case we can't find an
-		 * empty slot.
-		 *
-		 * XXX: This macro overwrites the last bit of the nanosecond value.
-		 */
-		if (!CRAP_GET_ACTIVE(cv))
-			inact = cv;
-
-		/* found an unused entry; use it */
-		if (cv->crap_fid == FID_ANY)
-			act = cv;
-
-		/* found our request; cancel */
-		if (cv->crap_fid == fgp->fg_fid &&
-		    cv->crap_off == off)
-			break;
-	}
-	/* use an inactive slot if we must */
-	if (!act && inact)
-		act = inact;
-	if (cv || !act) {
-		EXPORT_ULOCK(exp);
-		return;
-	}
-	act->crap_fid = fgp->fg_fid;
-	act->crap_off = off;
-	timespecadd(&now, &expire, &act->crap_exp);
-	CRAP_SET_ACTIVE(act);
-	EXPORT_ULOCK(exp);
-
-	wk = pfl_workq_getitem(slm_readdir_ra_issue,
-	    struct slm_wkdata_readdir);
-	wk->exp = pscrpc_export_get(exp);
-	wk->fg = *fgp;
-	wk->off = off;
-	wk->size = size;
-	pfl_workq_putitem(wk);
-}
-
-/*
  * Callback run signifying client completion of receiving a bulk READDIR.
  */
 int
 slm_rcmc_readdir_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	int decr = av->space[RCM_READDIR_CBARGI_DECR];
+	int i, rc, decr = av->space[RCM_READDIR_CBARGI_DECR];
 	off_t nextoff = av->space[RCM_READDIR_CBARGI_NEXTOFF];
 	void *base_attr = av->pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR];
 	void *base_dents = av->pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS];
 	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
 	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
-	struct slm_readdir_ra_past *crap;
 	struct srm_readdir_ra_req *mq;
 	struct slm_exp_cli *mexpc;
-	int i, rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-
-	if (decr) {
-		EXPORT_LOCK(exp);
-		mexpc = sl_exp_getpri_cli(exp, 0);
-		if (mexpc)
-			for (i = 0, crap = mexpc->mexpc_readdir_past;
-			    i < nitems(mexpc->mexpc_readdir_past);
-			    i++, crap++)
-				if (crap->crap_fid == mq->fg.fg_fid &&
-				    crap->crap_off == mq->offset) {
-					CRAP_CLR_ACTIVE(crap);
-					break;
-				}
-		EXPORT_ULOCK(exp);
-	}
-
-	if (rc == 0)
-		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->eof,
-		    nextoff, mq->size);
-
 	PSCFREE(base_dents);
 	PSCFREE(base_attr);
 	sl_csvc_decref(csvc);
@@ -1707,6 +1585,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mp->valid = 0;
 	if (chfg.fg_fid != FID_ANY) {
 		struct fidc_membh *c;
+
 		if (slm_fcmh_get(&chfg, &c) == 0) {
 			mp->valid = 1;
 			mdsio_fcmh_refreshattr(c, &mp->cattr);

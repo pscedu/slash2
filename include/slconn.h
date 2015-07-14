@@ -299,24 +299,22 @@ struct sl_expcli_ops {
 	SL_NBRQSETX_ADD(sl_nbrqset, (csvc), (rq))
 
 static __inline const char *
-slrpc_cb_extract_name(const char *s)
+slrpc_cb_extract_name(const char *s, int *len)
 {
 	const char *t, *cb = NULL, *rpc = NULL;
 
-	for (t = s; *t; t++) {
+	for (t = s; *t; t++)
 		if (*t == '_') {
 			rpc = cb;
 			cb = t;
 		}
-	}
 	psc_assert(rpc);
-	return (rpc);
+	*len = cb - rpc - 1;
+	return (rpc + 1);
 }
 
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
-		static struct pfl_opstat *_opst_err, *_opst_ok;		\
-									\
 		(mp) = NULL;						\
 		(error) = 0;						\
 		if ((rq)->rq_repmsg)					\
@@ -339,16 +337,32 @@ slrpc_cb_extract_name(const char *s)
 			slrpc_ops.slrpc_rep_in((csvc), (rq));		\
 									\
 		if (error) {						\
-			if (_opst_err == NULL)				\
+			static struct pfl_opstat *_opst_err;		\
+									\
+			if (_opst_err == NULL) {			\
+				const char *_cbname;			\
+				int _len;				\
+									\
+				_cbname = slrpc_cb_extract_name(	\
+				    __func__, &_len);			\
 				_opst_err = pfl_opstat_initf(		\
-				    OPSTF_BASE10, "rpc.cb.%s.err",	\
-				    slrpc_cb_extract_name(__func__));	\
+				    OPSTF_BASE10, "rpc.cb.%.*s.err",	\
+				    _len, _cbname);			\
+			}						\
 			pfl_opstat_incr(_opst_err);			\
 		} else {						\
-			if (_opst_ok == NULL)				\
+			static struct pfl_opstat *_opst_ok;		\
+									\
+			if (_opst_ok == NULL) {				\
+				const char *_cbname;			\
+				int _len;				\
+									\
+				_cbname = slrpc_cb_extract_name(	\
+				    __func__, &_len);			\
 				_opst_ok = pfl_opstat_initf(		\
-				    OPSTF_BASE10, "rpc.cb.%s.ok",	\
-				    slrpc_cb_extract_name(__func__));	\
+				    OPSTF_BASE10, "rpc.cb.%.*s.ok",	\
+				    _len, _cbname);			\
+			}						\
 			pfl_opstat_incr(_opst_ok);			\
 		}							\
 	} while (0)
