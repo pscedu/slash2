@@ -145,6 +145,8 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 struct psc_hashtbl		 slc_gidmap_int;
 
+psc_atomic32_t			 slc_direct_io = PSC_ATOMIC32_INIT(1);
+
 int				 msl_newent_inherit_groups = 1;
 
 struct sl_resource *
@@ -497,7 +499,8 @@ fci->fci_inode.nrepls = 1;
 
 	bmap_op_done(b);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && 
+	    psc_atomic32_read(&slc_direct_io))
 		rflags |= PSCFS_CREATEF_DIO;
 
  out:
@@ -576,7 +579,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 &&
+	    psc_atomic32_read(&slc_direct_io))
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
