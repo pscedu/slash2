@@ -425,7 +425,12 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
-		psc_assert(rc == 0);
+		if (rc) {
+			OPSTAT_INCR("rlsbmap-fail");
+			psclog_warnx("get bmap for "SLPRI_FG", rc = %d\n", 
+			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
+			continue;
+		}
 
 		/*
 		 * fsync here to guarantee that buffers are flushed to
