@@ -70,8 +70,6 @@ struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have thei
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
-static	int remove_all_slivers = 1;
-
 /*
  * Take the CRC of the data contained within a sliver and add the update
  * to a bcr.
@@ -760,8 +758,6 @@ slvr_remove_all(struct fidc_membh *f)
 	struct bmap_iod_info *bii;
 	static struct psc_dynarray a;
 
-	if (!remove_all_slivers)
-		return;
 	/*
 	 * Use two loops to avoid entangled with some background operations.
 	 */
