@@ -774,6 +774,19 @@ slvr_remove_all(struct fidc_membh *f)
 		bii = bmap_2_bii(b);
 		while (!SPLAY_EMPTY(&bii->bii_slvrs)) {
 			s = SPLAY_MIN(biod_slvrtree, &bii->bii_slvrs);
+			/* 
+			 * Use SLVR_FREEING to avoid a race with sliver reaper.
+			 * Note that we don't check refcnt here because we are
+			 * only called when the file is truncated or reclaimed.
+			 */
+			SLVR_LOCK(s);
+			if (s->slvr_flags & SLVR_FREEING) {
+				SLVR_ULOCK(s);
+				continue;
+			}
+			s->slvr_flags |= SLVR_FREEING;
+			SLVR_ULOCK(s);
+
 			OPSTAT_INCR("slvr-remove");
 			slvr_remove(s);
 		}
@@ -983,7 +996,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		if (s->slvr_refcnt) {
+		if (s->slvr_refcnt || (s->slvr_flags & SLVR_FREEING)) {
 			SLVR_ULOCK(s);
 			continue;
 		}
