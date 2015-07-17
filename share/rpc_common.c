@@ -149,6 +149,7 @@ sl_csvc_dectryref(struct slashrpc_cservice *csvc)
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
+	psc_assert(csvc->csvc_tryref > 0);
 	if (--csvc->csvc_tryref == 0)
 		psc_atomic32_clearmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
