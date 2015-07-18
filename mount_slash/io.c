@@ -770,8 +770,9 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	}
 
 	/* AIOWAIT is removed no matter what. */
-	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING | BMPCEF_PINNED);
-	DEBUG_BMPCE(PLL_DIAG, e, "rpc_done");
+	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING |
+	    BMPCEF_PINNED);
+	DEBUG_BMPCE(PLL_DEBUG, e, "rpc_done");
 
 	BMPCE_WAKE(e);
 	BMPCE_ULOCK(e);
