@@ -903,7 +903,7 @@ msbreleasethr_main(struct psc_thread *thr)
 				nto.tv_nsec = bci->bci_etime.tv_nsec;
 			}
 
-			DEBUG_BMAP(PLL_DIAG, b, "skip due to not expire");
+			DEBUG_BMAP(PLL_DEBUG, b, "skip due to not expire");
 			BMAP_ULOCK(b);
 			continue;
  evict:
