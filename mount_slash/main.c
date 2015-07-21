@@ -1215,6 +1215,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = fcmh_reserved(p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0)
+		PFL_GOTOERR(out, rc = EPERM);
 
 	slc_getfscreds(pfr, &pcr);
 
