@@ -145,6 +145,10 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 struct psc_hashtbl		 slc_gidmap_int;
 
+/*
+ * This allows io_submit() works before Linux kernel release 4.1. Before that,
+ * the O_DIRECT and the fuse direct_io path is not fully integrated.
+ */
 psc_atomic32_t			 slc_direct_io = PSC_ATOMIC32_INIT(1);
 
 int				 msl_newent_inherit_groups = 1;
