@@ -1080,6 +1080,8 @@ dircache_tally_lookup_miss(struct fidc_membh *p)
 	wk->off = off;
 	wk->size = 32 * 1024;
 	pfl_workq_putitem(wk);
+
+	msl_readdir_issue(NULL, d, 0, size, 0);
 #endif
 }
 
@@ -1421,7 +1423,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_rc = rc;
-		OPSTAT_INCR("namecache-load-error");
+		OPSTAT_INCR("dircache-load-error");
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 		DIRCACHE_WAKE(d);
@@ -1513,8 +1515,6 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct pscrpc_request *rq = NULL;
 	struct dircache_page *p;
 	int rc;
-
-	OPSTAT_INCR("dircache-issue");
 
 	p = dircache_new_page(d, off, wait);
 	if (p == NULL)
@@ -1675,6 +1675,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 				if ((p->dcp_flags &
 				    DIRCACHEPGF_EOF) == 0) {
+					/*
+					 * The reply_readdir() up ahead
+					 * may be followed by a RELEASE
+					 * so take an extra reference to
+					 * avoid use-after-free on the
+					 * fcmh.
+					 */
 					fcmh_op_start_type(d,
 					    FCMH_OPCNT_READAHEAD);
 					raoff = p->dcp_nextoff;
