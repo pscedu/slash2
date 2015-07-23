@@ -699,7 +699,7 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 int
-mslctl_resfieldi_connected(int fd, struct psc_ctlmsghdr *mh,
+mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -707,24 +707,27 @@ mslctl_resfieldi_connected(int fd, struct psc_ctlmsghdr *mh,
 	struct sl_resm *m;
 	char nbuf[8];
 
+	if (set && strcmp(pcp->pcp_value, "0") &&
+	    strcmp(pcp->pcp_value, "1"))
+		return (psc_ctlsenderr(fd, mh,
+		    "connected: invalid value"));
+
 	m = res_getmemb(r);
 	if (set) {
-		if (strcmp(pcp->pcp_value, "0") == 0) {
+		if (r->res_type == SLREST_MDS)
 			csvc = slc_geticsvc_nb(m);
-			if (csvc) {
-				sl_csvc_disconnect(csvc);
-				sl_csvc_decref(csvc);
-			}
-		} else if (strcmp(pcp->pcp_value, "1") == 0) {
-			csvc = slc_geticsvc_nb(m);
-			if (csvc)
-				sl_csvc_decref(csvc);
-		} else
-			return (psc_ctlsenderr(fd, mh,
-			    "connected: invalid value"));
+		else
+			csvc = slc_getmcsvc_nb(m);
+		if (strcmp(pcp->pcp_value, "0") == 0 && csvc)
+			sl_csvc_disconnect(csvc);
+		if (csvc)
+			sl_csvc_decref(csvc);
 		return (1);
 	}
-	csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	if (r->res_type == SLREST_MDS)
+		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	else
+		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -752,10 +755,13 @@ mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 	    levels, nlevels, nbuf));
 }
 
-const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
+const struct slctl_res_field slctl_resmds_fields[] = {
+	{ "connected",		mslctl_resfield_connected },
+	{ NULL, NULL }
+};
 
 const struct slctl_res_field slctl_resios_fields[] = {
-	{ "connected",		mslctl_resfieldi_connected },
+	{ "connected",		mslctl_resfield_connected },
 	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
 	{ NULL, NULL }
 };
