@@ -371,7 +371,6 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 				 * Someone is already taking care of
 				 * this page for us.
 				 */
-				DIRCACHE_ULOCK(d);
 				p = NULL;
 				goto out;
 			}
