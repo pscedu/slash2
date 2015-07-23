@@ -367,9 +367,13 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			if (p->dcp_off == off) {
-				/* Page is waiting for us; use it. */
-				p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-				break;
+				/*
+				 * Someone is already taking care of
+				 * this page for us.
+				 */
+				DIRCACHE_ULOCK(d);
+				p = NULL;
+				goto out;
 			}
 
 			if (wait) {
