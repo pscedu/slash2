@@ -1844,9 +1844,24 @@ msl_flush(struct msl_fhent *mfh, int all)
 
 	f = mfh->mfh_fcmh;
 
+  restart:
+
+	DYNARRAY_FOREACH(b, i, &a) {
+		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
+	}
+	psc_dynarray_reset(&a);
+
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		BMAP_LOCK(b);
+		/*
+ 		 * Avoid a deadlock with the bmap release thread who
+ 		 * will grab locks on multiple bmaps simultaneously.
+ 		 */ 
+		if (!BMAP_TRYLOCK(b)) {
+			pfl_rwlock_unlock(&f->fcmh_rwlock);
+			OPSTAT_INCR("flush-backout");
+			goto restart;
+		}
 		if (!(b->bcm_flags & BMAPF_TOFREE)) {
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 			psc_dynarray_add(&a, b);
