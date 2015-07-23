@@ -753,12 +753,10 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 }
 
 #define RCM_READDIR_CBARGP_CSVC		0
-#define RCM_READDIR_CBARGP_EXP		1
 #define RCM_READDIR_CBARGP_BASE_DENTS	2
 #define RCM_READDIR_CBARGP_BASE_ATTR	3
 
 #define RCM_READDIR_CBARGI_NEXTOFF	0
-#define RCM_READDIR_CBARGI_DECR		1
 
 int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *,
@@ -795,10 +793,6 @@ slm_rcm_issue_readdir_wk(void *p)
 	    wk->iov[0].iov_base;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR] =
 	    wk->iov[1].iov_base;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_EXP] =
-	    pscrpc_export_get(wk->exp);
-	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
-	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
 	if (wk->iov[0].iov_len) {
 		rq->rq_bulk_abortable = 1;
 		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
@@ -831,17 +825,12 @@ int
 slm_rcmc_readdir_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	int i, rc, decr = av->space[RCM_READDIR_CBARGI_DECR];
-	off_t nextoff = av->space[RCM_READDIR_CBARGI_NEXTOFF];
 	void *base_attr = av->pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR];
 	void *base_dents = av->pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS];
 	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
-	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
-	struct srm_readdir_ra_req *mq;
-	struct slm_exp_cli *mexpc;
+	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	PSCFREE(base_dents);
 	PSCFREE(base_attr);
 	sl_csvc_decref(csvc);
@@ -1831,7 +1820,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	mds_note_update(1);
+	mds_note_update(1); // XXX write during reads???
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
