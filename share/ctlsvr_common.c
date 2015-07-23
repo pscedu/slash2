@@ -297,10 +297,10 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 				levels[4] = (char *)cf->name;
 				if (!cf->cbf(fd, mh, pcp, levels, 5,
 				    set, r))
-				    return (0);
+					return (0);
 			}
 		}
-		if (!field_found && strcmp(p_res, "*"))
+		if (!field_found && strcmp(p_field, "*"))
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid resources field: %s", p_field));
 	}
