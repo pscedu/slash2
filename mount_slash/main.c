@@ -503,7 +503,7 @@ fci->fci_inode.nrepls = 1;
 
 	bmap_op_done(b);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && 
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 &&
 	    psc_atomic32_read(&slc_direct_io))
 		rflags |= PSCFS_CREATEF_DIO;
 
@@ -1598,6 +1598,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	DIRCACHEPG_INITEXP(&dexp);
 
 	issue = 1;
+
+	/*
+	 * XXX Large directories will page in lots of buffers so this
+	 * code should really be changed to create a stub and wait for
+	 * it to be filled in instead of rescanning the entire list.
+	 */
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
