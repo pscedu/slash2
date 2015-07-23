@@ -106,32 +106,10 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
-void
-append_path(const char *newpath)
-{
-	const char *path;
-	size_t len;
-	char *p;
-	int rc;
-
-	path = getenv("PATH");
-	len = (path ? strlen(path) + 1 : 0) + strlen(newpath) + 1;
-	p = PSCALLOC(len);
-	rc = snprintf(p, len, "%s%s%s", path ? path : "",
-	    path && path[0] != '\0' ? ":" : "", newpath);
-	if (rc == -1)
-		err(1, "%s", newpath);
-	else if (rc >= (int)len)
-		errx(1, "impossible");
-	if (setenv("PATH", p, 1) == -1)
-		err(1, "setenv");
-	PSCFREE(p);
-}
-
 /*
  * Use system() calls to import pool and mount file systems.  Note that
- * the paths needed by the system() is built in at compile time and
- * added by append_path() at run time.
+ * the paths needed by the system() are compiled in to potentially avoid
+ * system binaries (e.g. fZFSOnLinux).
  *
  * We don't check WEXITSTATUS(rc) after a system() call because
  * sometimes the ZFS tool can return an error (e.g. EEXIST) even if the
@@ -167,8 +145,11 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
-	rc = pfl_systemf("zpool import -f -c '%s' '%s'",
-	    zfspoolcf ?  zfspoolcf : "", zpoolname);
+	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
+	    zfspoolcf ? "-c '" : "",
+	    zfspoolcf ? zfspoolcf : "",
+	    zfspoolcf ? "'" : "",
+	    zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to import zpool "
 		    "%s: %s", zpoolname, cmdbuf);
@@ -418,7 +399,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char *zpcachefn = NULL, *zpname, *estr;
+	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int rc, vfsid, c, found;
 	struct psc_thread *thr;
@@ -436,8 +417,10 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLMSS_UPSCH, "upsch");
 	psc_subsys_register(SLMSS_INFO, "info");
 
-	append_path(ZFS_BIN_PATH);
-	append_path(ZPOOL_PATH);
+	rc = pfl_asprintf(&path_env, "%s:%s:%s", ZFS_BIN_PATH,
+	    ZPOOL_PATH, getenv("PATH"));
+	psc_assert(rc != -1);
+	setenv("PATH", path_env, 1);
 
 	sfn = SL_PATH_SLMCTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
