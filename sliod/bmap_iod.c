@@ -113,12 +113,12 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	uint64_t seqno;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmapminseq_req *mq;
 	struct srm_getbmapminseq_rep *mp;
 	struct timespec crtime;
+	uint64_t seqno;
 	int rc;
 
 	OPSTAT_INCR("bim-getcurseq");
@@ -167,9 +167,9 @@ bim_getcurseq(void)
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
 		psc_waitq_wakeall(&bimSeq.bim_waitq);
 		if (rc) {
+			freelock(&bimSeq.bim_lock);
 			psclog_warnx("failed to get bmap seqno rc=%d",
 			    rc);
-			freelock(&bimSeq.bim_lock);
 			sleep(1);
 			goto retry;
 		}
