@@ -725,9 +725,9 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 		return (1);
 	}
 	if (r->res_type == SLREST_MDS)
-		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
-	else
 		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	else
+		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
 	if (csvc)
 		sl_csvc_decref(csvc);
