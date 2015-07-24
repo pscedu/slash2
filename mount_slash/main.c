@@ -1471,7 +1471,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_refcnt--;
 		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 		DIRCACHE_ULOCK(d);
-	}
+	} else
+		PSCFREE(base);
 }
 
 int

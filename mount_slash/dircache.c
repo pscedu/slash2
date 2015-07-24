@@ -492,7 +492,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_pool_return(dircache_ent_pool, dce);
 		psc_dynarray_free(da_off);
 		PSCFREE(da_off);
-		PSCFREE(base);
 		return (0);
 	}
 
