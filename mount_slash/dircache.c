@@ -524,8 +524,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
-	p->dcp_refcnt--;
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
 	return (1);

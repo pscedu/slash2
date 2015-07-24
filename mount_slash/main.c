@@ -1465,8 +1465,13 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		msl_fcmh_stash_xattrsize(f, e->xattrsize);
 		fcmh_op_done(f);
 	}
-	if (registered)
-		psc_realloc(base, size, 0);
+	if (registered) {
+		DIRCACHE_WRLOCK(d);
+		p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+		p->dcp_refcnt--;
+		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
+		DIRCACHE_ULOCK(d);
+	}
 }
 
 int
