@@ -334,26 +334,6 @@ struct slm_wkdata_rmdir_ino {
 	slfid_t			 fid;
 };
 
-/* this is used for two different calling interfaces */
-struct slm_wkdata_readdir {
-	struct pscrpc_export	*exp;
-	struct slrpc_cservice	*csvc;
-
-	/* for running mdsio_readdir() */
-	struct sl_fidgen	 fg;
-	off_t			 off;
-	size_t			 size;
-
-	/* for sending async RPC */
-	struct iovec		 iov[2];
-	int			 num;
-	int			 eof;
-
-	/* for readahead */
-	int			 ra;
-	off_t			 nextoff;
-};
-
 struct slm_batchscratch_repl {
 	int64_t			 bsr_amt;
 	int			 bsr_off;

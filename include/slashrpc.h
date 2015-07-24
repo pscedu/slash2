@@ -897,8 +897,6 @@ struct srm_readdir_req {
 	uint32_t		flags;
 } __packed;
 
-#define SRM_READDIRF_XATTR	(1 << 0)	/* client wants to know xattr */
-
 #define srm_replrq_rep		srm_generic_rep
 
 struct srm_readdir_rep {

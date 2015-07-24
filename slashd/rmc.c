@@ -1832,8 +1832,6 @@ mexpc_allocpri(struct pscrpc_export *exp)
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
 	slm_getclcsvc(exp);
-	for (i = 0; i < nitems(mexpc->mexpc_readdir_past); i++)
-		mexpc->mexpc_readdir_past[i].crap_fid = FID_ANY;
 }
 
 struct sl_expcli_ops sl_expcli_ops = {

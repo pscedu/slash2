@@ -55,7 +55,7 @@ struct slvr {
 	/*
 	 * KISS: A sliver marked with an error must be freed. Otherwise, we
 	 * run the risk of turning a transient error into a longer-time error.
-	 */ 	
+	 */
 	 int32_t		 slvr_err;
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
@@ -69,14 +69,13 @@ struct slvr {
 
 /* slvr_flags */
 #define SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
-#define SLVR_PINNED		(1 <<  1)	/* active references or CRC dirty */
-#define SLVR_DATARDY		(1 <<  2)	/* ready for read / write activity */
-#define SLVR_DATAERR		(1 <<  3)
-#define SLVR_LRU		(1 <<  4)	/* cached but not dirty */
-#define SLVR_CRCDIRTY		(1 <<  5)	/* CRC does not match cached buffer */
-#define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
-#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead prediction */
-#define SLVRF_ACCESSED		(1 <<  8)	/* actually used by a client */
+#define SLVR_DATARDY		(1 <<  1)	/* ready for read / write activity */
+#define SLVR_DATAERR		(1 <<  2)
+#define SLVR_LRU		(1 <<  3)	/* cached but not dirty */
+#define SLVR_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
+#define SLVR_FREEING		(1 <<  5)	/* sliver is being reaped */
+#define SLVRF_READAHEAD		(1 <<  6)	/* loaded via readahead prediction */
+#define SLVRF_ACCESSED		(1 <<  7)	/* actually used by a client */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -127,7 +126,7 @@ struct slvr {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu ref=%u "		\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "bii=%p slab=%p bmap=%p fid="SLPRI_FID" iocb=%p flgs="	\
-	    "%s%s%s%s%s%s%s :: " fmt,					\
+	    "%s%s%s%s%s%s%s%s :: " fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_refcnt,			\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
 	    (s)->slvr_bii, (s)->slvr_slab,				\
@@ -136,12 +135,13 @@ struct slvr {
 	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
 	    (s)->slvr_iocb,						\
 	    (s)->slvr_flags & SLVR_FAULTING	? "f" : "-",		\
-	    (s)->slvr_flags & SLVR_PINNED	? "p" : "-",		\
 	    (s)->slvr_flags & SLVR_DATARDY	? "d" : "-",		\
 	    (s)->slvr_flags & SLVR_DATAERR	? "E" : "-",		\
 	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
+	    (s)->slvr_flags & SLVRF_READAHEAD	? "R" : "-",		\
+	    (s)->slvr_flags & SLVRF_ACCESSED	? "a" : "-",		\
 	    ##__VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
