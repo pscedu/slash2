@@ -904,24 +904,12 @@ struct srm_readdir_req {
 struct srm_readdir_rep {
 	uint64_t		size;		/* sum of dirents, XXX make 32-bit */
 	uint32_t		eof:1;		/* flag: directory read EOF */
-	uint32_t		num:31;		/* #dirents returned */
+	uint32_t		nents:31;	/* #dirents returned */
 	 int32_t		rc;
 	unsigned char		ents[824];
 /* XXX ents should be in a portable format, not fuse_dirent */
 /* XXX ents is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
 } __packed;
-
-struct srm_readdir_ra_req {
-	struct sl_fidgen	fg;
-	 int64_t		offset;		// XXX rename cookie
-	uint32_t		size;
-	uint32_t		eof:1;		/* flag: directory read EOF */
-	uint32_t		num:31;		/* #dirents returned */
-/* XXX bulk data should be in a portable format, not fuse_dirent */
-/* XXX bulk data is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
-};
-
-#define srm_readdir_ra_rep	srm_generic_rep
 
 struct srm_readlink_req {
 	struct sl_fidgen	fg;

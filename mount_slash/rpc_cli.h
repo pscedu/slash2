@@ -52,6 +52,7 @@ enum {
 #define MSL_READDIR_CBARG_CSVC		0
 #define MSL_READDIR_CBARG_FCMH		1
 #define MSL_READDIR_CBARG_PAGE		2
+#define MSL_READDIR_CBARG_DENTBUF	3
 
 /* RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8

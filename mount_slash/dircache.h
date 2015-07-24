@@ -100,8 +100,16 @@ struct dircache_page {
 #define DIRCACHE_UREQLOCK(d, l)	pfl_rwlock_ureqlock(fcmh_2_dc_rwlock(d), (l))
 #define DIRCACHE_RDLOCK(d)	pfl_rwlock_rdlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_ULOCK(d)	pfl_rwlock_unlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_WAKE(d)	psc_waitq_wakeall(&(d)->fcmh_waitq)
 #define DIRCACHE_WR_ENSURE(d)	psc_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
+
+#define DIRCACHE_WAKE(d)						\
+	do {								\
+		int _waslocked;						\
+									\
+		_waslocked = DIRCACHE_REQWRLOCK(d);			\
+		psc_waitq_wakeall(&(d)->fcmh_waitq);			\
+		DIRCACHE_UREQLOCK((d), _waslocked);			\
+	} while (0)
 
 #define DIRCACHE_WAIT(d)						\
 	do {								\
@@ -225,7 +233,7 @@ int	_dircache_free_page(const struct pfl_callerinfo *,
 void	dircache_mgr_init(void);
 void	dircache_init(struct fidc_membh *);
 void	dircache_purge(struct fidc_membh *);
-void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
+int	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
 	    size_t, void *, size_t, int);
 void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),

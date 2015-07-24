@@ -436,7 +436,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  * @size: size of @base buffer.
  * @eof: whether this signifies the last READDIR for this directory.
  */
-void
+int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base, size_t size, int eof)
 {
@@ -493,7 +493,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_dynarray_free(da_off);
 		PSCFREE(da_off);
 		PSCFREE(base);
-		return;
+		return (0);
 	}
 
 	DYNARRAY_FOREACH(dce, i, da_off) {
@@ -528,6 +528,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
+	return (1);
 }
 
 /*

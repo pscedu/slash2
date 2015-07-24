@@ -313,7 +313,7 @@ slrpc_cb_extract_name(const char *s, int *len)
 	return (rpc + 1);
 }
 
-#define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
+#define SL_GET_RQ_STATUSF(csvc, rq, mp, flags, error)			\
 	do {								\
 		(mp) = NULL;						\
 		(error) = 0;						\
@@ -324,8 +324,8 @@ slrpc_cb_extract_name(const char *s, int *len)
 		if ((error) == 0 && (rq)->rq_err)			\
 			(error) = SLERR_RPCIO;				\
 		if ((error) == 0)					\
-			(error) = authbuf_check((rq),			\
-			    PSCRPC_MSG_REPLY, 0);			\
+			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY,	\
+			    (flags));					\
 		if ((error) == 0) {					\
 			(mp) = pscrpc_msg_buf((rq)->rq_repmsg, 0,	\
 			    sizeof(*(mp)));				\
@@ -366,6 +366,9 @@ slrpc_cb_extract_name(const char *s, int *len)
 			pfl_opstat_incr(_opst_ok);			\
 		}							\
 	} while (0)
+
+#define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
+	SL_GET_RQ_STATUSF((csvc), (rq), (mp), 0, (error))
 
 #define SL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
 	do {								\
