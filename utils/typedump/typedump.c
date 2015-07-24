@@ -333,7 +333,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
 	PRTYPE(struct srm_ping_req);
-	PRTYPE(struct srm_readdir_ra_req);
 	PRTYPE(struct srm_readdir_rep);
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
@@ -571,6 +570,7 @@ main(int argc, char *argv[])
 	PRVAL(MSL_CBARG_CSVC);
 	PRVAL(MSL_CBARG_RESM);
 	PRVAL(MSL_READDIR_CBARG_CSVC);
+	PRVAL(MSL_READDIR_CBARG_DENTBUF);
 	PRVAL(MSL_READDIR_CBARG_FCMH);
 	PRVAL(MSL_READDIR_CBARG_PAGE);
 	PRVAL(MS_READAHEAD_MAXPGS);
