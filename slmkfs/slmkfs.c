@@ -216,7 +216,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-iW] [-I siteid:resid] [-u fsuuid] fsroot\n",
+	    "usage: %s [-iW] [-R siteid:resid] [-u fsuuid] fsroot\n",
 	    progname);
 	exit(1);
 }
@@ -231,9 +231,10 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "iI:u:W")) != -1)
+	while ((c = getopt(argc, argv, "iI:R:u:W")) != -1)
 		switch (c) {
 		case 'I':
+		case 'R':
 			s_resid = strchr(optarg, ':');
 			if (s_resid == NULL)
 				errx(1, "-I %s: ID must be specified in "

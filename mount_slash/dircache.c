@@ -371,7 +371,6 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 				 * Someone is already taking care of
 				 * this page for us.
 				 */
-				DIRCACHE_ULOCK(d);
 				p = NULL;
 				goto out;
 			}
@@ -437,7 +436,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  * @size: size of @base buffer.
  * @eof: whether this signifies the last READDIR for this directory.
  */
-void
+int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base, size_t size, int eof)
 {
@@ -493,8 +492,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_pool_return(dircache_ent_pool, dce);
 		psc_dynarray_free(da_off);
 		PSCFREE(da_off);
-		PSCFREE(base);
-		return;
+		return (0);
 	}
 
 	DYNARRAY_FOREACH(dce, i, da_off) {
@@ -525,10 +523,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
-	p->dcp_refcnt--;
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
+	return (1);
 }
 
 /*

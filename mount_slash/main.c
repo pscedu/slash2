@@ -1433,14 +1433,18 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 
 void
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
-    int eof, int nents, int size, struct iovec *iov)
+    int eof, int nents, int size, void *base)
 {
+	int i, rc, registered;
 	struct srt_readdir_ent *e;
 	struct fidc_membh *f;
-	int i, rc;
+	void *ebase;
 
-	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
-	for (i = 0, e = iov[1].iov_base; i < nents; i++, e++) {
+	ebase = PSC_AGP(base, size);
+
+	registered = dircache_reg_ents(d, p, nents, base, size, eof);
+	DIRCACHE_WAKE(d);
+	for (i = 0, e = ebase; i < nents; i++, e++) {
 		if (e->sstb.sst_fid == FID_ANY ||
 		    e->sstb.sst_fid == 0) {
 			DEBUG_SSTB(PLL_WARN, &e->sstb,
@@ -1461,47 +1465,74 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		msl_fcmh_stash_xattrsize(f, e->xattrsize);
 		fcmh_op_done(f);
 	}
+	if (registered) {
+		DIRCACHE_WRLOCK(d);
+		p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+		p->dcp_refcnt--;
+		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
+		DIRCACHE_ULOCK(d);
+	} else
+		PSCFREE(base);
 }
 
 int
 msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 {
+	struct iovec iov;
+	struct srm_readdir_req *mq;
+	struct srm_readdir_rep *mp;
 	struct slashrpc_cservice *csvc = av->pointer_arg[MSL_READDIR_CBARG_CSVC];
 	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
-	struct srm_readdir_req *mq;
-	struct srm_readdir_rep *mp;
+	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
 	int rc;
 
-	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	SL_GET_RQ_STATUSF(csvc, rq, mp,
+	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK, rc);
 
 	if (rc) {
+ error:
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 		msl_readdir_error(d, p, rc);
 	} else {
+		size_t len;
+
+		len = mp->size + mp->nents *
+		    sizeof(struct srt_readdir_ent);
+
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-		if (SRM_READDIR_BUFSZ(mp->size, mp->num) <=
+		if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <=
 		    sizeof(mp->ents)) {
-			struct iovec iov[2];
-
-			iov[0].iov_base = PSCALLOC(mp->size);
-			memcpy(iov[0].iov_base, mp->ents, mp->size);
-			iov[1].iov_base = mp->ents + mp->size;
-			msl_readdir_finish(d, p, mp->eof, mp->num,
-			    mp->size, iov);
-
 			OPSTAT_INCR("readdir-piggyback");
-		} else {
-			DIRCACHE_WRLOCK(d);
-			p->dcp_refcnt--;
-			PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decr");
-			DIRCACHE_ULOCK(d);
 
-			OPSTAT_INCR("readdir-wait-reply");
+			memcpy(dentbuf, mp->ents, len);
+		} else {
+			OPSTAT_INCR("readdir-bulk-reply");
+
+			iov.iov_base = dentbuf;
+			iov.iov_len = len;
+			rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
+			    &iov, 1);
+			if (rc)
+				PFL_GOTOERR(error, rc);
+
+#if 0
+			if (d->fcmh_sstb.sst_fg.fg_gen !=
+			    mq->fg.fg_gen) {
+				OPSTAT_INCR("readdir-stale");
+				PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
+			}
+#endif
 		}
+		msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size,
+		    dentbuf);
+		dentbuf = NULL;
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
+
+	PSCFREE(dentbuf);
+
 	return (0);
 }
 
@@ -1509,12 +1540,14 @@ int
 msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
     off_t off, size_t size, int wait)
 {
+	void *dentbuf = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_page *p;
-	int rc;
+	struct iovec iov;
+	int rc, nents;
 
 	p = dircache_new_page(d, off, wait);
 	if (p == NULL)
@@ -1525,25 +1558,49 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	MSL_RMC_NEWREQ_PFCC(pfcc, d, csvc, SRMT_READDIR, rq, mq, mp,
 	    rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out2, rc);
 
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
 
+	/*
+	 * Estimate the size of the statbufs.  Being wasteful most of
+	 * the time by overestimating is probably better than often
+	 * underestimating and missing some and imposing round trips for
+	 * GETATTRs when the application is likely to request them.
+	 */
+	nents = size / PFL_DIRENT_SIZE(sizeof(int));
+	iov.iov_len = size + nents * sizeof(struct srt_readdir_ent);
+	iov.iov_base = dentbuf = PSCALLOC(iov.iov_len);
+
+	/*
+	 * Set up an abortable RPC if the server denotes that the
+	 * contents can fit directly in the reply message.
+	 */
+	rq->rq_bulk_abortable = 1;
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov,
+	    1);
+	if (rc)
+		PFL_GOTOERR(out1, rc);
+
 	rq->rq_interpret_reply = msl_readdir_cb;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_DENTBUF] = dentbuf;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		return (0);
 
+ out1:
+	PSCFREE(dentbuf);
+
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
 
- out:
+ out2:
 	DIRCACHE_WRLOCK(d);
 	dircache_free_page(d, p);
 	DIRCACHE_ULOCK(d);
@@ -1844,9 +1901,24 @@ msl_flush(struct msl_fhent *mfh, int all)
 
 	f = mfh->mfh_fcmh;
 
+  restart:
+
+	DYNARRAY_FOREACH(b, i, &a) {
+		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
+	}
+	psc_dynarray_reset(&a);
+
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		BMAP_LOCK(b);
+		/*
+		 * Avoid a deadlock with the bmap release thread who
+		 * will grab locks on multiple bmaps simultaneously.
+		 */
+		if (!BMAP_TRYLOCK(b)) {
+			pfl_rwlock_unlock(&f->fcmh_rwlock);
+			OPSTAT_INCR("flush-backout");
+			goto restart;
+		}
 		if (!(b->bcm_flags & BMAPF_TOFREE)) {
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 			psc_dynarray_add(&a, b);
@@ -2907,15 +2979,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * but still held by the kernel.  Whenever we evict, we
 		 * should clear the kernel cache too.
 		 */
+#if 0
 		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
 		    fcmh_isdir(c)) {
 			struct msl_dc_inv_entry_data mdie;
 
 			mdie.mdie_pfr = pfr;
 			mdie.mdie_pinum = fcmh_2_fid(c);
-//			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
-//			    NULL);
+			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
+			    NULL);
 		}
+#endif
 
 		fcmh_op_done(c);
 	}
