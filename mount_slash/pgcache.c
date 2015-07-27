@@ -359,7 +359,6 @@ bmpc_freeall(struct bmap *b)
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
 
-	//BMAP_LOCK_ENSURE(b);
 	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
