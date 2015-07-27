@@ -160,14 +160,13 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
-	int locked;
 
 	if (dce->dce_page == NULL)
 		freedent = dce->dce_pfd;
 
 	fci = fcmh_2_fci(d);
 	p = dce->dce_page;
-	locked = DIRCACHE_REQWRLOCK(d);
+	DIRCACHE_WRLOCK(d);
 	if (p) {
 		a = p->dcp_dents_off;
 
@@ -183,7 +182,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 		dce2 = psc_dynarray_getpos(a, dce->dce_index);
 		dce2->dce_index = dce->dce_index;
 	}
-	DIRCACHE_UREQLOCK(d, locked);
+	DIRCACHE_ULOCK(d);
 
 	if (freedent)
 		PSCFREE(dce->dce_pfd);
@@ -495,6 +494,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		return (0);
 	}
 
+	DIRCACHE_ULOCK(d);
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
@@ -507,6 +507,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	}
 
+	DIRCACHE_WRLOCK(d);
 	psc_assert(p->dcp_dents_off == NULL);
 
 	if (dirent)
