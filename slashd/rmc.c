@@ -1828,7 +1828,6 @@ void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
-	int i;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
 	slm_getclcsvc(exp);
