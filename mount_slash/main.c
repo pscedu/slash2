@@ -429,10 +429,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psclog_diag("pfid="SLPRI_FID" fid="SLPRI_FID" "
-	    "mode=%#o name='%s' rc=%d", pinum,
-	    mp->cattr.sst_fg.fg_fid, mode, name, rc);
-
 	slc_fcmh_setattr(p, &mp->pattr);
 
 	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
@@ -512,8 +508,10 @@ fci->fci_inode.nrepls = 1;
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
-	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x "
-	    "flag=%#o rc=%d", pinum, name, mode, oflags, rc);
+	psclogs_diag(SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
+	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
+	    rc);
 
 	if (c)
 		fcmh_op_done(c);
@@ -837,8 +835,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 
-	psclog_diag("link cfid="SLPRI_FID" pfid="SLPRI_FID" "
-	    " name='%s' rc=%d",
+	psclogs_diag(SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
+	    "pfid="SLPRI_FID" name='%s' rc=%d",
 	    c_inum, p_inum, newname, rc);
 
 	if (c)
@@ -935,8 +933,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 
-	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", "
-	    "mode=%#o, name='%s', rc=%d",
+	psclogs_diag(SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
+	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
 	if (c)
@@ -1001,7 +999,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*sstb = f->fcmh_sstb;
 
  out:
-	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' "
+	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
@@ -1203,8 +1201,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
-	struct srm_unlink_rep *mp;
 	struct pscfs_creds pcr;
 	int rc;
 
@@ -1289,12 +1287,12 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		namecache_delete(p, name);
 	}
 
-	psclog_diag("delete: pinum="SLPRI_FID" fid="SLPRI_FG" valid=%d "
-	    "name='%s' isfile=%d rc=%d",
-	    pinum, SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name,
-	    isfile, rc);
-
  out:
+	psclogs_diag(SLCSS_FSOP, "DELETE: pinum="SLPRI_FID" "
+	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
+	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
+	    mp ? mp->valid : -1, name, isfile, rc);
+
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -1382,10 +1380,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psclog_info("mknod pfid="SLPRI_FID" mode=%#o name='%s' rc=%d "
-	    "mp->rc=%d",
-	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
-
 	slc_fcmh_setattr(p, &mp->pattr);
 
 	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
@@ -1403,6 +1397,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
+
+	psclogs_diag(SLCSS_FSOP, "MKNOD: pfid="SLPRI_FID" "
+	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
+	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
 	if (c)
 		fcmh_op_done(c);
@@ -2321,7 +2319,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srt_stat srcsstb, dstsstb;
 	struct sl_fidgen srcfg, dstfg;
 	struct srm_rename_req *mq;
-	struct srm_rename_rep *mp;
+	struct srm_rename_rep *mp = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
 	int sticky, rc;
@@ -2506,6 +2504,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
  out:
 	pscfs_reply_rename(pfr, rc);
 
+	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
+	    "npinum="SLPRI_FID" oldname='%s' newname='%s' rc=%d",
+	    opinum, npinum, oldname, newname, rc);
+
 	if (child)
 		fcmh_op_done(child);
 	if (op)
@@ -2665,6 +2667,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
+
+	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
+	    "cfid="SLPRI_FID" name='%s' rc=%d",
+	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
 
 	if (c)
 		fcmh_op_done(c);
@@ -2995,6 +3001,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
+
+	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
+	    "rc=%d", inum, to_set, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -3284,11 +3294,13 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		msl_fcmh_stash_xattrsize(f, 1);
 
  out:
-	if (f)
-		fcmh_op_done(f);
-
 	pscfs_reply_setxattr(pfr, rc);
 
+	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
+
+	if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -3461,6 +3473,9 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		fcmh_op_done(f);
 
 	pscfs_reply_removexattr(pfr, rc);
+
+	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -3806,6 +3821,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLCSS_INFO, "info");
+	psc_subsys_register(SLCSS_FSOP, "fsop");
 
 	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
 	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
