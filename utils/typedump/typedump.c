@@ -252,14 +252,12 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_inox_od);
 	PRTYPE(struct slm_nsstats);
 	PRTYPE(struct slm_progress);
-	PRTYPE(struct slm_readdir_ra_past);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_sth);
 	PRTYPE(struct slm_update_data);
 	PRTYPE(struct slm_update_generic);
 	PRTYPE(struct slm_wkdata_batchrq_cb);
 	PRTYPE(struct slm_wkdata_ptrunc);
-	PRTYPE(struct slm_wkdata_readdir);
 	PRTYPE(struct slm_wkdata_rmdir_ino);
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
@@ -333,7 +331,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
 	PRTYPE(struct srm_ping_req);
-	PRTYPE(struct srm_readdir_ra_req);
 	PRTYPE(struct srm_readdir_rep);
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
@@ -571,6 +568,7 @@ main(int argc, char *argv[])
 	PRVAL(MSL_CBARG_CSVC);
 	PRVAL(MSL_CBARG_RESM);
 	PRVAL(MSL_READDIR_CBARG_CSVC);
+	PRVAL(MSL_READDIR_CBARG_DENTBUF);
 	PRVAL(MSL_READDIR_CBARG_FCMH);
 	PRVAL(MSL_READDIR_CBARG_PAGE);
 	PRVAL(MS_READAHEAD_MAXPGS);
@@ -670,7 +668,6 @@ main(int argc, char *argv[])
 	PRVAL(SLVR_FAULTING);
 	PRVAL(SLVR_FREEING);
 	PRVAL(SLVR_LRU);
-	PRVAL(SLVR_PINNED);
 	PRVAL(SL_BITS_PER_REPLICA);
 	PRVAL(SL_DEF_REPLICAS);
 	PRVAL(SL_DEF_SNAPSHOTS);
@@ -746,7 +743,6 @@ main(int argc, char *argv[])
 	PRVAL(SRM_LEASEBMAPF_DATA);
 	PRVAL(SRM_LEASEBMAPF_DIO);
 	PRVAL(SRM_LEASEBMAPF_GETINODE);
-	PRVAL(SRM_READDIRF_XATTR);
 	PRVAL(SRM_RENAME_NAMEMAX);
 	PRVAL(SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	PRVAL(UPDF_BUSY);

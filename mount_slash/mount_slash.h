@@ -304,10 +304,6 @@ ssize_t	 slc_getxattr(const struct pscfs_clientctx *,
 	    const struct pscfs_creds *, const char *, void *, size_t,
 	    struct fidc_membh *, size_t *);
 
-void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);
-void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,
-	    int, int, struct iovec *);
-
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 

@@ -75,24 +75,9 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH_NENTS		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH_NENTS		2048			/* garbage reclamation */
 
-/*
- * Bookmark what was recently sent to the client for avoiding redundant
- * READDIR readahead activity.
- */
-struct slm_readdir_ra_past {
-	slfid_t				  crap_fid;
-	 int64_t			  crap_off;		/* d_off */
-	struct timespec			  crap_exp;		/* when to expire this entry */
-};
-
-#define CRAP_CLR_ACTIVE(crap)		((crap)->crap_exp.tv_nsec &= ~1)
-#define CRAP_SET_ACTIVE(crap)		((crap)->crap_exp.tv_nsec |= 1)
-#define CRAP_GET_ACTIVE(crap)		((crap)->crap_exp.tv_nsec & 1)
-
 struct slm_exp_cli {
 	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
 	uint32_t			  mexpc_stkvers;	/* must be second field */
-	struct slm_readdir_ra_past	  mexpc_readdir_past[3];
 };
 
 struct batchrq {

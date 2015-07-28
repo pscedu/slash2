@@ -79,9 +79,9 @@ mrsq_release(struct msctl_replstq *mrsq, int rc)
 	freelock(&mrsq->mrsq_lock);
 }
 
-/**
- * msrcm_handle_getreplst - Handle a GETREPLST request for CLI from MDS,
- *	which would have been initiated by a client request originally.
+/*
+ * Handle a GETREPLST request for CLI from MDS, which would have been
+ * initiated by a client request originally.
  * @rq: request.
  */
 int
@@ -127,10 +127,9 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * msrcm_handle_getreplst_slave - Handle a GETREPLST request for CLI
- *	from MDS, which would have been initiated by a client request
- *	originally.
+/*
+ * Handle a GETREPLST request for CLI from MDS, which would have been
+ * initiated by a client request originally.
  * @rq: request.
  */
 int
@@ -186,9 +185,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for CLI from
-	MDS.
+/*
+ * Handle a RELEASEBMAP request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -201,8 +199,8 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * msrcm_handle_bmap_wake - Handle a BMAP_WAKE request for CLI from MDS.
+/*
+ * Handle a BMAP_WAKE request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -229,8 +227,8 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * msrcm_handle_bmapdio - Handle a BMAPDIO request for CLI from MDS.
+/*
+ * Handle a BMAPDIO request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -287,70 +285,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	return (0);
 }
 
-int
-slc_rcm_handle_readdir(struct pscrpc_request *rq)
-{
-	struct srm_readdir_ra_req *mq;
-	struct srm_readdir_ra_rep *mp;
-	struct fidc_membh *d = NULL;
-	struct dircache_page *p;
-	struct iovec iov[2];
-
-	memset(iov, 0, sizeof(iov));
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-
-//	if (mq->num >=  || mq->size >= )
-//		PFL_GOTOERR(out, mp->rc = -EINVAL);
-
-	mp->rc = fidc_lookup_fg(&mq->fg, &d);
-	if (mp->rc)
-		PFL_GOTOERR(out2, mp->rc);
-
-	p = dircache_new_page(d, mq->offset, 0);
-	if (p == NULL) {
-		if (mq->size)
-			pscrpc_msg_add_flags(rq->rq_repmsg,
-			    MSG_ABORT_BULK);
-		OPSTAT_INCR("readdir-drop");
-		PFL_GOTOERR(out2, 0);
-	}
-
-	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
-		OPSTAT_INCR("readdir-stale");
-		PFL_GOTOERR(out1, mp->rc = -PFLERR_STALE);
-	}
-
-	iov[0].iov_base = PSCALLOC(mq->size);
-	iov[0].iov_len = mq->size;
-
-	iov[1].iov_len = mq->num * sizeof(struct srt_readdir_ent);
-	iov[1].iov_base = PSCALLOC(iov[1].iov_len);
-
-	if (mq->size)
-		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
-		    SRCM_BULK_PORTAL, iov, nitems(iov));
-
-	if (mp->rc) {
- out1:
-		msl_readdir_error(d, p, mp->rc);
-		PSCFREE(iov[0].iov_base);
-	} else
-		msl_readdir_finish(d, p, mq->eof, mq->num, mq->size,
-		    iov);
-
-	PSCFREE(iov[1].iov_base);
-
- out2:
-	if (d)
-		fcmh_op_done(d);
-	if (mp->rc)
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-	return (mp->rc);
-}
-
-/**
- * slc_rcm_handler - Handle a request for CLI from MDS.
+/*
+ * Handle a request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -359,7 +295,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slc_getmcsvcx(_resm, 0, rq->rq_export));
+	    slc_getmcsvcxf(_resm, 0, rq->rq_export));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 
@@ -374,10 +310,6 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_REPL_GETST_SLAVE:
 		rc = msrcm_handle_getreplst_slave(rq);
-		break;
-
-	case SRMT_READDIR:
-		rc = slc_rcm_handle_readdir(rq);
 		break;
 
 	case SRMT_RELEASEBMAP:

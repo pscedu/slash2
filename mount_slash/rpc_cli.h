@@ -52,6 +52,7 @@ enum {
 #define MSL_READDIR_CBARG_CSVC		0
 #define MSL_READDIR_CBARG_FCMH		1
 #define MSL_READDIR_CBARG_PAGE		2
+#define MSL_READDIR_CBARG_DENTBUF	3
 
 /* RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
@@ -99,7 +100,7 @@ enum {
 	    &(resm)->resm_nids, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
 	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw())
 
-#define slc_getmcsvcx(resm, fl, exp)					\
+#define slc_getmcsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
 	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_MDS, msl_getmw())
@@ -108,8 +109,11 @@ enum {
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
 #define slc_geticsvcf(resm, fl)		slc_geticsvcxf((resm), (fl), NULL)
 #define slc_geticsvc_nb(resm)		slc_geticsvcxf((resm), CSVCF_NONBLOCK, NULL)
-#define slc_getmcsvc(resm)		slc_getmcsvcx((resm), 0, NULL)
-#define slc_getmcsvc_nb(resm)		slc_getmcsvcx((resm), CSVC_NONBLOCK, NULL)
+
+#define slc_getmcsvcx(resm, exp)	slc_getmcsvcxf((resm), 0, (exp))
+#define slc_getmcsvc(resm)		slc_getmcsvcxf((resm), 0, NULL)
+#define slc_getmcsvcf(resm, fl)		slc_getmcsvcxf((resm), (fl), NULL)
+#define slc_getmcsvc_nb(resm)		slc_getmcsvcxf((resm), CSVCF_NONBLOCK, NULL)
 
 void	slc_rpc_initsvc(void);
 

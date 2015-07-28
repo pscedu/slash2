@@ -8,7 +8,7 @@ ctl=slmctl
 
 usage()
 {
-	echo "usage: $0 [-dgOv] [-F filter] [-P profile]" >&2
+	echo "usage: $0 [-dgOv] [-F filter] [-P deployment-profile]" >&2
 	exit 1
 }
 

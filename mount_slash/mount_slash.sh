@@ -8,7 +8,7 @@ ctl=msctl
 
 usage()
 {
-	echo "usage: $0 [-dgOv] [-F filter] [-P profile] [instance]" >&2
+	echo "usage: $0 [-dgOv] [-F filter] [-P deployment-profile] [instance]" >&2
 	exit 1
 }
 

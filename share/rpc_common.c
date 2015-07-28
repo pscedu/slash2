@@ -292,12 +292,12 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->version = csvc->csvc_version;
 	mq->stkvers = SL_STK_VERSION;
 
-	if (flags & CSVCF_NONBLOCK) {
-		CSVC_LOCK(csvc);
-		sl_csvc_incref(csvc);
-		csvc->csvc_tryref++;
-		CSVC_ULOCK(csvc);
+	CSVC_LOCK(csvc);
+	sl_csvc_incref(csvc);
+	csvc->csvc_tryref++;
+	CSVC_ULOCK(csvc);
 
+	if (flags & CSVCF_NONBLOCK) {
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[CBARG_STKVER] = stkversp;
@@ -911,7 +911,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				pscrpc_import_put(csvc->csvc_import);
 				csvc->csvc_import = NULL;
 			}
-			csvc->csvc_tryref = 1;
+			csvc->csvc_tryref++;
 		} else if (csvc->csvc_import == NULL)
 			csvc->csvc_import = slrpc_new_import(csvc);
 		CSVC_ULOCK(csvc);

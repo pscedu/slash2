@@ -160,14 +160,13 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
-	int locked;
 
 	if (dce->dce_page == NULL)
 		freedent = dce->dce_pfd;
 
 	fci = fcmh_2_fci(d);
 	p = dce->dce_page;
-	locked = DIRCACHE_REQWRLOCK(d);
+	DIRCACHE_WRLOCK(d);
 	if (p) {
 		a = p->dcp_dents_off;
 
@@ -183,7 +182,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 		dce2 = psc_dynarray_getpos(a, dce->dce_index);
 		dce2->dce_index = dce->dce_index;
 	}
-	DIRCACHE_UREQLOCK(d, locked);
+	DIRCACHE_ULOCK(d);
 
 	if (freedent)
 		PSCFREE(dce->dce_pfd);
@@ -367,9 +366,12 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			if (p->dcp_off == off) {
-				/* Page is waiting for us; use it. */
-				p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-				break;
+				/*
+				 * Someone is already taking care of
+				 * this page for us.
+				 */
+				p = NULL;
+				goto out;
 			}
 
 			if (wait) {
@@ -433,7 +435,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  * @size: size of @base buffer.
  * @eof: whether this signifies the last READDIR for this directory.
  */
-void
+int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base, size_t size, int eof)
 {
@@ -489,10 +491,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_pool_return(dircache_ent_pool, dce);
 		psc_dynarray_free(da_off);
 		PSCFREE(da_off);
-		PSCFREE(base);
-		return;
+		return (0);
 	}
 
+	DIRCACHE_ULOCK(d);
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
@@ -505,6 +507,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	}
 
+	DIRCACHE_WRLOCK(d);
 	psc_assert(p->dcp_dents_off == NULL);
 
 	if (dirent)
@@ -521,10 +524,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
-	p->dcp_refcnt--;
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
+	return (1);
 }
 
 /*

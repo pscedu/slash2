@@ -713,8 +713,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 }
 
 void
-slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
-    size_t nents)
+slm_rmc_handle_readdir_roots(struct iovec *iov, size_t nents)
 {
 	struct srt_stat tmpattr, *attr;
 	struct pscfs_dirent *dirent;
@@ -724,10 +723,9 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 	uint64_t fid;
 	int error;
 
-	attr = iov1->iov_base;
-	dirent = iov0->iov_base;
+	dirent = iov[0].iov_base;
+	attr = iov[1].iov_base;
 	for (i = 0; i < nents; i++) {
-
 		rn = slm_rmc_search_roots(dirent->pfd_name);
 		if (rn) {
 			mountinfo = &zfs_mounts[rn->rn_vfsid];
@@ -752,288 +750,165 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 	}
 }
 
-#define RCM_READDIR_CBARGP_CSVC		0
-#define RCM_READDIR_CBARGP_EXP		1
-#define RCM_READDIR_CBARGP_BASE_DENTS	2
-#define RCM_READDIR_CBARGP_BASE_ATTR	3
-
-#define RCM_READDIR_CBARGI_NEXTOFF	0
-#define RCM_READDIR_CBARGI_DECR		1
-
-int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *,
-	size_t, off_t, size_t *, int *, int *, unsigned char *, size_t,
-	int);
-
-/*
- * Issue a READDIR "request" to client, which actually contains the
- * readdir contents the client requested.
- */
-int
-slm_rcm_issue_readdir_wk(void *p)
+void
+slm_rmc_handle_readdir_global_mount(struct srm_readdir_rep *mp,
+    struct iovec *iov)
 {
-	struct slm_wkdata_readdir *wk = p;
-	struct srm_readdir_ra_req *mq;
-	struct srm_readdir_ra_rep *mp;
-	struct pscrpc_request *rq;
-	int rc;
+	struct srt_readdir_ent *attr;
+	struct pscfs_dirent *dirent;
+	struct sl_site *site;
+	int i, nsite = 0;
+	off_t entoff = 0;
+	size_t entsize;
+	uint64_t fid;
 
-	rc = SL_RSX_NEWREQ(wk->csvc, SRMT_READDIR, rq, mq, mp);
-	if (rc) {
-		sl_csvc_decref(wk->csvc);
-		goto out;
-	}
-	mq->fg = wk->fg;
-	mq->offset = wk->off;
-	mq->size = wk->size;
-	mq->eof = wk->eof;
-	mq->num = wk->num;
+	CONF_LOCK();
+	CONF_FOREACH_SITE(site)
+		nsite++;
+	CONF_ULOCK();
 
-	rq->rq_interpret_reply = slm_rcmc_readdir_cb;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_CSVC] = wk->csvc;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS] =
-	    wk->iov[0].iov_base;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR] =
-	    wk->iov[1].iov_base;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_EXP] =
-	    pscrpc_export_get(wk->exp);
-	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
-	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
-	if (wk->iov[0].iov_len) {
-		rq->rq_bulk_abortable = 1;
-		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
-		    SRCM_BULK_PORTAL, wk->iov, nitems(wk->iov));
-	} else
-		psc_assert(wk->eof);
-	if (rc == 0)
-		rc = SL_NBRQSET_ADD(wk->csvc, rq);
-	if (rc) {
-		if (wk->iov[0].iov_len)
-			pscrpc_abort_bulk(rq->rq_bulk);
-		pscrpc_req_finished(rq);
-		sl_csvc_decref(wk->csvc);
-		pscrpc_export_put(wk->exp);
-	}
+	mp->nents = nsite + 2;
+	iov[1].iov_base = PSCALLOC((nsite + 2) * sizeof(*attr));
+	dirent = iov[0].iov_base;
+	attr = iov[1].iov_base;
 
- out:
-	if (rc) {
-		PSCFREE(wk->iov[0].iov_base);
-		PSCFREE(wk->iov[1].iov_base);
+	for (i = 0; i < 2; i++) {
+		dirent->pfd_ino = SLFID_ROOT;
+		dirent->pfd_type = S_IFDIR;
+		dirent->pfd_off = entoff;
+		if (i == 0) {
+			dirent->pfd_namelen = 1;
+			strcpy(dirent->pfd_name, ".");
+		} else {
+			dirent->pfd_namelen = 2;
+			strcpy(dirent->pfd_name, "..");
+		}
+		entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
+		dirent = PSC_AGP(dirent, entsize);
+		entoff += entsize;
+
+		attr->xattrsize = 0;
+		attr->sstb.sst_fg.fg_fid = SLFID_ROOT;
+		attr->sstb.sst_fg.fg_gen = 2;
+		slm_root_attributes(&attr->sstb);
+		attr->sstb.sst_nlink = 2 + nsite;
+		attr++;
 	}
-	pscrpc_export_put(wk->exp);
-	return (0);
+	CONF_LOCK();
+	CONF_FOREACH_SITE(site) {
+		fid = SLFID_ROOT;
+		FID_SET_SITEID(fid, site->site_id);
+
+		dirent->pfd_ino = fid;
+		dirent->pfd_type = S_IFDIR;
+		dirent->pfd_off = entoff;
+		dirent->pfd_namelen = strlen(site->site_name);
+		/* XXX this code does buffer size handling all wrong. */
+		strcpy(dirent->pfd_name, site->site_name);
+		entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
+		dirent = PSC_AGP(dirent, entsize);
+		entoff += entsize;
+
+		attr->xattrsize = 0;
+		attr->sstb.sst_fg.fg_fid = fid;
+		attr->sstb.sst_fg.fg_gen = 2;
+		slm_root_attributes(&attr->sstb);
+		attr++;
+	}
+	CONF_ULOCK();
+
+	mp->eof = 1;
+	mp->size = entoff;
+	iov[0].iov_len = entoff;
+	iov[1].iov_len = (nsite + 2) * sizeof(struct srt_stat);
 }
 
-/*
- * Callback run signifying client completion of receiving a bulk READDIR.
- */
 int
-slm_rcmc_readdir_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *av)
-{
-	int i, rc, decr = av->space[RCM_READDIR_CBARGI_DECR];
-	off_t nextoff = av->space[RCM_READDIR_CBARGI_NEXTOFF];
-	void *base_attr = av->pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR];
-	void *base_dents = av->pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS];
-	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
-	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
-	struct srm_readdir_ra_req *mq;
-	struct slm_exp_cli *mexpc;
-
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	PSCFREE(base_dents);
-	PSCFREE(base_attr);
-	sl_csvc_decref(csvc);
-	return (0);
-}
-
-/*
- * Perform a READDIR and setup an async RPC to send it to a client.
- */
-int
-slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
-    size_t size, off_t off, size_t *outsize, int *nents, int *eof,
-    unsigned char *piggybuf, size_t piggysize, int ra)
+slm_rmc_handle_readdir(struct pscrpc_request *rq)
 {
 	struct fidc_membh *f = NULL;
+	struct srm_readdir_req *mq;
+	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
-	off_t nextoff;
-	int i, rc, nsite, vfsid;
-	struct sl_site *site;
-
-	uint64_t fid;
-	size_t entsize;
-	off_t entoff = 0;
-	struct pscfs_dirent *dirent;
-	struct srt_readdir_ent *attr;
-	struct timespec now;
+	off_t dummy;
+	int vfsid;
 
 	memset(iov, 0, sizeof(iov));
 
-	rc = slfid_to_vfsid(fgp->fg_fid, &vfsid);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->size > LNET_MTU)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	if (mq->fg.fg_fid == FID_ANY)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	rc = -slm_fcmh_get(fgp, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+#if 0
+	/* If we are too busy, drop readahead work. */
+	if (mq->ra && we_are_busy)
+		PFL_GOTOERR(out, mp->rc = -EAGAIN);
+#endif
 
-	iov[0].iov_base = PSCALLOC(size);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	iov[0].iov_base = PSCALLOC(mq->size);
 
 	/*
 	 * Ensure things are populated under the root before handling
 	 * subdirs.
 	 */
-	if (fgp->fg_fid == SLFID_ROOT)
+	if (mq->fg.fg_fid == SLFID_ROOT)
 		psc_scan_filesystems();
 
-	if (fgp->fg_fid == SLFID_ROOT && use_global_mount) {
-
-		nsite = 0;
-		CONF_LOCK();
-		CONF_FOREACH_SITE(site) {
-			nsite++;
-		}
-		CONF_ULOCK();
-
-		*nents = nsite + 2;
-		iov[1].iov_base = PSCALLOC((nsite + 2) * sizeof(struct srt_readdir_ent));
-		attr = iov[1].iov_base;
-		dirent = iov[0].iov_base;
-
-		PFL_GETTIMESPEC(&now);
-
-		for (i = 0; i < 2; i++) {
-
-			dirent->pfd_ino = SLFID_ROOT;
-			dirent->pfd_type = S_IFDIR;
-			dirent->pfd_off = entoff;
-			if (i == 0) {
-				dirent->pfd_namelen = 1;
-				strcpy(dirent->pfd_name, ".");
-			} else {
-				dirent->pfd_namelen = 2;
-				strcpy(dirent->pfd_name, "..");
-			}
-			entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
-			dirent = PSC_AGP(dirent, entsize);
-			entoff += entsize;
-
-			attr->xattrsize = 0;
-			attr->sstb.sst_fg.fg_fid = SLFID_ROOT;
-			attr->sstb.sst_fg.fg_gen = 2;
-			slm_root_attributes(&attr->sstb);
-			attr->sstb.sst_nlink = 2 + nsite;
-			attr++;
-		}
-		CONF_LOCK();
-		CONF_FOREACH_SITE(site) {
-			fid = SLFID_ROOT;
-			FID_SET_SITEID(fid, site->site_id);
-
-			dirent->pfd_ino = fid;
-			dirent->pfd_type = S_IFDIR;
-			dirent->pfd_off = entoff;
-			dirent->pfd_namelen = strlen(site->site_name);
-			strcpy(dirent->pfd_name, site->site_name);
-			entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
-			dirent = PSC_AGP(dirent, entsize);
-			entoff += entsize;
-
-			attr->xattrsize = 0;
-			attr->sstb.sst_fg.fg_fid = fid;
-			attr->sstb.sst_fg.fg_gen = 2;
-			slm_root_attributes(&attr->sstb);
-			attr++;
-		}
-		CONF_ULOCK();
-
-		*eof = 1;
-		*outsize = entoff;
-		iov[0].iov_len = entoff;
-		iov[1].iov_len = (nsite + 2)* sizeof(struct srt_stat);
-
+	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
+		slm_rmc_handle_readdir_global_mount(mp, iov);
 	} else {
+		int nents, eof;
 
-		rc = mdsio_readdir(vfsid, &rootcreds, size, off,
-		    iov[0].iov_base, outsize, nents, &iov[1], eof, &nextoff,
-		    fcmh_2_mfh(f));
-		if (rc)
-			PFL_GOTOERR(out, rc);
+		mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size,
+		    mq->offset, iov[0].iov_base, &mp->size, &nents,
+		    &iov[1], &eof, &dummy, fcmh_2_mfh(f));
+		if (mp->rc)
+			PFL_GOTOERR(out, mp->rc);
+		mp->nents = nents;
+		mp->eof = eof;
 
-		iov[0].iov_len = *outsize;
+		iov[0].iov_len = mp->size;
 
 		/*
 		 * If this is a request for the root, we fake part of
 		 * the readdir contents by returning the file system
 		 * names here.
 		 */
-		if (fgp->fg_fid == SLFID_ROOT)
-			slm_rmc_handle_readdir_roots(&iov[0], &iov[1],
-			    *nents);
+		if (mq->fg.fg_fid == SLFID_ROOT)
+			slm_rmc_handle_readdir_roots(iov, mp->nents);
 	}
-
-	if (piggybuf &&
-	    SRM_READDIR_BUFSZ(*outsize, *nents) <= piggysize) {
-		memcpy(piggybuf, iov[0].iov_base, *outsize);
-		memcpy(piggybuf + *outsize, iov[1].iov_base,
-		    *nents * sizeof(struct srt_readdir_ent));
-	} else {
-		struct slashrpc_cservice *csvc;
-		struct slm_wkdata_readdir *wk;
-
-		csvc = slm_getclcsvc(exp);
-		if (csvc == NULL)
-			goto out;
-
-		wk = pfl_workq_getitem(slm_rcm_issue_readdir_wk,
-		    struct slm_wkdata_readdir);
-		wk->exp = pscrpc_export_get(exp);
-		wk->csvc = csvc;
-		wk->fg = *fgp;
-		wk->off = off;
-		wk->size = *outsize;
-		wk->nextoff = nextoff;
-		wk->num = *nents;
-		wk->ra = ra;
-		memcpy(wk->iov, iov, sizeof(iov));
-		wk->eof = *eof;
-		iov[0].iov_base = NULL;
-		iov[1].iov_base = NULL;
-		pfl_workq_putitem(wk);
-	}
-
- out:
-	PSCFREE(iov[0].iov_base);
-	PSCFREE(iov[1].iov_base);
-	if (f)
-		fcmh_op_done(f);
-	return (rc);
-}
-
-int
-slm_rmc_handle_readdir(struct pscrpc_request *rq)
-{
-	struct srm_readdir_req *mq;
-	struct srm_readdir_rep *mp;
-	int eof, num;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->size > LNET_MTU)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	/*
-	 * XXX Check if currently being processed (on workq) and wait.
+	 * If the readdir contents are small enough to fit directly into
+	 * the reply message, cancel the bulk.
 	 */
-
-	mp->rc = slm_readdir_issue(rq->rq_export, &mq->fg, mq->size,
-	    mq->offset, &mp->size, &num, &eof, mp->ents,
-	    sizeof(mp->ents), 0);
-	mp->num = num;
-	mp->eof = eof;
+	if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <=
+	    sizeof(mp->ents)) {
+		memcpy(mp->ents, iov[0].iov_base, mp->size);
+		memcpy(mp->ents + mp->size, iov[1].iov_base,
+		    mp->nents * sizeof(struct srt_readdir_ent));
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	} else {
+		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, iov, nitems(iov));
+	}
 
  out:
+	if (f)
+		fcmh_op_done(f);
+	PSCFREE(iov[0].iov_base);
+	PSCFREE(iov[1].iov_base);
+	if (mp->rc)
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	return (mp->rc);
 }
 
@@ -1831,7 +1706,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	mds_note_update(1);
+	mds_note_update(1); // XXX write during reads???
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
@@ -1943,7 +1818,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 	}
  out:
-	mds_note_update(-1);
+	mds_note_update(-1); // XXX what?
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, -abs(rc), 0);
 	return (rc);
@@ -1953,12 +1828,9 @@ void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
-	int i;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
 	slm_getclcsvc(exp);
-	for (i = 0; i < nitems(mexpc->mexpc_readdir_past); i++)
-		mexpc->mexpc_readdir_past[i].crap_fid = FID_ANY;
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
