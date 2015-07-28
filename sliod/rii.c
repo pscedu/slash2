@@ -369,6 +369,10 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm));
 
+	/*
+ 	 * XXX: We should not let EIO sliver stay in the cache. Otherwise,
+ 	 * the following assert will be triggered.
+ 	 */
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
 	psc_assert(!rc);
 	BMAP_ULOCK(w->srw_bcm);
