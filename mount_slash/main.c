@@ -1015,10 +1015,6 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	return (rc);
 }
 
-int
-msl_readdir_issue(struct pscfs_clientctx *, struct fidc_membh *, off_t,
-    size_t, int);
-
 
 /* Remove the following #if when we actually implement dircache_tally_lookup_miss() */
 #if 0
