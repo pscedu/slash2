@@ -1019,6 +1019,9 @@ int
 msl_readdir_issue(struct pscfs_clientctx *, struct fidc_membh *, off_t,
     size_t, int);
 
+
+/* Remove the following #if when we actually implement dircache_tally_lookup_miss() */
+#if 0
 int
 slc_wk_issue_readdir(void *p)
 {
@@ -1030,6 +1033,7 @@ slc_wk_issue_readdir(void *p)
 	fcmh_op_done_type(wk->d, FCMH_OPCNT_WORKER);
 	return (0);
 }
+#endif
 
 /*
  * Register a 'miss' in the FID namespace lookup cache.
