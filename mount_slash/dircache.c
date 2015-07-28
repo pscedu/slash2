@@ -480,21 +480,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
-	DIRCACHE_WRLOCK(d);
-
-	if ((p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
-		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
-		p->dcp_refcnt--;
-		DIRCACHE_ULOCK(d);
-
-		DYNARRAY_FOREACH(dce, i, da_off)
-			psc_pool_return(dircache_ent_pool, dce);
-		psc_dynarray_free(da_off);
-		PSCFREE(da_off);
-		return (0);
-	}
-
-	DIRCACHE_ULOCK(d);
+	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
@@ -520,7 +506,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_dirgen = fcmh_2_gen(d);
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
