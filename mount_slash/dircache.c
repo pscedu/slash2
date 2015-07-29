@@ -478,6 +478,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
 
+	/*
+ 	 * XXX This is mostly a no-op.  However, if it does do something,
+ 	 * our dce_index cache is busted.
+ 	 */
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
