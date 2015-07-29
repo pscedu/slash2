@@ -1764,6 +1764,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		goto restart;
 	}
 
+	/* 
+ 	 * XXX consolidate three pscfs_reply_readdir() calls above 
+ 	 * into the following one.
+ 	 */
 	if (0)
  out:
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
