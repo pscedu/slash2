@@ -609,12 +609,15 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 			OPSTAT_INCR("namecache-hit");
 		return (rc);
 	case NAMECACHELOOKUPF_DELETE:
+		/* 
+		 * Note that the entry is already removed from 
+		 * the hash table if found due to PHLF_DEL.
+		 */
 		if (dce) {
 			dircache_ent_zap(d, dce);
 			OPSTAT_INCR("namecache-delete");
 		} else
 			OPSTAT_INCR("namecache-delete-miss");
-		/* XXX need to remove the entry from the hash table */
 		return (rc);
 	case NAMECACHELOOKUPF_UPDATE:
 		if (dce)
