@@ -253,13 +253,17 @@ pr_bmaps(FILE *outfp, struct file *f)
 
 		fprintf(outfp, "   %5u: gen %5u pol %u res ",
 		    bno, bd.bod.bod_gen, bd.bod.bod_replpol);
-
 		for (i = 0, off = 0; i < f->f_nrepls;
 		    i++, off += SL_BITS_PER_REPLICA)
 			fprintf(outfp, "%c", repl_states[
 			    SL_REPL_GET_BMAP_IOS_STAT(
 			    bd.bod.bod_repls, off)]);
+		fprintf(outfp, "\n");
 
+		fprintf(outfp, "   %5u: crcstates ", bno);
+		for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
+			fprintf(outfp, "%s%d", i ? "," : "",
+			    bd.bod.bod_crcstates[i]);
 		fprintf(outfp, "\n");
 	}
 
