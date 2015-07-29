@@ -33,6 +33,8 @@ if ($opts{R}) {
 	@report_excl = split /\s*,\s*/, $r;
 }
 
+@report_excl = map { /^0x/ ? hex($_) : $_ } @report_excl;
+
 {
 	my %tab = (
 		f => "fid",
