@@ -155,18 +155,15 @@ dircache_entq_cmp(const void *a, const void *b)
 void
 dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 {
-	void *freedent = NULL;
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
 
 	OPSTAT_INCR("dircache-ent-zap");
-	if (dce->dce_page == NULL)
-		freedent = dce->dce_pfd;
 
 	fci = fcmh_2_fci(d);
-	p = dce->dce_page;
 	DIRCACHE_WRLOCK(d);
+	p = dce->dce_page;
 	if (p) {
 		a = p->dcp_dents_off;
 
@@ -175,12 +172,11 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 		p->dcp_local_tm.tv_sec -= DIRCACHEPG_HARD_TIMEO;
 	} else {
 		a = &fci->fcid_ents;
+		PSCFREE(dce->dce_pfd);
 	}
 	psc_dynarray_removeitem(a, dce);
 	DIRCACHE_ULOCK(d);
 
-	if (freedent)
-		PSCFREE(dce->dce_pfd);
 	psc_pool_return(dircache_ent_pool, dce);
 }
 
