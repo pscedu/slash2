@@ -156,11 +156,11 @@ void
 dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 {
 	void *freedent = NULL;
-	struct dircache_ent *dce2;
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 	struct psc_dynarray *a;
 
+	OPSTAT_INCR("dircache-ent-zap");
 	if (dce->dce_page == NULL)
 		freedent = dce->dce_pfd;
 
@@ -176,12 +176,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	} else {
 		a = &fci->fcid_ents;
 	}
-	psc_dynarray_removepos(a, dce->dce_index);
-	if (psc_dynarray_len(a) &&
-	    dce->dce_index != psc_dynarray_len(a)) {
-		dce2 = psc_dynarray_getpos(a, dce->dce_index);
-		dce2->dce_index = dce->dce_index;
-	}
+	psc_dynarray_removeitem(a, dce);
 	DIRCACHE_ULOCK(d);
 
 	if (freedent)
@@ -472,16 +467,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_pfid = fcmh_2_fid(d);
 		dce->dce_key = dircache_ent_hash(dce->dce_pfid,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
-		dce->dce_index = psc_dynarray_len(da_off);
 		psc_dynarray_add(da_off, dce);
 
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
 
-	/*
- 	 * XXX This is mostly a no-op.  However, if it does do something,
- 	 * our dce_index cache is busted.
- 	 */
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
@@ -667,7 +657,6 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 		fci = fcmh_2_fci(d);
 		DIRCACHE_WRLOCK(d);
-		dce->dce_index = psc_dynarray_len(&fci->fcid_ents);
 		psc_dynarray_add(&fci->fcid_ents, dce);
 		DIRCACHE_ULOCK(d);
 	}
