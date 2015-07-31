@@ -351,10 +351,6 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
-			dircache_free_page(d, p);
-			continue;
-		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			if (p->dcp_off == off) {
 				/*
@@ -369,6 +365,10 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 				DIRCACHE_WAIT(d);
 				goto restart;
 			}
+			continue;
+		}
+		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+			dircache_free_page(d, p);
 			continue;
 		}
 		if (dircache_hasoff(p, off)) {
