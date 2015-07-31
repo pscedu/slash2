@@ -1433,14 +1433,14 @@ void
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
-	int i, rc, registered;
+	int i, rc;
 	struct srt_readdir_ent *e;
 	struct fidc_membh *f;
 	void *ebase;
 
 	ebase = PSC_AGP(base, size);
 
-	registered = dircache_reg_ents(d, p, nents, base, size, eof);
+	dircache_reg_ents(d, p, nents, base, size, eof);
 	DIRCACHE_WAKE(d);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		if (e->sstb.sst_fid == FID_ANY ||
@@ -1463,14 +1463,11 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		msl_fcmh_stash_xattrsize(f, e->xattrsize);
 		fcmh_op_done(f);
 	}
-	if (registered) {
-		DIRCACHE_WRLOCK(d);
-		p->dcp_base = psc_realloc(p->dcp_base, size, 0);
-		p->dcp_refcnt--;
-		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
-		DIRCACHE_ULOCK(d);
-	} else
-		PSCFREE(base);
+	DIRCACHE_WRLOCK(d);
+	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+	p->dcp_refcnt--;
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
+	DIRCACHE_ULOCK(d);
 }
 
 int

@@ -232,7 +232,7 @@ int	_dircache_free_page(const struct pfl_callerinfo *,
 void	dircache_mgr_init(void);
 void	dircache_init(struct fidc_membh *);
 void	dircache_purge(struct fidc_membh *);
-int	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
+void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
 	    size_t, void *, size_t, int);
 void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),

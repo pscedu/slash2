@@ -426,7 +426,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  * @size: size of @base buffer.
  * @eof: whether this signifies the last READDIR for this directory.
  */
-int
+void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base, size_t size, int eof)
 {
@@ -501,7 +501,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
-	return (1);
 }
 
 /*
