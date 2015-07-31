@@ -112,9 +112,17 @@ mds_bmap_timeotbl_getnextseq(void)
 
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 
+	/*
+ 	 * Skip zero sequence number because the client does not
+ 	 * like it. More work is needed when an IOS decides if
+ 	 * a smaller sequence number is actually ahead of a larger 
+ 	 * one after a wrap around happens.
+ 	 */
 	mdsBmapTimeoTbl.btt_maxseq++;
-	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY)
-		mdsBmapTimeoTbl.btt_maxseq = 0;
+	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY) {
+		OPSTAT_INCR("seqno-wrap");
+		mdsBmapTimeoTbl.btt_maxseq = 1;
+	}
 
 	hwm = mdsBmapTimeoTbl.btt_maxseq;
 	mds_bmap_timeotbl_journal_seqno();
