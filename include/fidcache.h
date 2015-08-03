@@ -288,7 +288,7 @@ int	_fidc_lookup(const struct pfl_callerinfo *,
 	_PFL_RVSTART {							\
 		struct sl_fidgen _fg = { (fid), FGEN_ANY };		\
 									\
-		fidc_lookup_fg(&_fg, (fp));				\
+		fidc_lookup(&_fg, 0, (fp));				\
 	} _PFL_RVEND
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
