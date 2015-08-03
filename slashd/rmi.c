@@ -172,12 +172,17 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		    libsl_nid2iosid(rq->rq_conn->c_peer.nid), mq);
 		if (rc)
 			mp->crcup_rc[i] = rc;
-		if (mp->crcup_rc[i])
-			psclog(mp->crcup_rc[i] == -SLERR_GEN_OLD ?
-			    PLL_INFO : PLL_ERROR,
+		if (mp->crcup_rc[i]) {
+			/*
+			 * A rash of EBADF (-9) errors can food
+			 * network monitoring tools. So let us
+			 * tone down the log level as a workaround.
+			 */
+			psclog_info(
 			    "mds_bmap_crc_write() failed: "
 			    "fid="SLPRI_FID", rc=%d",
 			    c->fg.fg_fid, mp->crcup_rc[i]);
+		}
 	}
 
  out:
