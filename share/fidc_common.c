@@ -82,7 +82,7 @@ fcmh_destroy(struct fidc_membh *f)
 	fcmh_put(f);
 }
 
-#define FCMH_MAX_REAP 8
+#define FCMH_MAX_REAP 128
 
 /*
  * Reap some files from the fidcache.
