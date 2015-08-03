@@ -233,6 +233,8 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	return (1);
 }
 
+#if 0
+
 /*
  * Perform a batch operation across all cached dirents.
  * @d: directory handle.
@@ -284,6 +286,8 @@ dircache_walk_async(struct fidc_membh *d, void (*cbf)(
 	wk->compl = compl;
 	pfl_workq_putitem(wk);
 }
+
+#endif
 
 /*
  * Destroy all dirent pages belonging to a directory.
@@ -663,6 +667,8 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 	return (rc);
 }
 
+#if 0
+
 void
 dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
     void *a)
@@ -691,3 +697,5 @@ dircache_dbgpr(struct fidc_membh *d)
 	wk.cbarg = &p;
 	dircache_walk_wkcb(&wk);
 }
+
+#endif
