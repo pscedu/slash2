@@ -2110,17 +2110,15 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 void
 mfh_incref(struct msl_fhent *mfh)
 {
-	int lk;
-
-	lk = MFH_RLOCK(mfh);
+	MFH_LOCK(mfh);
 	mfh->mfh_refcnt++;
-	MFH_URLOCK(mfh, lk);
+	MFH_ULOCK(mfh);
 }
 
 void
 mfh_decref(struct msl_fhent *mfh)
 {
-	(void)MFH_RLOCK(mfh);
+	MFH_LOCK_ENSURE(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);

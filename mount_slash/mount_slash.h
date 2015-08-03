@@ -186,6 +186,7 @@ struct msl_fhent {
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
 #define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
 #define MFH_URLOCK(m, lk)		ureqlock(&(m)->mfh_lock, (lk))
+#define MFH_LOCK_ENSURE(m)		LOCK_ENSURE(&(m)->mfh_lock)
 
 /*
  * This is attached to each pscfs_req structure.  It is only used for
