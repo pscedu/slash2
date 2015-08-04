@@ -99,7 +99,7 @@ fidc_reap(int max, int only_expired)
 	struct timespec crtime;
 	int i, nreap = 0;
 
-	if (!max)
+	if (!max || max > FCMH_MAX_REAP)
 		max = FCMH_MAX_REAP;
 
 	LIST_CACHE_LOCK(&fidcIdleList);
@@ -149,8 +149,7 @@ fidc_reap(int max, int only_expired)
 int
 fidc_reaper(struct psc_poolmgr *m)
 {
-	return (fidc_reap(MIN(FCMH_MAX_REAP,
-	    psc_atomic32_read(&m->ppm_nwaiters)), 0));
+	return (fidc_reap(psc_atomic32_read(&m->ppm_nwaiters), 0));
 }
 
 /*
