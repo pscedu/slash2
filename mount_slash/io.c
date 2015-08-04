@@ -365,8 +365,6 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 {
 	struct msl_fhent *mfh;
 
-	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
-
 	mfh = psc_pool_get(slc_mfh_pool);
 	memset(mfh, 0, sizeof(*mfh));
 	mfh->mfh_refcnt = 1;

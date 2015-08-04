@@ -507,6 +507,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    psc_atomic32_read(&slc_direct_io))
 		rflags |= PSCFS_CREATEF_DIO;
 
+	FCMH_LOCK(c);
+	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
@@ -601,6 +603,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (oflags & O_NONBLOCK) {
 		/* XXX write me */
 	}
+	FCMH_LOCK(c);
+	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
 	if (c) {
