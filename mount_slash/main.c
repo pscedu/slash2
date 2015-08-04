@@ -464,14 +464,18 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	fci = fcmh_2_fci(c);
-	// fci_inode should be read from
-//	msl_fcmh_save_inode(c, &mp->ino);
 
-// XXX bug fci->fci_inode.reptbl inherited?
-fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
-fci->fci_inode.nrepls = 1;
-// XXX bug fci->fci_inode.flags inherited?
-// XXX bug fci->fci_inode.newreplpol inherited?
+	// fci_inode should be read from
+	// msl_fcmh_save_inode(c, &mp->ino);
+
+	// XXX bug fci->fci_inode.reptbl inherited?
+
+	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
+	fci->fci_inode.nrepls = 1;
+
+	// XXX bug fci->fci_inode.flags inherited?
+	// XXX bug fci->fci_inode.newreplpol inherited?
+
 	FCMH_ULOCK(c);
 
 	rc = msl_io_convert_errno(mp->rc2);
