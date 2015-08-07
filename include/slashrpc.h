@@ -805,9 +805,8 @@ struct srm_getattr_req {
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
-	 int64_t		xattrsize; // 32
+	 uint32_t		xattrsize;
 	 int32_t		rc;
-	 int32_t		_pad;
 } __packed;
 
 struct srm_getattr2_rep {
@@ -881,10 +880,10 @@ struct srm_mknod_req {
 
 #define srm_mknod_rep		srm_getattr2_rep
 
-/* must be 64-bit aligned */
 struct srt_readdir_ent {  // XXX rename to srt_readdir_stpref
 	struct srt_stat		sstb;
-	uint64_t		xattrsize;
+	uint32_t		xattrsize;
+	 int32_t		_pad;
 } __packed;
 
 #define SRM_READDIR_BUFSZ(siz, nents)					\
