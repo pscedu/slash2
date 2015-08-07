@@ -145,7 +145,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(f);
-	f->fcmh_flags &= ~FCMH_CLI_HAVE_XATTRSIZE;
+	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
@@ -255,12 +255,8 @@ slc_fcmh_dtor(struct fidc_membh *f)
 void
 msl_fcmh_stash_xattrsize(struct fidc_membh *f, uint64_t xattrsize)
 {
-	int locked;
-
-	locked = FCMH_RLOCK(f);
 	fcmh_2_fci(f)->fci_xattrsize = xattrsize;
-	f->fcmh_flags |= FCMH_CLI_HAVE_XATTRSIZE;
-	FCMH_URLOCK(f, locked);
+	f->fcmh_flags |= FCMH_CLI_XATTR_INFO;
 }
 
 #if PFL_DEBUG > 0

@@ -3184,14 +3184,14 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	FCMH_LOCK(f);
 	/* Check if xattrsize is cached and useful. */
-	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
+	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct fcmh_cli_info *fci;
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
 		fci = fcmh_2_fci(f);
 		if (timercmp(&now, &fci->fci_age, >=)) {
-			f->fcmh_flags &= ~FCMH_CLI_HAVE_XATTRSIZE;
+			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		} else if (size == 0 && (long)fci->fci_xattrsize != -1) {
 			OPSTAT_INCR("xattr-hit-size");
 			FCMH_ULOCK(f);
@@ -3246,8 +3246,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		if (rc == 0)
 			OPSTAT_INCR("listxattr-bulk");
 	}
-	if (!rc && !size)
+	if (!rc && !size) {
+		FCMH_LOCK(f);
 		msl_fcmh_stash_xattrsize(f, mp->size);
+	}
 
  out:
 	if (f)
@@ -3348,7 +3350,7 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 //	if (rc)
 //		PFL_GOTOERR(out, rc);
 
-	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
+	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);

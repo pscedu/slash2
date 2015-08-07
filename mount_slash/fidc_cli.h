@@ -125,7 +125,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_DSIZE		(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
 #define FCMH_CLI_DIRTY_MTIME		(_FCMH_FLGSHFT << 3)	/* has dirty mtime */
 #define FCMH_CLI_DIRTY_QUEUE		(_FCMH_FLGSHFT << 4)	/* on dirty queue */
-#define FCMH_CLI_HAVE_XATTRSIZE		(_FCMH_FLGSHFT << 5)
+#define FCMH_CLI_XATTR_INFO		(_FCMH_FLGSHFT << 5)
 
 #define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 
