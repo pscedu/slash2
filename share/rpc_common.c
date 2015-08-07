@@ -1217,6 +1217,10 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 	char tbuf[AUTHBUF_ALGLEN];
 	int rc = 0;
 
+	/*
+ 	 * Make sure you rebuild ZFS module if you see this on MDS.
+ 	 * Some RPC messages (e.g. readdir) are filled by ZFS.
+ 	 */
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
