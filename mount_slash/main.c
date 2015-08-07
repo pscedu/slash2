@@ -3182,6 +3182,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	FCMH_LOCK(f);
 	/* Check if xattrsize is cached and useful. */
 	if (f->fcmh_flags & FCMH_CLI_HAVE_XATTRSIZE) {
 		struct fcmh_cli_info *fci;
@@ -3189,15 +3190,28 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 		PFL_GETTIMEVAL(&now);
 		fci = fcmh_2_fci(f);
-		FCMH_LOCK(f);
-		if (timercmp(&now, &fci->fci_age, <) &&
-		    (size == 0 || fci->fci_xattrsize == 0)) {
+		if (timercmp(&now, &fci->fci_age, >=)) {
+			f->fcmh_flags &= ~FCMH_CLI_HAVE_XATTRSIZE;
+		} else if (size == 0 && (long)fci->fci_xattrsize != -1) {
+			OPSTAT_INCR("xattr-hit-size");
+			FCMH_ULOCK(f);
 			tmp.size = fci->fci_xattrsize;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
+		} else if (size && fci->fci_xattrsize == 0) {
+			OPSTAT_INCR("xattr-hit-noattr");
+			FCMH_ULOCK(f);
+			tmp.size = 0;
+			mp = &tmp;
+			PFL_GOTOERR(out, rc = 0);
+		} else if (size && (long)fci->fci_xattrsize != -1 && 
+			   size < fci->fci_xattrsize) {
+			OPSTAT_INCR("xattr-hit-erange");
+			FCMH_ULOCK(f);
+			PFL_GOTOERR(out, rc = ERANGE);
 		}
-		FCMH_ULOCK(f);
 	}
+	FCMH_ULOCK(f);
 
 	if (size)
 		buf = PSCALLOC(size);
@@ -3211,9 +3225,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	mq->fg.fg_gen = FGEN_ANY;
 
 	if (size) {
-		mq->size = size - 1;
+		mq->size = size;
 		iov.iov_base = buf;
-		iov.iov_len = size - 1;
+		iov.iov_len = size;
 		rq->rq_bulk_abortable = 1;
 		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
 		    &iov, 1);
@@ -3232,7 +3246,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		if (rc == 0)
 			OPSTAT_INCR("listxattr-bulk");
 	}
-	if (!rc)
+	if (!rc && !size)
 		msl_fcmh_stash_xattrsize(f, mp->size);
 
  out:
