@@ -3282,6 +3282,12 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
+	/*
+ 	 * This prevents a crash in the RPC layer downwards. So disable it for now.
+ 	 */
+	if (size == 0)
+		PFL_GOTOERR(out, rc = EINVAL);
+
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
