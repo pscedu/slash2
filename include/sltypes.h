@@ -65,6 +65,8 @@ typedef uint32_t sl_ios_id_t;
 #define SL_NAME_MAX		255		/* file name component length */
 #define SL_PATH_MAX		4096		/* file path name length */
 
+#define	SL_XATTR_SIZE_MAX	4096
+
 #define SL_TWO_NAME_MAX		364		/* room for at most two names */
 
 /* I/O flags */

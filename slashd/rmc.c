@@ -1581,7 +1581,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	iov.iov_base = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->size > SL_NAME_MAX)
+	if (mq->size > SL_XATTR_SIZE_MAX)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
