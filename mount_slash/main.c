@@ -3264,6 +3264,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	PSCFREE(buf);
 }
 
+
+/*
+ * XATTR_REPLACE is not supported.
+ */
 void
 mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
     const void *value, size_t size, pscfs_inum_t inum)
@@ -3319,8 +3323,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		goto retry;
 	if (!rc)
 		rc = mp->rc;
-	if (!rc)
-		msl_fcmh_stash_xattrsize(f, 1);
 
  out:
 	pscfs_reply_setxattr(pfr, rc);
