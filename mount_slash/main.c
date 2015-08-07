@@ -3192,7 +3192,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		fci = fcmh_2_fci(f);
 		if (timercmp(&now, &fci->fci_age, >=)) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
-		} else if (size == 0 && (long)fci->fci_xattrsize != -1) {
+		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
 			OPSTAT_INCR("xattr-hit-size");
 			FCMH_ULOCK(f);
 			tmp.size = fci->fci_xattrsize;
@@ -3204,7 +3204,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 			tmp.size = 0;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
-		} else if (size && (long)fci->fci_xattrsize != -1 && 
+		} else if (size && fci->fci_xattrsize != (uint32_t)-1 && 
 			   size < fci->fci_xattrsize) {
 			OPSTAT_INCR("xattr-hit-erange");
 			FCMH_ULOCK(f);

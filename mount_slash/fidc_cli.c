@@ -253,7 +253,7 @@ slc_fcmh_dtor(struct fidc_membh *f)
 }
 
 void
-msl_fcmh_stash_xattrsize(struct fidc_membh *f, uint64_t xattrsize)
+msl_fcmh_stash_xattrsize(struct fidc_membh *f, uint32_t xattrsize)
 {
 	fcmh_2_fci(f)->fci_xattrsize = xattrsize;
 	f->fcmh_flags |= FCMH_CLI_XATTR_INFO;
