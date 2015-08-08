@@ -88,7 +88,7 @@ struct slrpc_cservice {
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;
 	int			 csvc_tryref;
-	psc_atomic32_t		 csvc_refcnt;
+	int			 csvc_refcnt;
 
 	int			 csvc_nfails;
 	int			 csvc_lineno;
@@ -129,20 +129,15 @@ struct slrpc_cservice {
 #define CSVC_PING_INTV		60			/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
-	do {								\
-		int _flags;						\
-									\
-		_flags = psc_atomic32_read(&(csvc)->csvc_flags);	\
-		psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,	\
-		    (csvc), _flags,					\
-		    _flags & CSVCF_CONNECTING	 ? "C" : "",		\
-		    _flags & CSVCF_CONNECTED	 ? "O" : "",		\
-		    _flags & CSVCF_ABANDON	 ? "A" : "",		\
-		    _flags & CSVCF_WANTFREE	 ? "F" : "",		\
-		    _flags & CSVCF_PING		 ? "P" : "",		\
-		    psc_atomic32_read(&(csvc)->csvc_refcnt),		\
-		    ##__VA_ARGS__);					\
-	} while (0)
+	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s%s ref:%d " fmt,	\
+	    (csvc), _flags,						\
+	    _flags & CSVCF_CONNECTING	 ? "C" : "",			\
+	    _flags & CSVCF_CONNECTED	 ? "O" : "",			\
+	    _flags & CSVCF_ABANDON	 ? "A" : "",			\
+	    _flags & CSVCF_WANTFREE	 ? "F" : "",			\
+	    _flags & CSVCF_PING		 ? "P" : "",			\
+	    _flags & CSVCF_BUSY		 ? "B" : "",			\
+	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
 struct sl_expcli_ops {
 	void	(*secop_allocpri)(struct pscrpc_export *);

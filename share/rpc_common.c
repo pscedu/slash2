@@ -507,7 +507,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	int rc;
 
 	(void)CSVC_RLOCK(csvc);
-	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
+	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
 	if (rc == 0 && psc_atomic32_read(&csvc->csvc_flags) &
@@ -541,7 +541,7 @@ void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
-	psc_atomic32_inc(&csvc->csvc_refcnt);
+	csvc->csvc_refcnt++;
 	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
 }
 
@@ -806,7 +806,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		} *expc;
 
 		/* Hold reference as the multiwait arg below. */
-		psc_atomic32_set(&csvc->csvc_refcnt, 1);
+		csvc->csvc_refcnt = 1;
 
 		snprintf(addrbuf, sizeof(addrbuf), "%p", csvc);
 		if (exp && exp->exp_connection)
@@ -1218,9 +1218,9 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 	int rc = 0;
 
 	/*
- 	 * Make sure you rebuild ZFS module if you see this on MDS.
- 	 * Some RPC messages (e.g. readdir) are filled by ZFS.
- 	 */
+	 * Make sure you rebuild ZFS module if you see this on MDS.
+	 * Some RPC messages (e.g. readdir) are filled by ZFS.
+	 */
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
