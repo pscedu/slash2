@@ -885,7 +885,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    CSVCF_DISCONNECTING);
 		csvc->csvc_flags |= CSVCF_CONNECTED;
 
-	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
+	} else if (csvc->csvc_tryref ||
+	    (csvc->csvc_flags & CSVCF_CONNECTING)) {
 
 		if (flags & CSVCF_NONBLOCK) {
 			csvc = NULL;
