@@ -1706,7 +1706,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	mds_note_update(1); // XXX write during reads???
+	mds_note_update(1);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
@@ -1818,7 +1818,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 	}
  out:
-	mds_note_update(-1); // XXX what?
+	mds_note_update(-1);
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, -abs(rc), 0);
 	return (rc);
