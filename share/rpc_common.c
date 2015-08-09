@@ -1120,7 +1120,7 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 		return;
 
 	CSVC_LOCK(csvc);
-	scp->scp_flags = flags;
+	scp->scp_flags |= flags;
 	scp->scp_useablef = useablef;
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
