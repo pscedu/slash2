@@ -38,9 +38,9 @@
 #include "pfl/atomic.h"
 #include "pfl/err.h"
 #include "pfl/export.h"
-#include "pfl/opstats.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
+#include "pfl/opstats.h"
 #include "pfl/str.h"
 
 #include "slerr.h"
@@ -118,6 +118,7 @@ struct slrpc_cservice {
 #define CSVCF_WANTFREE		(1 << 3)		/* csvc mem resources need freed */
 #define CSVCF_PING		(1 << 4)		/* send keepalives */
 #define CSVCF_BUSY		(1 << 5)		/* send keepalives */
+#define CSVCF_DISCONNECTING	(1 << 6)		/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
 #define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
@@ -130,13 +131,13 @@ struct slrpc_cservice {
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s%s ref:%d " fmt,	\
-	    (csvc), _flags,						\
-	    _flags & CSVCF_CONNECTING	 ? "C" : "",			\
-	    _flags & CSVCF_CONNECTED	 ? "O" : "",			\
-	    _flags & CSVCF_ABANDON	 ? "A" : "",			\
-	    _flags & CSVCF_WANTFREE	 ? "F" : "",			\
-	    _flags & CSVCF_PING		 ? "P" : "",			\
-	    _flags & CSVCF_BUSY		 ? "B" : "",			\
+	    (csvc), (csvc)->csvc_flags,					\
+	    (csvc)->csvc_flags & CSVCF_CONNECTING	? "C" : "",	\
+	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
+	    (csvc)->csvc_flags & CSVCF_ABANDON		? "A" : "",	\
+	    (csvc)->csvc_flags & CSVCF_WANTFREE		? "F" : "",	\
+	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
+	    (csvc)->csvc_flags & CSVCF_BUSY		? "B" : "",	\
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
 struct sl_expcli_ops {
@@ -152,11 +153,10 @@ struct sl_expcli_ops {
 	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
 #define SLRPC_DISCONNF_HIGHLEVEL	(1 << 0)
-#define SLRPC_DISCONNF_RECON		(1 << 1)
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), SLRPC_DISCONNF_HIGHLEVEL | SLRPC_DISCONNF_RECON)
-#define sl_csvc_disconnect_ll(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), SLRPC_DISCONNF_RECON)
+#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), SLRPC_DISCONNF_HIGHLEVEL)
+#define sl_csvc_disconnect_ll(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 0)
 #define sl_csvc_disconnect_norecon(csvc)_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 0)
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\

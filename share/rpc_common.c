@@ -467,7 +467,8 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	    csvc->csvc_import->imp_invalid)
 		return (0);
 	return ((csvc->csvc_flags &
-	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
+	  (CSVCF_CONNECTED | CSVCF_ABANDON | CSVCF_DISCONNECTING)) ==
+	    CSVCF_CONNECTED);
 }
 
 /*
@@ -490,6 +491,36 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 }
 
 /*
+ * Perform actual disconnect to a remote service.
+ */
+void
+_sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
+{
+	struct pscrpc_import *imp;
+
+	CSVC_LOCK_ENSURE(csvc);
+
+	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
+		while (csvc->csvc_flags & CSVCF_BUSY) {
+			CSVC_WAIT(csvc);
+			CSVC_LOCK(csvc);
+		}
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
+	csvc->csvc_lasterrno = 0;
+	imp = csvc->csvc_import;
+	if (imp) {
+		// deactivate(imp) ?
+		pscrpc_abort_inflight(imp);
+		if (flags & SLRPC_DISCONNF_HIGHLEVEL &&
+		    imp->imp_connection)
+			pscrpc_drop_conns(&imp->imp_connection->c_peer);
+		pscrpc_import_put(imp);
+	}
+	csvc->csvc_import = NULL;
+	CSVC_WAKE(csvc);
+}
+
+/*
  * Account for releasing the use of a remote service connection.
  * @csvc: client service.
  */
@@ -504,23 +535,24 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
-	if (rc == 0 && csvc->csvc_flags & CSVCF_WANTFREE) {
-		/*
-		 * This should only apply to mount_slash clients
-		 * the MDS stops communication with.
-		 */
-		if (csvc->csvc_peertype == SLCONNT_CLI)
-			pll_remove(&sl_clients, csvc);
-//		c = csvc->csvc_import->imp_connection;
-//		if (c)
-//			c->c_imp = NULL;
-		pscrpc_import_put(csvc->csvc_import);
-		DEBUG_CSVC(PLL_DIAG, csvc, "freed");
-		// XXX assert(mutex.nwaiters == 0)
-		psc_mutex_unlock(&csvc->csvc_mutex);
-		psc_mutex_destroy(&csvc->csvc_mutex);
-		psc_pool_return(sl_csvc_pool, csvc);
-		return;
+	if (rc == 0) {
+		if (csvc->csvc_flags & CSVCF_WANTFREE) {
+			if (csvc->csvc_peertype == SLCONNT_CLI)
+				pll_remove(&sl_clients, csvc);
+//			c = csvc->csvc_import->imp_connection;
+//			if (c)
+//				c->c_imp = NULL;
+			pscrpc_import_put(csvc->csvc_import);
+			DEBUG_CSVC(PLL_DIAG, csvc, "freed");
+			// XXX assert(mutex.nwaiters == 0)
+			psc_mutex_unlock(&csvc->csvc_mutex);
+			psc_mutex_destroy(&csvc->csvc_mutex);
+			psc_pool_return(sl_csvc_pool, csvc);
+			return;
+		}
+		if (csvc->csvc_flags & CSVCF_DISCONNECTING)
+			_sl_csvc_disconnect_core(csvc,
+			    SLRPC_DISCONNF_HIGHLEVEL);
 	}
 	CSVC_ULOCK(csvc);
 }
@@ -539,38 +571,24 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 }
 
 /*
- * Perform actual network disconnect to a remote service.
+ * Mark a csvc as no longer usable.
  * @csvc: client service.
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc, int flags)
 {
-	struct pscrpc_import *imp;
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
-		while (csvc->csvc_flags & CSVCF_BUSY) {
-			CSVC_WAIT(csvc);
-			CSVC_LOCK(csvc);
-		}
-	csvc->csvc_flags &= ~CSVCF_CONNECTED;
-	csvc->csvc_lasterrno = 0;
-	imp = csvc->csvc_import;
-	if (imp) {
-		// deactivate(imp) ?
-		pscrpc_abort_inflight(imp);
-		if (flags & SLRPC_DISCONNF_HIGHLEVEL &&
-		    imp->imp_connection)
-			pscrpc_drop_conns(&imp->imp_connection->c_peer);
-		pscrpc_import_put(imp);
+	if (csvc->csvc_flags & CSVCF_DISCONNECTING) {
+		CSVC_URLOCK(csvc, locked);
+		return;
 	}
-	if (flags & SLRPC_DISCONNF_RECON)
-		csvc->csvc_import = slrpc_new_import(csvc);
+	if (csvc->csvc_refcnt == 1)
+		_sl_csvc_disconnect_core(csvc, flags);
 	else
-		csvc->csvc_import = NULL;
-	CSVC_WAKE(csvc);
+		csvc->csvc_flags |= CSVCF_DISCONNECTING;
 	CSVC_URLOCK(csvc, locked);
 }
 
@@ -627,7 +645,6 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
 	csvc->csvc_rpptl = rpptl;
 	csvc->csvc_hldropf = hldropf;
 	csvc->csvc_hldroparg = hldroparg ? hldroparg : csvc;
-	csvc->csvc_import = slrpc_new_import(csvc);
 	return (csvc);
 }
 
@@ -855,6 +872,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		c = csvc->csvc_import->imp_connection;
 
 		atomic_inc(&exp->exp_connection->c_refcount);
+		// XXX pscrpc_connection_addref();
 		csvc->csvc_import->imp_connection = exp->exp_connection;
 		csvc->csvc_import->imp_connection->c_imp =
 		    csvc->csvc_import;
@@ -863,7 +881,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			pscrpc_put_connection(c);
 
 		csvc->csvc_mtime = now;
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
+		csvc->csvc_flags &= ~(CSVCF_CONNECTING |
+		    CSVCF_DISCONNECTING);
 		csvc->csvc_flags |= CSVCF_CONNECTED;
 
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
@@ -891,6 +910,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		int i, j, trc;
 
 		csvc->csvc_flags |= CSVCF_CONNECTING;
+		csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 		if (flags & CSVCF_NONBLOCK) {
 			if (csvc->csvc_import) {
 				pscrpc_import_put(csvc->csvc_import);
@@ -937,9 +957,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				csvc->csvc_import->imp_failed = 1;
 			csvc->csvc_lasterrno = rc;
 			/*
-			 * Leave the slashrpc_cservice structure in
-			 * csvcp intact, while return NULL to signal
-			 * that we fail to establish a connection.
+			 * The csvc stays allocated but is marked as
+			 * unusable until the next connection
+			 * establishment attempt.
+			 *
+			 * Our caller is signified about this failure
+			 * via the NULL return here.
 			 */
 			csvc = NULL;
 		}
@@ -1008,8 +1031,7 @@ slconnthr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
 			PSCTHR_ULOCK(thr);
 			csvc = sl_csvc_get(scp->scp_csvcp,
-			    psc_atomic32_read(&scp->scp_flags) |
-			    CSVCF_NONBLOCK, NULL,
+			    scp->scp_flags | CSVCF_NONBLOCK, NULL,
 			    scp->scp_peernids,
 			    scp->scp_rqptl, scp->scp_rpptl,
 			    scp->scp_magic, scp->scp_version,
@@ -1026,7 +1048,7 @@ slconnthr_main(struct psc_thread *thr)
 
 			CSVC_LOCK(csvc);
 			if (sl_csvc_useable(csvc) &&
-			    psc_atomic32_read(&scp->scp_flags) & CSVCF_PING) {
+			    scp->scp_flags & CSVCF_PING) {
 				timespecsub(&ts1, &csvc->csvc_mtime,
 				    &diff);
 				if (timespeccmp(&diff, &intv, >=)) {
@@ -1041,8 +1063,7 @@ slconnthr_main(struct psc_thread *thr)
 			}
 			sl_csvc_decref(csvc);
 
-			if (psc_atomic32_read(&scp->scp_flags) &
-			    CSVCF_WANTFREE) {
+			if (scp->scp_flags & CSVCF_WANTFREE) {
 				sl_csvc_decref(csvc);
 
 				psc_multiwaitcond_destroy(&csvc->csvc_mwc);
@@ -1098,7 +1119,7 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 		return;
 
 	CSVC_LOCK(csvc);
-	psc_atomic32_setmask(&scp->scp_flags, flags);
+	scp->scp_flags = flags;
 	scp->scp_useablef = useablef;
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
