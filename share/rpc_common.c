@@ -125,7 +125,7 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 
-	while (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_BUSY) {
+	while (csvc->csvc_flags & CSVCF_BUSY) {
 		CSVC_WAIT(csvc);
 		CSVC_LOCK(csvc);
 	}
@@ -134,8 +134,8 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 	csvc->csvc_import->imp_failed = 0;
 	csvc->csvc_import->imp_invalid = 0;
 
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
-	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+	csvc->csvc_flags &= ~CSVCF_CONNECTING;
+	csvc->csvc_flags |= CSVCF_CONNECTED;
 
 	csvc->csvc_lasterrno = 0;
 	csvc->csvc_nfails = 0;
@@ -151,8 +151,7 @@ sl_csvc_dectryref(struct slashrpc_cservice *csvc)
 	locked = CSVC_RLOCK(csvc);
 	psc_assert(csvc->csvc_tryref > 0);
 	if (--csvc->csvc_tryref == 0)
-		psc_atomic32_clearmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTING);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	CSVC_URLOCK(csvc, locked);
 }
 
@@ -255,10 +254,9 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	c = pscrpc_get_connection(server_id, local, NULL);
 
 	CSVC_LOCK(csvc);
-	psc_assert((psc_atomic32_read(&csvc->csvc_flags) &
-	    CSVCF_BUSY) == 0);
+	psc_assert((csvc->csvc_flags & CSVCF_BUSY) == 0);
 
-	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_BUSY);
+	csvc->csvc_flags |= CSVCF_BUSY;
 	csvc->csvc_owner = pthread_self();
 	csvc->csvc_lineno = __LINE__;
 	csvc->csvc_fn = __FILE__;
@@ -282,7 +280,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (rc) {
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
+		csvc->csvc_flags &= ~CSVCF_BUSY;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_ULOCK(csvc);
 		return (rc);
@@ -309,15 +307,14 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 			CSVC_LOCK(csvc);
 			csvc->csvc_owner = 0;
-			psc_atomic32_clearmask(&csvc->csvc_flags,
-			    CSVCF_BUSY);
+			csvc->csvc_flags &= ~CSVCF_BUSY;
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			sl_csvc_decref(csvc);
 			return (rc);
 		}
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_BUSY);
+		csvc->csvc_flags &= ~CSVCF_BUSY;
 		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 
@@ -337,8 +334,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_owner = 0;
-	psc_atomic32_clearmask(&csvc->csvc_flags,
-	    CSVCF_BUSY);
+	csvc->csvc_flags &= ~CSVCF_BUSY;
 	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_ULOCK(csvc);
 	return (rc);
@@ -470,7 +466,7 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	    csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
 		return (0);
-	return ((psc_atomic32_read(&csvc->csvc_flags) &
+	return ((csvc->csvc_flags &
 	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
 }
 
@@ -486,10 +482,8 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	psc_atomic32_setmask(&csvc->csvc_flags,
-	    CSVCF_ABANDON | CSVCF_WANTFREE);
-	psc_atomic32_clearmask(&csvc->csvc_flags,
-	    CSVCF_CONNECTED | CSVCF_CONNECTING);
+	csvc->csvc_flags |= CSVCF_ABANDON | CSVCF_WANTFREE;
+	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
 	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
 	CSVC_URLOCK(csvc, locked);
@@ -510,8 +504,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
-	if (rc == 0 && psc_atomic32_read(&csvc->csvc_flags) &
-	    CSVCF_WANTFREE) {
+	if (rc == 0 && csvc->csvc_flags & CSVCF_WANTFREE) {
 		/*
 		 * This should only apply to mount_slash clients
 		 * the MDS stops communication with.
@@ -558,12 +551,11 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 
 	locked = CSVC_RLOCK(csvc);
 	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
-		while (psc_atomic32_read(&csvc->csvc_flags) &
-		    CSVCF_BUSY) {
+		while (csvc->csvc_flags & CSVCF_BUSY) {
 			CSVC_WAIT(csvc);
 			CSVC_LOCK(csvc);
 		}
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
 	if (imp) {
@@ -609,9 +601,8 @@ _sl_csvc_disable(const struct pfl_callerinfo *pci,
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON);
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED |
-	    CSVCF_CONNECTING);
+	csvc->csvc_flags |= CSVCF_ABANDON;
+	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
@@ -790,7 +781,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
-	psc_atomic32_set(&csvc->csvc_flags, flags);
+	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
 	csvc->csvc_version = version;
@@ -840,7 +831,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (sl_csvc_useable(csvc))
 		goto out;
 
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -872,13 +863,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			pscrpc_put_connection(c);
 
 		csvc->csvc_mtime = now;
-		psc_atomic32_clearmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTING);
-		psc_atomic32_setmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTED);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
+		csvc->csvc_flags |= CSVCF_CONNECTED;
 
-	} else if (psc_atomic32_read(&csvc->csvc_flags) &
-	    CSVCF_CONNECTING) {
+	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
 			csvc = NULL;
@@ -902,10 +890,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		lnet_process_id_t *pp;
 		int i, j, trc;
 
-		psc_atomic32_setmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTING);
-		psc_atomic32_clearmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTED);
+		csvc->csvc_flags |= CSVCF_CONNECTING;
 		if (flags & CSVCF_NONBLOCK) {
 			if (csvc->csvc_import) {
 				pscrpc_import_put(csvc->csvc_import);
@@ -946,8 +931,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		}
 
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-		psc_atomic32_clearmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTING);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 		if (rc) {
 			if (csvc->csvc_import)
 				csvc->csvc_import->imp_failed = 1;

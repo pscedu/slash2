@@ -58,7 +58,7 @@ enum slconn_type {
 
 struct slconn_params {
 	struct slrpc_cservice	**scp_csvcp;
-	psc_atomic32_t		  scp_flags;
+	int			  scp_flags;
 	struct psc_dynarray	 *scp_peernids;
 	enum slconn_type	  scp_peertype;
 

@@ -52,8 +52,8 @@ slctl_fillconn(struct slctlmsg_conn *scc,
 	if (csvc == NULL)
 		return;
 
-	scc->scc_flags = psc_atomic32_read(&csvc->csvc_flags);
-	scc->scc_refcnt = psc_atomic32_read(&csvc->csvc_refcnt);
+	scc->scc_flags = csvc->csvc_flags;
+	scc->scc_refcnt = csvc->csvc_refcnt;
 
 	imp = csvc->csvc_import;
 	if (imp == NULL || imp->imp_connection == NULL)
