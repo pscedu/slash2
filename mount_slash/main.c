@@ -3183,7 +3183,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(f);
-	/* Check if xattrsize is cached and useful. */
+	/* Check if information about xattr size is cached and useful. */
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct fcmh_cli_info *fci;
 		struct timeval now;
