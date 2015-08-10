@@ -412,7 +412,7 @@ slislvrthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
 				continue;
-			if (s->slvr_refcnt) {
+			if (s->slvr_refcnt || s->slvr_flags & SLVR_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
 			}

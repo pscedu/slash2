@@ -776,6 +776,7 @@ slvr_remove_all(struct fidc_membh *f)
 			 * only called when the file is truncated or reclaimed.
 			 */
 			SLVR_LOCK(s);
+			SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 			if (s->slvr_flags & SLVR_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
