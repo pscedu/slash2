@@ -78,8 +78,6 @@ dircache_init(struct fidc_membh *d)
 void
 dircache_mgr_init(void)
 {
-
-#define DCP_DEF 64
 	psc_poolmaster_init(&dircache_page_poolmaster,
 	    struct dircache_page, dcp_lentry, PPMF_AUTO, DCP_DEF,
 	    DCP_DEF, 0, NULL, NULL, NULL, "dircachepg");

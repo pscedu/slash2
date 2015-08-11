@@ -66,6 +66,8 @@ struct psc_compl;
 
 struct fidc_membh;
 
+#define DCP_DEF 		64
+
 #define DIRCACHEPG_SOFT_TIMEO	4	/* expiration after page read */
 #define DIRCACHEPG_HARD_TIMEO	30	/* expiration regardless if read */
 
