@@ -1697,6 +1697,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
+	mds_note_update(1);
+
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
@@ -1705,8 +1707,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
-
-	mds_note_update(1);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
