@@ -3117,6 +3117,11 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	rc = msl_write(pfr, mfh, (void *)buf, size, off);
 
  out:
+	/*
+	 * msl_write() will arrange to have the pscfs_reply_write()
+	 * executed when the RPC callback runs to avoid tying up
+	 * threads, especially when doing aio to ARCHIVAL_FS.
+	 */
 	if (rc)
 		pscfs_reply_write(pfr, size, rc);
 
@@ -3146,6 +3151,11 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	rc = msl_read(pfr, mfh, NULL, size, off);
 
  out:
+	/*
+	 * msl_read() will arrange to have the pscfs_reply_read()
+	 * executed when the RPC callback runs to avoid tying up
+	 * threads, especially when doing aio to ARCHIVAL_FS.
+	 */
 	if (rc)
 		pscfs_reply_read(pfr, NULL, 0, rc);
 
