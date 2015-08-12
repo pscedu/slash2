@@ -3334,6 +3334,13 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		rc = mp->rc;
 
  out:
+	/*
+	 * Do not use xattr information until properly refreshed.
+	 */
+	FCMH_LOCK(f);
+	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
+	FCMH_ULOCK(f);
+
 	pscfs_reply_setxattr(pfr, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
