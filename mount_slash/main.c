@@ -3109,8 +3109,10 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	f = mfh->mfh_fcmh;
 
 	/* XXX EBADF if fd is not open for writing */
-	if (fcmh_isdir(f))
+	if (fcmh_isdir(f)) {
+		OPSTAT_INCR("fsrq-write-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
+	}
 
 	rc = msl_write(pfr, mfh, (void *)buf, size, off);
 
@@ -3137,7 +3139,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq-read-noreg");
+		OPSTAT_INCR("fsrq-read-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
