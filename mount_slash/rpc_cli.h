@@ -68,6 +68,10 @@ enum {
 #define SRCI_REPSZ			512
 #define SRCI_SVCNAME			"msrci"
 
+/*
+ * Initialize a new RPC request for a pscfs clientctx.
+ * Most arguments here are macro-value-result.
+ */
 #define MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, op, rq, mq, mp, rc)		\
 	do {								\
 		struct sl_resm *_resm;					\
@@ -95,11 +99,13 @@ enum {
 	MSL_RMC_NEWREQ_PFCC(pscfs_getclientctx(pfr), (f), (csvc), (op),	\
 	    (rq), (mq), (mp), (rc))
 
+/* obtain csvc to an IOS */
 #define slc_geticsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
 	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw())
 
+/* obtain csvc to an MDS */
 #define slc_getmcsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
@@ -129,8 +135,9 @@ int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
 
 extern struct pscrpc_svc_handle	*msl_rci_svh;
-extern struct pscrpc_svc_handle	*msl_rcm_svh; 
+extern struct pscrpc_svc_handle	*msl_rcm_svh;
 
+/* Grab calling thread's multiwait structure. */
 static __inline struct psc_multiwait *
 msl_getmw(void)
 {
