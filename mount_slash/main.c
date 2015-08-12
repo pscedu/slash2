@@ -3691,13 +3691,12 @@ msl_init(void)
 	/* Start up service threads. */
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
-#if 0
+
 	/*
 	 * This should only be enabled when we really care about
 	 * the average stuff in order to save energy.
 	 */
 	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
-#endif
 
 	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
 	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
