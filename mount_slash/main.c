@@ -3115,10 +3115,9 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	rc = msl_write(pfr, mfh, (void *)buf, size, off);
 
  out:
-	if (rc) {
+	if (rc)
 		pscfs_reply_write(pfr, size, rc);
-		OPSTAT_INCR("fsrq-write-err");
-	}
+
 	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 }
@@ -3145,10 +3144,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	rc = msl_read(pfr, mfh, NULL, size, off);
 
  out:
-	if (rc) {
+	if (rc)
 		pscfs_reply_read(pfr, NULL, 0, rc);
-		OPSTAT_INCR("fsrq-read-err");
-	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (end): rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, rc, size, off);
