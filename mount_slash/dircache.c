@@ -71,38 +71,6 @@ dircache_init(struct fidc_membh *d)
 	}
 }
 
-/*
- * Reap old dircache_pages.
- */
-int
-dircache_page_reap(__unusedx struct psc_poolmgr *m)
-{
-#if 0
-	for () {
-		if ()
-			break;
-	}
-
-	foreach
-		free
-#endif
-	return (0);
-}
-
-int
-dircache_ent_reap(__unusedx struct psc_poolmgr *m)
-{
-#if 0
-	for () {
-		if ()
-			break;
-	}
-
-	foreach
-		free
-#endif
-	return (0);
-}
 
 /*
  * Initialize dircache API.
@@ -110,18 +78,14 @@ dircache_ent_reap(__unusedx struct psc_poolmgr *m)
 void
 dircache_mgr_init(void)
 {
-	//pll_init(&msl_dircache_pages_lru, struct dircache_page);
-	//pll_init(&msl_dircache_ents_lru, struct dircache_ent);
-
-#define DCP_DEF 64
 	psc_poolmaster_init(&dircache_page_poolmaster,
 	    struct dircache_page, dcp_lentry, PPMF_AUTO, DCP_DEF,
-	    DCP_DEF, 0, NULL, NULL, dircache_page_reap, "dircachepg");
+	    DCP_DEF, 0, NULL, NULL, NULL, "dircachepg");
 	dircache_page_pool = psc_poolmaster_getmgr(&dircache_page_poolmaster);
 
 	psc_poolmaster_init(&dircache_ent_poolmaster,
 	    struct dircache_ent, dce_lentry, PPMF_AUTO, DCP_DEF,
-	    DCP_DEF, 0, NULL, NULL, dircache_ent_reap, "dircachent");
+	    DCP_DEF, 0, NULL, NULL, NULL, "dircachent");
 	dircache_ent_pool = psc_poolmaster_getmgr(&dircache_ent_poolmaster);
 }
 
