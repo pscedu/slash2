@@ -1769,10 +1769,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		goto restart;
 	}
 
-	/* 
- 	 * XXX consolidate three pscfs_reply_readdir() calls above 
- 	 * into the following one.
- 	 */
+	/*
+	 * XXX consolidate three pscfs_reply_readdir() calls above
+	 * into the following one.
+	 */
 	if (0)
  out:
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
@@ -3204,7 +3204,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 			tmp.size = 0;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
-		} else if (size && fci->fci_xattrsize != (uint32_t)-1 && 
+		} else if (size && fci->fci_xattrsize != (uint32_t)-1 &&
 			   size < fci->fci_xattrsize) {
 			OPSTAT_INCR("xattr-hit-erange");
 			FCMH_ULOCK(f);
@@ -3287,8 +3287,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	/*
- 	 * This prevents a crash in the RPC layer downwards. So disable it for now.
- 	 */
+	 * This prevents a crash in the RPC layer downwards. So disable it for now.
+	 */
 	if (size == 0)
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3677,9 +3677,9 @@ msl_init(void)
 	msctlthr_spawn();
 #if 0
 	/*
- 	 * This should only be enabled when we really care about
- 	 * the average stuff in order to save energy.
- 	 */
+	 * This should only be enabled when we really care about
+	 * the average stuff in order to save energy.
+	 */
 	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
 #endif
 
