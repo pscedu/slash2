@@ -1909,10 +1909,8 @@ msl_flush(struct msl_fhent *mfh, int all)
 	f = mfh->mfh_fcmh;
 
   restart:
-
-	DYNARRAY_FOREACH(b, i, &a) {
+	DYNARRAY_FOREACH(b, i, &a)
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
-	}
 	psc_dynarray_reset(&a);
 
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
@@ -3332,15 +3330,19 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		goto retry;
 	if (!rc)
 		rc = mp->rc;
+	if (!rc) {
+		/*
+		 * Do not use xattr information until properly
+		 * refreshed.
+		 *
+		 * XXX we could piggyback the new size in the reply
+		 */
+		FCMH_LOCK(f);
+		f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
+		FCMH_ULOCK(f);
+	}
 
  out:
-	/*
-	 * Do not use xattr information until properly refreshed.
-	 */
-	FCMH_LOCK(f);
-	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
-	FCMH_ULOCK(f);
-
 	pscfs_reply_setxattr(pfr, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
