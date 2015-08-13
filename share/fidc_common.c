@@ -55,6 +55,8 @@ struct psc_hashtbl	  fidcHtable;
 #define	fcmh_get()	psc_pool_get(fidcPool)
 #define	fcmh_put(f)	psc_pool_return(fidcPool, (f))
 
+psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
+
 unsigned long fcmh_done_type[FCMH_OPCNT_MAXTYPE+1];
 unsigned long fcmh_start_type[FCMH_OPCNT_MAXTYPE+1];
 
@@ -394,8 +396,10 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 {
 	int locked;
 
+	spinlock(&fcmh_ref_lock);
 	fcmh_start_type[type]++;
 	fcmh_start_type[FCMH_OPCNT_MAXTYPE]++;
+	freelock(&fcmh_ref_lock);
 
 	locked = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt >= 0);
@@ -416,8 +420,10 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 {
 	int rc;
 
+	spinlock(&fcmh_ref_lock);
 	fcmh_done_type[type]++;
 	fcmh_done_type[FCMH_OPCNT_MAXTYPE]++;
+	freelock(&fcmh_ref_lock);
 
 	(void)FCMH_RLOCK(f);
 	rc = f->fcmh_refcnt--;
