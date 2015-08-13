@@ -249,8 +249,9 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	/* sys.resources.<site>.<res>.<field> */
-	/* ex: sys.resources.SITE.RES.FLAG */
+	/* ex: sys.resources.SITE.RES.FIELD */
 	/* ex: sys.resources.SITE.* */
+	/* ex: sys.resources.*.*.FIELD */
 
 	levels[0] = "sys";
 	levels[1] = "resources";
@@ -300,7 +301,8 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 					return (0);
 			}
 		}
-		if (!field_found && strcmp(p_field, "*"))
+		if (!field_found && strcmp(p_field, "*") &&
+		    strcmp(p_res, "*") && strcmp(p_site, "*"))
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid resources field: %s", p_field));
 	}
