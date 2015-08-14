@@ -714,7 +714,7 @@ slvr_schedule_crc_locked(struct slvr *s)
 	lc_addqueue(&sli_crcqslvrs, s);
 }
 
-__static void
+void
 slvr_remove(struct slvr *s)
 {
 	struct bmap_iod_info *bii;
@@ -799,25 +799,27 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_refcnt)
+	if (s->slvr_refcnt) {
+		SLVR_ULOCK(s);
 		return;
+	}
 
 	/*
 	 * If we encounter an I/O on a sliver that is already on the CRC
 	 * queue, take it off.
 	 */
 	if (s->slvr_flags & SLVR_CRCDIRTY) {
-		if (s->slvr_flags & SLVR_DATAERR) {
-			s->slvr_flags |= SLVR_LRU;
-			s->slvr_flags &= ~SLVR_CRCDIRTY;
-			lc_remove(&sli_crcqslvrs, s);
-			lc_addtail(&sli_lruslvrs, s);
-		}
+		SLVR_ULOCK(s);
+		return;
+	}
+	if (s->slvr_flags & SLVR_DATAERR) {
+		SLVR_ULOCK(s);
+		slvr_remove(s);
 		return;
 	}
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
-	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
+	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -827,6 +829,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * trylock().
 	 */
 	lc_move2tail(&sli_lruslvrs, s);
+	SLVR_ULOCK(s);
 }
 
 void
@@ -859,8 +862,6 @@ slvr_rio_done(struct slvr *s)
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
 	slvr_lru_tryunpin_locked(s);
-
-	SLVR_ULOCK(s);
 }
 
 /*
@@ -880,9 +881,8 @@ slvr_wio_done(struct slvr *s, int repl)
 	} else {
 		if (s->slvr_flags & SLVR_LRU)
 			slvr_schedule_crc_locked(s);
+		SLVR_ULOCK(s);
 	}
-
-	SLVR_ULOCK(s);
 }
 
 /*
@@ -904,7 +904,11 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	s = SPLAY_FIND(biod_slvrtree, &bii->bii_slvrs, &ts);
 	if (s) {
 		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_FREEING) {
+		/*
+		 * Reuse SLVR_DATAERR slivers is tricky, we might as well
+		 * start from fresh.
+		 */
+		if (s->slvr_flags & (SLVR_FREEING|SLVR_DATAERR)) {
 			SLVR_ULOCK(s);
 			/*
 			 * Lock is required to free the slvr.

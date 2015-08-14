@@ -270,8 +270,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    rw == SL_WRITE ? "wr" : "rd", rv);
 		if (rv == -SLERR_AIOWAIT)
 			needaio = 1;
-		else if (rv)
+		else if (rv) {
+			bmap_op_done(bmap);
+			bmap = NULL;
 			PFL_GOTOERR(out, rc = mp->rc = rv);
+		}
 
 		/*
 		 * mq->offset is the offset into the bmap, here we must

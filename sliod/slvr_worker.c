@@ -296,6 +296,13 @@ slislvrthr_proc(struct slvr *s)
 	struct bmap *b;
 	uint64_t crc;
 
+	/*
+ 	 * Take a reference now because we might free the sliver later.
+ 	 */
+	bii = slvr_2_bii(s);
+	b = bii_2_bmap(bii);
+	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
+
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
@@ -315,17 +322,19 @@ slislvrthr_proc(struct slvr *s)
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
-	bii = slvr_2_bii(s);
-	b = bii_2_bmap(bii);
 
-	s->slvr_flags |= SLVR_LRU;
-	s->slvr_flags &= ~(SLVR_CRCDIRTY | SLVR_FAULTING);
-	lc_addtail(&sli_lruslvrs, s);
-
-	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
-	OPSTAT_INCR("slvr-requeue");
-	SLVR_WAKEUP(s);
-	SLVR_ULOCK(s);
+	if ((s->slvr_flags & SLVR_DATAERR) && !s->slvr_refcnt) {
+		OPSTAT_INCR("slvr-crc-remove");
+		SLVR_ULOCK(s);
+		slvr_remove(s);
+	} else {
+		s->slvr_flags |= SLVR_LRU;
+		s->slvr_flags &= ~(SLVR_CRCDIRTY | SLVR_FAULTING);
+		OPSTAT_INCR("slvr-crc-requeue");
+		lc_addtail(&sli_lruslvrs, s);
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+	}
 
 	BII_LOCK(bii);
 	bcr = bii->bii_bcr;
