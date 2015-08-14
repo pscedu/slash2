@@ -72,6 +72,11 @@ struct slvr {
 #define SLVR_DATARDY		(1 <<  1)	/* ready for read / write activity */
 #define SLVR_DATAERR		(1 <<  2)
 #define SLVR_LRU		(1 <<  3)	/* cached but not dirty */
+/*
+ * This flag acts like an extra reference count to the sliver. I would like to
+ * get rid of this special case.  However, maybe someday, we will remove the
+ * CRC logic entirely.
+ */
 #define SLVR_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
 #define SLVR_FREEING		(1 <<  5)	/* sliver is being reaped */
 #define SLVRF_READAHEAD		(1 <<  6)	/* loaded via readahead prediction */
