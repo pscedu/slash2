@@ -79,14 +79,17 @@ void
 dircache_mgr_init(void)
 {
 	psc_poolmaster_init(&dircache_page_poolmaster,
-	    struct dircache_page, dcp_lentry, PPMF_AUTO, DCP_DEF,
-	    DCP_DEF, 0, NULL, NULL, NULL, "dircachepg");
-	dircache_page_pool = psc_poolmaster_getmgr(&dircache_page_poolmaster);
+	    struct dircache_page, dcp_lentry, PPMF_AUTO,
+	    DIRCACHE_NPAGES, DIRCACHE_NPAGES, 0, NULL, NULL, NULL,
+	    "dircachepg");
+	dircache_page_pool = psc_poolmaster_getmgr(
+	    &dircache_page_poolmaster);
 
 	psc_poolmaster_init(&dircache_ent_poolmaster,
-	    struct dircache_ent, dce_lentry, PPMF_AUTO, DCP_DEF,
-	    DCP_DEF, 0, NULL, NULL, NULL, "dircachent");
-	dircache_ent_pool = psc_poolmaster_getmgr(&dircache_ent_poolmaster);
+	    struct dircache_ent, dce_lentry, PPMF_AUTO, DIRCACHE_NPAGES,
+	    DIRCACHE_NPAGES, 0, NULL, NULL, NULL, "dircachent");
+	dircache_ent_pool = psc_poolmaster_getmgr(
+	    &dircache_ent_poolmaster);
 }
 
 /*
@@ -566,9 +569,9 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 			OPSTAT_INCR("namecache-hit");
 		return (rc);
 	case NAMECACHELOOKUPF_DELETE:
-		/* 
-		 * Note that the entry is already removed from 
-		 * the hash table if found due to PHLF_DEL.
+		/*
+		 * Note that the entry is already removed from the hash
+		 * table if found due to PHLF_DEL above.
 		 */
 		if (dce) {
 			dircache_ent_zap(d, dce);

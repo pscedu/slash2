@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd June 25, 2015
+.Dd August 14, 2015
 .Dt SLICTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -346,6 +346,7 @@ The default is
 .\"		connections	=> "Status of\n.Tn SLASH2\npeers on network",
 .\"		fidcache	=> ".Tn FID\n.Pq file- Ns Tn ID\ncache members",
 .\"		replwkst	=> "Status of active replications",
+.\"		slvrs		=> "In-memory slivers (bmap slices)",
 .\"	},
 .\"	pools => {
 .\"		bmap		=> "Block map structures",
@@ -536,6 +537,8 @@ Status of active replications
 .It Cm rpcsvcs
 .Tn RPC
 services.
+.It Cm slvrs
+In-memory slivers (bmap slices)
 .It Cm threads
 Daemon thread activity and statistics.
 .Ar subspec

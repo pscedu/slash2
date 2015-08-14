@@ -38,7 +38,7 @@ struct slictlmsg_replwkst {
 	sl_bmapno_t		srws_bmapno;
 	uint32_t		srws_data_tot;
 	uint32_t		srws_data_cur;
-	int32_t			srws_refcnt;
+	 int32_t		srws_refcnt;
 	/* XXX #inflight slivers? */
 };
 
@@ -46,7 +46,17 @@ struct slictlmsg_fileop {
 	char			sfop_fn[PATH_MAX];
 	char			sfop_fn2[PATH_MAX];
 	slfid_t			sfop_pfid;
-	int			sfop_flags;
+	int32_t			sfop_flags;
+};
+
+struct slictlmsg_slvr {
+	slfid_t			ss_fid;
+	sl_bmapno_t		ss_bno;
+	uint16_t		ss_slvrno;
+	uint16_t		ss_flags;
+	uint32_t		ss_refcnt;
+	 int32_t		ss_err;
+	struct pfl_timespec	ss_ts;
 };
 
 #define SLI_CTL_FOPF_RECURSIVE	(1 << 0)
@@ -66,3 +76,4 @@ struct slictlmsg_fileop {
 #define SLICMT_IMPORT		(NPCMT + 4)
 #define SLICMT_STOP		(NPCMT + 5)
 #define SLICMT_GETBMAP		(NPCMT + 6)
+#define SLICMT_GETSLVR		(NPCMT + 7)
