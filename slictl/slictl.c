@@ -38,6 +38,8 @@
 #include "pfl/str.h"
 
 #include "sliod/ctl_iod.h"
+#include "sliod/slvr.h"
+
 #include "ctl.h"
 #include "ctlcli.h"
 #include "pathnames.h"
@@ -111,6 +113,32 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		printf("%7s %7s", curbuf, totbuf);
 	}
 	printf(" %6s\n", rbuf);
+}
+
+void
+slvr_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-16s %6s %3s %4s %8s %5s %9s\n",
+	    "slvr-fid", "bmap#", "sl#", "refs", "flags", "err", "time");
+}
+
+void
+slvr_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slictlmsg_slvr *ss = m;
+
+	printf("%016"SLPRIxFID" %6d %3d %4d %c%c%c%c%c%c%c%c "
+	    "%5d %9"PRId64" \n",
+	    ss->ss_fid, ss->ss_bno, ss->ss_slvrno, ss->ss_refcnt,
+	    ss->ss_flags & SLVR_FAULTING	? 'f' : '-',
+	    ss->ss_flags & SLVR_DATARDY		? 'd' : '-',
+	    ss->ss_flags & SLVR_DATAERR		? 'E' : '-',
+	    ss->ss_flags & SLVR_LRU		? 'l' : '-',
+	    ss->ss_flags & SLVR_CRCDIRTY	? 'D' : '-',
+	    ss->ss_flags & SLVR_FREEING		? 'F' : '-',
+	    ss->ss_flags & SLVRF_READAHEAD	? 'R' : '-',
+	    ss->ss_flags & SLVRF_ACCESSED	? 'a' : '-',
+	    ss->ss_err, ss->ss_ts.tv_sec);
 }
 
 void
@@ -230,7 +258,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
 	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
 	{ NULL,			NULL,			0,					NULL },
-	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL }
+	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL },
+	{ slvr_prhdr,		slvr_prdat,		sizeof(struct slictlmsg_slvr),		NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
