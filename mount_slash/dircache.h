@@ -66,10 +66,10 @@ struct psc_compl;
 
 struct fidc_membh;
 
-#define DCP_DEF 		64
+#define DIRCACHE_NPAGES		64		/* initial number of pages in pool*/
 
-#define DIRCACHEPG_SOFT_TIMEO	4	/* expiration after page read */
-#define DIRCACHEPG_HARD_TIMEO	30	/* expiration regardless if read */
+#define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
+#define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)
