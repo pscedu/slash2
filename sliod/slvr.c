@@ -799,19 +799,11 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_refcnt) {
+	if (s->slvr_refcnt || (s->slvr_flags & SLVR_CRCDIRTY)) {
 		SLVR_ULOCK(s);
 		return;
 	}
 
-	/*
-	 * If we encounter an I/O on a sliver that is already on the CRC
-	 * queue, take it off.
-	 */
-	if (s->slvr_flags & SLVR_CRCDIRTY) {
-		SLVR_ULOCK(s);
-		return;
-	}
 	if (s->slvr_flags & SLVR_DATAERR) {
 		SLVR_ULOCK(s);
 		slvr_remove(s);
