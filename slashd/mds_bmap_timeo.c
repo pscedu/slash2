@@ -264,8 +264,6 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 void
 slmbmaptimeothr_spawn(void)
 {
-	OPSTAT_INCR("min_seqno");
-	OPSTAT_INCR("max_seqno");
 	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, NULL, 0,
 	    "slmbmaptimeothr");
 }
