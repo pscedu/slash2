@@ -794,7 +794,7 @@ slvr_remove_all(struct fidc_membh *f)
 	psc_dynarray_free(&a);
 }
 
-void
+__static void 
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
