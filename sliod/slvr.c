@@ -794,6 +794,9 @@ slvr_remove_all(struct fidc_membh *f)
 	psc_dynarray_free(&a);
 }
 
+/*
+ * Note that the sliver may be freed by this fuction.
+ */
 __static void 
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
