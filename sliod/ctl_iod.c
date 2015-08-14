@@ -47,6 +47,7 @@
 #include "rpc_iod.h"
 #include "sliod.h"
 #include "slutil.h"
+#include "slvr.h"
 
 #define TRIMCHARS(str, ch)						\
 	do {								\
@@ -494,6 +495,34 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 int
+slictlrep_getslvr(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slictlmsg_slvr *ss = m;
+	struct slvr *s;
+	int rc;
+
+	rc = 1;
+	LIST_CACHE_LOCK(&sli_lruslvrs);
+	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
+		memset(ss, 0, sizeof(*ss));
+		ss->ss_fid = fcmh_2_fid(slvr_2_fcmh(s));
+		ss->ss_bno = slvr_2_bmap(s)->bcm_bmapno;
+		ss->ss_slvrno = s->slvr_num;
+		ss->ss_flags = s->slvr_flags;
+		ss->ss_refcnt = s->slvr_refcnt;
+		ss->ss_err = s->slvr_err;
+		ss->ss_ts.tv_sec = s->slvr_ts.tv_sec;
+		ss->ss_ts.tv_nsec = s->slvr_ts.tv_nsec;
+
+		rc = psc_ctlmsg_sendv(fd, mh, ss);
+		if (!rc)
+			break;
+	}
+	LIST_CACHE_ULOCK(&sli_lruslvrs);
+	return (rc);
+}
+
+int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
 {
@@ -551,8 +580,8 @@ const struct slctl_res_field slctl_resios_fields[] = {
 	{ NULL, NULL }
 };
 
-/**
- * slictlcmd_stop - Handle a STOP command to terminate execution.
+/*
+ * Handle a STOP command to terminate execution.
  */
 __dead int
 slictlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
@@ -579,7 +608,8 @@ struct psc_ctlop slictlops[] = {
 	{ slictlcmd_export,		sizeof(struct slictlmsg_fileop) },
 	{ slictlcmd_import,		sizeof(struct slictlmsg_fileop) },
 	{ slictlcmd_stop,		0 },
-	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
+	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
+	{ slictlrep_getslvr,		sizeof(struct slictlmsg_slvr) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
