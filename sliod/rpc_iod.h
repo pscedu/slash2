@@ -58,18 +58,24 @@ struct sli_exp_cli {
 };
 
 /* aliases for connection management */
-#define sli_geticsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), &(resm)->resm_nids,	\
-	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
-	    SLCONNT_IOD, NULL)
+#define sli_geticsvcxf(resm, exp, flags)				\
+	sl_csvc_get(&(resm)->resm_csvc, (flags), (exp),			\
+	    &(resm)->resm_nids, SRII_REQ_PORTAL, SRII_REP_PORTAL,	\
+	    SRII_MAGIC, SRII_VERSION, SLCONNT_IOD, NULL)
 
-#define sli_getmcsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), &(resm)->resm_nids,	\
-	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
-	    SLCONNT_MDS, NULL)
+#define sli_getmcsvcxf(resm, exp, flags)				\
+	sl_csvc_get(&(resm)->resm_csvc, (flags), (exp),			\
+	    &(resm)->resm_nids, SRMI_REQ_PORTAL, SRMI_REP_PORTAL,	\
+	    SRMI_MAGIC, SRMI_VERSION, SLCONNT_MDS, NULL)
 
-#define sli_geticsvc(resm)		sli_geticsvcx((resm), NULL)
-#define sli_getmcsvc(resm)		sli_getmcsvcx((resm), NULL)
+#define sli_geticsvcx(m, exp)		sli_geticsvcxf((m), (exp), 0)
+#define sli_getmcsvcx(m, exp)		sli_getmcsvcxf((m), (exp), 0)
+
+#define sli_geticsvcf(m, flags)		sli_geticsvcxf((m), NULL, (flags))
+#define sli_getmcsvcf(m, flags)		sli_getmcsvcxf((m), NULL, (flags))
+
+#define sli_geticsvc(m)			sli_geticsvcx((m), NULL)
+#define sli_getmcsvc(m)			sli_getmcsvcx((m), NULL)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)
