@@ -504,8 +504,52 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
-const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
-const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
+int
+slictl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *m;
+	char nbuf[8];
+
+	if (set && strcmp(pcp->pcp_value, "0") &&
+	    strcmp(pcp->pcp_value, "1"))
+		return (psc_ctlsenderr(fd, mh,
+		    "connected: invalid value"));
+
+	m = res_getmemb(r);
+	if (set) {
+		if (r->res_type == SLREST_MDS)
+			csvc = sli_geticsvcf(m, CSVCF_NONBLOCK);
+		else
+			csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK);
+		if (strcmp(pcp->pcp_value, "0") == 0 && csvc)
+			sl_csvc_disconnect(csvc);
+		if (csvc)
+			sl_csvc_decref(csvc);
+		return (1);
+	}
+	if (r->res_type == SLREST_MDS)
+		csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	else
+		csvc = sli_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
+const struct slctl_res_field slctl_resmds_fields[] = {
+	{ "connected",		slictl_resfield_connected },
+	{ NULL, NULL }
+};
+
+const struct slctl_res_field slctl_resios_fields[] = {
+	{ "connected",		slictl_resfield_connected },
+	{ NULL, NULL }
+};
 
 /**
  * slictlcmd_stop - Handle a STOP command to terminate execution.
