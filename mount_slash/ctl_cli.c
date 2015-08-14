@@ -715,9 +715,9 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 	m = res_getmemb(r);
 	if (set) {
 		if (r->res_type == SLREST_MDS)
-			csvc = slc_geticsvc_nb(m);
-		else
 			csvc = slc_getmcsvc_nb(m);
+		else
+			csvc = slc_geticsvc_nb(m);
 		if (strcmp(pcp->pcp_value, "0") == 0 && csvc)
 			sl_csvc_disconnect(csvc);
 		if (csvc)
