@@ -83,12 +83,12 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 	uint64_t crc;
 
 	SLVR_LOCK_ENSURE(s);
-	psc_assert((s->slvr_flags & SLVR_FAULTING ||
-		    s->slvr_flags & SLVR_CRCDIRTY));
+	psc_assert((s->slvr_flags & SLVRF_FAULTING ||
+		    s->slvr_flags & SLVRF_CRCDIRTY));
 
-	if (s->slvr_flags & SLVR_CRCDIRTY) {
+	if (s->slvr_flags & SLVRF_CRCDIRTY) {
 		/*
-		 * SLVR_CRCDIRTY means that DATARDY has been set and
+		 * SLVRF_CRCDIRTY means that DATARDY has been set and
 		 * that a write dirtied the buffer and invalidated the
 		 * CRC.
 		 */
@@ -111,7 +111,7 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 		DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
 		    "CRC update: slvr=%hu, crc=%"PSCPRIxCRC64,
 		    s->slvr_num, slvr_2_crc(s));
-	} else if (s->slvr_flags & SLVR_FAULTING) {
+	} else if (s->slvr_flags & SLVRF_FAULTING) {
 		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
 			return (SLERR_CRCABSENT);
 
@@ -156,8 +156,8 @@ slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
 		psc_assert(s->slvr_flags &
-		    (SLVR_DATARDY | SLVR_DATAERR));
-		if (s->slvr_flags & SLVR_DATAERR)
+		    (SLVRF_DATARDY | SLVRF_DATAERR));
+		if (s->slvr_flags & SLVRF_DATAERR)
 			rc = s->slvr_err;
 		SLVR_ULOCK(s);
 		if (rc)
@@ -278,7 +278,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_FAULTING) {
+		if (s->slvr_flags & SLVRF_FAULTING) {
 			SLVR_ULOCK(s);
 			return;
 		}
@@ -309,11 +309,11 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 
 	SLVR_LOCK(s);
 	psc_assert(iocb == s->slvr_iocb);
-	psc_assert(s->slvr_flags & SLVR_FAULTING);
-	psc_assert(!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
+	psc_assert(s->slvr_flags & SLVRF_FAULTING);
+	psc_assert(!(s->slvr_flags & (SLVRF_DATARDY | SLVRF_DATAERR)));
 
 	/* Prevent additions from new requests. */
-	s->slvr_flags &= ~SLVR_FAULTING;
+	s->slvr_flags &= ~SLVRF_FAULTING;
 
 	slvr_iocb_release(s->slvr_iocb);
 	s->slvr_iocb = NULL;
@@ -323,11 +323,11 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		 * There was a problem; unblock any waiters and
 		 * tell them the bad news.
 		 */
-		s->slvr_flags |= SLVR_DATAERR;
+		s->slvr_flags |= SLVRF_DATAERR;
 		DEBUG_SLVR(PLL_ERROR, s, "error, rc=%d", rc);
 		s->slvr_err = rc;
 	} else {
-		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags |= SLVRF_DATARDY;
 		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
 	}
 
@@ -446,7 +446,7 @@ sli_aio_register(struct slvr *s)
 	iocb = sli_aio_iocb_new(s);
 
 	SLVR_LOCK(s);
-	s->slvr_flags |= SLVR_FAULTING;
+	s->slvr_flags |= SLVRF_FAULTING;
 	s->slvr_iocb = iocb;
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
@@ -651,13 +651,13 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
 	 */
-	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
+	SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
 
 	DEBUG_SLVR(PLL_DIAG, s,
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
-	if (s->slvr_flags & SLVR_DATAERR) {
+	if (s->slvr_flags & SLVRF_DATAERR) {
 		rc = s->slvr_err;
 		goto out1;
 	}
@@ -665,9 +665,9 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	/*
 	 * Mark the sliver until we are done read and write with it.
 	 */
-	s->slvr_flags |= SLVR_FAULTING;
+	s->slvr_flags |= SLVRF_FAULTING;
 
-	if (s->slvr_flags & SLVR_DATARDY) {
+	if (s->slvr_flags & SLVRF_DATARDY) {
 		if ((flags & SLVRF_READAHEAD) == 0 &&
 		    s->slvr_flags & SLVRF_READAHEAD)
 			OPSTAT_INCR("readahead-hit");
@@ -705,8 +705,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
-	s->slvr_flags &= ~SLVR_LRU;
-	s->slvr_flags |= SLVR_CRCDIRTY;
+	s->slvr_flags &= ~SLVRF_LRU;
+	s->slvr_flags |= SLVRF_CRCDIRTY;
 	PFL_GETTIMESPEC(&s->slvr_ts);
 	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
 
@@ -724,7 +724,7 @@ slvr_remove(struct slvr *s)
 	OPSTAT_INCR("slvr-put");
 
 	SLVR_LOCK(s);
-	if (s->slvr_flags & SLVR_LRU)
+	if (s->slvr_flags & SLVRF_LRU)
 		lc_remove(&sli_lruslvrs, s);
 	else
 		lc_remove(&sli_crcqslvrs, s);
@@ -746,8 +746,8 @@ slvr_remove(struct slvr *s)
 }
 
 /*
- * Remove vestige of old contents when the generation of a file changes or when
- * the file is unlinked.
+ * Remove vestige of old contents when the generation of a file changes
+ * or when the file is unlinked.
  */
 void
 slvr_remove_all(struct fidc_membh *f)
@@ -759,7 +759,8 @@ slvr_remove_all(struct fidc_membh *f)
 	static struct psc_dynarray a;
 
 	/*
-	 * Use two loops to avoid entangled with some background operations.
+	 * Use two loops to avoid entangled with some background
+	 * operations.
 	 */
 	psc_dynarray_init(&a);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
@@ -771,17 +772,18 @@ slvr_remove_all(struct fidc_membh *f)
 		while (!SPLAY_EMPTY(&bii->bii_slvrs)) {
 			s = SPLAY_MIN(biod_slvrtree, &bii->bii_slvrs);
 			/* 
-			 * Use SLVR_FREEING to avoid a race with sliver reaper.
-			 * Note that we don't check refcnt here because we are
-			 * only called when the file is truncated or reclaimed.
+			 * Use SLVRF_FREEING to avoid a race with sliver
+			 * reaper.  Note that we don't check refcnt here
+			 * because we are only called when the file is
+			 * truncated or reclaimed.
 			 */
 			SLVR_LOCK(s);
-			SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
-			if (s->slvr_flags & SLVR_FREEING) {
+			SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
+			if (s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
 			}
-			s->slvr_flags |= SLVR_FREEING;
+			s->slvr_flags |= SLVRF_FREEING;
 			SLVR_ULOCK(s);
 
 			OPSTAT_INCR("slvr-remove");
@@ -802,19 +804,19 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_refcnt || (s->slvr_flags & SLVR_CRCDIRTY)) {
+	if (s->slvr_refcnt || (s->slvr_flags & SLVRF_CRCDIRTY)) {
 		SLVR_ULOCK(s);
 		return;
 	}
 
-	if (s->slvr_flags & SLVR_DATAERR) {
+	if (s->slvr_flags & SLVRF_DATAERR) {
 		SLVR_ULOCK(s);
 		slvr_remove(s);
 		return;
 	}
 
-	psc_assert(s->slvr_flags & SLVR_LRU);
-	psc_assert(s->slvr_flags & SLVR_DATARDY);
+	psc_assert(s->slvr_flags & SLVRF_LRU);
+	psc_assert(s->slvr_flags & SLVRF_DATARDY);
 
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -831,13 +833,13 @@ void
 slvr_io_done(struct slvr *s, int rc)
 {
 	SLVR_LOCK(s);
-	s->slvr_flags &= ~(SLVR_FAULTING | SLVR_DATARDY);
+	s->slvr_flags &= ~(SLVRF_FAULTING | SLVRF_DATARDY);
 	if (rc) {
 		s->slvr_err = rc;
-		s->slvr_flags |= SLVR_DATAERR;
+		s->slvr_flags |= SLVRF_DATAERR;
 		DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATAERR");
 	} else {
-		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags |= SLVRF_DATARDY;
 		DEBUG_SLVR(PLL_DIAG, s, "FAULTING --> DATARDY");
 
 	}
@@ -871,10 +873,10 @@ slvr_wio_done(struct slvr *s, int repl)
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
 
-	if (s->slvr_flags & SLVR_DATAERR || repl) {
+	if (s->slvr_flags & SLVRF_DATAERR || repl) {
 		slvr_lru_tryunpin_locked(s);
 	} else {
-		if (s->slvr_flags & SLVR_LRU)
+		if (s->slvr_flags & SLVRF_LRU)
 			slvr_schedule_crc_locked(s);
 		SLVR_ULOCK(s);
 	}
@@ -900,10 +902,10 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	if (s) {
 		SLVR_LOCK(s);
 		/*
-		 * Reuse SLVR_DATAERR slivers is tricky, we might as well
+		 * Reuse SLVRF_DATAERR slivers is tricky, we might as well
 		 * start from fresh.
 		 */
-		if (s->slvr_flags & (SLVR_FREEING|SLVR_DATAERR)) {
+		if (s->slvr_flags & (SLVRF_FREEING|SLVRF_DATAERR)) {
 			SLVR_ULOCK(s);
 			/*
 			 * Lock is required to free the slvr.
@@ -951,7 +953,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		 * Until the slab is added to the sliver, the sliver is
 		 * private to the bmap's biod_slvrtree.
 		 */
-		s->slvr_flags |= SLVR_LRU;
+		s->slvr_flags |= SLVRF_LRU;
 		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&sli_lruslvrs, s);
 
@@ -992,13 +994,13 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		if (s->slvr_refcnt || (s->slvr_flags & SLVR_FREEING)) {
+		if (s->slvr_refcnt || (s->slvr_flags & SLVRF_FREEING)) {
 			SLVR_ULOCK(s);
 			continue;
 		}
 
 		psc_dynarray_add(&a, s);
-		s->slvr_flags |= SLVR_FREEING;
+		s->slvr_flags |= SLVRF_FREEING;
 		SLVR_ULOCK(s);
 
 		if (psc_dynarray_len(&a) >=
@@ -1161,12 +1163,14 @@ dump_sliver_flags(int fl)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(SLVR_FAULTING, &fl, &seq);
-	PFL_PRFLAG(SLVR_DATARDY, &fl, &seq);
-	PFL_PRFLAG(SLVR_DATAERR, &fl, &seq);
-	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
-	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
-	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
+	PFL_PRFLAG(SLVRF_FAULTING, &fl, &seq);
+	PFL_PRFLAG(SLVRF_DATARDY, &fl, &seq);
+	PFL_PRFLAG(SLVRF_DATAERR, &fl, &seq);
+	PFL_PRFLAG(SLVRF_LRU, &fl, &seq);
+	PFL_PRFLAG(SLVRF_CRCDIRTY, &fl, &seq);
+	PFL_PRFLAG(SLVRF_FREEING, &fl, &seq);
+	PFL_PRFLAG(SLVRF_READAHEAD, &fl, &seq);
+	PFL_PRFLAG(SLVRF_ACCESSED, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
 	printf("\n");

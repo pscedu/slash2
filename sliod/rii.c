@@ -74,7 +74,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 */
 		psc_assert(s->slvr_refcnt > 0);
 		s->slvr_refcnt--;
-		s->slvr_flags &= ~SLVR_FAULTING;
+		s->slvr_flags &= ~SLVRF_FAULTING;
 
 		DEBUG_SLVR(PLL_DIAG, s, "aio wait");
 		SLVR_WAKEUP(s);
@@ -155,7 +155,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	if (rv == -SLERR_AIOWAIT) {
 		aiocbr = sli_aio_replreply_setup(rq, s, &iov);
 		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_FAULTING) {
+		if (s->slvr_flags & SLVRF_FAULTING) {
 			s->slvr_aioreply = aiocbr;
 			OPSTAT_INCR("aio-insert");
 			SLVR_ULOCK(s);
