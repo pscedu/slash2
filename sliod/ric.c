@@ -316,7 +316,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		for (i = 0; i < nslvrs; i++) {
 			SLVR_LOCK(slvr[i]);
-			if (slvr[i]->slvr_flags & SLVR_FAULTING) {
+			if (slvr[i]->slvr_flags & SLVRF_FAULTING) {
 				/*
 				 * Attach the reply to the first sliver
 				 * waiting for aio and return AIOWAIT to

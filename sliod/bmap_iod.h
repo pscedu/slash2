@@ -82,8 +82,8 @@ struct bmap_iod_rls {
 
 SPLAY_HEAD(biod_slvrtree, slvr);
 
-/**
- * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
+/*
+ * bmap_get_pri() data specific to the I/O server.
  */
 struct bmap_iod_info {
 	uint8_t			 bii_crcstates[SLASH_CRCS_PER_BMAP];

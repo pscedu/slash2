@@ -306,9 +306,9 @@ slislvrthr_proc(struct slvr *s)
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
-	psc_assert(!(s->slvr_flags & SLVR_LRU));
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
-	psc_assert(s->slvr_flags & SLVR_DATARDY);
+	psc_assert(!(s->slvr_flags & SLVRF_LRU));
+	psc_assert(s->slvr_flags & SLVRF_CRCDIRTY);
+	psc_assert(s->slvr_flags & SLVRF_DATARDY);
 
 	/*
 	 * OK, we've got a sliver to work on.  From this point until we
@@ -323,13 +323,13 @@ slislvrthr_proc(struct slvr *s)
 
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 
-	if ((s->slvr_flags & SLVR_DATAERR) && !s->slvr_refcnt) {
+	if ((s->slvr_flags & SLVRF_DATAERR) && !s->slvr_refcnt) {
 		OPSTAT_INCR("slvr-crc-remove");
 		SLVR_ULOCK(s);
 		slvr_remove(s);
 	} else {
-		s->slvr_flags |= SLVR_LRU;
-		s->slvr_flags &= ~(SLVR_CRCDIRTY | SLVR_FAULTING);
+		s->slvr_flags |= SLVRF_LRU;
+		s->slvr_flags &= ~(SLVRF_CRCDIRTY | SLVRF_FAULTING);
 		OPSTAT_INCR("slvr-crc-requeue");
 		lc_addtail(&sli_lruslvrs, s);
 		SLVR_WAKEUP(s);
@@ -421,12 +421,12 @@ slislvrthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
 				continue;
-			if (s->slvr_refcnt || s->slvr_flags & SLVR_FREEING) {
+			if (s->slvr_refcnt || s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
 			}
 			if (timespeccmp(&expire, &s->slvr_ts, >)) {
-				s->slvr_flags |= SLVR_FAULTING;
+				s->slvr_flags |= SLVRF_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
 			}

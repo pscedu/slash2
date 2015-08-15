@@ -39,8 +39,8 @@
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
 #include "pfl/fmtstr.h"
-#include "pfl/opstats.h"
 #include "pfl/listcache.h"
+#include "pfl/opstats.h"
 #include "pfl/pfl.h"
 #include "pfl/random.h"
 #include "pfl/str.h"
@@ -135,8 +135,9 @@ slistatfsthr_main(struct psc_thread *thr)
 	}
 }
 
-/**
- * slihealththr_main - Occassionally run the self health test.
+/*
+ * Occassionally run the self health test.
+ *
  * @thr: our thread.
  */
 void

@@ -68,10 +68,9 @@ iod_inode_getinfo(struct sl_fidgen *fg, uint64_t *size,
 	return (0);
 }
 
-/**
- * sli_fid_makepath - Build the pathname in the FID object root that
- *	corresponds to a FID, allowing easily lookup of file metadata
- *	via FIDs.
+/*
+ * Build the pathname in the FID object root that corresponds to a FID,
+ * allowing easily lookup of file metadata via FIDs.
  */
 void
 sli_fg_makepath(const struct sl_fidgen *fg, char *fid_path)
@@ -165,10 +164,10 @@ sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
 	return (rc);
 }
 
-/**
- * sli_fcmh_reopen - If the generation number changes, we assume a full
- *	truncation has happened.  We need to open a new backing file and
- *	attach it to the fcmh.
+/*
+ * If the generation number changes, we assume a full truncation has
+ * happened.  We need to open a new backing file and attach it to the
+ * fcmh.
  */
 int
 sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)

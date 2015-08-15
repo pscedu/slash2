@@ -341,15 +341,16 @@ iod_bmap_finalcleanup(struct bmap *b)
 	psc_assert(psclist_disjoint(&bii->bii_lentry));
 }
 
-/**
- * iod_bmap_retrieve - Load the relevant bmap information from the
- *	metadata server.  In the case of the ION the bmap sections of
- *	interest are the CRC table and the CRC states bitmap.  For now
- *	we only load this information on read.
+/*
+ * Load the relevant bmap information from the metadata server.  In the
+ * case of the ION the bmap sections of interest are the CRC table and
+ * the CRC states bitmap.  For now we only load this information on read.
+ *
  * @b: bmap to load.
  * @rw: the bmap access mode.
+ *
  * Return zero on success or errno code on failure (likely an RPC
- *	problem).
+ * problem).
  */
 int
 iod_bmap_retrieve(struct bmap *b, enum rw rw, __unusedx int flags)

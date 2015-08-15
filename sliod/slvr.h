@@ -42,7 +42,7 @@
 
 struct bmap_iod_info;
 
-/**
+/*
  * Bmap "sliver" used for scheduling dirty slivers to be CRC'd
  *	and sent to the MDS.
  * Note: slivers are locked through their bmap_iod_info lock.  A slab is
@@ -53,8 +53,9 @@ struct slvr {
 	uint16_t		 slvr_flags;	/* see SLVR_* flags */
 	uint32_t		 slvr_refcnt;
 	/*
-	 * KISS: A sliver marked with an error must be freed. Otherwise, we
-	 * run the risk of turning a transient error into a longer-time error.
+	 * KISS: A sliver marked with an error must be freed.
+	 * Otherwise, we run the risk of turning a transient error into
+	 * a longer-time error.
 	 */
 	 int32_t		 slvr_err;
 	psc_spinlock_t		 slvr_lock;
@@ -68,17 +69,17 @@ struct slvr {
 };
 
 /* slvr_flags */
-#define SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
-#define SLVR_DATARDY		(1 <<  1)	/* ready for read / write activity */
-#define SLVR_DATAERR		(1 <<  2)
-#define SLVR_LRU		(1 <<  3)	/* cached but not dirty */
+#define SLVRF_FAULTING		(1 <<  0)	/* contents loading from disk or net */
+#define SLVRF_DATARDY		(1 <<  1)	/* ready for read / write activity */
+#define SLVRF_DATAERR		(1 <<  2)
+#define SLVRF_LRU		(1 <<  3)	/* cached but not dirty */
 /*
- * This flag acts like an extra reference count to the sliver. I would like to
- * get rid of this special case.  However, maybe someday, we will remove the
- * CRC logic entirely.
+ * This flag acts like an extra reference count to the sliver.  I would
+ * like to get rid of this special case.  However, maybe someday, we
+ * will remove the CRC logic entirely.
  */
-#define SLVR_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
-#define SLVR_FREEING		(1 <<  5)	/* sliver is being reaped */
+#define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
+#define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
 #define SLVRF_READAHEAD		(1 <<  6)	/* loaded via readahead prediction */
 #define SLVRF_ACCESSED		(1 <<  7)	/* actually used by a client */
 
@@ -139,12 +140,12 @@ struct slvr {
 	    (s)->slvr_bii ?						\
 	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
 	    (s)->slvr_iocb,						\
-	    (s)->slvr_flags & SLVR_FAULTING	? "f" : "-",		\
-	    (s)->slvr_flags & SLVR_DATARDY	? "d" : "-",		\
-	    (s)->slvr_flags & SLVR_DATAERR	? "E" : "-",		\
-	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
-	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
-	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
+	    (s)->slvr_flags & SLVRF_FAULTING	? "f" : "-",		\
+	    (s)->slvr_flags & SLVRF_DATARDY	? "d" : "-",		\
+	    (s)->slvr_flags & SLVRF_DATAERR	? "E" : "-",		\
+	    (s)->slvr_flags & SLVRF_LRU		? "l" : "-",		\
+	    (s)->slvr_flags & SLVRF_CRCDIRTY	? "D" : "-",		\
+	    (s)->slvr_flags & SLVRF_FREEING	? "F" : "-",		\
 	    (s)->slvr_flags & SLVRF_READAHEAD	? "R" : "-",		\
 	    (s)->slvr_flags & SLVRF_ACCESSED	? "a" : "-",		\
 	    ##__VA_ARGS__)
