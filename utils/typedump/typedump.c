@@ -242,6 +242,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_fileop);
 	PRTYPE(struct slictlmsg_replwkst);
+	PRTYPE(struct slictlmsg_slvr);
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
