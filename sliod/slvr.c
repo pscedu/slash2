@@ -965,7 +965,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	return (s);
 }
 
-/**
+/*
  * The reclaim function for sl_bufs_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */

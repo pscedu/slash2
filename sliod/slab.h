@@ -35,9 +35,8 @@
 #include "pfl/list.h"
 #include "pfl/pool.h"
 
-/**
- * sl_buffer - Used for both read caching and write
- *   aggregation.
+/*
+ * Used for both read caching and write aggregation.
  */
 struct sl_buffer {
 	void			*slb_base;		/* point to the data buffer */
