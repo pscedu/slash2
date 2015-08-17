@@ -811,6 +811,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 
 	if (s->slvr_flags & SLVRF_DATAERR) {
 		SLVR_ULOCK(s);
+		OPSTAT_INCR("slvr-err-remove");
 		slvr_remove(s);
 		return;
 	}
