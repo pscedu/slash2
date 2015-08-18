@@ -607,9 +607,6 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 			} else if (q->mfsrq_iovs) {
 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
-				pscfs_reply_read(pfr, q->mfsrq_iovs,
-				    q->mfsrq_niov, 0);
-
 				for (i = 0; i < MAX_BMAPS_REQ; i++) {
 					r = q->mfsrq_biorq[i];
 					if (!r)
@@ -617,6 +614,9 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 					biorq_bmpces_setflag(r,
 					    BMPCEF_ACCESSED);
 				}
+
+				pscfs_reply_read(pfr, q->mfsrq_iovs,
+				    q->mfsrq_niov, 0);
 			} else {
 				struct iovec iov[MAX_BMAPS_REQ];
 				int nio = 0;
