@@ -784,6 +784,10 @@ slvr_remove_all(struct fidc_membh *f)
 				continue;
 			}
 			s->slvr_flags |= SLVRF_FREEING;
+			if (s->slvr_refcnt) {
+				SLVR_ULOCK(s);
+				continue;
+			}
 			SLVR_ULOCK(s);
 
 			OPSTAT_INCR("slvr-remove");
@@ -809,7 +813,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		return;
 	}
 
-	if (s->slvr_flags & SLVRF_DATAERR) {
+	if (s->slvr_flags & (SLVRF_DATAERR | SLVRF_FREEING)) {
 		SLVR_ULOCK(s);
 		OPSTAT_INCR("slvr-err-remove");
 		slvr_remove(s);
