@@ -917,9 +917,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				pscrpc_import_put(csvc->csvc_import);
 				csvc->csvc_import = NULL;
 			}
-			csvc->csvc_tryref++;
 		} else if (csvc->csvc_import == NULL)
 			csvc->csvc_import = slrpc_new_import(csvc);
+		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
 		if (stkversp == NULL)
@@ -943,8 +943,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  proc_conn:
 		CSVC_LOCK(csvc);
 
-		if (flags & CSVCF_NONBLOCK)
-			sl_csvc_dectryref(csvc);
+		sl_csvc_dectryref(csvc);
 
 		if (rc == EWOULDBLOCK) {
 			csvc = NULL;
