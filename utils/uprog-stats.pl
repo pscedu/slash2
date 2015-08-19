@@ -36,6 +36,7 @@ while (<>) {
 		rd=(\d+) \s wr=(\d+) \s
 		prog=(.*)/x or next;
 	$uprog =~ s!^\S*/!!;
+	$uprog =~ s/^ksh93|^bash\s+\-//;
 	$uprog = "?" unless $uprog;
 	update_stat \%bytes_rd, $uprog, $rd;
 	update_stat \%bytes_wr, $uprog, $wr;
