@@ -1039,58 +1039,6 @@ slc_wk_issue_readdir(void *p)
 }
 #endif
 
-/*
- * Register a 'miss' in the FID namespace lookup cache.
- * If we reach a threshold, we issue an asynchronous READDIR in hopes
- * that we will hit subsequent requests.
- */
-void
-dircache_tally_lookup_miss(struct fidc_membh *p)
-{
-#if 0
-	struct fcmh_cli_info *pi = fcmh_2_fci(p);
-	struct slc_wkdata_readdir *wk = NULL;
-	struct timeval ts, delta;
-	struct dircache_page *np;
-	int ra = 0;
-
-	OPSTAT_INCR("dircache-lookup-miss");
-
-	FCMH_LOCK(p);
-	PFL_GETTIMEVAL(&ts);
-	timersub(&ts, &pi->fcid_lookup_age, &delta);
-	if (delta.tv_sec > 1) {
-		pi->fcid_lookup_age = ts;
-		pi->fcid_lookup_misses = pi->fcid_lookup_misses >>
-		    delta.tv_sec;
-	}
-	pi->fcid_lookup_misses += DIR_LOOKUP_MISSES_INCR;
-	if (pi->fcid_lookup_misses >= DIR_LOOKUP_MISSES_THRES)
-		ra = 1;
-	FCMH_ULOCK(p);
-
-	if (!ra)
-		return;
-
-	if (dircache_hasoff(p, off)) {
-
-	np = dircache_new_page(p, 0, 0);
-	if (np == NULL)
-		return;
-
-	wk = pfl_workq_getitem(slc_wk_issue_readdir,
-	    struct slc_wkdata_readdir);
-	fcmh_op_start_type(p, FCMH_OPCNT_WORKER);
-	wk->d = p;
-	wk->pg = np;
-	wk->off = off;
-	wk->size = 32 * 1024;
-	pfl_workq_putitem(wk);
-
-	msl_readdir_issue(NULL, d, 0, size, 0);
-#endif
-}
-
 __static int
 msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
@@ -1162,8 +1110,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	cfid = namecache_lookup(p, name);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
-		if (cfid == FID_ANY)
-			dircache_tally_lookup_miss(p);
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
 	}
