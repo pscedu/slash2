@@ -997,7 +997,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
-	namecache_clobber(p, name, fcmh_2_fid(f));
+	namecache_insert(p, name, fcmh_2_fid(f));
 
 	FCMH_LOCK(f);
 	slc_fcmh_setattr_locked(f, &mp->attr);
