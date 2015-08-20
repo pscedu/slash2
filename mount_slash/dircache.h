@@ -245,13 +245,11 @@ enum {
 	NAMECACHELOOKUPF_CLOBBER,
 	NAMECACHELOOKUPF_DELETE,
 	NAMECACHELOOKUPF_INSERT,
-	NAMECACHELOOKUPF_PEEK,
-	NAMECACHELOOKUPF_UPDATE
+	NAMECACHELOOKUPF_PEEK
 };
 
 #define namecache_delete(p, name)	_namecache_lookup(NAMECACHELOOKUPF_DELETE, (p), (name), 0)
 #define namecache_lookup(p, name)	_namecache_lookup(NAMECACHELOOKUPF_PEEK, (p), (name), 0)
-#define namecache_update(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_UPDATE, (p), (name), (fid))
 #define namecache_clobber(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_CLOBBER, (p), (name), (fid))
 #define namecache_insert(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_INSERT, (p), (name), (fid))
 
