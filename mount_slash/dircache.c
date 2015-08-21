@@ -585,6 +585,12 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 		}
 		break;
 	case NAMECACHELOOKUPF_INSERT:
+		/*
+ 		 * XXX Whenever we are doing namespace operation, we are
+ 		 * holding the lock on the parent directory. So this should
+ 		 * never happen. Yet, we always pay the price of searching
+ 		 * the hash table twice.
+ 		 */
 		if (dce) {
 			OPSTAT_INCR("namecache-insert-collision");
 			return (rc);
