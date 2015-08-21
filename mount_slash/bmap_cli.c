@@ -1022,7 +1022,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	 * Occasionally stir the order of replicas to distribute load.
 	 */
 	FCMH_LOCK(b->bcm_fcmh);
-	if (++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
+	if (fci->fci_inode.nrepls > 1 && ++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
 		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
 		    sizeof(fci->fcif_idxmap[0]), slc_reptbl_cmp, fci);
 		fci->fcif_mapstircnt = 0;
