@@ -359,6 +359,9 @@ slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a,
  * Gather a list of I/O servers.  This is used by the IOS selector and
  * should the client's preferred choices as well as factor in other
  * considerations.
+ *
+ * XXX: Make sure that we don't give out dead IOS and possibly avoid
+ * shuffling when there is only one IOS in the table.
  */
 void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
