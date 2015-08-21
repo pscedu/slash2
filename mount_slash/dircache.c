@@ -579,6 +579,10 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 			OPSTAT_INCR("namecache-delete-miss");
 		return (rc);
 	case NAMECACHELOOKUPF_UPDATE:
+		/*
+		 * If dce is NULL, it means that we haven't found an entry
+		 * to update, we are going to insert below.
+		 */
 		if (dce) {
 			OPSTAT_INCR("namecache-update");
 			return (rc);
