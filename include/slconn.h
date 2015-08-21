@@ -121,10 +121,10 @@ struct slrpc_cservice {
 #define CSVCF_DISCONNECTING	(1 << 6)		/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
-#define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 7)		/* do not attempt reconnection if down */
+#define CSVCF_NONBLOCK		(1 << 7)		/* don't timeout waiting for new establishment */
+#define CSVCF_NORECON		(1 << 8)		/* do not attempt reconnection if down */
 
-#define CSVCF_LASTFLAG		(1 << 8)
+#define CSVCF_FLAGSHIFT		(1 << 9)
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 #define CSVC_PING_INTV		60			/* seconds */
