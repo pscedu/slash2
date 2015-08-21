@@ -2419,10 +2419,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		PFL_GOTOERR(out, rc);
 
 	namecache_delete(op, oldname);
-#if 0
-	namecache_insert(np, newname, mp->srr_cattr.sst_fid);
-#endif
-	namecache_clobber(np, newname, mp->srr_cattr.sst_fid);
+	namecache_update(np, newname, mp->srr_cattr.sst_fid);
 
 	/* refresh old parent attributes */
 	slc_fcmh_setattr(op, &mp->srr_opattr);

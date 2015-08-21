@@ -540,7 +540,7 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 	psc_assert(pfid == SLFID_ROOT || pfid >= SLFID_MIN);
 
 	switch (op) {
-	case NAMECACHELOOKUPF_CLOBBER:
+	case NAMECACHELOOKUPF_UPDATE:
 		cbf = dircache_ent_update;
 		arg = &cfid;
 		break;
@@ -578,7 +578,7 @@ _namecache_lookup(int op, struct fidc_membh *d, const char *name,
 		} else
 			OPSTAT_INCR("namecache-delete-miss");
 		return (rc);
-	case NAMECACHELOOKUPF_CLOBBER:
+	case NAMECACHELOOKUPF_UPDATE:
 		if (dce) {
 			OPSTAT_INCR("namecache-update");
 			return (rc);

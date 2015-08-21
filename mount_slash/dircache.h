@@ -242,16 +242,16 @@ void	dircache_walk_async(struct fidc_membh *, void (*)(
 int	dircache_ent_cmp(const void *, const void *);
 
 enum {
-	NAMECACHELOOKUPF_CLOBBER,
+	NAMECACHELOOKUPF_UPDATE,	/* insert if not exist */
 	NAMECACHELOOKUPF_DELETE,
 	NAMECACHELOOKUPF_INSERT,
 	NAMECACHELOOKUPF_PEEK
 };
 
+#define namecache_update(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_UPDATE, (p), (name), (fid))
 #define namecache_delete(p, name)	_namecache_lookup(NAMECACHELOOKUPF_DELETE, (p), (name), 0)
-#define namecache_lookup(p, name)	_namecache_lookup(NAMECACHELOOKUPF_PEEK, (p), (name), 0)
-#define namecache_clobber(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_CLOBBER, (p), (name), (fid))
 #define namecache_insert(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_INSERT, (p), (name), (fid))
+#define namecache_lookup(p, name)	_namecache_lookup(NAMECACHELOOKUPF_PEEK, (p), (name), 0)
 
 void	 namecache_purge(struct fidc_membh *);
 slfid_t	_namecache_lookup(int, struct fidc_membh *, const char *, uint64_t);
