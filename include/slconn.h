@@ -122,7 +122,7 @@ struct slrpc_cservice {
 
 /* sl_csvc_get() flags, shared in numerical space */
 #define CSVCF_NONBLOCK		(1 << 7)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 8)		/* do not attempt reconnection if down */
+#define CSVCF_NORECON		(1 << 8)		/* don't attempt reconnection if down */
 
 #define CSVCF_FLAGSHIFT		(1 << 9)
 
