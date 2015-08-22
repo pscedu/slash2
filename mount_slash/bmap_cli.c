@@ -73,6 +73,23 @@ msl_bmap_init(struct bmap *b)
 }
 
 /*
+ * Save a bmap lease received from the MDS.
+ */
+void
+msl_bmap_stash_lease(struct bmap *b, struct srt_bmapdesc *sbd)
+{
+	BMAP_LOCK_ENSURE(b);
+
+	/*
+	 * Yes, this is looks like a redundant check but I have seen
+	 * cases where fid==0 yet the memchk succeeds.
+	 */
+	psc_assert(sbd->sbd_fg.fg_fid);
+	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
+	memcpy(bmap_2_sbd(b), &sbd, sizeof(struct srt_bmapdesc));
+}
+
+/*
  * Set READ or WRITE as access mode on an open file bmap.
  * @b: bmap.
  * @rw: access mode to set the bmap to.
@@ -123,7 +140,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	memcpy(bmap_2_sbd(b), &mp->sbd, sizeof(struct srt_bmapdesc));
+	BMAP_LOCK(b);
+	msl_bmap_stash_lease(b, &mp->sbd);
+	BMAP_ULOCK(b);
 
 	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 	psc_assert(r);
@@ -190,8 +209,7 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = 0;
 	} else {
-		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-		    sizeof(struct srt_bmapdesc));
+		msl_bmap_stash_lease(b, &mp->sbd);
 
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_etime);
 		timespecadd(&bmap_2_bci(b)->bci_etime,
@@ -229,7 +247,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	PFL_GETTIMESPEC(&ts);
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc) {
-		memcpy(&bci->bci_sbd, &mp->sbd, sizeof(bci->bci_sbd));
+		msl_bmap_stash_lease(b, &mp->sbd);
 
 		timespecadd(&ts, &msl_bmap_max_lease, &bci->bci_etime);
 	} else {
@@ -426,8 +444,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	if (rc)
 		goto out;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
-	    sizeof(struct srt_bmapdesc));
+	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
