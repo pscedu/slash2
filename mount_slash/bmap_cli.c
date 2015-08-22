@@ -554,6 +554,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		FCMH_LOCK(f);
 
 		BMAP_LOCK(b);
+		bci->bci_error = 0;
 		msl_bmap_reap_init(b, &mp->sbd);
 		msl_fcmh_stash_inode(f, &mp->ino);
 
@@ -657,6 +658,10 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 
 	psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
+
+	BMAP_LOCK(b);
+	rc = bmap_2_bci(b)->bci_error;
+	BMAP_ULOCK(b);
 
 	rq = NULL;
 	csvc = NULL;
