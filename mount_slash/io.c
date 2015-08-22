@@ -596,7 +596,6 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		if (q->mfsrq_err) {
-			OPSTAT_INCR("fsrq-read-err");
 			pscfs_reply_read(pfr, NULL, 0,
 			    abs(q->mfsrq_err));
 		} else {
@@ -638,9 +637,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 			}
 		}
 	} else {
-		if (q->mfsrq_err)
-			OPSTAT_INCR("fsrq-write-err");
-		else {
+		if (!q->mfsrq_err) {
 			OPSTAT_INCR("fsrq-write-ok");
 			msl_update_attributes(q);
 			psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
