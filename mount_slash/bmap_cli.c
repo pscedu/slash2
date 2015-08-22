@@ -73,6 +73,23 @@ msl_bmap_init(struct bmap *b)
 }
 
 /*
+ * Save a bmap lease received from the MDS.
+ */
+void
+msl_bmap_stash_lease(struct bmap *b, struct srt_bmapdesc *sbd)
+{
+	BMAP_LOCK_ENSURE(b);
+
+	/*
+	 * Yes, this is looks like a redundant check but I have seen
+	 * cases where fid==0 yet the memchk succeeds.
+	 */
+	psc_assert(sbd->sbd_fg.fg_fid);
+	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
+	memcpy(bmap_2_sbd(b), &sbd, sizeof(struct srt_bmapdesc));
+}
+
+/*
  * Set READ or WRITE as access mode on an open file bmap.
  * @b: bmap.
  * @rw: access mode to set the bmap to.
@@ -123,7 +140,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	memcpy(bmap_2_sbd(b), &mp->sbd, sizeof(struct srt_bmapdesc));
+	BMAP_LOCK(b);
+	msl_bmap_stash_lease(b, &mp->sbd);
+	BMAP_ULOCK(b);
 
 	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 	psc_assert(r);
@@ -189,15 +208,12 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = 0;
-		OPSTAT_INCR("bmap-reassign-fail");
 	} else {
-		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-		    sizeof(struct srt_bmapdesc));
+		msl_bmap_stash_lease(b, &mp->sbd);
 
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_etime);
 		timespecadd(&bmap_2_bci(b)->bci_etime,
 		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_etime);
-		OPSTAT_INCR("bmap-reassign-done");
 	}
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
@@ -231,11 +247,9 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	PFL_GETTIMESPEC(&ts);
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc) {
-		memcpy(&bci->bci_sbd, &mp->sbd, sizeof(bci->bci_sbd));
+		msl_bmap_stash_lease(b, &mp->sbd);
 
 		timespecadd(&ts, &msl_bmap_max_lease, &bci->bci_etime);
-
-		OPSTAT_INCR("bmap-lease-ext-done");
 	} else {
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
@@ -246,13 +260,12 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 		bci->bci_etime = ts;
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
-		OPSTAT_INCR("bmap-lease-ext-fail");
 	}
 
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension: rc=%d, nseq=%"PRId64", "
+	    "lease extension: rc=%d nseq=%"PRId64" "
 	    "etime="PSCPRI_TIMESPEC, rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
@@ -338,8 +351,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		OPSTAT_INCR("bmap-reassign-send");
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
@@ -353,7 +364,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
-		OPSTAT_INCR("bmap-reassign-abrt");
 	}
 }
 
@@ -434,15 +444,12 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	if (rc)
 		goto out;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
-	    sizeof(struct srt_bmapdesc));
+	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		OPSTAT_INCR("bmap-lease-ext-send");
 
  out:
 	BMAP_LOCK(b);
@@ -460,7 +467,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		OPSTAT_INCR("bmap-lease-ext-abrt");
 	} else if (blockable) {
 		/*
 		 * We should never cache data without a lease.
@@ -759,7 +765,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_DIAG, b,
-	    "reap init: nseq=%"PRId64", etime="PSCPRI_TIMESPEC,
+	    "reap init: nseq=%"PRId64" etime="PSCPRI_TIMESPEC,
 	    bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
