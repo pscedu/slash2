@@ -247,7 +247,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension: rc=%d, nseq=%"PRId64", "
+	    "lease extension: rc=%d nseq=%"PRId64" "
 	    "etime="PSCPRI_TIMESPEC, rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
@@ -748,7 +748,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_DIAG, b,
-	    "reap init: nseq=%"PRId64", etime="PSCPRI_TIMESPEC,
+	    "reap init: nseq=%"PRId64" etime="PSCPRI_TIMESPEC,
 	    bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
