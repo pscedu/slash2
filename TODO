@@ -698,6 +698,9 @@ leaks:
 - lnet export refcnt leak: export@0xefbee0 ref=5664
 - get rid of fmid_dino_mfid and fmid_dino_mfh
 - write FSUUID into sliod and check
+- authbuf file dir should not be world readable so people can
+  determine key size
+   - make default size much bigger, and random
 
 unnecessary lock contention?
 mount_slash/io.c:
