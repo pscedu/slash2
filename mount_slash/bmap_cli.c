@@ -189,7 +189,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = 0;
-		OPSTAT_INCR("bmap-reassign-fail");
 	} else {
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
@@ -197,7 +196,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_etime);
 		timespecadd(&bmap_2_bci(b)->bci_etime,
 		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_etime);
-		OPSTAT_INCR("bmap-reassign-done");
 	}
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
@@ -234,8 +232,6 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 		memcpy(&bci->bci_sbd, &mp->sbd, sizeof(bci->bci_sbd));
 
 		timespecadd(&ts, &msl_bmap_max_lease, &bci->bci_etime);
-
-		OPSTAT_INCR("bmap-lease-ext-done");
 	} else {
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
@@ -246,7 +242,6 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 		bci->bci_etime = ts;
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
-		OPSTAT_INCR("bmap-lease-ext-fail");
 	}
 
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
@@ -338,8 +333,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		OPSTAT_INCR("bmap-reassign-send");
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
@@ -353,7 +346,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
-		OPSTAT_INCR("bmap-reassign-abrt");
 	}
 }
 
@@ -441,8 +433,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		OPSTAT_INCR("bmap-lease-ext-send");
 
  out:
 	BMAP_LOCK(b);
@@ -460,7 +450,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		OPSTAT_INCR("bmap-lease-ext-abrt");
 	} else if (blockable) {
 		/*
 		 * We should never cache data without a lease.
