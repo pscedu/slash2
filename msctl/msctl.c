@@ -572,8 +572,13 @@ cmd_replst_one(FTSENT *f, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
-	if (f && f->fts_info != FTS_F && f->fts_info != FTS_D)
+	if (f && f->fts_info != FTS_F && f->fts_info != FTS_D) {
+		if (!recursive) {
+			errno = EINVAL;
+			warn("%s", f->fts_path);
+		}
 		return (0);
+	}
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
 	if (f)
