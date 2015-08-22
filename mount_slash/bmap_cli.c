@@ -547,6 +547,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 	if (rc) {
 		BMAP_LOCK(b);
 		bci->bci_error = rc;
+		b->bcm_flags |= BMAPF_LEASEFAILED;
 		BMAP_ULOCK(b);
 	} else {
 		f = b->bcm_fcmh;
