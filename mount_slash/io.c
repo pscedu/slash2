@@ -847,9 +847,9 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 }
 
 /*
- * Thin layer around msl_read_cleanup(), which does the real READ completion
- * processing, in case an AIOWAIT is discovered.  Upon completion of the
- * AIO, msl_read_cleanup() is called.
+ * Thin layer around msl_read_cleanup(), which does the real READ
+ * completion processing, in case an AIOWAIT is discovered.  Upon
+ * completion of the AIO, msl_read_cleanup() is called.
  */
 int
 msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
@@ -1382,7 +1382,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 
 /*
  * Copy user pages into buffer cache and schedule them to be sent to the
- * ION backend.
+ * ION backend (i.e. application write(2) servicing).
  *
  * @r: array of request structs.
  */
@@ -1473,7 +1473,8 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 }
 
 /*
- * Copy pages to the user application buffer.
+ * Copy pages to the user application buffer (i.e. application read(2)
+ * servicing).
  */
 size_t
 msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
