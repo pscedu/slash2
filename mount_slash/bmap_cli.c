@@ -551,15 +551,15 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		BMAP_ULOCK(b);
 	} else {
 		f = b->bcm_fcmh;
-		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
+
 		FCMH_LOCK(f);
+		msl_fcmh_stash_inode(f, &mp->ino);
+		FCMH_ULOCK(f);
 
 		BMAP_LOCK(b);
 		bci->bci_error = 0;
+		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b, &mp->sbd);
-		msl_fcmh_stash_inode(f, &mp->ino);
-
-		FCMH_ULOCK(f);
 	}
 
 	if (mp)
