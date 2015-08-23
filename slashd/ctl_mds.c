@@ -627,6 +627,8 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
+	psc_ctlparam_register_var("sys.nbrq-outstanding",
+	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime", slctlparam_uptime_get,
 	    NULL);
