@@ -425,6 +425,11 @@ slislvrthr_main(struct psc_thread *thr)
 				SLVR_ULOCK(s);
 				continue;
 			}
+			if (s->slvr_flags & SLVRF_FREEING || 
+			    s->slvr_flags & SLVRF_DATAERR) {
+				SLVR_ULOCK(s);
+				continue;
+			}
 			if (timespeccmp(&expire, &s->slvr_ts, >)) {
 				s->slvr_flags |= SLVRF_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
