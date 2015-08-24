@@ -638,7 +638,7 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
  */
 ssize_t
 slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
-    int flags)
+    __unusedx int flags)
 {
 	struct bmap *b = slvr_2_bmap(s);
 	ssize_t rc = 0;
@@ -667,12 +667,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	s->slvr_flags |= SLVRF_FAULTING;
 
-	if (s->slvr_flags & SLVRF_DATARDY) {
-		if ((flags & SLVRF_READAHEAD) == 0 &&
-		    s->slvr_flags & SLVRF_READAHEAD)
-			OPSTAT_INCR("readahead-hit");
+	if (s->slvr_flags & SLVRF_DATARDY)
 		goto out1;
-	}
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
@@ -682,9 +678,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		goto out1;
 	}
-
-	if (flags & SLVRF_READAHEAD)
-		s->slvr_flags |= SLVRF_READAHEAD;
 
 	SLVR_ULOCK(s);
 
@@ -735,10 +728,6 @@ slvr_remove(struct slvr *s)
 	BII_LOCK(bii);
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
-
-	if ((s->slvr_flags & (SLVRF_READAHEAD | SLVRF_ACCESSED)) ==
-	    SLVRF_READAHEAD)
-		OPSTAT_INCR("readahead-waste");
 
 	if (s->slvr_slab)
 		psc_pool_return(sl_bufs_pool, s->slvr_slab);
@@ -1062,57 +1051,8 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-slirathr_main(struct psc_thread *thr)
-{
-	struct sli_readaheadrq *rarq;
-	struct bmapc_memb *b;
-	struct fidc_membh *f;
-	struct slvr *s;
-	int i, rc, slvrno;
-
-	while (pscthr_run(thr)) {
-		f = NULL;
-		b = NULL;
-
-		if (slcfg_local->cfg_async_io)
-			break;
-
-		rarq = lc_getwait(&sli_readaheadq);
-		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
-			goto skip;
-		slvrno = rarq->rarq_off / SLASH_SLVR_SIZE;
-		if (bmap_get(f, rarq->rarq_bno, SL_READ, &b))
-			goto skip;
-		for (i = 0; i < 4; i++) {
-			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
-
-			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ,
-			    SLVRF_READAHEAD);
-
-			slvr_io_done(s, rc);
-			/*
-			 * FixMe: This cause asserts on flags when we
-			 * encounter AIOWAIT. We need a unified way to
-			 * perform I/O done on each sliver instead of
-			 * sprinkling them all over the place.
-			 */
-			slvr_rio_done(s);
-		}
-
- skip:
-		if (b)
-			bmap_op_done(b);
-		if (f)
-			fcmh_op_done(f);
-		psc_pool_return(sli_readaheadrq_pool, rarq);
-	}
-}
-
-void
 slvr_cache_init(void)
 {
-	int i;
-
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "slvr");
@@ -1147,10 +1087,6 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_AIO, sliaiothr_main, NULL, 0,
 		    "sliaiothr");
 	}
-
-	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
-		pscthr_init(SLITHRT_READAHEAD, slirathr_main, NULL, 0,
-		    "slirathr%d", i);
 
 	sl_buffer_cache_init();
 	slvr_worker_init();
