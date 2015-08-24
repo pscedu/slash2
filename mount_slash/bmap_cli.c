@@ -86,7 +86,7 @@ msl_bmap_stash_lease(struct bmap *b, struct srt_bmapdesc *sbd)
 	 */
 	psc_assert(sbd->sbd_fg.fg_fid);
 	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
-	memcpy(bmap_2_sbd(b), &sbd, sizeof(struct srt_bmapdesc));
+	memcpy(bmap_2_sbd(b), sbd, sizeof(struct srt_bmapdesc));
 }
 
 /*

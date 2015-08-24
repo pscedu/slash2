@@ -30,8 +30,8 @@
 
 #include "pfl/atomic.h"
 #include "pfl/fs.h"
-#include "pfl/opstats.h"
 #include "pfl/multiwait.h"
+#include "pfl/opstats.h"
 #include "pfl/service.h"
 
 #include "bmap.h"
