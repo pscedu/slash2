@@ -390,6 +390,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct srm_leasebmapext_rep *mp;
 	struct timespec ts;
 	int secs, rc;
+	struct srt_bmapdesc *sbd;
 
 	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_TOFREE) {
@@ -437,6 +438,10 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	BMAP_ULOCK(b);
 
+	sbd = bmap_2_sbd(b);
+	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+	psc_assert(sbd->sbd_fg.fg_gen == fcmh_2_gen(b->bcm_fcmh));
+
 	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 	if (rc)
 		goto out;
@@ -444,7 +449,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	if (rc)
 		goto out;
 
-	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
+	memcpy(&mq->sbd, sbd, sizeof(struct srt_bmapdesc));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
