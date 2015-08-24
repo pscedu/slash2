@@ -94,7 +94,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	sl_bmapno_t bmapno, slvrno;
 	int rc, nslvrs = 0, i, needaio = 0;
 	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
-	struct fcmh_iod_info *fii;
 	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
@@ -190,8 +189,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	mp->rc = sli_fcmh_get(fgp, &f);
 	if (mp->rc)
 		return (mp->rc);
-
-	fii = fcmh_2_fii(f);
 
 	FCMH_LOCK(f);
 	/* Update the utimegen if necessary. */
@@ -348,17 +345,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    nslvrs);
 		goto out;
 	}
-
-	FCMH_LOCK(f);
-//	if ((fii->fii_predio_lastbno == bmapno &&
-//	     fii->fii_predio_boff == mq->offset) ||
-//	    mq->offset == 0) {
-//		fii->fii_predio_nseq++;
-//	} else
-//		fii->fii_predio_nseq = 0;
-	fii->fii_predio_boff = mq->offset + mq->size;
-	fii->fii_predio_lastbno = bmapno;
-	FCMH_ULOCK(f);
 
  out:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
