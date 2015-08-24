@@ -40,7 +40,6 @@
 #include "pfl/pool.h"
 #include "pfl/time.h"
 #include "pfl/tree.h"
-#include "pfl/vbitmap.h"
 #include "pfl/waitq.h"
 
 #include "bmap.h"
