@@ -701,6 +701,8 @@ leaks:
 - authbuf file dir should not be world readable so people can
   determine key size
    - make default size much bigger, and random
+- breleasethr 'skip due to not expire' should put such bmaps at
+  the end of the list and stop processing when encountering one
 
 unnecessary lock contention?
 mount_slash/io.c:
