@@ -323,15 +323,11 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-			if (p->dcp_off == off) {
-				/*
-				 * Someone is already taking care of
-				 * this page for us.
-				 */
-				p = NULL;
-				goto out;
-			}
-
+			/*
+			 * Wait for previously launched readdir
+			 * to complete regardless of offset for
+			 * simplicity.
+			 */
 			if (wait) {
 				DIRCACHE_WAIT(d);
 				goto restart;
