@@ -51,7 +51,6 @@ enum {
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_NBRQ,		/* non blocking RPC request processor */
 	SLITHRT_OPSTIMER,	/* iostats updater */
-	SLITHRT_READAHEAD,	/* sliver read-ahead */
 	SLITHRT_REPLPND,	/* process enqueued replication work */
 	SLITHRT_RIC,		/* service RPC requests from CLI */
 	SLITHRT_RII,		/* service RPC requests from ION */
@@ -63,7 +62,6 @@ enum {
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
-#define NSLVR_READAHEAD_THRS	16
 
 enum {
 	SLI_FAULT_AIO_FAIL,
