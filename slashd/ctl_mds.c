@@ -40,6 +40,7 @@
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
+#include "slconn.h"
 
 struct slm_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
