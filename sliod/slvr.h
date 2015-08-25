@@ -32,7 +32,6 @@
 #include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/tree.h"
-#include "pfl/vbitmap.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
