@@ -118,7 +118,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 void
 slvr_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %6s %3s %4s %8s %5s %9s\n",
+	printf("%-16s %6s %3s %4s %7s %5s %9s\n",
 	    "slvr-fid", "bmap#", "sl#", "refs", "flags", "err", "time");
 }
 
@@ -127,7 +127,7 @@ slvr_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slictlmsg_slvr *ss = m;
 
-	printf("%016"SLPRIxFID" %6d %3d %4d %c%c%c%c%c%c%c%c "
+	printf("%016"SLPRIxFID" %6d %3d %4d %c%c%c%c%c%c%c "
 	    "%5d %9"PRId64" \n",
 	    ss->ss_fid, ss->ss_bno, ss->ss_slvrno, ss->ss_refcnt,
 	    ss->ss_flags & SLVRF_FAULTING	? 'f' : '-',
@@ -136,7 +136,6 @@ slvr_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    ss->ss_flags & SLVRF_LRU		? 'l' : '-',
 	    ss->ss_flags & SLVRF_CRCDIRTY	? 'D' : '-',
 	    ss->ss_flags & SLVRF_FREEING	? 'F' : '-',
-	    ss->ss_flags & SLVRF_READAHEAD	? 'R' : '-',
 	    ss->ss_flags & SLVRF_ACCESSED	? 'a' : '-',
 	    ss->ss_err, ss->ss_ts.tv_sec);
 }
@@ -275,7 +274,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* OPSTIMER	*/ NULL,
-/* READAHEAD	*/ NULL,
 /* REPLPND	*/ NULL,
 /* RIC		*/ sliricthr_pr,
 /* RII		*/ sliriithr_pr,

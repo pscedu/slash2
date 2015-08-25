@@ -625,7 +625,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* OPSTIMER	*/ NULL,
-/* READAHEAD	*/ NULL,
 /* REPLPND	*/ NULL,
 /* RIC		*/ NULL,
 /* RII		*/ sliriithr_get,
