@@ -328,11 +328,8 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 			 * to complete regardless of offset for
 			 * simplicity.
 			 */
-			if (wait) {
-				DIRCACHE_WAIT(d);
-				goto restart;
-			}
-			continue;
+			DIRCACHE_WAIT(d);
+			goto restart;
 		}
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
