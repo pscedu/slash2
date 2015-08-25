@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd April 27, 2015
+.Dd August 24, 2015
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -434,10 +434,19 @@ lookups for network addresses.
 .\"	log_xr => "in\n.Xr mount_slash 8\n",
 .\"	params => {
 .\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH2\nfile system is mounted.",
-.\"		pref_ios	=> "Preferred I/O system.",
+.\"		pref_ios	=> "Preferred I/O system.\nFor read I/O, " .
+.\"				   "data replicas on residing on this " .
+.\"				   "resource are always accessed before " .
+.\"				   "other replicas.\n" .
+.\"				   "For write I/O within a bmap, the " .
+.\"				   "existing resource is leased.\n" .
+.\"				   "For write I/O in new bmaps, this " .
+.\"				   "resource will be prioritized before " .
+.\"				   "other resources unless file IOS " .
+.\"				   "affinity is set.",
 .\"		readahead_pgs	=> "Number of pages to read ahead when read I/O is performed.",
-.\"		offline_nretries=> "Number of times to retry remote peer connection\n" .
-.\"					"establishment per file system request.",
+.\"		offline_nretries=> "Number of times to retry remote peer connection " .
+.\"				   "establishment per file system request.",
 .\"	},
 .It Fl p Ar paramspec
 Query/manipulate operational parameters.
@@ -516,8 +525,7 @@ File hierarchy node where
 .Tn SLASH2
 file system is mounted.
 .It Cm offline_nretries
-Number of times to retry remote peer connection
-establishment per file system request.
+Number of times to retry remote peer connection establishment per file system request.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
@@ -534,7 +542,10 @@ Threshold for unused items for auto-sized pools before items are freed.
 Current number of entries contained in pool.
 .El
 .It Cm pref_ios
-Preferred, but not the only, I/O system to use.
+Preferred I/O system.
+For read I/O, data replicas on residing on this resource are always accessed before other replicas.
+For write I/O within a bmap, the existing resource is leased.
+For write I/O in new bmaps, this resource will be prioritized before other resources unless file IOS affinity is set.
 .It Cm pscfs.attr_timeout
 Amount of time to cache
 .Xr stat 2
@@ -839,10 +850,10 @@ display additional information about each operation being performed.
 .\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
 .\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
 .\"		q{msnbrqthr Ns Ar %d}		=> qq{Non-blocking\n.Tn RPC\nreply handler},
+.\"		q{msopstimerthr}		=> qq{Internal operation count updater},
 .\"		q{msrcithr Ns Ar %02d}		=> qq{.Tn IO RPC\nrequest service},
 .\"		q{msrcmthr Ns Ar %02d}		=> qq{.Tn MDS RPC\nrequest service},
 .\"		q{msreadaheadthr}		=> qq{Bmap read-ahead queuer},
-.\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater},
 .\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll},
 .\"		q{mswkthr Ns Ar %d}		=> qq{Generic worker},
 .\"	}
@@ -882,6 +893,8 @@ File system syscall handler
 Non-blocking
 .Tn RPC
 reply handler
+.It Cm msopstimerthr
+Internal operation count updater
 .It Cm msrcithr Ns Ar %02d
 .Tn IO RPC
 request service
@@ -890,10 +903,6 @@ request service
 request service
 .It Cm msreadaheadthr
 Bmap read-ahead queuer
-.It Cm mstiosthr
-Timed
-.Tn I/O
-stats updater
 .It Cm msusklndplthr Ns Ar %d
 Lustre userland socket poll
 .It Cm mswkthr Ns Ar %d

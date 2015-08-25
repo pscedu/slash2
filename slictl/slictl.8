@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd August 14, 2015
+.Dd August 24, 2015
 .Dt SLICTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -565,18 +565,22 @@ may also be specified to display a list of recognized values.
 .\"	thrs => {
 .\"		"sliaiothr"			=> "Asynchronous\n.Tn I/O\nprocessor",
 .\"		"slibmaprlsthr"			=> "Bmap releaser",
+.\"		"slibreapthr"			=> "Bmap reaper",
 .\"		"sliconnthr"			=> "Peer resource connection monitor",
+.\"		"slicrudthr"			=> "Bmap CRC updater",
 .\"		"slictlacthr"			=> ".Nm\nconnection acceptor",
 .\"		"slictlthr"			=> ".Nm\nconnection processor",
+.\"		"slifreapthr"			=> "File reaper",
+.\"		"slihealththr"			=> "Backing file system health checker",
 .\"		"slilnacthr- Ns Ar %s"		=> "Lustre network acceptor thread",
 .\"		"slinbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
+.\"		"sliopstimerthr"		=> qq{Internal operation count updater},
 .\"		"slireplpndthr"			=> "Pending replication work processor",
 .\"		"sliricthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
 .\"		"sliriithr Ns Ar %02d"		=> ".No Inter- Ns Tn I/O RPC\nrequest service thread",
 .\"		"slirimthr Ns Ar %02d"		=> ".Tn MDS RPC\nrequest service thread",
 .\"		"slislvrthr Ns Ar %d"		=> "Sliver monitoring thread",
 .\"		"slistatfsthr"			=> "Periodic\n.Xr statvfs 2\nupdater",
-.\"		"slitiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
 .\"		"sliusklndplthr Ns Ar %d"	=> "Lustre userland socket poll thread",
 .\"		"sliwkthr Ns Ar %d"		=> "Generic worker thread"
 .\"	}
@@ -593,20 +597,30 @@ Asynchronous
 processor
 .It Cm slibmaprlsthr
 Bmap releaser
+.It Cm slibreapthr
+Bmap reaper
 .It Cm sliconnthr
 Peer resource connection monitor
+.It Cm slicrudthr
+Bmap CRC updater
 .It Cm slictlacthr
 .Nm
 connection acceptor
 .It Cm slictlthr
 .Nm
 connection processor
+.It Cm slifreapthr
+File reaper
+.It Cm slihealththr
+Backing file system health checker
 .It Cm slilnacthr- Ns Ar %s
 Lustre network acceptor thread
 .It Cm slinbrqthr
 Non-blocking
 .Tn RPC
 reply handler
+.It Cm sliopstimerthr
+Internal operation count updater
 .It Cm slireplpndthr
 Pending replication work processor
 .It Cm sliricthr Ns Ar %02d
@@ -625,10 +639,6 @@ Sliver monitoring thread
 Periodic
 .Xr statvfs 2
 updater
-.It Cm slitiosthr
-Timed
-.Tn I/O
-stats updater thread
 .It Cm sliusklndplthr Ns Ar %d
 Lustre userland socket poll thread
 .It Cm sliwkthr Ns Ar %d
