@@ -114,27 +114,25 @@ struct slrpc_cservice {
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
 #define CSVCF_CONNECTED		(1 << 1)		/* conn online */
-#define CSVCF_ABANDON		(1 << 2)		/* conn should be dropped */
-#define CSVCF_WANTFREE		(1 << 3)		/* csvc mem resources need freed */
-#define CSVCF_PING		(1 << 4)		/* send keepalives */
-#define CSVCF_BUSY		(1 << 5)		/* send keepalives */
-#define CSVCF_DISCONNECTING	(1 << 6)		/* want to disconnect but in use; ASAP */
+#define CSVCF_WANTFREE		(1 << 2)		/* csvc mem resources need freed */
+#define CSVCF_PING		(1 << 3)		/* send keepalives */
+#define CSVCF_BUSY		(1 << 4)		/* send keepalives */
+#define CSVCF_DISCONNECTING	(1 << 5)		/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
-#define CSVCF_NONBLOCK		(1 << 7)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 8)		/* don't attempt reconnection if down */
+#define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
+#define CSVCF_NORECON		(1 << 7)		/* don't attempt reconnection if down */
 
-#define CSVCF_FLAGSHIFT		(1 << 9)
+#define CSVCF_FLAGSHIFT		(1 << 8)
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 #define CSVC_PING_INTV		60			/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
-	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s%s ref:%d " fmt,	\
+	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,		\
 	    (csvc), (csvc)->csvc_flags,					\
 	    (csvc)->csvc_flags & CSVCF_CONNECTING	? "C" : "",	\
 	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
-	    (csvc)->csvc_flags & CSVCF_ABANDON		? "A" : "",	\
 	    (csvc)->csvc_flags & CSVCF_WANTFREE		? "F" : "",	\
 	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
 	    (csvc)->csvc_flags & CSVCF_BUSY		? "B" : "",	\

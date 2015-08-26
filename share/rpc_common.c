@@ -467,7 +467,7 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	    csvc->csvc_import->imp_invalid)
 		return (0);
 	return ((csvc->csvc_flags &
-	  (CSVCF_CONNECTED | CSVCF_ABANDON | CSVCF_DISCONNECTING)) ==
+	  (CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_WANTFREE)) ==
 	    CSVCF_CONNECTED);
 }
 
@@ -483,7 +483,7 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	csvc->csvc_flags |= CSVCF_ABANDON | CSVCF_WANTFREE;
+	csvc->csvc_flags |= CSVCF_WANTFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
 	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
