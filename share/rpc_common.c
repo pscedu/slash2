@@ -560,7 +560,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 /*
  * Account for starting to use a remote service connection.
  * @csvc: client service.
- * XXX if ABANDON is set, bail.
+ * XXX if CSVCF_WANTFREE is set, bail.
  */
 void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
