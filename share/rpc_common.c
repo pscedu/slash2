@@ -609,24 +609,6 @@ sl_imp_hldrop_resm(void *arg)
 }
 
 /*
- * Mark a connection as no longer available.
- * @csvc: client service.
- */
-void
-_sl_csvc_disable(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc)
-{
-	int locked;
-
-	locked = CSVC_RLOCK(csvc);
-	csvc->csvc_flags |= CSVCF_ABANDON;
-	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
-	csvc->csvc_lasterrno = 0;
-	CSVC_WAKE(csvc);
-	CSVC_URLOCK(csvc, locked);
-}
-
-/*
  * Create a new client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
