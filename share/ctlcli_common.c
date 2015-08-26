@@ -156,8 +156,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		printf("-");
 	}
 
-	printf("%c%c%c ",
-	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
+	printf("%c%c ",
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
 	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
 
