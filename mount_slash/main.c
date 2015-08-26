@@ -1882,7 +1882,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 		BMAP_LOCK(b);
 		bmpc_biorqs_flush(b, all);
 		if (!rc)
-			rc = bmap_2_bci(b)->bci_flush_rc;
+			rc = -bmap_2_bci(b)->bci_flush_rc;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 	psc_dynarray_free(&a);
