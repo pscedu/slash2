@@ -207,6 +207,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
 	}
+	csvc->csvc_owner = 0;
 	CSVC_WAKE(csvc);
 	sl_csvc_decref(csvc);
 	return (0);
@@ -918,8 +919,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 						rc = 0;
 						goto proc_conn;
 					}
-					if (rc != EWOULDBLOCK)
+					if (trc != EWOULDBLOCK) {
 						rc = trc;
+						goto proc_conn;
+					}
+					rc = EWOULDBLOCK;
 				}
 
  proc_conn:
