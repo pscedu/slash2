@@ -440,7 +440,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	sbd = bmap_2_sbd(b);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
-	psc_assert(sbd->sbd_fg.fg_gen == fcmh_2_gen(b->bcm_fcmh));
 
 	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 	if (rc)
