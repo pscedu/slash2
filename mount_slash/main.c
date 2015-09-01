@@ -969,6 +969,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 
  retry:
+ 	// usleep(psc_random32u(50000));
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2503,6 +2504,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	RPCI_ULOCK(rpci);
 
  retry:
+ 	// usleep(10000+psc_random32u(500000));
 	MSL_RMC_NEWREQ_PFCC(NULL, NULL, csvc, SRMT_STATFS, rq, mq, mp,
 	    rc);
 	if (rc)
