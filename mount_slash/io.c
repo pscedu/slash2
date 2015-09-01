@@ -2073,6 +2073,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (rarq == NULL)
 			break;
 
+		b = NULL;
 		rc = fidc_lookup(&rarq->rarq_fg, 0, &f);
 		if (rc)
 			goto end;
