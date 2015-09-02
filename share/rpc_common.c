@@ -918,6 +918,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 						rc = 0;
 						goto proc_conn;
 					}
+					/*
+					 * Keep the current error code without
+					 * overwriting a previous EWOULDBLOCK.
+					 */
 					if (rc != EWOULDBLOCK)
 						rc = trc;
 				}
