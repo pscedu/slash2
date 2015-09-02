@@ -1692,6 +1692,9 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* 
+ * Handle a RPC request, called from pscrpc_server_handle_request().
+ */
 int
 slm_rmc_handler(struct pscrpc_request *rq)
 {
