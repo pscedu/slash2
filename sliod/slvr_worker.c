@@ -324,7 +324,7 @@ slislvrthr_proc(struct slvr *s)
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 
 	if ((s->slvr_flags & SLVRF_DATAERR) && !s->slvr_refcnt) {
-		OPSTAT_INCR("slvr-crc-remove");
+		OPSTAT_INCR("slvr-crc-remove2");
 		SLVR_ULOCK(s);
 		slvr_remove(s);
 	} else {
@@ -421,13 +421,19 @@ slislvrthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
 				continue;
+			/*
+ 			 * A sliver can be referenced while being CRC'ed. However,
+ 			 * we want to wait for all references to go away before
+ 			 * doing CRC on it.
+ 			 */
 			if (s->slvr_refcnt || s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
 			}
-			if (s->slvr_flags & SLVRF_FREEING || 
-			    s->slvr_flags & SLVRF_DATAERR) {
+			if (s->slvr_flags & SLVRF_DATAERR) {
+				OPSTAT_INCR("slvr-crc-remove1");
 				SLVR_ULOCK(s);
+				slvr_remove(s);
 				continue;
 			}
 			if (timespeccmp(&expire, &s->slvr_ts, >)) {
