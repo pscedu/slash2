@@ -175,6 +175,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		slvr_io_done(s, rv);
 
 	if (rv)
+		/* XXX missing slvr_rio_done()? */
 		PFL_GOTOERR(out, mp->rc = rv);
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
