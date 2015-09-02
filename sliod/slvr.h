@@ -70,7 +70,7 @@ struct slvr {
 /* slvr_flags */
 #define SLVRF_FAULTING		(1 <<  0)	/* contents loading from disk or net */
 #define SLVRF_DATARDY		(1 <<  1)	/* ready for read / write activity */
-#define SLVRF_DATAERR		(1 <<  2)
+#define SLVRF_DATAERR		(1 <<  2)	/* a sliver can't be reused if marked error */
 #define SLVRF_LRU		(1 <<  3)	/* cached but not dirty */
 /*
  * This flag acts like an extra reference count to the sliver.  I would
