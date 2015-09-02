@@ -228,6 +228,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * RIC_MAX_SLVRS_PER_IO.
 	 *
 	 * Note that once i > 0, roff is always 0.
+	 *
+	 * Although we may be trying to set FAULTING bit on two slivers,
+	 * they should be ordered by their offsets in the bmap.
 	 */
 	roff = mq->offset - slvrno * SLASH_SLVR_SIZE;
 	for (i = 0, tsize = mq->size; i < nslvrs; i++, roff = 0) {
