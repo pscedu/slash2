@@ -745,7 +745,7 @@ slvr_remove_all(struct fidc_membh *f)
 	struct bmap *b;
 	struct slvr *s;
 	struct bmap_iod_info *bii;
-	static struct psc_dynarray a;
+	struct psc_dynarray a;
 
 	/*
 	 * Use two loops to avoid entangled with some background
