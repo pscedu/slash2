@@ -1288,6 +1288,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH_CONT(e, i, &pages) {
 		BMPCE_LOCK(e);
+		e->bmpce_rc = rc;
 		e->bmpce_flags &= ~BMPCEF_FAULTING;
 		e->bmpce_flags |= BMPCEF_EIO;
 		BMPCE_WAKE(e);
