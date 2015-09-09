@@ -1216,7 +1216,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_LOCK(e);
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCEF_EIO;
-		e->bmpce_flags &= ~(BMPCEF_FAULTING | BMPCEF_PINNED);
+		e->bmpce_flags &= ~BMPCEF_FAULTING;
 		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCEF_EIO");
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
