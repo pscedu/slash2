@@ -344,10 +344,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
 
-	/*
-	 * XXX we should use a copy-on-write strategy here to not hold
-	 * up the application.
-	 */
 	bwc_pin_pages(bwc);
 
 	rq->rq_interpret_reply = msl_ric_bflush_cb;
