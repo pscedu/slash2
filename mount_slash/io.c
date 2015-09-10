@@ -1949,6 +1949,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		goto out1;
 	}
 
+	/*
+ 	 * Note that i can only be 0 or 1 afer the above loop.
+ 	 */
+	if (i == 1) 
+		psc_assert(roff == SLASH_BMAP_SIZE);
+
 	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
 	alen = tlen + (roff & BMPC_BUFMASK);
 
