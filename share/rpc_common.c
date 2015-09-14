@@ -130,6 +130,10 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 		CSVC_LOCK(csvc);
 	}
 
+	/*
+	 * Hit a crash here on FreeBSD on sliod due to NULL import field below. 
+	 * The type is SLCONNT_MDS, the last errno is ETIMEDOUT (-60).
+	 */
 	csvc->csvc_import->imp_state = PSCRPC_IMP_FULL;
 	csvc->csvc_import->imp_failed = 0;
 	csvc->csvc_import->imp_invalid = 0;
