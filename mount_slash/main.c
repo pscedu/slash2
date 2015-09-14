@@ -2772,6 +2772,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		unset_trunc = 1;
 	}
 
+	/*
+	 * XXX: While the Linux kernel should synchronize a read with a truncate,
+	 * we probably should synchronize with any read-ahead launched ourselves.
+	 */
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		struct bmap *b;
 
