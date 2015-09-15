@@ -117,7 +117,9 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
 
+sl_ios_id_t			 msl_mds = SITE_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
+
 const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
@@ -3603,6 +3605,7 @@ msl_init(void)
 {
 	char *name;
 	int rc;
+	struct sl_resource *r;
 
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
@@ -3676,13 +3679,15 @@ msl_init(void)
 	if (name == NULL)
 		psc_fatalx("environment variable MDS not specified");
 
+	r = libsl_str2res(name);
+	msl_mds = r->res_id;
+
 	rc = slc_rmc_setmds(name);
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", name, slstrerror(rc));
 
 	name = getenv("PREF_IOS");
 	if (name) {
-		struct sl_resource *r;
 
 		r = libsl_str2res(name);
 		if (r == NULL)

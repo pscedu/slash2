@@ -518,6 +518,18 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 void
+msctlparam_mds_get(char buf[PCP_VALUE_MAX])
+{
+	struct sl_resource *r;
+
+	r = libsl_id2res(msl_mds);
+	if (r)
+		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
+	else
+		strlcpy(buf, "(null)", PCP_VALUE_MAX);
+}
+
+void
 msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 {
 	struct sl_resource *r;
@@ -850,6 +862,8 @@ msctlthr_spawn(void)
 	    &slc_max_nretries);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
+	psc_ctlparam_register_simple("sys.mds",
+	    msctlparam_mds_get, NULL);
 
 	psc_ctlparam_register_var("sys.direct_io",
 	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
