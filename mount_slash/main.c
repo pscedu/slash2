@@ -117,7 +117,7 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 slc_attrtimeoutq;
 
-sl_ios_id_t			 msl_mds = SITE_ID_ANY;
+sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
 const char			*progname;
