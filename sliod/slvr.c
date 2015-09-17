@@ -758,8 +758,11 @@ slvr_remove_all(struct fidc_membh *f)
 		psc_dynarray_add(&a, b);
 
 		bii = bmap_2_bii(b);
+		BII_LOCK(bii);
 		while (!SPLAY_EMPTY(&bii->bii_slvrs)) {
 			s = SPLAY_MIN(biod_slvrtree, &bii->bii_slvrs);
+			BII_ULOCK(bii);
+
 			/* 
 			 * Use SLVRF_FREEING to avoid a race with sliver
 			 * reaper.  Note that we don't check refcnt here
@@ -770,18 +773,22 @@ slvr_remove_all(struct fidc_membh *f)
 			SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
 			if (s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
-				continue;
+				goto next;
 			}
 			s->slvr_flags |= SLVRF_FREEING;
 			if (s->slvr_refcnt) {
 				SLVR_ULOCK(s);
-				continue;
+				goto next;
 			}
 			SLVR_ULOCK(s);
 
 			OPSTAT_INCR("slvr-remove");
 			slvr_remove(s);
+
+ next:
+			BII_LOCK(bii);
 		}
+		BII_ULOCK(bii);
 	}
 	DYNARRAY_FOREACH(b, i, &a)
 		bmap_op_done_type(b, BMAP_OPCNT_SLVR);

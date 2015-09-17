@@ -217,6 +217,15 @@ slicrudthr_main(struct psc_thread *thr)
 				    ~BMAPF_CRUD_INFLIGHT;
 				//bcr->bcr_bii->bii_bcr = NULL;
 				BII_ULOCK(bcr->bcr_bii);
+
+				/*
+				 * There is a newer FID generation in
+				 * existence than our packaged update is
+				 * for, so this can be safely discarded.
+				 */
+				if (rc == ESTALE) {
+					bcr_ready_remove(bcr);
+				} 
 			}
 			psc_dynarray_reset(bcrs);
 		} else {

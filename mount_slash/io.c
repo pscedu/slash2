@@ -1969,6 +1969,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE *
 		    (nbmaps - 1);
 
+	if (psc_atomic32_read(&slc_max_readahead))
+		goto out1;
+
 	/*
 	 * XXX: Enlarging the original request to include some
 	 * readhead pages within the same bmap can save extra
