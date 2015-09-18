@@ -415,6 +415,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 */
 			DEBUG_REQ(PLL_WARN, rq,
 			    "duplicate connect msg detected");
+		/*
+ 		 * Call mexpc_allocpri() or iexpc_allocpri() to establish 
+ 		 * a SLCONNT_CLI connection to our newly arrived client.
+ 		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->stkvers = mq->stkvers;
 		break;
