@@ -1158,8 +1158,6 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 	if (csvcp == NULL)
 		return;
 
-	if (sl_expcli_ops.secop_destroy)
-		sl_expcli_ops.secop_destroy(exp->exp_private);
 	(void)CSVC_RLOCK(*csvcp);
 	sl_csvc_markfree(*csvcp);
 	sl_csvc_disconnect_ll(*csvcp);

@@ -140,7 +140,6 @@ struct slrpc_cservice {
 
 struct sl_expcli_ops {
 	void	(*secop_allocpri)(struct pscrpc_export *);
-	void	(*secop_destroy)(void *);
 };
 
 #define CSVC_CALLERINFO			PFL_CALLERINFO()
