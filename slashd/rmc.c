@@ -1837,6 +1837,5 @@ mexpc_allocpri(struct pscrpc_export *exp)
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
-	mexpc_allocpri,
-	NULL
+	mexpc_allocpri
 };
