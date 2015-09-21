@@ -72,13 +72,7 @@ sli_rmi_setmds(const char *name)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resource *res;
-//	struct sl_resm *old;
 	lnet_nid_t nid;
-
-	/* XXX kill any old MDS and purge any bmap updates being held */
-//	slconnthr_unwatch(rmi_resm->resm_csvc);
-//	old = rmi_resm;
-//	sl_csvc_disable(old->resm_csvc);
 
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
