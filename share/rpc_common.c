@@ -295,8 +295,9 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->stkvers = SL_STK_VERSION;
 
 	CSVC_LOCK(csvc);
-	sl_csvc_incref(csvc);
 	csvc->csvc_tryref++;
+	if (flags & CSVCF_NONBLOCK)
+		sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
 	if (flags & CSVCF_NONBLOCK) {
