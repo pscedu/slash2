@@ -1037,6 +1037,10 @@ slconnthr_main(struct psc_thread *thr)
 				 * reconnect while we wait.
 				 */
 				goto next;
+			/*
+			 * Only used by MDS to watch for its I/O servers.
+			 * So scp_useablef is always mds_sliod_alive().
+			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
 				sl_csvc_disconnect(csvc);
