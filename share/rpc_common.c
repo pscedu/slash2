@@ -988,7 +988,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 }
 
 /*
- * Logic for peer resource connection monitor.
+ * Logic for peer resource connection monitor. It is used to send pings to
+ * a peer and watch for pings from a peer.
+ *
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
  * CLI - needs to send PINGs to IONs
@@ -1041,6 +1043,9 @@ slconnthr_main(struct psc_thread *thr)
 			/*
 			 * Only used by MDS to watch for its I/O servers.
 			 * So scp_useablef is always mds_sliod_alive().
+			 *
+			 * Note that the above sl_csvc_get() only returns
+			 * csvc when the connection is already established.
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
