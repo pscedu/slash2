@@ -102,14 +102,16 @@ slc_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct msrci_thread);
 }
 
+/*
+ * This function is called once at mount time. If the MDS changes, we have
+ * to remount.
+ */
 int
 slc_rmc_setmds(const char *name)
 {
 	struct sl_resource *res;
-//	struct sl_resm *old;
 	lnet_nid_t nid;
 
-//	old = slc_rmc_resm;
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
@@ -119,15 +121,6 @@ slc_rmc_setmds(const char *name)
 	} else
 		slc_rmc_resm = libsl_nid2resm(nid);
 
-	/* XXX kill any old MDS and purge any bmap updates being held */
-//	sl_csvc_disable(old->resm_csvc);
-#if 0
-	slconnthr_watch(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
-	slconnthr_spawn(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
-	    SRMC_MAGIC, SRMC_VERSION, 0,
-	    &resm2rmci(slc_rmc_resm)->rmci_mwc,
-	    SLCONNT_MDS, MSTHRT_CONN, "ms");
-#endif
 	return (0);
 }
 
