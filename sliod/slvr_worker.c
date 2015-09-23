@@ -97,9 +97,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	for (i = 0; i < mq->ncrc_updates; i++) {
 		bcr = psc_dynarray_getpos(bcrs, i);
 
-		rc = iod_inode_getinfo(&bcr->bcr_crcup.fg,
-		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.nblks,
-		    &bcr->bcr_crcup.utimgen);
+		rc = bcr_update_inodeinfo(bcr);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 

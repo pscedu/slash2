@@ -42,29 +42,26 @@
 #include "slvr.h"
 
 int
-iod_inode_getinfo(struct sl_fidgen *fg, uint64_t *size,
-    uint64_t *nblks, uint32_t *utimgen)
+bcr_update_inodeinfo(struct bcrcupd *bcr)
 {
+	struct bmap *b;
 	struct fidc_membh *f;
 	struct stat stb;
 	int rc;
 
-	rc = fidc_lookup_fg(fg, &f);
-	if (rc)
-		return (rc);
+	b = bcr_2_bmap(bcr);
+	f = b->bcm_fcmh;
 
-	FCMH_LOCK(f);
+	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
+
 	if (fstat(fcmh_2_fd(f), &stb) == -1) {
 		rc = -errno;
-		fcmh_op_done(f);
 		return (rc);
 	}
+	bcr->bcr_crcup.fsize = stb.st_size;
+	bcr->bcr_crcup.nblks = stb.st_blocks;
+	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;
 
-	*size = stb.st_size;
-	*nblks = stb.st_blocks;
-	*utimgen = f->fcmh_sstb.sst_utimgen;
-
-	fcmh_op_done(f);
 	return (0);
 }
 

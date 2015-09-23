@@ -33,6 +33,7 @@
 #include "fid.h"
 #include "slconfig.h"
 #include "sltypes.h"
+#include "bmap_iod.h"
 
 struct bmapc_memb;
 struct fidc_membh;
@@ -97,7 +98,7 @@ resm2rmii(struct sl_resm *resm)
 
 void		slictlthr_main(const char *);
 
-int		iod_inode_getinfo(struct sl_fidgen *, uint64_t *, uint64_t *, uint32_t *);
+int		bcr_update_inodeinfo(struct bcrcupd *);
 
 extern struct pfl_iostats_grad	 sli_iorpc_iostats[];
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;
