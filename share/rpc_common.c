@@ -1071,6 +1071,7 @@ slconnthr_main(struct psc_thread *thr)
 			if (scp->scp_flags & CSVCF_WANTFREE) {
 				sl_csvc_decref(csvc);
 
+				/* XXX touch after free */
 				psc_multiwaitcond_destroy(&csvc->csvc_mwc);
 
 				PSCTHR_LOCK(thr);
