@@ -182,8 +182,12 @@ mdscoh_req(struct bmap_mds_lease *bml)
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 	rq->rq_interpret_reply = slm_rcm_bmapdio_cb;
-	psc_assert(SL_NBRQSET_ADD(csvc, rq) == 0);
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc) {
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
+		return (rc);
+	}
 
-	OPSTAT_INCR("coherent_req");
 	return (0);
 }
