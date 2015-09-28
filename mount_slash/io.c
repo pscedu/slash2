@@ -1949,7 +1949,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		goto out1;
 	}
 
-	if (psc_atomic32_read(&slc_max_readahead))
+	if (!psc_atomic32_read(&slc_max_readahead))
 		goto out1;
 
 	/*
