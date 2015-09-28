@@ -1991,8 +1991,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Enqueue readahead for next sequential region of file
 	 * space.
 	 */
-	readahead_enqueue(&b->bcm_fcmh->fcmh_fg, b->bcm_bmapno,
-	    raoff, rapages);
+	if (rapages)
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg, 
+		    b->bcm_bmapno, raoff, rapages);
 
 	/*
 	 * Enqueue readahead into next bmap if our prediction
