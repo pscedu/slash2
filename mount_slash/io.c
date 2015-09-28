@@ -1949,6 +1949,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		goto out1;
 	}
 
+	if (psc_atomic32_read(&slc_max_readahead))
+		goto out1;
+
 	/*
  	 * Note that i can only be 0 or 1 afer the above loop.
  	 */
@@ -1968,9 +1971,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	else
 		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE *
 		    (nbmaps - 1);
-
-	if (psc_atomic32_read(&slc_max_readahead))
-		goto out1;
 
 	/*
 	 * XXX: Enlarging the original request to include some
@@ -2093,8 +2093,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		BMAP_ULOCK(b);
 
-		r = bmpc_biorq_new(NULL, b, NULL, 0, 0, BIORQ_READ |
-		    BIORQ_READAHEAD);
+		r = bmpc_biorq_new(NULL, b, NULL, rarq->rarq_off, 
+			rarq->rarq_npages*BMPC_BUFSZ, 
+			BIORQ_READ | BIORQ_READAHEAD);
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {
