@@ -1279,13 +1279,20 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		if (i - j + 1 == BMPC_MAXBUFSRPC ||
 		    i == psc_dynarray_len(&pages) - 1) {
 			rc = msl_read_rpc_launch(r, &pages, j, i - j + 1);
-			if (rc)
+			if (rc) {
+				i++;
 				break;
+			}
 			j = i + 1;
 		}
 		off = e->bmpce_off + BMPC_BUFSZ;
 	}
 
+	/* 
+	 * Clean up remaining pages that were not launched.
+	 * Note that msl_read_rpc_launch() cleans up pages
+	 * on its own in case of a failure.
+	 */
 	DYNARRAY_FOREACH_CONT(e, i, &pages) {
 		BMPCE_LOCK(e);
 		e->bmpce_rc = rc;
