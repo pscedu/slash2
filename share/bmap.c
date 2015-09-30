@@ -197,14 +197,14 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	/* Perform app-specific substructure initialization. */
 	sl_bmap_ops.bmo_init_privatef(b);
 
-	BMAP_LOCK(b);
-
 	/* Add to the fcmh's bmap cache */
 	PSC_RB_XINSERT(bmaptree, &f->fcmh_bmaptree, b);
 
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
+
+	BMAP_LOCK(b);
 
 	return (b);
 }
