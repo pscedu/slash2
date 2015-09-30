@@ -760,7 +760,7 @@ slvr_remove_all(struct fidc_membh *f)
 		bii = bmap_2_bii(b);
 		BII_LOCK(bii);
 		while (!SPLAY_EMPTY(&bii->bii_slvrs)) {
-			s = SPLAY_MIN(biod_slvrtree, &bii->bii_slvrs);
+			s = SPLAY_ROOT(&bii->bii_slvrs);
 			BII_ULOCK(bii);
 
 			/* 
