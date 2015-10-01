@@ -2494,15 +2494,20 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	pref_ios = msl_get_pref_ios();
 	PFL_GETTIMESPEC(&expire);
-#define MSL_STATFS_EXPIRE_S 1
-	expire.tv_sec += MSL_STATFS_EXPIRE_S;
+#define MSL_STATFS_EXPIRE_S 4
+	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
 	rpci = res2rpci(pref_ios);
 	RPCI_LOCK(rpci);
+	while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
+		RPCI_WAIT(rpci);
+		RPCI_LOCK(rpci);
+	}
 	if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
 		memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
 		RPCI_ULOCK(rpci);
 		PFL_GOTOERR(out, 0);
 	}
+	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
 	RPCI_ULOCK(rpci);
 
  retry:
@@ -2527,15 +2532,21 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
 
+	PFL_GETTIMESPEC(&expire);
 	RPCI_LOCK(rpci);
 	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
 	rpci->rpci_sfb_time = expire;
+
+	if (0)
+ out:
+		RPCI_LOCK(rpci);
+	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
+	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
 
- out:
-	sl_resource_put(pref_ios);
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
+	sl_resource_put(pref_ios);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)

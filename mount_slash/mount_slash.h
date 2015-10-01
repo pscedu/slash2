@@ -232,13 +232,18 @@ struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
 	struct statvfs			 rpci_sfb;
 	struct timespec			 rpci_sfb_time;
+	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
 };
 
 #define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
+#define RPCIF_STATFS_FETCHING		(1 << 1)	/* RPC for STATFS in flight */
 
 #define RPCI_LOCK(rpci)			spinlock(&(rpci)->rpci_lock)
 #define RPCI_ULOCK(rpci)		freelock(&(rpci)->rpci_lock)
+#define RPCI_WAIT(rpci)			psc_waitq_wait(&(rpci)->rpci_waitq, \
+					    &(rpci)->rpci_lock)
+#define RPCI_WAKE(rpci)			psc_waitq_wakeall(&(rpci)->rpci_waitq)
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)
