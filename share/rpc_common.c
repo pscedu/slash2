@@ -586,16 +586,13 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc, int flags)
+    struct slashrpc_cservice *csvc)
 {
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	if (csvc->csvc_flags & CSVCF_DISCONNECTING) {
-		CSVC_URLOCK(csvc, locked);
-		return;
-	}
-	csvc->csvc_flags |= CSVCF_DISCONNECTING;
+	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING)) 
+		csvc->csvc_flags |= CSVCF_DISCONNECTING;
 	CSVC_URLOCK(csvc, locked);
 }
 
