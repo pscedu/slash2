@@ -153,7 +153,6 @@ struct sl_expcli_ops {
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
 #define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect_ll(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	_PFL_RVSTART {							\

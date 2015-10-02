@@ -600,7 +600,7 @@ void
 sl_imp_hldrop_cli(void *csvc)
 {
 	sl_csvc_markfree(csvc);
-	sl_csvc_disconnect_ll(csvc);
+	sl_csvc_disconnect(csvc);
 	sl_csvc_decref(csvc);
 }
 
@@ -609,7 +609,7 @@ sl_imp_hldrop_resm(void *arg)
 {
 	struct sl_resm *resm = arg;
 
-	sl_csvc_disconnect_ll(resm->resm_csvc);
+	sl_csvc_disconnect(resm->resm_csvc);
 }
 
 /*
@@ -1143,7 +1143,7 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
 	if (resm) {
-		sl_csvc_disconnect_ll(resm->resm_csvc);
+		sl_csvc_disconnect(resm->resm_csvc);
 		sl_resm_hldrop(resm);
 	} else {
 		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
@@ -1165,7 +1165,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 
 	(void)CSVC_RLOCK(*csvcp);
 	sl_csvc_markfree(*csvcp);
-	sl_csvc_disconnect_ll(*csvcp);
+	sl_csvc_disconnect(*csvcp);
 	sl_csvc_decref(*csvcp);
 	PSCFREE(exp->exp_private);
 }
