@@ -181,13 +181,16 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 		if (sli_fcmh_peek(&entryp->fg, &f) == 0) {
 			FCMH_LOCK(f);
-			if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
-				close(fcmh_2_fd(f));
-				fcmh_2_fd(f) = -1;
-				f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
-				OPSTAT_INCR("reclaim-close");
+			if (entryp->fg.fg_gen == fcmh_2_gen(f)) {
+				if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+					close(fcmh_2_fd(f));
+					fcmh_2_fd(f) = -1;
+					f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
+					OPSTAT_INCR("reclaim-close");
+				}
+				OPSTAT_INCR("slvr-remove-reclaim");
+				slvr_remove_all(f);
 			}
-			slvr_remove_all(f);
 			fcmh_op_done(f);
 		}
 

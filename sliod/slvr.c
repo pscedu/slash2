@@ -781,7 +781,6 @@ slvr_remove_all(struct fidc_membh *f)
 			SLVR_ULOCK(s);
 			BII_ULOCK(bii);
 
-			OPSTAT_INCR("slvr-remove");
 			slvr_remove(s);
 
 			BII_LOCK(bii);
