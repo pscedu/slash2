@@ -85,6 +85,11 @@ struct slconn_thread {
  */
 struct slrpc_cservice {
 	struct slconn_params	 csvc_params;
+
+	/*
+	 * An import is for sending requests and receiving replies, and its 
+	 * peer, an export, is for receiving requests and sending replies.
+	 */
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;
 	int			 csvc_tryref;
