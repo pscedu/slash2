@@ -806,7 +806,12 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		return;
 	}
 
-	if (s->slvr_flags & (SLVRF_DATAERR | SLVRF_FREEING)) {
+	if (s->slvr_flags & SLVRF_DATAERR) {
+		/*
+		 * This is safe because we hold the sliver lock
+		 * even if our reference count is now zero.
+		 */
+		s->slvr_flags |= SLVRF_FREEING;
 		SLVR_ULOCK(s);
 		OPSTAT_INCR("slvr-err-remove");
 		slvr_remove(s);
