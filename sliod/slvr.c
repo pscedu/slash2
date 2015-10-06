@@ -767,15 +767,13 @@ slvr_remove_all(struct fidc_membh *f)
 				BII_LOCK(bii);
 				continue;
 			}
-			if (s->slvr_flags & SLVRF_FREEING ||
-			    s->slvr_flags & SLVRF_FAULTING) {
+			if (s->slvr_refcnt || s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
 				pscthr_yield();
 				BII_LOCK(bii);
 				continue;
 			}
-			psc_assert(!(s->slvr_refcnt));
 			s->slvr_flags |= SLVRF_FREEING;
 
 			SLVR_ULOCK(s);
