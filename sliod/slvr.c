@@ -410,6 +410,10 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
 
+	/*
+	 * XXX take reference count here, so we can unify/simplify
+	 * code path later.
+	 */
 	for (i = 0; i < nslvrs; i++)
 		a->aiocbr_slvrs[i] = slvrs[i];
 
