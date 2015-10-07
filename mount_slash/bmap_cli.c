@@ -1130,8 +1130,6 @@ bmap_biorq_expire(struct bmap *b)
 	BMAP_LOCK(b);
 	bmpc_expire_biorqs(bmpc);
 	BMAP_ULOCK(b);
-
-	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /*

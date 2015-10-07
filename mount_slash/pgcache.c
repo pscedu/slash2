@@ -424,6 +424,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
 	}
+	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /*
@@ -452,9 +453,7 @@ bmpc_biorqs_flush(struct bmap *b, int all)
 	while (bmpc->bmpc_pndg_writes) {
 		OPSTAT_INCR("biorq-flush-wait");
 		bmpc_expire_biorqs(bmpc);
-		bmap_flushq_wake(BMAPFLSH_EXPIRE);
-		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
-		    100);
+		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock, 100);
 		BMAP_LOCK(b);
 	}
 }
