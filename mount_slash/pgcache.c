@@ -403,6 +403,29 @@ bmpc_freeall(struct bmap *b)
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
+void
+bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
+{
+	struct bmpc_ioreq *r;
+
+	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+		BIORQ_LOCK(r);
+		/*
+		 * A biorq can only be added at the end of the
+		 * list. So when we encounter an already expired
+		 * biorq we can stop since we've already processed
+		 * it and all biorqs before it.
+		 */
+		if (r->biorq_flags & BIORQ_EXPIRE) {
+			BIORQ_ULOCK(r);
+			break;
+		}
+		r->biorq_flags |= BIORQ_EXPIRE;
+		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
+		BIORQ_ULOCK(r);
+	}
+}
+
 /*
  * Flush all biorqs on the bmap's `new' biorq list, which all writes get
  * initially placed on.  This routine is called in all flush code paths
@@ -416,7 +439,6 @@ void
 bmpc_biorqs_flush(struct bmap *b, int all)
 {
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
 
 	/*
 	 * XXX if `all' is false, we should not wait for any new biorqs
@@ -429,22 +451,7 @@ bmpc_biorqs_flush(struct bmap *b, int all)
 
 	while (bmpc->bmpc_pndg_writes) {
 		OPSTAT_INCR("biorq-flush-wait");
-		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
-			BIORQ_LOCK(r);
-			/*
-			 * A biorq can only be added at the end of the
-			 * list. So when we encounter an already expired
-			 * biorq we can stop since we've already processed
-			 * it and all biorqs before it.
-			 */
-			if (r->biorq_flags & BIORQ_EXPIRE) {
-				BIORQ_ULOCK(r);
-				break;
-			}
-			r->biorq_flags |= BIORQ_EXPIRE;
-			DEBUG_BIORQ(PLL_DIAG, r, "force expire");
-			BIORQ_ULOCK(r);
-		}
+		bmpc_expire_biorqs(bmpc);
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
 		    100);

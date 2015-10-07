@@ -1122,16 +1122,13 @@ void
 bmap_biorq_expire(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
-
 	/*
 	 * Note that the following two lists and the bmap
 	 * structure itself all share the same lock.
 	 */
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
-	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		BIORQ_SETATTR(r, BIORQ_EXPIRE);
+	bmpc_expire_biorqs(bmpc);
 	BMAP_ULOCK(b);
 
 	bmap_flushq_wake(BMAPFLSH_EXPIRE);
