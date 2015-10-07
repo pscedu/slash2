@@ -2838,8 +2838,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 * XXX some writes can be cancelled, but no API
 			 * exists yet.
 			 */
-			DYNARRAY_FOREACH(b, i, &a)
-				bmap_biorq_expire(b);
+			DYNARRAY_FOREACH(b, i, &a) {
+				struct bmap_pagecache *bmpc;
+				bmpc = bmap_2_bmpc(b);
+				BMAP_LOCK(b);
+				bmpc_expire_biorqs(bmpc);
+				BMAP_ULOCK(b);
+			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
 				bmap_biorq_waitempty(b);

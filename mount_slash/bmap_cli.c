@@ -1118,20 +1118,6 @@ bmap_biorq_waitempty(struct bmap *b)
 	BMAP_ULOCK(b);
 }
 
-void
-bmap_biorq_expire(struct bmap *b)
-{
-	struct bmap_pagecache *bmpc;
-	/*
-	 * Note that the following two lists and the bmap
-	 * structure itself all share the same lock.
-	 */
-	bmpc = bmap_2_bmpc(b);
-	BMAP_LOCK(b);
-	bmpc_expire_biorqs(bmpc);
-	BMAP_ULOCK(b);
-}
-
 /*
  * Implement bmo_final_cleanupf() operation.
  */
