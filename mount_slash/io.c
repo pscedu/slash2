@@ -173,7 +173,7 @@ readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
  */
 __static struct bmpc_ioreq *
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
-    int rqnum, uint32_t roff, uint32_t len, int op)
+    uint32_t roff, uint32_t len, int op)
 {
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
@@ -1611,7 +1611,7 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
  * disable the code, but keep it for reference.
  */
 void
-mfh_prod_writeahead(struct msl_fhent *mfh, sl_bmapno_t bno)
+mfh_prod_writeahead(__unusedx struct msl_fhent *mfh, __unusedx sl_bmapno_t bno)
 {
 #if 0
 	if (!mfh->mfh_predio_nseq)
@@ -1913,7 +1913,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 * roff - (i * SLASH_BMAP_SIZE) should be zero
 			 * if i == 1.
 			 */
-			r = msl_biorq_build(q, b, buf, i,
+			r = msl_biorq_build(q, b, buf,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 
