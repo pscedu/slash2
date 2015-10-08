@@ -427,7 +427,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * re-established with that sliod.  But that logic is too
 	 * complicated to get right.
 	 */
-	r->biorq_flags &= ~BIORQ_EXPIRE;
 	PFL_GETTIMESPEC(&r->biorq_expire);
 
 	/*
@@ -631,40 +630,15 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 __static int
 bmap_flushable(struct bmap *b)
 {
-	int secs, samples = 0, flush = 0, force = 0;
+	int secs, flush = 0, force = 0;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
 	struct timespec ts;
-
-	// BMAP_LOCK_ENSURE(b);
 
 	bmpc = bmap_2_bmpc(b);
 
-	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
-		/*
-		 * If the first request is scheduled, all other requests
-		 * that were eligible to be flushed during the last scan
-		 * must be scheduled as well.  However, newly eligible
-		 * requests can appear.  To find them for sure, we need
-		 * to scan the entire tree.
-		 *
-		 * Let us take our chances by looking at only 3 requests.
-		 * We will scan the tree again once scheduled requests
-		 * are flushed out and removed.  Yes, the flush callback
-		 * will wake us up.
-		 */
-		if (++samples > 3)
-			break;
+	flush = !RB_EMPTY(&bmpc->bmpc_new_biorqs);
+	force = bmpc->bmpc_force_expired;
 
-		BIORQ_LOCK(r);
-		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
-		if (r->biorq_flags & BIORQ_EXPIRE)
-			force = 1;
-
-		BIORQ_ULOCK(r);
-		flush = 1;
-		break;
-	}
 	if (flush && !force) {
 		/* assert: the bmap should a write bmap at this point */
 		PFL_GETTIMESPEC(&ts);
