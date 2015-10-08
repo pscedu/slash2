@@ -253,7 +253,6 @@ struct bmap_pagecache {
 	 * The tree is protected by the bmap lock.
 	 */
 	int				 bmpc_pndg_writes;
-	int				 bmpc_force_expired;
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* for flushing/expiring */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* pending I/O requests */
