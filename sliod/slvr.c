@@ -771,7 +771,8 @@ slvr_remove_all(struct fidc_membh *f)
 				BII_LOCK(bii);
 				continue;
 			}
-			if (s->slvr_refcnt || s->slvr_flags & SLVRF_FREEING) {
+			if (s->slvr_refcnt ||
+		           (s->slvr_flags & (SLVRF_FREEING | SLVRF_FAULTING))) {
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
 				pscthr_yield();
