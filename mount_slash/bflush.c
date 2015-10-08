@@ -623,27 +623,22 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 }
 
 /*
- * Check if we can flush the given bmpc (either an I/O request has
- * expired or we have accumulated a big enough I/O).  This function must
- * be non-blocking.
+ * Check if we can flush the given bmp now.
  */
 __static int
 bmap_flushable(struct bmap *b)
 {
-	int secs, flush = 0, force = 0;
-	struct bmap_pagecache *bmpc;
+	int flush;
 	struct timespec ts;
+	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
-
 	flush = !RB_EMPTY(&bmpc->bmpc_new_biorqs);
-	force = bmpc->bmpc_force_expired;
 
-	if (flush && !force) {
-		/* assert: the bmap should a write bmap at this point */
+	if (flush) {
 		PFL_GETTIMESPEC(&ts);
-		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-		if ((secs > 0 && secs < BMAP_CLI_EXTREQSECS) ||
+		if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
+		    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec < BMAP_CLI_EXTREQSECS) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 			OPSTAT_INCR("flush-skip-expire");
 			flush = 0;
