@@ -1352,6 +1352,12 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			perfect_ra = 0;
 
 		if (r->biorq_flags & BIORQ_WRITE) {
+			while (e->bmpce_flags & BMPCEF_PINNED) {
+				OPSTAT_INCR("write-wait-pinned");
+				DEBUG_BMPCE(PLL_DIAG, e, "waiting");
+				BMPCE_WAIT(e);
+				BMPCE_LOCK(e);
+			}
 			BMPCE_ULOCK(e);
 			continue;
 		}
