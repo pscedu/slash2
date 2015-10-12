@@ -1352,6 +1352,12 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			perfect_ra = 0;
 
 		if (r->biorq_flags & BIORQ_WRITE) {
+			while (e->bmpce_flags & BMPCEF_PINNED) {
+				OPSTAT_INCR("write-wait-pinned");
+				DEBUG_BMPCE(PLL_DIAG, e, "waiting");
+				BMPCE_WAIT(e);
+				BMPCE_LOCK(e);
+			}
 			BMPCE_ULOCK(e);
 			continue;
 		}
@@ -2063,6 +2069,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * only happen after each biorq finishes.  For DIO, buffers are
 	 * attached to the biorqs directly so they must be used before
 	 * being freed.
+	 *
+	 * 10/12/2015: The above argument does not seem to make sense
+	 * because we have mfsrq_ref to decide when it is time to finally
+	 * complete the request and each biorq also holds such a reference.
+	 * If so, we should be able to move step 5 after step 6.
 	 */
 	msl_complete_fsrq(q, 0);
 
