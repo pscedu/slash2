@@ -1079,7 +1079,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
-	bmpc->bmpc_pndg_writes++;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
