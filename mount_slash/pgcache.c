@@ -337,11 +337,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		}
 	}
 
-	BMAP_LOCK(b);
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
-	if (flags & BIORQ_WRITE)
-		bmpc->bmpc_pndg_writes++;
-	BMAP_ULOCK(b);
 
 //	OPSTAT_SET_MAX("biorq-max", slc_biorq_pool->ppm_total -
 //	    slc_biorq_pool->ppm_used);

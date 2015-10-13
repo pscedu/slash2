@@ -343,8 +343,7 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 		 * declare it as complete until after its reference
 		 * count drops to zero.
 		 */
-		if (msl_biorq_complete_fsrq(r))
-			msl_pages_schedflush(r);
+		msl_biorq_complete_fsrq(r);
 		BIORQ_LOCK(r);
 	}
 
@@ -700,6 +699,10 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 		q->mfsrq_flags |= MFSRQ_COPIED;
 	}
 	MFH_ULOCK(q->mfsrq_mfh);
+
+	if (needflush)
+		msl_pages_schedflush(r);
+
 	msl_complete_fsrq(q, len);
 	return (needflush);
 }
@@ -1079,6 +1082,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	biorq_incref(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
+	bmpc->bmpc_pndg_writes++;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
