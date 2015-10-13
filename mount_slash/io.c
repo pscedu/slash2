@@ -98,6 +98,8 @@ struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
 struct psc_listcache	 msl_readaheadq;
 
+int		 	 slc_root_squash = 1;
+
 void
 msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 {

@@ -51,6 +51,8 @@
 const char *sl_datadir = SL_PATH_DATA_DIR;
 const int   sl_stkvers = SL_STK_VERSION;
 
+extern int slc_root_squash;
+
 enum rw
 fflags_2_rw(int fflags)
 {
@@ -154,7 +156,7 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
  */
 int
 checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
-    int accmode)
+    int accmode, int root_squash)
 {
 	gid_t gid;
 	int n;
@@ -164,7 +166,7 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 #endif
 
 	/* root can do anything, unless rootsquash is enabled */
-	if (!slcfg_local->cfg_root_squash && pcrp->pcr_uid == 0)
+	if (!root_squash && pcrp->pcr_uid == 0)
 		return (0);
 
 	if (sstb->sst_uid == pcrp->pcr_uid)

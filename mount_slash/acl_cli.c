@@ -163,7 +163,7 @@ sl_checkacls(acl_t a, struct srt_stat *sstb,
 	}
 #ifdef SLOPT_POSIX_ACLS_REVERT
 	else
-		rv = checkcreds(sstb, pcrp, accmode);
+		rv = checkcreds(sstb, pcrp, accmode, slc_root_squash);
 #endif
 	return (rv);
 }
@@ -182,7 +182,7 @@ sl_fcmh_checkacls(struct fidc_membh *f,
 
 #ifdef SLOPT_POSIX_ACLS_REVERT
 		locked = FCMH_RLOCK(f);
-		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
+		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode, slc_root_squash);
 		FCMH_URLOCK(f, locked);
 #else
 		rc = EACCES;

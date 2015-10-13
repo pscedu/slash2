@@ -178,7 +178,7 @@ fcmh_checkcreds_ctx(struct fidc_membh *f,
 	(void)locked;
 #else
 	locked = FCMH_RLOCK(f);
-	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
+	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode, slc_root_squash);
 	FCMH_URLOCK(f, locked);
 	(void)pfcc;
 #endif
@@ -3890,7 +3890,7 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'Q':
-			slcfg_local->cfg_root_squash = 1;
+			slc_root_squash = 1;
 			break;
 		case 'S':
 			ctlsockfn = optarg;
