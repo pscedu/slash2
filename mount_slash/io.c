@@ -69,7 +69,7 @@
 #include "slerr.h"
 #include "subsys_cli.h"
 
-__static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static void	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 
@@ -656,7 +656,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 	PSCFREE(oiov);
 }
 
-int
+void
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
 	int i, needflush = 0;
@@ -666,7 +666,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	/* don't do anything for readahead */
 	q = r->biorq_fsrqi;
 	if (q == NULL)
-		return (0);
+		return;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
@@ -706,7 +706,6 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 		msl_pages_schedflush(r);
 
 	msl_complete_fsrq(q, len);
-	return (needflush);
 }
 
 /*
