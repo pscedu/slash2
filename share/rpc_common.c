@@ -492,7 +492,6 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	psc_assert(csvc->csvc_peertype == SLCONNT_CLI);
 	csvc->csvc_flags |= CSVCF_WANTFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
