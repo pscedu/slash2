@@ -151,6 +151,7 @@ struct psc_hashtbl		 slc_gidmap_int;
  * the O_DIRECT and the fuse direct_io path is not fully integrated.
  */
 psc_atomic32_t			 slc_direct_io = PSC_ATOMIC32_INIT(1);
+int				 slc_root_squash;
 
 int				 msl_newent_inherit_groups = 1;
 
@@ -172,12 +173,15 @@ fcmh_checkcreds_ctx(struct fidc_membh *f,
 {
 	int rc, locked;
 
+	if (slc_root_squash && pcrp->pcr_uid == 0)
+		return (EACCES);
+
 #ifdef SLOPT_POSIX_ACLS
 	rc = sl_fcmh_checkacls(f, pfcc, pcrp, accmode);
 	(void)locked;
 #else
 	locked = FCMH_RLOCK(f);
-	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode, slc_root_squash);
+	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
 	FCMH_URLOCK(f, locked);
 	(void)pfcc;
 #endif

@@ -154,7 +154,7 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
  */
 int
 checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
-    int accmode, int root_squash)
+    int accmode)
 {
 	gid_t gid;
 	int n;
@@ -162,10 +162,6 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 #if PFL_DEBUG > 0
 	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
-
-	/* root can do anything, unless rootsquash is enabled */
-	if (!root_squash && pcrp->pcr_uid == 0)
-		return (0);
 
 	if (sstb->sst_uid == pcrp->pcr_uid)
 		return (PERMCHECK(accmode, sstb->sst_mode, S_IRWXU));

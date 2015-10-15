@@ -49,6 +49,6 @@ int	sl_fcmh_checkacls(struct fidc_membh *,
 	    int);
 
 int	checkcreds(const struct srt_stat *, const struct pscfs_creds *,
-	    int, int);
+	    int);
 
 #endif /* _SLASH_CREDS_H_ */
