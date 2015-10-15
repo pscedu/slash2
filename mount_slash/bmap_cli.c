@@ -650,10 +650,10 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 		PFL_GOTOERR(out, rc);
 	}
 	if ((flags & BMAPGETF_NONBLOCK) || rc) {
-		if (flags & BMAPGETF_NONBLOCK)
-			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
-		else
+		if (rc)
 			psc_compl_destroy(&compl);
+		else if (flags & BMAPGETF_NONBLOCK)
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		return (rc);
 	}
 
