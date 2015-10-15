@@ -1746,7 +1746,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
  *
  * @f: the FID cache handle for the inode.
  * @bmapno: bmap index number.
- * @flags: bmap lease flags (SRM_LEASEBMAPF_*).
+ * @lflags: bmap lease flags (SRM_LEASEBMAPF_*).
  * @rw: read/write access to the bmap.
  * @prefios: client preferred I/O system ID.
  * @sbd: value-result bmap descriptor to pass back to client.
@@ -1757,7 +1757,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
  *	with a bit (i.e. INIT) and other threads block on its waitq.
  */
 int
-mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
+mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
     struct pscrpc_export *exp, uint8_t *repls, int new)
 {
@@ -1765,7 +1765,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
-	int rc, flag;
+	int rc, bflags;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
@@ -1783,14 +1783,16 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		FCMH_ULOCK(f);
 	}
 
-	flag = BMAPGETF_CREATE | (new ? BMAPGETF_NODISKREAD : 0);
-	rc = bmap_getf(f, bmapno, SL_WRITE, flag, &b);
+	bflags = BMAPGETF_CREATE;
+	if (new)
+		bflags |= BMAPGETF_NODISKREAD;
+	rc = bmap_getf(f, bmapno, SL_WRITE, bflags, &b);
 	if (rc)
 		return (rc);
 
 	bml = mds_bml_new(b, exp,
 	    (rw == SL_WRITE ? BML_WRITE : BML_READ) |
-	     (flags & SRM_LEASEBMAPF_DIO ? BML_DIO : 0),
+	     (lflags & SRM_LEASEBMAPF_DIO ? BML_DIO : 0),
 	    &exp->exp_connection->c_peer);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
