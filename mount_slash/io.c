@@ -755,11 +755,11 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 	}
 }
 
-#define msl_bmpce_rpc_done(e, rc)					\
-	_msl_bmpce_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
+#define msl_bmpce_read_rpc_done(e, rc)					\
+	_msl_bmpce_read_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
 
 __static void
-_msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
+_msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
     struct bmap_pagecache_entry *e, int rc)
 {
 	BMPCE_LOCK(e);
@@ -817,7 +817,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
 	DYNARRAY_FOREACH(e, i, a)
-		msl_bmpce_rpc_done(e, rc);
+		msl_bmpce_read_rpc_done(e, rc);
 
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
