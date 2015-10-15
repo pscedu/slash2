@@ -159,7 +159,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 					e->bmpce_flags &=
 					    ~BMPCEF_IDLE;
 					remove_idle = 1;
-					} else if (e->bmpce_flags &
+				} else if (e->bmpce_flags &
 				    BMPCEF_READALC) {
 					e->bmpce_flags &=
 					    ~BMPCEF_READALC;
