@@ -997,6 +997,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
+		/*
+		 * We do not check SLVRF_FAULTING here because we
+		 * are not looking at the CRC list (sli_crcqslvrs).
+		 */
 		if (s->slvr_refcnt || (s->slvr_flags & SLVRF_FREEING)) {
 			SLVR_ULOCK(s);
 			continue;
