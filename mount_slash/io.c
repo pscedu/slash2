@@ -106,8 +106,14 @@ msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 	pfl_opstat_incr(rw == SL_READ ? ist->rw.rd : ist->rw.wr);
 }
 
+#define msl_biorq_page_valid_accounting(r, idx)				\
+	_msl_biorq_page_valid((r), (idx), 1)
+
+#define msl_biorq_page_valid(r, idx)					\
+	_msl_biorq_page_valid((r), (idx), 0)
+
 __static int
-msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
+msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 {
 	struct bmap_pagecache_entry *e;
 	uint32_t toff, tsize, nbytes;
@@ -131,7 +137,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 		}
 
 		if (e->bmpce_flags & BMPCEF_DATARDY) {
-			if (!checkonly)
+			if (accounting)
 				pfl_opstat_add(slc_rdcache_iostats,
 				    nbytes);
 			return (1);
@@ -139,7 +145,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
-			if (!checkonly) {
+			if (accounting) {
 				pfl_opstat_add(slc_rdcache_iostats,
 				    nbytes);
 				OPSTAT_INCR("read-part-valid");
@@ -1241,7 +1247,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (e->bmpce_flags & BMPCEF_FAULTING ||
-		    msl_biorq_page_valid(r, i, 0)) {
+		    msl_biorq_page_valid(r, i)) {
 			BMPCE_ULOCK(e);
 			if (r->biorq_flags & BIORQ_READAHEAD)
 				OPSTAT_INCR("readahead-gratuitous");
@@ -1358,7 +1364,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			continue;
 		}
 
-		if (msl_biorq_page_valid(r, i, 0)) {
+		if (msl_biorq_page_valid(r, i)) {
 			BMPCE_ULOCK(e);
 			continue;
 		}
@@ -1534,7 +1540,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
-		psc_assert(msl_biorq_page_valid(r, i, 1));
+		psc_assert(msl_biorq_page_valid_accounting(r, i));
 
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r,
 		    i));
