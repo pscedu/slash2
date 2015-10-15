@@ -53,7 +53,7 @@
 void
 slm_coh_bml_release(struct bmap_mds_lease *bml)
 {
-	BML_RLOCK(bml);
+	BML_LOCK(bml);
 	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
 
@@ -68,8 +68,11 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 	struct bmap_mds_lease *bml =
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
+	struct srm_bmap_dio_req *mq;
 	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
 	if (rc)
@@ -82,19 +85,15 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_DIO;
+	BML_ULOCK(bml);
 
  out:
-	slm_coh_bml_release(bml);
+	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
+	    "cli=%s seq=%"PRId64" rc=%d",
+	    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
+	    buf), mq->seq, rc);
 
-	if (b) {
-		DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
-		    "cli=%s seq=%"PRId64" rc=%d",
-		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
-		    buf), wk->seq, rc);
-	} else
-		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
-		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
-		    buf), wk->seq, rc);
+	slm_coh_bml_release(bml);
 
 	sl_csvc_decref(csvc);
 
@@ -104,6 +103,8 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 /*
  * Request a lease holder to do direct I/O as the result of a
  * conflicting access request.
+ *
+ * Note: @bml is unlocked upon return.
  */
 void
 mdscoh_req(struct bmap_mds_lease *bml)
@@ -152,5 +153,6 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+
 	slm_coh_bml_release(bml);
 }
