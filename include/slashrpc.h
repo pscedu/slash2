@@ -456,9 +456,9 @@ struct srm_leasebmap_req {
 	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
-#define SRM_LEASEBMAPF_DIO	(1 << 0)	/* client wants direct I/O */
-#define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* fetch inode (replica table, etc.) */
-#define SRM_LEASEBMAPF_DATA	(1 << 2)	/* true if any crcstates has SLVR_DATA */
+#define SRM_LEASEBMAPF_DIO	(1 << 0)	/* reply: client wants direct I/O */
+#define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* request: fetch inode (replica table, etc.) */
+#define SRM_LEASEBMAPF_DATA	(1 << 2)	/* reply: true if any crcstates has SLVR_DATA */
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
@@ -792,7 +792,7 @@ struct srm_create_rep {
 	 int32_t		_pad;
 
 	/* parameters for fetching first bmap */
-	uint32_t		rc2;		/* (for LEASEBMAP) 0 or slerrno */
+	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	struct srt_bmapdesc	sbd;
 } __packed;
