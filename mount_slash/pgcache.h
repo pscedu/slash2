@@ -82,7 +82,7 @@ struct bmap_pagecache_entry {
 #define BMPCEF_EIO		(1 <<  3)	/* I/O error */
 #define BMPCEF_AIOWAIT		(1 <<  4)	/* wait on async read */
 #define BMPCEF_DISCARD		(1 <<  5)	/* don't cache after I/O is done */
-#define BMPCEF_PINNED		(1 <<  6)	/* do not modify */
+#define BMPCEF_PINNED		(1 <<  6)	/* page contents are being modified */
 #define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
 #define BMPCEF_ACCESSED		(1 <<  8)	/* bmpce was used before reap (readahead) */
 #define BMPCEF_IDLE		(1 <<  9)	/* on idle_pages listcache */
@@ -120,10 +120,11 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "			\
-	    "off=%#09x base=%p "					\
-	    "ref=%u : " fmt,						\
-	    (b), (b)->bmpce_flags,					\
+	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
+	    "fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "				\
+	    "off=%#09x base=%p ref=%u : " fmt,				\
+	    (b), (b)->bmpce_bmap->bcm_fcmh,				\
+	    fcmh_2_fid((b)->bmpce_bmap->bcm_fcmh), (b)->bmpce_flags,	\
 	    (b)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
 	    (b)->bmpce_flags & BMPCEF_FAULTING		? "f" : "",	\
 	    (b)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
