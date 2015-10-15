@@ -69,11 +69,11 @@ int				 slc_max_nretries = 256;
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
 
-struct psc_waitq		slc_bflush_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			slc_bflush_lock = SPINLOCK_INIT;
-int				slc_bflush_tmout_flags;
+struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
+int				 slc_bflush_tmout_flags;
 
-psc_atomic32_t			slc_write_coalesce_max;
+psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
@@ -479,8 +479,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		psc_assert(b == r->biorq_bmap);
 		/*
 		 * No need to lock because we have already replied to
-		 * the user space. Furthermore, we flush each biorq in
-		 * one RPC. So the callback handler won't race with us.
+		 * the user space.  Furthermore, we flush each biorq in
+		 * one RPC.  So the callback handler won't race with us.
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
@@ -823,7 +823,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			}
 			PFL_GETTIMESPEC(&ts);
 			if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
-		    	    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec < 
+			    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec <
 				BMAP_CLI_EXTREQSECS))
 				psc_dynarray_add(&bmaps, b);
 			BMAP_ULOCK(b);
