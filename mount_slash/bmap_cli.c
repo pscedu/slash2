@@ -575,7 +575,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		psc_compl_ready(compl, 1);
 	else
 		/* will do bmap_wake_locked() for anyone waiting for us */
-		bmap_op_done_type(b, BMAP_OPCNT_NONBLOCK);
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -651,7 +651,7 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	}
 	if ((flags & BMAPGETF_NONBLOCK) || rc) {
 		if (flags & BMAPGETF_NONBLOCK)
-			bmap_op_start_type(b, BMAP_OPCNT_NONBLOCK);
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		else
 			psc_compl_destroy(&compl);
 		return (rc);
