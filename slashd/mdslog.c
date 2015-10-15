@@ -78,7 +78,7 @@
 #define CBARG_RES		2
 
 /* max # MDS records in one progress file */
-#define	MAX_UPDATE_PROG_ENTRY	1024
+#define MAX_UPDATE_PROG_ENTRY	1024
 
 /* namespace update progress tracker to peer MDSes */
 struct update_prog_entry {
@@ -89,7 +89,7 @@ struct update_prog_entry {
 };
 
 /* max # IOS records in one progress file */
-#define	MAX_RECLAIM_PROG_ENTRY	1024
+#define MAX_RECLAIM_PROG_ENTRY	1024
 
 /* garbage reclaim progress tracker to IOSes */
 struct reclaim_prog_entry {

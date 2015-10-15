@@ -205,7 +205,7 @@ struct rpmi_mds {
 };
 #define sl_mds_peerinfo rpmi_mds
 
-#define	SPF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
+#define SPF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 
 #define res2rpmi_mds(res)	((struct rpmi_mds *)res2rpmi(res)->rpmi_info)
 #define res2mdsinfo(res)	res2rpmi_mds(res)
@@ -237,13 +237,13 @@ struct rpmi_ios {
 };
 #define sl_mds_iosinfo rpmi_ios
 
-#define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
+#define SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 #define SIF_DISABLE_LEASE	(1 << 1)		/* disable bmap lease assignments */
 #define SIF_DISABLE_ADVLEASE	(1 << 2)		/* advisory (from sliod) control */
 #define SIF_DISABLE_GC		(1 << 3)		/* disable garbage collection temporarily */
 #define SIF_UPSCH_PAGING	(1 << 4)		/* upsch will page more work in destined for this IOS */
-#define	SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
-#define	SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
+#define SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
+#define SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
 
 #define res2rpmi_ios(r)		((struct rpmi_ios *)res2rpmi(r)->rpmi_info)
 #define res2iosinfo(res)	res2rpmi_ios(res)

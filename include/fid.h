@@ -37,7 +37,7 @@
 
 #include "sltypes.h"
 
-#define	SL_FIDBUF_LEN		(18 + 1 + 20 + 1)
+#define SL_FIDBUF_LEN		(18 + 1 + 20 + 1)
 
 struct sl_fidgen;
 
@@ -62,15 +62,15 @@ struct sl_fidgen;
  *
  * 01/20/2014: site id should really be called MDS ID.
  */
-#define	SLASH_FID_FLAG_BITS	4
-#define	SLASH_FID_MDSID_BITS	10
-#define	SLASH_FID_CYCLE_BITS	8
-#define	SLASH_FID_INUM_BITS	42
+#define SLASH_FID_FLAG_BITS	4
+#define SLASH_FID_MDSID_BITS	10
+#define SLASH_FID_CYCLE_BITS	8
+#define SLASH_FID_INUM_BITS	42
 
-#define	SLASH_FID_FLAG_SHFT	(SLASH_FID_MDSID_BITS + SLASH_FID_MDSID_SHFT)
-#define	SLASH_FID_MDSID_SHFT	(SLASH_FID_CYCLE_BITS + SLASH_FID_CYCLE_SHFT)
-#define	SLASH_FID_CYCLE_SHFT	(SLASH_FID_INUM_BITS)
-#define	SLASH_FID_INUM_SHFT	0
+#define SLASH_FID_FLAG_SHFT	(SLASH_FID_MDSID_BITS + SLASH_FID_MDSID_SHFT)
+#define SLASH_FID_MDSID_SHFT	(SLASH_FID_CYCLE_BITS + SLASH_FID_CYCLE_SHFT)
+#define SLASH_FID_CYCLE_SHFT	(SLASH_FID_INUM_BITS)
+#define SLASH_FID_INUM_SHFT	0
 
 #define SLFIDF_HIDE_DENTRY	(UINT64_C(1) << 0)	/* keep but hide an entry until its log arrives */
 #define SLFIDF_LOCAL_DENTRY	(UINT64_C(1) << 1)	/* don't expose to external nodes */
@@ -85,12 +85,12 @@ struct sl_fidgen;
 
 struct sl_fidgen {
 	slfid_t			fg_fid;
-	/* 
+	/*
 	 * Used to track full file truncations and directory modifications.
 	 * Note that changing the attributes of a directory alone does not
 	 * change its generation number.
-	 */ 
-	slfgen_t		fg_gen;		
+	 */
+	slfgen_t		fg_gen;
 };
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)

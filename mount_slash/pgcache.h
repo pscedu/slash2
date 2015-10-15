@@ -174,12 +174,12 @@ struct bmpc_ioreq {
 	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
 };
 
-#define	BIORQ_READ		(1 <<  0)
-#define	BIORQ_WRITE		(1 <<  1)
-#define	BIORQ_DIO		(1 <<  2)
-#define	BIORQ_EXPIRE		(1 <<  3)
-#define	BIORQ_DESTROY		(1 <<  4)
-#define	BIORQ_FLUSHRDY		(1 <<  5)
+#define BIORQ_READ		(1 <<  0)
+#define BIORQ_WRITE		(1 <<  1)
+#define BIORQ_DIO		(1 <<  2)
+#define BIORQ_EXPIRE		(1 <<  3)
+#define BIORQ_DESTROY		(1 <<  4)
+#define BIORQ_FLUSHRDY		(1 <<  5)
 #define BIORQ_FREEBUF		(1 <<  6)	/* DIO READ needs a buffer */
 #define BIORQ_WAIT		(1 <<  7)
 #define BIORQ_ONTREE		(1 <<  8)

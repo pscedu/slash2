@@ -103,8 +103,8 @@ struct fcmh_mds_info {
 #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, (fp))
 #define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, (fp))
 
-#define	mds_fcmh_setattr(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 1)
-#define	mds_fcmh_setattr_nolog(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 0)
+#define mds_fcmh_setattr(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 1)
+#define mds_fcmh_setattr_nolog(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 0)
 
 int	_mds_fcmh_setattr(int, struct fidc_membh *, int, const struct srt_stat *, int);
 

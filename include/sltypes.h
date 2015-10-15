@@ -65,7 +65,7 @@ typedef uint32_t sl_ios_id_t;
 #define SL_NAME_MAX		255		/* file name component length */
 #define SL_PATH_MAX		4096		/* file path name length */
 
-#define	SL_XATTR_SIZE_MAX	4096
+#define SL_XATTR_SIZE_MAX	4096
 
 #define SL_TWO_NAME_MAX		364		/* room for at most two names */
 
@@ -110,7 +110,7 @@ typedef uint64_t slfgen_t;
 	 PSCFS_SETATTRF_GID  | PSCFS_SETATTRF_DATASIZE |		\
 	 PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME)
 
-#define	SLASH2_IGNORE_MTIME	0x400000
-#define	SLASH2_IGNORE_CTIME	0x800000
+#define SLASH2_IGNORE_MTIME	0x400000
+#define SLASH2_IGNORE_CTIME	0x800000
 
 #endif /* _SL_TYPES_H_ */
