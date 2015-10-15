@@ -3808,8 +3808,9 @@ opt_lookup(const char *opt)
 		const char	*name;
 		int		*var;
 	} *io, opts[] = {
-		{ "mapfile",	&slc_use_mapfile },
-		{ NULL,		NULL }
+		{ "mapfile",		&slc_use_mapfile },
+		{ "root_squash",	&slc_root_squash },
+		{ NULL,			NULL }
 	};
 
 	for (io = opts; io->name; io++)
@@ -3931,6 +3932,7 @@ main(int argc, char *argv[])
 
 	slcfg_local->cfg_fidcachesz = 1024;
 	slcfg_parse(cfg);
+	slc_root_squash = slcfg_local->cfg_root_squash;
 	parse_allowexe();
 	if (slc_use_mapfile) {
 		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
