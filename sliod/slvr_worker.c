@@ -334,6 +334,9 @@ slislvrthr_proc(struct slvr *s)
 	if ((s->slvr_flags & SLVRF_DATAERR) && !s->slvr_refcnt) {
 		OPSTAT_INCR("slvr-crc-remove2");
 		SLVR_ULOCK(s);
+		/*
+ 		 * We are protected by SLVRF_FAULTING and we are on the CRC list.
+ 		 */
 		slvr_remove(s);
 	} else {
 		s->slvr_flags |= SLVRF_LRU;
