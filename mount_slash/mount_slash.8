@@ -31,7 +31,7 @@
 file system
 .Sh SYNOPSIS
 .Nm mount_slash
-.Op Fl dQUV
+.Op Fl dUV
 .Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl I Ar iosystem
@@ -88,13 +88,13 @@ Group mappings may also specified:
 .Bd -literal -offset 4n
 .Ic group local-uids Ar uid ... Ic remote Ar gid
 .Ed
-.El
-.It Fl Q
+.It Ic root_squash
 Enable root squash.
 Root squash mode disables traditional superuser access and instead
 treats superuser like any other user.
 Note that this is not a security feature per se but more of a guard
 against accidental behavior.
+.El
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm
