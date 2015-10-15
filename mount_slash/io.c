@@ -1473,7 +1473,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		    "tsize=%u nbytes=%u toff=%u, start=%u, len=%u",
 		    tsize, nbytes, toff, e->bmpce_start, e->bmpce_len);
 
-		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 
 		toff  += nbytes;
