@@ -483,7 +483,7 @@ bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
 		 * destroying the same biorq again.
 		 */
 		BIORQ_LOCK(r);
-		assert(r->biorq_flags & BIORQ_FLUSHRDY);
+		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
 		r->biorq_flags &= ~BIORQ_ONTREE;
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
 		    r);
