@@ -768,6 +768,7 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCEF_EIO;
 	} else {
+		e->bmpce_flags &= ~BMPCEF_EIO;
 		e->bmpce_flags |= BMPCEF_DATARDY;
 	}
 
