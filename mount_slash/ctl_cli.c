@@ -850,22 +850,20 @@ msctlthr_spawn(void)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+
 	psc_ctlparam_register_var("sys.bmap-max-cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &bmap_max_cache);
-
 	/* XXX: add max_fs_iosz */
-
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_max_nretries);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
-	psc_ctlparam_register_simple("sys.mds",
-	    msctlparam_mds_get, NULL);
-	psc_ctlparam_register_var("sys.direct_io",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &slc_direct_io);
+	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
+	    NULL);
+	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &slc_direct_io);
 	psc_ctlparam_register_var("sys.readahead_pgs",
 	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
 	    &slc_max_readahead);
