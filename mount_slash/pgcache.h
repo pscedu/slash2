@@ -158,31 +158,31 @@ struct bmpc_ioreq {
 	 * Note that a request may fall somewhere within a bmap.  It
 	 * might be not page aligned.
 	 */
-	uint32_t		 biorq_off;	/* bmap relative		*/
-	uint32_t		 biorq_len;	/* length of the original req	*/
-	uint32_t		 biorq_flags;	/* state and op type bits	*/
-	uint32_t		 biorq_retries;	/* dirty data flush retries	*/
+	uint32_t		 biorq_off;	/* bmap relative */
+	uint32_t		 biorq_len;	/* length of the original req */
+	uint32_t		 biorq_flags;	/* state and op type bits */
+	uint32_t		 biorq_retries;	/* dirty data flush retries */
 	sl_ios_id_t		 biorq_last_sliod;
 	psc_spinlock_t		 biorq_lock;
 	struct timespec		 biorq_expire;
-	struct psc_dynarray	 biorq_pages;	/* array of bmpce		*/
-	struct psc_listentry	 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
+	struct psc_dynarray	 biorq_pages;	/* array of bmpce */
+	struct psc_listentry	 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
 	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_new_biorqs_exp */
-	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios	*/
+	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios */
 	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* indexed on offset for write coalescing */
-	struct bmap		*biorq_bmap;	/* backpointer to our bmap	*/
+	struct bmap		*biorq_bmap;	/* backpointer to our bmap */
 	struct msl_fsrqinfo	*biorq_fsrqi;	/* NULL for internal read-ahead */
 };
 
-#define BIORQ_READ		(1 <<  0)
-#define BIORQ_WRITE		(1 <<  1)
-#define BIORQ_DIO		(1 <<  2)
-#define BIORQ_EXPIRE		(1 <<  3)
-#define BIORQ_DESTROY		(1 <<  4)
-#define BIORQ_FLUSHRDY		(1 <<  5)
+#define BIORQ_READ		(1 <<  0)	/* request is for an application read(2) */
+#define BIORQ_WRITE		(1 <<  1)	/* request is for an application write(2) */
+#define BIORQ_DIO		(1 <<  2)	/* direct I/O (no buffering) */
+#define BIORQ_EXPIRE		(1 <<  3)	/* buffered write should be flushed now */
+#define BIORQ_DESTROY		(1 <<  4)	/* debug: returned to system */
+#define BIORQ_FLUSHRDY		(1 <<  5)	/* write buffer is filled */
 #define BIORQ_FREEBUF		(1 <<  6)	/* DIO READ needs a buffer */
-#define BIORQ_WAIT		(1 <<  7)
-#define BIORQ_ONTREE		(1 <<  8)
+#define BIORQ_WAIT		(1 <<  7)	/* at least one waiter for aio */
+#define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
