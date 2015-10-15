@@ -118,27 +118,27 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((e), _locked);				\
 	} while (0)
 
-#define DEBUG_BMPCE(level, b, fmt, ...)					\
+#define DEBUG_BMPCE(level, pg, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
 	    "fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "off=%#09x base=%p ref=%u : " fmt,				\
-	    (b), (b)->bmpce_bmap->bcm_fcmh,				\
-	    fcmh_2_fid((b)->bmpce_bmap->bcm_fcmh), (b)->bmpce_flags,	\
-	    (b)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
-	    (b)->bmpce_flags & BMPCEF_FAULTING		? "f" : "",	\
-	    (b)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
-	    (b)->bmpce_flags & BMPCEF_EIO		? "e" : "",	\
-	    (b)->bmpce_flags & BMPCEF_AIOWAIT		? "w" : "",	\
-	    (b)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
-	    (b)->bmpce_flags & BMPCEF_PINNED		? "p" : "",	\
-	    (b)->bmpce_flags & BMPCEF_READAHEAD		? "r" : "",	\
-	    (b)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
-	    (b)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
-	    (b)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
-	    (b)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
-	    (b)->bmpce_off, (b)->bmpce_base,				\
-	    (b)->bmpce_ref, ## __VA_ARGS__)
+	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
+	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
+	    (pg)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_FAULTING		? "f" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_EIO		? "e" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_AIOWAIT		? "w" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_PINNED		? "p" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_READAHEAD	? "r" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
+	    (pg)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
+	    (pg)->bmpce_off, (pg)->bmpce_base,				\
+	    (pg)->bmpce_ref, ## __VA_ARGS__)
 
 static __inline int
 bmpce_cmp(const void *x, const void *y)
