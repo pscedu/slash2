@@ -870,9 +870,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.readahead_pipesz",
 	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
 	    &slc_readahead_pipesz);
-	psc_ctlparam_register_var("sys.root_squash",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &slc_root_squash);
+	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &slc_root_squash);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
