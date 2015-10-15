@@ -456,7 +456,7 @@ struct srm_leasebmap_req {
 	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
-#define SRM_LEASEBMAPF_DIO	(1 << 0)	/* reply: client wants direct I/O */
+#define SRM_LEASEBMAPF_DIO	(1 << 0)	/* reply: client can't cache */
 #define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* request: fetch inode (replica table, etc.) */
 #define SRM_LEASEBMAPF_DATA	(1 << 2)	/* reply: true if any crcstates has SLVR_DATA */
 
