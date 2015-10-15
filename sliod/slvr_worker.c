@@ -439,6 +439,7 @@ slislvrthr_main(struct psc_thread *thr)
 				continue;
 			}
 			if (s->slvr_flags & SLVRF_DATAERR) {
+				s->slvr_flags |= SLVRF_FREEING;
 				OPSTAT_INCR("slvr-crc-remove1");
 				SLVR_ULOCK(s);
 				slvr_remove(s);
