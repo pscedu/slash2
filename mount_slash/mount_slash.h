@@ -53,7 +53,6 @@ enum {
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BRELEASE,		/* bmap lease releaser */
 	MSTHRT_BWATCH,			/* bmap lease watcher */
-	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_EQPOLL,			/* LNET event queue polling */

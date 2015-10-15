@@ -800,7 +800,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* BENCH	*/ NULL,
 /* BRELEASE	*/ NULL,
 /* BWATCH	*/ NULL,
-/* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
 /* EQPOLL	*/ NULL,
