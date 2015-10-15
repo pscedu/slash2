@@ -433,19 +433,11 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
  * and before launching read RPCs.
  *
  * @b: bmap to flush.
- * @all: whether to continuously monitor and flush any new biorqs added
- *	while waiting for old ones to clear.
  */
 void
-bmpc_biorqs_flush(struct bmap *b, int all)
+bmpc_biorqs_flush(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc;
-
-	/*
-	 * XXX if `all' is false, we should not wait for any new biorqs
-	 * added to the bmap since this routine has started flushing.
-	 */
-	(void)all;
 
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK_ENSURE(b);

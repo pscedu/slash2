@@ -1840,16 +1840,13 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		sl_csvc_decref(csvc);
 }
 
-#define msl_flush_all(mfh)	msl_flush((mfh), 1)
-#define msl_flush_wait(mfh)	msl_flush((mfh), 0)
-
 /*
  * Perform main data flush operation.
  * @mfh: handle corresponding to process file descriptor.
  * Note that this function is called (at least) once for each open.
  */
 __static int
-msl_flush(struct msl_fhent *mfh, int all)
+msl_flush(struct msl_fhent *mfh)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
@@ -1884,7 +1881,7 @@ msl_flush(struct msl_fhent *mfh, int all)
 
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
-		bmpc_biorqs_flush(b, all);
+		bmpc_biorqs_flush(b);
 		if (!rc)
 			rc = -bmap_2_bci(b)->bci_flush_rc;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
@@ -2049,7 +2046,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	pfcc = pscfs_getclientctx(pfr);
 
 	MFH_LOCK(mfh);
-	rc = msl_flush_all(mfh);
+	rc = msl_flush(mfh);
 	rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
 	//if (rc && slc_rmc_retry(pfr, &rc))
 	if (!rc)
@@ -3004,7 +3001,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
 		MFH_LOCK(mfh);
-		rc = msl_flush_wait(mfh);
+		rc = msl_flush(mfh);
 		if (!datasync_only) {
 			int rc2;
 

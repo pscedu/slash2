@@ -282,11 +282,9 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op,
 
 #define biorq_voff_get(r)	((r)->biorq_off + (r)->biorq_len)
 
-#define bmpc_biorqs_flush_wait(b)	bmpc_biorqs_flush((b), 0)
-
 void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
-void	 bmpc_biorqs_flush(struct bmap *, int);
+void	 bmpc_biorqs_flush(struct bmap *);
 void	 bmpc_biorqs_destroy_locked(struct bmap *, int);
 
 void	bmpc_expire_biorqs(struct bmap_pagecache *);
