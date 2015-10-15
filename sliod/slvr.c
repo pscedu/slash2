@@ -718,14 +718,11 @@ slvr_remove(struct slvr *s)
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
-	OPSTAT_INCR("slvr-put");
-
-	SLVR_LOCK(s);
+	psc_assert(s->slvr_refcnt == 0);
 	if (s->slvr_flags & SLVRF_LRU)
 		lc_remove(&sli_lruslvrs, s);
 	else
 		lc_remove(&sli_crcqslvrs, s);
-	SLVR_ULOCK(s);
 
 	bii = slvr_2_bii(s);
 
