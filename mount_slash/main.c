@@ -150,7 +150,7 @@ struct psc_hashtbl		 slc_gidmap_int;
  * This allows io_submit() works before Linux kernel release 4.1. Before that,
  * the O_DIRECT and the fuse direct_io path is not fully integrated.
  */
-psc_atomic32_t			 slc_direct_io = PSC_ATOMIC32_INIT(1);
+int				 slc_direct_io = 1;
 int				 slc_root_squash;
 
 int				 msl_newent_inherit_groups = 1;
@@ -508,8 +508,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	bmap_op_done(b);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 &&
-	    psc_atomic32_read(&slc_direct_io))
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
 	FCMH_LOCK(c);
@@ -592,8 +591,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 &&
-	    psc_atomic32_read(&slc_direct_io))
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
