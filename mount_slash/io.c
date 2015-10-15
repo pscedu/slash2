@@ -1290,7 +1290,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		off = e->bmpce_off + BMPC_BUFSZ;
 	}
 
-	/* 
+	/*
 	 * Clean up remaining pages that were not launched.
 	 * Note that msl_read_rpc_launch() cleans up pages
 	 * on its own in case of a failure.
@@ -1962,9 +1962,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		goto out1;
 
 	/*
- 	 * Note that i can only be 0 or 1 afer the above loop.
- 	 */
-	if (i == 1) 
+	 * Note that i can only be 0 or 1 afer the above loop.
+	 */
+	if (i == 1)
 		psc_assert(roff == SLASH_BMAP_SIZE);
 
 	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
@@ -2001,7 +2001,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * space.
 	 */
 	if (rapages)
-		readahead_enqueue(&b->bcm_fcmh->fcmh_fg, 
+		readahead_enqueue(&b->bcm_fcmh->fcmh_fg,
 		    b->bcm_bmapno, raoff, rapages);
 
 	/*
@@ -2108,15 +2108,15 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		BMAP_ULOCK(b);
 
-		r = bmpc_biorq_new(NULL, b, NULL, rarq->rarq_off, 
-			rarq->rarq_npages*BMPC_BUFSZ, 
-			BIORQ_READ | BIORQ_READAHEAD);
+		r = bmpc_biorq_new(NULL, b, NULL, rarq->rarq_off,
+		    rarq->rarq_npages * BMPC_BUFSZ, BIORQ_READ |
+		    BIORQ_READAHEAD);
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 		for (i = 0; i < rarq->rarq_npages; i++) {
 			e = bmpce_lookup(b, BMPCEF_READAHEAD,
-				rarq->rarq_off + i * BMPC_BUFSZ,
-				&f->fcmh_waitq);
+			    rarq->rarq_off + i * BMPC_BUFSZ,
+			    &f->fcmh_waitq);
 			psc_dynarray_add(&r->biorq_pages, e);
 		}
 		msl_launch_read_rpcs(r);
