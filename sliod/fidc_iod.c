@@ -44,20 +44,20 @@
 int
 bcr_update_inodeinfo(struct bcrcupd *bcr)
 {
-	struct bmap *b;
 	struct fidc_membh *f;
 	struct stat stb;
-	int rc;
+	struct bmap *b;
 
 	b = bcr_2_bmap(bcr);
 	f = b->bcm_fcmh;
 
 	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
 
-	if (fstat(fcmh_2_fd(f), &stb) == -1) {
-		rc = -errno;
-		return (rc);
-	}
+	if ((f->fcmh_flags & FCMH_IOD_BACKFILE) == 0)
+		return (EBADF);
+
+	if (fstat(fcmh_2_fd(f), &stb) == -1)
+		return (errno);
 	bcr->bcr_crcup.fsize = stb.st_size;
 	bcr->bcr_crcup.nblks = stb.st_blocks;
 	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;

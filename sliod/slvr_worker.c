@@ -221,9 +221,10 @@ slicrudthr_main(struct psc_thread *thr)
 				 * existence than our packaged update is
 				 * for, so this can be safely discarded.
 				 */
-				if (rc == ESTALE) {
+				if (rc == ESTALE ||
+				    rc == EBADF) {
 					bcr_ready_remove(bcr);
-				} 
+				}
 			}
 			psc_dynarray_reset(bcrs);
 		} else {
