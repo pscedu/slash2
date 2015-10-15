@@ -1620,7 +1620,7 @@ mfh_prod_writeahead(__unusedx struct msl_fhent *mfh, __unusedx sl_bmapno_t bno)
 		return;
 
 	(void) bmap_getf(mfh->mfh_fcmh, bno, SL_WRITE,
-		BMAPGETF_CREATE | BMAPGETF_ASYNC, NULL);
+		BMAPGETF_CREATE | BMAPGETF_NONBLOCK, NULL);
 #endif
 
 }

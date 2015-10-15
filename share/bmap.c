@@ -245,12 +245,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 
-		if ((flags & BMAPGETF_ASYNC) == 0) {
+		if ((flags & BMAPGETF_NONBLOCK) == 0) {
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_INIT;
 			bmap_wake_locked(b);
 		}
-	} else if ((flags & BMAPGETF_ASYNC) == 0) {
+	} else if ((flags & BMAPGETF_NONBLOCK) == 0) {
 		/*
 		 * Wait while BMAPF_INIT is set.
 		 *

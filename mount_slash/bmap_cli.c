@@ -575,7 +575,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		psc_compl_ready(compl, 1);
 	else
 		/* will do bmap_wake_locked() for anyone waiting for us */
-		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+		bmap_op_done_type(b, BMAP_OPCNT_NONBLOCK);
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -634,7 +634,7 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    b->bcm_bmapno, rw == SL_READ ? "read" : "write");
 
-	if ((flags & BMAPGETF_ASYNC) == 0) {
+	if ((flags & BMAPGETF_NONBLOCK) == 0) {
 		psc_compl_init(&compl);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_COMPL] =
 		    &compl;
@@ -645,13 +645,13 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	rq->rq_interpret_reply = msl_rmc_bmlget_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		if ((flags & BMAPGETF_ASYNC) == 0)
+		if ((flags & BMAPGETF_NONBLOCK) == 0)
 			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
 	}
-	if ((flags & BMAPGETF_ASYNC) || rc) {
-		if (flags & BMAPGETF_ASYNC)
-			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+	if ((flags & BMAPGETF_NONBLOCK) || rc) {
+		if (flags & BMAPGETF_NONBLOCK)
+			bmap_op_start_type(b, BMAP_OPCNT_NONBLOCK);
 		else
 			psc_compl_destroy(&compl);
 		return (rc);

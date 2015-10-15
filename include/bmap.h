@@ -311,7 +311,7 @@ struct bmap {
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
-#define BMAPGETF_ASYNC		(1 << 0)	/* load lease in the background */
+#define BMAPGETF_NONBLOCK	(1 << 0)	/* load lease in the background */
 #define BMAPGETF_CREATE		(1 << 1)	/* create a new bmap if not in cache */
 #define BMAPGETF_NORETRIEVE	(1 << 2)	/* when loading, do not invoke retrievef */
 #define BMAPGETF_NOAUTOINST	(1 << 3)	/* do not autoinstantiate */
