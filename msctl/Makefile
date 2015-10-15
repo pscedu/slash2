@@ -4,6 +4,7 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
 PROG=		msctl
+BIN=		msctl.sh
 MAN+=		msctl.8
 SRCS+=		msctl.c
 SRCS+=		${SLASH_BASE}/share/ctlcli_common.c
