@@ -23,8 +23,8 @@
  */
 
 /*
- * coh - Routines for orchestrating coherency/properness across bmap
- *	lease assignments so e.g. multiple IOS do not get assigned.
+ * Routines for orchestrating coherency/properness across bmap lease
+ * assignments so e.g. multiple IOS do not get assigned.
  */
 
 #include <time.h>
@@ -48,55 +48,16 @@
 #include "slashrpc.h"
 
 #define SLM_CBARG_SLOT_CSVC	0
+#define SLM_CBARG_SLOT_BML	1
 
-struct slm_wkdata_coh_releasebml {
-	slfid_t			fid;
-	sl_bmapno_t		bno;
-	uint64_t		seq;
-	lnet_process_id_t	peer;
-};
-
-int
-slmcoh_releasebml(void *p)
+void
+slm_coh_bml_release(struct bmap_mds_lease *bml)
 {
-	int rc = 0, new_bmap = 0;
-	char buf[PSCRPC_NIDSTR_SIZE];
-	struct slm_wkdata_coh_releasebml *wk = p;
-	struct bmapc_memb *b = NULL;
-	struct bmap_mds_lease *bml;
-	struct fidc_membh *f;
-
-	/* Leases can come and go regardless of pending coh cb's. */
-	rc = fidc_lookup_fid(wk->fid, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	b = bmap_lookup_cache(f, wk->bno, &new_bmap);
-	if (!b)
-		PFL_GOTOERR(out, rc = -ENOENT);
-
-	bml = mds_bmap_getbml(b, wk->seq, wk->peer.nid, wk->peer.pid);
-	if (!bml)
-		PFL_GOTOERR(out, rc = -ENOENT);
-
-	BML_LOCK(bml);
-	bml->bml_flags |= BML_DIO;
+	BML_RLOCK(bml);
 	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
-	mds_bmap_bml_release(bml);
 
- out:
-	if (b) {
-		DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
-		    "cli=%s seq=%"PRId64" rc=%d",
-		    pscrpc_id2str(wk->peer, buf), wk->seq, rc);
-		bmap_op_done(b);
-	} else
-		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
-		    pscrpc_id2str(wk->peer, buf), wk->seq, rc);
-	if (f)
-		fcmh_op_done(f);
-	return (0);
+	mds_bmap_bml_release(bml);
 }
 
 int
@@ -105,45 +66,46 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc =
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
-	struct slm_wkdata_coh_releasebml *wk;
-	struct srm_bmap_dio_req *mq;
+	struct bmap_mds_lease *bml =
+	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
 	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
-	if (rc) {
-		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
-		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
-		    buf), mq->seq, rc);
+	if (rc)
 		goto out;
-	}
 
 	/*
 	 * XXX if the client has given up the lease then we shouldn't
 	 * consider that an error and should proceed.
 	 */
 
-	wk = pfl_workq_getitem(slmcoh_releasebml,
-	    struct slm_wkdata_coh_releasebml);
-	wk->fid = mq->fid;
-	wk->bno = mq->bno;
-	wk->seq = mq->seq;
-	wk->peer = rq->rq_peer;
-	pfl_workq_putitem(wk);
+	BML_LOCK(bml);
+	bml->bml_flags |= BML_DIO;
 
  out:
+	slm_coh_bml_release(bml);
+
+	if (b) {
+		DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
+		    "cli=%s seq=%"PRId64" rc=%d",
+		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
+		    buf), wk->seq, rc);
+	} else
+		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
+		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
+		    buf), wk->seq, rc);
+
 	sl_csvc_decref(csvc);
 
-	return (rc);
+	return (0);
 }
 
-/**
- * mdscoh_req - Request a lease holder to do direct I/O as the result of
- *	a conflicting access request.
+/*
+ * Request a lease holder to do direct I/O as the result of a
+ * conflicting access request.
  */
-int
+void
 mdscoh_req(struct bmap_mds_lease *bml)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -155,25 +117,24 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK_ENSURE(bml);
+
+	/* Take a reference for the asynchronous RPC. */
+	bml->bml_refcnt++;
+
 	if (bml->bml_flags & BML_RECOVER) {
 		psc_assert(!bml->bml_exp);
-		BML_ULOCK(bml);
-		return (-PFLERR_NOTCONN);
+		PFL_GOTOERR(out, rc = -PFLERR_NOTCONN);
 	}
 	psc_assert(bml->bml_exp);
 
 	csvc = slm_getclcsvc(bml->bml_exp);
-	if (csvc == NULL) {
-		BML_ULOCK(bml);
-		return (-PFLERR_NOTCONN);
-	}
+	if (csvc == NULL)
+		PFL_GOTOERR(out, rc = -PFLERR_NOTCONN);
 	BML_ULOCK(bml);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
-	if (rc) {
-		sl_csvc_decref(csvc);
-		return (rc);
-	}
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->bno = bml_2_bmap(bml)->bcm_bmapno;
@@ -181,13 +142,15 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	mq->dio = 1;
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML] = bml;
 	rq->rq_interpret_reply = slm_rcm_bmapdio_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc) {
-		pscrpc_req_finished(rq);
-		sl_csvc_decref(csvc);
-		return (rc);
-	}
+	if (rc == 0)
+		return;
 
-	return (0);
+ out:
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	slm_coh_bml_release(bml);
 }
