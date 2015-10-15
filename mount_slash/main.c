@@ -3041,6 +3041,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	psc_waitq_wakeall(&msl_flush_attrq);
 
+	peer.nid = LNET_NID_ANY;
+	pscrpc_drop_conns(&peer);
+
 	CONF_FOREACH_RESM(s, r, i, m, j)
 		if (m->resm_csvc) {
 			csvc = m->resm_csvc;
@@ -3053,8 +3056,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_compl_ready(&sl_nbrqset->set_compl, 1);
 	sleep(1);
 	pscrpc_set_destroy(sl_nbrqset);
-	peer.nid = LNET_NID_ANY;
-	pscrpc_drop_conns(&peer);
+
 exit(0);
 	pscrpc_svh_destroy(msl_rci_svh);
 	pscrpc_svh_destroy(msl_rcm_svh);
