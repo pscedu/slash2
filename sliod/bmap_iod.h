@@ -103,7 +103,7 @@ struct bmap_iod_info {
 };
 
 /* sliod-specific bcm_flags */
-#define	BMAPF_CRUD_INFLIGHT	(_BMAPF_SHIFT << 0)	/* CRC update RPC inflight */
+#define BMAPF_CRUD_INFLIGHT	(_BMAPF_SHIFT << 0)	/* CRC update RPC inflight */
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 

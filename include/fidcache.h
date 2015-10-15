@@ -43,7 +43,7 @@
 #include "slashrpc.h"
 #include "slsubsys.h"
 
-#define	MAX_FCMH_LIFETIME	(60 * 5)
+#define MAX_FCMH_LIFETIME	(60 * 5)
 
 struct fidc_membh;
 
@@ -84,17 +84,17 @@ struct fidc_membh {
 };
 
 /* fcmh_flags */
-#define	FCMH_FREE		(1 <<  0)	/* totally free item */
-#define	FCMH_IDLE		(1 <<  1)	/* on idle list */
-#define	FCMH_INITING		(1 <<  2)	/* initializing */
-#define	FCMH_WAITING		(1 <<  3)	/* being waited on */
-#define	FCMH_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
-#define	FCMH_HAVE_ATTRS		(1 <<  5)	/* has valid stat(2) info */
-#define	FCMH_GETTING_ATTRS	(1 <<  6)	/* fetching stat(2) info */
-#define	FCMH_CTOR_FAILED	(1 <<  7)	/* constructor func failed */
-#define	FCMH_BUSY		(1 <<  8)	/* fcmh being processed */
-#define	FCMH_DELETED		(1 <<  9)	/* fcmh has been deleted */
-#define	_FCMH_FLGSHFT		(1 << 10)
+#define FCMH_FREE		(1 <<  0)	/* totally free item */
+#define FCMH_IDLE		(1 <<  1)	/* on idle list */
+#define FCMH_INITING		(1 <<  2)	/* initializing */
+#define FCMH_WAITING		(1 <<  3)	/* being waited on */
+#define FCMH_TOFREE		(1 <<  4)	/* ctor failure or memory pressure */
+#define FCMH_HAVE_ATTRS		(1 <<  5)	/* has valid stat(2) info */
+#define FCMH_GETTING_ATTRS	(1 <<  6)	/* fetching stat(2) info */
+#define FCMH_CTOR_FAILED	(1 <<  7)	/* constructor func failed */
+#define FCMH_BUSY		(1 <<  8)	/* fcmh being processed */
+#define FCMH_DELETED		(1 <<  9)	/* fcmh has been deleted */
+#define _FCMH_FLGSHFT		(1 << 10)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -249,18 +249,18 @@ struct fidc_membh {
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
 /* types of references */
-#define	FCMH_OPCNT_BMAP			 0	/* bcm_fcmh backpointer */
-#define	FCMH_OPCNT_LOOKUP_FIDC		 1	/* fidc_lookup() */
-#define	FCMH_OPCNT_NEW			 2
-#define	FCMH_OPCNT_OPEN			 3	/* CLI: pscfs file info */
-#define	FCMH_OPCNT_WAIT			 4	/* dup ref during initialization */
-#define	FCMH_OPCNT_WORKER		 5	/* MDS: generic worker */
-#define	FCMH_OPCNT_DIRTY_QUEUE		 6	/* CLI: attribute flushing */
-#define	FCMH_OPCNT_UPSCH		 7	/* MDS: temporarily held by upsch engine */
-#define	FCMH_OPCNT_READDIR		 8	/* CLI: readahead readdir RPC */
-#define	FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
-#define	FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
-#define	FCMH_OPCNT_MAXTYPE		11
+#define FCMH_OPCNT_BMAP			 0	/* bcm_fcmh backpointer */
+#define FCMH_OPCNT_LOOKUP_FIDC		 1	/* fidc_lookup() */
+#define FCMH_OPCNT_NEW			 2
+#define FCMH_OPCNT_OPEN			 3	/* CLI: pscfs file info */
+#define FCMH_OPCNT_WAIT			 4	/* dup ref during initialization */
+#define FCMH_OPCNT_WORKER		 5	/* MDS: generic worker */
+#define FCMH_OPCNT_DIRTY_QUEUE		 6	/* CLI: attribute flushing */
+#define FCMH_OPCNT_UPSCH		 7	/* MDS: temporarily held by upsch engine */
+#define FCMH_OPCNT_READDIR		 8	/* CLI: readahead readdir RPC */
+#define FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
+#define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
+#define FCMH_OPCNT_MAXTYPE		11
 
 void	fidc_init(int);
 

@@ -106,9 +106,9 @@ struct slrpc_cservice {
 	struct psclist_head	 csvc_lentry;
 	struct pfl_mutex	 csvc_mutex;
 	struct psc_multiwaitcond csvc_mwc;
-#define	csvc_flags	csvc_params.scp_flags
-#define	csvc_magic	csvc_params.scp_magic
-#define	csvc_version	csvc_params.scp_version
+#define csvc_flags	csvc_params.scp_flags
+#define csvc_magic	csvc_params.scp_magic
+#define csvc_version	csvc_params.scp_version
 #define csvc_peertype	csvc_params.scp_peertype
 #define csvc_peernids	csvc_params.scp_peernids
 #define csvc_rqptl	csvc_params.scp_rqptl

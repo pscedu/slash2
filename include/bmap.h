@@ -261,8 +261,8 @@ struct bmap {
 /* CRC of a zeroed sliver */
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
-#define	BMAP_OD_CRCSZ		sizeof(struct bmap_ondisk)
-#define	BMAP_OD_SZ		(BMAP_OD_CRCSZ + sizeof(uint64_t))
+#define BMAP_OD_CRCSZ		sizeof(struct bmap_ondisk)
+#define BMAP_OD_SZ		(BMAP_OD_CRCSZ + sizeof(uint64_t))
 
 /* bcs_crcstates flags */
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */

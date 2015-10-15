@@ -140,11 +140,11 @@ struct slmds_jent_assign_rep {
 	struct slmds_jent_bmap_assign	sjar_bmap;
 } __packed;
 
-#define	SLJ_ASSIGN_REP_NONE		0x00
-#define	SLJ_ASSIGN_REP_INO		0x01
-#define	SLJ_ASSIGN_REP_REP		0x02
-#define	SLJ_ASSIGN_REP_BMAP		0x04
-#define	SLJ_ASSIGN_REP_FREE		0x08
+#define SLJ_ASSIGN_REP_NONE		0x00
+#define SLJ_ASSIGN_REP_INO		0x01
+#define SLJ_ASSIGN_REP_REP		0x02
+#define SLJ_ASSIGN_REP_BMAP		0x04
+#define SLJ_ASSIGN_REP_FREE		0x08
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xabcd12345678dcba)
 
@@ -192,7 +192,7 @@ struct slmds_jent_namespace {
  * struct psc_journal_enthdr) and its data, if any, must occupy less
  * than or this size.
  */
-#define	SLJ_MDS_ENTSIZE			512
+#define SLJ_MDS_ENTSIZE			512
 
 /*
  * Keep track of the bmap associated with a CRC update to save FID and

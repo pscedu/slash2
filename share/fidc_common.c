@@ -52,15 +52,13 @@ struct psc_poolmgr	 *fidcPool;
 struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
 struct psc_hashtbl	  fidcHtable;
 
-#define	fcmh_get()	psc_pool_get(fidcPool)
-#define	fcmh_put(f)	psc_pool_return(fidcPool, (f))
+#define fcmh_get()	psc_pool_get(fidcPool)
+#define fcmh_put(f)	psc_pool_return(fidcPool, (f))
 
 #if PFL_DEBUG > 0
-
 psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
-unsigned long		fcmh_done_type[FCMH_OPCNT_MAXTYPE+1];
-unsigned long		fcmh_start_type[FCMH_OPCNT_MAXTYPE+1];
-
+unsigned long		fcmh_done_type[FCMH_OPCNT_MAXTYPE + 1];
+unsigned long		fcmh_start_type[FCMH_OPCNT_MAXTYPE + 1];
 #endif
 
 /*

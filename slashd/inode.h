@@ -111,8 +111,8 @@ struct slm_inoh {
 #define slash_inode_handle slm_inoh
 
 /* inoh_flags */
-#define	INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
-#define	INOH_INO_NOTLOADED	(1 << 1)
+#define INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
+#define INOH_INO_NOTLOADED	(1 << 1)
 
 #define INOH_GETLOCK(ih)	(&inoh_2_fcmh(ih)->fcmh_lock)
 #define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))

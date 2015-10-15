@@ -33,7 +33,7 @@
 #include "slashrpc.h"
 
 /* number of bmaps to allow before reaper kicks into gear */
-#define	BMAP_CACHE_MAX		1024
+#define BMAP_CACHE_MAX		1024
 
 extern int bmap_max_cache;
 
@@ -68,8 +68,8 @@ struct bmap_cli_info {
 #define BMAP_CLI_EXTREQSECS	20
 #define BMAP_CLI_TIMEO_INC	1
 
-#define	BMAP_CLI_DIOWAIT	2
-#define	BMAP_CLI_DIOWAIT_MAX	120
+#define BMAP_CLI_DIOWAIT	2
+#define BMAP_CLI_DIOWAIT_MAX	120
 
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
