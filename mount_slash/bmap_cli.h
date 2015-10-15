@@ -68,8 +68,8 @@ struct bmap_cli_info {
 #define BMAP_CLI_EXTREQSECS	20
 #define BMAP_CLI_TIMEO_INC	1
 
-#define	BMAP_CLI_DIOWAIT	60
-#define	BMAP_CLI_DIOWAIT_MAX	4
+#define	BMAP_CLI_DIOWAIT	2
+#define	BMAP_CLI_DIOWAIT_MAX	120
 
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
