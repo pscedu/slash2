@@ -106,9 +106,11 @@ bmpce_destroy(void *p)
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 }
 
-struct bmap_pagecache_entry *
-_bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
-    int flags, uint32_t off, struct psc_waitq *wq)
+int
+_bmpce_lookup(const struct pfl_callerinfo *pci,
+    __unusedx struct bmpc_ioreq *r, struct bmap *b, int flags,
+    uint32_t off, struct psc_waitq *wq,
+    struct bmap_pagecache_entry **ep)
 {
 	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
 	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
@@ -215,7 +217,14 @@ _bmpce_lookup(const struct pfl_callerinfo *pci, struct bmap *b,
 		lc_remove(&msl_readahead_pages, e);
 	}
 
-	return (e);
+	psc_dynarray_add(&r->biorq_pages, e);
+
+	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
+	    "n=%d foff=%"PRIx64, e, psc_dynarray_len(&r->biorq_pages),
+	    off + bmap_foff(b));
+
+	*ep = e;
+	return (0);
 }
 
 void

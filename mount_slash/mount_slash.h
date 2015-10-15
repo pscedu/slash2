@@ -121,9 +121,6 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define NUM_ATTR_FLUSH_THREADS		4
 #define NUM_READAHEAD_THREADS		4
 
-#define MS_READAHEAD_MAXPGS		64
-#define MS_READAHEAD_PIPESZ		128
-
 #define MSL_FIDNS_RPATH			".slfidns"
 
 /*
@@ -164,10 +161,9 @@ struct msl_fhent {
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 
-	/* XXX these should be 32-bit as they can relative to bmap */
+	/* offsets are file-wise */
 	off_t				 mfh_predio_lastoff;	/* last offset */
-	off_t				 mfh_predio_lastsz;	/* last size */
-	off_t				 mfh_predio_off;	/* next offset */
+	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
 	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */
@@ -266,6 +262,7 @@ resm2rmci(struct sl_resm *resm)
 
 struct readaheadrq {
 	struct psc_listentry		rarq_lentry;
+	enum rw				rarq_rw;
 	struct sl_fidgen		rarq_fg;
 	sl_bmapno_t			rarq_bno;
 	uint32_t			rarq_off;
@@ -384,8 +381,8 @@ extern struct psc_poolmgr	*slc_mfh_pool;
 extern int			 slc_direct_io;
 extern int			 slc_root_squash;
 extern int			 slc_max_nretries;
-extern psc_atomic32_t		 slc_max_readahead;
-extern psc_atomic32_t		 slc_readahead_pipesz;
+extern int			 msl_readahead_window_minpages;
+extern int			 msl_readahead_window_maxpages;
 
 extern int			 bmap_max_cache;
 

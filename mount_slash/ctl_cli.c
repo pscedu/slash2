@@ -864,12 +864,12 @@ msctlthr_spawn(void)
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &slc_direct_io);
-	psc_ctlparam_register_var("sys.readahead_pgs",
-	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
-	    &slc_max_readahead);
-	psc_ctlparam_register_var("sys.readahead_pipesz",
-	    PFLCTL_PARAMT_ATOMIC32, PFLCTL_PARAMF_RDWR,
-	    &slc_readahead_pipesz);
+	psc_ctlparam_register_var("sys.readahead_window_minpages",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_readahead_window_minpages);
+	psc_ctlparam_register_var("sys.readahead_window_maxpages",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_readahead_window_maxpages);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &slc_root_squash);
 

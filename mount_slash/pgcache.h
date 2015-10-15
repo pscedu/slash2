@@ -294,11 +294,13 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,
 	    char *, uint32_t, uint32_t, int);
 
-#define bmpce_lookup(b, fl, off, wq)	_bmpce_lookup(PFL_CALLERINFO(), (b), (fl), (off), (wq))
+#define bmpce_lookup(r, b, fl, off, wq, ep)				\
+	_bmpce_lookup(PFL_CALLERINFO(), (r), (b), (fl), (off), (wq), (ep))
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
-struct bmap_pagecache_entry *
-	 _bmpce_lookup(const struct pfl_callerinfo *, struct bmap *, int, uint32_t, struct psc_waitq *);
+int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
+	     struct bmap *, int, uint32_t, struct psc_waitq *,
+	     struct bmap_pagecache_entry **);
 void	 bmpce_release(struct bmap_pagecache_entry *);
 
 void	 bwc_release(struct bmpc_write_coalescer *);
