@@ -459,6 +459,7 @@ struct srm_leasebmap_req {
 #define SRM_LEASEBMAPF_DIO	(1 << 0)	/* reply: client can't cache */
 #define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* request: fetch inode (replica table, etc.) */
 #define SRM_LEASEBMAPF_DATA	(1 << 2)	/* reply: true if any crcstates has SLVR_DATA */
+#define SRM_LEASEBMAPF_NODIO	(1 << 3)	/* request: do not force modechange */
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */

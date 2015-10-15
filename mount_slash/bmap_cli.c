@@ -630,6 +630,8 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	mq->bmapno = b->bcm_bmapno;
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETINODE;
+	if (flags & BMAPGETF_NODIO)
+		mq->flags |= SRM_LEASEBMAPF_NODIO;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    b->bcm_bmapno, rw == SL_READ ? "read" : "write");
