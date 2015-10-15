@@ -311,12 +311,11 @@ struct bmap {
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
-#define BMAPGETF_VALID		(1 << 0)	/* contain a valid lease */
-#define BMAPGETF_ASYNC		(1 << 1)	/* load lease in the background */
-#define BMAPGETF_CREATE		(1 << 2)	/* create a new bmap if not in cache */
-#define BMAPGETF_NORETRIEVE	(1 << 3)	/* when loading, do not invoke retrievef */
-#define BMAPGETF_NOAUTOINST	(1 << 4)	/* do not autoinstantiate */
-#define BMAPGETF_NODISKREAD	(1 << 5)	/* do not read from disk - nothing there */
+#define BMAPGETF_ASYNC		(1 << 0)	/* load lease in the background */
+#define BMAPGETF_CREATE		(1 << 1)	/* create a new bmap if not in cache */
+#define BMAPGETF_NORETRIEVE	(1 << 2)	/* when loading, do not invoke retrievef */
+#define BMAPGETF_NOAUTOINST	(1 << 3)	/* do not autoinstantiate */
+#define BMAPGETF_NODISKREAD	(1 << 4)	/* do not read from disk - nothing there */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
