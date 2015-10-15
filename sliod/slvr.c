@@ -771,8 +771,8 @@ slvr_remove_all(struct fidc_membh *f)
 				BII_LOCK(bii);
 				continue;
 			}
-			if (s->slvr_refcnt ||
-		           (s->slvr_flags & (SLVRF_FREEING | SLVRF_FAULTING))) {
+			if (s->slvr_refcnt || (s->slvr_flags &
+			    (SLVRF_FREEING | SLVRF_FAULTING))) {
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
 				pscthr_yield();
@@ -799,7 +799,7 @@ slvr_remove_all(struct fidc_membh *f)
 /*
  * Note that the sliver may be freed by this fuction.
  */
-__static void 
+__static void
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
@@ -908,10 +908,10 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	if (s) {
 		SLVR_LOCK(s);
 		/*
-		 * Reuse SLVRF_DATAERR slivers is tricky, we might as well
-		 * start from fresh.
+		 * Reuse SLVRF_DATAERR slivers is tricky, we might as
+		 * well start from fresh.
 		 */
-		if (s->slvr_flags & (SLVRF_FREEING|SLVRF_DATAERR)) {
+		if (s->slvr_flags & (SLVRF_FREEING | SLVRF_DATAERR)) {
 			SLVR_ULOCK(s);
 			/*
 			 * Lock is required to free the slvr.
