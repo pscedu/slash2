@@ -155,6 +155,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	/* test for retryable error codes */
 	switch (rc) {
 	case -ENOTCONN:
+	case -ETIMEDOUT:
 	case -PFLERR_KEYEXPIRED:
 	case -PFLERR_TIMEDOUT:
 	case -SLERR_ION_OFFLINE:
