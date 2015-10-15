@@ -370,7 +370,7 @@ bmpc_freeall(struct bmap *b)
 	}
 
  restart:
-	/* 
+	/*
 	 * Remove any LRU pages still associated with the bmap.
 	 * Only readahead pages can be encountered here. If we
 	 * don't treat readahead pages specially, this code ca
@@ -466,8 +466,7 @@ bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
 		bci->bci_flush_rc = rc;
 
 	bmpc = bmap_2_bmpc(b);
-	while (!RB_EMPTY(&bmpc->bmpc_new_biorqs)) {
-		r = RB_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs);
+	while ((r = RB_ROOT(&bmpc->bmpc_new_biorqs)) != NULL) {
 		psc_dynarray_add(&a, r);
 
 		/*
