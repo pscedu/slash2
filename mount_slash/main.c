@@ -120,7 +120,6 @@ struct psc_listcache		 slc_attrtimeoutq;
 sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
-const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 slc_use_mapfile;
@@ -3826,11 +3825,48 @@ opt_lookup(const char *opt)
 __dead void
 usage(void)
 {
+	extern char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-dUV] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
 	    "\t[-o mountopt] [-S socket] node\n",
-	    progname);
+	    __progname);
 	exit(1);
+}
+
+void
+pscfs_module_load(struct pscfs *m)
+{
+	m->pf_name = "slash2";
+	m->pf_handle_access		= mslfsop_access;
+	m->pf_handle_release		= mslfsop_release;
+	m->pf_handle_releasedir		= mslfsop_release;
+	m->pf_handle_create		= mslfsop_create;
+	m->pf_handle_flush		= mslfsop_flush;
+	m->pf_handle_fsync		= mslfsop_fsync;
+	m->pf_handle_fsyncdir		= mslfsop_fsync;
+	m->pf_handle_getattr		= mslfsop_getattr;
+	m->pf_handle_link		= mslfsop_link;
+	m->pf_handle_lookup		= mslfsop_lookup;
+	m->pf_handle_mkdir		= mslfsop_mkdir;
+	m->pf_handle_mknod		= mslfsop_mknod;
+	m->pf_handle_open		= mslfsop_open;
+	m->pf_handle_opendir		= mslfsop_opendir;
+	m->pf_handle_read		= mslfsop_read;
+	m->pf_handle_readdir		= mslfsop_readdir;
+	m->pf_handle_readlink		= mslfsop_readlink;
+	m->pf_handle_rename		= mslfsop_rename;
+	m->pf_handle_rmdir		= mslfsop_rmdir;
+	m->pf_handle_setattr		= mslfsop_setattr;
+	m->pf_handle_statfs		= mslfsop_statfs;
+	m->pf_handle_symlink		= mslfsop_symlink;
+	m->pf_handle_unlink		= mslfsop_unlink;
+	m->pf_handle_destroy		= mslfsop_destroy;
+	m->pf_handle_write		= mslfsop_write;
+	m->pf_handle_listxattr		= mslfsop_listxattr;
+	m->pf_handle_getxattr		= mslfsop_getxattr;
+	m->pf_handle_setxattr		= mslfsop_setxattr;
+	m->pf_handle_removexattr	= mslfsop_removexattr;
 }
 
 int
@@ -3845,7 +3881,6 @@ main(int argc, char *argv[])
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
-	progname = argv[0];
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLCSS_INFO, "info");
@@ -3869,6 +3904,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfg = p;
 
+	optind = 1;
 	while ((c = getopt(argc, argv, "D:df:I:M:o:QS:UV")) != -1)
 		switch (c) {
 		case 'D':
