@@ -113,7 +113,7 @@ msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
 	_msl_biorq_page_valid((r), (idx), 0)
 
 __static int
-msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
+_msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 {
 	struct bmap_pagecache_entry *e;
 	uint32_t toff, tsize, nbytes;
