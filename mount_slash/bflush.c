@@ -66,7 +66,7 @@ struct psc_listcache		 slc_bmaptimeoutq;
 
 int				 slc_max_nretries = 256;
 
-#define MAX_OUTSTANDING_RPCS	128
+#define MAX_OUTSTANDING_RPCS	1024
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
 
 struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
