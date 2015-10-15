@@ -64,7 +64,7 @@ struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
 
-psc_atomic32_t			 slc_max_nretries = PSC_ATOMIC32_INIT(256);
+int				 slc_max_nretries = 256;
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
@@ -149,7 +149,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "nretries=%d, maxretries=%d (non-blocking=%d)",
-	    mfh->mfh_retries, psc_atomic32_read(&slc_max_nretries),
+	    mfh->mfh_retries, slc_max_nretries,
 	    mfh->mfh_oflags & O_NONBLOCK);
 
 	/* test for retryable error codes */
@@ -180,8 +180,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	// fcntl(2)
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		retry = 0;
-	else if (++mfh->mfh_retries >=
-	    psc_atomic32_read(&slc_max_nretries))
+	else if (++mfh->mfh_retries >= slc_max_nretries)
 		retry = 0;
 
 	if (retry) {

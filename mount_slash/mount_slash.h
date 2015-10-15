@@ -382,9 +382,8 @@ extern struct psc_poolmgr	*slc_biorq_pool;
 extern struct psc_poolmgr	*slc_mfh_pool;
 
 extern psc_atomic32_t		 slc_direct_io;
-extern int	 		 slc_root_squash;
-
-extern psc_atomic32_t		 slc_max_nretries;
+extern int			 slc_root_squash;
+extern int			 slc_max_nretries;
 extern psc_atomic32_t		 slc_max_readahead;
 extern psc_atomic32_t		 slc_readahead_pipesz;
 
