@@ -433,20 +433,47 @@ lookups for network addresses.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	log_xr => "in\n.Xr mount_slash 8\n",
 .\"	params => {
-.\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH2\nfile system is mounted.",
-.\"		pref_ios	=> "Preferred I/O system.\nFor read I/O, " .
-.\"				   "data replicas on residing on this " .
-.\"				   "resource are always accessed before " .
-.\"				   "other replicas.\n" .
-.\"				   "For write I/O within a bmap, the " .
-.\"				   "existing resource is leased.\n" .
-.\"				   "For write I/O in new bmaps, this " .
-.\"				   "resource will be prioritized before " .
-.\"				   "other resources unless file IOS " .
-.\"				   "affinity is set.",
-.\"		readahead_pgs	=> "Number of pages to read ahead when read I/O is performed.",
-.\"		offline_nretries=> "Number of times to retry remote peer connection " .
-.\"				   "establishment per file system request.",
+.\"		'sys.mountpoint'
+.\"		     =>	"File hierarchy node where\n" .
+.\"			".Tn SLASH2\nfile system is mounted.",
+.\"		'sys.mds'
+.\"		     =>	"Preferred MDS resource name.",
+.\"		'sys.pref_ios'
+.\"		     =>	"Preferred I/O system resource name.\n" .
+.\"			"For read I/O, data replicas on residing on this " .
+.\"			"resource are always accessed before other replicas.\n" .
+.\"			"For write I/O within a bmap, the existing " .
+.\"			"resource is leased.\n" .
+.\"			"For write I/O in new bmaps, this resource will " .
+.\"			"be prioritized before other resources unless " .
+.\"			"file IOS affinity is set.",
+.\"		'sys.readahead_window_minpages'
+.\"		     =>	"Minimum number of pages necessary before the " .
+.\"			"I/O prediction mechanism is allowed to issue a " .
+.\"			"predictive I/O, to group many small requests " .
+.\"			"into larger batches during streaming.",
+.\"		'sys.readahead_window_maxpages'
+.\"		     =>	"Maximum number of pages to be requested by the " .
+.\"			"prediction mechanism when an I/O is issued.",
+.\"		'sys.resources'
+.\"		     => "Resources/peers in the deployment.",
+.\"		'sys.uptime'
+.\"		     => "Elapsed time since daemon launch.",
+.\"		'sys.bmap-max-cache'
+.\"		     => "Maximum number of bmaps to allow to be loaded " .
+.\"			"into memory before the reaper is invoked.",
+.\"		'sys.direct_io'
+.\"		     => "Whether to use the direct I/O facility provided " .
+.\"			"by kernel.",
+.\"		'sys.version'
+.\"		     => "Software revision number.",
+.\"		'sys.root_squash'
+.\"		     => "Whether root squashing is enabled.",
+.\"		'sys.nbrq-outstanding'
+.\"		     => "Number of currently outstanding asynchronous RPCs.",
+.\"		'sys.offline_nretries'
+.\"		     => "Number of times to retry remote peer connection " .
+.\"			"establishment per file system request.",
 .\"	},
 .It Fl p Ar paramspec
 Query/manipulate operational parameters.
@@ -492,7 +519,7 @@ port to use to connect to remote
 peers.
 .It Cm log.file
 File path name where log messages will be written.
-This value is write-only.
+This field is write-only.
 If the
 .Li +=
 assignment operator is used, this file will not be truncated.
@@ -520,32 +547,35 @@ See the description of
 in
 .Xr mount_slash 8
 for recognized log level values.
-.It Cm mountpoint
-File hierarchy node where
-.Tn SLASH2
-file system is mounted.
-.It Cm offline_nretries
-Number of times to retry remote peer connection establishment per file system request.
+.It Cm log.points
+List of places in the source code (in the form
+.Dq file:line-number )
+where granular logging can be enabled on a case-by-case
+basis.
+Usually assigned to by the
+.Li +=
+operator.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
+.It Cm free
+Current number of allocated entries available for use in pool.
 .It Cm max
 Upper bound for number of entries to which auto-sized pools can grow.
 .It Cm min
 Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm reap
+Assign a value to reap the specified number of entries.
+Only applies to pools that have a reaper routine.
+This field is write-only.
 .It Cm thres
 Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
-.It Cm pref_ios
-Preferred I/O system.
-For read I/O, data replicas on residing on this resource are always accessed before other replicas.
-For write I/O within a bmap, the existing resource is leased.
-For write I/O in new bmaps, this resource will be prioritized before other resources unless file IOS affinity is set.
 .It Cm pscfs.attr_timeout
 Amount of time to cache
 .Xr stat 2
@@ -554,8 +584,6 @@ information in
 .It Cm pscfs.entry_timeout
 Amount of time to cache name space entries in
 .Tn FUSE .
-.It Cm readahead_pgs
-Number of pages to read ahead when read I/O is performed.
 .It Cm rlim
 Process resource limits.
 See
@@ -564,12 +592,61 @@ or
 .Xr ulimit 1
 for more information.
 .Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm nofiles
-Corresponds to
-.Dv RLIMIT_NOFILE ,
-the maximum number of open files.
+.Bl -column "msgqueue" -offset 3n
+.It Sy Name Ta Sy Field
+.It =============================
+.It Cm cpu        Ta Dv RLIMIT_CPU
+.It Cm csize      Ta Dv RLIMIT_CORE
+.It Cm dsize      Ta Dv RLIMIT_DATA
+.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.It Cm locks      Ta Dv RLIMIT_LOCKS
+.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.It Cm mem        Ta Dv RLIMIT_AS
+.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.It Cm nice       Ta Dv RLIMIT_NICE
+.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.It Cm rss        Ta Dv RLIMIT_RSS
+.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.It Cm stksize    Ta Dv RLIMIT_STACK
 .El
+.It Cm rusage
+Process resource usage information.
+See
+.Xr getrusage 2 .
+.It Cm sys.bmap-max-cache
+Maximum number of bmaps to allow to be loaded into memory before the reaper is invoked.
+.It Cm sys.direct_io
+Whether to use the direct I/O facility provided by kernel.
+.It Cm sys.mds
+Preferred MDS resource name.
+.It Cm sys.mountpoint
+File hierarchy node where
+.Tn SLASH2
+file system is mounted.
+.It Cm sys.nbrq-outstanding
+Number of currently outstanding asynchronous RPCs.
+.It Cm sys.offline_nretries
+Number of times to retry remote peer connection establishment per file system request.
+.It Cm sys.pref_ios
+Preferred I/O system resource name.
+For read I/O, data replicas on residing on this resource are always accessed before other replicas.
+For write I/O within a bmap, the existing resource is leased.
+For write I/O in new bmaps, this resource will be prioritized before other resources unless file IOS affinity is set.
+.It Cm sys.readahead_window_maxpages
+Maximum number of pages to be requested by the prediction mechanism when an I/O is issued.
+.It Cm sys.readahead_window_minpages
+Minimum number of pages necessary before the I/O prediction mechanism is allowed to issue a predictive I/O, to group many small requests into larger batches during streaming.
+.It Cm sys.resources
+Resources/peers in the deployment.
+.It Cm sys.root_squash
+Whether root squashing is enabled.
+.It Cm sys.uptime
+Elapsed time since daemon launch.
+.It Cm sys.version
+Software revision number.
 .El
 .\" }%
 .It Fl Q Ar replrqspec Ns : Ns Ar fn
@@ -616,12 +693,22 @@ The default is
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
 .\"	},
 .\"	hashtables => {
-.\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
-.\"		res		=> qq{network resources\n.Pq network Tn ID},
-.\"		rpcconn		=> qq{network resources\n.Pq network Tn ID},
+.\"		fidc		=> qq{Files\n.Po file\n.Tn ID\ncache\n.Pc},
+.\"		namecache	=> qq{Directory entry name cache},
+.\"		res		=> qq{Deployment peer/resource network IDs},
+.\"		rpcconn		=> qq{RPC peer connection structures},
 .\"	},
 .\"	pools => {
-.\"		bmap		=> qq{Block map structures},
+.\"		asyncrq		=> qq{Asynchronous I/O requests},
+.\"		biorq		=> qq{Bmap I/O requests},
+.\"		bmpce		=> qq{Bmap page cache entries},
+.\"		bwc		=> qq{Bmap write coalescers},
+.\"		csvc		=> qq{Client RPC service structures},
+.\"		dircachent	=> qq{Directory cache entries},
+.\"		dircachepg	=> qq{Directory cache pages},
+.\"		fcmh		=> qq{FID cache},
+.\"		mfh		=> qq{Open file handles},
+.\"		readaheadrq	=> qq{Predictive I/O requests},
 .\"	},
 .\"	listcaches => {
 .\"		attrtimeout	=> "File attribute updates from write activity",
@@ -676,66 +763,22 @@ may be one of the following:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
 .It Cm fidc
-files
+Files
 .Po file
 .Tn ID
 cache
 .Pc
+.It Cm namecache
+Directory entry name cache
 .It Cm res
-network resources
-.Pq network Tn ID
+Deployment peer/resource network IDs
 .It Cm rpcconn
-network resources
-.Pq network Tn ID
+RPC peer connection structures
 .El
 .Pp
 If
 .Ar subspec
 is left unspecified, all hash tables will be accessed.
-.It Cm iostats
-.Tn I/O
-statistics.
-.Ar subspec
-has the following format:
-.Pp
-.Bd -unfilled -offset 3n
-.Ar iostats Ns Op , Ns Ar ...
-.Ed
-.Pp
-.Ar iostats
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 3n
-.It Cm lni-rcv- Ns Ar if ,
-.It Cm lni-snd- Ns Ar if
-Data sent/received per
-.Tn LNET
-networking interface.
-.Pp
-.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
-.It Cm lusklnd- Ns Ar mode Ns Cm -snd
-Data sent/received over userland socket networking device.
-.Ar mode
-may be
-.Cm pasv
-.Pq passive
-or
-.Cm aggr
-.Pq aggregate .
-.Pp
-.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
-.It Cm rpc- Ns Ar addr Ns Cm -snd
-Data sent/received per
-.Tn RPC
-peer.
-.Pp
-.El
-.Pp
-If
-.Ar subspec
-is left unspecified, all
-.Tn I/O
-statistics will be accessed.
 .It Cm listcaches
 List cache statistics.
 .Ar subspec
@@ -770,7 +813,7 @@ Generic work items
 If
 .Ar subspec
 is left unspecified, all list caches will be accessed.
-.It Cm lni
+.It Cm lnetif
 Lustre network interfaces.
 .It Cm loglevels
 Thread logging levels.
@@ -787,6 +830,49 @@ for details on specifying
 If
 .Ar subspec
 is left unspecified, all threads will be accessed.
+.It Cm opstats
+Operation counters/statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar opstats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar opstats
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 3n
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.Pp
+.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
+.It Cm rpc- Ns Ar addr Ns Cm -snd
+Data sent/received per
+.Tn RPC
+peer.
+.Pp
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all
+.Tn I/O
+statistics will be accessed.
 .It Cm pools
 Memory pool statistics.
 .Ar subspec
@@ -799,13 +885,33 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
-.It Cm bmap
-Block map structures
+.It Cm asyncrq
+Asynchronous I/O requests
+.It Cm biorq
+Bmap I/O requests
+.It Cm bmpce
+Bmap page cache entries
+.It Cm bwc
+Bmap write coalescers
+.It Cm csvc
+Client RPC service structures
+.It Cm dircachent
+Directory cache entries
+.It Cm dircachepg
+Directory cache pages
+.It Cm fcmh
+FID cache
+.It Cm mfh
+Open file handles
+.It Cm readaheadrq
+Predictive I/O requests
 .El
 .Pp
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
+.It Cm rpcrqs
+Remote procedure calls (RPC).
 .It Cm rpcsvcs
 .Tn RPC
 services.
