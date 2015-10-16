@@ -236,12 +236,10 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 {
 	int wake = 0;
 
-	spinlock(&slc_bflush_lock);
 	if (slc_bflush_tmout_flags & BMAPFLSH_RPCWAIT) {
 		wake = 1;
 		psc_waitq_wakeall(&slc_bflush_waitq);
 	}
-	freelock(&slc_bflush_lock);
 
 	if (reason == BMAPFLSH_TRUNCATE)
 		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
