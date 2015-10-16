@@ -956,7 +956,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* BWATCH	*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
-/* EQPOLL	*/ NULL,
 /* FCMHREAP	*/ NULL,
 /* FLUSH	*/ NULL,
 /* FS		*/ NULL,

@@ -55,7 +55,6 @@ enum {
 	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
-	MSTHRT_EQPOLL,			/* LNET event queue polling */
 	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FS,			/* file system syscall handler workers */

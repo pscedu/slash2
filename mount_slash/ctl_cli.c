@@ -802,7 +802,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* BWATCH	*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
-/* EQPOLL	*/ NULL,
 /* FCMHREAP	*/ NULL,
 /* FLUSH	*/ NULL,
 /* FS		*/ NULL,
