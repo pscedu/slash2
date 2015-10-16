@@ -290,7 +290,7 @@ libsl_init(int nmsgs)
 
  skiplnet:
 #ifdef _SLASH_CLIENT
-	mode = PSCNET_CLIENT;
+	mode = PSCNET_MTCLIENT;
 #endif
 	pscrpc_init_portals(mode, nmsgs);
 	pscrpc_getlocalprids(&sl_lnet_prids);

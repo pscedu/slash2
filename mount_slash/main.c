@@ -45,7 +45,6 @@
 #include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
-#include "pfl/eqpollthr.h"
 #include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
@@ -3661,7 +3660,6 @@ msl_init(void)
 	    "msnbrqthr%d");
 
 	/* Start up service threads. */
-	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
 
 	/*
