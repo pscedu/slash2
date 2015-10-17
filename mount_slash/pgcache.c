@@ -181,7 +181,13 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 		if (e2 == NULL) {
 			pfl_rwlock_unlock(&bci->bci_rwlock);
-			e2 = psc_pool_get(bmpce_pool);
+
+			if (flags & BMPCEF_READAHEAD) {
+				e2 = psc_pool_shallowget(bmpce_pool);
+				if (e2 == NULL)
+					return (EAGAIN);
+			} else
+				e2 = psc_pool_get(bmpce_pool);
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
