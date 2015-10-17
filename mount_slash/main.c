@@ -46,6 +46,7 @@
 #include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fault.h"
+#include "pfl/fmt.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
 #include "pfl/log.h"
@@ -152,6 +153,7 @@ struct psc_hashtbl		 slc_gidmap_int;
  */
 int				 slc_direct_io = 1;
 int				 slc_root_squash;
+uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
 
@@ -3800,21 +3802,49 @@ parse_allowexe(void)
 	}
 }
 
+enum {
+	LOOKUP_TYPE_BOOL,
+	LOOKUP_TYPE_UINT64,
+};
+
 int
 opt_lookup(const char *opt)
 {
 	struct {
 		const char	*name;
-		int		*var;
+		int		 type;
+		void		*ptr;
 	} *io, opts[] = {
-		{ "mapfile",		&slc_use_mapfile },
-		{ "root_squash",	&slc_root_squash },
-		{ NULL,			NULL }
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
+		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
+		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
+		{ NULL,			0,			NULL }
 	};
+	const char *val;
+	size_t optlen;
+	ssize_t sz;
+
+	val = strchr(opt, '=');
+	if (val) {
+		optlen = val - opt;
+		val++;
+	} else
+		optlen = strlen(opt);
 
 	for (io = opts; io->name; io++)
-		if (strcmp(opt, io->name) == 0) {
-			*io->var = 1;
+		if (strncmp(opt, io->name, optlen) == 0) {
+			switch (io->type) {
+			case LOOKUP_TYPE_BOOL:
+				*(int *)io->ptr = 1;
+				break;
+			case LOOKUP_TYPE_UINT64:
+				sz = pfl_humantonum(val);
+				if (sz < 0)
+					errx(1, "%s: %s: %s", io->name,
+					    strerror(-sz), val);
+				*(uint64_t *)io->ptr = sz;
+				break;
+			}
 			return (1);
 		}
 	return (0);

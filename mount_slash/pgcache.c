@@ -48,6 +48,7 @@ struct psc_poolmaster	 bmpce_poolmaster;
 struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
+int			 msl_bmpces_max = 16 * 1024; /* 512MiB */
 
 struct psc_listcache	 msl_idle_pages;
 struct psc_listcache	 msl_readahead_pages;
@@ -573,9 +574,13 @@ bmpce_reap(struct psc_poolmgr *m)
 void
 bmpc_global_init(void)
 {
+	if (msl_pagecache_maxsize)
+		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
+
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, 16384, bmpce_init, bmpce_destroy, bmpce_reap, "bmpce");
+	    512, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
+	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
 	psc_poolmaster_init(&bwc_poolmaster,
