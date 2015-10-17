@@ -164,7 +164,9 @@ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	struct readaheadrq *rarq;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
-	rarq = psc_pool_get(slc_readaheadrq_pool);
+	rarq = psc_pool_tryget(slc_readaheadrq_pool);
+	if (rarq == NULL)
+		return;
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
 	rarq->rarq_rw = rw;
 	rarq->rarq_fg = *fgp;
@@ -1669,11 +1671,10 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	f = mfh->mfh_fcmh;
 	/* Now issue an I/O for each bmap in the prediction. */
-	for (; rapages; rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (off >= SLASH_BMAP_SIZE) {
-			bno++;
-			off -= SLASH_BMAP_SIZE;
-		}
+	for (; rapages && bno < fcmh_2_nbmaps(f);
+	    bno++, rapages -= tpages, off += tpages * BMPC_BUFSZ) {
+		if (off >= SLASH_BMAP_SIZE)
+			off = 0;
 		bsize = SLASH_BMAP_SIZE;
 		/* Trim a readahead that extends past EOF. */
 		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1)
@@ -2117,8 +2118,8 @@ msreadaheadthr_spawn(void)
 	int i;
 
 	psc_poolmaster_init(&slc_readaheadrq_poolmaster,
-	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "readaheadrq");
+	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 4096, 4096,
+	    4096, NULL, NULL, NULL, "readaheadrq");
 	slc_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &slc_readaheadrq_poolmaster);
 
