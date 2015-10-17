@@ -247,8 +247,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (!pll_nitems(&bii->bii_rls)) {
 				lc_remove(&sli_bmap_releaseq, bii);
 				psc_dynarray_add(&a, b);
-			} else
-				BMAP_ULOCK(b);
+			}
+			BMAP_ULOCK(b);
 
 			if (nrls >= MAX_BMAP_RELEASE)
 				break;
