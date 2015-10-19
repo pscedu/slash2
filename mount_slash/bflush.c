@@ -695,8 +695,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		}
 
 		/*
-		 * The next request, 't', can be added to the coalesce
-		 * group because 't' overlaps or extends 'e'.
+		 * The next request, 'curr', can be added to the
+		 * coalesce group because 'curr' overlaps or extends
+		 * 'last'.
 		 */
 		if (curr->biorq_off <= biorq_voff_get(last)) {
 			sz = biorq_voff_get(curr) - biorq_voff_get(last);
