@@ -308,7 +308,9 @@ void	 bwc_release(struct bmpc_write_coalescer *);
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;
 
-extern struct timespec		msl_bflush_maxage;
+extern struct timespec		 msl_bflush_maxage;
+extern struct psc_listcache	 msl_idle_pages;
+extern struct psc_listcache	 msl_readahead_pages;
 
 static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
