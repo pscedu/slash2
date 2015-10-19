@@ -292,7 +292,6 @@ bmpce_release(struct bmap_pagecache_entry *e)
 		} else {
 			LIST_CACHE_LOCK(&msl_idle_pages);
 			BMPCE_LOCK(e);
-
 			if (e->bmpce_ref == 1) {
 				DEBUG_BMPCE(PLL_DIAG, e, "add to idle");
 				lc_add(&msl_idle_pages, e);
@@ -518,8 +517,9 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
 		/*
-		 * This avoids a deadlock with bmpc_freeall(). In general,
-		 * a background reaper should be nice to other uses.
+		 * This avoids a deadlock with bmpc_freeall().  In
+		 * general, a background reaper should be nice to other
+		 * uses.
 		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
