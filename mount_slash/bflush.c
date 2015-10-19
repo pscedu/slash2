@@ -559,8 +559,8 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 				DEBUG_BMPCE(PLL_DIAG, bmpce, "added");
 				continue;
 			}
-			if (bwc->bwc_bmpces[bwc->bwc_nbmpces -
-			    1]->bmpce_off >= bmpce->bmpce_off)
+			if (bwc->bwc_bmpces[bwc->bwc_nbmpces - 1]->
+			    bmpce_off >= bmpce->bmpce_off)
 				continue;
 
 			psc_assert(bmpce->bmpce_off - BMPC_BUFSZ ==
