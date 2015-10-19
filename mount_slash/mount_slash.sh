@@ -26,7 +26,7 @@ while getopts "dF:gOP:v" c; do
 done
 shift $(($OPTIND - 1))
 
-xargs=
+xargs=()
 apply_host_prefs "$@"
 
 : ${mp:=/$prof}
@@ -46,4 +46,4 @@ export CONFIG_FILE=$base/slcfg
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
-rundaemon $filter $prog -D $base/var -U $xargs $mp
+rundaemon $filter $prog -D $base/var -U ${xargs[@]} $mp
