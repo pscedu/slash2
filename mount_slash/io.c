@@ -1647,8 +1647,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	off += npages * BMPC_BUFSZ;
 	absoff += npages * BMPC_BUFSZ;
 
-	rapages = MIN(mfh->mfh_predio_nseq,
-	    msl_readahead_window_maxpages);
+	rapages = mfh->mfh_predio_nseq;
 
 	/* Note: this can extend past current EOF. */
 	newissued = absoff + rapages * BMPC_BUFSZ;
