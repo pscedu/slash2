@@ -513,7 +513,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 __static void
 bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 {
-	struct bmpc_ioreq *r, *e = NULL;
+	struct bmpc_ioreq *r, *end = NULL;
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t reqsz, tlen;
 	off_t off, loff;
@@ -522,17 +522,17 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	psc_assert(!bwc->bwc_nbmpces);
 
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
-		if (!e)
-			e = r;
+		if (!end)
+			end = r;
 		else {
 			/*
 			 * biorq offsets may not decrease and holes are
 			 * not allowed.
 			 */
 			psc_assert(r->biorq_off >= loff);
-			psc_assert(r->biorq_off <= biorq_voff_get(e));
-			if (biorq_voff_get(r) > biorq_voff_get(e))
-				e = r;
+			psc_assert(r->biorq_off <= biorq_voff_get(end));
+			if (biorq_voff_get(r) > biorq_voff_get(end))
+				end = r;
 		}
 
 		loff = off = r->biorq_off;
@@ -573,7 +573,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
 	psc_assert(bwc->bwc_size ==
-	    (e->biorq_off - r->biorq_off) + e->biorq_len);
+	    (end->biorq_off - r->biorq_off) + end->biorq_len);
 }
 
 /*
