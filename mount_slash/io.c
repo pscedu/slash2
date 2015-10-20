@@ -1646,7 +1646,6 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		mfh->mfh_predio_nseq = 0;
 
 	mfh->mfh_predio_lastoff = absoff;
-	absoff += npages * BMPC_BUFSZ;
 
 	if (!mfh->mfh_predio_nseq)
 		PFL_GOTOERR(out, 0);
