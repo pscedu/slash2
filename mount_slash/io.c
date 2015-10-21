@@ -81,8 +81,9 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT;
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_readahead_window_minpages = LNET_MTU / BMPC_BUFSZ;
-int			 msl_readahead_window_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+int			 msl_predio_window_size = 4 * 1024 * 1024;
+int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
+int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
 struct pfl_iostats_rw	 slc_dio_iostats;
 struct pfl_opstat	*slc_rdcache_iostats;
@@ -1635,11 +1636,11 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * (typically because of application threading) or skipped I/Os.
 	 */
 	if (labs(absoff - mfh->mfh_predio_lastoff) <
-	    msl_readahead_window_maxpages * BMPC_BUFSZ) {
+	    msl_predio_window_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
 			    mfh->mfh_predio_nseq * 2,
-			    msl_readahead_window_maxpages);
+			    msl_predio_issue_maxpages);
 		} else
 			mfh->mfh_predio_nseq++;
 	} else
@@ -1649,9 +1650,6 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	if (!mfh->mfh_predio_nseq)
 		PFL_GOTOERR(out, 0);
-
-	off += npages * BMPC_BUFSZ;
-	absoff += npages * BMPC_BUFSZ;
 
 	rapages = mfh->mfh_predio_nseq;
 
@@ -1666,24 +1664,27 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		/* Don't issue too soon after a previous issue. */
 		rapages = (newissued - mfh->mfh_predio_issued) /
 		    BMPC_BUFSZ;
-		if (rapages < msl_readahead_window_minpages)
+		if (rapages < msl_predio_issue_minpages)
 			PFL_GOTOERR(out, 0);
 		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
 		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
 	}
 
-	mfh->mfh_predio_issued = newissued;
-
 	f = mfh->mfh_fcmh;
 	/* Now issue an I/O for each bmap in the prediction. */
 	for (; rapages && bno < fcmh_2_nbmaps(f);
-	    bno++, rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (off >= SLASH_BMAP_SIZE)
+	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
+		if (off >= SLASH_BMAP_SIZE) {
 			off = 0;
+			bno++;
+		}
 		bsize = SLASH_BMAP_SIZE;
 		/* Trim a readahead that extends past EOF. */
-		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1)
+		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1) {
 			bsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+			if (bsize == 0 && fcmh_2_fsz(f))
+				bsize = SLASH_BMAP_SIZE;
+		}
 		tpages = howmany(bsize - off, BMPC_BUFSZ);
 		if (!tpages)
 			break;
@@ -1700,6 +1701,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 		predio_enqueue(&f->fcmh_fg, bno, rw, off, tpages);
 	}
+
+	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + off;
 
  out:
 	MFH_ULOCK(mfh);
@@ -1947,7 +1950,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Step 2: Trigger read-ahead or write-ahead if necessary.
 	 *
 	 */
-	if (retry || !msl_readahead_window_maxpages ||
+	if (retry || !msl_predio_issue_maxpages ||
 	    b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
