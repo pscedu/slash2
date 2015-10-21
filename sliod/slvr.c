@@ -742,8 +742,8 @@ slvr_remove(struct slvr *s)
 void
 slvr_remove_all(struct fidc_membh *f)
 {
+	struct bmap *b, *lastb = NULL;
 	struct bmap_iod_info *bii;
-	struct bmap *b;
 	struct slvr *s;
 
 	/*
@@ -753,15 +753,27 @@ slvr_remove_all(struct fidc_membh *f)
 	for (;;) {
 		pfl_rwlock_rdlock(&f->fcmh_rwlock);
 		b = RB_ROOT(&f->fcmh_bmaptree);
-		if (b)
+		if (b) {
+			BMAP_LOCK(b);
+			if (b->bcm_flags & BMAPF_TOFREE) {
+				BMAP_ULOCK(b);
+				pfl_rwlock_unlock(&f->fcmh_rwlock);
+				continue;
+			}
 			bmap_op_start_type(b, BMAP_OPCNT_SLVR);
+		}
 		pfl_rwlock_unlock(&f->fcmh_rwlock);
 
 		if (b == NULL)
 			break;
 
+		if (b == lastb) {
+			BMAP_ULOCK(b);
+			usleep(5);
+			BMAP_LOCK(b);
+		}
+
 		bii = bmap_2_bii(b);
-		BII_LOCK(bii);
 		while ((s = SPLAY_ROOT(&bii->bii_slvrs))) {
 			if (!SLVR_TRYLOCK(s)) {
 				BII_ULOCK(bii);
@@ -786,6 +798,7 @@ slvr_remove_all(struct fidc_membh *f)
 
 			BII_LOCK(bii);
 		}
+		lastb = b;
 		bmap_op_done_type(b, BMAP_OPCNT_SLVR);
 	}
 }
