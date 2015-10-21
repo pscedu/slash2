@@ -742,26 +742,27 @@ slvr_remove(struct slvr *s)
 void
 slvr_remove_all(struct fidc_membh *f)
 {
-	int i;
+	struct bmap_iod_info *bii;
 	struct bmap *b;
 	struct slvr *s;
-	struct bmap_iod_info *bii;
-	struct psc_dynarray a;
 
 	/*
 	 * Use two loops to avoid entangled with some background
 	 * operations.
 	 */
-	psc_dynarray_init(&a);
-	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+	for (;;) {
+		pfl_rwlock_rdlock(&f->fcmh_rwlock);
+		b = RB_ROOT(&f->fcmh_bmaptree);
+		if (b)
+			bmap_op_start_type(b, BMAP_OPCNT_SLVR);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
 
-		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
-		psc_dynarray_add(&a, b);
+		if (b == NULL)
+			break;
 
 		bii = bmap_2_bii(b);
 		BII_LOCK(bii);
 		while ((s = SPLAY_ROOT(&bii->bii_slvrs))) {
-
 			if (!SLVR_TRYLOCK(s)) {
 				BII_ULOCK(bii);
 				pscthr_yield();
@@ -785,12 +786,8 @@ slvr_remove_all(struct fidc_membh *f)
 
 			BII_LOCK(bii);
 		}
-		BII_ULOCK(bii);
-	}
-	DYNARRAY_FOREACH(b, i, &a)
 		bmap_op_done_type(b, BMAP_OPCNT_SLVR);
-
-	psc_dynarray_free(&a);
+	}
 }
 
 /*
