@@ -368,6 +368,7 @@ void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
+	int rc = 0, rc2, rflags = 0;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -379,7 +380,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	struct bmap *b;
-	int rc = 0, rflags = 0;
 
 	msfsthr_ensure(pfr);
 
@@ -483,20 +483,34 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	// XXX bug fci->fci_inode.flags inherited?
 	// XXX bug fci->fci_inode.newreplpol inherited?
 
+	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
+
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
+		rflags |= PSCFS_CREATEF_DIO;
+
 	FCMH_ULOCK(c);
 
-	rc = msl_io_convert_errno(mp->rc2);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	/*
+	 * Any errors encountered here cannot affect the return status
+	 * of the open(2).  If they were to, the namei cache in the
+	 * kernel would get confused thinking there the error here was a
+	 * failure of the creation itself.
+	 *
+	 * Instead, wait for the application to perform some actual I/O
+	 * then report the error then.
+	 */
+	rc2 = msl_io_convert_errno(mp->rc2);
+	if (rc2)
+		PFL_GOTOERR(out, rc2);
 
 	/*
 	 * Instantiate a bmap and load it with the piggybacked lease
 	 * from the above create RPC.
 	 */
-	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_CREATE |
+	rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_CREATE |
 	    BMAPGETF_NORETRIEVE, &b);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (rc2)
+		PFL_GOTOERR(out, rc2);
 
 	msl_bmap_reap_init(b, &mp->sbd);
 
@@ -510,11 +524,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	bmap_op_done(b);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
-		rflags |= PSCFS_CREATEF_DIO;
-
-	FCMH_LOCK(c);
-	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,

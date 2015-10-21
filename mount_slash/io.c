@@ -1642,7 +1642,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 			    mfh->mfh_predio_nseq * 2,
 			    msl_predio_issue_maxpages);
 		} else
-			mfh->mfh_predio_nseq++;
+			mfh->mfh_predio_nseq = npages;
 	} else
 		mfh->mfh_predio_nseq = 0;
 
@@ -1792,7 +1792,6 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
-	uint32_t aoff, alen;
 	int nr, i, j, rc, retry = 0, npages;
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
@@ -1801,6 +1800,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct bmpc_ioreq *r = NULL;
 	struct fidc_membh *f;
 	struct bmap *b;
+	sl_bmapno_t bno;
+	uint32_t aoff;
 	uint64_t fsz;
 	off_t roff;
 
@@ -1960,13 +1961,17 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (i == 1)
 		psc_assert(roff == SLASH_BMAP_SIZE);
 
-	/* Align readahead to page boundary. */
-	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
-	alen = tlen + (roff & BMPC_BUFMASK);
-
-	npages = alen / BMPC_BUFSZ;
-	if (alen % BMPC_BUFSZ)
-		npages++;
+	/* Calculate predictive I/O offset. */
+	bno = b->bcm_bmapno;
+	aoff = roff + tlen;
+	if (aoff & (BMPC_BUFSZ - 1))
+		aoff += BMPC_BUFSZ;
+	while (aoff >= SLASH_BMAP_SIZE) {
+		aoff -= SLASH_BMAP_SIZE;
+		bno++;
+	}
+	aoff &= ~BMPC_BUFSZ;
+	npages = howmany(size, BMPC_BUFSZ);
 
 	/*
 	 * XXX: Enlarging the original request to include some
@@ -1974,7 +1979,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * RPCs.  And the cost of waiting for them all should be
 	 * minimal.
 	 */
-	msl_issue_predio(mfh, b->bcm_bmapno, rw, aoff, npages);
+	msl_issue_predio(mfh, bno, rw, aoff, npages);
 
  out1:
 	/*
