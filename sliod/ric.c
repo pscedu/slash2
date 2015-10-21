@@ -310,7 +310,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				goto aio_out;
 			}
 			if (!rc)
-				rc = slvr[i]->slvr_err; 
+				rc = slvr[i]->slvr_err;
 			DEBUG_SLVR(PLL_DIAG, slvr[i],
 			    "aio early ready, rw=%s",
 			    rw == SL_WRITE ? "wr" : "rd");
@@ -361,6 +361,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
  aio_out:
+	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
+	    "rc=%d", bmapno, mq->size, mq->offset,
+	    rw == SL_WRITE ? "wr" : "rd", rc);
+
 	if (bmap)
 		bmap_op_done(bmap);
 
@@ -395,7 +399,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("rlsbmap-fail");
-			psclog_warnx("get bmap for "SLPRI_FG", rc = %d\n", 
+			psclog_warnx("get bmap for "SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			continue;
 		}
