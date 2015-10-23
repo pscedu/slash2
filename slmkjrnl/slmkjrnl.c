@@ -70,7 +70,7 @@ usage(void)
  */
 void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
-    uint32_t rs, uint64_t uuid)
+    uint32_t rs, uint64_t uuid, int block_dev)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal pj;
@@ -79,10 +79,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	uint32_t i, j, slot;
 	int rc, fd;
 	ssize_t nb;
-
-	if (nents % rs)
-		psc_fatalx("number of slots (%u) should be a multiple of "
-		    "readsize (%u)", nents, rs);
+	size_t numblocks;
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 
@@ -93,6 +90,27 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("stat %s", fn);
+
+	/*
+ 	 * If the user does not specify nents, either use default
+ 	 * or based on the block device size.
+ 	 */
+	if (nents == 0 && !block_dev)
+		nents = SLJ_MDS_JNENTS;
+
+	if (nents == 0 && block_dev) {
+		if (ioctl(fd, BLKGETSIZE, &numblocks))
+			errx(1, "ioctl fails on: %s", fn);
+
+		/* show progress, it is going to be a while */
+		verbose = 1;
+		nents = numblocks - stb.st_blksize/SLJ_MDS_ENTSIZE;  
+		nents = (nents / rs) * rs;
+	}
+
+	if (nents % rs)
+		psc_fatalx("number of slots (%u) should be a multiple of "
+		    "readsize (%u)", nents, rs);
 
 	pj.pj_fd = fd;
 	pj.pj_hdr = PSCALLOC(PSC_ALIGN(sizeof(struct psc_journal_hdr),
@@ -438,7 +456,8 @@ pjournal_dump(const char *fn)
 int
 main(int argc, char *argv[])
 {
-	ssize_t nents = SLJ_MDS_JNENTS;
+	int block_dev = 0;
+	ssize_t nents = 0;
 	char *endp, c, fn[PATH_MAX];
 	uint64_t uuid = 0;
 	long l;
@@ -452,6 +471,7 @@ main(int argc, char *argv[])
 		switch (c) {
 		case 'b':
 			strlcpy(fn, optarg, sizeof(fn));
+			block_dev = 1;
 			break;
 		case 'D':
 			datadir = optarg;
@@ -500,8 +520,8 @@ main(int argc, char *argv[])
 		if (!uuid)
 			psc_fatalx("no fsuuid specified");
 		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE,
-		    SLJ_MDS_READSZ, uuid);
-		if (verbose)
+		    SLJ_MDS_READSZ, uuid, block_dev);
+		if (verbose || !nents)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
