@@ -400,8 +400,6 @@ slislvrthr_proc(struct slvr *s)
 		PFL_GETTIMESPEC(&bcr->bcr_age);
 	}
 
-	BII_ULOCK(bii);
-
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
