@@ -53,11 +53,15 @@ bcr_update_inodeinfo(struct bcrcupd *bcr)
 
 	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
 
+	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen)
+		return (ESTALE);
+
 	if ((f->fcmh_flags & FCMH_IOD_BACKFILE) == 0)
 		return (EBADF);
 
 	if (fstat(fcmh_2_fd(f), &stb) == -1)
 		return (errno);
+
 	bcr->bcr_crcup.fsize = stb.st_size;
 	bcr->bcr_crcup.nblks = stb.st_blocks;
 	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;
