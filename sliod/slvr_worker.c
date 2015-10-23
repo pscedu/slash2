@@ -338,14 +338,14 @@ slislvrthr_proc(struct slvr *s)
 		bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 		slvr_remove(s);
 		return;
-	} else {
-		s->slvr_flags |= SLVRF_LRU;
-		s->slvr_flags &= ~(SLVRF_CRCDIRTY | SLVRF_FAULTING);
-		OPSTAT_INCR("slvr-crc-requeue");
-		lc_addtail(&sli_lruslvrs, s);
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
 	}
+
+	s->slvr_flags |= SLVRF_LRU;
+	s->slvr_flags &= ~(SLVRF_CRCDIRTY | SLVRF_FAULTING);
+	OPSTAT_INCR("slvr-crc-requeue");
+	lc_addtail(&sli_lruslvrs, s);
+	SLVR_WAKEUP(s);
+	SLVR_ULOCK(s);
 
 	BII_LOCK(bii);
 	bcr = bii->bii_bcr;
@@ -381,9 +381,7 @@ slislvrthr_proc(struct slvr *s)
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			bcr->bcr_bii->bii_bcr = NULL;
-
 	} else {
-
 		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
 		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);
 
