@@ -1974,12 +1974,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 	npages = howmany(size, BMPC_BUFSZ);
 
-	/*
-	 * XXX: Enlarging the original request to include some
-	 * readhead pages within the same bmap can save extra
-	 * RPCs.  And the cost of waiting for them all should be
-	 * minimal.
-	 */
 	msl_issue_predio(mfh, bno, rw, aoff, npages);
 
  out1:
