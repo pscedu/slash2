@@ -335,7 +335,9 @@ slislvrthr_proc(struct slvr *s)
 		 * We are protected by SLVRF_FAULTING and we are on the
 		 * CRC list.
 		 */
+		bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 		slvr_remove(s);
+		return;
 	} else {
 		s->slvr_flags |= SLVRF_LRU;
 		s->slvr_flags &= ~(SLVRF_CRCDIRTY | SLVRF_FAULTING);
