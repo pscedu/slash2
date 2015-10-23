@@ -58,29 +58,25 @@ int
 sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[1];
+	struct psc_dynarray *a = args->pointer_arg[0];
 	struct srm_bmap_crcwrt_rep *mp;
 	struct srm_bmap_crcwrt_req *mq;
-	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *bii;
-	struct psc_dynarray *a;
 	struct bcrcupd *bcr;
-	int i;
+	int rc, i;
 
-	a = args->pointer_arg[0];
-	csvc = args->pointer_arg[1];
-	psc_assert(a);
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
 		bii = bcr->bcr_bii;
 
-		DEBUG_BCR(rq->rq_status || !mp || mp->rc ?
+		DEBUG_BCR(rc || !mp || mp->rc ?
 		    PLL_ERROR : PLL_DIAG, bcr, "rq_status=%d rc=%d%s",
-		    rq->rq_status, mp ? mp->rc : -4096,
-		    mp ? "" : " (unknown, no buf)");
+		    rq->rq_status, rc, mp ? "" : " (unknown, no buf)");
 
 		BII_LOCK(bii);
 		psc_assert(bii_2_bmap(bii)->bcm_flags &
@@ -99,6 +95,9 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 	/*
 	 * If there were errors, log them but obviously the MDS will
 	 * make the master choice about what our residency validity is.
+	 *
+	 * XXX if this was a transient error (e.g. networking) then we
+	 * should resend this update.
 	 */
 	for (i = 0; i < (int)mq->ncrc_updates; i++)
 		if (mp && mp->crcup_rc[i])
