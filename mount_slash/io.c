@@ -1958,8 +1958,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/*
 	 * Note that i can only be 0 or 1 after the above loop.
 	 */
-	if (i == 1)
+	if (i == 1) {
 		psc_assert(roff == SLASH_BMAP_SIZE);
+		roff = 0;
+	}
 
 	/* Calculate predictive I/O offset. */
 	bno = b->bcm_bmapno;
