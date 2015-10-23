@@ -610,7 +610,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
-		psclog_warnx("unable to contact ION %#x (%s) for lease",
+		psclog_warnx("unable to contact IOS %#x (%s) for lease",
 		    iosid, r ? r->res_name : NULL);
 
 		return (-SLERR_ION_OFFLINE);
