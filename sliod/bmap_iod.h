@@ -43,7 +43,7 @@ struct slvr;
 struct bcrcupd {
 	struct timespec		 bcr_age;
 	struct bmap_iod_info	*bcr_bii;
-	struct psclist_head	 bcr_lentry;
+	struct psc_listentry	 bcr_lentry;
 	struct srt_bmap_crcup	 bcr_crcup;
 };
 
