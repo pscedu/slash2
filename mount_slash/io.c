@@ -1964,13 +1964,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/* Calculate predictive I/O offset. */
 	bno = b->bcm_bmapno;
 	aoff = roff + tlen;
-	if (aoff & (BMPC_BUFSZ - 1))
+	if (aoff & BMPC_BUFMASK) {
 		aoff += BMPC_BUFSZ;
-	while (aoff >= SLASH_BMAP_SIZE) {
+		aoff &= ~BMPC_BUFMASK;
+	}
+	if (aoff >= SLASH_BMAP_SIZE) {
 		aoff -= SLASH_BMAP_SIZE;
 		bno++;
 	}
-	aoff &= ~BMPC_BUFSZ;
 	npages = howmany(size, BMPC_BUFSZ);
 
 	/*
