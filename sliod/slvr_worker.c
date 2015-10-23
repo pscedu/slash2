@@ -204,8 +204,7 @@ slicrudthr_main(struct psc_thread *thr)
 		 * If we fail to send an RPC, we must leave the
 		 * reference in the tree for future attempt(s).
 		 * Otherwise, the callback function (i.e.
-		 * sli_rmi_bcrcupd_cb) should remove them from
-		 * the tree.
+		 * sli_rmi_bcrcupd_cb) should remove them from the tree.
 		 */
 		rc = slvr_worker_crcup_genrq(bcrs);
 		if (rc) {
@@ -262,7 +261,8 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 		    mp ? "" : " (unknown, no buf)");
 
 		BII_LOCK(bii);
-		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAPF_CRUD_INFLIGHT);
+		psc_assert(bii_2_bmap(bii)->bcm_flags &
+		    BMAPF_CRUD_INFLIGHT);
 		bii_2_bmap(bii)->bcm_flags &= ~BMAPF_CRUD_INFLIGHT;
 
 		if (rq->rq_status) {
@@ -305,8 +305,8 @@ slislvrthr_proc(struct slvr *s)
 	uint64_t crc;
 
 	/*
- 	 * Take a reference now because we might free the sliver later.
- 	 */
+	 * Take a reference now because we might free the sliver later.
+	 */
 	bii = slvr_2_bii(s);
 	b = bii_2_bmap(bii);
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
@@ -335,8 +335,9 @@ slislvrthr_proc(struct slvr *s)
 		OPSTAT_INCR("slvr-crc-remove2");
 		SLVR_ULOCK(s);
 		/*
- 		 * We are protected by SLVRF_FAULTING and we are on the CRC list.
- 		 */
+		 * We are protected by SLVRF_FAULTING and we are on the
+		 * CRC list.
+		 */
 		slvr_remove(s);
 	} else {
 		s->slvr_flags |= SLVRF_LRU;
@@ -433,11 +434,12 @@ slislvrthr_main(struct psc_thread *thr)
 			if (!SLVR_TRYLOCK(s))
 				continue;
 			/*
- 			 * A sliver can be referenced while being CRC'ed. However,
- 			 * we want to wait for all references to go away before
- 			 * doing CRC on it.
- 			 */
-			if (s->slvr_refcnt || s->slvr_flags & SLVRF_FREEING) {
+			 * A sliver can be referenced while being
+			 * CRC'ed.  However, we want to wait for all
+			 * references to go away before doing CRC on it.
+			 */
+			if (s->slvr_refcnt ||
+			    s->slvr_flags & SLVRF_FREEING) {
 				SLVR_ULOCK(s);
 				continue;
 			}
