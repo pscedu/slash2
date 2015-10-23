@@ -742,36 +742,28 @@ slvr_remove(struct slvr *s)
 void
 slvr_remove_all(struct fidc_membh *f)
 {
-	struct bmap *b, *lastb = NULL;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct timespec ts0, ts1, delta;
 	struct bmap_iod_info *bii;
+	struct bmap *b;
 	struct slvr *s;
+	int i;
+
+	PFL_GETTIMESPEC(&ts0);
 
 	/*
 	 * Use two loops to avoid entangled with some background
 	 * operations.
 	 */
-	for (;;) {
-		pfl_rwlock_rdlock(&f->fcmh_rwlock);
-		b = RB_ROOT(&f->fcmh_bmaptree);
-		if (b) {
-			BMAP_LOCK(b);
-			if (b->bcm_flags & BMAPF_TOFREE) {
-				BMAP_ULOCK(b);
-				pfl_rwlock_unlock(&f->fcmh_rwlock);
-				continue;
-			}
-			bmap_op_start_type(b, BMAP_OPCNT_SLVR);
-		}
-		pfl_rwlock_unlock(&f->fcmh_rwlock);
-
-		if (b == NULL)
-			break;
-
-		if (b == lastb) {
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		BMAP_LOCK(b);
+		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
-			usleep(5);
-			BMAP_LOCK(b);
+			continue;
 		}
+		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
+		psc_dynarray_add(&a, b);
 
 		bii = bmap_2_bii(b);
 		while ((s = SPLAY_ROOT(&bii->bii_slvrs))) {
@@ -798,13 +790,22 @@ slvr_remove_all(struct fidc_membh *f)
 
 			BII_LOCK(bii);
 		}
-		lastb = b;
-		bmap_op_done_type(b, BMAP_OPCNT_SLVR);
+		BMAP_ULOCK(b);
 	}
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
+
+	DYNARRAY_FOREACH(b, i, &a)
+		bmap_op_done_type(b, BMAP_OPCNT_SLVR);
+	psc_dynarray_free(&a);
+
+	PFL_GETTIMESPEC(&ts1);
+	timespecsub(&ts1, &ts0, &delta);
+	OPSTAT_ADD("slvr-remove-all-wait-usecs",
+	    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
 }
 
 /*
- * Note that the sliver may be freed by this fuction.
+ * Note that the sliver may be freed by this function.
  */
 __static void
 slvr_lru_tryunpin_locked(struct slvr *s)
