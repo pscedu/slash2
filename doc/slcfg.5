@@ -63,10 +63,16 @@ Executable
 access list, separated by colons
 .Pq Sq :\& .
 .It Ic fsuuid
-
+File system unique ID.
+This is a 64-bit number that is generated when formatting the MDS file
+system that is used to uniquely identify this SLASH2 deployment to avoid
+conflict among multiple deployments accessible from the same host.
 .It Ic nets
-This value is used to specify the environment variable
+This value is used to construct the LNet networks setting
+.Pq Ev LNET_NETWORKS ,
+although it has the same format as the
 .Ev LNET_IP2NETS
+setting
 .Po see
 .Xr slashd 8 ,
 .Xr mount_slash 8 ,
@@ -74,6 +80,11 @@ or
 .Xr sliod 8
 for more information
 .Pc .
+Note that manually specifying
+.Pq Ev LNET_NETWORKS
+or
+.Pq Ev LNET_IP2NETS
+will cause ignore this setting to be ignored.
 .It Ic port
 .Tn TCP
 port used to establish connections to
@@ -157,7 +168,7 @@ resources in a site.
 .It Ic ios
 One or more resource names comprising the cluster, separated by comma
 delimiters
-.Pq applies only to clusters .  
+.Pq applies only to clusters .
 .It Ic journal
 Set the path of the operation journal file.
 May be a direct device for increased performance.
