@@ -1853,7 +1853,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
-	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
+	struct srt_bmap_crcup *crcup = crclog->scl_crcup;
 	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
 

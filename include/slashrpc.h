@@ -536,9 +536,9 @@ struct srt_bmap_crcwire {
 	 int32_t		_pad;
 } __packed;
 
-#define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srm_bmap_crcup */
+#define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srt_bmap_crcup */
 
-struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
+struct srt_bmap_crcup {				/* a batch of CRC updates for the same file */
 	struct sl_fidgen	fg;
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
 	uint64_t		nblks;		/* st_blocks for us */

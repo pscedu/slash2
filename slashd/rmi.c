@@ -121,7 +121,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
+	len = mq->ncrc_updates * sizeof(struct srt_bmap_crcup);
 	for (i = 0; i < mq->ncrc_updates; i++) {
 		// XXX sanity check mq->ncrcs_per_update[i]
 		len += mq->ncrcs_per_update[i] *
@@ -135,7 +135,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		iovs[i].iov_base = buf + off;
 		iovs[i].iov_len = (mq->ncrcs_per_update[i] *
 		    sizeof(struct srt_bmap_crcwire)) +
-		    sizeof(struct srm_bmap_crcup);
+		    sizeof(struct srt_bmap_crcup);
 
 		off += iovs[i].iov_len;
 	}
@@ -148,7 +148,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	}
 
 	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
-		struct srm_bmap_crcup *c = iovs[i].iov_base;
+		struct srt_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
 		int rc;
 

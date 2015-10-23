@@ -1460,7 +1460,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
  *	compared against the ID stored in the bml
  */
 int
-mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
+mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
     const struct srm_bmap_crcwrt_req *mq)
 {
 	struct sl_resource *res = libsl_id2res(iosid);

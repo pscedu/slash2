@@ -44,7 +44,7 @@ struct bcrcupd {
 	struct timespec		 bcr_age;
 	struct bmap_iod_info	*bcr_bii;
 	struct psclist_head	 bcr_lentry;
-	struct srm_bmap_crcup	 bcr_crcup;
+	struct srt_bmap_crcup	 bcr_crcup;
 };
 
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)

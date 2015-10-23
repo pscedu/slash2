@@ -146,7 +146,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	rq->rq_async_args.pointer_arg[0] = (void *)bcrs;
 	rq->rq_async_args.pointer_arg[1] = csvc;
 
-	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
+	len = mq->ncrc_updates * sizeof(struct srt_bmap_crcup);
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 
 	for (i = 0; i < mq->ncrc_updates; i++) {
@@ -162,7 +162,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
-		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
+		len += iovs[i].iov_len = sizeof(struct srt_bmap_crcup) +
 		    (mq->ncrcs_per_update[i] *
 		     sizeof(struct srt_bmap_crcwire));
 	}

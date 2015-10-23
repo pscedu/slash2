@@ -36,7 +36,7 @@
 
 struct bmap;
 struct fidc_membh;
-struct srm_bmap_crcup;
+struct srt_bmap_crcup;
 struct srt_stat;
 
 #define SLJ_MDS_JNENTS			(128 * 1024)		/* 131072 */
@@ -200,7 +200,7 @@ struct slmds_jent_namespace {
  */
 struct sl_mds_crc_log {
 	struct bmap			*scl_bmap;
-	struct srm_bmap_crcup		*scl_crcup;
+	struct srt_bmap_crcup		*scl_crcup;
 	sl_ios_id_t			 scl_iosid;
 };
 
@@ -231,7 +231,7 @@ void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
 
 void	mds_journal_init(uint64_t);
 
-int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t, struct srm_bmap_crcup *);
+int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t, struct srt_bmap_crcup *);
 
 void	mds_reserve_slot(int);
 void	mds_unreserve_slot(int);

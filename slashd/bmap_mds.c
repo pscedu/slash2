@@ -340,7 +340,7 @@ mds_bmap_destroy(struct bmap *b)
  */
 int
 mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
-    struct srm_bmap_crcup *crcup)
+    struct srt_bmap_crcup *crcup)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct slash_inode_handle *ih;
