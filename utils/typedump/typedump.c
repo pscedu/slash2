@@ -289,7 +289,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
 	PRTYPE(struct srm_bmap_chwrmode_req);
-	PRTYPE(struct srm_bmap_crcup);
 	PRTYPE(struct srm_bmap_crcwrt_rep);
 	PRTYPE(struct srm_bmap_crcwrt_req);
 	PRTYPE(struct srm_bmap_dio_req);
@@ -361,6 +360,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_update_req);
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
+	PRTYPE(struct srt_bmap_crcup);
 	PRTYPE(struct srt_bmap_crcwire);
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_bmapminseq);
