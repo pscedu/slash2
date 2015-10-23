@@ -65,10 +65,7 @@ bim_updateseq(uint64_t seq)
 		invalid = 1;
 		goto done;
 	}
-	if (seq == bimSeq.bim_minseq)
-		goto done;
-
-	if (seq > bimSeq.bim_minseq ||
+	if (seq >= bimSeq.bim_minseq ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		bimSeq.bim_minseq = seq;
 		psclog_info("update min seq to %"PRId64, seq);
@@ -153,6 +150,7 @@ bim_getcurseq(void)
 			goto out;
 
 		rc = bim_updateseq(mp->seqno);
+
  out:
 		if (rq) {
 			pscrpc_req_finished(rq);
@@ -194,7 +192,6 @@ bcr_ready_add(struct bcrcupd *bcr)
 void
 bcr_ready_remove(struct bcrcupd *bcr)
 {
-
 	DEBUG_BCR(PLL_DIAG, bcr, "bcr remove");
 
 	lc_remove(&bcr_ready, bcr);
