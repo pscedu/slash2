@@ -83,7 +83,7 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 		    BMAPF_CRUD_INFLIGHT);
 		bii_2_bmap(bii)->bcm_flags &= ~BMAPF_CRUD_INFLIGHT;
 
-		if (rq->rq_status) {
+		if (rc) {
 			BII_ULOCK(bii);
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR("crc-update-cb-failure");
@@ -95,9 +95,6 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 	/*
 	 * If there were errors, log them but obviously the MDS will
 	 * make the master choice about what our residency validity is.
-	 *
-	 * XXX if this was a transient error (e.g. networking) then we
-	 * should resend this update.
 	 */
 	for (i = 0; i < (int)mq->ncrc_updates; i++)
 		if (mp && mp->crcup_rc[i])
