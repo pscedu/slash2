@@ -241,19 +241,17 @@ packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
-	scf = psc_ctlmsg_push(MSCMT_GETFCMH,
-	    sizeof(struct slctlmsg_fcmh));
+	scf = psc_ctlmsg_push(MSCMT_GETFCMH, sizeof(*scf));
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
 void
 packshow_bmaps(__unusedx char *fid)
 {
-	struct slctlmsg_fcmh *scf;
+	struct slctlmsg_bmap *scb;
 
-	scf = psc_ctlmsg_push(MSCMT_GETBMAP,
-	    sizeof(struct slctlmsg_bmap));
-	scf->scf_fg.fg_fid = FID_ANY;
+	scb = psc_ctlmsg_push(MSCMT_GETBMAP, sizeof(*scb));
+	scb->scb_fg.fg_fid = FID_ANY;
 }
 
 void

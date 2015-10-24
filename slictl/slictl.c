@@ -70,7 +70,7 @@ packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
-	scf = psc_ctlmsg_push(SLICMT_GETFCMH, sizeof(struct slctlmsg_fcmh));
+	scf = psc_ctlmsg_push(SLICMT_GETFCMH, sizeof(*scf));
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
