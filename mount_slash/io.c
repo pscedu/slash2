@@ -1155,6 +1155,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		psc_assert(!(e->bmpce_flags & BMPCEF_PINNED));
 
 		psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
+		/*
+		 * XXX crash on kernel build when IOS and client share 
+ 		 * the same machine with flag value of 100000011.
+ 		 */
 		psc_assert(!(e->bmpce_flags & BMPCEF_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 		BMPCE_ULOCK(e);
