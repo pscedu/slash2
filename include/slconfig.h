@@ -162,20 +162,12 @@ site_get_pri(struct sl_site *site)
 	return (site + 1);
 }
 
-/* LNET route */
-struct sl_lnetrt {
-	union pfl_sockaddr	 lrt_addr;
-	int			 lrt_mask;	/* # bits in network */
-	uint32_t		 lrt_net;
-	struct psclist_head	 lrt_lentry;
-};
-
 /* link between LNET interface and LNET route */
 struct lnetif_pair {
 	uint32_t		 net;
 	int			 flags;		/* see LPF_* flags */
 	char			 ifn[IFNAMSIZ];
-	struct psclist_head	 lentry;
+	struct psc_listentry	 lentry;
 };
 
 #define LPF_NOACCEPTOR		(1 << 0)
