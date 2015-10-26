@@ -59,7 +59,7 @@ struct bmap_iod_minseq {
 
 struct bmap_iod_rls {
 	struct srt_bmapdesc	 bir_sbd;
-	struct psclist_head	 bir_lentry;
+	struct psc_listentry	 bir_lentry;
 };
 
 #define BIM_RETRIEVE_SEQ	1
@@ -98,7 +98,7 @@ struct bmap_iod_info {
 	struct bcrcupd		*bii_bcr;
 
 	struct biod_slvrtree	 bii_slvrs;
-	struct psclist_head	 bii_lentry;
+	struct psc_listentry	 bii_lentry;
 	struct psc_lockedlist	 bii_rls;
 };
 

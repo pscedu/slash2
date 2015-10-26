@@ -196,8 +196,8 @@ struct bmap_mds_lease {
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmi;
 	struct pscrpc_export	 *bml_exp;
-	struct psclist_head	  bml_bmi_lentry;
-	struct psclist_head	  bml_timeo_lentry;
+	struct psc_listentry	  bml_bmi_lentry;
+	struct psc_listentry	  bml_timeo_lentry;
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
 };
 
