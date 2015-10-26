@@ -87,6 +87,13 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 	FCMH_BUSY_ENSURE(f);
 	FCMH_ULOCK(f);
 
+	/* Make sure mdsio_setattr() will set sstb_out */
+	if (!to_set) {
+		OPSTAT_INCR("attrib-empty-mask");
+		psclog_warnx("attribute set mask is empty");
+		return (0);
+	}
+
 	if (log)
 		mds_reserve_slot(1);
 	rc = mdsio_setattr(vfsid, fcmh_2_mfid(f), sstb, to_set,
