@@ -333,6 +333,8 @@ iod_bmap_finalcleanup(struct bmap *b)
 	struct bmap_iod_info *bii;
 
 	bii = bmap_2_bii(b);
+
+	/* XXX Hit this assert within 1 hour of my four ways parallel tests */
 	psc_assert(pll_empty(&bii->bii_rls));
 	psc_assert(SPLAY_EMPTY(&bii->bii_slvrs));
 	psc_assert(psclist_disjoint(&bii->bii_lentry));
