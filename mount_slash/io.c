@@ -1948,8 +1948,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bmap_op_done(b);
 
 		/*
-		 * No need to update roff and tsize for the last iteration.
-		 * Plus, we need them for read-ahead work in the next setp.
+		 * No need to update roff and tsize for the last
+		 * iteration.  Plus, we need them for predictive I/O
+		 * work in the next step.
 		 */
 		if (i == nr - 1)
 			break;
@@ -1961,17 +1962,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		tlen = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
-	/*
-	 * Step 2: Trigger read-ahead or write-ahead if necessary.
-	 *
-	 */
+	/* Step 2: trigger read-ahead or write-ahead if necessary. */
 	if (retry || !msl_predio_issue_maxpages ||
 	    b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
-	/*
-	 * Note that i can only be 0 or 1 after the above loop.
-	 */
+	/* Note that i can only be 0 or 1 after the above loop. */
 	if (i == 1) {
 		psc_assert(roff == SLASH_BMAP_SIZE);
 		roff = 0;
@@ -1993,12 +1989,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	msl_issue_predio(mfh, bno, rw, aoff, npages);
 
  out1:
-	/*
-	 * Step 3: launch biorqs if necessary
-	 *
-	 * Note that the offsets used here are file-wise offsets not
-	 * offsets into the buffer.
-	 */
+	/* Step 3: launch biorqs (if necessary). */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 
@@ -2011,7 +2002,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
  out2:
-	/* Step 4: retry if at least one biorq failed */
+	/* Step 4: retry if at least one biorq failed. */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f,
 		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
