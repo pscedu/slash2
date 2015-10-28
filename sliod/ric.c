@@ -390,7 +390,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR("release-bmap");
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
