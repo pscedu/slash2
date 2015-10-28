@@ -774,6 +774,9 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 	BMPCE_LOCK(e);
 	psc_assert(e->bmpce_waitq);
 
+	/* AIOWAIT is removed no matter what. */
+	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING);
+
 	if (rc) {
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCEF_EIO;
@@ -782,8 +785,6 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 		e->bmpce_flags |= BMPCEF_DATARDY;
 	}
 
-	/* AIOWAIT is removed no matter what. */
-	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING);
 	DEBUG_BMPCE(PLL_DEBUG, e, "rpc_done");
 
 	BMPCE_WAKE(e);
