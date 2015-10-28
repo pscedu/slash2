@@ -390,13 +390,12 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	OPSTAT_INCR("release-bmap");
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
-		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
+		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("rlsbmap-fail");
 			psclog_warnx("get bmap for "SLPRI_FG" rc=%d",
