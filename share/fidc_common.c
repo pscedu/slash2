@@ -234,8 +234,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * bucket lock in case we need to insert a new item.
 	 */
 	if (f) {
-		psc_hashbkt_put(&fidcHtable, b);
-
 		/*
 		 * Test to see if we jumped here from fidcIdleList.
 		 * Note an unlucky thread could find that the FID does
@@ -250,6 +248,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+
+		psc_hashbkt_put(&fidcHtable, b);
 
 		/* call sli_fcmh_reopen() sliod only */
 		if (sl_fcmh_ops.sfop_modify)
