@@ -69,7 +69,7 @@
 #include "slerr.h"
 #include "subsys_cli.h"
 
-__static void	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 
@@ -351,7 +351,8 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 		 * declare it as complete until after its reference
 		 * count drops to zero.
 		 */
-		msl_biorq_complete_fsrq(r);
+		if (msl_biorq_complete_fsrq(r))
+			return;
 		BIORQ_LOCK(r);
 	}
 
@@ -576,7 +577,7 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 #define msl_complete_fsrq(q, len)					\
 	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (len))
 
-void
+int
 _msl_complete_fsrq(const struct pfl_callerinfo *pci,
     struct msl_fsrqinfo *q, size_t len)
 {
@@ -602,7 +603,7 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
 	if (q->mfsrq_ref) {
 		MFH_ULOCK(q->mfsrq_mfh);
-		return;
+		return (-1);
 	}
 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
@@ -667,19 +668,28 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
 	}
 	PSCFREE(oiov);
+
+	for (i = 0; i < MAX_BMAPS_REQ; i++) {
+		r = q->mfsrq_biorq[i];
+		if (!r || r->biorq_fsrqi)
+			break;
+		msl_biorq_release(r);
+	}
+
+	return (0);
 }
 
-void
+int
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
-	int i, needflush = 0;
+	int rc, i, needflush = 0;
 	struct msl_fsrqinfo *q;
 	size_t len = 0;
 
 	/* don't do anything for readahead */
 	q = r->biorq_fsrqi;
 	if (q == NULL)
-		return;
+		return (0);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
@@ -718,7 +728,13 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (needflush)
 		msl_pages_schedflush(r);
 
-	msl_complete_fsrq(q, len);
+	rc = msl_complete_fsrq(q, len);
+
+	BIORQ_LOCK(r);
+	r->biorq_fsrqi = NULL;
+	BIORQ_ULOCK(r);
+
+	return (rc); 
 }
 
 /*
