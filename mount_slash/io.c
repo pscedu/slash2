@@ -1157,9 +1157,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 
 		psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
 		/*
-		 * XXX crash on kernel build when IOS and client share 
- 		 * the same machine with flag value of 100000011.
- 		 */
+		 * XXX crash on kernel build when IOS and client share
+		 * the same machine with flag value of 100000011.
+		 */
 		psc_assert(!(e->bmpce_flags & BMPCEF_DATARDY));
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 		BMPCE_ULOCK(e);
@@ -1834,18 +1834,27 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	FCMH_ULOCK(f);
 
+	if (size == 0) {
+		if (rw == SL_READ)
+			pscfs_reply_read(pfr, NULL, 0, 0);
+		else
+			pscfs_reply_write(pfr, 0, 0);
+		return (0);
+	}
+
 	/*
 	 * Get the start and end block regions from the input
-	 * parameters.  We support at most 2 full block worth of I/O
-	 * requests that span at most one block boundary.
+	 * parameters.  We support at most 1MiB I/O that span at most
+	 * one bmap boundary.
 	 */
 	start = off / SLASH_BMAP_SIZE;
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
 	nr = end - start + 1;
-	if (nr > MAX_BMAPS_REQ) {
-		rc = -EINVAL;
-		return (rc);
-	}
+	if (nr > MAX_BMAPS_REQ)
+		return (-EINVAL);
+
+	// XXX locked?  we should be using a counter on the mfsrq, not
+	// the entire mfh
 	mfh->mfh_retries = 0;
 
 	/*
@@ -2025,27 +2034,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		mfsrq_seterr(q, rc);
 	}
 
-	/*
-	 * Step 5: drop our reference to the fsrq.  This is done to
-	 * insert any error obtained in this routine to the mfsrq.  Each
-	 * biorq holds a reference to the mfsrq so reply to pscfs will
-	 * only happen after each biorq finishes.  For DIO, buffers are
-	 * attached to the biorqs directly so they must be used before
-	 * being freed.
-	 *
-	 * 10/12/2015: The above argument does not seem to make sense
-	 * because we have mfsrq_ref to decide when it is time to finally
-	 * complete the request and each biorq also holds such a reference.
-	 * If so, we should be able to move step 5 after step 6.
-	 */
-	msl_complete_fsrq(q, 0);
-
-	/* Step 6: finish up biorqs. */
+	/* Step 5: finish up biorqs. */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
 			msl_biorq_release(r);
 	}
+
+	/* Step 6: drop our reference to the fsrq. */
+	msl_complete_fsrq(q, 0);
 	return (0);
 }
 
