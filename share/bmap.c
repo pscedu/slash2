@@ -261,6 +261,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if (flags & BMAPGETF_NORETRIEVE)
 			b->bcm_flags &= ~BMAPF_INIT;
 		else {
+			b->bcm_flags |= BMAPF_RETR;
 			BMAP_ULOCK(b);
 			/*
 			 * mds_bmap_read(),
@@ -269,6 +270,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			 */
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_RETR;
 
 			if (flags & BMAPGETF_NONBLOCK || rc)
 				;
