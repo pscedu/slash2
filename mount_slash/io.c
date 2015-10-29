@@ -495,6 +495,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		r = av->pointer_arg[MSL_CBARG_BIORQ];
 		DYNARRAY_FOREACH(e, i, a) {
 			BMPCE_LOCK(e);
+			/* XXX potential conflict with new read RPC launch */
 			if (e->bmpce_flags & BMPCEF_FAULTING) {
 				naio++;
 				e->bmpce_flags &= ~BMPCEF_FAULTING;
