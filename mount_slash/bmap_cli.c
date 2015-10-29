@@ -113,13 +113,11 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		BMAP_LOCK(b);
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
-		BMAP_ULOCK(b);
 	} else {
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd);
-		BMAP_ULOCK(b);
-
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
+		BMAP_ULOCK(b);
 		psc_assert(r);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
 			/*
@@ -134,11 +132,18 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	if (compl)
+	if (compl) {
+		BMAP_ULOCK(b);
+
+		/* synchronous */
 		psc_compl_ready(compl, 1);
-	else
+	} else {
+		/* asynchronous */
+		b->bcm_flags &= ~BMAPF_MODECHNG;
+
 		/* will do bmap_wake_locked() for anyone waiting for us */
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+	}
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -627,7 +632,6 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		BMAP_LOCK(b);
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
-		BMAP_ULOCK(b);
 	} else {
 		f = b->bcm_fcmh;
 
@@ -650,11 +654,20 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 		    "rc=%d mp=NULL", rc);
 
-	if (compl)
+	if (compl) {
+		BMAP_ULOCK(b);
+
+		/* synchronous */
 		psc_compl_ready(compl, 1);
-	else
+	} else {
+		/* asynchronous */
+		b->bcm_flags &= ~BMAPF_RETR;
+		if (!rc)
+			b->bcm_flags &= ~BMAPF_INIT;
+
 		/* will do bmap_wake_locked() for anyone waiting for us */
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+	}
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -849,20 +862,16 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
-	b->bcm_flags &= ~BMAPF_INIT;
-	bmap_wake_locked(b);
-	BMAP_ULOCK(b);
-
-	DEBUG_BMAP(PLL_DIAG, b,
-	    "reap init: nseq=%"PRId64" etime="PSCPRI_TIMESPEC,
-	    bci->bci_sbd.sbd_seq,
-	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
-
 	/*
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
 	 */
 	lc_addtail(&slc_bmaptimeoutq, bci);
+
+	DEBUG_BMAP(PLL_DIAG, b,
+	    "reap init: nseq=%"PRId64" etime="PSCPRI_TIMESPEC,
+	    bci->bci_sbd.sbd_seq,
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 }
 
 int
