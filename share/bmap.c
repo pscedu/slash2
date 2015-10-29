@@ -241,7 +241,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	if (new_bmap)
 		b->bcm_flags |= bmaprw;
 
-	if (flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
+	if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
 		if (flags & BMAPGETF_NONBLOCK)
 			goto out;
 		/*
@@ -257,7 +257,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		    (BMAPF_RETR | BMAPF_MODECHNG));
 	}
 
-	if (flags & BMAPF_INIT) {
+	if (b->bcm_flags & BMAPF_INIT) {
 		if (flags & BMAPGETF_NORETRIEVE)
 			b->bcm_flags &= ~BMAPF_INIT;
 		else {
@@ -277,7 +277,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			else
 				b->bcm_flags &= ~BMAPF_INIT;
 		}
-		if ((flags & BMAPF_INIT) == 0)
+		if ((b->bcm_flags & BMAPF_INIT) == 0)
 			bmap_wake_locked(b);
 	}
 
