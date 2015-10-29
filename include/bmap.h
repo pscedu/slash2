@@ -123,13 +123,14 @@ struct bmap {
 #define BMAPF_RD		(1 <<  0)
 #define BMAPF_WR		(1 <<  1)
 #define BMAPF_INIT		(1 <<  2)	/* initializing from disk/network */
-#define BMAPF_DIO		(1 <<  3)	/* direct I/O, no client caching */
-#define BMAPF_DIOCB		(1 <<  4)
-#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
-#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
-#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
-#define _BMAPF_SHIFT		(1 <<  9)
+#define BMAPF_RETR		(1 <<  3)	/* initializing from disk/network */
+#define BMAPF_DIO		(1 <<  4)	/* direct I/O, no client caching */
+#define BMAPF_DIOCB		(1 <<  5)
+#define BMAPF_TOFREE		(1 <<  6)	/* refcnt dropped to zero, removing */
+#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
+#define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 << 10)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
