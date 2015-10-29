@@ -2089,7 +2089,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		if (b->bcm_flags & BMAPF_DIO)
 			goto end;
-		if (b->bcm_flags & BMAPF_INIT) {
+		if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
 			bmap_op_done(b);
 			fcmh_op_done(f);
 			lc_add(&msl_readaheadq, rarq);
