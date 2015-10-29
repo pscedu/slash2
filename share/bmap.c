@@ -271,7 +271,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			psc_assert(rw == SL_WRITE || rw == SL_READ);
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_RETR;
+
+			if ((flags & BMAPGETF_NONBLOCK) == 0)
+				b->bcm_flags &= ~BMAPF_RETR;
 
 			if (flags & BMAPGETF_NONBLOCK || rc)
 				;
@@ -302,7 +304,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 
 		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAPF_MODECHNG;
+
+		if ((flags & BMAPGETF_NONBLOCK) == 0)
+			b->bcm_flags &= ~BMAPF_MODECHNG;
+
 		if (flags & BMAPGETF_NONBLOCK || rc)
 			;
 		else
