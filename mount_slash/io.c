@@ -574,12 +574,12 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 	}
 }
 
-#define msl_complete_fsrq(q, len)					\
-	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (len))
+#define msl_complete_fsrq(q, len, r)					\
+	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (len), (r))
 
 int
 _msl_complete_fsrq(const struct pfl_callerinfo *pci,
-    struct msl_fsrqinfo *q, size_t len)
+    struct msl_fsrqinfo *q, size_t len, struct bmpc_ioreq *r0)
 {
 	void *oiov = q->mfsrq_iovs;
 	struct pscfs_req *pfr;
@@ -671,8 +671,10 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
-		if (!r || r->biorq_fsrqi)
+		if (!r)
 			break;
+		if (r->biorq_fsrqi || r == r0)
+			continue;
 		msl_biorq_release(r);
 	}
 
@@ -728,13 +730,13 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (needflush)
 		msl_pages_schedflush(r);
 
-	rc = msl_complete_fsrq(q, len);
+	rc = msl_complete_fsrq(q, len, r);
 
 	BIORQ_LOCK(r);
 	r->biorq_fsrqi = NULL;
 	BIORQ_ULOCK(r);
 
-	return (rc); 
+	return (rc);
 }
 
 /*
@@ -2049,7 +2051,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 6: drop our reference to the fsrq. */
-	msl_complete_fsrq(q, 0);
+	msl_complete_fsrq(q, 0, NULL);
 	return (0);
 }
 
