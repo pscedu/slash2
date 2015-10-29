@@ -228,8 +228,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	if (bp)
 		*bp = NULL;
 
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
-	bmaprw = rw == SL_WRITE ? BMAPF_WR : BMAPF_RD;
+	if (rw)
+		bmaprw = rw == SL_WRITE ? BMAPF_WR : BMAPF_RD;
 
 	new_bmap = flags & BMAPGETF_CREATE;
 	b = bmap_lookup_cache(f, n, &new_bmap);
@@ -268,6 +268,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			 * iod_bmap_retrieve(),
 			 * msl_bmap_retrieve()
 			 */
+			psc_assert(rw == SL_WRITE || rw == SL_READ);
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_RETR;
@@ -297,6 +298,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		BMAP_ULOCK(b);
 
+		psc_assert(rw == SL_WRITE || rw == SL_READ);
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 
 		BMAP_LOCK(b);
