@@ -41,6 +41,12 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+enum {
+	MSL_BMODECHG_CBARG_BMAP,
+	MSL_BMODECHG_CBARG_COMPL,
+	MSL_BMODECHG_CBARG_CSVC,
+};
+
 int bmap_max_cache = BMAP_CACHE_MAX;
 
 /*
@@ -89,22 +95,80 @@ msl_bmap_stash_lease(struct bmap *b, struct srt_bmapdesc *sbd)
 	memcpy(bmap_2_sbd(b), sbd, sizeof(struct srt_bmapdesc));
 }
 
+int
+msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMODECHG_CBARG_CSVC];
+	struct psc_compl *compl = args->pointer_arg[MSL_BMODECHG_CBARG_COMPL];
+	struct bmap *b = args->pointer_arg[MSL_BMODECHG_CBARG_BMAP];
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct srm_bmap_chwrmode_rep *mp;
+	struct sl_resource *r;
+	int rc;
+
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+
+	if (rc) {
+		BMAP_LOCK(b);
+		bci->bci_error = rc;
+		b->bcm_flags |= BMAPF_LEASEFAILED;
+		BMAP_ULOCK(b);
+	} else {
+		BMAP_LOCK(b);
+		msl_bmap_stash_lease(b, &mp->sbd);
+		BMAP_ULOCK(b);
+
+		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
+		psc_assert(r);
+		if (r->res_type == SLREST_ARCHIVAL_FS) {
+			/*
+			 * Prepare for archival write by ensuring that all
+			 * subsequent IO's are direct.
+			 */
+			BMAP_LOCK(b);
+			b->bcm_flags |= BMAPF_DIO;
+			BMAP_ULOCK(b);
+
+			msl_bmap_cache_rls(b);
+		}
+	}
+
+	if (compl)
+		psc_compl_ready(compl, 1);
+	else
+		/* will do bmap_wake_locked() for anyone waiting for us */
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+
+	sl_csvc_decref(csvc);
+	return (rc);
+}
+
 /*
  * Set READ or WRITE as access mode on an open file bmap.
  * @b: bmap.
  * @rw: access mode to set the bmap to.
  */
 __static int
-msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
+msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
+	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
-	struct sl_resource *r;
+	struct msfs_thread *mft;
+	struct psc_thread *thr;
+	struct psc_compl compl;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
+
+	thr = pscthr_get();
+	if (thr->pscthr_type == MSTHRT_FS) {
+		mft = thr->pscthr_private;
+		pfr = mft->mft_pfr;
+	}
 
 	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
@@ -120,10 +184,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 		 * further action being taken.
 		 */
 		return (0);
-
 	/* Add write mode to this bmap. */
+
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
+	/* XXX respect NONBLOCK */
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -132,53 +197,67 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
+	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-	if (rc)
+
+	if ((flags & BMAPGETF_NONBLOCK) == 0) {
+		psc_compl_init(&compl);
+		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
+		    &compl;
+	}
+
+	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
+	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
+	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc) {
+		if ((flags & BMAPGETF_NONBLOCK) == 0)
+			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
+	}
+	if ((flags & BMAPGETF_NONBLOCK) || rc) {
+		if (rc)
+			psc_compl_destroy(&compl);
+		else if (flags & BMAPGETF_NONBLOCK)
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+		return (rc);
+	}
+
+	psc_compl_wait(&compl);
+	psc_compl_destroy(&compl);
 
 	BMAP_LOCK(b);
-	msl_bmap_stash_lease(b, &mp->sbd);
+	rc = bmap_2_bci(b)->bci_error;
 	BMAP_ULOCK(b);
 
-	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
-	psc_assert(r);
-	if (r->res_type == SLREST_ARCHIVAL_FS) {
-		/*
-		 * Prepare for archival write by ensuring that all
-		 * subsequent IO's are direct.
-		 */
-		BMAP_LOCK(b);
-		b->bcm_flags |= BMAPF_DIO;
-		BMAP_ULOCK(b);
+	rq = NULL;
+	csvc = NULL;
 
-		msl_bmap_cache_rls(b);
-	}
-
- out:
-	if (rq) {
-		pscrpc_req_finished(rq);
-		rq = NULL;
-	}
-	if (csvc) {
-		sl_csvc_decref(csvc);
-		csvc = NULL;
-	}
-
-//	if (rc && slc_rmc_retry(pfr, &rc))
-//		goto retry;
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		DEBUG_BMAP(PLL_NOTICE, b, "SLERR_BMAP_DIOWAIT try=%d",
-		    nretries);
+		// XXX async path is broken here
+
+		/* Retry for bmap to be DIO ready. */
+		DEBUG_BMAP(PLL_NOTICE, b,
+		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
+
 		nretries++;
 		if (nretries > BMAP_CLI_DIOWAIT_MAX)
 			return (-ETIMEDOUT);
 		sleep(BMAP_CLI_DIOWAIT);
 		goto retry;
 	}
+
+	return (rc);
+
+ out:
+	pscrpc_req_finished(rq);
+	if (csvc) {
+		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
+
+	if (rc && pfr && slc_rmc_retry(pfr, &rc))
+		goto retry;
 
 	return (rc);
 }
@@ -617,7 +696,7 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-	// XXX respect ASYNC
+	// XXX respect NONBLOCK
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -771,6 +850,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
 	b->bcm_flags &= ~BMAPF_INIT;
+	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_DIAG, b,
