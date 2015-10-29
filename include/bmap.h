@@ -132,6 +132,8 @@ struct bmap {
 #define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
 #define _BMAPF_SHIFT		(1 << 10)
 
+#define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
+
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
 #define SL_MAX_IOSREASSIGN	16

@@ -130,6 +130,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 
 			msl_bmap_cache_rls(b);
 		}
+		BMAP_LOCK(b);
 	}
 
 	if (compl) {
@@ -138,8 +139,14 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		/* synchronous */
 		psc_compl_ready(compl, 1);
 	} else {
+		BMAP_LOCK_ENSURE(b);
+
 		/* asynchronous */
 		b->bcm_flags &= ~BMAPF_MODECHNG;
+
+		if (!rc)
+			b->bcm_flags = (b->bcm_flags & ~BMAP_RW_MASK) |
+			    BMAPF_WR;
 
 		/* will do bmap_wake_locked() for anyone waiting for us */
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
@@ -183,12 +190,21 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
  retry:
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
 
-	if (b->bcm_flags & BMAPF_WR)
+	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
 		 * further action being taken.
 		 */
+		if (flags & BMAPGETF_NONBLOCK) {
+			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_MODECHNG;
+			b->bcm_flags = (b->bcm_flags &
+			    ~BMAP_RW_MASK) | BMAPF_WR;
+			BMAP_ULOCK(b);
+		}
 		return (0);
+	}
+
 	/* Add write mode to this bmap. */
 
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
@@ -468,9 +484,9 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmapext_req *mq;
 	struct srm_leasebmapext_rep *mp;
+	struct srt_bmapdesc *sbd;
 	struct timespec ts;
 	int secs, rc;
-	struct srt_bmapdesc *sbd;
 
 	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_TOFREE) {
@@ -660,6 +676,8 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		/* synchronous */
 		psc_compl_ready(compl, 1);
 	} else {
+		BMAP_LOCK_ENSURE(b);
+
 		/* asynchronous */
 		b->bcm_flags &= ~BMAPF_RETR;
 		if (!rc)
