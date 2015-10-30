@@ -275,6 +275,9 @@ bmpce_release(struct bmap_pagecache_entry *e)
 	    BMPCEF_EIO | BMPCEF_DISCARD)) == BMPCEF_DATARDY) {
 		BMPCE_ULOCK(e);
 
+		/*
+		 * XXX Need to recheck flags after grabbing the lock.
+		 */
 		if ((e->bmpce_flags & (BMPCEF_READAHEAD |
 		    BMPCEF_ACCESSED)) == BMPCEF_READAHEAD) {
 			LIST_CACHE_LOCK(&msl_readahead_pages);
