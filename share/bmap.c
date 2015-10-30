@@ -190,7 +190,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	 * Signify that the bmap is newly initialized and therefore may
 	 * not contain certain structures.
 	 */
-	b->bcm_flags = BMAPF_INIT;
+	b->bcm_flags = BMAPF_INIT | BMAPF_PREINIT;
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
@@ -239,11 +239,14 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	}
 
 	if (new_bmap)
-		b->bcm_flags |= bmaprw;
+		b->bcm_flags = (b->bcm_flags & ~BMAPF_PREINIT) | bmaprw;
+
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_PREINIT);
 
 	if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
 		if (flags & BMAPGETF_NONBLOCK)
 			goto out;
+
 		/*
 		 * Wait while retrieving or mode-changing.
 		 *
