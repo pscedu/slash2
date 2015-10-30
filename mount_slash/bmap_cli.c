@@ -236,11 +236,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
 	}
-	if ((flags & BMAPGETF_NONBLOCK) || rc) {
-		if (rc)
-			psc_compl_destroy(&compl);
-		else if (flags & BMAPGETF_NONBLOCK)
-			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+	if (flags & BMAPGETF_NONBLOCK) {
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		return (rc);
 	}
 
@@ -255,8 +252,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	csvc = NULL;
 
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		// XXX async path is broken here
-
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_NOTICE, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
@@ -272,6 +267,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
  out:
 	pscrpc_req_finished(rq);
+	rq = NULL;
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
@@ -761,11 +757,8 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
 	}
-	if ((flags & BMAPGETF_NONBLOCK) || rc) {
-		if (rc)
-			psc_compl_destroy(&compl);
-		else if (flags & BMAPGETF_NONBLOCK)
-			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+	if (flags & BMAPGETF_NONBLOCK) {
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		return (rc);
 	}
 
@@ -780,8 +773,6 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	csvc = NULL;
 
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		// XXX async path is broken here
-
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_NOTICE, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
