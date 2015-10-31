@@ -1104,7 +1104,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 __static void
 msl_pages_schedflush(struct bmpc_ioreq *r)
 {
+	int i;
 	struct bmap *b = r->biorq_bmap;
+	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
@@ -1121,6 +1123,16 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
+
+	/* clear BMPCEF_FAULTING after incrementing bmpc_pndg_writes */
+	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+		BMPCE_LOCK(e);
+		psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
+		e->bmpce_flags &= ~BMPCEF_FAULTING;
+		BMPCE_WAKE(e);
+		BMPCE_ULOCK(e);
+	}
+
 	BIORQ_ULOCK(r);
 
 	if (!(b->bcm_flags & BMAPF_FLUSHQ)) {
@@ -1394,6 +1406,10 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			perfect_ra = 0;
 
 		if (r->biorq_flags & BIORQ_WRITE) {
+			/*
+			 * Avoid a race with readahead thread.
+			 */
+			e->bmpce_flags |= BMPCEF_FAULTING;
 			BMPCE_ULOCK(e);
 			continue;
 		}
