@@ -1090,7 +1090,7 @@ msbreleasethr_main(struct psc_thread *thr)
  *	long as it is recent).
  */
 int
-msl_bmap_to_csvc(struct bmap *b, int exclusive,
+msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm, 
     struct slashrpc_cservice **csvcp)
 {
 	int has_residency, i, j, locked, rc;
@@ -1099,6 +1099,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 	struct sl_resm *m;
 	void *p;
 
+	if (pm)
+		*pm = NULL;
 	*csvcp = NULL;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -1113,8 +1115,11 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
 		*csvcp = slc_geticsvc(m);
-		if (*csvcp)
+		if (*csvcp) {
+			if (pm)
+				*pm = m;
 			return (0);
+		}
 		rc = m->resm_csvc->csvc_lasterrno;
 		if (rc)
 			return (-abs(rc));
@@ -1153,7 +1158,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
 			rc = msl_try_get_replica_res(b,
 			    fci->fcif_idxmap[i], j ? has_residency : 1,
-			    csvcp);
+			    pm, csvcp);
 			switch (rc) {
 			case 0:
 				psc_multiwait_leavecritsect(mw);
