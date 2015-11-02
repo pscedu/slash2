@@ -109,28 +109,27 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
+	BMAP_LOCK(b);
 	if (rc) {
-		BMAP_LOCK(b);
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
 	} else {
-		BMAP_LOCK(b);
+		bci->bci_error = 0;
+		b->bcm_flags = (b->bcm_flags & ~BMAP_RW_MASK) |
+		    BMAPF_WR;
 		msl_bmap_stash_lease(b, &mp->sbd);
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
-		BMAP_ULOCK(b);
-		psc_assert(r);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
 			/*
 			 * Prepare for archival write by ensuring that all
 			 * subsequent IO's are direct.
 			 */
-			BMAP_LOCK(b);
 			b->bcm_flags |= BMAPF_DIO;
-			BMAP_ULOCK(b);
 
+			BMAP_ULOCK(b);
 			msl_bmap_cache_rls(b);
+			BMAP_LOCK(b);
 		}
-		BMAP_LOCK(b);
 	}
 
 	if (compl) {
@@ -139,14 +138,8 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		/* synchronous */
 		psc_compl_ready(compl, 1);
 	} else {
-		BMAP_LOCK_ENSURE(b);
-
 		/* asynchronous */
 		b->bcm_flags &= ~BMAPF_MODECHNG;
-
-		if (!rc)
-			b->bcm_flags = (b->bcm_flags & ~BMAP_RW_MASK) |
-			    BMAPF_WR;
 
 		/* will do bmap_wake_locked() for anyone waiting for us */
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
@@ -198,8 +191,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		if (flags & BMAPGETF_NONBLOCK) {
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_MODECHNG;
-			b->bcm_flags = (b->bcm_flags &
-			    ~BMAP_RW_MASK) | BMAPF_WR;
 			BMAP_ULOCK(b);
 		}
 		return (0);
@@ -245,6 +236,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	psc_compl_destroy(&compl);
 
 	BMAP_LOCK(b);
+	/* XXX this is not race safe */
 	rc = bmap_2_bci(b)->bci_error;
 	BMAP_ULOCK(b);
 
@@ -766,6 +758,7 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	psc_compl_destroy(&compl);
 
 	BMAP_LOCK(b);
+	/* XXX this is not race safe */
 	rc = bmap_2_bci(b)->bci_error;
 	BMAP_ULOCK(b);
 

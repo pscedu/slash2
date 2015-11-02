@@ -238,8 +238,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 
-	if (new_bmap)
+	if (new_bmap) {
+		psc_assert(rw);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_PREINIT) | bmaprw;
+	}
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_PREINIT);
 
@@ -312,12 +314,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		if ((flags & BMAPGETF_NONBLOCK) == 0 || rc)
 			b->bcm_flags &= ~BMAPF_MODECHNG;
-
-		if (flags & BMAPGETF_NONBLOCK || rc)
-			;
-		else
-			b->bcm_flags = (b->bcm_flags & ~BMAP_RW_MASK) |
-			    bmaprw;
 		bmap_wake_locked(b);
 	}
 
