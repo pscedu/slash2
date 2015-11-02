@@ -659,7 +659,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		// release odt ent?
 		return (-1); // errno
 	}
-	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 
 	bml->bml_seq = bia->bia_seq;
 
@@ -668,6 +667,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
 	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmi_wr_ion, bmi->bmi_assign);
+
+	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 
 	return (0);
 }
