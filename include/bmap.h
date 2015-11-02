@@ -120,17 +120,16 @@ struct bmap {
 #define bmapc_memb bmap
 
 /* shared bmap_flags */
-#define BMAPF_RD		(1 <<  0)
-#define BMAPF_WR		(1 <<  1)
-#define BMAPF_INIT		(1 <<  2)	/* initializing from disk/network */
-#define BMAPF_PREINIT		(1 <<  3)	/* super early initialization */
-#define BMAPF_RETR		(1 <<  4)	/* initializing from disk/network */
-#define BMAPF_DIO		(1 <<  5)	/* direct I/O, no client caching */
-#define BMAPF_TOFREE		(1 <<  7)	/* refcnt dropped to zero, removing */
-#define BMAPF_MODECHNG		(1 <<  8)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAPF_WAITERS		(1 <<  9)	/* has bcm_fcmh waiters */
-#define BMAPF_BUSY		(1 << 10)	/* temporary processing lock */
-#define _BMAPF_SHIFT		(1 << 11)
+#define BMAPF_RD		(1 <<  0)	/* data is read-only */
+#define BMAPF_WR		(1 <<  1)	/* data is read-write accessible */
+#define BMAPF_INIT		(1 <<  2)	/* bmap initializing from disk/network */
+#define BMAPF_RETR		(1 <<  3)	/* retrieval RPC is inflight */
+#define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
+#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 <<  9)
 
 #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
 
@@ -330,7 +329,7 @@ void	_bmap_op_done(const struct pfl_callerinfo *,
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmap **);
 struct bmap *
-	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int *);
+	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int, int *);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 

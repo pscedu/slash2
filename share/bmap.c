@@ -121,7 +121,8 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
  * it was newly created or not.
  */
 struct bmap *
-bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
+bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
+    int *new_bmap)
 {
 	struct bmap lb, *b, *bnew = NULL;
 	int doalloc;
@@ -190,7 +191,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	 * Signify that the bmap is newly initialized and therefore may
 	 * not contain certain structures.
 	 */
-	b->bcm_flags = BMAPF_INIT | BMAPF_PREINIT;
+	psc_assert(bmaprw == BMAPF_RD || bmaprw == BMAPF_WR);
+	b->bcm_flags = BMAPF_INIT | bmaprw;
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
@@ -232,18 +234,11 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		bmaprw = rw == SL_WRITE ? BMAPF_WR : BMAPF_RD;
 
 	new_bmap = flags & BMAPGETF_CREATE;
-	b = bmap_lookup_cache(f, n, &new_bmap);
+	b = bmap_lookup_cache(f, n, bmaprw, &new_bmap);
 	if (b == NULL) {
 		rc = ENOENT;
 		goto out;
 	}
-
-	if (new_bmap) {
-		psc_assert(rw);
-		b->bcm_flags = (b->bcm_flags & ~BMAPF_PREINIT) | bmaprw;
-	}
-
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_PREINIT);
 
 	if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
 		if (flags & BMAPGETF_NONBLOCK)
@@ -372,7 +367,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAPF_RD, flags, seq);
 	PFL_PRFLAG(BMAPF_WR, flags, seq);
 	PFL_PRFLAG(BMAPF_INIT, flags, seq);
-	PFL_PRFLAG(BMAPF_PREINIT, flags, seq);
 	PFL_PRFLAG(BMAPF_RETR, flags, seq);
 	PFL_PRFLAG(BMAPF_DIO, flags, seq);
 	PFL_PRFLAG(BMAPF_TOFREE, flags, seq);
