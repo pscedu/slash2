@@ -376,23 +376,14 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAPF_RD, flags, seq);
 	PFL_PRFLAG(BMAPF_WR, flags, seq);
 	PFL_PRFLAG(BMAPF_INIT, flags, seq);
+	PFL_PRFLAG(BMAPF_PREINIT, flags, seq);
+	PFL_PRFLAG(BMAPF_RETR, flags, seq);
 	PFL_PRFLAG(BMAPF_DIO, flags, seq);
 	PFL_PRFLAG(BMAPF_DIOCB, flags, seq);
 	PFL_PRFLAG(BMAPF_TOFREE, flags, seq);
 	PFL_PRFLAG(BMAPF_MODECHNG, flags, seq);
 	PFL_PRFLAG(BMAPF_WAITERS, flags, seq);
 	PFL_PRFLAG(BMAPF_BUSY, flags, seq);
-}
-
-__weak void
-dump_bmap_flags(uint32_t flags)
-{
-	int seq = 0;
-
-	_dump_bmap_flags_common(&flags, &seq);
-	if (flags)
-		printf(" unknown: %#x", flags);
-	printf("\n");
 }
 
 void
