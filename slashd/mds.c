@@ -168,18 +168,19 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 		return (0);
 
 	/*
-	 * We enter into the DIO mode in three cases:
+	 * We enter into DIO mode in three cases:
 	 *
-	 *  (1) Our caller wants a DIO lease
-	 *  (2) There is already a write lease out there
-	 *  (3) We want to a write lease when there are read leases out
-	 *	there.
+	 *  (1) Requester specifically wants a DIO lease (not currently
+	 *	possible).
+	 *  (2) There is already a write lease issued.
+	 *  (3) Requester wants a write lease when there are existing
+	 *	read leases.
 	 *
 	 * In addition, even if the current lease request does not
 	 * trigger a DIO by itself, it has to wait if there is a DIO
 	 * downgrade already in progress.
 	 */
-	if (!want_dio && (b->bcm_flags & BMAPF_DIOCB))
+	if (bmi->bmi_diocb)
 		want_dio = 1;
 
 	if (want_dio || bmi->bmi_writers ||
@@ -208,11 +209,9 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 				}
 
 				rc = -SLERR_BMAP_DIOWAIT;
-				if (!(bml->bml_flags & BML_DIOCB)) {
-					bml->bml_flags |= BML_DIOCB;
-					b->bcm_flags |= BMAPF_DIOCB;
+				if (!(bml->bml_flags & BML_DIOCB)) 
 					mdscoh_req(bml);
-				} else
+				else
 					BML_ULOCK(bml);
  next:
 				bml = bml->bml_chain;
@@ -222,7 +221,6 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	if (!rc && (want_dio || force_dio)) {
 		OPSTAT_INCR("bmap-dio-set");
 		b->bcm_flags |= BMAPF_DIO;
-		b->bcm_flags &= ~BMAPF_DIOCB;
 	}
 	return (rc);
 }
@@ -1173,11 +1171,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	BML_ULOCK(bml);
 
-	if ((b->bcm_flags & (BMAPF_DIO | BMAPF_DIOCB)) &&
+	/* Remove the direct I/O flag if possible. */
+	if ((b->bcm_flags & BMAPF_DIO || b->bcm_diocb) &&
 	    (!bmi->bmi_writers ||
 	     (bmi->bmi_writers == 1 && !bmi->bmi_readers))) {
-		/* Remove the directio flag if possible. */
-		b->bcm_flags &= ~(BMAPF_DIO | BMAPF_DIOCB);
+		b->bcm_flags &= ~BMAPF_DIO;
 		OPSTAT_INCR("bmap-dio-clr");
 	}
 

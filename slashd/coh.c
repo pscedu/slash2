@@ -53,9 +53,18 @@
 void
 slm_coh_bml_release(struct bmap_mds_lease *bml)
 {
+	struct bmap_mds_info *bmi;
+	struct bmap *b;
+
 	BML_LOCK(bml);
 	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
+
+	bmi = bml->bml_bmi;
+	b = bmi_2_bmap(b);
+	BMAP_LOCK(b);
+	bmi->bmi_diocb--;
+	BMAP_ULOCK(b);
 
 	mds_bmap_bml_release(bml);
 }
@@ -118,9 +127,12 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK_ENSURE(bml);
+	BMAP_LOCK_ENSURE(b);
 
 	/* Take a reference for the asynchronous RPC. */
+	bmi->bmi_diocb++;
 	bml->bml_refcnt++;
+	bml->bml_flags |= BML_DIOCB;
 
 	if (bml->bml_flags & BML_RECOVER) {
 		psc_assert(!bml->bml_exp);

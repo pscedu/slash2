@@ -126,7 +126,6 @@ struct bmap {
 #define BMAPF_PREINIT		(1 <<  3)	/* super early initialization */
 #define BMAPF_RETR		(1 <<  4)	/* initializing from disk/network */
 #define BMAPF_DIO		(1 <<  5)	/* direct I/O, no client caching */
-#define BMAPF_DIOCB		(1 <<  6)
 #define BMAPF_TOFREE		(1 <<  7)	/* refcnt dropped to zero, removing */
 #define BMAPF_MODECHNG		(1 <<  8)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAPF_WAITERS		(1 <<  9)	/* has bcm_fcmh waiters */
@@ -157,8 +156,8 @@ struct bmap {
 	(b)->bcm_flags & BMAPF_RD	? "R" : "",			\
 	(b)->bcm_flags & BMAPF_WR	? "W" : "",			\
 	(b)->bcm_flags & BMAPF_INIT	? "I" : "",			\
+	(b)->bcm_flags & BMAPF_RETR	? "r" : "",			\
 	(b)->bcm_flags & BMAPF_DIO	? "D" : "",			\
-	(b)->bcm_flags & BMAPF_DIOCB	? "C" : "",			\
 	(b)->bcm_flags & BMAPF_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAPF_MODECHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAPF_WAITERS	? "w" : "",			\
