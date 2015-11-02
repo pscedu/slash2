@@ -66,7 +66,6 @@ struct psc_listcache		 slc_bmaptimeoutq;
 
 int				 slc_max_nretries = 256;
 
-#define MAX_OUTSTANDING_RPCS	1024
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
 
 struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
@@ -464,7 +463,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
-	rc = msl_bmap_to_csvc(r->biorq_bmap, 1, &csvc);
+	rc = msl_bmap_to_csvc(r->biorq_bmap, 1, NULL, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -759,8 +758,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	return (bwc);
 }
 
-__static void
-bmap_flush_outstanding_rpcwait(struct sl_resm *m)
+int
+_msl_resm_throttle(struct sl_resm *m, int wait)
 {
 	struct timespec ts0, ts1, tsd;
 	struct resm_cli_info *rmci;
@@ -771,10 +770,18 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	 * XXX use resm multiwait?
 	 */
 	spinlock(&slc_bflush_lock);
-	PFL_GETTIMESPEC(&ts0);
+	if (!wait && atomic_read(&rmci->rmci_infl_rpcs) >=
+	    RESM_MAX_OUTSTANDING_RPCS) {
+		freelock(&slc_bflush_lock);
+		return (-EAGAIN);
+	}
+
 	while (atomic_read(&rmci->rmci_infl_rpcs) >=
-	    MAX_OUTSTANDING_RPCS) {
-		account = 1;
+	    RESM_MAX_OUTSTANDING_RPCS) {
+		if (!account) {
+			PFL_GETTIMESPEC(&ts0);
+			account = 1;
+		}
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		psc_waitq_waitrel_ts(&slc_bflush_waitq,
 		    &slc_bflush_lock, &bmapFlushWaitSecs);
@@ -788,6 +795,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	}
 	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 	freelock(&slc_bflush_lock);
+	return (0);
 }
 
 /*
@@ -891,7 +899,7 @@ bmap_flush(void)
 		}
 		BMAP_ULOCK(b);
 
-		if (psc_dynarray_len(&bmaps) >= MAX_OUTSTANDING_RPCS)
+		if (psc_dynarray_len(&bmaps) >= RESM_MAX_OUTSTANDING_RPCS)
 			break;
 	}
 	LIST_CACHE_ULOCK(&slc_bmapflushq);
@@ -926,7 +934,7 @@ bmap_flush(void)
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
-			bmap_flush_outstanding_rpcwait(m);
+			msl_resm_throttle_wait(m);
 			bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);

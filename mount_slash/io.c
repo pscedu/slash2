@@ -409,7 +409,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
  */
 int
 msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
-    struct slashrpc_cservice **csvcp)
+    struct sl_resm **pm, struct slashrpc_cservice **csvcp)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct fcmh_cli_info *fci;
@@ -435,8 +435,11 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
 		*csvcp = slc_geticsvc_nb(m);
-		if (*csvcp)
+		if (*csvcp) {
+			if (pm)
+				*pm = m;
 			return (0);
+		}
 	}
 	return (-1);
 }
@@ -826,7 +829,9 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct bmap_pagecache_entry *e;
+	struct resm_cli_info *rmci;
 	struct srm_io_req *mq;
 	struct bmap *b;
 	int i;
@@ -868,6 +873,9 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	msl_biorq_release(r);
 
+	rmci = resm2rmci(m);
+	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
+
 	/*
 	 * Free the dynarray which was allocated in
 	 * msl_read_rpc_launch().
@@ -906,6 +914,8 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
+	struct resm_cli_info *rmci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	int op;
@@ -938,6 +948,9 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 
 	//msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
 
+	rmci = resm2rmci(m);
+	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
+
 	return (rc);
 }
 
@@ -963,11 +976,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request_set *nbs = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
+	struct sl_resm *m;
 	struct bmap *b;
 	uint64_t *v8;
 
@@ -991,9 +1006,16 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		OPSTAT_INCR("dio-read");
 	}
 
-	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &csvc);
+	/*
+	 * XXX for read lease, we could inspect throttle limits of other
+	 * residencies and use them if available.
+	 */
+	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &m, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	msl_resm_throttle_wait(m);
+	rmci = resm2rmci(m);
 
   retry:
 	nbs = pscrpc_prep_set();
@@ -1017,6 +1039,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rq->rq_interpret_reply = msl_dio_cb;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 		iovs[i].iov_base = r->biorq_buf + off;
 		iovs[i].iov_len = len;
 
@@ -1040,7 +1063,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			msl_biorq_release(r);
 			OPSTAT_INCR("dio-add-req-fail");
 			PFL_GOTOERR(out, rc);
-		}
+		} else
+			psc_atomic32_inc(&rmci->rmci_infl_rpcs);
 		rq = NULL;
 	}
 
@@ -1160,13 +1184,13 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	struct pscrpc_request *rq = NULL;
 	struct bmap_pagecache_entry *e;
 	struct psc_dynarray *a = NULL;
+	struct resm_cli_info *rmci;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
+	struct sl_resm *m;
 	uint32_t off = 0;
 	int rc = 0, i;
-
-	OPSTAT_INCR("read-rpc-launch");
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1203,10 +1227,22 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	    -ETIMEDOUT);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	/*
+	 * XXX we could inspect throttle limits of other residencies and
+	 * use them if available.
+	 */
 	rc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAPF_WR, &csvc);
+	    r->biorq_bmap->bcm_flags & BMAPF_WR, &m, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	if (r->biorq_flags & BIORQ_READAHEAD) {
+		rc = msl_resm_throttle_nowait(m);
+		if (rc)
+			PFL_GOTOERR(out, rc);
+	} else
+		msl_resm_throttle_wait(m);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1234,13 +1270,18 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_interpret_reply = msl_read_cb;
+
+	rmci = resm2rmci(m);
+	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
 
 	biorq_incref(r);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		msl_biorq_release(r);
+		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 		OPSTAT_INCR("read-add-req-fail");
 		PFL_GOTOERR(out, rc);
 	}
