@@ -118,7 +118,7 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((e), _locked);				\
 	} while (0)
 
-#define DEBUG_BMPCE(level, pg, fmt, ...)					\
+#define DEBUG_BMPCE(level, pg, fmt, ...)				\
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
 	    "fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "				\
