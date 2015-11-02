@@ -1725,8 +1725,12 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	mfh->mfh_predio_lastoff = absoff;
 
-	if (!mfh->mfh_predio_nseq)
+	if (mfh->mfh_predio_nseq)
+		OPSTAT_INCR("predio-window-hit");
+	else {
+		OPSTAT_INCR("predio-window-miss");
 		PFL_GOTOERR(out, 0);
+	}
 
 	rapages = mfh->mfh_predio_nseq;
 
