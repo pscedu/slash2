@@ -69,7 +69,7 @@
 #include "slerr.h"
 #include "subsys_cli.h"
 
-__static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static void	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 
@@ -351,8 +351,7 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 		 * declare it as complete until after its reference
 		 * count drops to zero.
 		 */
-		if (msl_biorq_complete_fsrq(r))
-			return;
+		msl_biorq_complete_fsrq(r);
 		BIORQ_LOCK(r);
 	}
 
@@ -582,40 +581,47 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 	}
 }
 
-#define msl_complete_fsrq(q, len, r)					\
-	_msl_complete_fsrq(PFL_CALLERINFO(), (q), (len), (r))
-
-int
-_msl_complete_fsrq(const struct pfl_callerinfo *pci,
-    struct msl_fsrqinfo *q, size_t len, struct bmpc_ioreq *r0)
+void
+msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
+    struct bmpc_ioreq *r0)
 {
 	void *oiov = q->mfsrq_iovs;
+	struct msl_fhent *mfh;
 	struct pscfs_req *pfr;
 	struct bmpc_ioreq *r;
 	int i;
 
 	pfr = mfsrq_2_pfr(q);
+	mfh = q->mfsrq_mfh;
 
-	MFH_LOCK(q->mfsrq_mfh);
+	if (r0) {
+		BIORQ_LOCK(r0);
+		r0->biorq_fsrqi = NULL;
+		BIORQ_ULOCK(r0);
+	}
+
+	MFH_LOCK(mfh);
 	if (!q->mfsrq_err) {
 		q->mfsrq_len += len;
 		psc_assert(q->mfsrq_len <= q->mfsrq_size);
 		if (q->mfsrq_flags & MFSRQ_READ)
-			q->mfsrq_mfh->mfh_nbytes_rd += len;
+			mfh->mfh_nbytes_rd += len;
 		else
-			q->mfsrq_mfh->mfh_nbytes_wr += len;
+			mfh->mfh_nbytes_wr += len;
 	}
 
 	psc_assert(q->mfsrq_ref > 0);
 	q->mfsrq_ref--;
 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
 	if (q->mfsrq_ref) {
-		MFH_ULOCK(q->mfsrq_mfh);
-		return (-1);
+		if (r0)
+			biorq_incref(r0);
+		MFH_ULOCK(mfh);
+		return;
 	}
 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
-	mfh_decref(q->mfsrq_mfh);
+	mfh_decref(mfh);
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		if (q->mfsrq_err) {
@@ -681,25 +687,23 @@ _msl_complete_fsrq(const struct pfl_callerinfo *pci,
 		r = q->mfsrq_biorq[i];
 		if (!r)
 			break;
-		if (r->biorq_fsrqi || r == r0)
+		if (r == r0)
 			continue;
 		msl_biorq_release(r);
 	}
-
-	return (0);
 }
 
-int
+void
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 {
-	int rc, i, needflush = 0;
+	int i, needflush = 0;
 	struct msl_fsrqinfo *q;
 	size_t len = 0;
 
 	/* don't do anything for readahead */
 	q = r->biorq_fsrqi;
 	if (q == NULL)
-		return (0);
+		return;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
@@ -738,13 +742,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (needflush)
 		msl_pages_schedflush(r);
 
-	rc = msl_complete_fsrq(q, len, r);
-
-	BIORQ_LOCK(r);
-	r->biorq_fsrqi = NULL;
-	BIORQ_ULOCK(r);
-
-	return (rc);
+	msl_complete_fsrq(q, len, r);
 }
 
 /*
@@ -2021,7 +2019,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 
 			q->mfsrq_biorq[i] = r;
+
+			MFH_LOCK(mfh);
 			q->mfsrq_ref++;
+			MFH_ULOCK(mfh);
+
 			DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
 		}
 
@@ -2152,7 +2154,8 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto end;
 		if (b->bcm_flags & BMAPF_DIO)
 			goto end;
-		if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
+		if ((b->bcm_flags & (BMAPF_LOADING | BMAPF_LOADED)) !=
+		    BMAPF_LOADED) {
 			bmap_op_done(b);
 			fcmh_op_done(f);
 			lc_add(&msl_readaheadq, rarq);
