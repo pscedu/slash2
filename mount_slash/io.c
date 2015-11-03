@@ -521,6 +521,10 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		if (r->biorq_flags & BIORQ_WRITE)
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
+		BIORQ_LOCK(r);
+		r->biorq_flags |= BIORQ_AIOWAKE;
+		BIORQ_ULOCK(r);
+
 		car->car_fsrqinfo = r->biorq_fsrqi;
 	}
 
@@ -939,10 +943,11 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 	mfsrq_seterr(q, rc);
 	msl_biorq_release(r);
 
-	// XXX if (was_aio) {
-	MFH_LOCK(q->mfsrq_mfh);
-	psc_waitq_wakeall(&msl_fhent_aio_waitq);
-	MFH_ULOCK(q->mfsrq_mfh);
+	if (r->biorq_flags & BIORQ_AIOWAKE) {
+		MFH_LOCK(q->mfsrq_mfh);
+		psc_waitq_wakeall(&msl_fhent_aio_waitq);
+		MFH_ULOCK(q->mfsrq_mfh);
+	}
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 

@@ -185,6 +185,7 @@ struct bmpc_ioreq {
 #define BIORQ_WAIT		(1 <<  7)	/* at least one waiter for aio */
 #define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
+#define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
@@ -212,6 +213,7 @@ struct bmpc_ioreq {
 	    (r)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (r)->biorq_flags & BIORQ_ONTREE		? "t" : "",	\
 	    (r)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (r)->biorq_flags & BIORQ_AIOWAKE		? "k" : "",	\
 	    (r)->biorq_ref, (r)->biorq_off, (r)->biorq_len,		\
 	    (r)->biorq_retries, (r)->biorq_buf, (r)->biorq_fsrqi,	\
 	    (r)->biorq_fsrqi ? mfsrq_2_pfr((r)->biorq_fsrqi) : NULL,	\
