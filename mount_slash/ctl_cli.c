@@ -663,7 +663,7 @@ msctlmsg_bmpce_send(int fd, struct psc_ctlmsghdr *mh,
 	mpce->mpce_ref = e->bmpce_ref;
 	mpce->mpce_flags = e->bmpce_flags;
 	mpce->mpce_off = e->bmpce_off;
-//	mpce->mpce_start = e->bmpce_start;
+	mpce->mpce_start = e->bmpce_start;
 	mpce->mpce_nwaiters =e->bmpce_waitq ?
 	    psc_waitq_nwaiters(e->bmpce_waitq) : 0;
 	mpce->mpce_npndgaios = pll_nitems(&e->bmpce_pndgaios);
