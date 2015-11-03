@@ -1172,7 +1172,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	BML_ULOCK(bml);
 
 	/* Remove the direct I/O flag if possible. */
-	if ((b->bcm_flags & BMAPF_DIO || b->bcm_diocb) &&
+	if (b->bcm_flags & BMAPF_DIO &&
 	    (!bmi->bmi_writers ||
 	     (bmi->bmi_writers == 1 && !bmi->bmi_readers))) {
 		b->bcm_flags &= ~BMAPF_DIO;

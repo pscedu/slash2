@@ -61,7 +61,7 @@ slm_coh_bml_release(struct bmap_mds_lease *bml)
 	BML_ULOCK(bml);
 
 	bmi = bml->bml_bmi;
-	b = bmi_2_bmap(b);
+	b = bmi_2_bmap(bmi);
 	BMAP_LOCK(b);
 	bmi->bmi_diocb--;
 	BMAP_ULOCK(b);
@@ -122,9 +122,14 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
+	struct bmap_mds_info *bmi;
+	struct bmap *b;
 	int rc;
 
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "bml=%p", bml);
+
+	bmi = bml->bml_bmi;
+	b = bmi_2_bmap(bmi);
 
 	BML_LOCK_ENSURE(bml);
 	BMAP_LOCK_ENSURE(b);
