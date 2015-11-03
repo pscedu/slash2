@@ -287,8 +287,10 @@ struct gid_mapping {
 
 #define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
+void	 msl_bmap_stash_lease(struct bmap *,
+    	    const struct srt_bmapdesc *, int, const char *);
 int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slashrpc_cservice **);
-void	 msl_bmap_reap_init(struct bmap *, const struct srt_bmapdesc *);
+void	 msl_bmap_reap_init(struct bmap *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 

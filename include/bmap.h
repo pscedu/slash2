@@ -122,8 +122,8 @@ struct bmap {
 /* shared bmap_flags */
 #define BMAPF_RD		(1 <<  0)	/* data is read-only */
 #define BMAPF_WR		(1 <<  1)	/* data is read-write accessible */
-#define BMAPF_INIT		(1 <<  2)	/* bmap initializing from disk/network */
-#define BMAPF_RETR		(1 <<  3)	/* retrieval RPC is inflight */
+#define BMAPF_LOADED		(1 <<  2)	/* contents are loaded */
+#define BMAPF_LOADING		(1 <<  3)	/* retrieval RPC is inflight */
 #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
 #define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
 #define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
@@ -154,8 +154,8 @@ struct bmap {
 	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
 	(b)->bcm_flags & BMAPF_RD	? "R" : "",			\
 	(b)->bcm_flags & BMAPF_WR	? "W" : "",			\
-	(b)->bcm_flags & BMAPF_INIT	? "I" : "",			\
-	(b)->bcm_flags & BMAPF_RETR	? "r" : "",			\
+	(b)->bcm_flags & BMAPF_LOADED	? "L" : "",			\
+	(b)->bcm_flags & BMAPF_LOADING	? "l" : "",			\
 	(b)->bcm_flags & BMAPF_DIO	? "D" : "",			\
 	(b)->bcm_flags & BMAPF_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAPF_MODECHNG	? "G" : "",			\

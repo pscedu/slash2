@@ -192,7 +192,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	 * not contain certain structures.
 	 */
 	psc_assert(bmaprw == BMAPF_RD || bmaprw == BMAPF_WR);
-	b->bcm_flags = BMAPF_INIT | bmaprw;
+	b->bcm_flags = bmaprw;
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
@@ -240,53 +240,58 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 
-	if (b->bcm_flags & (BMAPF_RETR | BMAPF_MODECHNG)) {
-		if (flags & BMAPGETF_NONBLOCK)
+	if (flags & BMAPGETF_NONBLOCK) {
+		if (b->bcm_flags & BMAPF_LOADING)
 			goto out;
+	} else
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_LOADING);
 
-		/*
-		 * Wait while retrieving or mode-changing.
-		 *
-		 * Others wishing to access this bmap in the same mode
-		 * must wait until MODECHNG ops have completed.  If the
-		 * desired mode is present then a thread may proceed
-		 * without blocking here so long as it only accesses
-		 * structures which pertain to its mode.
-		 */
-		bmap_wait_locked(b, b->bcm_flags &
-		    (BMAPF_RETR | BMAPF_MODECHNG));
+	if (b->bcm_flags & BMAPF_LOADED)
+		goto loaded;
+
+	if (flags & BMAPGETF_NORETRIEVE) {
+		b->bcm_flags |= BMAPF_LOADED;
+		goto loaded;
 	}
 
-	if (b->bcm_flags & BMAPF_INIT) {
-		if (flags & BMAPGETF_NORETRIEVE)
-			b->bcm_flags &= ~BMAPF_INIT;
-		else {
-			b->bcm_flags |= BMAPF_RETR;
-			BMAP_ULOCK(b);
-			/*
-			 * mds_bmap_read(),
-			 * iod_bmap_retrieve(),
-			 * msl_bmap_retrieve()
-			 */
-			psc_assert(rw == SL_WRITE || rw == SL_READ);
-			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
-			BMAP_LOCK(b);
+	b->bcm_flags |= BMAPF_LOADING;
+	DEBUG_BMAP(PLL_DIAG, b, "loading bmap; flags=%d", flags);
+	BMAP_ULOCK(b);
 
-			if ((flags & BMAPGETF_NONBLOCK) == 0 || rc)
-				b->bcm_flags &= ~BMAPF_RETR;
+	/* mds_bmap_read(), iod_bmap_retrieve(), msl_bmap_retrieve() */
+	psc_assert(rw == SL_WRITE || rw == SL_READ);
+	rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 
-			if (flags & BMAPGETF_NONBLOCK || rc)
-				;
-			else
-				b->bcm_flags &= ~BMAPF_INIT;
-		}
-		if ((b->bcm_flags & BMAPF_INIT) == 0)
-			bmap_wake_locked(b);
+	BMAP_LOCK(b);
+
+	if (flags & BMAPGETF_NONBLOCK) {
+		if (rc)
+			b->bcm_flags &= ~BMAPF_LOADING;
+		goto out;
 	}
+	b->bcm_flags &= ~BMAPF_LOADING;
+	if (!rc) {
+		b->bcm_flags |= BMAPF_LOADED;
+		bmap_wake_locked(b);
+	}
+
+ loaded:
+	/*
+	 * Others wishing to access this bmap in the same mode must wait
+	 * until MODECHNG ops have completed.  If the desired mode is
+	 * present then a thread may proceed without blocking here so
+	 * long as it only accesses structures which pertain to its
+	 * mode.
+	 */
+	if (flags & BMAPGETF_NONBLOCK) {
+		if (b->bcm_flags & BMAPF_MODECHNG)
+			goto out;
+	} else
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_MODECHNG);
 
 	/*
 	 * Not all lookups are done with the intent of changing the bmap
-	 * mode.  bmap_lookup() does not specify a rw value.
+	 * mode i.e. bmap_lookup() does not specify a rw value.
 	 *
 	 * bmo_mode_chngf is currently CLI only and is
 	 * msl_bmap_modeset().
@@ -366,8 +371,8 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 {
 	PFL_PRFLAG(BMAPF_RD, flags, seq);
 	PFL_PRFLAG(BMAPF_WR, flags, seq);
-	PFL_PRFLAG(BMAPF_INIT, flags, seq);
-	PFL_PRFLAG(BMAPF_RETR, flags, seq);
+	PFL_PRFLAG(BMAPF_LOADED, flags, seq);
+	PFL_PRFLAG(BMAPF_LOADING, flags, seq);
 	PFL_PRFLAG(BMAPF_DIO, flags, seq);
 	PFL_PRFLAG(BMAPF_TOFREE, flags, seq);
 	PFL_PRFLAG(BMAPF_MODECHNG, flags, seq);
