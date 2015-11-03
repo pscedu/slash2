@@ -39,7 +39,7 @@
 
 struct sl_resm			*slc_rmc_resm;
 struct pscrpc_svc_handle	*msl_rci_svh;
-struct pscrpc_svc_handle	*msl_rcm_svh; 
+struct pscrpc_svc_handle	*msl_rcm_svh;
 
 __static void
 slc_rci_init(void)
@@ -63,13 +63,13 @@ slc_rcm_init(void)
 	    thr->pscthr_name);
 }
 
-/**
- * slc_rpc_initsvc: Initialize CLI RPC services.
+/*
+ * Initialize CLI RPC services.
  */
 void
 slc_rpc_initsvc(void)
 {
-	struct pscrpc_svc_handle *svh; 
+	struct pscrpc_svc_handle *svh;
 
 	/* Setup request service for CLI from MDS. */
 	msl_rcm_svh = svh = PSCALLOC(sizeof(*svh));
@@ -103,8 +103,8 @@ slc_rpc_initsvc(void)
 }
 
 /*
- * This function is called once at mount time. If the MDS changes, we have
- * to remount.
+ * This function is called once at mount time.  If the MDS changes, we
+ * have to remount.
  */
 int
 slc_rmc_setmds(const char *name)
@@ -124,9 +124,9 @@ slc_rmc_setmds(const char *name)
 	return (0);
 }
 
-/**
- * slc_rmc_retry_pfcc - Determine if process doesn't want to wait or if
- *	maximum allowed timeout has been reached for MDS communication.
+/*
+ * Determine if process doesn't want to wait or if maximum allowed
+ * timeout has been reached for MDS communication.
  */
 int
 slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
