@@ -207,7 +207,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAPF_RD		? 'R' : '-',
 	    scb->scb_flags & BMAPF_WR		? 'W' : '-',
 	    scb->scb_flags & BMAPF_LOADED	? 'L' : '-',
-	    scb->scb_flags & BMAPF_RETRIEVING	? 'r' : '-',
+	    scb->scb_flags & BMAPF_LOADING	? 'l' : '-',
 	    scb->scb_flags & BMAPF_DIO		? 'D' : '-',
 	    scb->scb_flags & BMAPF_TOFREE	? 'F' : '-',
 	    scb->scb_flags & BMAPF_MODECHNG	? 'G' : '-',
