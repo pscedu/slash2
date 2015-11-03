@@ -197,7 +197,8 @@ struct bmpc_ioreq {
 #define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
 #define DEBUGS_BIORQ(level, ss, r, fmt, ...)				\
-	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s%s%s%s "	\
+	psclogs((level), (ss), "biorq@%p "				\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p pfr=%p "				\
 	    "sliod=%x npages=%d "					\
