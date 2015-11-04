@@ -88,7 +88,7 @@ struct msflush_thread {
 struct msfs_thread {
 	size_t				 mft_uniqid;
 	struct psc_multiwait		 mft_mw;
-	char				 mft_uprog[256];
+	char				 mft_uprog[128];
 	struct pscfs_req		*mft_pfr;
 };
 
@@ -169,7 +169,7 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
-	char				 mfh_uprog[256];
+	char				 mfh_uprog[128];
 };
 
 #define MFHF_CLOSING			(1 << 0)	/* close(2) has been issued */
@@ -288,7 +288,7 @@ struct gid_mapping {
 #define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
 void	 msl_bmap_stash_lease(struct bmap *,
-    	    const struct srt_bmapdesc *, int, const char *);
+	    const struct srt_bmapdesc *, int, const char *);
 int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmap *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
