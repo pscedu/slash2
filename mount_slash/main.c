@@ -4009,7 +4009,8 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	psc_dynarray_add(&pscfs_modules, &slc_pscfs);
+	pflfs_module_init(&slc_pscfs);
+	pflfs_module_add(0, &slc_pscfs);
 
 	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
 }
