@@ -752,7 +752,7 @@ slvr_remove_all(struct fidc_membh *f)
 	PFL_GETTIMESPEC(&ts0);
 
 	/*
-	 * Use two loops to avoid entangled with some background
+	 * Use two loops to avoid entanglement with some background
 	 * operations.
 	 */
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
