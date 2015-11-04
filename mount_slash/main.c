@@ -1237,6 +1237,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 		slc_fcmh_setattr(p, &mp->pattr);
 
+		namecache_delete(p, name);
+
 		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!tmprc) {
 			if (mp->valid) {
@@ -1248,7 +1250,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			}
 		} else
 			OPSTAT_INCR("delete-skipped");
-		namecache_delete(p, name);
 	}
 
  out:
