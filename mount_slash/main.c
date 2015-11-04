@@ -3608,7 +3608,41 @@ slc_setprefios(sl_ios_id_t id)
 }
 
 void
-msl_init(void)
+parse_allowexe(void)
+{
+	char *p, *s, *t;
+	struct stat stb;
+
+	s = slcfg_local->cfg_allowexe;
+	while (s) {
+		p = s;
+		while (isspace(*p))
+			p++;
+		s = strchr(p, ':');
+		if (s)
+			*s++ = '\0';
+		if (strlen(p)) {
+			t = p + strlen(p) - 1;
+			if (isspace(*t)) {
+				while (isspace(*t))
+					t--;
+				t[1] = '\0';
+			}
+		}
+		if (*p == '\0')
+			continue;
+		if (stat(p, &stb) == -1) {
+			warn("%s", p);
+			continue;
+		}
+
+		psc_dynarray_add(&allow_exe, p);
+		psclog_info("restricting open(2) access to %s", p);
+	}
+}
+
+void
+msl_init(const char *cfgfn)
 {
 	struct sl_resource *r;
 	char *name;
@@ -3623,7 +3657,7 @@ msl_init(void)
 	/* defaults */
 	slcfg_local->cfg_fidcachesz = 1024;
 
-	slcfg_parse(cfg);
+	slcfg_parse(cfgfn);
 	slc_root_squash = slcfg_local->cfg_root_squash;
 	parse_allowexe();
 	if (slc_use_mapfile) {
@@ -3786,40 +3820,6 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
-void
-parse_allowexe(void)
-{
-	char *p, *s, *t;
-	struct stat stb;
-
-	s = slcfg_local->cfg_allowexe;
-	while (s) {
-		p = s;
-		while (isspace(*p))
-			p++;
-		s = strchr(p, ':');
-		if (s)
-			*s++ = '\0';
-		if (strlen(p)) {
-			t = p + strlen(p) - 1;
-			if (isspace(*t)) {
-				while (isspace(*t))
-					t--;
-				t[1] = '\0';
-			}
-		}
-		if (*p == '\0')
-			continue;
-		if (stat(p, &stb) == -1) {
-			warn("%s", p);
-			continue;
-		}
-
-		psc_dynarray_add(&allow_exe, p);
-		psclog_info("restricting open(2) access to %s", p);
-	}
-}
-
 enum {
 	LOOKUP_TYPE_BOOL,
 	LOOKUP_TYPE_UINT64,
@@ -3890,7 +3890,7 @@ msl_fileinfo_freeze(void *fh)
 	struct msl_fhent *mfh = fh;
 
 	mfh->mfh_fg = mfh->mfh_fcmh->fcmh_fg;
-	fcmh_op_done_type(mfh->mfh_fcmh);
+	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 }
 
 /*
@@ -3904,6 +3904,8 @@ msl_fileinfo_thaw(void *fh)
 
 	rc = fidc_lookup_load(mfh->mfh_fg.fg_fid, &mfh->mfh_fcmh, NULL);
 	psc_assert(rc == 0);
+	fcmh_op_start_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
+	fcmh_op_done(mfh->mfh_fcmh);
 }
 
 void
@@ -3944,7 +3946,7 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_setxattr		= mslfsop_setxattr;
 	m->pf_handle_removexattr	= mslfsop_removexattr;
 
-	msl_init();
+	msl_init(NULL);
 }
 
 int
@@ -4040,7 +4042,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
-	msl_init();
+	msl_init(cfg);
 
 	pflfs_module_init(&slc_pscfs);
 	pflfs_module_add(0, &slc_pscfs);
