@@ -54,9 +54,6 @@ bmap_2_mfh(struct bmap *b)
  * Called when a read request offset exceeds the bounds of the file
  * causing a new bmap to be created.
  *
- * Note: bmap creation race conditions are prevented because the bmap
- * handle already exists at this time with bcm_flags == BMAPF_INIT.
- *
  * This causes other threads to block on the waitq until read/creation
  * has completed.
  *
