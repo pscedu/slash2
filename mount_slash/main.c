@@ -3610,9 +3610,33 @@ slc_setprefios(sl_ios_id_t id)
 void
 msl_init(void)
 {
+	struct sl_resource *r;
 	char *name;
 	int rc;
-	struct sl_resource *r;
+
+	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
+	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
+	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
+
+	sl_sys_upnonce = psc_random32();
+
+	/* defaults */
+	slcfg_local->cfg_fidcachesz = 1024;
+
+	slcfg_parse(cfg);
+	slc_root_squash = slcfg_local->cfg_root_squash;
+	parse_allowexe();
+	if (slc_use_mapfile) {
+		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
+		    um_key, um_hentry, 191, NULL, "uidmapext");
+		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
+		    um_key, um_hentry, 191, NULL, "uidmapint");
+
+		psc_hashtbl_init(&slc_gidmap_int, 0, struct gid_mapping,
+		    gm_key, gm_hentry, 191, NULL, "gidmapint");
+
+		parse_mapfile();
+	}
 
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
@@ -3703,6 +3727,9 @@ msl_init(void)
 		else
 			slc_setprefios(r->res_id);
 	}
+
+	pscfs_entry_timeout = 8.;
+	pscfs_attr_timeout = 8.;
 }
 
 struct pscfs slc_pscfs = {
@@ -3853,10 +3880,40 @@ usage(void)
 	exit(1);
 }
 
+/*
+ * This routine is called when pscfs fileinfo data is serialized i.e.
+ * for purposes of reloading the entire SLASH2 file system module.
+ */
+void
+msl_fileinfo_freeze(void *fh)
+{
+	struct msl_fhent *mfh = fh;
+
+	mfh->mfh_fg = mfh->mfh_fcmh->fcmh_fg;
+	fcmh_op_done_type(mfh->mfh_fcmh);
+}
+
+/*
+ * This routine is called when pscfs fileinfo data is deserialized.
+ */
+void
+msl_fileinfo_thaw(void *fh)
+{
+	struct msl_fhent *mfh = fh;
+	int rc;
+
+	rc = fidc_lookup_load(mfh->mfh_fg.fg_fid, &mfh->mfh_fcmh, NULL);
+	psc_assert(rc == 0);
+}
+
 void
 pscfs_module_load(struct pscfs *m)
 {
 	m->pf_name = "slash2";
+
+//	m->pf_fileinfo_freeze		= msl_fileinfo_freeze;
+//	m->pf_fileinfo_thaw		= msl_fileinfo_thaw;
+
 	m->pf_handle_access		= mslfsop_access;
 	m->pf_handle_release		= mslfsop_release;
 	m->pf_handle_releasedir		= mslfsop_release;
@@ -3886,6 +3943,8 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_getxattr		= mslfsop_getxattr;
 	m->pf_handle_setxattr		= mslfsop_setxattr;
 	m->pf_handle_removexattr	= mslfsop_removexattr;
+
+	msl_init();
 }
 
 int
@@ -3968,8 +4027,6 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "msfsmgrthr");
 
-	sl_sys_upnonce = psc_random32();
-
 	noncanon_mp = argv[0];
 	if (unmount_first)
 		unmount(noncanon_mp);
@@ -3978,34 +4035,12 @@ main(int argc, char *argv[])
 	if (realpath(noncanon_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", noncanon_mp);
 
-	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
-	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
-	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
-
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
 
 	sl_drop_privs(1);
 
-	slcfg_local->cfg_fidcachesz = 1024;
-	slcfg_parse(cfg);
-	slc_root_squash = slcfg_local->cfg_root_squash;
-	parse_allowexe();
-	if (slc_use_mapfile) {
-		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
-		    um_key, um_hentry, 191, NULL, "uidmapext");
-		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
-		    um_key, um_hentry, 191, NULL, "uidmapint");
-
-		psc_hashtbl_init(&slc_gidmap_int, 0, struct gid_mapping,
-		    gm_key, gm_hentry, 191, NULL, "gidmapint");
-
-		parse_mapfile();
-	}
 	msl_init();
-
-	pscfs_entry_timeout = 8.;
-	pscfs_attr_timeout = 8.;
 
 	pflfs_module_init(&slc_pscfs);
 	pflfs_module_add(0, &slc_pscfs);
