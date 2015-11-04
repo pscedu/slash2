@@ -149,6 +149,8 @@ _msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 			}
 			return (1);
 		}
+		if (accounting) 
+			psc_fatalx("biorq %p does not valid data", r);
 
 		return (0);
 	}
@@ -1626,7 +1628,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
-		psc_assert(msl_biorq_page_valid_accounting(r, i));
+		msl_biorq_page_valid_accounting(r, i);
 
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r,
 		    i));
