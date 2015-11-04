@@ -347,9 +347,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->rw == SL_WRITE)
-		OPSTAT_INCR("get_bmap_lease_write");
+		OPSTAT_INCR("getbmap-lease-write");
 	else if (mq->rw == SL_READ)
-		OPSTAT_INCR("get_bmap_lease_read");
+		OPSTAT_INCR("getbmap-lease-read");
 	else {
 		mp->rc = -EINVAL;
 		return (0);
@@ -1692,7 +1692,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	return (0);
 }
 
-/* 
+/*
  * Handle a RPC request, called from pscrpc_server_handle_request().
  */
 int

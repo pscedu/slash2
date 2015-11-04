@@ -118,7 +118,7 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((e), _locked);				\
 	} while (0)
 
-#define DEBUG_BMPCE(level, pg, fmt, ...)					\
+#define DEBUG_BMPCE(level, pg, fmt, ...)				\
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
 	    "fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "				\
@@ -185,6 +185,7 @@ struct bmpc_ioreq {
 #define BIORQ_WAIT		(1 <<  7)	/* at least one waiter for aio */
 #define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
+#define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
@@ -196,7 +197,8 @@ struct bmpc_ioreq {
 #define BIORQ_CLEARATTR(r, fl)	CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
 
 #define DEBUGS_BIORQ(level, ss, r, fmt, ...)				\
-	psclogs((level), (ss), "biorq@%p flg=%#x:%s%s%s%s%s%s%s%s%s%s "	\
+	psclogs((level), (ss), "biorq@%p "				\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p pfr=%p "				\
 	    "sliod=%x npages=%d "					\
@@ -212,6 +214,7 @@ struct bmpc_ioreq {
 	    (r)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (r)->biorq_flags & BIORQ_ONTREE		? "t" : "",	\
 	    (r)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (r)->biorq_flags & BIORQ_AIOWAKE		? "k" : "",	\
 	    (r)->biorq_ref, (r)->biorq_off, (r)->biorq_len,		\
 	    (r)->biorq_retries, (r)->biorq_buf, (r)->biorq_fsrqi,	\
 	    (r)->biorq_fsrqi ? mfsrq_2_pfr((r)->biorq_fsrqi) : NULL,	\

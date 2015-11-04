@@ -644,6 +644,7 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_ONTREE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_READAHEAD, &flags, &seq);
+	PFL_PRFLAG(BIORQ_AIOWAKE, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

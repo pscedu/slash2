@@ -254,7 +254,7 @@ libsl_init(int nmsgs)
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
 		err(1, "setenv");
 
-	if (getenv("LNET_NETWORKS")) {
+	if (getenv("LNET_NETWORKS") || getenv("LNET_IP2NETS")) {
 		psclog_info("using LNET_NETWORKS (%s) from "
 		    "environment", getenv("LNET_NETWORKS"));
 		goto skiplnet;

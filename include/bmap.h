@@ -120,18 +120,16 @@ struct bmap {
 #define bmapc_memb bmap
 
 /* shared bmap_flags */
-#define BMAPF_RD		(1 <<  0)
-#define BMAPF_WR		(1 <<  1)
-#define BMAPF_INIT		(1 <<  2)	/* initializing from disk/network */
-#define BMAPF_PREINIT		(1 <<  3)	/* super early initialization */
-#define BMAPF_RETR		(1 <<  4)	/* initializing from disk/network */
-#define BMAPF_DIO		(1 <<  5)	/* direct I/O, no client caching */
-#define BMAPF_DIOCB		(1 <<  6)
-#define BMAPF_TOFREE		(1 <<  7)	/* refcnt dropped to zero, removing */
-#define BMAPF_MODECHNG		(1 <<  8)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAPF_WAITERS		(1 <<  9)	/* has bcm_fcmh waiters */
-#define BMAPF_BUSY		(1 << 10)	/* temporary processing lock */
-#define _BMAPF_SHIFT		(1 << 11)
+#define BMAPF_RD		(1 <<  0)	/* data is read-only */
+#define BMAPF_WR		(1 <<  1)	/* data is read-write accessible */
+#define BMAPF_LOADED		(1 <<  2)	/* contents are loaded */
+#define BMAPF_LOADING		(1 <<  3)	/* retrieval RPC is inflight */
+#define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
+#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 <<  9)
 
 #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
 
@@ -156,9 +154,9 @@ struct bmap {
 	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
 	(b)->bcm_flags & BMAPF_RD	? "R" : "",			\
 	(b)->bcm_flags & BMAPF_WR	? "W" : "",			\
-	(b)->bcm_flags & BMAPF_INIT	? "I" : "",			\
+	(b)->bcm_flags & BMAPF_LOADED	? "L" : "",			\
+	(b)->bcm_flags & BMAPF_LOADING	? "l" : "",			\
 	(b)->bcm_flags & BMAPF_DIO	? "D" : "",			\
-	(b)->bcm_flags & BMAPF_DIOCB	? "C" : "",			\
 	(b)->bcm_flags & BMAPF_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAPF_MODECHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAPF_WAITERS	? "w" : "",			\
@@ -331,7 +329,7 @@ void	_bmap_op_done(const struct pfl_callerinfo *,
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmap **);
 struct bmap *
-	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int *);
+	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int, int *);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
@@ -354,20 +352,20 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 					(f), (n), (rw), BMAPGETF_CREATE, (bp))
 
 enum bmap_opcnt_types {
-	BMAP_OPCNT_ASYNC,		/* asynchronous callback */
-	BMAP_OPCNT_BCRSCHED,		/* bmap CRC update list */
-	BMAP_OPCNT_BIORQ,		/* IO request */
-	BMAP_OPCNT_FLUSH,		/* flusher queue */
-	BMAP_OPCNT_LEASE,		/* */
-	BMAP_OPCNT_LEASEEXT,		/* */
-	BMAP_OPCNT_LOOKUP,		/* bmap_get */
-	BMAP_OPCNT_REAPER,		/* client bmap timeout */
-	BMAP_OPCNT_REASSIGN,		/* */
-	BMAP_OPCNT_REPLWK,		/* repl work inside ION */
-	BMAP_OPCNT_SLVR,		/* IOD sliver */
-	BMAP_OPCNT_TRUNCWAIT,		/* */
-	BMAP_OPCNT_UPSCH,		/* peer update scheduler */
-	BMAP_OPCNT_WORK			/* generic worker thread */
+	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
+	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
+	BMAP_OPCNT_BIORQ,		/* all: IO request */
+	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
+	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
+	BMAP_OPCNT_LEASEEXT,		/* CLI: lease extension async RPC */
+	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
+	BMAP_OPCNT_REAPER,		/* all: client bmap timeout */
+	BMAP_OPCNT_REASSIGN,		/* CLI: lease reassignment async RPC */
+	BMAP_OPCNT_REPLWK,		/* IOD: repl work */
+	BMAP_OPCNT_SLVR,		/* all: IOD sliver */
+	BMAP_OPCNT_TRUNCWAIT,		/* CLI: waiting for ptrunc to resolve */
+	BMAP_OPCNT_UPSCH,		/* all: peer update scheduler */
+	BMAP_OPCNT_WORK			/* all: generic worker thread */
 };
 
 RB_HEAD(bmaptree, bmap);

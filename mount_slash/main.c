@@ -512,7 +512,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc2)
 		PFL_GOTOERR(out, rc2);
 
-	msl_bmap_reap_init(b, &mp->sbd);
+	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload");
+	msl_bmap_reap_init(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,
 	    libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
@@ -538,8 +539,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -723,8 +723,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	DEBUG_FCMH(PLL_DEBUG, f, "attrs retrieved via rpc rc=%d", rc);
 
 	FCMH_ULOCK(f);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -865,8 +864,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -963,8 +961,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -1030,8 +1027,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		FCMH_ULOCK(f);
 	} else if (f)
 		fcmh_op_done(f);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -1265,8 +1261,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -1374,8 +1369,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -1844,8 +1838,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	pscfs_reply_readlink(pfr, retbuf, rc);
 
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -1952,8 +1945,7 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
  out:
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (ptrunc_started)
@@ -2476,8 +2468,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		fcmh_op_done(op);
 	if (np && np != op)
 		fcmh_op_done(np);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -2554,8 +2545,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
 	sl_resource_put(pref_ios);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -2649,8 +2639,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -2987,8 +2976,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
 
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -3243,8 +3231,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
 
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	PSCFREE(buf);
@@ -3329,8 +3316,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	if (f)
 		fcmh_op_done(f);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -3408,8 +3394,7 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	rc = -rc;
 
  out:
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (locked)
@@ -3505,8 +3490,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
 
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -4025,7 +4009,8 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
-	psc_dynarray_add(&pscfs_modules, &slc_pscfs);
+	pflfs_module_init(&slc_pscfs);
+	pflfs_module_add(0, &slc_pscfs);
 
 	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
 }

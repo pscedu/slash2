@@ -65,7 +65,7 @@ struct bmap_mds_info {
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
-	struct pfl_odt_receipt	*bmi_assign;
+	struct pfl_odt_receipt	*bmi_assign;		/* bmap <-> ION binding */
 	uint64_t		 bmi_seq;		/* Largest write bml seq # */
 
 	/*
@@ -75,16 +75,17 @@ struct bmap_mds_info {
 	 */
 	int32_t			 bmi_writers;
 	int32_t			 bmi_readers;
-	struct pfl_rwlock	 bmi_rwlock;
-	struct slm_update_data	 bmi_upd;
+	int32_t			 bmi_diocb;		/* # of DIO downgrade RPCs inflight */
+	struct pfl_rwlock	 bmi_rwlock;		/* rwlock for modifying bmap contents */
+	struct slm_update_data	 bmi_upd;		/* data for upsch (replication engine) */
 
 	/*
 	 * These fields are used when writing changes to bmap in-memory
 	 * before they hit persistent store.
 	 */
 	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
-	int			 bmi_sys_prio;
-	int			 bmi_usr_prio;
+	int			 bmi_sys_prio;		/* upsch admin priority */
+	int			 bmi_usr_prio;		/* upsch user priority */
 };
 
 #define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
