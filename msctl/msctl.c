@@ -822,7 +822,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_biorq *msr = m;
 
-	printf("%016"SLPRIxFID" %5d %3d %9d %6d     "
+	printf("%016"SLPRIxFID" %5d %3d %9d %6d "
 	    "%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %10s %10"PRId64" %2d %2d %#lx\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
