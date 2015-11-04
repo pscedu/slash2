@@ -3025,7 +3025,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct sl_site *s;
 	int i, j;
 
-	pscthr_killall();
 	pfl_wkthr_killall();
 	lc_kill(&slc_bmapflushq);
 	lc_kill(&slc_bmaptimeoutq);
