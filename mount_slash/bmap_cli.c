@@ -247,16 +247,18 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
+	if (flags & BMAPGETF_NONBLOCK)
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		if ((flags & BMAPGETF_NONBLOCK) == 0)
+		if (flags & BMAPGETF_NONBLOCK)
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+		else
 			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
 	}
-	if (flags & BMAPGETF_NONBLOCK) {
-		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
-		return (rc);
-	}
+	if (flags & BMAPGETF_NONBLOCK)
+		return (0);
 
 	psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
@@ -729,16 +731,18 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlget_cb;
+	if (flags & BMAPGETF_NONBLOCK)
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		if ((flags & BMAPGETF_NONBLOCK) == 0)
+		if (flags & BMAPGETF_NONBLOCK)
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+		else
 			psc_compl_destroy(&compl);
 		PFL_GOTOERR(out, rc);
 	}
-	if (flags & BMAPGETF_NONBLOCK) {
-		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
-		return (rc);
-	}
+	if (flags & BMAPGETF_NONBLOCK)
+		return (0);
 
 	psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
@@ -807,7 +811,6 @@ msl_bmap_reap_init(struct bmap *b)
 	struct srt_bmapdesc *sbd = bmap_2_sbd(b);
 
 	BMAP_LOCK_ENSURE(b);
-
 
 	/*
 	 * Take the reaper ref cnt early and place the bmap onto the
