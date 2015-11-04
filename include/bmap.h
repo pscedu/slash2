@@ -352,20 +352,20 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 					(f), (n), (rw), BMAPGETF_CREATE, (bp))
 
 enum bmap_opcnt_types {
-	BMAP_OPCNT_ASYNC,		/* asynchronous callback */
-	BMAP_OPCNT_BCRSCHED,		/* bmap CRC update list */
-	BMAP_OPCNT_BIORQ,		/* IO request */
-	BMAP_OPCNT_FLUSH,		/* flusher queue */
-	BMAP_OPCNT_LEASE,		/* */
-	BMAP_OPCNT_LEASEEXT,		/* */
-	BMAP_OPCNT_LOOKUP,		/* bmap_get */
-	BMAP_OPCNT_REAPER,		/* client bmap timeout */
-	BMAP_OPCNT_REASSIGN,		/* */
-	BMAP_OPCNT_REPLWK,		/* repl work inside ION */
-	BMAP_OPCNT_SLVR,		/* IOD sliver */
-	BMAP_OPCNT_TRUNCWAIT,		/* */
-	BMAP_OPCNT_UPSCH,		/* peer update scheduler */
-	BMAP_OPCNT_WORK			/* generic worker thread */
+	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
+	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
+	BMAP_OPCNT_BIORQ,		/* all: IO request */
+	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
+	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
+	BMAP_OPCNT_LEASEEXT,		/* CLI: lease extension async RPC */
+	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
+	BMAP_OPCNT_REAPER,		/* all: client bmap timeout */
+	BMAP_OPCNT_REASSIGN,		/* CLI: lease reassignment async RPC */
+	BMAP_OPCNT_REPLWK,		/* IOD: repl work */
+	BMAP_OPCNT_SLVR,		/* all: IOD sliver */
+	BMAP_OPCNT_TRUNCWAIT,		/* CLI: waiting for ptrunc to resolve */
+	BMAP_OPCNT_UPSCH,		/* all: peer update scheduler */
+	BMAP_OPCNT_WORK			/* all: generic worker thread */
 };
 
 RB_HEAD(bmaptree, bmap);
