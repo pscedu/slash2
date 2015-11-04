@@ -150,7 +150,7 @@ struct slc_wkdata_readdir {
 struct msl_fhent {
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
-	struct psclist_head		 mfh_lentry;
+	struct psc_listentry		 mfh_lentry;
 	int				 mfh_flags;
 	int				 mfh_refcnt;
 	pid_t				 mfh_pid;
@@ -169,6 +169,7 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
+	struct sl_fidgen		 mfh_fg;	/* used during serialization */
 	char				 mfh_uprog[128];
 };
 
