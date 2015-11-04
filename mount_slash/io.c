@@ -149,7 +149,7 @@ _msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 			}
 			return (1);
 		}
-		if (accounting) 
+		if (accounting)
 			psc_fatalx("biorq %p does not valid data", r);
 
 		return (0);
@@ -851,8 +851,8 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	(void)psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b, "sbd_seq=%"PRId64,
-	    bmap_2_sbd(b)->sbd_seq);
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b, "rc=%d "
+	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
 	DYNARRAY_FOREACH(e, i, a)
@@ -1343,8 +1343,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			continue;
 		}
 		/*
-		 * The faulting flag could be set by a concurrent writer 
-		 * that touches a different area in the page, so don't 
+		 * The faulting flag could be set by a concurrent writer
+		 * that touches a different area in the page, so don't
 		 * assume that data is ready when it is cleared.
 		 */
 		if (e->bmpce_flags & BMPCEF_FAULTING) {
