@@ -1333,13 +1333,23 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	uint32_t off = 0;
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+
+  retry:
 		BMPCE_LOCK(e);
-		if (e->bmpce_flags & BMPCEF_FAULTING ||
-		    msl_biorq_page_valid(r, i)) {
+		if (msl_biorq_page_valid(r, i)) {
 			BMPCE_ULOCK(e);
 			if (r->biorq_flags & BIORQ_READAHEAD)
 				OPSTAT_INCR("readahead-gratuitous");
 			continue;
+		}
+		/*
+		 * The faulting flag could be set by a concurrent writer 
+		 * that touches a different area in the page, so don't 
+		 * assume that data is ready when it is cleared.
+		 */
+		if (e->bmpce_flags & BMPCEF_FAULTING) {
+			BMPCE_WAIT(e);
+			goto retry;
 		}
 
 		e->bmpce_flags |= BMPCEF_FAULTING;
