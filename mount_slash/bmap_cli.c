@@ -103,6 +103,9 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		psc_assert(sbd->sbd_fg.fg_fid);
 		psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
+		if (b->bcm_flags & BMAPF_WR)
+			psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
 
@@ -676,7 +679,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
  * @flags: access flags (BMAPGETF_*).
  */
 int
-msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
+msl_bmap_retrieve(struct bmap *b, int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -689,8 +692,6 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	struct psc_compl compl;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
-
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == MSTHRT_FS) {
@@ -713,13 +714,12 @@ msl_bmap_retrieve(struct bmap *b, enum rw rw, int flags)
 	mq->fg = f->fcmh_fg;
 	mq->prefios[0] = msl_pref_ios;
 	mq->bmapno = b->bcm_bmapno;
-	mq->rw = rw;
+	mq->rw = b->bcm_flags & BMAPF_RD ? SL_READ : SL_WRITE;
 	mq->flags |= SRM_LEASEBMAPF_GETINODE;
 	if (flags & BMAPGETF_NODIO)
 		mq->flags |= SRM_LEASEBMAPF_NODIO;
 
-	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
-	    b->bcm_bmapno, rw == SL_READ ? "read" : "write");
+	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u)", b->bcm_bmapno);
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
 	if ((flags & BMAPGETF_NONBLOCK) == 0) {

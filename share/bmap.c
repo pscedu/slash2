@@ -211,8 +211,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	return (b);
 }
 
-/**
- * _bmap_get - Get the specified bmap.
+/*
+ * Get the specified bmap.
  * @f: fcmh.
  * @n: bmap number.
  * @rw: access mode.
@@ -259,8 +259,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	BMAP_ULOCK(b);
 
 	/* mds_bmap_read(), iod_bmap_retrieve(), msl_bmap_retrieve() */
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
-	rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
+	rc = sl_bmap_ops.bmo_retrievef(b, flags);
 
 	BMAP_LOCK(b);
 
