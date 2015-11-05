@@ -167,7 +167,7 @@ slm_bmap_resetnonce(struct bmap *b)
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
+mds_bmap_read(struct bmap *b, int flags)
 {
 	int rc, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);

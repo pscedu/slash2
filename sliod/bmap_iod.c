@@ -346,13 +346,12 @@ iod_bmap_finalcleanup(struct bmap *b)
  * the CRC states bitmap.  For now we only load this information on read.
  *
  * @b: bmap to load.
- * @rw: the bmap access mode.
  *
  * Return zero on success or errno code on failure (likely an RPC
  * problem).
  */
 int
-iod_bmap_retrieve(struct bmap *b, enum rw rw, __unusedx int flags)
+iod_bmap_retrieve(struct bmap *b, __unusedx int flags)
 {
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmap_full_req *mq;
@@ -372,7 +371,7 @@ iod_bmap_retrieve(struct bmap *b, enum rw rw, __unusedx int flags)
 		goto out;
 	}
 
-	mq->rw = rw;
+	mq->rw = b->bcm_flags & BMAPF_RD ? SL_READ : SL_WRITE;
 	mq->bmapno = b->bcm_bmapno;
 	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
 
