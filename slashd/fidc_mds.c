@@ -130,8 +130,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
-		DEBUG_FCMH(flags & FIDC_LOOKUP_NOLOG ? PLL_DIAG :
-		    PLL_WARN, f, "mdsio_lookup_slfid failed; "
+		DEBUG_FCMH(PLL_WARN, f, "mdsio_lookup_slfid failed; "
 		    "fid="SLPRI_FID" rc=%d",
 		    fcmh_2_fid(f), rc);
 		return (rc);
@@ -190,10 +189,8 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 			    fcmh_2_dino_mfh(f));
 		} else if (rc) {
 			fmi->fmi_ctor_rc = rc;
-			if ((flags & FIDC_LOOKUP_NOLOG) == 0)
-				DEBUG_FCMH(PLL_WARN, f,
-				    "mdsio_lookup failed; rc=%d",
-				    rc);
+			DEBUG_FCMH(PLL_WARN, f,
+			    "mdsio_lookup failed; rc=%d", rc);
 			return (rc);
 		}
 

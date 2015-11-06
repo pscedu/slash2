@@ -269,7 +269,6 @@ void	fidc_init(int);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
-#define FIDC_LOOKUP_NOLOG		(1 << 3)
 
 int	fidc_reap(int, int);
 
