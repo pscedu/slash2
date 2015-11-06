@@ -253,7 +253,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		/* call sli_fcmh_reopen() sliod only */
 		if (sl_fcmh_ops.sfop_modify)
-			rc = sl_fcmh_ops.sfop_modify(f, fgp);
+			rc = sl_fcmh_ops.sfop_modify(f, fgp->fg_gen);
 		if (rc)
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		else {

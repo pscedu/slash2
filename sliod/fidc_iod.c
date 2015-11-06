@@ -171,20 +171,19 @@ sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
  * fcmh.
  */
 int
-sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
+sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 {
 	int rc = 0;
 
 	FCMH_LOCK_ENSURE(f);
-	psc_assert(fg->fg_fid == fcmh_2_fid(f));
 
 	OPSTAT_INCR("reopen");
 
-	if (fg->fg_gen == FGEN_ANY) {
+	if (fgen == FGEN_ANY) {
 		OPSTAT_INCR("generation-bogus");
 		return (EBADF);
 	}
-	if (fg->fg_gen < fcmh_2_gen(f)) {
+	if (fgen < fcmh_2_gen(f)) {
 		OPSTAT_INCR("generation-stale");
 		return (ESTALE);
 	}
@@ -192,10 +191,10 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 	/*
 	 * If our generation number is still unknown try to set it here.
 	 */
-	if (fcmh_2_gen(f) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
-		fcmh_2_gen(f) = fg->fg_gen;
+	if (fcmh_2_gen(f) == FGEN_ANY && fgen != FGEN_ANY)
+		fcmh_2_gen(f) = fgen;
 
-	if (fg->fg_gen > fcmh_2_gen(f)) {
+	if (fgen > fcmh_2_gen(f)) {
 		struct sl_fidgen oldfg;
 		char fidfn[PATH_MAX];
 
@@ -223,7 +222,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct sl_fidgen *fg)
 		oldfg.fg_fid = fcmh_2_fid(f);
 		oldfg.fg_gen = fcmh_2_gen(f);
 
-		fcmh_2_gen(f) = fg->fg_gen;
+		fcmh_2_gen(f) = fgen;
 
 		rc = sli_open_backing_file(f);
 		/* Notify upper layers that open() has failed. */

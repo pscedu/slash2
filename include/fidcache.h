@@ -52,7 +52,7 @@ struct sl_fcmh_ops {
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
-	int	(*sfop_modify)(struct fidc_membh *, const struct sl_fidgen *);
+	int	(*sfop_modify)(struct fidc_membh *, slfgen_t);
 };
 
 /**
