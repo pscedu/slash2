@@ -107,7 +107,7 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 }
 
 int
-slm_fcmh_ctor(struct fidc_membh *f, int flags)
+slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	struct fcmh_mds_info *fmi;
 	struct mio_fh *ino_mfh;
