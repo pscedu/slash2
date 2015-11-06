@@ -6,4 +6,4 @@ information.
 # Copyright
 
 SLASH2 is licensed under GPLv2.
-See COPYING-GPL at the top of this distribution.
+See COPYING-GPL and AUTHORS at the top of this distribution.
