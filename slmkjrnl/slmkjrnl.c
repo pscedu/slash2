@@ -92,9 +92,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("stat %s", fn);
 
 	/*
- 	 * If the user does not specify nents, either use default
- 	 * or based on the block device size.
- 	 */
+	 * If the user does not specify nents, either use default or
+	 * based on the block device size.
+	 */
 	if (nents == 0 && !block_dev)
 		nents = SLJ_MDS_JNENTS;
 
@@ -104,7 +104,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 		/* show progress, it is going to be a while */
 		verbose = 1;
-		nents = numblocks - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;  
+		nents = numblocks - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
 		nents = (nents / rs) * rs;
 	}
 
