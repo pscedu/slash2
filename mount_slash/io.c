@@ -529,7 +529,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		car->car_fsrqinfo = r->biorq_fsrqi;
 	}
 
-	psclog_diag("get car=%p car_id=%"PRIx64" q=%p, r=%p",
+	psclog_diag("add car=%p car_id=%"PRIx64" q=%p r=%p",
 	    car, car->car_id, car->car_fsrqinfo, r);
 
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
@@ -1572,7 +1572,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		}
 
 		DEBUG_BMPCE(PLL_DIAG, e,
-		    "tsize=%u nbytes=%u toff=%u, start=%u, len=%u",
+		    "tsize=%u nbytes=%u toff=%u start=%u len=%u",
 		    tsize, nbytes, toff, e->bmpce_start, e->bmpce_len);
 
 		BMPCE_ULOCK(e);

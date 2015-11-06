@@ -38,7 +38,7 @@ struct fidc_membh;
 
 struct fcmh_cli_info_file {
 	struct srt_inode	 inode;
-	uint32_t	 	 xattrsize;
+	uint32_t		 xattrsize;
 	int			 idxmap[SL_MAX_REPLICAS];
 	int			 mapstircnt;
 };

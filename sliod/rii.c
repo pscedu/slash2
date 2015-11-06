@@ -171,7 +171,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 			SLVR_ULOCK(s);
 			sli_aio_aiocbr_release(aiocbr);
 		}
-	} else 
+	} else
 		slvr_io_done(s, rv);
 
 	if (rv)
@@ -371,9 +371,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm));
 
 	/*
- 	 * XXX: We should not let EIO sliver stay in the cache. Otherwise,
- 	 * the following assert will be triggered.
- 	 */
+	 * XXX: We should not let EIO sliver stay in the cache.
+	 * Otherwise, the following assert will be triggered.
+	 */
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
 	psc_assert(!rc);
 	BMAP_ULOCK(w->srw_bcm);

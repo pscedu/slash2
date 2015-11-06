@@ -131,7 +131,7 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 	}
 
 	/*
-	 * Hit a crash here on FreeBSD on sliod due to NULL import field below. 
+	 * Hit a crash here on FreeBSD on sliod due to NULL import field below.
 	 * The type is SLCONNT_MDS, the last errno is ETIMEDOUT (-60).
 	 */
 	csvc->csvc_import->imp_state = PSCRPC_IMP_FULL;
@@ -416,10 +416,12 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 */
 			DEBUG_REQ(PLL_WARN, rq,
 			    "duplicate connect msg detected");
+
 		/*
- 		 * Call mexpc_allocpri() or iexpc_allocpri() to establish 
- 		 * a SLCONNT_CLI connection to our newly arrived client.
- 		 */
+		 * Call mexpc_allocpri() or iexpc_allocpri() to
+		 * establish a SLCONNT_CLI connection to our newly
+		 * arrived client.
+		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->stkvers = mq->stkvers;
 		break;
@@ -590,7 +592,7 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING)) 
+	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING))
 		csvc->csvc_flags |= CSVCF_DISCONNECTING;
 	CSVC_URLOCK(csvc, locked);
 }
