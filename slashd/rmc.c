@@ -1462,8 +1462,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		struct fidc_membh *c;
 
 		if (slm_fcmh_get(&chfg, &c) == 0) {
-			mp->valid = 1;
-			mdsio_fcmh_refreshattr(c, &mp->cattr);
+			if (c->fcmh_sstb.sst_nlink) {
+				mp->valid = 1;
+				mdsio_fcmh_refreshattr(c, &mp->cattr);
+			}
 			fcmh_op_done(c);
 		}
 	}
