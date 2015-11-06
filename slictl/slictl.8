@@ -259,7 +259,7 @@ port to use to connect to remote
 peers.
 .It Cm log.file
 File path name where log messages will be written.
-This value is write-only.
+This field is write-only.
 If the
 .Li +=
 assignment operator is used, this file will not be truncated.
@@ -287,16 +287,30 @@ See the description of
 in
 .Xr sliod 8
 for recognized log level values.
+.It Cm log.points
+List of places in the source code (in the form
+.Dq file:line-number )
+where granular logging can be enabled on a case-by-case
+basis.
+Usually assigned to by the
+.Li +=
+operator.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
+.It Cm free
+Current number of allocated entries available for use in pool.
 .It Cm max
 Upper bound for number of entries to which auto-sized pools can grow.
 .It Cm min
 Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm reap
+Assign a value to reap the specified number of entries.
+Only applies to pools that have a reaper routine.
+This field is write-only.
 .It Cm thres
 Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
@@ -310,12 +324,30 @@ or
 .Xr ulimit 1
 for more information.
 .Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm nofiles
-Corresponds to
-.Dv RLIMIT_NOFILE ,
-the maximum number of open files.
+.Bl -column "msgqueue" -offset 3n
+.It Sy Name Ta Sy Field
+.It =============================
+.It Cm cpu        Ta Dv RLIMIT_CPU
+.It Cm csize      Ta Dv RLIMIT_CORE
+.It Cm dsize      Ta Dv RLIMIT_DATA
+.It Cm fsize      Ta Dv RLIMIT_FSIZE
+.It Cm locks      Ta Dv RLIMIT_LOCKS
+.It Cm maxproc    Ta Dv RLIMIT_NPROC
+.It Cm mem        Ta Dv RLIMIT_AS
+.It Cm mlock      Ta Dv RLIMIT_MEMLOCK
+.It Cm msgqueue   Ta Dv RLIMIT_MSGQUEUE
+.It Cm nice       Ta Dv RLIMIT_NICE
+.It Cm nofile     Ta Dv RLIMIT_NOFILE
+.It Cm rss        Ta Dv RLIMIT_RSS
+.It Cm rtprio     Ta Dv RLIMIT_RTPRIO
+.It Cm rttime     Ta Dv RLIMIT_RTTIME
+.It Cm sigpndg    Ta Dv RLIMIT_SIGPENDING
+.It Cm stksize    Ta Dv RLIMIT_STACK
 .El
+.It Cm rusage
+Process resource usage information.
+See
+.Xr getrusage 2 .
 .El
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
@@ -420,17 +452,65 @@ network resources
 If
 .Ar subspec
 is left unspecified, all hash tables will be accessed.
-.It Cm iostats
-.Tn I/O
-statistics.
+.It Cm listcaches
+List cache statistics.
 .Ar subspec
 has the following format:
 .Pp
 .Bd -unfilled -offset 3n
-.Ar iostats Ns Op , Ns Ar ...
+.Ar list Ns Op , Ns Ar ...
 .Ed
 .Pp
-.Ar iostats
+.Ar list
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm bcr_ready
+Bmap CRC update tranmission queue
+.It Cm breleaseq
+Bmaps awaiting release by MDS response
+.It Cm crcqslvrs
+Bmap slivers awaiting checksumming
+.It Cm fcmhidle
+Recently used files
+.It Cm lruslvrs
+Recently used bmap slivers
+.It Cm readaheadq
+Readahead I/O work queue
+.It Cm replwkpnd
+Pending replication work
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all list caches will be accessed.
+.It Cm lnetif
+Lustre network interfaces.
+.It Cm loglevels
+Thread logging levels.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar thread Ns Op , Ns Ar ...
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread .
+If
+.Ar subspec
+is left unspecified, all threads will be accessed.
+.It Cm opstats
+Operation counters/statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset 3n
+.Ar opstats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar opstats
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset 3n -width 3n
@@ -464,55 +544,6 @@ If
 is left unspecified, all
 .Tn I/O
 statistics will be accessed.
-.It Cm listcaches
-List cache statistics.
-.Ar subspec
-has the following format:
-.Pp
-.Bd -unfilled -offset 3n
-.Ar list Ns Op , Ns Ar ...
-.Ed
-.Pp
-.Ar list
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm bcr_ready
-Bmap CRC update tranmission queue
-.It Cm breleaseq
-Bmaps awaiting release by MDS response
-.It Cm crcqslvrs
-Bmap slivers awaiting checksumming
-.It Cm fcmhidle
-Recently used files
-.It Cm lruslvrs
-Recently used bmap slivers
-.It Cm readaheadq
-Readahead I/O work queue
-.It Cm replwkpnd
-Pending replication work
-.El
-.Pp
-If
-.Ar subspec
-is left unspecified, all list caches will be accessed.
-.It Cm lni
-Lustre network interfaces.
-.It Cm loglevels
-Thread logging levels.
-.Ar subspec
-has the following format:
-.Bd -unfilled -offset 3n
-.Ar thread Ns Op , Ns Ar ...
-.Ed
-.Pp
-See
-.Sx Thread Specification
-for details on specifying
-.Ar thread .
-If
-.Ar subspec
-is left unspecified, all threads will be accessed.
 .It Cm pools
 Memory pool statistics.
 .Ar subspec
@@ -534,6 +565,8 @@ If
 is left unspecified, all pools will be accessed.
 .It Cm replwkst
 Status of active replications
+.It Cm rpcrqs
+Remote procedure calls (RPC).
 .It Cm rpcsvcs
 .Tn RPC
 services.
