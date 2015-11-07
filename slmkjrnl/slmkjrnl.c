@@ -1,8 +1,10 @@
 /* $Id$ */
 /*
- * %PSCGPL_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2014, Pittsburgh Supercomputing Center (PSC).
+ * %GPL_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2015, Google, Inc.
+ * Copyright 2006-2015, Pittsburgh Supercomputing Center
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,12 +16,8 @@
  * PURPOSE.  See the GNU General Public License contained in the file
  * `COPYING-GPL' at the top of this distribution or at
  * https://www.gnu.org/licenses/gpl-2.0.html for more details.
- *
- * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
- * 300 S. Craig Street			e-mail: remarks@psc.edu
- * Pittsburgh, PA 15213			web: http://www.psc.edu/
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
+ * ---------------------------------------------------------------------
+ * %END_LICENSE%
  */
 
 #include <err.h>
