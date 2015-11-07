@@ -309,7 +309,7 @@ void	_dump_fcmh_flags_common(int *, int *);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
-extern struct psc_hashtbl	 fidcHtable;
+extern struct psc_hashtbl	 sl_fcmh_hashtbl;
 
 static __inline void *
 fcmh_get_pri(struct fidc_membh *f)

@@ -50,7 +50,7 @@
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
 struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
-struct psc_hashtbl	  fidcHtable;
+struct psc_hashtbl	  sl_fcmh_hashtbl;
 
 #define fcmh_get()	psc_pool_get(fidcPool)
 #define fcmh_put(f)	psc_pool_return(fidcPool, (f))
@@ -70,7 +70,7 @@ fcmh_destroy(struct fidc_membh *f)
 {
 	psc_assert(RB_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(f->fcmh_refcnt == 0);
-	psc_assert(psc_hashent_disjoint(&fidcHtable, f));
+	psc_assert(psc_hashent_disjoint(&sl_fcmh_hashtbl, f));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 
 	psc_waitq_destroy(&f->fcmh_waitq);
@@ -140,7 +140,7 @@ fidc_reap(int max, int only_expired)
 	psclog_debug("reaping %d files from fidcache", nreap);
 
 	for (i = 0; i < nreap; i++) {
-		psc_hashent_remove(&fidcHtable, reap[i]);
+		psc_hashent_remove(&sl_fcmh_hashtbl, reap[i]);
 		fcmh_destroy(reap[i]);
 	}
 	return (i);
@@ -190,10 +190,10 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 #endif
 
 	/* OK.  Now check if it is already in the cache. */
-	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
+	b = psc_hashbkt_get(&sl_fcmh_hashtbl, &fgp->fg_fid);
  restart:
 	f = NULL;
-	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
+	PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, b) {
 		/*
 		 * Note that generation number is only used to track
 		 *   truncations.
@@ -249,7 +249,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
-		psc_hashbkt_put(&fidcHtable, b);
+		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
 		/* call sli_fcmh_reopen() sliod only */
 		if (sl_fcmh_ops.sfop_modify)
@@ -281,7 +281,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 * FIDC_LOOKUP_CREATE was not specified and the fcmh is
 		 * not present.
 		 */
-		psc_hashbkt_put(&fidcHtable, b);
+		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 		return (ENOENT);
 	}
 
@@ -295,7 +295,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
 	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
-	psc_hashent_init(&fidcHtable, f);
+	psc_hashent_init(&sl_fcmh_hashtbl, f);
 	psc_waitq_init(&f->fcmh_waitq);
 	pfl_rwlock_init(&f->fcmh_rwlock);
 
@@ -311,8 +311,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * item is not on any list yet.
 	 */
 	f->fcmh_flags |= FCMH_INITING;
-	psc_hashbkt_add_item(&fidcHtable, b, f);
-	psc_hashbkt_put(&fidcHtable, b);
+	psc_hashbkt_add_item(&sl_fcmh_hashtbl, b, f);
+	psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
 	/*
 	 * Call service specific constructor slm_fcmh_ctor(),
@@ -371,8 +371,8 @@ fidc_init(int privsiz)
 	lc_reginit(&fidcIdleList, struct fidc_membh, fcmh_lentry,
 	    "fcmhidle");
 
-	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh, fcmh_fg,
-	    fcmh_hentry, 3 * nobj - 1, NULL, "fidc");
+	psc_hashtbl_init(&sl_fcmh_hashtbl, 0, struct fidc_membh,
+	    fcmh_fg, fcmh_hentry, 3 * nobj - 1, NULL, "fidc");
 }
 
 ssize_t
@@ -458,7 +458,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			f->fcmh_flags |= FCMH_TOFREE;
 			FCMH_ULOCK(f);
 
-			psc_hashent_remove(&fidcHtable, f);
+			psc_hashent_remove(&sl_fcmh_hashtbl, f);
 			fcmh_destroy(f);
 			return;
 		}
@@ -507,9 +507,9 @@ dump_fidcache(void)
 	struct psc_hashbkt *bkt;
 	struct fidc_membh *tmp;
 
-	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
+	PSC_HASHTBL_FOREACH_BUCKET(bkt, &sl_fcmh_hashtbl) {
 		psc_hashbkt_lock(bkt);
-		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt)
+		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, bkt)
 			dump_fcmh(tmp);
 		psc_hashbkt_unlock(bkt);
 	}

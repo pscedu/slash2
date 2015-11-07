@@ -614,9 +614,9 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct bmap *b;
 	int rc = 1;
 
-	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
+	PSC_HASHTBL_FOREACH_BUCKET(hb, &sl_fcmh_hashtbl) {
 		psc_hashbkt_lock(hb);
-		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
+		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, f, hb) {
 			pfl_rwlock_rdlock(&f->fcmh_rwlock);
 			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 
@@ -679,9 +679,9 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct bmap *b;
 	int rc = 1;
 
-	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
+	PSC_HASHTBL_FOREACH_BUCKET(hb, &sl_fcmh_hashtbl) {
 		psc_hashbkt_lock(hb);
-		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
+		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, f, hb) {
 			pfl_rwlock_rdlock(&f->fcmh_rwlock);
 			RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 				bci = bmap_2_bci(b);
