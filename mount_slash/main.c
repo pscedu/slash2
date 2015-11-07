@@ -661,6 +661,9 @@ msl_stat(struct fidc_membh *f, void *arg)
 	struct timeval now;
 	int rc = 0;
 
+	if (pfcc)
+		psc_assert(pfcc->pfcc_magic == PFCC_MAGIC);
+
 	/*
 	 * Special case to handle accesses to
 	 * /$mountpoint/.slfidns/<fid>
@@ -749,7 +752,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	rc = msl_stat(f, pfr);
+	rc = msl_stat(f, pscfs_getclientctx(pfr));
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1130,7 +1133,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	 * RPC.  Note the call is looking based on a name here, not
 	 * based on FID.
 	 */
-	rc = msl_stat(c, pfr);
+	rc = msl_stat(c, pscfs_getclientctx(pfr));
 	if (!rc) {
 		FCMH_LOCK(c);
 		if (fgp)
