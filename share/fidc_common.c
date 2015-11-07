@@ -257,7 +257,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		if (rc)
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		else {
-			FCMH_ULOCK(f);
+			if ((flags & FIDC_LOOKUP_LOCK) == 0)
+				FCMH_ULOCK(f);
 			*fp = f;
 		}
 		return (rc);
@@ -345,7 +346,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		*fp = f;
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
+	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), f,
+	    FCMH_OPCNT_NEW, flags & FIDC_LOOKUP_LOCK);
 	return (rc);
 }
 
@@ -419,7 +421,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, int type)
+    struct fidc_membh *f, int type, int keep_locked)
 {
 	int rc;
 
@@ -468,7 +470,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 	}
 	fcmh_wake_locked(f);
-	FCMH_ULOCK(f);
+	if (!keep_locked)
+		FCMH_ULOCK(f);
 }
 
 void

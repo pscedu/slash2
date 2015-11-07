@@ -55,9 +55,9 @@ struct sl_fcmh_ops {
 	int	(*sfop_modify)(struct fidc_membh *, slfgen_t);
 };
 
-/**
- * fidc_membh - The primary cached file structure; all updates and
- * lookups into the inode are done through here.
+/*
+ * The primary in-memory file structure; all updates and lookups into the
+ * inode are done through here.
  *
  * fidc_membh tracks cached bmaps (bmaptree) and clients (via their
  * exports) which hold cached bmaps.
@@ -269,6 +269,7 @@ void	fidc_init(int);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
+#define FIDC_LOOKUP_LOCK		(1 << 3)	/* leave locked upon return */
 
 int	fidc_reap(int, int);
 
@@ -294,13 +295,13 @@ int	_fidc_lookup(const struct pfl_callerinfo *,
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
 void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, int);
-void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, int);
+void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, int, int);
 
 #define fcmh_op_start_type(f, type)					\
 	_fcmh_op_start_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
 
 #define fcmh_op_done_type(f, type)					\
-	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
+	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type), 0)
 
 #define fcmh_op_done(f)		fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
 
