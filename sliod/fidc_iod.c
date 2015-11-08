@@ -134,7 +134,7 @@ sli_fcmh_getattr(struct fidc_membh *f)
 }
 
 int
-sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
+sli_rmi_lookup_fid(struct slashrpc_cservice *csvc,
     const struct sl_fidgen *pfg, const char *cpn,
     struct sl_fidgen *cfg, int *isdir)
 {

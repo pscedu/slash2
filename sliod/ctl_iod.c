@@ -68,7 +68,7 @@ sli_export(__unusedx FTSENT *f, __unusedx void *arg)
 	snprintf("%s/%s", dst_base, dst);
 
 	for (cpn) {
-		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
+		rc = sli_rmi_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
 		rc = mkdir();
 	}
 	rc = link(fidfn, exfn);
@@ -220,7 +220,7 @@ sli_import(FTSENT *f, void *arg)
 		if (*np == '\0')
 			break;
 
-		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
+		rc = sli_rmi_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
 
 		/* Last component is intended destination; use directly. */
 		if (rc == ENOENT && *np == '\0')
