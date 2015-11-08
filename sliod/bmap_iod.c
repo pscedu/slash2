@@ -240,6 +240,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 					break;
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
+				b->bcm_flags |= BMAPF_RELEASING;
+				/* XXX locking violation */
 				lc_remove(&sli_bmap_releaseq, bii);
 				psc_dynarray_add(&a, b);
 			}

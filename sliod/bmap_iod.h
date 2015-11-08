@@ -97,11 +97,12 @@ struct bmap_iod_info {
 
 	struct biod_slvrtree	 bii_slvrs;
 	struct psc_listentry	 bii_lentry;
-	struct psc_lockedlist	 bii_rls;
+	struct psc_lockedlist	 bii_rls;	/* leases */
 };
 
 /* sliod-specific bcm_flags */
 #define BMAPF_CRUD_INFLIGHT	(_BMAPF_SHIFT << 0)	/* CRC update RPC inflight */
+#define BMAPF_RELEASING		(_BMAPF_SHIFT << 1)	/* marked for release by reaper */
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
