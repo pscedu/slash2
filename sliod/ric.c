@@ -396,7 +396,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("rlsbmap-fail");
-			psclog_warnx("get bmap for "SLPRI_FG" rc=%d",
+			psclog(rc == ENOENT ? PLL_DIAG : PLL_ERROR,
+			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			continue;
 		}
