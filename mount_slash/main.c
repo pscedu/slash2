@@ -151,6 +151,7 @@ struct psc_hashtbl		 slc_gidmap_int;
  */
 int				 slc_direct_io = 1;
 int				 slc_root_squash;
+int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
@@ -173,18 +174,21 @@ fcmh_checkcreds_ctx(struct fidc_membh *f,
 {
 	int rc, locked;
 
+	(void)pfcc;
+
 	if (slc_root_squash && pcrp->pcr_uid == 0)
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
-	rc = sl_fcmh_checkacls(f, pfcc, pcrp, accmode);
-	(void)locked;
-#else
-	locked = FCMH_RLOCK(f);
-	rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
-	FCMH_URLOCK(f, locked);
-	(void)pfcc;
+	if (msl_acl)
+		rc = sl_fcmh_checkacls(f, pfcc, pcrp, accmode);
+	else
 #endif
+	{
+		locked = FCMH_RLOCK(f);
+		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
+		FCMH_URLOCK(f, locked);
+	}
 	return (rc);
 }
 
@@ -192,13 +196,12 @@ int
 fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	struct pscfs_clientctx *pfcc;
+	struct pscfs_clientctx *pfcc = NULL;
 
-#ifdef SLOPT_POSIX_ACLS
-	pfcc = pscfs_getclientctx(pfr);
-#else
-	pfcc = NULL;
 	(void)pfr;
+#ifdef SLOPT_POSIX_ACLS
+	if (msl_acl)
+		pfcc = pscfs_getclientctx(pfr);
 #endif
 	return (fcmh_checkcreds_ctx(f, pfcc, pcrp, accmode));
 }
@@ -3830,9 +3833,10 @@ opt_lookup(const char *opt)
 		int		 type;
 		void		*ptr;
 	} *io, opts[] = {
+		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
-		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
+		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
 		{ NULL,			0,			NULL }
 	};
 	const char *val;
@@ -3982,7 +3986,7 @@ main(int argc, char *argv[])
 		cfg = p;
 
 	optind = 1;
-	while ((c = getopt(argc, argv, "D:df:I:M:o:QS:UV")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:S:UV")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -4004,9 +4008,6 @@ main(int argc, char *argv[])
 				pscfs_addarg(&args, "-o");
 				pscfs_addarg(&args, optarg);
 			}
-			break;
-		case 'Q':
-			slc_root_squash = 1;
 			break;
 		case 'S':
 			ctlsockfn = optarg;

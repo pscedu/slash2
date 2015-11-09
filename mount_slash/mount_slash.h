@@ -385,6 +385,7 @@ extern struct psc_poolmgr	*slc_mfh_pool;
 extern int			 slc_direct_io;
 extern int			 slc_root_squash;
 extern int			 slc_max_nretries;
+extern int			 msl_acl;
 extern int			 msl_predio_window_size;
 extern int			 msl_predio_issue_minpages;
 extern int			 msl_predio_issue_maxpages;
