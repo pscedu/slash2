@@ -3658,7 +3658,8 @@ msl_init(const char *cfgfn)
 	slcfg_local->cfg_fidcachesz = 1024;
 
 	slcfg_parse(cfgfn);
-	slc_root_squash = slcfg_local->cfg_root_squash;
+	if (slcfg_local->cfg_root_squash)
+		slc_root_squash = 1;
 	parse_allowexe();
 	if (slc_use_mapfile) {
 		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
