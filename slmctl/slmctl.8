@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl rpc %
-.Dd January 30, 2015
+.Dd November 10, 2015
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -579,11 +579,11 @@ may also be specified to display a list of recognized values.
 .\"		"slmjthr"			=> "Master journal thread",
 .\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
 .\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
+.\"		"slmopstimerthr"		=> "Internal operation count updater",
 .\"		"slmrcmthr"			=> "Client\n.Tn RPC\nrequest initiator thread",
 .\"		"slmrmcthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
 .\"		"slmrmithr Ns Ar %02d"		=> ".Tn I/O\nnode\n.Tn RPC\nrequest service thread",
 .\"		"slmrmmthr Ns Ar %02d"		=> ".No Inter- Ns MDS RPC\nrequest service thread",
-.\"		"slmtiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
 .\"		"slmupschedthr"			=> "Peer update scheduler thread",
 .\"		"slmusklndplthr Ns Ar %d"	=> ".Tn LNET\nuserland socket poll thread",
 .\"		"slmwkthr Ns Ar %d"		=> "Generic worker",
@@ -631,6 +631,8 @@ network acceptor thread
 Non-blocking
 .Tn RPC
 reply handler
+.It Cm slmopstimerthr
+Internal operation count updater
 .It Cm slmrcmthr
 Client
 .Tn RPC
@@ -647,10 +649,6 @@ request service thread
 .It Cm slmrmmthr Ns Ar %02d
 .No Inter- Ns MDS RPC
 request service thread
-.It Cm slmtiosthr
-Timed
-.Tn I/O
-stats updater thread
 .It Cm slmupschedthr
 Peer update scheduler thread
 .It Cm slmusklndplthr Ns Ar %d
