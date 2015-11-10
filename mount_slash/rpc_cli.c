@@ -27,6 +27,7 @@
 #include "pfl/rsx.h"
 #include "pfl/service.h"
 #include "pfl/str.h"
+#include "pfl/fsmod.h"
 
 #include "ctlsvr_cli.h"
 #include "mount_slash.h"
@@ -161,6 +162,12 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 		retry = 0;
 //	retry = hard timeout
 	*rc = retry ? 0 : ETIMEDOUT;
+
+	if (pfr->pfr_interrupted) {
+		*rc = EINTR;
+		retry = 0;
+	}
+
 	return (retry);
 }
 
