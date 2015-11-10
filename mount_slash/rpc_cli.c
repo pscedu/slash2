@@ -127,7 +127,7 @@ slc_rmc_setmds(const char *name)
  * timeout has been reached for MDS communication.
  */
 int
-slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
+slc_rmc_retry_pfcc(struct pscfs_req *pfr, int *rc)
 {
 	int retry = 1;
 
@@ -154,7 +154,7 @@ slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
 	}
 
 //	retry = global setting
-	if (pfcc)
+	if (pfr)
 //		retry = read_proc_env(ctx->pid, "");
 		;
 	else
@@ -165,7 +165,7 @@ slc_rmc_retry_pfcc(const struct pscfs_clientctx *pfcc, int *rc)
 }
 
 int
-slc_rmc_getcsvc(const struct pscfs_clientctx *pfcc,
+slc_rmc_getcsvc(struct pscfs_req *pfr,
     struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
 	int rc;
@@ -182,7 +182,7 @@ slc_rmc_getcsvc(const struct pscfs_clientctx *pfcc,
 			break;
 
 		rc = resm->resm_csvc->csvc_lasterrno;
-		if (!slc_rmc_retry_pfcc(pfcc, &rc))
+		if (!slc_rmc_retry_pfcc(pfr, &rc))
 			break;
 		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
 	}
