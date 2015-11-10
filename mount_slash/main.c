@@ -168,7 +168,7 @@ sl_resource_put(__unusedx struct sl_resource *res)
 }
 
 int
-fcmh_checkcreds_ctx(struct fidc_membh *f,
+fcmh_checkcreds(struct fidc_membh *f,
     struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
     int accmode)
 {
@@ -188,13 +188,6 @@ fcmh_checkcreds_ctx(struct fidc_membh *f,
 		FCMH_URLOCK(f, locked);
 	}
 	return (rc);
-}
-
-int
-fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
-    const struct pscfs_creds *pcrp, int accmode)
-{
-	return (fcmh_checkcreds_ctx(f, pfr, pcrp, accmode));
 }
 
 gid_t
