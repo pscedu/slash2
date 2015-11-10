@@ -637,18 +637,20 @@ mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 }
 
 int
-msl_stat(struct fidc_membh *f, struct pscfs_req *pfr)
+msl_stat(struct fidc_membh *f, void *arg)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct pscfs_clientctx *pfcc = NULL;
+	struct pscfs_req *pfr = arg;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct timeval now;
 	int rc = 0;
-	struct pscfs_clientctx *pfcc;
 
-	pfcc = pscfs_getclientctx(pfr);
+	if (pfr)
+		pfcc = pscfs_getclientctx(pfr);
 
 	/*
 	 * Special case to handle accesses to
