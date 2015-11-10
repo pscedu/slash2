@@ -96,8 +96,8 @@ enum {
 	} while ((rc) && slc_rmc_retry_pfcc((pfr), &(rc)))
 
 #define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
-	MSL_RMC_NEWREQ_PFCC(pfr, (f), (csvc), (op),			\
-	    (rq), (mq), (mp), (rc))
+	MSL_RMC_NEWREQ_PFCC((pfr), (f), (csvc), (op), (rq), (mq), (mp),	\
+	    (rc))
 
 /* obtain csvc to an IOS */
 #define slc_geticsvcxf(resm, fl, exp)					\
@@ -129,7 +129,7 @@ int	slc_rmc_getcsvc1(struct slrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry_pfcc(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 
-#define slc_rmc_retry(pfr, rcp)		slc_rmc_retry_pfcc(pfr, (rcp))
+#define slc_rmc_retry(pfr, rcp)		slc_rmc_retry_pfcc((pfr), (rcp))
 
 int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
