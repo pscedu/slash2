@@ -685,7 +685,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, SRMT_GETATTR, rq, mq,
+		MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_GETATTR, rq, mq,
 		    mp, rc);
 		if (rc)
 			break;
@@ -1502,8 +1502,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
-	MSL_RMC_NEWREQ_PFCC(pfcc, d, csvc, SRMT_READDIR, rq, mq, mp,
-	    rc);
+	MSL_RMC_NEWREQ_PFR(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out2, rc);
 
@@ -1895,8 +1894,7 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
-	MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, SRMT_SETATTR, rq, mq, mp,
-	    rc);
+	MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
 
@@ -2497,7 +2495,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	RPCI_ULOCK(rpci);
 
  retry:
-	MSL_RMC_NEWREQ_PFCC(NULL, NULL, csvc, SRMT_STATFS, rq, mq, mp,
+	MSL_RMC_NEWREQ_PFR(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp,
 	    rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3347,8 +3345,7 @@ slc_getxattr(struct pscfs_req *pfr,
 		FCMH_ULOCK(f);
 
  retry:
-	MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, SRMT_GETXATTR, rq, mq, mp,
-	    rc);
+	MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
 

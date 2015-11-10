@@ -72,7 +72,7 @@ enum {
  * Initialize a new RPC request for a pscfs clientctx.
  * Most arguments here are macro-value-result.
  */
-#define MSL_RMC_NEWREQ_PFCC(pfr, f, csvc, op, rq, mq, mp, rc)		\
+#define MSL_RMC_NEWREQ_PFR(pfr, f, csvc, op, rq, mq, mp, rc)		\
 	do {								\
 		struct sl_resm *_resm;					\
 									\
@@ -96,7 +96,7 @@ enum {
 	} while ((rc) && slc_rmc_retry_pfcc((pfr), &(rc)))
 
 #define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
-	MSL_RMC_NEWREQ_PFCC((pfr), (f), (csvc), (op), (rq), (mq), (mp),	\
+	MSL_RMC_NEWREQ_PFR((pfr), (f), (csvc), (op), (rq), (mq), (mp),	\
 	    (rc))
 
 /* obtain csvc to an IOS */

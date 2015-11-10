@@ -148,10 +148,10 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
-		MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_REPL_ADDRQ, rq,
+		MSL_RMC_NEWREQ_PFR(NULL, f, csvc, SRMT_REPL_ADDRQ, rq,
 		    mq, mp, rc);
 	else
-		MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_REPL_DELRQ, rq,
+		MSL_RMC_NEWREQ_PFR(NULL, f, csvc, SRMT_REPL_DELRQ, rq,
 		    mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -246,7 +246,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_REPL_GETST, rq, mq, mp,
+	MSL_RMC_NEWREQ_PFR(NULL, f, csvc, SRMT_REPL_GETST, rq, mq, mp,
 	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -422,7 +422,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SET_FATTR, rq, mq, mp,
+	MSL_RMC_NEWREQ_PFR(NULL, f, csvc, SRMT_SET_FATTR, rq, mq, mp,
 	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -489,8 +489,8 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SET_BMAPREPLPOL, rq,
-	    mq, mp, rc);
+	MSL_RMC_NEWREQ_PFR(NULL, f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq,
+	    mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc));
