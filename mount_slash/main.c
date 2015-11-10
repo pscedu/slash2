@@ -641,16 +641,12 @@ msl_stat(struct fidc_membh *f, void *arg)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscfs_clientctx *pfcc = NULL;
 	struct pscfs_req *pfr = arg;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct timeval now;
 	int rc = 0;
-
-	if (pfr)
-		pfcc = pscfs_getclientctx(pfr);
 
 	/*
 	 * Special case to handle accesses to
@@ -685,8 +681,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_GETATTR, rq, mq,
-		    mp, rc);
+		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
+		    rc);
 		if (rc)
 			break;
 
@@ -694,7 +690,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 		mq->iosid = msl_pref_ios;
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-	} while (rc && slc_rmc_retry_pfcc(pfcc, &rc));
+	} while (rc && slc_rmc_retry(pfr, &rc));
 
 	if (rc == 0)
 		rc = mp->rc;
@@ -1484,7 +1480,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 }
 
 int
-msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
+msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
     off_t off, size_t size, int wait)
 {
 	void *dentbuf = NULL;
@@ -1502,7 +1498,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
-	MSL_RMC_NEWREQ_PFR(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out2, rc);
 
@@ -1560,7 +1556,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 {
 	int hit = 1, j, nd, issue, rc;
 	struct dircache_page *p, *np;
-	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
 	struct dircache_expire dexp;
 	struct fcmh_cli_info *fci;
@@ -1573,8 +1568,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
-
-	pfcc = pscfs_getclientctx(pfr);
 
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
@@ -1703,7 +1696,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 * had an error.  Issue a READDIR then wait for a reply.
 		 */
 		hit = 0;
-		rc = msl_readdir_issue(pfcc, d, off, size, 1);
+		rc = msl_readdir_issue(pfr, d, off, size, 1);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1884,9 +1877,9 @@ msl_flush(struct msl_fhent *mfh)
 }
 
 int
-msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
-    int32_t to_set, const struct srt_stat *sstb,
-    const struct sl_fidgen *fgp, const struct stat *stb)
+msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
+    const struct srt_stat *sstb, const struct sl_fidgen *fgp,
+    const struct stat *stb)
 {
 	int rc, ptrunc_started = 0, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1894,7 +1887,7 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
-	MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
 
@@ -1942,7 +1935,7 @@ msl_setattr(struct pscfs_clientctx *pfcc, struct fidc_membh *f,
 }
 
 int
-msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
+msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
 	int dummy, flush_size = 0, flush_mtime = 0;
 	int rc, waslocked, to_set = 0;
@@ -1981,11 +1974,11 @@ msl_flush_ioattrs(struct pscfs_clientctx *pfcc, struct fidc_membh *f)
 
 	OPSTAT_INCR("flush-attr");
 
-	rc = msl_setattr(pfcc, f, to_set, &attr, NULL, NULL);
+	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
-	if (rc && slc_rmc_retry_pfcc(NULL, &rc)) {
+	if (rc && slc_rmc_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
@@ -2026,17 +2019,14 @@ void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct pscfs_clientctx *pfcc;
 	int rc, rc2;
 
 	msfsthr_ensure(pfr);
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
-	pfcc = pscfs_getclientctx(pfr);
-
 	rc = msl_flush(mfh);
-	rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
+	rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
 	//if (rc && slc_rmc_retry(pfr, &rc))
 	if (!rc)
 		rc = rc2;
@@ -2495,8 +2485,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	RPCI_ULOCK(rpci);
 
  retry:
-	MSL_RMC_NEWREQ_PFR(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp,
-	    rc);
+	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
@@ -2663,7 +2652,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	int flush_mtime = 0, flush_size = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct fcmh_cli_info *fci;
@@ -2876,9 +2864,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	FCMH_ULOCK(c);
 
-	pfcc = pscfs_getclientctx(pfr);
  retry:
-	rc = msl_setattr(pfcc, c, to_set, NULL, &c->fcmh_fg, stb);
+	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	switch (rc) {
@@ -2969,7 +2956,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 void
 mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 {
-	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 	int rc = 0;
@@ -2987,8 +2973,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 		if (!datasync_only) {
 			int rc2;
 
-			pfcc = pscfs_getclientctx(pfr);
-			rc2 = msl_flush_ioattrs(pfcc, mfh->mfh_fcmh);
+			rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
 			//if (rc && slc_rmc_retry(pfr, &rc))
 			if (!rc)
 				rc = rc2;
@@ -3314,10 +3299,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
-	struct pscfs_clientctx *pfcc = NULL;
 
-	if (pfr)
-		pfcc = pscfs_getclientctx(pfr);
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3345,7 +3327,7 @@ slc_getxattr(struct pscfs_req *pfr,
 		FCMH_ULOCK(f);
 
  retry:
-	MSL_RMC_NEWREQ_PFR(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
 
@@ -3362,7 +3344,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
 		rc = mp->rc;

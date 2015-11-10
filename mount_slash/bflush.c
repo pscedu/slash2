@@ -134,7 +134,7 @@ bmap_free_all_locked(struct fidc_membh *f)
  *	- user process/environment/file descriptor policy
  *	- user process interrupt
  *
- * XXX this should likely be merged with slc_rmc_retry_pfcc().
+ * XXX this should likely be merged with slc_rmc_retry_pfr().
  * XXX mfh_retries access and modification is racy here, e.g. if the
  *	process has multiple threads or forks.
  */
