@@ -155,18 +155,16 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	}
 
 //	retry = global setting
-	if (pfr)
+	if (pfr) {
+		if (pfr->pfr_interrupted) {
+			*rc = EINTR;
+			retry = 0;
+		}
 //		retry = read_proc_env(ctx->pid, "");
-		;
-	else
+	} else
 		retry = 0;
 //	retry = hard timeout
 	*rc = retry ? 0 : ETIMEDOUT;
-
-	if (pfr->pfr_interrupted) {
-		*rc = EINTR;
-		retry = 0;
-	}
 
 	return (retry);
 }
