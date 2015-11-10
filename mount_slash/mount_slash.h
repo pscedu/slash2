@@ -297,7 +297,7 @@ void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
 
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_stat(struct fidc_membh *, void *);
+int	 msl_stat(struct fidc_membh *, struct pscfs_req *);
 
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
