@@ -136,7 +136,7 @@ void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);
 int	fcmh_checkcreds_ctx(struct fidc_membh *,
-	    const struct pscfs_clientctx *, const struct pscfs_creds *,
+	    struct pscfs_req *, const struct pscfs_creds *,
 	    int);
 
 int	msl_fcmh_fetch_inode(struct fidc_membh *);

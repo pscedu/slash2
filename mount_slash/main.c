@@ -169,19 +169,17 @@ sl_resource_put(__unusedx struct sl_resource *res)
 
 int
 fcmh_checkcreds_ctx(struct fidc_membh *f,
-    const struct pscfs_clientctx *pfcc, const struct pscfs_creds *pcrp,
+    struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
     int accmode)
 {
 	int rc, locked;
-
-	(void)pfcc;
 
 	if (slc_root_squash && pcrp->pcr_uid == 0)
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
 	if (msl_acl)
-		rc = sl_fcmh_checkacls(f, pfcc, pcrp, accmode);
+		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
 	else
 #endif
 	{
@@ -196,14 +194,7 @@ int
 fcmh_checkcreds(struct fidc_membh *f, struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	struct pscfs_clientctx *pfcc = NULL;
-
-	(void)pfr;
-#ifdef SLOPT_POSIX_ACLS
-	if (msl_acl)
-		pfcc = pscfs_getclientctx(pfr);
-#endif
-	return (fcmh_checkcreds_ctx(f, pfcc, pcrp, accmode));
+	return (fcmh_checkcreds_ctx(f, pfr, pcrp, accmode));
 }
 
 gid_t
@@ -3320,7 +3311,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 }
 
 ssize_t
-slc_getxattr(const struct pscfs_clientctx *pfcc,
+slc_getxattr(struct pscfs_req *pfr,
     __unusedx const struct pscfs_creds *pcrp, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
@@ -3331,7 +3322,10 @@ slc_getxattr(const struct pscfs_clientctx *pfcc,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
+	struct pscfs_clientctx *pfcc = NULL;
 
+	if (pfr)
+		pfcc = pscfs_getclientctx(pfr);
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
@@ -3404,7 +3398,6 @@ void
 mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
     pscfs_inum_t inum)
 {
-	struct pscfs_clientctx *pfcc;
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	size_t retsz = 0;
@@ -3424,10 +3417,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	if (size)
 		buf = PSCALLOC(size);
 
-	pfcc = pscfs_getclientctx(pfr);
 	slc_getfscreds(pfr, &pcr);
 
-	rc = slc_getxattr(pfcc, &pcr, name, buf, size, f, &retsz);
+	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
 
  out:
 	if (f)

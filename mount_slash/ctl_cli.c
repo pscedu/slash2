@@ -133,7 +133,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
-		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, W_OK);
+		rc = fcmh_checkcreds_ctx(f, NULL, &pcr, W_OK);
 		/* Allow owner to replicate read-only files. */
 		if (rc == EACCES &&
 		    f->fcmh_sstb.sst_uid == pcr.pcr_uid)
@@ -235,7 +235,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
-		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, R_OK);
+		rc = fcmh_checkcreds_ctx(f, NULL, &pcr, R_OK);
 	else
 		rc = ENOTSUP;
 	fg = f->fcmh_fg;
@@ -342,7 +342,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
-		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, R_OK);
+		rc = fcmh_checkcreds_ctx(f, NULL, &pcr, R_OK);
 	else
 		rc = ENOTSUP;
 	FCMH_ULOCK(f);
@@ -412,7 +412,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
-		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, W_OK);
+		rc = fcmh_checkcreds_ctx(f, NULL, &pcr, W_OK);
 	else
 		rc = ENOTSUP;
 	fg = f->fcmh_fg;
@@ -479,7 +479,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f))
-		rc = fcmh_checkcreds_ctx(f, &pfcc, &pcr, W_OK);
+		rc = fcmh_checkcreds_ctx(f, NULL, &pcr, W_OK);
 	else
 		rc = ENOTSUP;
 	fg = f->fcmh_fg;
