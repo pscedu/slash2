@@ -1101,8 +1101,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
 	}
-
 	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
+	FCMH_ULOCK(c);
 
 	/*
 	 * We should do a lookup based on name here because a rename
@@ -1220,9 +1220,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			OPSTAT_INCR("delete-skipped");
 		else {
 			if (mp->valid) {
-				slc_fcmh_setattr(c, &mp->cattr);
+				slc_fcmh_setattr_locked(c, &mp->cattr);
 			} else {
-				FCMH_LOCK(c);
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete-marked");
 			}
