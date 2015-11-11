@@ -25,12 +25,10 @@
 
 #include <stdint.h>
 
-struct pscfs_req;
-
 struct passwd;
 
 struct pscfs_creds;
-struct pscfs_clientctx;
+struct pscfs_req;
 
 struct fidc_membh;
 struct srt_stat;
@@ -44,8 +42,8 @@ struct slash_creds {
 
 void	sl_drop_privs(int);
 void	sl_getuserpwent(struct passwd **);
-int	sl_fcmh_checkacls(struct fidc_membh *,
-	    struct pscfs_req *, const struct pscfs_creds *, int);
+int	sl_fcmh_checkacls(struct fidc_membh *, struct pscfs_req *,
+	    const struct pscfs_creds *, int);
 
 int	checkcreds(const struct srt_stat *, const struct pscfs_creds *,
 	    int);
