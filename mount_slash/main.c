@@ -350,8 +350,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_create_rep *mp = NULL;
-	struct srm_create_req *mq;
+	struct dircache_ent_handle dch;
 	struct msl_fhent *mfh = NULL;
+	struct srm_create_req *mq;
 	struct fcmh_cli_info *fci;
 	struct bmap_cli_info *bci;
 	struct pscfs_creds pcr;
@@ -405,7 +406,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, mp ? mp->cattr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -418,8 +422,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_insert(p, name, fcmh_2_fid(c));
 
 #if 0
 	if (oflags & O_APPEND) {
@@ -753,6 +755,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct dircache_ent_handle dch;
 	struct srm_link_rep *mp = NULL;
 	struct srm_link_req *mq;
 	struct pscfs_creds pcr;
@@ -811,15 +814,15 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	mq->fg = c->fcmh_fg;
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
+	namecache_hold_entry(&dch, p, newname);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, fcmh_2_fid(c), rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_insert(p, newname, fcmh_2_fid(c));
 
 	slc_fcmh_setattr(p, &mp->pattr);
 
@@ -854,6 +857,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mkdir_rep *mp = NULL;
+	struct dircache_ent_handle dch;
 	struct srm_mkdir_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
@@ -904,7 +908,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, mp ? mp->cattr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -917,8 +924,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_insert(p, name, fcmh_2_fid(c));
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
@@ -951,6 +956,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	slfid_t pfid = fcmh_2_fid(p);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct dircache_ent_handle dch;
 	struct fidc_membh *f = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
@@ -965,7 +971,10 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	mq->pfg.fg_gen = FGEN_ANY;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, mp ? mp->attr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -984,8 +993,6 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
-
-	namecache_insert(p, name, fcmh_2_fid(f));
 
 	FCMH_LOCK(f);
 	slc_fcmh_setattr_locked(f, &mp->attr);
@@ -1144,6 +1151,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_unlink_rep *mp = NULL;
+	struct dircache_ent_handle dch;
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
 	int rc;
@@ -1202,7 +1210,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfid = pinum;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_delete(&dch, rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc)
@@ -1212,8 +1222,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!rc) {
 		slc_fcmh_setattr(p, &mp->pattr);
-
-		namecache_delete(p, name);
 
 		if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
 		    FIDC_LOOKUP_LOCK, &c, pfr))
@@ -1267,6 +1275,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscrpc_request *rq = NULL;
 	struct srm_mknod_rep *mp = NULL;
 	struct srm_mknod_req *mq = NULL;
+	struct dircache_ent_handle dch;
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
@@ -1312,7 +1321,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->rdev = rdev;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, mp ? mp->cattr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -1325,8 +1337,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_insert(p, name, fcmh_2_fid(c));
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
@@ -2231,6 +2241,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 {
 	struct fidc_membh *child = NULL, *np = NULL, *op = NULL, *ch;
 	struct slashrpc_cservice *csvc = NULL;
+	struct dircache_ent_handle odch, ndch;
 	struct pscrpc_request *rq = NULL;
 	struct srt_stat srcsstb, dstsstb;
 	struct sl_fidgen srcfg, dstfg;
@@ -2371,20 +2382,18 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
 	}
 
+	namecache_get_entries(&odch, op, oldname, &ndch, np, newname);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	/* XXX deadlock? */
+	namecache_delete(&odch, rc ? rc : mp->rc);
+	namecache_update(&ndch, mp ? mp->srr_cattr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
-
-	psclog_diag("rename: opfid="SLPRI_FID" npfid="SLPRI_FID" from='%s' "
-	    "to='%s' rc=%d", opinum, npinum, oldname, newname, rc);
-
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_delete(op, oldname);
-	namecache_update(np, newname, mp->srr_cattr.sst_fid);
 
 	/* refresh old parent attributes */
 	slc_fcmh_setattr(op, &mp->srr_opattr);
@@ -2519,6 +2528,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct dircache_ent_handle dch;
 	struct srm_symlink_req *mq;
 	struct pscfs_creds pcr;
 	struct iovec iov;
@@ -2566,7 +2576,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
 	    1);
 
+	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	namecache_update(&dch, mp ? mp->cattr.sst_fid : FID_ANY,
+	    rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -2579,8 +2592,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	namecache_insert(p, name, fcmh_2_fid(c));
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
