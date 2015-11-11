@@ -24,6 +24,7 @@
 #define _SLASH_CREDS_H_
 
 #include <stdint.h>
+#include <pfl/fsmod.h>
 
 struct passwd;
 
@@ -43,8 +44,7 @@ struct slash_creds {
 void	sl_drop_privs(int);
 void	sl_getuserpwent(struct passwd **);
 int	sl_fcmh_checkacls(struct fidc_membh *,
-	    const struct pscfs_clientctx *, const struct pscfs_creds *,
-	    int);
+	    struct pscfs_req *, const struct pscfs_creds *, int);
 
 int	checkcreds(const struct srt_stat *, const struct pscfs_creds *,
 	    int);
