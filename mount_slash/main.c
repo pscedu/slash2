@@ -1211,14 +1211,14 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		rc = mp->rc;
 
 	if (!rc) {
-		int tmprc;
-
 		slc_fcmh_setattr(p, &mp->pattr);
 
 		namecache_delete(p, name);
 
-		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
-		if (!tmprc) {
+		if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
+		    FIDC_LOOKUP_LOCK, &c, pfr))
+			OPSTAT_INCR("delete-skipped");
+		else {
 			if (mp->valid) {
 				slc_fcmh_setattr(c, &mp->cattr);
 			} else {
@@ -1226,8 +1226,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				c->fcmh_flags |= FCMH_DELETED;
 				OPSTAT_INCR("delete-marked");
 			}
-		} else
-			OPSTAT_INCR("delete-skipped");
+		}
 	}
 
  out:
@@ -1374,18 +1373,20 @@ void
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
-	int i, rc;
 	struct srt_readdir_ent *e;
+	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
+	int i;
 
 	ebase = PSC_AGP(base, size);
 
 	dircache_reg_ents(d, p, nents, base, size, eof);
 	DIRCACHE_WAKE(d);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
-		if (e->sstb.sst_fid == FID_ANY ||
-		    e->sstb.sst_fid == 0) {
+		fgp = &e->sstb.sst_fg;
+		if (fgp->fg_fid == FID_ANY ||
+		    fgp->fg_fid == 0) {
 			DEBUG_SSTB(PLL_WARN, &e->sstb,
 			    "invalid readdir prefetch FID ent=%d "
 			    "parent@%p="SLPRI_FID, i, d, fcmh_2_fid(d));
