@@ -35,6 +35,11 @@ struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
 };
 
+/* sliod-specific fcmh_flags */
+#define FCMH_IOD_BACKFILE	(_FCMH_FLGSHFT << 0)    /* backing file exists */
+
+#define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
+
 static __inline struct fcmh_iod_info *
 fcmh_2_fii(struct fidc_membh *f)
 {
@@ -51,13 +56,8 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 	return (fcmh - 1);
 }
 
-/* sliod-specific fcmh_flags */
-#define FCMH_IOD_BACKFILE	(_FCMH_FLGSHFT << 0)    /* backing file exists */
-
-#define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
-
-#define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, (fp))
-#define sli_fcmh_peek(fgp, fp)  fidc_lookup((fgp), FIDC_LOOKUP_NONE, (fp))
+#define sli_fcmh_get(fgp, fp)	sl_fcmh_get_fg((fgp), (fp))
+#define sli_fcmh_peek(fgp, fp)  sl_fcmh_peek_fg((fgp), (fp))
 
 void	sli_fg_makepath(const struct sl_fidgen *, char *);
 int	sli_fcmh_getattr(struct fidc_membh *);

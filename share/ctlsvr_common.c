@@ -186,8 +186,7 @@ slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	} else {
-		rc = fidc_lookup_fid(scf->scf_fg.fg_fid, &f);
-		if (rc) {
+		if (sl_fcmh_peek_fid(scf->scf_fg.fg_fid, &f)) {
 			rc = psc_ctlsenderr(fd, mh,
 			    "FID "SLPRI_FID" not in cache",
 			    scf->scf_fg.fg_fid);
