@@ -95,11 +95,11 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define MSL_FS_BLKSIZ		(256 * 1024)
 
 #define msl_load_fcmh(pfr, fid, fp)					\
-	msl_fcmh_load_fid((fid), (fp), pscfs_getclientctx(pfr))
+	msl_fcmh_load_fid((fid), (fp), (pfr))
 
 #define msl_fcmh_get_fg(pfr, fg, fp)					\
 	sl_fcmh_lookup((fg)->fg_fid, (fg)->fg_gen, FIDC_LOOKUP_CREATE,	\
-	    (fp), pscfs_getclientctx(pfr))
+	    (fp), (pfr))
 
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
@@ -1097,7 +1097,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	cfid = namecache_lookup(p, name);
 	if (cfid == FID_ANY || sl_fcmh_lookup(cfid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &c, pscfs_getclientctx(pfr))) {
+	    FIDC_LOOKUP_LOCK, &c, pfr)) {
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
 	}
@@ -2395,8 +2395,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	/* refresh moved file's attributes */
 	if (mp->srr_cattr.sst_fid != FID_ANY &&
-	    msl_fcmh_load_fg(&mp->srr_cattr.sst_fg, &ch,
-	    pscfs_getclientctx(pfr)) == 0) {
+	    msl_fcmh_load_fg(&mp->srr_cattr.sst_fg, &ch, pfr) == 0) {
 		slc_fcmh_setattr(ch, &mp->srr_cattr);
 		fcmh_op_done(ch);
 	}
@@ -2407,8 +2406,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * evict.
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
-	    msl_fcmh_load_fg(&mp->srr_clattr.sst_fg, &ch,
-	    pscfs_getclientctx(pfr)) == 0) {
+	    msl_fcmh_load_fg(&mp->srr_clattr.sst_fg, &ch, pfr) == 0) {
 		slc_fcmh_setattr(ch, &mp->srr_clattr);
 		fcmh_op_done(ch);
 	}

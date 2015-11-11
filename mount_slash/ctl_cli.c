@@ -126,7 +126,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, &pfcc);
+	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -207,8 +207,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *f = NULL;
 	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
-	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
+	struct sl_fidgen fg;
 	int added = 0, rc;
 
 	if (mrq->mrq_fid == FID_ANY) {
@@ -228,7 +228,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, &pfcc);
+	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -334,7 +334,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfa->mfa_fid, slstrerror(rc)));
 
-	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, &pfcc);
+	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, slstrerror(rc)));
@@ -404,7 +404,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfa->mfa_fid, slstrerror(rc)));
 
-	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, &pfcc);
+	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, slstrerror(rc)));
@@ -454,9 +454,9 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
-	struct sl_fidgen fg;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
+	struct sl_fidgen fg;
 	int rc;
 
 	rc = msctl_getcreds(fd, &pcr);
@@ -470,7 +470,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = msl_fcmh_load_fid(mfbrp->mfbrp_fid, &f, &pfcc);
+	rc = msl_fcmh_load_fid(mfbrp->mfbrp_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
