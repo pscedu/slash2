@@ -2154,7 +2154,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 			    BMPC_BUFSZ;
 		psc_assert(npages);
 
-		rc = fidc_lookup(&rarq->rarq_fg, 0, &f);
+		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
 		if (rc)
 			goto end;
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw,
