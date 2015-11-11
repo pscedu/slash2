@@ -24,7 +24,8 @@
 #define _SLASH_CREDS_H_
 
 #include <stdint.h>
-#include <pfl/fsmod.h>
+
+struct pscfs_req;
 
 struct passwd;
 
