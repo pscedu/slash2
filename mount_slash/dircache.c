@@ -695,22 +695,6 @@ namecache_get_entries(struct dircache_ent_handle *odch,
 }
 
 /*
- * Helper routine for namecache_lookup() that copies the inum from a
- * dirent in a thread-safe manner.
- */
-void
-dircache_ent_peek(void *p, void *arg)
-{
-	struct dircache_ent *dce = p;
-	uint64_t *fidp = arg;
-
-	if (dce->dce_flags & DCEF_HOLD)
-		OPSTAT_INCR("namecache-hold");
-	else
-		*fidp = dce->dce_pfd->pfd_ino;
-}
-
-/*
  * Perform a lookup to get a FID for a basename from the namecache.  If
  * the entry exists but is marked HOLD, treat the entry as nonexistent,
  * which should force the caller to contact the authoritative MDS.
@@ -720,6 +704,8 @@ namecache_lookup(struct fidc_membh *d, const char *name)
 {
 	struct dircache_ent_query q;
 	slfid_t pfid, fid = FID_ANY;
+	struct dircache_ent *dce;
+	struct psc_hashbkt *b;
 
 	pfid = fcmh_2_fid(d);
 	if (pfid == SLFID_NS)
@@ -730,15 +716,32 @@ namecache_lookup(struct fidc_membh *d, const char *name)
 	q.dcq_name = name;
 	q.dcq_namelen = strlen(name);
 	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
-	psc_hashtbl_search_cmpf(&msl_namecache_hashtbl, 0,
-	    dircache_entq_cmp, &q, dircache_ent_peek, &fid, &q.dcq_key);
+	b = psc_hashbkt_get(&msl_namecache_hashtbl, &q.dcq_key);
+
+ retry:
+
+	dce = psc_hashbkt_search_cmpf(
+	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
+	    NULL, NULL, &q.dcq_key);
 
 	DEBUG_FCMH(PLL_DIAG, d, "lookup name='%s' fid="SLPRI_FID, name,
 	    fid);
-	if (fid == FID_ANY)
+
+	if (!dce) {
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		OPSTAT_INCR("namecache-miss");
-	else
-		OPSTAT_INCR("namecache-hit");
+		return FID_ANY;
+	}
+	if (dce->dce_flags & DCEF_HOLD) {
+		psc_hashbkt_unlock(b);
+		usleep(1);
+		OPSTAT_INCR("namecache-hold");
+		psc_hashbkt_lock(b);
+		goto retry;
+	}
+	OPSTAT_INCR("namecache-hit");
+	fid = dce->dce_pfd->pfd_ino;
+	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	return (fid);
 }

@@ -1154,7 +1154,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct dircache_ent_handle dch;
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
-	int rc;
+	int rc, release_dce = 0;
 
 	msfsthr_ensure(pfr);
 
@@ -1197,6 +1197,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	release_dce = 1;
+	namecache_hold_entry(&dch, p, name);
+
  retry:
 	if (isfile)
 		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp,
@@ -1210,9 +1213,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfid = pinum;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_hold_entry(&dch, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	namecache_delete(&dch, rc ? rc : mp->rc);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc)
@@ -1242,6 +1243,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
 
+	if (release_dce)
+		namecache_delete(&dch, rc);
 	if (c)
 		fcmh_op_done(c);
 	if (p)
