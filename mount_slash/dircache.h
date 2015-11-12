@@ -162,25 +162,48 @@ struct dircache_expire {
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
+#define PFLOG_DIRCACHENT(lvl, e, fmt, ...)				\
+	psclog((lvl), "dce@%p pfd=%p pfid="SLPRI_FID" fid="SLPRI_FID" "	\
+	    "off=%"PRId64" type=%#o flags=%#x name='%.*s' " fmt,	\
+	    (e), (e)->dce_pfd, (e)->dce_pfid, (e)->dce_pfd->pfd_ino,	\
+	    (e)->dce_pfd->pfd_off, (e)->dce_pfd->pfd_type,		\
+	    (e)->dce_flags, (e)->dce_pfd->pfd_namelen,			\
+	    (e)->dce_pfd->pfd_name, ## __VA_ARGS__)
+
 /*
  * This is essentially a pointer to a pscfs_dirent.  Many of these
  * reside in one dircache_page but may exist totally independently if
  * brought in through certain namespace operations.
  */
 struct dircache_ent {
-	uint64_t		 dce_key;
-	uint64_t		 dce_pfid;
-	struct dircache_page	*dce_page;
-	struct pscfs_dirent	*dce_pfd;
-	struct psc_hashentry	 dce_hentry;
+	uint64_t		 dce_key;	/* hash table key */
+	uint64_t		 dce_pfid;	/* parent dir FID, for hashtbl cmp */
+	uint32_t		 dce_flags;	/* see DCEF_* flags below */
+	struct dircache_page	*dce_page;	/* back pointer to READDIR page */
+	struct pscfs_dirent	*dce_pfd;	/* actual dirent */
+	struct psc_hashentry	 dce_hentry;	/* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 };
 
+/* dce_flags */
+#define DCEF_HOLD		(1 << 0)	/* being updated via RPC */
+
+/*
+ * This structure is almost identical to dircache_ent but slightly
+ * different solely to accommodate hash table lookups.
+ */
 struct dircache_ent_query {
-	uint64_t		 dcq_key;
-	uint64_t		 dcq_pfid;
-	uint32_t		 dcq_namelen;
-	const char		*dcq_name;
+	uint64_t		 dcq_key;	/* hash table key */
+	uint64_t		 dcq_pfid;	/* parent dir FID */
+	uint32_t		 dcq_namelen;	/* strlen(dcq_name) */
+	const char		*dcq_name;	/* entry basename */
+};
+
+/* struct to simplify lookup API arguments */
+struct dircache_ent_handle {
+	struct dircache_ent	 *dch_dce;	/* dirent */
+	struct psc_hashbkt	 *dch_bkt;	/* namecache hashtable */
+	struct fidc_membh	 *dch_d;	/* parent directory */
 };
 
 struct slc_wkdata_dircache {
@@ -239,21 +262,28 @@ void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    void *, struct psc_compl *);
 int	dircache_ent_cmp(const void *, const void *);
 
-enum {
-	NAMECACHELOOKUPF_UPDATE,	/* insert if not exist */
-	NAMECACHELOOKUPF_DELETE,
-	NAMECACHELOOKUPF_INSERT,
-	NAMECACHELOOKUPF_PEEK
-};
+#define namecache_get_entry(dch, d, name)				\
+	_namecache_get_entry(PFL_CALLERINFO(), (dch), (d), (name), 0)
 
-#define namecache_update(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_UPDATE, (p), (name), (fid))
-#define namecache_delete(p, name)	_namecache_lookup(NAMECACHELOOKUPF_DELETE, (p), (name), 0)
-#define namecache_insert(p, name, fid)	_namecache_lookup(NAMECACHELOOKUPF_INSERT, (p), (name), (fid))
-#define namecache_lookup(p, name)	_namecache_lookup(NAMECACHELOOKUPF_PEEK, (p), (name), 0)
+#define namecache_hold_entry(dch, d, name)				\
+	_namecache_get_entry(PFL_CALLERINFO(), (dch), (d), (name), 1)
 
+#define namecache_update(dch, fid, rc)					\
+	_namecache_update(PFL_CALLERINFO(), (dch), (fid), (rc))
+
+int	_namecache_get_entry(const struct pfl_callerinfo *,
+	    struct dircache_ent_handle *, struct fidc_membh *,
+	    const char *, int);
+void	 namecache_get_entries(struct dircache_ent_handle *,
+	    struct fidc_membh *, const char *,
+	    struct dircache_ent_handle *,
+	    struct fidc_membh *, const char *);
+slfid_t	 namecache_lookup(struct fidc_membh *, const char *);
+void	_namecache_update(const struct pfl_callerinfo *,
+	    struct dircache_ent_handle *, uint64_t, int);
+void	 namecache_delete(struct dircache_ent_handle *, int);
 void	 namecache_purge(struct fidc_membh *);
-slfid_t	_namecache_lookup(int, struct fidc_membh *, const char *, uint64_t);
 
-struct psc_hashtbl msl_namecache_hashtbl;
+extern struct psc_hashtbl msl_namecache_hashtbl;
 
 #endif /* _DIRCACHE_H_ */

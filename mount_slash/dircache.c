@@ -23,6 +23,10 @@
 /*
  * This API implements the core READDIR dirents caching into buffers
  * called 'dircache_page'.
+ *
+ * TODO
+ *  - use the fuse async API to automatically insert entries into the
+ *    name cache after READDIR instead of waiting for LOOKUPs
  */
 
 #include <sys/types.h>
@@ -56,6 +60,9 @@ struct psc_poolmgr	*dircache_ent_pool;
 
 struct psc_lockedlist	 msl_dircache_pages_lru;
 
+/*
+ * Initialize per-fcmh dircache structures.
+ */
 void
 dircache_init(struct fidc_membh *d)
 {
@@ -69,9 +76,8 @@ dircache_init(struct fidc_membh *d)
 	}
 }
 
-
 /*
- * Initialize dircache API.
+ * Initialize global dircache structures.
  */
 void
 dircache_mgr_init(void)
@@ -105,6 +111,10 @@ dircache_ent_cmp(const void *a, const void *b)
 	    da->dce_pfd->pfd_namelen) == 0);
 }
 
+/*
+ * Perform a comparison for use by the hash table search to disambiguate
+ * entries with the same hash key against a query structures.
+ */
 int
 dircache_entq_cmp(const void *a, const void *b)
 {
@@ -117,32 +127,43 @@ dircache_entq_cmp(const void *a, const void *b)
 	    da->dcq_namelen) == 0);
 }
 
+/*
+ * Release memory for a dircache_ent.
+ *
+ * If the entry came from a READDIR page, it is marked as stale and the
+ * entire page is marked as expired so it is not used.  The entry itself
+ * is not released so as to not screw with the page dcp_dents_off list
+ * (although the page shouldn't be used).
+ *
+ * If the entry came from a individual population, it is removed and
+ * memory released.
+ */
 void
 dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
-	struct psc_dynarray *a;
 
 	OPSTAT_INCR("dircache-ent-zap");
+
+	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "delete");
 
 	fci = fcmh_2_fci(d);
 	DIRCACHE_WRLOCK(d);
 	p = dce->dce_page;
+	dce->dce_pfd->pfd_ino = FID_ANY;
 	if (p) {
-		a = p->dcp_dents_off;
-
-		/* force expiration */
+		/* force expiration of the entire page */
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_local_tm.tv_sec -= DIRCACHEPG_HARD_TIMEO;
 	} else {
-		a = &fci->fcid_ents;
 		PSCFREE(dce->dce_pfd);
+		psc_dynarray_removeitem(&fci->fcid_ents, dce);
 	}
-	psc_dynarray_removeitem(a, dce);
 	DIRCACHE_ULOCK(d);
 
-	psc_pool_return(dircache_ent_pool, dce);
+	if (p == NULL)
+		psc_pool_return(dircache_ent_pool, dce);
 }
 
 /*
@@ -176,14 +197,14 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	while (p->dcp_refcnt)
 		DIRCACHE_WAIT(d);
 
-	// XXX this conjoint conditional should not be here
-	if (psclist_conjoint(&p->dcp_lentry,
-	    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd)))
-		pll_remove(&fci->fci_dc_pages, p);
+	pll_remove(&fci->fci_dc_pages, p);
 
 	if (p->dcp_dents_off) {
 		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off) {
-			psc_hashent_remove(&msl_namecache_hashtbl, dce);
+			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "free_page");
+			if (dce->dce_pfd->pfd_ino != FID_ANY)
+				psc_hashent_remove(
+				    &msl_namecache_hashtbl, dce);
 			psc_pool_return(dircache_ent_pool, dce);
 		}
 		psc_dynarray_free(p->dcp_dents_off);
@@ -197,8 +218,6 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 
 	return (1);
 }
-
-#if 0
 
 /*
  * Perform a batch operation across all cached dirents.
@@ -251,8 +270,6 @@ dircache_walk_async(struct fidc_membh *d, void (*cbf)(
 	wk->compl = compl;
 	pfl_workq_putitem(wk);
 }
-
-#endif
 
 /*
  * Destroy all dirent pages belonging to a directory.
@@ -320,17 +337,28 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-			/*
-			 * Wait for previously launched readdir
-			 * to complete regardless of offset for
-			 * simplicity.
-			 */
-			DIRCACHE_WAIT(d);
-			goto restart;
-		}
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
+			continue;
+		}
+		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
+			if (p->dcp_off == off) {
+				if (wait) {
+					DIRCACHE_WAIT(d);
+					goto restart;
+				}
+
+				/*
+				 * Someone is already taking care of
+				 * this page for us.
+				 */
+				p = NULL;
+				goto out;
+			}
+			if (wait) {
+				DIRCACHE_WAIT(d);
+				goto restart;
+			}
 			continue;
 		}
 		if (dircache_hasoff(p, off)) {
@@ -427,21 +455,40 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
 		psc_dynarray_add(da_off, dce);
 
+		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "init");
+
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
 
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
+
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
 		    &dce->dce_key);
-		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b,
-		    PHLF_DEL, NULL, dce, NULL, NULL, &dce->dce_key);
-		if (dce2)
-			dircache_ent_zap(d, dce2);
-		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+#if 0
+		if (d->fcmh_sstb.sst_fg.fg_gen !=
+		    mq->fg.fg_gen) {
+			OPSTAT_INCR("readdir-stale");
+			PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
+		}
+#endif
+		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
+		    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
+		if (dce2 && dce2->dce_flags & DCEF_HOLD) {
+			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "skip");
+			dce->dce_pfd->pfd_ino = FID_ANY;
+		} else {
+			if (dce2) {
+				psc_hashbkt_del_item(
+				    &msl_namecache_hashtbl, b, dce2);
+				dircache_ent_zap(d, dce2);
+			}
+			psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
+			    dce);
+		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	}
 
@@ -481,6 +528,7 @@ namecache_purge(struct fidc_membh *d)
 
 	fci = fcmh_get_pri(d);
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
+		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "purge");
 		psc_hashent_remove(&msl_namecache_hashtbl, dce);
 		PSCFREE(dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, dce);
@@ -488,149 +536,250 @@ namecache_purge(struct fidc_membh *d)
 	psc_dynarray_free(&fci->fcid_ents);
 }
 
+/*
+ * Helper routine for namecache_get_entry() that conditionally marks a
+ * dirent as immutable in anticipation of an update.
+ */
 void
-dircache_ent_update(void *p, void *arg)
+dircache_ent_tryhold(void *p, void *arg)
 {
 	struct dircache_ent *dce = p;
 
-	dce->dce_pfd->pfd_ino = *(uint64_t *)arg;
+	if ((dce->dce_flags & DCEF_HOLD) == 0) {
+		dce->dce_flags |= DCEF_HOLD;
+		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "set HOLD");
+		*(int *)arg = 1;
+	}
 }
 
+/*
+ * Grab a dirent from the namecache, optionally inserting it if
+ * non-existent.
+ */
+int
+_namecache_get_entry(const struct pfl_callerinfo *pci,
+    struct dircache_ent_handle *dch, struct fidc_membh *d,
+    const char *name, int blocking)
+{
+	struct dircache_ent *dce, *new_dce;
+	struct dircache_ent_query q;
+	struct psc_hashbkt *b;
+	int mine = 0;
+
+	dch->dch_d = d;
+
+	q.dcq_pfid = fcmh_2_fid(d);
+	q.dcq_name = name;
+	q.dcq_namelen = strlen(name);
+	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
+	dch->dch_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
+	    &q.dcq_key);
+ retry_hold:
+	dch->dch_dce = dce = psc_hashbkt_search_cmpf(
+	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
+	    dircache_ent_tryhold, &mine, &q.dcq_key);
+	if (dce && !mine) {
+		if (blocking) {
+			psc_hashbkt_unlock(b);
+			usleep(1);
+			psc_hashbkt_lock(b);
+			goto retry_hold;
+		}
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		OPSTAT_INCR("namecache-get-hold");
+		return (-1);
+	}
+	psc_hashbkt_unlock(b);
+	if (dce) {
+		OPSTAT_INCR("namecache-get-hit");
+		return (0);
+	}
+
+	new_dce = psc_pool_get(dircache_ent_pool);
+	memset(new_dce, 0, sizeof(*new_dce));
+	INIT_PSC_LISTENTRY(&new_dce->dce_lentry);
+	new_dce->dce_pfd = PSCALLOC(PFL_DIRENT_SIZE(q.dcq_namelen));
+
+ retry_add:
+	psc_assert(!mine);
+	psc_hashbkt_lock(b);
+	dce = psc_hashbkt_search_cmpf(&msl_namecache_hashtbl, b,
+	    dircache_entq_cmp, &q, dircache_ent_tryhold, &mine,
+	    &q.dcq_key);
+	if (dce && !mine) {
+		if (blocking) {
+			psc_hashbkt_unlock(b);
+			usleep(1);
+			goto retry_add;
+		}
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		PSCFREE(new_dce->dce_pfd);
+		psc_pool_return(dircache_ent_pool, new_dce);
+		OPSTAT_INCR("namecache-race-hold");
+		return (-1);
+	}
+	if (dce) {
+		OPSTAT_INCR("namecache-race-lost");
+	} else {
+		OPSTAT_INCR("namecache-race-won");
+
+		dce = new_dce;
+		new_dce = NULL;
+
+		dce->dce_key = q.dcq_key;
+		dce->dce_pfid = q.dcq_pfid;
+		dce->dce_flags = DCEF_HOLD;
+		dce->dce_pfd->pfd_ino = FID_ANY;
+		dce->dce_pfd->pfd_namelen = q.dcq_namelen;
+		strncpy(dce->dce_pfd->pfd_name, name, q.dcq_namelen);
+		psc_hashent_init(&msl_namecache_hashtbl, dce);
+		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+
+		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "init");
+	}
+	psc_hashbkt_unlock(b);
+
+	if (new_dce) {
+		PSCFREE(new_dce->dce_pfd);
+		psc_pool_return(dircache_ent_pool, new_dce);
+	} else {
+		struct fcmh_cli_info *fci;
+
+		fci = fcmh_2_fci(d);
+		DIRCACHE_WRLOCK(d);
+		psc_dynarray_add(&fci->fcid_ents, dce);
+		DIRCACHE_ULOCK(d);
+	}
+
+	dch->dch_dce = dce;
+
+	return (0);
+}
+
+/*
+ * Unset 'HOLD' on a dircache_ent and release hash bucket reference.
+ * 'HOLD' behaves like a reference count and can't go away until we
+ * release
+ */
+__static void
+namecache_release_entry(struct dircache_ent_handle *dch, int locked)
+{
+	if (!locked)
+		psc_hashbkt_lock(dch->dch_bkt);
+	psc_assert(dch->dch_dce->dce_flags & DCEF_HOLD);
+	dch->dch_dce->dce_flags &= ~DCEF_HOLD;
+	PFLOG_DIRCACHENT(PLL_DEBUG, dch->dch_dce, "release HOLD");
+	psc_hashbkt_put(&msl_namecache_hashtbl, dch->dch_bkt);
+}
+
+/*
+ * Acquire HOLDs on two entries.  If the HOLD on the second entry isn't
+ * immediately successful, release HOLD from the first entry and restart
+ * from the beginning to avoid deadlock.
+ *
+ * This is a dumb approach and could conceivably spin forever, and
+ * perhaps an ordering strategy would be better, but it's simple.
+ */
+void
+namecache_get_entries(struct dircache_ent_handle *odch,
+    struct fidc_membh *op, const char *oldname,
+    struct dircache_ent_handle *ndch,
+    struct fidc_membh *np, const char *newname)
+{
+	for (;;) {
+		namecache_hold_entry(odch, op, oldname);
+		if (!namecache_get_entry(ndch, np, newname))
+			break;
+		namecache_release_entry(odch, 0);
+	}
+}
+
+/*
+ * Helper routine for namecache_lookup() that copies the inum from a
+ * dirent in a thread-safe manner.
+ */
 void
 dircache_ent_peek(void *p, void *arg)
 {
 	struct dircache_ent *dce = p;
+	uint64_t *fidp = arg;
 
-	*(uint64_t *)arg = dce->dce_pfd->pfd_ino;
+	if (dce->dce_flags & DCEF_HOLD)
+		OPSTAT_INCR("namecache-hold");
+	else
+		*fidp = dce->dce_pfd->pfd_ino;
 }
 
 /*
- * Perform a search in the namecache hash table for a FID based on
- * the parent directory FID and file basename.
- * @d: parent directory.
- * @name: basename to lookup.
- * @cfid: for UPDATE type, new child FID for entry.
- * @op: operation type (LOOKUP, DELETE, etc.).
+ * Perform a lookup to get a FID for a basename from the namecache.  If
+ * the entry exists but is marked HOLD, treat the entry as nonexistent,
+ * which should force the caller to contact the authoritative MDS.
  */
 slfid_t
-_namecache_lookup(int op, struct fidc_membh *d, const char *name,
-    uint64_t cfid)
+namecache_lookup(struct fidc_membh *d, const char *name)
 {
-	void *cbf = NULL, *arg = NULL;
-	uint64_t pfid, key, rc = FID_ANY;
-	struct dircache_ent *dce, *new_dce;
 	struct dircache_ent_query q;
-	struct fcmh_cli_info *fci;
-	struct psc_hashbkt *b;
-	size_t entsz, namelen;
-	int flags = 0;
+	slfid_t pfid, fid = FID_ANY;
 
 	pfid = fcmh_2_fid(d);
 	if (pfid == SLFID_NS)
 		return (FID_ANY);
 	psc_assert(pfid == SLFID_ROOT || pfid >= SLFID_MIN);
 
-	switch (op) {
-	case NAMECACHELOOKUPF_UPDATE:
-		cbf = dircache_ent_update;
-		arg = &cfid;
-		break;
-	case NAMECACHELOOKUPF_DELETE:
-		flags |= PHLF_DEL;
-		break;
-	case NAMECACHELOOKUPF_PEEK:
-		cbf = dircache_ent_peek;
-		arg = &rc;
-		/* FALLTHRU */
-	default:
-		break;
-	}
-
 	q.dcq_pfid = pfid;
 	q.dcq_name = name;
-	q.dcq_namelen = namelen = strlen(name);
-	q.dcq_key = key = dircache_ent_hash(pfid, name, namelen);
-	dce = psc_hashtbl_search_cmpf(&msl_namecache_hashtbl, flags,
-	    dircache_entq_cmp, &q, cbf, arg, &key);
+	q.dcq_namelen = strlen(name);
+	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
+	psc_hashtbl_search_cmpf(&msl_namecache_hashtbl, 0,
+	    dircache_entq_cmp, &q, dircache_ent_peek, &fid, &q.dcq_key);
 
-	switch (op) {
-	case NAMECACHELOOKUPF_PEEK:
-		if (dce)
-			OPSTAT_INCR("namecache-hit");
-		return (rc);
-	case NAMECACHELOOKUPF_DELETE:
-		/*
-		 * Note that the entry is already removed from the hash
-		 * table if found due to PHLF_DEL above.
-		 */
-		if (dce) {
-			dircache_ent_zap(d, dce);
-			OPSTAT_INCR("namecache-delete");
-		} else
-			OPSTAT_INCR("namecache-delete-miss");
-		return (rc);
-	case NAMECACHELOOKUPF_UPDATE:
-		/*
-		 * If dce is NULL, it means that we haven't found an entry
-		 * to update, we are going to insert below.
-		 */
-		if (dce) {
-			OPSTAT_INCR("namecache-update");
-			return (rc);
-		}
-		break;
-	case NAMECACHELOOKUPF_INSERT:
-		/*
-		 * XXX Whenever we are doing namespace operation, we are
-		 * holding the lock on the parent directory. So this should
-		 * never happen. Yet, we always pay the price of searching
-		 * the hash table twice.
-		 */
-		if (dce) {
-			OPSTAT_INCR("namecache-insert-collision");
-			return (rc);
-		}
-		break;
-	}
+	DEBUG_FCMH(PLL_DIAG, d, "lookup name='%s' fid="SLPRI_FID, name,
+	    fid);
+	if (fid == FID_ANY)
+		OPSTAT_INCR("namecache-miss");
+	else
+		OPSTAT_INCR("namecache-hit");
 
-	entsz = PFL_DIRENT_SIZE(namelen);
-	new_dce = psc_pool_get(dircache_ent_pool);
-	memset(new_dce, 0, sizeof(*new_dce));
-	INIT_PSC_LISTENTRY(&new_dce->dce_lentry);
-	new_dce->dce_pfd = PSCALLOC(entsz);
-
-	b = psc_hashbkt_get(&msl_namecache_hashtbl, &key);
-	dce = psc_hashbkt_search_cmpf(&msl_namecache_hashtbl, b,
-	    dircache_entq_cmp, &q, NULL, NULL, &key);
-	if (dce) {
-		OPSTAT_INCR("namecache-insert-race");
-	} else {
-		OPSTAT_INCR("namecache-insert");
-
-		dce = new_dce;
-		new_dce = NULL;
-
-		dce->dce_pfd->pfd_ino = cfid;
-		dce->dce_pfd->pfd_namelen = namelen;
-		dce->dce_key = key;
-		dce->dce_pfid = pfid;
-		strncpy(dce->dce_pfd->pfd_name, name, namelen);
-		psc_hashent_init(&msl_namecache_hashtbl, dce);
-		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
-		fci = fcmh_2_fci(d);
-		DIRCACHE_WRLOCK(d);
-		psc_dynarray_add(&fci->fcid_ents, dce);
-		DIRCACHE_ULOCK(d);
-	}
-	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-	if (new_dce) {
-		PSCFREE(new_dce->dce_pfd);
-		psc_pool_return(dircache_ent_pool, new_dce);
-	}
-	return (rc);
+	return (fid);
 }
 
-#if 0
+/*
+ * Finish a namecache entry update window, releasing the HOLD setting
+ * previously acquired.  If there was an error, release (or potentially
+ * delete, if the entry was a placeholder that failed) the entry
+ * instead.
+ */
+void
+_namecache_update(const struct pfl_callerinfo *pci,
+    struct dircache_ent_handle *dch, uint64_t fid, int rc)
+{
+	if (rc) {
+		namecache_delete(dch, -1);
+	} else {
+		psc_hashbkt_lock(dch->dch_bkt);
+		dch->dch_dce->dce_pfd->pfd_ino = fid;
+		namecache_release_entry(dch, 1);
+		OPSTAT_INCR("namecache-update");
+	}
+}
+
+/*
+ * Remove an entry marked HOLD from the namecache.
+ */
+void
+namecache_delete(struct dircache_ent_handle *dch, int rc)
+{
+	if (rc && dch->dch_dce->dce_pfd->pfd_ino != FID_ANY)
+		namecache_release_entry(dch, 0);
+	else {
+		psc_hashbkt_lock(dch->dch_bkt);
+		psc_hashbkt_del_item(&msl_namecache_hashtbl,
+		    dch->dch_bkt, dch->dch_dce);
+		psc_hashbkt_put(&msl_namecache_hashtbl, dch->dch_bkt);
+
+		dircache_ent_zap(dch->dch_d, dch->dch_dce);
+	}
+}
 
 void
 dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
@@ -660,5 +809,3 @@ dircache_dbgpr(struct fidc_membh *d)
 	wk.cbarg = &p;
 	dircache_walk_wkcb(&wk);
 }
-
-#endif

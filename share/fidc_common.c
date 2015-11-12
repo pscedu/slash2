@@ -1,8 +1,10 @@
 /* $Id$ */
 /*
- * %PSCGPL_START_COPYRIGHT%
- * -----------------------------------------------------------------------------
+ * %GPL_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2015, Google, Inc.
  * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,12 +16,8 @@
  * PURPOSE.  See the GNU General Public License contained in the file
  * `COPYING-GPL' at the top of this distribution or at
  * https://www.gnu.org/licenses/gpl-2.0.html for more details.
- *
- * Pittsburgh Supercomputing Center	phone: 412.268.4960  fax: 412.268.5832
- * 300 S. Craig Street			e-mail: remarks@psc.edu
- * Pittsburgh, PA 15213			web: http://www.psc.edu/
- * -----------------------------------------------------------------------------
- * %PSC_END_COPYRIGHT%
+ * ---------------------------------------------------------------------
+ * %END_LICENSE%
  */
 
 /*
@@ -159,7 +157,8 @@ fidc_reaper(struct psc_poolmgr *m)
  * Search the FID cache for a member by its FID, optionally creating it.
  *
  * @pci: thread caller information.
- * @fgp: FID and GEN #.
+ * @fid: FID.
+ * @fgen: file GEN #.
  * @flags: access flags.
  * @fp: value-result fcmh return.
  * @arg: argument to GETATTR.
@@ -170,16 +169,15 @@ fidc_reaper(struct psc_poolmgr *m)
  * Note: Returns positive errno.
  */
 int
-_fidc_lookup(const struct pfl_callerinfo *pci,
-    const struct sl_fidgen *fgp, int flags, struct fidc_membh **fp,
-    void *arg)
+_fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
+    slfgen_t fgen, int flags, struct fidc_membh **fp, void *arg)
 {
 	struct fidc_membh *tmp, *f, *fnew;
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
 
-	psclog_debug("fidc_lookup called for fid "SLPRI_FID,
-	    fgp->fg_fid);
+	psclog_debug("fidc_lookup called for fid "SLPRI_FID" "
+	    "gen "SLPRI_FGEN, fid, fgen);
 
 	*fp = NULL;
 	fnew = NULL; /* gcc */
@@ -190,15 +188,15 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 #endif
 
 	/* OK.  Now check if it is already in the cache. */
-	b = psc_hashbkt_get(&sl_fcmh_hashtbl, &fgp->fg_fid);
+	b = psc_hashbkt_get(&sl_fcmh_hashtbl, &fid);
  restart:
 	f = NULL;
 	PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, b) {
 		/*
 		 * Note that generation number is only used to track
-		 *   truncations.
+		 * truncations.
 		 */
-		if (fgp->fg_fid != fcmh_2_fid(tmp))
+		if (fid != fcmh_2_fid(tmp))
 			continue;
 		FCMH_LOCK(tmp);
 
@@ -244,7 +242,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			fnew = NULL;
 		}
 
-		psc_assert(fgp->fg_fid == fcmh_2_fid(f));
+		psc_assert(fid == fcmh_2_fid(f));
 
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
@@ -253,7 +251,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		/* call sli_fcmh_reopen() sliod only */
 		if (sl_fcmh_ops.sfop_modify)
-			rc = sl_fcmh_ops.sfop_modify(f, fgp->fg_gen);
+			rc = sl_fcmh_ops.sfop_modify(f, fgen);
 		if (rc)
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		else {
@@ -299,7 +297,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	psc_waitq_init(&f->fcmh_waitq);
 	pfl_rwlock_init(&f->fcmh_rwlock);
 
-	COPYFG(&f->fcmh_fg, fgp);
+	f->fcmh_fg.fg_fid = fid;
+	f->fcmh_fg.fg_gen = fgen;
 	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "new");

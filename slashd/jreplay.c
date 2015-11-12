@@ -470,7 +470,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 			 * to the fcmh layer if work is done at
 			 * the ZFS layer.
 			 */
-			rc = slm_fcmh_peek(&sstb.sst_fg, &f);
+			rc = sl_fcmh_peek_fg(&sstb.sst_fg, &f);
 			if (f)
 				FCMH_LOCK(f);
 		}

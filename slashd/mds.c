@@ -1696,7 +1696,7 @@ mds_bmap_load_fg(const struct sl_fidgen *fg, sl_bmapno_t bmapno,
 
 	psc_assert(*bp == NULL);
 
-	rc = fidc_lookup_fg(fg, &f);
+	rc = sl_fcmh_load_fg(fg, &f);
 	if (rc)
 		return (rc);
 
