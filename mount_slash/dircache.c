@@ -661,11 +661,12 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
  * 'HOLD' behaves like a reference count and can't go away until we
  * release
  */
-void
-namecache_release_entry(struct dircache_ent_handle *dch)
+__static void
+namecache_release_entry(struct dircache_ent_handle *dch, int locked)
 {
+	if (!locked)
+		psc_hashbkt_lock(dch->dch_bkt);
 	psc_assert(dch->dch_dce->dce_flags & DCEF_HOLD);
-//	psc_hashbkt_reqlock(&msl_namecache_hashtbl, dch->dch_bkt);
 	dch->dch_dce->dce_flags &= ~DCEF_HOLD;
 	PFLOG_DIRCACHENT(PLL_DEBUG, dch->dch_dce, "release HOLD");
 	psc_hashbkt_put(&msl_namecache_hashtbl, dch->dch_bkt);
@@ -689,7 +690,7 @@ namecache_get_entries(struct dircache_ent_handle *odch,
 		namecache_hold_entry(odch, op, oldname);
 		if (!namecache_get_entry(ndch, np, newname))
 			break;
-		namecache_release_entry(odch);
+		namecache_release_entry(odch, 0);
 	}
 }
 
@@ -757,8 +758,7 @@ _namecache_update(const struct pfl_callerinfo *pci,
 	} else {
 		psc_hashbkt_lock(dch->dch_bkt);
 		dch->dch_dce->dce_pfd->pfd_ino = fid;
-		namecache_release_entry(dch);
-
+		namecache_release_entry(dch, 1);
 		OPSTAT_INCR("namecache-update");
 	}
 }
@@ -770,7 +770,7 @@ void
 namecache_delete(struct dircache_ent_handle *dch, int rc)
 {
 	if (rc && dch->dch_dce->dce_pfd->pfd_ino != FID_ANY)
-		namecache_release_entry(dch);
+		namecache_release_entry(dch, 0);
 	else {
 		psc_hashbkt_lock(dch->dch_bkt);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl,
