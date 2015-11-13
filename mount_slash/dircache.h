@@ -200,10 +200,10 @@ struct dircache_ent_query {
 };
 
 /* struct to simplify lookup API arguments */
-struct dircache_ent_handle {
-	struct dircache_ent	 *dch_dce;	/* dirent */
-	struct psc_hashbkt	 *dch_bkt;	/* namecache hashtable */
-	struct fidc_membh	 *dch_d;	/* parent directory */
+struct dircache_ent_update {
+	struct dircache_ent	 *dcu_dce;	/* dirent */
+	struct psc_hashbkt	 *dcu_bkt;	/* namecache hashtable */
+	struct fidc_membh	 *dcu_d;	/* parent directory */
 };
 
 struct slc_wkdata_dircache {
@@ -262,26 +262,26 @@ void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    void *, struct psc_compl *);
 int	dircache_ent_cmp(const void *, const void *);
 
-#define namecache_get_entry(dch, d, name)				\
-	_namecache_get_entry(PFL_CALLERINFO(), (dch), (d), (name), 0)
+#define namecache_get_entry(dcu, d, name)				\
+	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 0)
 
-#define namecache_hold_entry(dch, d, name)				\
-	_namecache_get_entry(PFL_CALLERINFO(), (dch), (d), (name), 1)
+#define namecache_hold_entry(dcu, d, name)				\
+	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
 
-#define namecache_update(dch, fid, rc)					\
-	_namecache_update(PFL_CALLERINFO(), (dch), (fid), (rc))
+#define namecache_update(dcu, fid, rc)					\
+	_namecache_update(PFL_CALLERINFO(), (dcu), (fid), (rc))
 
 int	_namecache_get_entry(const struct pfl_callerinfo *,
-	    struct dircache_ent_handle *, struct fidc_membh *,
+	    struct dircache_ent_update *, struct fidc_membh *,
 	    const char *, int);
-void	 namecache_get_entries(struct dircache_ent_handle *,
+void	 namecache_get_entries(struct dircache_ent_update *,
 	    struct fidc_membh *, const char *,
-	    struct dircache_ent_handle *,
+	    struct dircache_ent_update *,
 	    struct fidc_membh *, const char *);
 slfid_t	 namecache_lookup(struct fidc_membh *, const char *);
 void	_namecache_update(const struct pfl_callerinfo *,
-	    struct dircache_ent_handle *, uint64_t, int);
-void	 namecache_delete(struct dircache_ent_handle *, int);
+	    struct dircache_ent_update *, uint64_t, int);
+void	 namecache_delete(struct dircache_ent_update *, int);
 void	 namecache_purge(struct fidc_membh *);
 
 extern struct psc_hashtbl msl_namecache_hashtbl;

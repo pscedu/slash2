@@ -558,7 +558,7 @@ dircache_ent_tryhold(void *p, void *arg)
  */
 int
 _namecache_get_entry(const struct pfl_callerinfo *pci,
-    struct dircache_ent_handle *dch, struct fidc_membh *d,
+    struct dircache_ent_update *dcu, struct fidc_membh *d,
     const char *name, int blocking)
 {
 	struct dircache_ent *dce, *new_dce;
@@ -566,16 +566,16 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 	struct psc_hashbkt *b;
 	int mine = 0;
 
-	dch->dch_d = d;
+	dcu->dcu_d = d;
 
 	q.dcq_pfid = fcmh_2_fid(d);
 	q.dcq_name = name;
 	q.dcq_namelen = strlen(name);
 	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
-	dch->dch_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
+	dcu->dcu_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
 	    &q.dcq_key);
  retry_hold:
-	dch->dch_dce = dce = psc_hashbkt_search_cmpf(
+	dcu->dcu_dce = dce = psc_hashbkt_search_cmpf(
 	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
 	    dircache_ent_tryhold, &mine, &q.dcq_key);
 	if (dce && !mine) {
@@ -651,7 +651,7 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 		DIRCACHE_ULOCK(d);
 	}
 
-	dch->dch_dce = dce;
+	dcu->dcu_dce = dce;
 
 	return (0);
 }
@@ -662,14 +662,14 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
  * release
  */
 __static void
-namecache_release_entry(struct dircache_ent_handle *dch, int locked)
+namecache_release_entry(struct dircache_ent_update *dcu, int locked)
 {
 	if (!locked)
-		psc_hashbkt_lock(dch->dch_bkt);
-	psc_assert(dch->dch_dce->dce_flags & DCEF_HOLD);
-	dch->dch_dce->dce_flags &= ~DCEF_HOLD;
-	PFLOG_DIRCACHENT(PLL_DEBUG, dch->dch_dce, "release HOLD");
-	psc_hashbkt_put(&msl_namecache_hashtbl, dch->dch_bkt);
+		psc_hashbkt_lock(dcu->dcu_bkt);
+	psc_assert(dcu->dcu_dce->dce_flags & DCEF_HOLD);
+	dcu->dcu_dce->dce_flags &= ~DCEF_HOLD;
+	PFLOG_DIRCACHENT(PLL_DEBUG, dcu->dcu_dce, "release HOLD");
+	psc_hashbkt_put(&msl_namecache_hashtbl, dcu->dcu_bkt);
 }
 
 /*
@@ -681,9 +681,9 @@ namecache_release_entry(struct dircache_ent_handle *dch, int locked)
  * perhaps an ordering strategy would be better, but it's simple.
  */
 void
-namecache_get_entries(struct dircache_ent_handle *odch,
+namecache_get_entries(struct dircache_ent_update *odch,
     struct fidc_membh *op, const char *oldname,
-    struct dircache_ent_handle *ndch,
+    struct dircache_ent_update *ndch,
     struct fidc_membh *np, const char *newname)
 {
 	for (;;) {
@@ -754,14 +754,14 @@ namecache_lookup(struct fidc_membh *d, const char *name)
  */
 void
 _namecache_update(const struct pfl_callerinfo *pci,
-    struct dircache_ent_handle *dch, uint64_t fid, int rc)
+    struct dircache_ent_update *dcu, uint64_t fid, int rc)
 {
 	if (rc) {
-		namecache_delete(dch, -1);
+		namecache_delete(dcu, -1);
 	} else {
-		psc_hashbkt_lock(dch->dch_bkt);
-		dch->dch_dce->dce_pfd->pfd_ino = fid;
-		namecache_release_entry(dch, 1);
+		psc_hashbkt_lock(dcu->dcu_bkt);
+		dcu->dcu_dce->dce_pfd->pfd_ino = fid;
+		namecache_release_entry(dcu, 1);
 		OPSTAT_INCR("namecache-update");
 	}
 }
@@ -770,17 +770,17 @@ _namecache_update(const struct pfl_callerinfo *pci,
  * Remove an entry marked HOLD from the namecache.
  */
 void
-namecache_delete(struct dircache_ent_handle *dch, int rc)
+namecache_delete(struct dircache_ent_update *dcu, int rc)
 {
-	if (rc && dch->dch_dce->dce_pfd->pfd_ino != FID_ANY)
-		namecache_release_entry(dch, 0);
+	if (rc && dcu->dcu_dce->dce_pfd->pfd_ino != FID_ANY)
+		namecache_release_entry(dcu, 0);
 	else {
-		psc_hashbkt_lock(dch->dch_bkt);
+		psc_hashbkt_lock(dcu->dcu_bkt);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl,
-		    dch->dch_bkt, dch->dch_dce);
-		psc_hashbkt_put(&msl_namecache_hashtbl, dch->dch_bkt);
+		    dcu->dcu_bkt, dcu->dcu_dce);
+		psc_hashbkt_put(&msl_namecache_hashtbl, dcu->dcu_bkt);
 
-		dircache_ent_zap(dch->dch_d, dch->dch_dce);
+		dircache_ent_zap(dcu->dcu_d, dcu->dcu_dce);
 	}
 }
 
