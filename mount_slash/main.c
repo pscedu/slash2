@@ -1798,7 +1798,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1816,11 +1816,10 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		retbuf[mp->len] = '\0';
 
  out:
-	if (c)
-		fcmh_op_done(c);
-
 	pscfs_reply_readlink(pfr, retbuf, rc);
 
+	if (c)
+		fcmh_op_done(c);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
