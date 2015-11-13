@@ -167,7 +167,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct bw_dir);
 	PRTYPE(struct dircache_ent);
-	PRTYPE(struct dircache_ent_handle);
+	PRTYPE(struct dircache_ent_update);
 	PRTYPE(struct dircache_ent_query);
 	PRTYPE(struct dircache_expire);
 	PRTYPE(struct dircache_page);
