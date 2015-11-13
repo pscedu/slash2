@@ -1331,7 +1331,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2394,7 +2394,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2495,7 +2495,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2586,7 +2586,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3179,7 +3179,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (!rc && size) {
 		// XXX sanity check mp->size
 		iov.iov_len = mp->size;
@@ -3262,7 +3262,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (!rc) {
 		/*
 		 * Do not use xattr information until properly
