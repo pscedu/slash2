@@ -1118,18 +1118,19 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	 * based on FID.
 	 */
 	rc = msl_stat(c, pfr);
-	if (!rc) {
-		FCMH_LOCK(c);
-		if (fgp)
-			*fgp = c->fcmh_fg;
-		if (sstb)
-			*sstb = c->fcmh_sstb;
-		FCMH_ULOCK(c);
-	}
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	FCMH_LOCK(c);
+	if (fgp)
+		*fgp = c->fcmh_fg;
+	if (sstb)
+		*sstb = c->fcmh_sstb;
 
  out:
 	if (rc == 0 && fp) {
 		*fp = c;
+		FCMH_ULOCK(c);
 		c = NULL;
 	}
 	if (p)
