@@ -1799,18 +1799,18 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		goto retry;
 	if (!rc)
 		rc = mp->rc;
-	if (!rc) {
-		if (mp->len > LNET_MTU) {
-			rc = EINVAL;
-		} else if (mp->len < sizeof(mp->buf)) {
-			retbuf = mp->buf;
-		} else {
-			iov.iov_len = mp->len;
-			rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
-			    &iov, 1);
-			if (rc == 0)
-				OPSTAT_INCR("readlink-bulk");
-		}
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	if (mp->len > LNET_MTU) {
+		rc = EINVAL;
+	} else if (mp->len < sizeof(mp->buf)) {
+		retbuf = mp->buf;
+	} else {
+		iov.iov_len = mp->len;
+		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
+		if (rc == 0)
+			OPSTAT_INCR("readlink-bulk");
 	}
 	if (!rc)
 		retbuf[mp->len] = '\0';
