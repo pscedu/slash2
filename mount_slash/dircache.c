@@ -656,13 +656,18 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 	return (0);
 }
 
+#define namecache_release_entry(h)					\
+	_namecache_release_entry((h), 0)
+#define namecache_release_entry_locked(h)				\
+	_namecache_release_entry((h), 1)
+
 /*
  * Unset 'HOLD' on a dircache_ent and release hash bucket reference.
  * 'HOLD' behaves like a reference count and can't go away until we
  * release
  */
 __static void
-namecache_release_entry(struct dircache_ent_update *dcu, int locked)
+_namecache_release_entry(struct dircache_ent_update *dcu, int locked)
 {
 	if (!locked)
 		psc_hashbkt_lock(dcu->dcu_bkt);
@@ -681,69 +686,17 @@ namecache_release_entry(struct dircache_ent_update *dcu, int locked)
  * perhaps an ordering strategy would be better, but it's simple.
  */
 void
-namecache_get_entries(struct dircache_ent_update *odch,
+namecache_get_entries(struct dircache_ent_update *odcu,
     struct fidc_membh *op, const char *oldname,
-    struct dircache_ent_update *ndch,
+    struct dircache_ent_update *ndcu,
     struct fidc_membh *np, const char *newname)
 {
 	for (;;) {
-		namecache_hold_entry(odch, op, oldname);
-		if (!namecache_get_entry(ndch, np, newname))
+		namecache_hold_entry(odcu, op, oldname);
+		if (!namecache_get_entry(ndcu, np, newname))
 			break;
-		namecache_release_entry(odch, 0);
+		namecache_release_entry(odcu);
 	}
-}
-
-/*
- * Perform a lookup to get a FID for a basename from the namecache.  If
- * the entry exists but is marked HOLD, treat the entry as nonexistent,
- * which should force the caller to contact the authoritative MDS.
- */
-slfid_t
-namecache_lookup(struct fidc_membh *d, const char *name)
-{
-	struct dircache_ent_query q;
-	slfid_t pfid, fid = FID_ANY;
-	struct dircache_ent *dce;
-	struct psc_hashbkt *b;
-
-	pfid = fcmh_2_fid(d);
-	if (pfid == SLFID_NS)
-		return (FID_ANY);
-	psc_assert(pfid == SLFID_ROOT || pfid >= SLFID_MIN);
-
-	q.dcq_pfid = pfid;
-	q.dcq_name = name;
-	q.dcq_namelen = strlen(name);
-	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
-	b = psc_hashbkt_get(&msl_namecache_hashtbl, &q.dcq_key);
-
- retry:
-
-	dce = psc_hashbkt_search_cmpf(
-	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
-	    NULL, NULL, &q.dcq_key);
-
-	DEBUG_FCMH(PLL_DIAG, d, "lookup name='%s' fid="SLPRI_FID, name,
-	    fid);
-
-	if (!dce) {
-		psc_hashbkt_put(&msl_namecache_hashtbl, b);
-		OPSTAT_INCR("namecache-miss");
-		return FID_ANY;
-	}
-	if (dce->dce_flags & DCEF_HOLD) {
-		psc_hashbkt_unlock(b);
-		usleep(1);
-		OPSTAT_INCR("namecache-hold");
-		psc_hashbkt_lock(b);
-		goto retry;
-	}
-	OPSTAT_INCR("namecache-hit");
-	fid = dce->dce_pfd->pfd_ino;
-	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-
-	return (fid);
 }
 
 /*
@@ -756,14 +709,17 @@ void
 _namecache_update(const struct pfl_callerinfo *pci,
     struct dircache_ent_update *dcu, uint64_t fid, int rc)
 {
+	if (dcu->dcu_d == NULL)
+		return;
 	if (rc) {
 		namecache_delete(dcu, -1);
 	} else {
 		psc_hashbkt_lock(dcu->dcu_bkt);
 		dcu->dcu_dce->dce_pfd->pfd_ino = fid;
-		namecache_release_entry(dcu, 1);
+		namecache_release_entry_locked(dcu);
 		OPSTAT_INCR("namecache-update");
 	}
+	dcu->dcu_d = NULL;
 }
 
 /*
@@ -773,7 +729,7 @@ void
 namecache_delete(struct dircache_ent_update *dcu, int rc)
 {
 	if (rc && dcu->dcu_dce->dce_pfd->pfd_ino != FID_ANY)
-		namecache_release_entry(dcu, 0);
+		namecache_release_entry(dcu);
 	else {
 		psc_hashbkt_lock(dcu->dcu_bkt);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl,

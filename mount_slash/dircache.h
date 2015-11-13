@@ -199,12 +199,14 @@ struct dircache_ent_query {
 	const char		*dcq_name;	/* entry basename */
 };
 
-/* struct to simplify lookup API arguments */
+/* struct to simplify updating entries */
 struct dircache_ent_update {
 	struct dircache_ent	 *dcu_dce;	/* dirent */
 	struct psc_hashbkt	 *dcu_bkt;	/* namecache hashtable */
 	struct fidc_membh	 *dcu_d;	/* parent directory */
 };
+
+#define DCE_UPD_INIT		{ NULL, NULL, NULL }
 
 struct slc_wkdata_dircache {
 	struct fidc_membh	 *d;
@@ -269,7 +271,11 @@ int	dircache_ent_cmp(const void *, const void *);
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
 
 #define namecache_update(dcu, fid, rc)					\
-	_namecache_update(PFL_CALLERINFO(), (dcu), (fid), (rc))
+	_namecache_update(PFL_CALLERINFO(), (dcu),			\
+	    (rc) ? FID_ANY : (fid), (rc))
+
+#define namecache_fail(dcu)						\
+	namecache_update((dcu), FID_ANY, -1)
 
 int	_namecache_get_entry(const struct pfl_callerinfo *,
 	    struct dircache_ent_update *, struct fidc_membh *,
@@ -278,7 +284,6 @@ void	 namecache_get_entries(struct dircache_ent_update *,
 	    struct fidc_membh *, const char *,
 	    struct dircache_ent_update *,
 	    struct fidc_membh *, const char *);
-slfid_t	 namecache_lookup(struct fidc_membh *, const char *);
 void	_namecache_update(const struct pfl_callerinfo *,
 	    struct dircache_ent_update *, uint64_t, int);
 void	 namecache_delete(struct dircache_ent_update *, int);
