@@ -1134,12 +1134,13 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		*fgp = c->fcmh_fg;
 	if (sstb)
 		*sstb = c->fcmh_sstb;
+	if (fp)
+		FCMH_ULOCK(c);
 
  out:
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
-		FCMH_ULOCK(c);
 		c = NULL;
 	}
 	if (p)
