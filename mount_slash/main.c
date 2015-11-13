@@ -3441,9 +3441,8 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 
  out:
 	if (f)
