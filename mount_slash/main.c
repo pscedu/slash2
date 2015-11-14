@@ -1444,7 +1444,11 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		}
 	}
 	DIRCACHE_WRLOCK(d);
-	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+	/*
+	 * We could free unused space here but we would have to adjust
+	 * the various pointers referenced by the dynarrays.
+	 */
+//	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_ULOCK(d);
