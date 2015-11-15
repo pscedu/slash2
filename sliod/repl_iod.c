@@ -90,6 +90,15 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 	spinlock(&sli_ssfb_lock);
 	sli_ssfb_send.tv_sec = 0;	/* reset timer */
 	freelock(&sli_ssfb_lock);
+
+	/* XXX use non-blocking version */
+	if (sli_rmi_getcsvc(&csvc)) {
+		CSVC_LOCK(csvc);
+		PFL_GETTIMESPEC(&csvc->csvc_mtime);
+		csvc->csvc_mtime.tv_sec -= CSVC_PING_INTV;
+		// XXX could do a wakeup here to send update immediately
+		CSVC_ULOCK(csvc);
+	}
 }
 
 /*
