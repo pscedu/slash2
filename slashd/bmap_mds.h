@@ -217,6 +217,7 @@ struct bmap_mds_lease {
 
 #define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
+#define BML_RLOCK(bml)		reqlock(&(bml)->bml_lock)
 #define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
 #define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
 #define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
