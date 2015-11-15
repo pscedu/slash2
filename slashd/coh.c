@@ -54,7 +54,7 @@ slm_coh_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 
-	BML_LOCK(bml);
+	BML_RLOCK(bml);
 	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
 
@@ -92,7 +92,6 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_DIO;
-	BML_ULOCK(bml);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
