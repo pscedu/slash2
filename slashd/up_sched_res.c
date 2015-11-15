@@ -614,7 +614,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	pe.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &pe.bgen);
 
-	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRIM_BULK_PORTAL,
+	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
 	    slm_batch_preclaim_cb, 30);
 	if (rc)
