@@ -234,6 +234,11 @@ sli_rpc_mds_pack_statfs(struct pscrpc_msg *m, int idx)
 	spinlock(&sli_bwqueued_lock);
 	data->bwq = sli_bwqueued;
 	freelock(&sli_bwqueued_lock);
+
+	/*
+	 * XXX pack a generation number to prevent against stale data
+	 * via out-of-order receptions.
+	 */
 }
 
 int
