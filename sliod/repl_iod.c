@@ -95,7 +95,7 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 	/* XXX use non-blocking version */
 	if (!sli_rmi_getcsvc(&csvc)) {
 		CSVC_LOCK(csvc);
-		PFL_GETTIMESPEC(&csvc->csvc_mtime);
+		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 		csvc->csvc_mtime.tv_sec -= CSVC_PING_INTV;
 		// XXX could do a wakeup here to send update immediately
 		CSVC_ULOCK(csvc);
