@@ -517,6 +517,9 @@ _sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
 	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 	csvc->csvc_lasterrno = 0;
 	imp = csvc->csvc_import;
+	csvc->csvc_import = NULL;
+
+	CSVC_ULOCK(csvc);
 	if (imp) {
 		// deactivate(imp) ?
 		pscrpc_abort_inflight(imp);
@@ -525,7 +528,7 @@ _sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
 			pscrpc_drop_conns(&imp->imp_connection->c_peer);
 		pscrpc_import_put(imp);
 	}
-	csvc->csvc_import = NULL;
+	CSVC_LOCK(csvc);
 	CSVC_WAKE(csvc);
 }
 
