@@ -688,7 +688,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	} while (rc && slc_rmc_retry(pfr, &rc));
 
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 
 	FCMH_LOCK(f);
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
@@ -978,7 +978,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1234,7 +1234,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 
 	if (!rc) {
 		slc_fcmh_setattr(p, &mp->pattr);
@@ -1939,7 +1939,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc == -SLERR_BMAP_PTRUNC_STARTED) {
 		ptrunc_started = 1;
 		rc = 0;
@@ -3381,7 +3381,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (!rc && size) {
 		iov.iov_len = mp->valuelen;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
@@ -3390,7 +3390,6 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	if (!rc)
 		*retsz = mp->valuelen;
-	rc = -rc;
 
  out:
 	pscrpc_req_finished(rq);
