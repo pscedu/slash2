@@ -1970,6 +1970,8 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	int rc, waslocked, to_set = 0;
 	struct srt_stat attr;
 
+	memset(&attr, 0, sizeof(attr));
+
 	waslocked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
 
