@@ -143,7 +143,7 @@ server
 .Xr sliod 8
 writes files resident in a
 .Tn SLASH2
-network to the root of the directory specified by the
+deployment to the root of the directory specified by the
 .Ic fsroot
 .Xr slcfg 5
 option.
@@ -155,7 +155,7 @@ This directory must be initialized for use with
 .Pp
 Next, ensure that the shared
 .Tn SLASH2
-network daemon communication key has been installed on the machine.
+deployment daemon communication key has been installed on the machine.
 The file defaults to
 .Pa /var/lib/slash/authbuf.key
 and will be generated automatically by
@@ -179,8 +179,8 @@ server once it is online.
 .Ss Client Mount Daemon
 To communicate on a
 .Tn SLASH2
-network, the shared network daemon communication key must be installed
-on the machine.
+deployment, the shared deployment daemon communication key must be
+installed on the machine.
 The file defaults to
 .Pa /var/lib/slash/authbuf.key
 and will be generated automatically by
