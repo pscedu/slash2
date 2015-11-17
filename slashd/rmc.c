@@ -393,7 +393,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_link(vfsid, fcmh_2_mfid(c), fcmh_2_mfid(p),
+	mp->rc = -mdsio_link(vfsid, fcmh_2_mfid(c), fcmh_2_mfid(p),
 	    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
 
@@ -456,7 +456,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	mp->rc = mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
+	mp->rc = -mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
 	    &rootcreds, &mp->attr, &mp->xattrsize);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -591,7 +591,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_reserve_slot(1);
 	cr.scr_uid = mq->creds.scr_uid;
 	cr.scr_gid = mq->creds.scr_gid;
-	mp->rc = mdsio_mknod(vfsid, fcmh_2_mfid(p), mq->name,
+	mp->rc = -mdsio_mknod(vfsid, fcmh_2_mfid(p), mq->name,
 	    mq->mode, &cr, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid);
 	mds_unreserve_slot(1);
@@ -658,7 +658,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mp->cattr.sst_ctim = mq->time;
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p), &cr,
+	mp->rc = -mdsio_opencreate(vfsid, fcmh_2_mfid(p), &cr,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mfh, fid ? NULL : mdslog_namespace,
 	    fid ? 0 : slm_get_next_slashfid, fid);
@@ -866,7 +866,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	} else {
 		int nents, eof;
 
-		mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size,
+		mp->rc = -mdsio_readdir(vfsid, &rootcreds, mq->size,
 		    mq->offset, iov[0].iov_base, &mp->size, &nents,
 		    &iov[1], &eof, &dummy, fcmh_2_mfh(f));
 		if (mp->rc)
@@ -930,7 +930,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &len,
+	mp->rc = -mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &len,
 	    &rootcreds);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -1022,7 +1022,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mds_reserve_slot(2);
-	mp->rc = mdsio_rename(vfsid, fcmh_2_mfid(op), from,
+	mp->rc = -mdsio_rename(vfsid, fcmh_2_mfid(op), from,
 	    fcmh_2_mfid(np), to, &rootcreds, mdslog_namespace,
 	    chfg);
 	mds_unreserve_slot(2);
@@ -1291,7 +1291,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	 * is a cluster, loop through each IOS and calculate aggregate
 	 * space.
 	 */
-	mp->rc = mdsio_statfs(vfsid, &sfb);
+	mp->rc = -mdsio_statfs(vfsid, &sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	r = libsl_id2res(mq->iosid);
 	if (r == NULL) {
@@ -1380,7 +1380,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mfid(p),
+	mp->rc = -mdsio_symlink(vfsid, linkname, fcmh_2_mfid(p),
 	    mq->name, &cr, &mp->cattr, NULL, fid ? NULL :
 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
@@ -1442,10 +1442,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	mds_reserve_slot(1);
 	if (isfile)
-		mp->rc = mdsio_unlink(vfsid, fcmh_2_mfid(p), &oldfg,
+		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace, &chfg);
 	else
-		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), &oldfg,
+		mp->rc = -mdsio_rmdir(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
 
@@ -1500,7 +1500,7 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	if (mq->size)
 		iov.iov_base = PSCALLOC(mq->size);
 
-	rc = mdsio_listxattr(vfsid, &rootcreds, iov.iov_base,
+	rc = -mdsio_listxattr(vfsid, &rootcreds, iov.iov_base,
 	    mq->size, &outsize, fcmh_2_mfid(f));
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1557,7 +1557,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, rc);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_setxattr(vfsid, &rootcreds, mq->name,
+	mp->rc = -mdsio_setxattr(vfsid, &rootcreds, mq->name,
 	    iov.iov_base, mq->valuelen, fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 
@@ -1635,7 +1635,7 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_removexattr(vfsid, &rootcreds, mq->name,
+	mp->rc = -mdsio_removexattr(vfsid, &rootcreds, mq->name,
 	    fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 
