@@ -585,6 +585,7 @@ void
 msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
     struct bmpc_ioreq *r0)
 {
+	struct bmpc_ioreq *iorqs[MAX_BMAPS_REQ];
 	void *oiov = q->mfsrq_iovs;
 	struct msl_fhent *mfh;
 	struct pscfs_req *pfr;
@@ -593,12 +594,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 
 	pfr = mfsrq_2_pfr(q);
 	mfh = q->mfsrq_mfh;
-
-	if (r0) {
-		BIORQ_LOCK(r0);
-		r0->biorq_fsrqi = NULL;
-		BIORQ_ULOCK(r0);
-	}
 
 	MFH_LOCK(mfh);
 	if (!q->mfsrq_err) {
@@ -622,6 +617,12 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
 	mfh_decref(mfh);
+
+	/*
+	 * Make a copy of the biorqs to avoid use-after-free via
+	 * pscfs_reply_read/write().
+	 */
+	memcpy(iorqs, q->mfsrq_biorq, sizeof(iorqs));
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		if (q->mfsrq_err) {
@@ -684,7 +685,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	PSCFREE(oiov);
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
-		r = q->mfsrq_biorq[i];
+		r = iorqs[i];
 		if (!r)
 			break;
 		if (r == r0)
@@ -701,7 +702,11 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	size_t len = 0;
 
 	/* don't do anything for readahead */
+	BIORQ_LOCK(r);
 	q = r->biorq_fsrqi;
+	r->biorq_fsrqi = NULL;
+	BIORQ_ULOCK(r);
+
 	if (q == NULL)
 		return;
 
