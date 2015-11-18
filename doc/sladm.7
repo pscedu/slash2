@@ -45,41 +45,46 @@ file system.
 .Ss Creating a File System for SLASH2 Metadata
 .Tn SLASH2
 uses
-.Tn ZFS
-for its backend metadata file system.
-To create a new
-.Tn ZFS
-file system, launch the
-.Xr zfs-fuse 8
-daemon:
-.Bd -literal -offset indent
-# zfs-fuse
+.Tn ZFS ,
+and specifically
+.Xr zfs-fuse 8 ,
+for its backend.
+This backend is called the metadata file system
+.Pq MDFS .
 .Pp
+To create an MDFS, first launch
+.Xr zfs-fuse 8 :
+.Bd -literal -offset indent
+mds-host# zfs-fuse
 .Ed
-Next, create a
+.Pp
+Now follow the normal zpool creation instructions (i.e. the official
 .Tn ZFS
-pool with
-.Xr zpool 8
-for the backing file system used by the
-.Tn SLASH2
-metadata server.
+documentation), tailored to the deployment requirements, such as drive
+redundancy, cache devices, etc.
+.Pp
 For example:
 .Bd -literal -offset indent
-# zpool create mypool sda		# single drive
-# zpool create mypool mirror sda sdb	# two mirrored drives
-
-Other pool settings:
-# zfs set atime=off mypool
-# zfs set compression=lz4 mypool
-# zpool set cachefile=/mypool.zcf mypool
+mds-host# zpool create mypool sda		# single drive MDFS
+mds-host# zpool create mypool mirror sda sdb	# two-drive mirror
 .Ed
 .Pp
-Before this file system can be used by the
+Other pool settings that may tuned (this list is by no means
+comprehensive):
+.Bd -literal -offset indent
+mds-host# zfs set atime=off mypool
+mds-host# zfs set compression=lz4 mypool
+mds-host# zpool set cachefile=/mypool.zcf mypool
+.Ed
+.Pp
+Before this MDFS can be used by the
 .Tn SLASH2
-metadata server, it must be initialized by
+metadata server, it must be initialized or
+.Dq formatted
+with
 .Xr slmkfs 8 :
 .Bd -literal -offset indent
-# slmkfs -I $site_id:$res_id /mypool
+mds-host# slmkfs -I $site_id:$res_id /mypool
 .Ed
 .Pp
 The
@@ -87,23 +92,32 @@ The
 must match the site's ID and
 .Va $res_id
 must match the resource's ID as specified in
-.Xr slcfg 5 .
+.Xr slcfg 5 ,
+in hexadecimal format with leading
+.Sq 0x
+prefix notation.
 .Pp
-During formatting of a new MDS file system, a file system unique ID will
-be generated
-.Pq Dq fsuuid .
-The value for this setting in
+During formatting of the MDFS, a SLASH2 deployment
+.Dq file system universally unique ID
+.Pq fsuuid
+will be generated and written into a special location inside the MDFS.
+This value should be stashed into the deployment's
 .Xr slcfg 5
-must match the ID the file system has been formatted with.
+file as all daemons
+.Po
+.Xr slashd 8 and
+.Xr sliod 8
+.Pc
+in the deployment must agree on its value.
 .Pp
-Now that the metadata file system has been set up,
+Now that the MDFS has been set up,
 .Xr zfs-fuse 8
 must be terminated before the
 .Tn SLASH2
 metadata server can access it:
 .Bd -literal -offset indent
-# umount /mypool
-# pkill zfs-fuse
+mds-host# umount /mypool
+mds-host# pkill zfs-fuse
 .Ed
 .Ss Metadata Server Po Ss MDS Pc
 The metadata server
@@ -113,82 +127,106 @@ This can be created with the
 .Xr slmkjrnl 8
 utility:
 .Bd -literal -offset indent
-# slmkjrnl -f -b /dev/disk0 -u $fsuuid
+mds-host# slmkjrnl -f -b /dev/disk0 -u $fsuuid
 .Ed
 .Pp
-Note that a battery backed NVRAM device is the ideal type of device for
-this purpose.
+Note that a low-latency, non-volatile device
+.Pq such as Tn NVRAM
+is ideal for this function.
 .Pp
 The MDS server also maintains an
 .Tn SQLite
-database for managing some workloads.
+database for managing some of its workloads.
 This is created automatically by
 .Xr slashd 8
-as necessary for operation.
+as necessary for its operation.
 .Pp
 Now launch
 .Xr slashd 8 :
 .Bd -literal -offset indent
-# slashd -p /mypool.zcf mypool
+mds-host# slashd -p /mypool.zcf mypool
 .Ed
 .Pp
 .Xr slmctl 8
 can be used to control live operation of
 .Xr slashd 8
 once it is online.
-.Ss Tn Ss I/O Ss Server
-The
-.Tn I/O
-server
+.Ss I/O Server
+The I/O server
 .Xr sliod 8
-writes files resident in a
+handles requests for actual file data that is read and written in a
 .Tn SLASH2
-deployment to the root of the directory specified by the
+deployment.
+The backend storage it uses is rooted in the directory specified by the
 .Ic fsroot
+option under the IOS resource's profile in the
 .Xr slcfg 5
-option.
-This directory must be initialized for use with
-.Xr slmkfs 8 :
+file.
+This directory must be an existing POSIX file system
+.Pq e.g. ext3, ZFS, xfs, UFS, btrfs, etc. .
+.Pp
+Note that it is
+.Sy not advised
+to use the
+.Xr zfs-fuse 8
+system included in the SLASH2 distribution as the IOS backend file
+system due to poor performance, software maintenance, and other reasons.
+.Pp
+For its core operation,
+.Xr sliod 8
+simply writes SLASH2 file data under this
+.Ic fsroot
+location, albeit in a special naming convention.
+As such, this directory must be initialized for use by
+.Xr slmkfs 8 ,
+very similarly to the way the MDFS was formatted above.
+.Pp
+For example:
 .Bd -literal -offset indent
-# slmkfs -i -u $fsuuid -I $site_id:$res_id /$fsroot
+ios-host# slmkfs -i -u $fsuuid -I $site_id:$res_id /$fsroot
 .Ed
 .Pp
-Next, ensure that the shared
-.Tn SLASH2
-deployment daemon communication key has been installed on the machine.
-The file defaults to
+In this example,
+.Va $fsuuid
+is the value generated when formatting the MDFS via
+.Xr slmkfs 8
+above.
+.Pp
+Next, ensure that the deployment's shared communication key
+.Pq the Dq authbuf key file
+has been installed on the IOS host.
+The location of this file defaults to
 .Pa /var/lib/slash/authbuf.key
-and will be generated automatically by
+and is generated automatically by
 .Xr slashd 8
-or manually with
+or can be generated manually with
 .Xr slkeymgt 8 :
 .Bd -literal -offset indent
-# scp mdshost:/var/lib/slash/authbuf.key /var/lib/slash
+ios-host# scp mds-host:/var/lib/slash/authbuf.key /var/lib/slash
 .Ed
 .Pp
 Now launch
 .Xr sliod 8 :
 .Bd -literal -offset indent
-# sliod
+ios-host# sliod
 .Ed
 .Pp
 .Xr slictl 8
-can be used to control live operation of the
-.Tn I/O
-server once it is online.
+can be used to control live operation of the I/O server once it is
+online.
 .Ss Client Mount Daemon
-To communicate on a
+To mount a
 .Tn SLASH2
-deployment, the shared deployment daemon communication key must be
-installed on the machine.
-The file defaults to
+deployment on a client host, the deployment's shared authbuf key
+must be installed.
+The location of this file defaults to
 .Pa /var/lib/slash/authbuf.key
-and will be generated automatically by
+and is be generated automatically by
 .Xr slashd 8
-or manually with
+or can be generated manually with
 .Xr slkeymgt 8 :
 .Bd -literal -offset indent
-# scp mdshost:/var/lib/slash/authbuf.key /var/lib/slash
+client-host# scp mds-host:/var/lib/slash/authbuf.key /var/lib/slash
 .Ed
 .Pp
 Now
@@ -197,17 +235,15 @@ may be used to mount a
 .Tn SLASH2
 file system under a directory node on the local system:
 .Bd -literal -offset indent
-# mount_slash -U /myfs
+client-host# mount_slash -U /myfs
 .Ed
 .Pp
 .Xr msctl 8
 can be used to control live operation of the client mount point once it
-has been brought up.
+is online.
 .Sh CAVEATS
-Running metadata and
-.Tn I/O
-servers on the same machine currently requires configuring each daemon
-to listen on different addresses.
+Running metadata and I/O servers on the same machine currently requires
+configuring each daemon to listen on different addresses.
 Furthermore, the network configuration must be such that each daemon can
 access clients via the client destination network address.
 .Pp
