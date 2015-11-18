@@ -300,7 +300,7 @@ API rename
 - IOS that do not connect to an MDS (outside a site) will never be upsch
   scheduled
 - use F_FREESP on Solaris to implement replication ejection
-- msattrflushthr_main should be async 
+- msattrflushthr_main should be async
 - use-after-unlink also affects directories
 
 - client needs to track when MDS goes down and recheck pinned ptrunc
@@ -644,17 +644,12 @@ add rpc xid to psc_log_fmt
 - fuse: bad error value: 101 (ENETUNREACH) probably from bmap_to_csvc
 1297480 fuse: bad error value: 504
 
-VM images for slash2?
-
 - msctl -S or infer sockfn from mountpoint name:
    msctl -r /supercell/tmp/foo
      -> statfs() parent dir until fsid changes
      -> connect(AF_LOCAL, .slctlsock)
 
 honor .slmd/resid on startup for MDS and IOD
-
-
-move from splay -> redblack in bmpc_biorq
 
 
 - failed replication need to reset upschdb
@@ -703,11 +698,202 @@ leaks:
    - make default size much bigger, and random
 - breleasethr 'skip due to not expire' should put such bmaps at
   the end of the list and stop processing when encountering one
+- ensure buffered IO mode with reads past EOF still issue RPCs to sliod
+- pscrpc nbreapthr should not forced wakeup every second
 
 unnecessary lock contention?
 mount_slash/io.c:
- 728                                 MFH_LOCK(q->mfsrq_mfh);
- 729                                 len = msl_pages_copyout(r, q);
- 730                                 MFH_ULOCK(q->mfsrq_mfh);
+ 722                                 MFH_LOCK(q->mfsrq_mfh);
+ ..
+ 738                                 len = msl_pages_copyout(r, q);
+ ..
+ 740                                 len = msl_pages_copyin(r, q);
+ ..
+ 745                                 MFH_ULOCK(q->mfsrq_mfh);
+	- zhihui says no because kernel only allows on writer but this
+	  should be double checked
 
- stkvers is not getting updated from certain clients/sliod
+- stkvers is not getting updated from certain clients/sliod
+
+D-MDS
+  make pool of MDS at each logical endpoint and uses consensus to
+  establish leaders and use synchronous updating of all changes across
+  each minipool (NVRAM)
+
+make ability to pass FIDs around
+
+- bulk CREATEs
+	- (client) after 2-3 creates in a dir with an mtime that has not
+	  changed outside of our own updates, piggyback a LEASEDIR flag
+	  in the next CREATE
+	- MDS sees a LEASEDIR request and checks if other clients have
+	  READDIR or any modification to dir in question
+	- MDS passes back a token and a block of 16 FIDs
+	- if any modification or readdir on the dir happens, synchronous
+	  wait (or timeout) on owning client until relinquishment
+	- if timeout
+
+	- O_SYNC
+	- O_DSYNC
+	- O_RSYNC
+	- O_ASYNC
+	- fsync(2)
+
+if user owns directory and first CREATE worked, assume more will and
+batch them up
+	dir is OK for user
+	quota is OK
+	- LOOKUP is the way into a directory.
+	- when a lease gets revoked, add a timeout on the dir for
+	  X time
+	-
+	- any create operations should check if there is a lease and
+	  perform it locally
+		- access
+		- release
+		- flush -> flush bulk
+		- create
+	- allocate local fid?    map to same fcmh?
+
+	- other areas ripe for bulk?
+
+- track MDFS compressratio for historical purposes
+
+is msctl -p fuse.debug broke (firehose6)?
+
+mount_slash implement sys_splice?
+vmsplice(2)
+
+- check various tunables/stats (sizes, cache hits, hashtable sizes) on
+  illusion2 zfs/arc
+	- cache hits
+	- file accesses
+	- hash table sizes
+	- file lookup latency
+	- I/O sizes
+	- open(2)'s accounting
+
+- add contention stats for spinlocks, mutexes
+  (time waiting; number of waiters)
+
+- search /arc_s2ssd_prod/.slmd/fidns for nlink=1
+- __attribute__ printf like sweep on all printf va_arg functions in tree
+- mds_update_note() in mds rmc.c
+
+- measure sync waiting on bmap in write()
+- ETIMEDOUT during multithreaded I/O when no csvc immediately available
+- dynamically scale number of compute-bound threads to available CPU -
+  loadavg; io-bound (normal and readahead) threads to underlying storage
+  parallelism: use generic worker threads and workq and scale wkthrs
+  out to nprocs-loadavg
+
+- gridftp IO block size? most IOs on grace are 1k, which is terrible
+
+- introduce client nonce ID to identify when clients restart and we can
+  eradicate old leases immediately
+- measure effectiveness of 'write-behind': expiration and sending of
+  batched up writes
+	- latency vs throughput
+
+- readahead is horrifically overallocating requests under some workloads
+
+reminders:
+- make sure a bunch of threads dont always do the waitq(&abstime)
+  mechanism, creating a spike of spam activity every second: make an API
+  with a random tv_nsec
+
+- implement dynamically resizeable hashtables with reader-writer locks
+- spread rcu?
+
+make sure no fts() invoke ever does unlink() without checking that
+	stat(root).inum != stat("/").inum
+
+- interrupts received in hanging I/Os in multiwait_wait_cond should wake
+  them up
+
+- analyze various queue stats: listcaches, mlists
+	- average length
+	- average wait time
+	- utilization
+
+	mutex locks:
+		U - the time the lock was held
+		S - threads queued waiting on the lock
+	thread pools:
+		U - the time threads were busy processing work
+		S - the number of requests waiting to be serviced by the thread pool
+	process/thread capacity:
+		U - total number of working threads;
+		S - # work items queued
+		E - are when the allocation failed (eg, "cannot fork").
+	file descriptor capacity: similar to the above, but for file descriptors.
+
+- bmap leases attached old fgen's to IOS servers that are down
+  will infinitely wait when write IO is attempted
+
+SLASH2 should immediately return an error when Frank compute nodes try
+to access sense51
+
+- track unused predictive accesses
+   - writeahead
+   - readdir_page
+
+dsc snapshots
+- document that upsch.db (and the backup) should be zapped during pool
+  recreation
+
+- how to detect concurrency in underlying FS?
+	-> spawn N fs worker threads
+	-> must adapt to conditions: scrub, degrade
+	-> maybe monitor device IO queue size and dynamically adjust?
+
+  - find /arc_sliod/$n/.slmd/fidns/ -depth 4 -type d
+
+- choke readahead if performance is already at a max
+- allow writes from fuse >1MB in the bmap flusher
+
+- supply nonce to communicate instance ID to avoid DIO bullshit after
+  restart for debugging sanity
+
+s2re
+- maybe create virtual queues for high-level user bandwidth reservation?
+
+- mysql is broke on /crucible
+
+- when connected to multiple NIDs, the first one should still be
+  preferred in case the second NID tried happens to reply faster.
+  really, all NIDs that work should be used and saturated as they can
+  be.
+- mount_slash has very poor streaming behavior (very bursty) when
+  dealing with a slow IOS; resulting lots of timeouts, EIO, etc.
+
+- move slash2 journal to an SSD on deployments
+- bump pagesize from 32k to something larger, perhaps 128k?
+	- adapt pagesize for IO app is using?
+- pscrpc_export leaking?  check any slmctl -sp
+- try zfs_vdev_cache_size nonzero in SLASH2 MDS and IOS
+- add back blanket (ERANGE) assert to FUSE
+- should usocklnd bind the local port to ACCEPT_PORT instead of the
+  LNET_ACCEPTOR_MAX_RESERVED_PORT range?
+- seems there are more >1 mount_slash client file CREATE visibility
+  issues
+- fix slash2 wiki documentation about not using zfs-fuse for IOS backend fs
+  setup
+- users lacking write permission yet are in member in group of file
+  should be able to replicate
+- make ctl -s rpcsvc more useful
+- NODIO support in MDS
+- EDQUOT hit by awetzel@psc.edu
+- du is broke on /crucible
+- awetzel: use something better than tar
+	- 0 length files
+- PINNED crash
+- psc_assert(msl_biorq_page_valid_accounting(r, i));
+- SIGBUS
+
+- tune metaslab_df_free_pct zfs/slashd
+
+sft
+- if encounter a certain number of IO errors, fatal out
+- $ sft -RKZ linux-4.2
+  sft: open ./include/linux/taskstats_kern.h: Too many open files
