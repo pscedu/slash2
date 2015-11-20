@@ -2103,20 +2103,19 @@ void
 slc_getuprog(pid_t pid, char *uprog, size_t maxlen)
 {
 	char *sp, *dp, fn[128], buf[128];
+	ssize_t sz, dst_remaining;
 	int n, fd;
-	ssize_t sz;
 
 	n = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
 	if (n == -1)
 		return;
-	uprog[0] = '\0';
 	n = readlink(fn, uprog, maxlen - 1);
 	if (n == -1)
 		n = 0;
 	uprog[n] = '\0';
 
 	/* no space to append script name */
-	if ((size_t)n >= maxlen)
+	if (n == -1 || (size_t)n >= maxlen)
 		return;
 
 	if (strstr(uprog, "/bash") == NULL &&
@@ -2136,24 +2135,49 @@ slc_getuprog(pid_t pid, char *uprog, size_t maxlen)
 	if (sz == -1)
 		return;
 
+	/* Note: arguments in `buf' are separated by NUL bytes. */
+
 	buf[sz] = '\0';
 
+	dp = uprog + n;
+
 	/*
-	 * Ensure args match otherwise process tampered with their name
-	 * in which case we ignore the hint.
+	 * Skip first argument which is the executable name (e.g. `sh').
 	 */
-	if (strncmp(buf, uprog, n - 1))
-		return;
-	if (buf[rc] != ' ')
-		return;
+	for (sp = buf; *sp; sp++)
+		;
+
+	dst_remaining = maxlen - (dp - uprog) + 1;
+	if (dst_remaining < sz)
+		sz = dst_remaining;
 
 	/*
 	 * Copy as much of the command as we can fit, substituting
 	 * newlines for spaces.
 	 */
-	for (sp = buf + rc, dp = uprog + rc; *sp; sp++, dp++)
-		*dp = *sp == '\n' ? ' ' : *sp;
-	*dp = '\0';
+	for (; sp - buf < sz; sp++, dp++) {
+		switch (*sp) {
+		case '\0':
+			/*
+			 * Two sequential NULs denotes end of argument
+			 * list.
+			 */
+			if (sp[1] == '\0') {
+				dp--;
+				goto out;
+			}
+			/* FALLTHRU */
+		case '\n':
+			*dp = ' ';
+			break;
+		default:
+			*dp = *sp;
+			break;
+		}
+	}
+ out:
+	if (dp >= uprog + n)
+		*dp = '\0';
 }
 
 const char *
