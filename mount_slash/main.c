@@ -2088,30 +2088,41 @@ mfh_decref(struct msl_fhent *mfh)
 		MFH_ULOCK(mfh);
 }
 
+/*
+ * Scrape user program name (uprog).
+ *
+ * Interpreters get special treatment as the arguments get included so
+ * parsers of these logs can differentiate entries by script name.
+ *
+ * Examples:
+ *	/bin/sh - foo.sh
+ *	/bin/sh foo.sh
+ *	/bin/perl -W foo.pl
+ */
 void
-slc_getuprog(pid_t pid, char *prog, size_t len)
+slc_getuprog(pid_t pid, char *uprog, size_t maxlen)
 {
-	char *p, *np, *ep, fn[128], buf[128];
-	int rc, fd;
+	char *sp, *dp, fn[128], buf[128];
+	int n, fd;
 	ssize_t sz;
 
-	rc = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
-	if (rc == -1)
+	n = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+	if (n == -1)
 		return;
-	prog[0] = '\0';
-	rc = readlink(fn, prog, len - 1);
-	if (rc == -1)
-		rc = 0;
-	prog[rc] = '\0';
+	uprog[0] = '\0';
+	n = readlink(fn, uprog, maxlen - 1);
+	if (n == -1)
+		n = 0;
+	uprog[n] = '\0';
 
 	/* no space to append script name */
-	if ((size_t)rc >= len)
+	if ((size_t)n >= maxlen)
 		return;
 
-	if (strstr(prog, "/bash") == NULL &&
-	    strstr(prog, "/python") == NULL &&
-	    strstr(prog, "/perl") == NULL &&
-	    strstr(prog, "/ksh") == NULL)
+	if (strstr(uprog, "/bash") == NULL &&
+	    strstr(uprog, "/python") == NULL &&
+	    strstr(uprog, "/perl") == NULL &&
+	    strstr(uprog, "/ksh") == NULL)
 		return;
 
 	snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
@@ -2125,30 +2136,24 @@ slc_getuprog(pid_t pid, char *prog, size_t len)
 	if (sz == -1)
 		return;
 
+	buf[sz] = '\0';
+
 	/*
-	 * Parse various interpreters such as:
-	 *	/bin/sh - foo.sh
-	 *	/bin/sh foo.sh
-	 *	/bin/perl -W foo.pl
+	 * Ensure args match otherwise process tampered with their name
+	 * in which case we ignore the hint.
 	 */
-
-	/* skip first arg: should be identical to `exe' above */
-	ep = &buf[sz];
-	*ep = '\0';
-	p = strchr(buf, '\0');
-	if (p == ep)
+	if (strncmp(buf, uprog, n - 1))
 		return;
-	p++;
+	if (buf[rc] != ' ')
+		return;
 
-	/* concatentate (i.e. switch NUL to space) next two args */
-	np = strchr(p, '\0');
-	if (np != ep) {
-		*np++ = ' ';
-		np = strchr(np, '\0');
-		if (np != ep)
-			*np++ = ' ';
-	}
-	snprintf(prog + strlen(prog), len - strlen(prog), " %s", p);
+	/*
+	 * Copy as much of the command as we can fit, substituting
+	 * newlines for spaces.
+	 */
+	for (sp = buf + rc, dp = uprog + rc; *sp; sp++, dp++)
+		*dp = *sp == '\n' ? ' ' : *sp;
+	*dp = '\0';
 }
 
 const char *
