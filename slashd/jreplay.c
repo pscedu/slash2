@@ -52,8 +52,8 @@
  * matching.
  */
 
-/**
- * mds_replay_bmap - Replay an operation on a bmap.
+/*
+ * Replay an operation on a bmap.
  */
 static int
 mds_replay_bmap(void *jent, int op)
@@ -199,10 +199,9 @@ mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
 	    B_REPLAY_OP_REPLS));
 }
 
-/**
- * mds_replay_bmap_crc - Replay a CRC update.  Because we only log
- *     CRCs that have been changed in the bmap, this has to be a
- *     read-modify-write process.
+/*
+ * Replay a CRC update.  Because we only log CRCs that have been changed
+ * in the bmap, this has to be a read-modify-write process.
  */
 static int
 mds_replay_bmap_crc(struct psc_journal_enthdr *pje)
@@ -225,8 +224,8 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-/**
- * mds_replay_ino - Replay an inode update.
+/*
+ * Replay an inode update.
  */
 static int
 mds_replay_ino(void *jent, int op)
@@ -324,8 +323,8 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	return (rc);
 }
 
-/**
- * mds_replay_bmap_assign - Replay a bmap assignment update.
+/*
+ * Replay a bmap assignment update.
  */
 static int
 mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
@@ -366,10 +365,12 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-/**
- * mds_replay_namespace - Replay a NAMESPACE modification operation.
- *	Note: this may not be a replay but could also be a namespace
- *	update from a remote MDS.
+/*
+ * Replay a NAMESPACE modification operation.
+ *
+ * Note: this may not be a replay but could also be a namespace update
+ * from a remote MDS.
+ *
  * @sjnm: journal entry.
  * @replay: whether this is a replay or remote MDS update.
  */
@@ -500,8 +501,8 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	return (rc);
 }
 
-/**
- * mds_replay_handler - Handle journal replay events.
+/*
+ * Handle journal replay events.
  */
 int
 mds_replay_handler(struct psc_journal_enthdr *pje)
