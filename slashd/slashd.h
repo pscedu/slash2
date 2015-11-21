@@ -376,7 +376,7 @@ int		 slm_ptrunc_wake_clients(void *);
 void		 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
-void		 mdscoh_req(struct bmap_mds_lease *);
+int		 mdscoh_req(struct bmap_mds_lease *);
 
 void		 psc_scan_filesystems(void);
 void		 mds_note_update(int);

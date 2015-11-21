@@ -157,8 +157,8 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
     lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	struct bmap_mds_lease *bml = NULL, *tmp;
-	int rc = 0, force_dio = 0, check_leases = 0;
+	struct bmap_mds_lease *bml, *tmp;
+	int rc = 0, force_dio = 0;
 
 	BMAP_LOCK_ENSURE(b);
 
@@ -182,13 +182,11 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 		want_dio = 1;
 
 	if (want_dio || bmi->bmi_writers ||
-	    (rw == SL_WRITE && bmi->bmi_readers))
-		check_leases = 1;
-
-	if (check_leases) {
+	    (rw == SL_WRITE && bmi->bmi_readers)) {
 		PLL_FOREACH(bml, &bmi->bmi_leases) {
 			tmp = bml;
 			do {
+
 				/*
 				 * A client can have more than one lease
 				 * in flight even though it really uses
@@ -207,10 +205,13 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 				}
 
 				rc = -SLERR_BMAP_DIOWAIT;
-				if (!(bml->bml_flags & BML_DIOCB)) 
-					mdscoh_req(bml);
-				else
+				if (bml->bml_flags & BML_DIOCB) {
 					BML_ULOCK(bml);
+					goto next;
+				}
+				mdscoh_req(bml);
+				BML_ULOCK(bml);
+
  next:
 				bml = bml->bml_chain;
 			} while (tmp != bml);
@@ -935,6 +936,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		/* First on the list. */
 		bml->bml_chain = bml;
 		pll_addtail(&bmi->bmi_leases, bml);
+		PFLOG_BML(PLL_WARN, bml, "added");
 	}
 
 	bml->bml_flags |= BML_BMI;
@@ -1060,6 +1062,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 		psc_assert(obml == bml);
 		psc_assert(!(bml->bml_flags & BML_CHAIN));
 		pll_remove(&bmi->bmi_leases, bml);
+		PFLOG_BML(PLL_WARN, bml, "removed");
 
 		if ((wlease + rlease) > 1) {
 			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
@@ -1068,6 +1071,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
 			pll_addtail(&bmi->bmi_leases, bml->bml_chain);
+			PFLOG_BML(PLL_WARN, bml, "added");
 
 			tail->bml_chain = bml->bml_chain;
 		} else
