@@ -151,8 +151,13 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		bcr = psc_dynarray_getpos(bcrs, i);
 
 		rc = bcr_update_inodeinfo(bcr);
-		if (rc)
-			PFL_GOTOERR(out, rc);
+		if (rc) {
+			/*
+			 * XXX hack because the bcr code is awfully
+			 * structured.
+			 */
+			bcr->bcr_crcup.fg.fg_fid = FID_ANY;
+		}
 
 		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
@@ -247,7 +252,7 @@ slicrudthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&bcr_ready);
 
 		if (!psc_dynarray_len(bcrs)) {
-			usleep(3000);
+			usleep(100);
 			continue;
 		}
 
@@ -444,6 +449,7 @@ slislvrthr_main(struct psc_thread *thr)
 				s->slvr_flags |= SLVRF_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
+				/* XXX can't we break here ? */
 			}
 			SLVR_ULOCK(s);
 			if (psc_dynarray_len(&ss) >=
