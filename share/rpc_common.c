@@ -973,11 +973,16 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (csvc)
 		sl_csvc_incref(csvc);
 	else if ((flags & CSVCF_NONBLOCK) && mw) {
+		struct psc_thread *thr;
+
+		thr = pscthr_get();
+		PSCTHR_LOCK(thr);
 		if (psc_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
 			psc_multiwait_setcondwakeable(mw,
 			    &(*csvcp)->csvc_mwc, 1);
 		else
 			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
+		PSCTHR_LOCK(thr);
 	}
 	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
@@ -1127,9 +1132,9 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	CSVC_ULOCK(csvc);
 
 	PSCTHR_LOCK(thr);
-	psc_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
+	if (!psc_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
+		psc_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
 	psc_dynarray_add(&sct->sct_monres, scp);
-	psc_multiwaitcond_wakeup(&sct->sct_mwc);
 	PSCTHR_ULOCK(thr);
 }
 
