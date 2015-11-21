@@ -936,7 +936,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		/* First on the list. */
 		bml->bml_chain = bml;
 		pll_addtail(&bmi->bmi_leases, bml);
-		PFLOG_BML(PLL_WARN, bml, "added");
+		PFLOG_BML(PLL_DIAG, bml, "added");
 	}
 
 	bml->bml_flags |= BML_BMI;
@@ -1062,7 +1062,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 		psc_assert(obml == bml);
 		psc_assert(!(bml->bml_flags & BML_CHAIN));
 		pll_remove(&bmi->bmi_leases, bml);
-		PFLOG_BML(PLL_WARN, bml, "removed");
+		PFLOG_BML(PLL_DIAG, bml, "removed");
 
 		if ((wlease + rlease) > 1) {
 			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
@@ -1071,7 +1071,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
 			pll_addtail(&bmi->bmi_leases, bml->bml_chain);
-			PFLOG_BML(PLL_WARN, bml, "added");
+			PFLOG_BML(PLL_DIAG, bml, "added");
 
 			tail->bml_chain = bml->bml_chain;
 		} else
