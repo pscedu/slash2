@@ -222,22 +222,26 @@ struct bmap_mds_lease {
 #define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
 #define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
 
+#define PFLOG_BML(level, bml, fmt, ...)					\
+	psclogs((level), SLSS_BMAP, "bml@%p " fmt, (bml), ##__VA_ARGS__)
+
 #define BMAP_FOREACH_LEASE(b, bml)					\
 	PLL_FOREACH((bml), &bmap_2_bmi(b)->bmi_leases)
 
 /**
  * bmap_ios_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.
- * XXX is the generation number needed here? - pauln
+ * XXX is the generation number needed here?
+ * XXX reorder these fields to pack 32-bit fields together.
  */
 struct bmap_ios_assign {
-	sl_ios_id_t		bia_ios;
 	lnet_process_id_t	bia_lastcli;
+	sl_ios_id_t		bia_ios;
 	slfid_t			bia_fid;
 	uint64_t		bia_seq;
 	sl_bmapno_t		bia_bmapno;
-	time_t			bia_start;
 	int			bia_flags;
+	time_t			bia_start;
 };
 
 /* bia_flags */

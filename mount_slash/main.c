@@ -1154,14 +1154,14 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#define msl_unlink_file(pfr, pinum, name, dcu)				\
-	msl_unlink((pfr), (pinum), (name), (dcu), 1)
-#define msl_unlink_dir(pfr, pinum, name, dcu)				\
-	msl_unlink((pfr), (pinum), (name), (dcu), 0)
+#define msl_unlink_file(pfr, pinum, name, pp, dcu)			\
+	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 1)
+#define msl_unlink_dir(pfr, pinum, name, pp, dcu)			\
+	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 0)
 
 __static int
-msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
-    const char *name, struct dircache_ent_update *dcu, int isfile)
+msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
+    struct fidc_membh **pp, struct dircache_ent_update *dcu, int isfile)
 {
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1253,15 +1253,14 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclogs_diag(SLCSS_FSOP, "DELETE: pinum="SLPRI_FID" "
+	psclogs_diag(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
 
 	if (c)
 		fcmh_op_done(c);
-	if (p)
-		fcmh_op_done(p);
+	*pp = p;
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1273,11 +1272,14 @@ mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct fidc_membh *p = NULL;
 	int rc;
 
-	rc = msl_unlink_file(pfr, pinum, name, &dcu);
+	rc = msl_unlink_file(pfr, pinum, name, &p, &dcu);
 	pscfs_reply_unlink(pfr, rc);
 	namecache_delete(&dcu, rc);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void
@@ -1285,11 +1287,14 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct fidc_membh *p = NULL;
 	int rc;
 
-	rc = msl_unlink_dir(pfr, pinum, name, &dcu);
+	rc = msl_unlink_dir(pfr, pinum, name, &p, &dcu);
 	pscfs_reply_rmdir(pfr, rc);
 	namecache_delete(&dcu, rc);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void
@@ -2089,30 +2094,40 @@ mfh_decref(struct msl_fhent *mfh)
 		MFH_ULOCK(mfh);
 }
 
+/*
+ * Scrape user program name (uprog).
+ *
+ * Interpreters get special treatment as the arguments get included so
+ * parsers of these logs can differentiate entries by script name.
+ *
+ * Examples:
+ *	/bin/sh - foo.sh
+ *	/bin/sh foo.sh
+ *	/bin/perl -W foo.pl
+ */
 void
-slc_getuprog(pid_t pid, char *prog, size_t len)
+slc_getuprog(pid_t pid, char *uprog, size_t maxlen)
 {
-	char *p, *np, *ep, fn[128], buf[128];
-	int rc, fd;
-	ssize_t sz;
+	char *sp, *dp, fn[128], buf[128];
+	ssize_t sz, dst_remaining;
+	int n, fd;
 
-	rc = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
-	if (rc == -1)
+	n = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+	if (n == -1)
 		return;
-	prog[0] = '\0';
-	rc = readlink(fn, prog, len - 1);
-	if (rc == -1)
-		rc = 0;
-	prog[rc] = '\0';
+	n = readlink(fn, uprog, maxlen - 1);
+	if (n == -1)
+		n = 0;
+	uprog[n] = '\0';
 
 	/* no space to append script name */
-	if ((size_t)rc >= len)
+	if (n == -1 || (size_t)n >= maxlen)
 		return;
 
-	if (strstr(prog, "/bash") == NULL &&
-	    strstr(prog, "/python") == NULL &&
-	    strstr(prog, "/perl") == NULL &&
-	    strstr(prog, "/ksh") == NULL)
+	if (strstr(uprog, "/bash") == NULL &&
+	    strstr(uprog, "/python") == NULL &&
+	    strstr(uprog, "/perl") == NULL &&
+	    strstr(uprog, "/ksh") == NULL)
 		return;
 
 	snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
@@ -2126,30 +2141,49 @@ slc_getuprog(pid_t pid, char *prog, size_t len)
 	if (sz == -1)
 		return;
 
+	/* Note: arguments in `buf' are separated by NUL bytes. */
+
+	buf[sz] = '\0';
+
+	dp = uprog + n;
+
 	/*
-	 * Parse various interpreters such as:
-	 *	/bin/sh - foo.sh
-	 *	/bin/sh foo.sh
-	 *	/bin/perl -W foo.pl
+	 * Skip first argument which is the executable name (e.g. `sh').
 	 */
+	for (sp = buf; *sp; sp++)
+		;
 
-	/* skip first arg: should be identical to `exe' above */
-	ep = &buf[sz];
-	*ep = '\0';
-	p = strchr(buf, '\0');
-	if (p == ep)
-		return;
-	p++;
+	dst_remaining = maxlen - (dp - uprog) + 1;
+	if (dst_remaining < sz)
+		sz = dst_remaining;
 
-	/* concatentate (i.e. switch NUL to space) next two args */
-	np = strchr(p, '\0');
-	if (np != ep) {
-		*np++ = ' ';
-		np = strchr(np, '\0');
-		if (np != ep)
-			*np++ = ' ';
+	/*
+	 * Copy as much of the command as we can fit, substituting
+	 * newlines for spaces.
+	 */
+	for (; sp - buf < sz; sp++, dp++) {
+		switch (*sp) {
+		case '\0':
+			/*
+			 * Two sequential NULs denotes end of argument
+			 * list.
+			 */
+			if (sp[1] == '\0') {
+				dp--;
+				goto out;
+			}
+			/* FALLTHRU */
+		case '\n':
+			*dp = ' ';
+			break;
+		default:
+			*dp = *sp;
+			break;
+		}
 	}
-	snprintf(prog + strlen(prog), len - strlen(prog), " %s", p);
+ out:
+	if (dp >= uprog + n)
+		*dp = '\0';
 }
 
 const char *

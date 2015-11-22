@@ -151,6 +151,14 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		int rc;
 
 		/*
+		 * Due to poor code structure, the IOS will occasionally
+		 * send us known junk.  Until that gets fixed, do a hack
+		 * and ignore updates to old generations.
+		 */
+		if (c->fg.fg_fid == FID_ANY)
+			continue;
+
+		/*
 		 * Does the bulk payload agree with the original
 		 * request?
 		 */
@@ -173,7 +181,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		if (mp->crcup_rc[i]) {
 			/*
 			 * A rash of EBADF (-9) errors can food
-			 * network monitoring tools. So let us
+			 * network monitoring tools.  So let us
 			 * tone down the log level as a workaround.
 			 */
 			psclog_info(

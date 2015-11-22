@@ -728,6 +728,8 @@ _namecache_update(const struct pfl_callerinfo *pci,
 void
 namecache_delete(struct dircache_ent_update *dcu, int rc)
 {
+	if (dcu->dcu_d == NULL)
+		return;
 	if (rc && dcu->dcu_dce->dce_pfd->pfd_ino != FID_ANY)
 		namecache_release_entry(dcu);
 	else {
@@ -738,6 +740,7 @@ namecache_delete(struct dircache_ent_update *dcu, int rc)
 
 		dircache_ent_zap(dcu->dcu_d, dcu->dcu_dce);
 	}
+	dcu->dcu_d = NULL;
 }
 
 void

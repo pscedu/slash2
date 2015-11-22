@@ -37,8 +37,9 @@ struct fidc_membh;
 struct srt_bmap_crcup;
 struct srt_stat;
 
-#define SLJ_MDS_JNENTS			(128 * 1024)		/* 131072 */
-#define SLJ_MDS_READSZ			1024			/* SLJ_MDS_JNENTS % SLJ_MDS_READSZ == 0 */
+/* SLJ_MDS_JNENTS % SLJ_MDS_READSZ == 0 */
+#define SLJ_MDS_JNENTS			(128 * 1024)
+#define SLJ_MDS_READSZ			1024
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
 /**
@@ -210,26 +211,22 @@ struct sl_mds_crc_log {
 #define MDS_LOG_NAMESPACE		(_PJE_FLSHFT << 5)
 #define _MDS_LOG_LAST_TYPE		(_PJE_FLSHFT << 5)
 
-/*
- * A structure used to describe the log application progress on each site.
- */
-struct site_progress {
-	int				sp_siteid;
-	uint64_t			sp_seqno;
-};
-
 void	mdslog_bmap_crc(void *, uint64_t, int);
 void	mdslog_bmap_repls(void *, uint64_t, int);
 void	mdslog_ino_repls(void *, uint64_t, int);
 void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
-	    const struct srt_stat *, int, const char *, const char *, void *);
+	    const struct srt_stat *, int, const char *, const char *,
+	    void *);
 
-void	mdslogfill_bmap_repls(struct bmap *, struct slmds_jent_bmap_repls *);
-void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
+void	mdslogfill_bmap_repls(struct bmap *,
+	    struct slmds_jent_bmap_repls *);
+void	mdslogfill_ino_repls(struct fidc_membh *,
+	    struct slmds_jent_ino_repls *);
 
 void	mds_journal_init(uint64_t);
 
-int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t, struct srt_bmap_crcup *);
+int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t,
+	    struct srt_bmap_crcup *);
 
 void	mds_reserve_slot(int);
 void	mds_unreserve_slot(int);
