@@ -1636,7 +1636,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			DIRCACHE_WAIT(d);
 			goto restart;
 		}
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+		if (DIRCACHEPG_EXPIRED(d, p, &dexp) ||
+	  	    p->dcp_dirgen != fcmh_2_gen(d)) {
 			dircache_free_page(d, p);
 			continue;
 		}
