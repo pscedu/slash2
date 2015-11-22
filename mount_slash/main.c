@@ -1154,14 +1154,14 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#define msl_unlink_file(pfr, pinum, name, dcu)				\
-	msl_unlink((pfr), (pinum), (name), (dcu), 1)
-#define msl_unlink_dir(pfr, pinum, name, dcu)				\
-	msl_unlink((pfr), (pinum), (name), (dcu), 0)
+#define msl_unlink_file(pfr, pinum, name, pp, dcu)			\
+	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 1)
+#define msl_unlink_dir(pfr, pinum, name, pp, dcu)			\
+	msl_unlink((pfr), (pinum), (name), (pp), (dcu), 0)
 
 __static int
-msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
-    const char *name, struct dircache_ent_update *dcu, int isfile)
+msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
+    struct fidc_membh **pp, struct dircache_ent_update *dcu, int isfile)
 {
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1253,15 +1253,14 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclogs_diag(SLCSS_FSOP, "DELETE: pinum="SLPRI_FID" "
+	psclogs_diag(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
 
 	if (c)
 		fcmh_op_done(c);
-	if (p)
-		fcmh_op_done(p);
+	*pp = p;
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1273,11 +1272,14 @@ mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct fidc_membh *p = NULL;
 	int rc;
 
-	rc = msl_unlink_file(pfr, pinum, name, &dcu);
+	rc = msl_unlink_file(pfr, pinum, name, &p, &dcu);
 	pscfs_reply_unlink(pfr, rc);
 	namecache_delete(&dcu, rc);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void
@@ -1285,11 +1287,14 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct fidc_membh *p = NULL;
 	int rc;
 
-	rc = msl_unlink_dir(pfr, pinum, name, &dcu);
+	rc = msl_unlink_dir(pfr, pinum, name, &p, &dcu);
 	pscfs_reply_rmdir(pfr, rc);
 	namecache_delete(&dcu, rc);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void
