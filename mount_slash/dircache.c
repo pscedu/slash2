@@ -385,6 +385,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
 	p->dcp_refcnt++;
+	p->dcp_dirgen = fcmh_2_gen(d);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "incref");
 
  out:
@@ -502,7 +503,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_dents_off = da_off;
 	p->dcp_base = base;
 	p->dcp_size = size;
-	p->dcp_dirgen = fcmh_2_gen(d);
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
