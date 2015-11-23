@@ -119,10 +119,11 @@ struct psc_listcache		 slc_attrtimeoutq;
 sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
-const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
+const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 slc_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
+char				*msl_cfgfn = SL_PATH_CONF;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
@@ -3672,12 +3673,27 @@ parse_allowexe(void)
 	}
 }
 
-void
+int
 msl_init(const char *cfgfn)
 {
 	struct sl_resource *r;
 	char *name;
 	int rc;
+
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	if (!gcry_check_version(GCRYPT_VERSION)) {
+		warnx("libgcrypt version mismatch");
+		return (-1);
+	}
+
+	sl_subsys_register();
+	psc_subsys_register(SLCSS_INFO, "info");
+	psc_subsys_register(SLCSS_FSOP, "fsop");
+
+	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
+	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
+	psc_fault_register(SLC_FAULT_READ_CB_EIO);
+	psc_fault_register(SLC_FAULT_REQUEST_TIMEOUT);
 
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
@@ -3796,6 +3812,8 @@ msl_init(const char *cfgfn)
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	return (0);
 }
 
 struct pscfs slc_pscfs = {
@@ -3854,6 +3872,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 
 enum {
 	LOOKUP_TYPE_BOOL,
+	LOOKUP_TYPE_STR,
 	LOOKUP_TYPE_UINT64,
 };
 
@@ -3866,9 +3885,12 @@ opt_lookup(const char *opt)
 		void		*ptr;
 	} *io, opts[] = {
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
+		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
+		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
+		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
 	};
 	const char *val;
@@ -3887,6 +3909,9 @@ opt_lookup(const char *opt)
 			switch (io->type) {
 			case LOOKUP_TYPE_BOOL:
 				*(int *)io->ptr = 1;
+				break;
+			case LOOKUP_TYPE_STR:
+				*(const char **)io->ptr = val;
 				break;
 			case LOOKUP_TYPE_UINT64:
 				sz = pfl_humantonum(val);
@@ -3943,9 +3968,12 @@ msl_fileinfo_thaw(void *fh)
 	fcmh_op_done(f);
 }
 
-void
+int
 pscfs_module_load(struct pscfs *m)
 {
+	const char *opt;
+	int i;
+
 	m->pf_name = "slash2";
 
 //	m->pf_fileinfo_freeze		= msl_fileinfo_freeze;
@@ -3981,30 +4009,21 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_setxattr		= mslfsop_setxattr;
 	m->pf_handle_removexattr	= mslfsop_removexattr;
 
-	msl_init(NULL);
+	DYNARRAY_FOREACH(opt, i, &m->pf_opts)
+		if (!opt_lookup(opt))
+			return (EINVAL);
+
+	return (msl_init(NULL));
 }
 
 int
 main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
-	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
+	char c, *p, *noncanon_mp;
 	int unmount_first = 0;
 
-	/* gcrypt must be initialized very early on */
-	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	if (!gcry_check_version(GCRYPT_VERSION))
-		errx(1, "libgcrypt version mismatch");
-
 	pfl_init();
-	sl_subsys_register();
-	psc_subsys_register(SLCSS_INFO, "info");
-	psc_subsys_register(SLCSS_FSOP, "fsop");
-
-	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
-	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
-	psc_fault_register(SLC_FAULT_READ_CB_EIO);
-	psc_fault_register(SLC_FAULT_REQUEST_TIMEOUT);
 
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
 	pscfs_addarg(&args, "-o");
@@ -4012,12 +4031,11 @@ main(int argc, char *argv[])
 
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
-		ctlsockfn = p;
+		msl_ctlsockfn = p;
 
-	cfg = SL_PATH_CONF;
 	p = getenv("CONFIG_FILE");
 	if (p)
-		cfg = p;
+		msl_cfgfn = p;
 
 	optind = 1;
 	while ((c = getopt(argc, argv, "D:df:I:M:o:S:UV")) != -1)
@@ -4029,7 +4047,7 @@ main(int argc, char *argv[])
 			pscfs_addarg(&args, "-odebug");
 			break;
 		case 'f':
-			cfg = optarg;
+			msl_cfgfn = optarg;
 			break;
 		case 'I':
 			setenv("PREF_IOS", optarg, 1);
@@ -4044,7 +4062,7 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'S':
-			ctlsockfn = optarg;
+			msl_ctlsockfn = optarg;
 			break;
 		case 'U':
 			unmount_first = 1;
@@ -4074,9 +4092,10 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
-	msl_init(cfg);
+	if (msl_init(msl_cfgfn))
+		exit(1);
 
-	pflfs_module_init(&slc_pscfs);
+	pflfs_module_init(&slc_pscfs, NULL);
 	pflfs_module_add(0, &slc_pscfs);
 
 	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
