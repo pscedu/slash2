@@ -3674,7 +3674,7 @@ parse_allowexe(void)
 }
 
 int
-msl_init(const char *cfgfn)
+msl_init(void)
 {
 	struct sl_resource *r;
 	char *name;
@@ -3704,7 +3704,7 @@ msl_init(const char *cfgfn)
 	/* defaults */
 	slcfg_local->cfg_fidcachesz = 1024;
 
-	slcfg_parse(cfgfn);
+	slcfg_parse(msl_cfgfn);
 	if (slcfg_local->cfg_root_squash)
 		slc_root_squash = 1;
 	parse_allowexe();
@@ -3877,7 +3877,7 @@ enum {
 };
 
 int
-opt_lookup(const char *opt)
+msl_opt_lookup(const char *opt)
 {
 	struct {
 		const char	*name;
@@ -4010,10 +4010,12 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_removexattr	= mslfsop_removexattr;
 
 	DYNARRAY_FOREACH(opt, i, &m->pf_opts)
-		if (!opt_lookup(opt))
+		if (!msl_opt_lookup(opt)) {
+			warnx("invalid option: %s", opt);
 			return (EINVAL);
+		}
 
-	return (msl_init(NULL));
+	return (msl_init());
 }
 
 int
@@ -4056,7 +4058,7 @@ main(int argc, char *argv[])
 			setenv("MDS", optarg, 1);
 			break;
 		case 'o':
-			if (!opt_lookup(optarg)) {
+			if (!msl_opt_lookup(optarg)) {
 				pscfs_addarg(&args, "-o");
 				pscfs_addarg(&args, optarg);
 			}
@@ -4092,7 +4094,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(1);
 
-	if (msl_init(msl_cfgfn))
+	if (msl_init())
 		exit(1);
 
 	pflfs_module_init(&slc_pscfs, NULL);
