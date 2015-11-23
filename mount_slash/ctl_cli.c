@@ -816,7 +816,7 @@ PFLCTL_SVR_DEFS;
 void
 msctlthr_main(__unusedx struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops),
+	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
 	    MSTHRT_CTLAC);
 }
 

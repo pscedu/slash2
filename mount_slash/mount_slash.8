@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES lnet pflenv %
-.Dd November 6, 2015
+.Dd November 23, 2015
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -30,12 +30,7 @@ file system
 .Sh SYNOPSIS
 .Nm mount_slash
 .Op Fl dUV
-.Op Fl D Ar datadir
-.Op Fl f Ar conf
-.Op Fl I Ar iosystem
-.Op Fl M Ar mds
 .Op Fl o Ar mountopt
-.Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
 The
@@ -47,59 +42,19 @@ file system under the specified
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl D Ar datadir
-Specify an alternative directory where operation data is stored.
-Defaults to
-.Pa /var/lib/slash .
 .It Fl d
 Enable low-level file system debug messages.
-.It Fl f Ar conf
-Specify an alternative configuration file.
-Defaults to
-.Pa /etc/slash/slcfg .
-.It Fl I Ar iosystem
-Specify the preferred
-.Tn I/O
-system resource name.
-.It Fl M Ar mds
-Specify the primary metadata server resource name.
 .It Fl o Ar mountopt
 Specify additional behavioral options.
 The options are as follows:
-.Bl -tag
+.Bl -tag -width Ds
 .It Ic acl
 Enable
 .Dq POSIX
 access control list
 .Pq ACL
 support.
-.It Ic mapfile
-Use the mapfile
-.Pa /var/lib/slash/mapfile
-.Pq or wherever the data directory is configured; see Fl D
-for translating local user account IDs to global SLASH2 user IDs and
-vice versa as necessary.
-The concept of
-.Dq global
-simply means the user account IDs present on the MDS.
-.Pp
-The format of each line in this file is:
-.Bd -literal -offset 4n
-.Ic user local Ar uid Ic remote Ar uid
-.Ed
-.Pp
-Group mappings may also specified:
-.Bd -literal -offset 4n
-.Ic group local-uids Ar uid ... Ic remote Ar gid
-.Ed
-.It Ic root_squash
-Enable root squash.
-Root squash mode disables traditional superuser access and instead
-treats superuser like any other user.
-Note that this is not a security feature per se but more of a guard
-against accidental behavior.
-.El
-.It Fl S Ar socket
+.It Ic ctlsock Ns = Ns Ar path
 Specify an alternative path for the named socket through which
 .Nm
 operation can be controlled via
@@ -117,6 +72,52 @@ character
 .Pp
 The default is
 .Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
+.It Ic datadir Ns = Ns Ar path
+Specify an alternative directory where runtime configuration is
+accessed.
+Defaults to
+.Pa /var/lib/slash .
+.It Ic mapfile
+Use the mapfile
+.Pa /var/lib/slash/mapfile
+.Pq or wherever the data directory is configured; see Ic datadir
+for translating local user account IDs to global SLASH2 user IDs and
+vice versa as necessary.
+The concept of
+.Dq global
+simply means the user account IDs present on the MDS.
+.Pp
+The format of each line in this file is:
+.Bd -literal -offset 4n
+.Ic user local Ar uid Ic remote Ar uid
+.Ed
+.Pp
+Group mappings may also specified:
+.Bd -literal -offset 4n
+.Ic group local-uids Ar uid ... Ic remote Ar gid
+.Ed
+.It Ic pagecache_maxsize Ns = Ns Ar size
+Specify the maximum amount of memory to which the file data cache can
+grow.
+A good heuristic is 10% of available system memory but proper tuning
+depends heavily on workload characteristics.
+.Pp
+Human-readable sizes are recognized
+.Pq e.g. Li 4g for 4 GiB .
+.Pp
+Defaults to
+.Li 512m .
+.It Ic root_squash
+Enable root squash.
+Root squash mode disables traditional superuser access and instead
+treats superuser like any other user.
+Note that this is not a security feature per se but more of a guard
+against accidental behavior.
+.It Ic slcfg Ns = Ns Ar path
+Specify an alternative configuration file.
+Defaults to
+.Pa /etc/slash/slcfg .
+.El
 .It Fl U
 Perform a
 .Xr umount 8
@@ -142,13 +143,13 @@ Print version and exit.
 .\"		or in the environment.
 .\"		EOF
 .\"	env => {
-.\"		CTL_SOCK_FILE => "Path to control socket file\n.Pq see Fl S .",
+.\"		CTL_SOCK_FILE => "Path to control socket file\n.Pq see Ic ctlsock .",
 .\"	},
 .Sh ENVIRONMENT
 .Bl -tag -width 3n
 .It Ev CTL_SOCK_FILE
 Path to control socket file
-.Pq see Fl S .
+.Pq see Ic ctlsock .
 .It Ev LNET_ACCEPT
 Specify constraints on which connections are accepted.
 May be
