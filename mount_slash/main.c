@@ -3089,7 +3089,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	sleep(1);
 	pscrpc_set_destroy(sl_nbrqset);
 
-exit(0);
 	pscrpc_svh_destroy(msl_rci_svh);
 	pscrpc_svh_destroy(msl_rcm_svh);
 
@@ -3544,7 +3543,10 @@ msattrflushthr_main(struct psc_thread *thr)
 		nexttimeo.tv_nsec = 0;
 
 		LIST_CACHE_LOCK(&slc_attrtimeoutq);
-		lc_peekheadwait(&slc_attrtimeoutq);
+		if (lc_peekheadwait(&slc_attrtimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
+			break;
+		}
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH(fci, &slc_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
