@@ -45,15 +45,12 @@
 #include "slconfig.h"
 #include "slutil.h"
 
-struct psc_poolmaster	  fidcPoolMaster;
-struct psc_poolmgr	 *fidcPool;
-struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
+struct psc_poolmaster	  sl_fcmh_poolmaster;
+struct psc_poolmgr	 *sl_fcmh_pool;
+struct psc_listcache	  sl_fcmh_idle;		/* identity untouched, but reapable */
 struct psc_hashtbl	  sl_fcmh_hashtbl;
 struct psc_thread	 *sl_freapthr;
 struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT;
-
-#define fcmh_get()	psc_pool_get(fidcPool)
-#define fcmh_put(f)	psc_pool_return(fidcPool, (f))
 
 #if PFL_DEBUG > 0
 psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
@@ -85,7 +82,7 @@ fcmh_destroy(struct fidc_membh *f)
 	}
 
 	f->fcmh_flags = FCMH_FREE;
-	fcmh_put(f);
+	psc_pool_return(sl_fcmh_pool, f);
 }
 
 #define FCMH_MAX_REAP 128
@@ -105,8 +102,8 @@ fidc_reap(int max, int only_expired)
 	if (!max || max > FCMH_MAX_REAP)
 		max = FCMH_MAX_REAP;
 
-	LIST_CACHE_LOCK(&fidcIdleList);
-	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
+	LIST_CACHE_LOCK(&sl_fcmh_idle);
+	LIST_CACHE_FOREACH_SAFE(f, tmp, &sl_fcmh_idle) {
 		/* never reap root (/) */
 		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
 			continue;
@@ -128,14 +125,14 @@ fidc_reap(int max, int only_expired)
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
 		f->fcmh_flags |= FCMH_TOFREE;
-		lc_remove(&fidcIdleList, f);
+		lc_remove(&sl_fcmh_idle, f);
 		reap[nreap++] = f;
 		FCMH_ULOCK(f);
 
 		if (nreap >= max)
 			break;
 	}
-	LIST_CACHE_ULOCK(&fidcIdleList);
+	LIST_CACHE_ULOCK(&sl_fcmh_idle);
 
 	psclog_debug("reaping %d files from fidcache", nreap);
 
@@ -235,12 +232,12 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	 */
 	if (f) {
 		/*
-		 * Test to see if we jumped here from fidcIdleList.
+		 * Test to see if we jumped here from sl_fcmh_idle.
 		 * Note an unlucky thread could find that the FID does
 		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
-			fcmh_put(fnew);
+			psc_pool_return(sl_fcmh_pool, fnew);
 			fnew = NULL;
 		}
 
@@ -269,7 +266,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		if (!try_create) {
 			psc_hashbkt_unlock(b);
 
-			fnew = fcmh_get();
+			fnew = psc_pool_get(sl_fcmh_pool);
 			try_create = 1;
 
 			psc_hashbkt_lock(b);
@@ -291,7 +288,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	 */
 	f = fnew;
 
-	memset(f, 0, fidcPoolMaster.pms_entsize);
+	memset(f, 0, sl_fcmh_poolmaster.pms_entsize);
 	INIT_PSC_LISTENTRY(&f->fcmh_lentry);
 	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
@@ -362,14 +359,14 @@ fidc_init(int privsiz)
 
 	nobj = slcfg_local->cfg_fidcachesz;
 
-	_psc_poolmaster_init(&fidcPoolMaster,
+	_psc_poolmaster_init(&sl_fcmh_poolmaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
 	    PPMF_AUTO, nobj, nobj, 0, NULL,
 	    NULL, fidc_reaper, NULL, "fcmh");
-	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
+	sl_fcmh_pool = psc_poolmaster_getmgr(&sl_fcmh_poolmaster);
 
-	lc_reginit(&fidcIdleList, struct fidc_membh, fcmh_lentry,
+	lc_reginit(&sl_fcmh_idle, struct fidc_membh, fcmh_lentry,
 	    "fcmhidle");
 
 	psc_hashtbl_init(&sl_fcmh_hashtbl, 0, struct fidc_membh,
@@ -415,7 +412,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 	if (f->fcmh_flags & FCMH_IDLE) {
 		f->fcmh_flags &= ~FCMH_IDLE;
-		lc_remove(&fidcIdleList, f);
+		lc_remove(&sl_fcmh_idle, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
@@ -466,7 +463,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 
 		psc_assert(!(f->fcmh_flags & FCMH_IDLE));
 		f->fcmh_flags |= FCMH_IDLE;
-		lc_add(&fidcIdleList, f);
+		lc_add(&sl_fcmh_idle, f);
 		PFL_GETTIMESPEC(&f->fcmh_etime);
 		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 	}
