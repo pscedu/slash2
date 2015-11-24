@@ -71,7 +71,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, mq->rw,
-		    nodeInfo.node_res->res_id, *np);
+		    sl_resprof->res_id, *np);
 		if (mp->rc == 0)
 			break;
 	}
