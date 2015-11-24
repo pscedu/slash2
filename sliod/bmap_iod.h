@@ -134,7 +134,7 @@ void		bcr_ready_remove(struct bcrcupd *);
 
 void		slibmaprlsthr_spawn(void);
 
-extern struct bmap_iod_minseq	 bimSeq;
+extern struct bmap_iod_minseq	 sli_bminseq;
 
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
 extern struct psc_poolmgr	*bmap_rls_pool;

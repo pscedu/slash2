@@ -36,7 +36,7 @@
 #include "sliod.h"
 #include "slvr.h"
 
-struct bmap_iod_minseq	 bimSeq;
+struct bmap_iod_minseq	 sli_bminseq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
 struct psc_listcache	 sli_bmap_releaseq;
@@ -47,9 +47,9 @@ struct psc_poolmgr	*bmap_rls_pool;
 void
 bim_init(void)
 {
-	INIT_SPINLOCK(&bimSeq.bim_lock);
-	psc_waitq_init(&bimSeq.bim_waitq);
-	bimSeq.bim_minseq = 0;
+	INIT_SPINLOCK(&sli_bminseq.bim_lock);
+	psc_waitq_init(&sli_bminseq.bim_waitq);
+	sli_bminseq.bim_minseq = 0;
 }
 
 int
@@ -57,21 +57,21 @@ bim_updateseq(uint64_t seq)
 {
 	int invalid = 0;
 
-	spinlock(&bimSeq.bim_lock);
+	spinlock(&sli_bminseq.bim_lock);
 
 	if (seq == BMAPSEQ_ANY) {
 		invalid = 1;
 		goto done;
 	}
-	if (seq >= bimSeq.bim_minseq ||
-	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
-		bimSeq.bim_minseq = seq;
+	if (seq >= sli_bminseq.bim_minseq ||
+	    sli_bminseq.bim_minseq == BMAPSEQ_ANY) {
+		sli_bminseq.bim_minseq = seq;
 		psclog_info("update min seq to %"PRId64, seq);
-		PFL_GETTIMESPEC(&bimSeq.bim_age);
+		PFL_GETTIMESPEC(&sli_bminseq.bim_age);
 		goto done;
 	}
 
-	if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR) {
+	if (seq >= sli_bminseq.bim_minseq - BMAP_SEQLOG_FACTOR) {
 		/*
 		 * This allows newly-acquired leases to be accepted
 		 * after an MDS restart.  Otherwise, the client would
@@ -83,8 +83,8 @@ bim_updateseq(uint64_t seq)
 		 * cases.
 		 */
 		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
-		    bimSeq.bim_minseq, seq);
-		bimSeq.bim_minseq = seq;
+		    sli_bminseq.bim_minseq, seq);
+		sli_bminseq.bim_minseq = seq;
 		OPSTAT_INCR("seqno-reduce");
 		goto done;
 	}
@@ -96,11 +96,11 @@ bim_updateseq(uint64_t seq)
 	invalid = 1;
 	psclog_warnx("Seqno %"PRId64" is invalid "
 	    "(bim_minseq=%"PRId64")",
-	    seq, bimSeq.bim_minseq);
+	    seq, sli_bminseq.bim_minseq);
 	OPSTAT_INCR("seqno-invalid");
 
  done:
-	freelock(&bimSeq.bim_lock);
+	freelock(&sli_bminseq.bim_lock);
 
 	return (invalid);
 }
@@ -119,20 +119,21 @@ bim_getcurseq(void)
 	OPSTAT_INCR("bim-getcurseq");
 
  retry:
-	spinlock(&bimSeq.bim_lock);
-	while (bimSeq.bim_flags & BIM_RETRIEVE_SEQ) {
-		psc_waitq_wait(&bimSeq.bim_waitq, &bimSeq.bim_lock);
-		spinlock(&bimSeq.bim_lock);
+	spinlock(&sli_bminseq.bim_lock);
+	while (sli_bminseq.bim_flags & BIM_RETRIEVE_SEQ) {
+		psc_waitq_wait(&sli_bminseq.bim_waitq,
+		    &sli_bminseq.bim_lock);
+		spinlock(&sli_bminseq.bim_lock);
 	}
 
 	PFL_GETTIMESPEC(&crtime);
 	timespecsub(&crtime, &bim_timeo, &crtime);
 
-	if (timespeccmp(&crtime, &bimSeq.bim_age, >) ||
-	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
+	if (timespeccmp(&crtime, &sli_bminseq.bim_age, >) ||
+	    sli_bminseq.bim_minseq == BMAPSEQ_ANY) {
 
-		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
-		freelock(&bimSeq.bim_lock);
+		sli_bminseq.bim_flags |= BIM_RETRIEVE_SEQ;
+		freelock(&sli_bminseq.bim_lock);
 
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
@@ -159,11 +160,11 @@ bim_getcurseq(void)
 			csvc = NULL;
 		}
 
-		spinlock(&bimSeq.bim_lock);
-		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
-		psc_waitq_wakeall(&bimSeq.bim_waitq);
+		spinlock(&sli_bminseq.bim_lock);
+		sli_bminseq.bim_flags &= ~BIM_RETRIEVE_SEQ;
+		psc_waitq_wakeall(&sli_bminseq.bim_waitq);
 		if (rc) {
-			freelock(&bimSeq.bim_lock);
+			freelock(&sli_bminseq.bim_lock);
 			psclog_warnx("failed to get bmap seqno rc=%d",
 			    rc);
 			sleep(1);
@@ -171,8 +172,8 @@ bim_getcurseq(void)
 		}
 	}
 
-	seqno = bimSeq.bim_minseq;
-	freelock(&bimSeq.bim_lock);
+	seqno = sli_bminseq.bim_minseq;
+	freelock(&sli_bminseq.bim_lock);
 
 	return (seqno);
 }
@@ -225,16 +226,18 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				continue;
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
+				DEBUG_BMAP(PLL_DIAG, b,
+				    "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
 			}
 			i = pll_nitems(&bii->bii_rls);
-			DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases", i);
+			DEBUG_BMAP(PLL_DIAG, b,
+			    "returning %d bmap leases", i);
 			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr->sbd[nrls++],
-				    &brls->bir_sbd, sizeof(struct
-				    srt_bmapdesc));
+				    &brls->bir_sbd,
+				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
 				if (nrls >= MAX_BMAP_RELEASE)
 					break;
