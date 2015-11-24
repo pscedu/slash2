@@ -62,6 +62,7 @@
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
+#include "pfl/fmtstr.h"
 #include "pfl/workthr.h"
 
 #include "bmap_cli.h"
@@ -119,7 +120,9 @@ struct psc_listcache		 slc_attrtimeoutq;
 sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
-const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
+char				*msl_ctlsockfn;
+char				 tmp_ctlsockfn[PATH_MAX];
+
 char				 mountpoint[PATH_MAX];
 int				 slc_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
@@ -157,6 +160,8 @@ int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
+
+extern char 			*__progname;
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -3062,6 +3067,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct sl_site *s;
 	int i, j;
 
+	unlink(msl_ctlsockfn);
+
 	lc_kill(&slc_bmapflushq);
 	lc_kill(&slc_bmaptimeoutq);
 	lc_kill(&slc_attrtimeoutq);
@@ -3931,8 +3938,6 @@ msl_opt_lookup(const char *opt)
 __dead void
 usage(void)
 {
-	extern char *__progname;
-
 	fprintf(stderr,
 	    "usage: %s [-dUV] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
 	    "\t[-o mountopt] [-S socket] node\n",
@@ -4033,6 +4038,7 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
+	msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		msl_ctlsockfn = p;
@@ -4080,6 +4086,13 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc != 1)
 		usage();
+
+	/* perform transliteration for "variables" in file path */
+	(void)FMTSTR(tmp_ctlsockfn, sizeof(tmp_ctlsockfn), msl_ctlsockfn, 
+		FMTSTRCASE('h', "s", psclog_getdata()->pld_hostshort)
+		FMTSTRCASE('n', "s", __progname)
+	);
+	msl_ctlsockfn = tmp_ctlsockfn;
 
 	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "msfsmgrthr");
 
