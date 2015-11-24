@@ -355,7 +355,7 @@ enum {
 	SLC_FAULT_REQUEST_TIMEOUT
 };
 
-extern char			*msl_ctlsockfn;
+extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*slc_rmc_resm;

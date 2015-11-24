@@ -119,4 +119,6 @@ struct msctlmsg_bmpce {
 
 #define SLASH_FSID		0x51a54
 
+extern struct psc_thread	*msl_ctlthr0;
+
 #endif /* _SL_CTL_CLI_H_ */

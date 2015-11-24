@@ -51,6 +51,8 @@
 
 #include "slashd/inode.h"
 
+struct psc_thread	*msl_ctlthr0;
+
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
@@ -814,8 +816,9 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 PFLCTL_SVR_DEFS;
 
 void
-msctlthr_main(__unusedx struct psc_thread *thr)
+msctlthr_main(struct psc_thread *thr)
 {
+	msl_ctlthr0 = thr;
 	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
 	    MSTHRT_CTLAC);
 }
