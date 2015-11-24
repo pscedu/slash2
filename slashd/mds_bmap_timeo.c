@@ -35,15 +35,15 @@
 #include "bmap_mds.h"
 #include "journal_mds.h"
 
-struct bmap_timeo_table	 mdsBmapTimeoTbl;
+struct bmap_timeo_table	 slm_bmap_leases;
 
 void
 mds_bmap_timeotbl_init(void)
 {
-	INIT_SPINLOCK(&mdsBmapTimeoTbl.btt_lock);
+	INIT_SPINLOCK(&slm_bmap_leases.btt_lock);
 
-	pll_init(&mdsBmapTimeoTbl.btt_leases, struct bmap_mds_lease,
-	    bml_timeo_lentry, &mdsBmapTimeoTbl.btt_lock);
+	pll_init(&slm_bmap_leases.btt_leases, struct bmap_mds_lease,
+	    bml_timeo_lentry, &slm_bmap_leases.btt_lock);
 }
 
 static void
@@ -67,8 +67,8 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 void
 mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 {
-	mdsBmapTimeoTbl.btt_maxseq = maxseq;
-	mdsBmapTimeoTbl.btt_minseq = minseq;
+	slm_bmap_leases.btt_maxseq = maxseq;
+	slm_bmap_leases.btt_minseq = minseq;
 }
 
 int
@@ -76,14 +76,14 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
 
-	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
+	locked = reqlock(&slm_bmap_leases.btt_lock);
 
 	if (maxseq)
-		*maxseq = mdsBmapTimeoTbl.btt_maxseq;
+		*maxseq = slm_bmap_leases.btt_maxseq;
 	if (minseq)
-		*minseq = mdsBmapTimeoTbl.btt_minseq;
+		*minseq = slm_bmap_leases.btt_minseq;
 
-	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
+	ureqlock(&slm_bmap_leases.btt_lock, locked);
 
 	return (0);
 }
@@ -94,8 +94,8 @@ mds_bmap_timeotbl_journal_seqno(void)
 	static int log = 0;
 	struct slmds_jent_bmapseq sjbsq;
 
-	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
+	sjbsq.sjbsq_high_wm = slm_bmap_leases.btt_maxseq;
+	sjbsq.sjbsq_low_wm = slm_bmap_leases.btt_minseq;
 
 	log++;
 	if (!(log % BMAP_SEQLOG_FACTOR))
@@ -108,7 +108,7 @@ mds_bmap_timeotbl_getnextseq(void)
 	int locked;
 	uint64_t hwm;
 
-	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
+	locked = reqlock(&slm_bmap_leases.btt_lock);
 
 	/*
 	 * Skip a zero sequence number because the client does not like
@@ -116,16 +116,16 @@ mds_bmap_timeotbl_getnextseq(void)
 	 * sequence number is actually ahead of a larger one after a
 	 * wrap around happens.
 	 */
-	mdsBmapTimeoTbl.btt_maxseq++;
-	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY) {
+	slm_bmap_leases.btt_maxseq++;
+	if (slm_bmap_leases.btt_maxseq == BMAPSEQ_ANY) {
 		OPSTAT_INCR("seqno-wrap");
-		mdsBmapTimeoTbl.btt_maxseq = 1;
+		slm_bmap_leases.btt_maxseq = 1;
 	}
 
-	hwm = mdsBmapTimeoTbl.btt_maxseq;
+	hwm = slm_bmap_leases.btt_maxseq;
 	mds_bmap_timeotbl_journal_seqno();
 
-	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
+	ureqlock(&slm_bmap_leases.btt_lock, locked);
 
 	return (hwm);
 }
@@ -136,20 +136,20 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	struct bmap_mds_lease *tmp;
 	int update = 0;
 
-	spinlock(&mdsBmapTimeoTbl.btt_lock);
-	if (pll_peekhead(&mdsBmapTimeoTbl.btt_leases) == bml)
+	spinlock(&slm_bmap_leases.btt_lock);
+	if (pll_peekhead(&slm_bmap_leases.btt_leases) == bml)
 		update = 1;
-	pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
+	pll_remove(&slm_bmap_leases.btt_leases, bml);
 	if (update) {
-		tmp = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
+		tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (tmp)
-			mdsBmapTimeoTbl.btt_minseq = tmp->bml_seq;
+			slm_bmap_leases.btt_minseq = tmp->bml_seq;
 		else
-			mdsBmapTimeoTbl.btt_minseq =
-			    mdsBmapTimeoTbl.btt_maxseq;
+			slm_bmap_leases.btt_minseq =
+			    slm_bmap_leases.btt_maxseq;
 		mds_bmap_timeotbl_journal_seqno();
 	}
-	freelock(&mdsBmapTimeoTbl.btt_lock);
+	freelock(&slm_bmap_leases.btt_lock);
 }
 
 /**
@@ -169,22 +169,22 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context. */
-		spinlock(&mdsBmapTimeoTbl.btt_lock);
-		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
+		spinlock(&slm_bmap_leases.btt_lock);
+		if (slm_bmap_leases.btt_maxseq < bml->bml_seq)
 			/*
 			 * A lease has been found in odtable whose
 			 * issuance was after that of the last HWM
 			 * journal entry.  (HWM's are journaled every
 			 * BMAP_SEQLOG_FACTOR times.)
 			 */
-			seq = mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+			seq = slm_bmap_leases.btt_maxseq = bml->bml_seq;
 
-		else if (mdsBmapTimeoTbl.btt_minseq > bml->bml_seq)
+		else if (slm_bmap_leases.btt_minseq > bml->bml_seq)
 			/* This lease has already expired. */
 			seq = BMAPSEQ_ANY;
 		else
 			seq = bml->bml_seq;
-		freelock(&mdsBmapTimeoTbl.btt_lock);
+		freelock(&slm_bmap_leases.btt_lock);
 
 	} else {
 		seq = mds_bmap_timeotbl_getnextseq();
@@ -193,10 +193,10 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	BML_LOCK(bml);
 	if (bml->bml_flags & BML_TIMEOQ) {
 		mds_bmap_timeotbl_remove(bml);
-		pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
+		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	} else {
 		bml->bml_flags |= BML_TIMEOQ;
-		pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
+		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	}
 	BML_ULOCK(bml);
 
@@ -210,22 +210,22 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	int rc, nsecs = 0;
 
 	while (pscthr_run(thr)) {
-		spinlock(&mdsBmapTimeoTbl.btt_lock);
-		bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
+		spinlock(&slm_bmap_leases.btt_lock);
+		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {
-			freelock(&mdsBmapTimeoTbl.btt_lock);
+			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = BMAP_TIMEO_MAX;
 			goto sleep;
 		}
 
 		if (!BML_TRYLOCK(bml)) {
-			freelock(&mdsBmapTimeoTbl.btt_lock);
+			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
 			goto sleep;
 		}
 		if (bml->bml_refcnt) {
 			BML_ULOCK(bml);
-			freelock(&mdsBmapTimeoTbl.btt_lock);
+			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
 			goto sleep;
 		}
@@ -234,14 +234,14 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			nsecs = bml->bml_expire - time(NULL);
 			if (nsecs > 0) {
 				BML_ULOCK(bml);
-				freelock(&mdsBmapTimeoTbl.btt_lock);
+				freelock(&slm_bmap_leases.btt_lock);
 				goto sleep;
 			}
 			bml->bml_flags |= BML_FREEING;
 		}
 
 		BML_ULOCK(bml);
-		freelock(&mdsBmapTimeoTbl.btt_lock);
+		freelock(&slm_bmap_leases.btt_lock);
 
 		rc = mds_bmap_bml_release(bml);
 		if (rc) {

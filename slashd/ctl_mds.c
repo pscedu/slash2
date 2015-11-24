@@ -540,7 +540,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct bmap_mds_info *bmi;
 	int rc = 1;
 
-	pll = &mdsBmapTimeoTbl.btt_leases;
+	pll = &slm_bmap_leases.btt_leases;
 	PLL_LOCK(pll);
 	PLL_FOREACH(bml, pll) {
 		bmi = bml->bml_bmi;
@@ -647,9 +647,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.reclaim_cursor",
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
 	psc_ctlparam_register_var("sys.bmaxseqno", PFLCTL_PARAMT_UINT64,
-	    0, &mdsBmapTimeoTbl.btt_maxseq);
+	    0, &slm_bmap_leases.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
-	    0, &mdsBmapTimeoTbl.btt_minseq);
+	    0, &slm_bmap_leases.btt_minseq);
 	psc_ctlparam_register_var("sys.bwqueuesz", PFLCTL_PARAMT_INT,
 	    0, &slm_bwqueuesz);
 
