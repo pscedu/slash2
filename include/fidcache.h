@@ -320,6 +320,8 @@ void	_dump_fcmh_flags_common(int *, int *);
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
 extern struct psc_hashtbl	 sl_fcmh_hashtbl;
+extern struct psc_thread	*sl_freapthr;
+extern struct psc_waitq		 sl_freap_waitq;
 
 static __inline void *
 fcmh_get_pri(struct fidc_membh *f)

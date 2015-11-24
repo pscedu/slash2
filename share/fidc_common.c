@@ -49,6 +49,8 @@ struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
 struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
 struct psc_hashtbl	  sl_fcmh_hashtbl;
+struct psc_thread	 *sl_freapthr;
+struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT;
 
 #define fcmh_get()	psc_pool_get(fidcPool)
 #define fcmh_put(f)	psc_pool_return(fidcPool, (f))
@@ -479,14 +481,16 @@ sl_freapthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		while (fidc_reap(0, 1))
 			;
-		sleep(MAX_FCMH_LIFETIME);
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL,
+		    MAX_FCMH_LIFETIME);
 	}
 }
 
 void
 sl_freapthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, sl_freapthr_main, NULL, 0, name);
+	sl_freapthr = pscthr_init(thrtype, sl_freapthr_main, NULL, 0,
+	    name);
 }
 
 #if PFL_DEBUG > 0
