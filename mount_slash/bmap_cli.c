@@ -940,7 +940,10 @@ msbreleasethr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		PFL_GETTIMESPEC(&crtime);
 		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-		lc_peekheadwait(&slc_bmaptimeoutq);
+		if (lc_peekheadwait(&slc_bmaptimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+			break;
+		}
 		OPSTAT_INCR("release-wakeup");
 		timespecadd(&crtime, &msl_bmap_max_lease, &nto);
 
