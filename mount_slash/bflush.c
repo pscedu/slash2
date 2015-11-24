@@ -965,7 +965,8 @@ msflushthr_main(struct psc_thread *thr)
 		mflt->mflt_failcnt = 1;
 
 		/* wait until some work appears */
-		lc_peekheadwait(&slc_bmapflushq);
+		if (lc_peekheadwait(&slc_bmapflushq) == NULL)
+			break;
 
 		OPSTAT_INCR("bmap-flush");
 
