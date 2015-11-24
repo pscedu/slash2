@@ -3112,6 +3112,16 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 		if (thr)
 			usleep(10);
 	} while (thr);
+
+	/* XXX wait for wkq to drain */
+
+	pflog_get_fsctx_uprog = NULL;
+	pflog_get_fsctx_uid = NULL;
+	pflog_get_fsctx_pid = NULL;
+
+	psc_subsys_unregister(SLCSS_FSOP);
+	psc_subsys_unregister(SLCSS_INFO);
+	sl_subsys_unregister();
 }
 
 void

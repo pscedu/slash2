@@ -41,4 +41,11 @@ sl_subsys_register(void)
 	psc_subsys_register(SLSS_FCMH, "fcmh");
 }
 
+static __inline void
+sl_subsys_unregister(void)
+{
+	psc_subsys_unregister(SLSS_FCMH);
+	psc_subsys_unregister(SLSS_BMAP);
+}
+
 #endif /* _SLSUBSYS_H_ */
