@@ -3057,6 +3057,7 @@ void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
 	struct slashrpc_cservice *csvc;
+	struct psc_thread *thr;
 	lnet_process_id_t peer;
 	struct sl_resource *r;
 	struct sl_resm *m;
@@ -3086,9 +3087,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			sl_csvc_decref(csvc);
 			continue;
 		}
-	psc_compl_ready(&sl_nbrqset->set_compl, 1);
-	sleep(1);
-	pscrpc_set_destroy(sl_nbrqset);
+	pscrpc_set_kill(sl_nbrqset);
 
 	pscrpc_svh_destroy(msl_rci_svh);
 	pscrpc_svh_destroy(msl_rcm_svh);
@@ -3100,6 +3099,16 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	 * observability reasons.
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
+
+	do {
+		PLL_LOCK(&psc_threads);
+		PLL_FOREACH(thr, &psc_threads)
+			if (strncmp(thr->pscthr_name, "ms", 2) == 0)
+				break;
+		PLL_ULOCK(&psc_threads);
+		if (thr)
+			usleep(10);
+	} while (thr);
 }
 
 void
@@ -3757,8 +3766,11 @@ msl_init(void)
 	    NULL, NULL, "mfh");
 	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
 
+#ifndef SLASH2_CLI_PFLFS_MODULE
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
+	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
+#endif
 
 	slrpc_initcli();
 	slc_rpc_initsvc();
@@ -3769,12 +3781,6 @@ msl_init(void)
 
 	/* Start up service threads. */
 	msctlthr_spawn();
-
-	/*
-	 * This should only be enabled when we really care about
-	 * the average stuff in order to save energy.
-	 */
-	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
 
 	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
 	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
