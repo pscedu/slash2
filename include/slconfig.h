@@ -300,7 +300,7 @@ void			yywarn(const char *, ...);
 extern struct sl_resm	*nodeResm;
 
 #define nodeSite	nodeResm->resm_site
-#define nodeResProf	nodeResm->resm_res
+#define sl_resprof	nodeResm->resm_res
 
 extern struct slcfg_local *slcfg_local;
 extern struct sl_config	 globalConfig;

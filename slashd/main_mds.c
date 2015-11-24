@@ -500,7 +500,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	/* startup meter */
-	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
+	psc_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	if (slcfg_local->cfg_arc_max) {
 		void arc_set_maxsize(uint64_t);

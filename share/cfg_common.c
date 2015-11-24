@@ -308,7 +308,7 @@ libsl_init(int nmsgs)
 	 * configuration.
 	 */
 	for (i = 0, p = (void *)slcfg_local,
-	    t = (void *)nodeResProf->res_localcfg;
+	    t = (void *)sl_resprof->res_localcfg;
 	    i < (int)sizeof(*slcfg_local); p++, t++, i++)
 		if (*t)
 			*p = *t;
