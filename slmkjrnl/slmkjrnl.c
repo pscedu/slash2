@@ -67,7 +67,7 @@ usage(void)
  * Returns 0 on success, errno on error.
  */
 void
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
+sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
     uint32_t rs, uint64_t uuid, int block_dev)
 {
 	struct psc_journal_enthdr *pje;
@@ -179,7 +179,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 }
 
 void
-pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
+sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 {
 	union {
 		struct slmds_jent_assign_rep *logentry;
@@ -279,14 +279,13 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 /*
  * Dump the contents of a journal file.
  * @fn: journal filename to query.
- * @verbose: whether to report stats summary or full dump.
  *
  * Each time mds restarts, it writes log entries starting from the very
  * first slot of the log.  Anyway, the function dumps all log entries,
  * some of them may be from previous incarnations of the MDS.
  */
 void
-pjournal_dump(const char *fn)
+sl_journal_dump(const char *fn)
 {
 	int i, ntotal, nmagic, nchksum, nformat, ndump, first = 1;
 	uint32_t slot, highest_slot = -1, lowest_slot = -1;
@@ -412,7 +411,7 @@ pjournal_dump(const char *fn)
 			}
 			ndump++;
 			if (verbose)
-				pjournal_dump_entry(slot + i, pje);
+				sl_journal_dump_entry(slot + i, pje);
 			if (first) {
 				first = 0;
 				highest_xid = lowest_xid = pje->pje_xid;
@@ -517,14 +516,14 @@ main(int argc, char *argv[])
 	if (format) {
 		if (!uuid)
 			psc_fatalx("no fsuuid specified");
-		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE,
+		sl_journal_format(fn, nents, SLJ_MDS_ENTSIZE,
 		    SLJ_MDS_READSZ, uuid, block_dev);
 		if (verbose || !nents)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
 	} else if (query)
-		pjournal_dump(fn);
+		sl_journal_dump(fn);
 	else
 		usage();
 	exit(0);
