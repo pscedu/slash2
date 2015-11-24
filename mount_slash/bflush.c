@@ -57,7 +57,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-struct timespec			 bmapFlushWaitSecs = { 1, 0L };
+struct timespec			 msl_bflush_timeout = { 1, 0L };
 struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 slc_bmapflushq;
 struct psc_listcache		 slc_bmaptimeoutq;
@@ -782,7 +782,7 @@ _msl_resm_throttle(struct sl_resm *m, int wait)
 		}
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		psc_waitq_waitrel_ts(&slc_bflush_waitq,
-		    &slc_bflush_lock, &bmapFlushWaitSecs);
+		    &slc_bflush_lock, &msl_bflush_timeout);
 		spinlock(&slc_bflush_lock);
 	}
 	if (account) {
@@ -986,7 +986,7 @@ msflushthr_main(struct psc_thread *thr)
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		psc_waitq_waitrel_ts(&slc_bflush_waitq,
-		    &slc_bflush_lock, &bmapFlushWaitSecs);
+		    &slc_bflush_lock, &msl_bflush_timeout);
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 		freelock(&slc_bflush_lock);
