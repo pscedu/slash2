@@ -107,7 +107,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 /*
  * Use system() calls to import pool and mount file systems.  Note that
  * the paths needed by the system() are compiled in to potentially avoid
- * system binaries (e.g. fZFSOnLinux).
+ * system binaries (e.g. ZFSOnLinux).
  *
  * We don't check WEXITSTATUS(rc) after a system() call because
  * sometimes the ZFS tool can return an error (e.g. EEXIST) even if the
