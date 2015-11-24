@@ -815,7 +815,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		 * after all its biorqs are flushed if any.
 		 */
 		LIST_CACHE_LOCK(&slc_bmapflushq);
-		lc_peekheadwait(&slc_bmapflushq);
+		if (lc_peekheadwait(&slc_bmapflushq) == NULL) {
+			LIST_CACHE_ULOCK(&slc_bmapflushq);
+			break;
+		}
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -855,6 +858,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&bmaps);
 	}
+	psc_dynarray_free(&bmaps);
 }
 
 /*
