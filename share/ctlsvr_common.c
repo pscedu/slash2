@@ -64,8 +64,8 @@ slctl_fillconn(struct slctlmsg_conn *scc,
 	scc->scc_txcr = lp->lp_txcredits;
 }
 
-/**
- * slctlrep_getconn - Send a response to a "GETCONN" inquiry.
+/*
+ * Send a response to a "GETCONN" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.

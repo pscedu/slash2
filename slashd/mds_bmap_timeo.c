@@ -152,9 +152,8 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	freelock(&slm_bmap_leases.btt_lock);
 }
 
-/**
- * mds_bmap_timeotbl_mdsi -
- * Returns bmapseqno.
+/*
+ * Obtain the current bmap seqno.
  */
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)

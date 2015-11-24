@@ -77,9 +77,10 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slc_rci_handle_io - Handle a READ or WRITE completion to CLI from
- *	ION (only used for async I/O).
+/*
+ * Handle a READ or WRITE completion to CLI from ION (only used for
+ * async I/O).
+ *
  * @rq: request.
  */
 int
@@ -199,8 +200,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/**
- * slc_rci_handler - Handle a request for CLI from ION.
+/*
+ * Handle a request for CLI from ION.
  * @rq: request.
  */
 int

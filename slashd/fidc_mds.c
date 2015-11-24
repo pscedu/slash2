@@ -267,9 +267,10 @@ slm_fcmh_dtor(struct fidc_membh *f)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
-/**
- * _slm_fcmh_endow - "Endow" or apply inheritance to a new directory
- *	entry from its parent directory replica layout.
+/*
+ * "Endow" or apply inheritance to a new directory entry from its parent
+ * directory replica layout.
+ *
  * Note: the bulk of this is empty until we have a place to store such
  * info in the SLASH2 metafile.
  */

@@ -57,9 +57,10 @@ fflags_2_rw(int fflags)
 	return (SL_READ);
 }
 
-/**
- * sl_externalize_stat - Prepare a 'struct stat' buffer for high-level
- *	representation, suitable for transmission between systems.
+/*
+ * Prepare a 'struct stat' buffer for high-level representation,
+ * suitable for transmission between systems.
+ *
  * @stb: system stat buffer.
  * @sstb: higher-level app stat buffer.
  *
@@ -143,8 +144,8 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
 	  (((accmode) & W_OK) && ((fmode) & ((mask) & _S_IWUGO)) == 0) ||	\
 	  (((accmode) & X_OK) && ((fmode) & ((mask) & _S_IXUGO)) == 0)) ? EACCES : 0)
 
-/**
- * checkcreds - Perform a classic UNIX-style permission access check.
+/*
+ * Perform a classic UNIX-style permission access check.
  * @sstb: file ownership info.
  * @pcrp: credentials of access.
  * @accmode: type of access (R_OK | W_OK | X_OK).

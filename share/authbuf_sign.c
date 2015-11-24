@@ -41,8 +41,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
-/**
- * authbuf_sign - Sign a message with the secret key.
+/*
+ * Sign a message with the secret key.
  * @rq: request structure to sign.
  * @msgtype: request or reply to sign.
  */
@@ -111,8 +111,8 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 		    bd->bd_iov_count);
 }
 
-/**
- * authbuf_check - Check signature validity of a authbuf.
+/*
+ * Check signature validity of a authbuf.
  * @rq: request structure to check.
  * @msgtype: request or reply to check.
  */

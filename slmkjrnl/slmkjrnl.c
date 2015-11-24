@@ -59,8 +59,8 @@ usage(void)
 	exit(1);
 }
 
-/**
- * pjournal_format - Initialize an on-disk journal.
+/*
+ * Initialize an on-disk journal.
  * @fn: file path to store journal.
  * @nents: number of entries journal may contain.
  * @entsz: size of a journal entry.
@@ -276,8 +276,8 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	printf("\n");
 }
 
-/**
- * pjournal_dump - Dump the contents of a journal file.
+/*
+ * Dump the contents of a journal file.
  * @fn: journal filename to query.
  * @verbose: whether to report stats summary or full dump.
  *
