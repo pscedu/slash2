@@ -3123,7 +3123,14 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 		psc_hashtbl_destroy(&slc_gidmap_int);
 	}
 
-	/* XXX wait for wkq to drain */
+	/* XXX wait for wkq to drain, or perhaps at the pflfs layer? */
+
+	pfl_listcache_destroy_registered(&slc_attrtimeoutq);
+	pfl_listcache_destroy_registered(&slc_bmapflushq);
+	pfl_listcache_destroy_registered(&slc_bmaptimeoutq);
+	pfl_listcache_destroy_registered(&msl_readaheadq);
+	pfl_listcache_destroy_registered(&msl_idle_pages);
+	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
 	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;

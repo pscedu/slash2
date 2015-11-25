@@ -377,8 +377,7 @@ void
 fidc_destroy(void)
 {
 	psc_hashtbl_destroy(&sl_fcmh_hashtbl);
-	lc_unregister(&sl_fcmh_idle);
-	pfl_listcache_destroy(&sl_fcmh_idle);
+	pfl_listcache_destroy_registered(&sl_fcmh_idle);
 }
 
 ssize_t
