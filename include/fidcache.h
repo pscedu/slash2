@@ -263,6 +263,7 @@ struct fidc_membh {
 #define FCMH_OPCNT_MAXTYPE		11
 
 void	fidc_init(int);
+void	fidc_destroy(void);
 int	fidc_reap(int, int);
 
 void	sl_freapthr_spawn(int, const char *);

@@ -274,6 +274,7 @@ void			 slcfg_init_site(struct sl_site *);
 int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
+void			 slcfg_destroy(void);
 void			 slcfg_parse(const char *);
 void			 slcfg_resm_addaddr(char *, const char *);
 

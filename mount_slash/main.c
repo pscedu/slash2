@@ -3113,6 +3113,16 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			usleep(10);
 	} while (thr);
 
+	fidc_destroy();
+	psc_hashtbl_destroy(&msl_namecache_hashtbl);
+	slcfg_destroy();
+
+	if (slc_use_mapfile) {
+		psc_hashtbl_destroy(&slc_uidmap_ext);
+		psc_hashtbl_destroy(&slc_uidmap_int);
+		psc_hashtbl_destroy(&slc_gidmap_int);
+	}
+
 	/* XXX wait for wkq to drain */
 
 	pflog_get_fsctx_uprog = NULL;
