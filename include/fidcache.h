@@ -41,8 +41,6 @@
 #include "slashrpc.h"
 #include "slsubsys.h"
 
-#define MAX_FCMH_LIFETIME	(60 * 5)
-
 struct fidc_membh;
 
 struct sl_fcmh_ops {
@@ -266,6 +264,13 @@ void	fidc_init(int);
 void	fidc_destroy(void);
 int	fidc_reap(int, int);
 
+#define MAX_FCMH_LIFETIME		60
+
+#define FCMH_MAX_REAP			32
+
+#define SL_FIDC_REAPF_EXPIRED		(1 << 0)
+#define SL_FIDC_REAPF_ROOT		(1 << 1)
+
 void	sl_freapthr_spawn(int, const char *);
 
 /* fidc_lookup() flags */
@@ -320,6 +325,7 @@ void	_dump_fcmh_flags_common(int *, int *);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_hashtbl	 sl_fcmh_hashtbl;
+extern struct psc_listcache	 sl_fcmh_idle;
 extern struct psc_thread	*sl_freapthr;
 extern struct psc_waitq		 sl_freap_waitq;
 

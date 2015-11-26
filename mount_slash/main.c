@@ -215,6 +215,8 @@ msfsthr_teardown(void *arg)
 	psc_vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
 	psc_vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
 	freelock(&msfsthr_uniqidmap_lock);
+
+	psc_multiwait_free(&mft->mft_mw);
 }
 
 void
@@ -3056,8 +3058,8 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
+	struct psc_thread *thr, *thr_next;
 	struct slashrpc_cservice *csvc;
-	struct psc_thread *thr;
 	lnet_process_id_t peer;
 	struct sl_resource *r;
 	struct sl_resm *m;
@@ -3077,6 +3079,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	pscthr_setdead(sl_freapthr, 1);
 	psc_waitq_wakeall(&sl_freap_waitq);
+
+	while (lc_nitems(&sl_fcmh_idle))
+		fidc_reap(FCMH_MAX_REAP, SL_FIDC_REAPF_ROOT);
 
 	peer.nid = LNET_NID_ANY;
 	pscrpc_drop_conns(&peer);
@@ -3103,14 +3108,21 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
+	PLL_LOCK(&psc_threads);
+	PLL_FOREACH_SAFE(thr, thr_next, &psc_threads)
+	    if (strncmp(thr->pscthr_name, "msfsthr",
+		7) == 0)
+		    pscthr_destroy(thr);
+
 	do {
-		PLL_LOCK(&psc_threads);
 		PLL_FOREACH(thr, &psc_threads)
 			if (strncmp(thr->pscthr_name, "ms", 2) == 0)
 				break;
 		PLL_ULOCK(&psc_threads);
-		if (thr)
+		if (thr) {
 			usleep(10);
+			PLL_LOCK(&psc_threads);
+		}
 	} while (thr);
 
 	fidc_destroy();

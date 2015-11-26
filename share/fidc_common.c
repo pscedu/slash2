@@ -85,15 +85,13 @@ fcmh_destroy(struct fidc_membh *f)
 	psc_pool_return(sl_fcmh_pool, f);
 }
 
-#define FCMH_MAX_REAP 128
-
 /*
  * Reap some files from the fidcache.
  * @max: max number of objects to reap.
  * @only_expired: whether to restrict reaping to only expired files.
  */
 int
-fidc_reap(int max, int only_expired)
+fidc_reap(int max, int flags)
 {
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
 	struct timespec crtime;
@@ -102,10 +100,13 @@ fidc_reap(int max, int only_expired)
 	if (!max || max > FCMH_MAX_REAP)
 		max = FCMH_MAX_REAP;
 
+	if (flags & SL_FIDC_REAPF_EXPIRED)
+		PFL_GETTIMESPEC(&crtime);
+
 	LIST_CACHE_LOCK(&sl_fcmh_idle);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &sl_fcmh_idle) {
-		/* never reap root (/) */
-		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
+		if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT &&
+		    (flags & SL_FIDC_REAPF_ROOT) == 0)
 			continue;
 
 		if (!FCMH_TRYLOCK(f))
@@ -113,12 +114,10 @@ fidc_reap(int max, int only_expired)
 
 		psc_assert(!f->fcmh_refcnt);
 
-		if (only_expired) {
-			PFL_GETTIMESPEC(&crtime);
-			if (timespeccmp(&crtime, &f->fcmh_etime, <)) {
-				FCMH_ULOCK(f);
-				continue;
-			}
+		if (flags & SL_FIDC_REAPF_EXPIRED &&
+		    timespeccmp(&crtime, &f->fcmh_etime, <)) {
+			FCMH_ULOCK(f);
+			continue;
 		}
 
 		psc_assert(f->fcmh_flags & FCMH_IDLE);
@@ -483,10 +482,9 @@ void
 sl_freapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		while (fidc_reap(0, 1))
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED))
 			;
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL,
-		    MAX_FCMH_LIFETIME);
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
 	}
 }
 
