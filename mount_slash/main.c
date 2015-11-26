@@ -141,6 +141,9 @@ struct psc_poolmgr		*slc_mfh_pool;
 struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
 
+struct psc_poolmaster		 msl_iorq_poolmaster;
+struct psc_poolmgr		*msl_iorq_pool;
+
 uint32_t			 sl_sys_upnonce;
 
 struct psc_hashtbl		 slc_uidmap_ext;
@@ -3808,6 +3811,11 @@ msl_init(void)
 	    NULL, NULL, "mfh");
 	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
 
+	psc_poolmaster_init(&msl_iorq_poolmaster, struct msl_fsrqinfo,
+	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
+	    "iorq");
+	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
+
 #ifndef SLASH2_CLI_PFLFS_MODULE
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
@@ -4155,5 +4163,5 @@ main(int argc, char *argv[])
 	pflfs_module_init(&slc_pscfs, NULL);
 	pflfs_module_add(0, &slc_pscfs);
 
-	exit(pscfs_main(sizeof(struct msl_fsrqinfo)));
+	exit(pscfs_main());
 }

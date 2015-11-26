@@ -186,7 +186,9 @@ struct msl_fhent {
  * I/O requests (read/write).
  */
 struct msl_fsrqinfo {
+	struct psc_listentry		 mfsrq_lentry;
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
+	struct pscfs_req		*mfsrq_pfr;
 	struct msl_fhent		*mfsrq_mfh;
 	char				*mfsrq_buf;
 	size_t				 mfsrq_size;	/* incoming request size */
@@ -205,7 +207,7 @@ struct msl_fsrqinfo {
 #define MFSRQ_FSREPLIED			(1 << 2)	/* replied to pscfs, as a sanity check */
 #define MFSRQ_COPIED			(1 << 3)	/* data has been copied in/out from user to our buffers */
 
-#define mfsrq_2_pfr(q)			((struct pscfs_req *)(q) - 1)
+#define mfsrq_2_pfr(q)			(q)->mfsrq_pfr
 
 #define DPRINTFS_MFSRQ(level, ss, q, fmt, ...)				\
 	psclogs((level), (ss), "mfsrq@%p ref=%d flags=%d len=%zd "	\
@@ -377,6 +379,7 @@ extern struct psc_listcache	 slc_bmapflushq;
 extern struct psc_listcache	 slc_bmaptimeoutq;
 extern struct psc_listcache	 msl_readaheadq;
 
+extern struct psc_poolmgr	*msl_iorq_pool;
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
 extern struct psc_poolmgr	*slc_mfh_pool;

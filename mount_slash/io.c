@@ -585,7 +585,6 @@ void
 msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
     struct bmpc_ioreq *r0)
 {
-	struct bmpc_ioreq *iorqs[MAX_BMAPS_REQ];
 	void *oiov = q->mfsrq_iovs;
 	struct msl_fhent *mfh;
 	struct pscfs_req *pfr;
@@ -617,12 +616,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
 	mfh_decref(mfh);
-
-	/*
-	 * Make a copy of the biorqs to avoid use-after-free via
-	 * pscfs_reply_read/write().
-	 */
-	memcpy(iorqs, q->mfsrq_biorq, sizeof(iorqs));
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		if (q->mfsrq_err) {
@@ -685,13 +678,15 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	PSCFREE(oiov);
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
-		r = iorqs[i];
+		r = q->mfsrq_biorq[i];
 		if (!r)
 			break;
 		if (r == r0)
 			continue;
 		msl_biorq_release(r);
 	}
+
+	psc_pool_return(msl_iorq_pool, q);
 }
 
 void
@@ -1813,7 +1808,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 {
 	struct msl_fsrqinfo *q;
 
-	q = PSC_AGP(pfr + 1, 0);
+	q = psc_pool_get(msl_iorq_pool);
+	q->mfsrq_pfr = pfr;
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
 	q->mfsrq_size = size;
