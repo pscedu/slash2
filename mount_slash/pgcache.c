@@ -599,9 +599,6 @@ bmpc_global_init(void)
 	    bmpce_lentry, "idlepages");
 	lc_reginit(&msl_readahead_pages, struct bmap_pagecache_entry,
 	    bmpce_lentry, "readapages");
-
-	/* make it visible */
-	OPSTAT_INCR("biorq-max");
 }
 
 #if PFL_DEBUG > 0
