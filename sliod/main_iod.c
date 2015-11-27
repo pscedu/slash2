@@ -221,10 +221,6 @@ main(int argc, char *argv[])
 	sl_subsys_register();
 	psc_subsys_register(SLISS_SLVR, "slvr");
 
-	psc_fault_register(SLI_FAULT_AIO_FAIL);
-	psc_fault_register(SLI_FAULT_CRCUP_FAIL);
-	psc_fault_register(SLI_FAULT_FSIO_READ_FAIL);
-
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
 	if (p)

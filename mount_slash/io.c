@@ -847,7 +847,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq,
 		    "bmap=%p biorq=%p", b, r);
 
-	(void)psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
+	(void)pfl_fault_here_rc("msl.read_cb", &rc, EIO);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b, "rc=%d "
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
@@ -1226,7 +1226,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		psc_dynarray_add(a, e);
 	}
 
-	(void)psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc,
+	(void)pfl_fault_here_rc("msl.readrpc_offline", &rc,
 	    -ETIMEDOUT);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1393,9 +1393,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	}
 
 	/*
-	 * Clean up remaining pages that were not launched.
-	 * Note that msl_read_rpc_launch() cleans up pages
-	 * on its own in case of a failure.
+	 * Clean up remaining pages that were not launched.  Note that
+	 * msl_read_rpc_launch() cleans up pages on its own in case of a
+	 * failure.
 	 */
 	DYNARRAY_FOREACH_CONT(e, i, &pages) {
 		BMPCE_LOCK(e);

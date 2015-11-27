@@ -3061,10 +3061,11 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 void
 mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 {
+	lnet_process_id_t peer;
 	struct psc_thread *thr, *thr_next;
 	struct slashrpc_cservice *csvc;
-	lnet_process_id_t peer;
 	struct sl_resource *r;
+	struct pfl_fault *flt;
 	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j;
@@ -3126,7 +3127,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	PLL_LOCK(&psc_threads);
 	PLL_FOREACH_SAFE(thr, thr_next, &psc_threads)
 	    if (strncmp(thr->pscthr_name, "msfsthr",
-		7) == 0)
+		strlen("msfsthr")) == 0)
 		    pscthr_destroy(thr);
 
 	do {
@@ -3150,6 +3151,14 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 		psc_hashtbl_destroy(&slc_gidmap_int);
 	}
 
+	spinlock(&pfl_faults_lock);
+	DYNARRAY_FOREACH(flt, i, &pfl_faults) {
+		if (strncmp(flt->pflt_name, "slash2.",
+		    strlen("slash2.")) == 0) {
+		}
+	}
+	freelock(&pfl_faults_lock);
+
 	/* XXX wait for wkq to drain, or perhaps at the pflfs layer? */
 
 	pfl_listcache_destroy_registered(&slc_attrtimeoutq);
@@ -3158,6 +3167,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_readaheadq);
 	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
+
+	pfl_iostats_grad_destroy(slc_iosyscall_iostats);
+	pfl_iostats_grad_destroy(slc_iorpc_iostats);
 
 	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
@@ -3764,11 +3776,6 @@ msl_init(void)
 	sl_subsys_register();
 	psc_subsys_register(SLCSS_INFO, "info");
 	psc_subsys_register(SLCSS_FSOP, "fsop");
-
-	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
-	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
-	psc_fault_register(SLC_FAULT_READ_CB_EIO);
-	psc_fault_register(SLC_FAULT_REQUEST_TIMEOUT);
 
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
