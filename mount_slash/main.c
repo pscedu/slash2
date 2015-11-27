@@ -3069,11 +3069,13 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct sl_site *s;
 	int i, j;
 
+	/* mark listcaches as dead */
 	lc_kill(&slc_bmapflushq);
 	lc_kill(&slc_bmaptimeoutq);
 	lc_kill(&slc_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
 
+	/* notify of termination */
 	LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 	psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
 	LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
@@ -3083,6 +3085,16 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pscthr_setdead(sl_freapthr, 1);
 	psc_waitq_wakeall(&sl_freap_waitq);
 
+	/* wait for drain */
+	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_bmapflushq,
+	    lc_nitems(&slc_bmapflushq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_bmaptimeoutq,
+	    lc_nitems(&slc_bmaptimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_attrtimeoutq,
+	    lc_nitems(&slc_attrtimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
+	    lc_nitems(&msl_readaheadq));
+
 	while (lc_nitems(&sl_fcmh_idle))
 		fidc_reap(FCMH_MAX_REAP, SL_FIDC_REAPF_ROOT);
 
@@ -3090,7 +3102,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pscrpc_drop_conns(&peer);
 
 	CONF_FOREACH_RESM(s, r, i, m, j)
-		if (m->resm_csvc) {
+		if (!RES_ISCLUSTER(r) && m->resm_csvc) {
 			csvc = m->resm_csvc;
 			CSVC_LOCK(csvc);
 			sl_csvc_incref(csvc);
