@@ -75,7 +75,7 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 void
 slmzfskstatmthr_main(__unusedx struct psc_thread *thr)
 {
-	pscfs_main(0);
+	pscfs_main();
 }
 
 #define _PATH_KSTAT "/zfs-kstat"
