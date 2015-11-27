@@ -929,7 +929,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, nitems;
+	int exiting, i, nitems;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -948,6 +948,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		timespecadd(&crtime, &msl_bmap_max_lease, &nto);
 
 		nitems = lc_nitems(&slc_bmaptimeoutq);
+		exiting = pfl_listcache_isdead(&slc_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
@@ -961,6 +962,8 @@ msbreleasethr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			if (exiting)
+				goto evict;
 			if (timespeccmp(&crtime, &bci->bci_etime, >=))
 				goto evict;
 
@@ -1034,7 +1037,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 
 		PFL_GETTIMESPEC(&crtime);
-		if (timespeccmp(&crtime, &nto, <)) {
+		if (timespeccmp(&crtime, &nto, <) && !exiting) {
 			LIST_CACHE_LOCK(&slc_bmaptimeoutq);
 			psc_waitq_waitabs(&slc_bmaptimeoutq.plc_wq_empty,
 			    &slc_bmaptimeoutq.plc_lock, &nto);
