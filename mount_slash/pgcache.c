@@ -601,6 +601,13 @@ bmpc_global_init(void)
 	    bmpce_lentry, "readapages");
 }
 
+void
+bmap_pagecache_destroy(void)
+{
+	pfl_poolmaster_destroy(&bwc_poolmaster);
+	pfl_poolmaster_destroy(&bmpce_poolmaster);
+}
+
 #if PFL_DEBUG > 0
 void
 dump_bmpce_flags(uint32_t flags)

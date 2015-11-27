@@ -337,6 +337,12 @@ bmap_cache_init(size_t priv_size)
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 
+void
+bmap_cache_destroy(void)
+{
+	pfl_poolmaster_destroy(&bmap_poolmaster);
+}
+
 int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
     sl_ios_id_t ios_id)

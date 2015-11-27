@@ -3170,6 +3170,18 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_iostats_grad_destroy(slc_iosyscall_iostats);
 	pfl_iostats_grad_destroy(slc_iorpc_iostats);
 
+	bmap_pagecache_destroy();
+	bmap_cache_destroy();
+
+	pfl_poolmaster_destroy(&slc_async_req_poolmaster);
+	pfl_poolmaster_destroy(&slc_biorq_poolmaster);
+	    //csvc
+	    //dircachent
+	    //dircachepg
+	    //iorq
+	    //mfh
+	    //readaheadrq
+
 	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
 	pflog_get_fsctx_pid = NULL;

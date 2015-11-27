@@ -320,6 +320,7 @@ struct bmap {
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
+void	 bmap_cache_destroy(void);
 void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmap *);
 void	_bmap_op_done(const struct pfl_callerinfo *,

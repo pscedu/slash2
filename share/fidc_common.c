@@ -377,6 +377,7 @@ fidc_destroy(void)
 {
 	psc_hashtbl_destroy(&sl_fcmh_hashtbl);
 	pfl_listcache_destroy_registered(&sl_fcmh_idle);
+	pfl_poolmaster_destroy(&sl_fcmh_poolmaster);
 }
 
 ssize_t
