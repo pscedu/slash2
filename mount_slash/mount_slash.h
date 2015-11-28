@@ -325,6 +325,7 @@ int	 _msl_resm_throttle(struct sl_resm *, int);
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
+void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);

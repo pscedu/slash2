@@ -1248,13 +1248,13 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 		if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
 		    FIDC_LOOKUP_LOCK, &c, pfr))
-			OPSTAT_INCR("delete-skipped");
+			OPSTAT_INCR("msl.delete-skipped");
 		else {
 			if (mp->valid) {
 				slc_fcmh_setattr_locked(c, &mp->cattr);
 			} else {
 				c->fcmh_flags |= FCMH_DELETED;
-				OPSTAT_INCR("delete-marked");
+				OPSTAT_INCR("msl.delete-marked");
 			}
 		}
 	}
@@ -1409,7 +1409,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_rc = rc;
-		OPSTAT_INCR("dircache-load-error");
+		OPSTAT_INCR("msl.dircache-load-error");
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 		DIRCACHE_WAKE(d);
@@ -1449,7 +1449,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 			if (!f->fcmh_sstb.sst_nlink)
 				// XXX don't enter into namecache
-				OPSTAT_INCR("namecache-junk");
+				OPSTAT_INCR("msl.namecache-junk");
 
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
@@ -1494,11 +1494,11 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 		if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <=
 		    sizeof(mp->ents)) {
-			OPSTAT_INCR("readdir-piggyback");
+			OPSTAT_INCR("msl.readdir-piggyback");
 
 			memcpy(dentbuf, mp->ents, len);
 		} else {
-			OPSTAT_INCR("readdir-bulk-reply");
+			OPSTAT_INCR("msl.readdir-bulk-reply");
 
 			iov.iov_base = dentbuf;
 			iov.iov_len = len;
@@ -1644,7 +1644,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			// XXX need to wake up if csvc fails
-			OPSTAT_INCR("dircache-wait");
+			OPSTAT_INCR("msl.dircache-wait");
 			DIRCACHE_WAIT(d);
 			goto restart;
 		}
@@ -1657,7 +1657,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DIRCACHEPGF_EOF) {
 			DIRCACHE_ULOCK(d);
-			OPSTAT_INCR("dircache-hit-eof");
+			OPSTAT_INCR("msl.dircache-hit-eof");
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
@@ -1707,7 +1707,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_base + poff, len, 0);
 				p->dcp_flags |= DIRCACHEPGF_READ;
 				if (hit)
-					OPSTAT_INCR("dircache-hit");
+					OPSTAT_INCR("msl.dircache-hit");
 
 				if ((p->dcp_flags &
 				    DIRCACHEPGF_EOF) == 0) {
@@ -1851,7 +1851,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		iov.iov_len = mp->len;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("readlink-bulk");
+			OPSTAT_INCR("msl.readlink-bulk");
 	}
 	if (!rc)
 		retbuf[mp->len] = '\0';
@@ -1894,7 +1894,7 @@ msl_flush(struct msl_fhent *mfh)
 		 */
 		if (!BMAP_TRYLOCK(b)) {
 			pfl_rwlock_unlock(&f->fcmh_rwlock);
-			OPSTAT_INCR("flush-backout");
+			OPSTAT_INCR("msl.flush-backout");
 			goto restart;
 		}
 		if (!(b->bcm_flags & BMAPF_TOFREE)) {
@@ -2015,7 +2015,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	OPSTAT_INCR("flush-attr");
+	OPSTAT_INCR("msl.flush-attr");
 
 	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
 
@@ -2840,7 +2840,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			DEBUG_FCMH(PLL_DIAG, c,
 			    "full truncate, free bmaps");
 
-			OPSTAT_INCR("truncate-full");
+			OPSTAT_INCR("msl.truncate-full");
 			bmap_free_all_locked(c);
 			FCMH_ULOCK(c);
 
@@ -2854,7 +2854,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			OPSTAT_INCR("truncate-part");
+			OPSTAT_INCR("msl.truncate-part");
 
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
@@ -3175,12 +3175,13 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	pfl_poolmaster_destroy(&slc_async_req_poolmaster);
 	pfl_poolmaster_destroy(&slc_biorq_poolmaster);
+	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
+	pfl_poolmaster_destroy(&slc_mfh_poolmaster);
 	    //csvc
-	    //dircachent
-	    //dircachepg
-	    //iorq
-	    //mfh
-	    //readaheadrq
+
+	msl_readahead_svc_destroy();
+	dircache_mgr_destroy();
+	slrpc_destroy();
 
 	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
@@ -3205,7 +3206,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq-write-isdir");
+		OPSTAT_INCR("msl.fsrq-write-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
@@ -3239,7 +3240,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 
 	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("fsrq-read-isdir");
+		OPSTAT_INCR("msl.fsrq-read-isdir");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
 
@@ -3297,20 +3298,20 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		if (timercmp(&now, &fci->fci_age, >=)) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
-			OPSTAT_INCR("xattr-hit-size");
+			OPSTAT_INCR("msl.xattr-hit-size");
 			FCMH_ULOCK(f);
 			tmp.size = fci->fci_xattrsize;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
 		} else if (size && fci->fci_xattrsize == 0) {
-			OPSTAT_INCR("xattr-hit-noattr");
+			OPSTAT_INCR("msl.xattr-hit-noattr");
 			FCMH_ULOCK(f);
 			tmp.size = 0;
 			mp = &tmp;
 			PFL_GOTOERR(out, rc = 0);
 		} else if (size && fci->fci_xattrsize != (uint32_t)-1 &&
 			   size < fci->fci_xattrsize) {
-			OPSTAT_INCR("xattr-hit-erange");
+			OPSTAT_INCR("msl.xattr-hit-erange");
 			FCMH_ULOCK(f);
 			PFL_GOTOERR(out, rc = ERANGE);
 		}
@@ -3348,7 +3349,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		iov.iov_len = mp->size;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("listxattr-bulk");
+			OPSTAT_INCR("msl.listxattr-bulk");
 	}
 	if (!rc && !size) {
 		FCMH_LOCK(f);
@@ -3516,7 +3517,7 @@ slc_getxattr(struct pscfs_req *pfr,
 		iov.iov_len = mp->valuelen;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc == 0)
-			OPSTAT_INCR("getxattr-bulk");
+			OPSTAT_INCR("msl.getxattr-bulk");
 	}
 	if (!rc)
 		*retsz = mp->valuelen;
@@ -3668,7 +3669,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			break;
 		}
 		if (fci == NULL) {
-			OPSTAT_INCR("flush-attr-wait");
+			OPSTAT_INCR("msl.flush-attr-wait");
 			psc_waitq_waitrel_ts(&msl_flush_attrq,
 			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
 		}
@@ -3862,9 +3863,9 @@ msl_init(void)
 	/* Start up service threads. */
 	msctlthr_spawn();
 
-	slc_dio_iostats.rd = pfl_opstat_init("dio-rpc-rd");
-	slc_dio_iostats.wr = pfl_opstat_init("dio-rpc-wr");
-	slc_rdcache_iostats = pfl_opstat_init("rd-cache-hit");
+	slc_dio_iostats.rd = pfl_opstat_init("msl.dio-rpc-rd");
+	slc_dio_iostats.wr = pfl_opstat_init("msl.dio-rpc-wr");
+	slc_rdcache_iostats = pfl_opstat_init("msl.rd-cache-hit");
 
 	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
 	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;

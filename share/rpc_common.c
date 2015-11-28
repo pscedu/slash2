@@ -559,6 +559,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 			// XXX assert(mutex.nwaiters == 0)
 			psc_mutex_unlock(&csvc->csvc_mutex);
 			psc_mutex_destroy(&csvc->csvc_mutex);
+			psc_multiwaitcond_destroy(&csvc->csvc_mwc);
 			psc_pool_return(sl_csvc_pool, csvc);
 			return;
 		}
@@ -1072,9 +1073,6 @@ slconnthr_main(struct psc_thread *thr)
 			if (scp->scp_flags & CSVCF_WANTFREE) {
 				sl_csvc_decref(csvc);
 
-				/* XXX touch after free */
-				psc_multiwaitcond_destroy(&csvc->csvc_mwc);
-
 				PSCTHR_LOCK(thr);
 				psc_dynarray_remove(&sct->sct_monres,
 				    scp);
@@ -1307,4 +1305,10 @@ slrpc_initcli(void)
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "csvc");
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
+}
+
+void
+slrpc_destroy(void)
+{
+	pfl_poolmaster_destroy(&sl_csvc_poolmaster);
 }

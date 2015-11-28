@@ -96,6 +96,13 @@ dircache_mgr_init(void)
 	    &dircache_ent_poolmaster);
 }
 
+void
+dircache_mgr_destroy(void)
+{
+	pfl_poolmaster_destroy(&dircache_page_poolmaster);
+	pfl_poolmaster_destroy(&dircache_ent_poolmaster);
+}
+
 /*
  * Perform a dircache_ent comparison for use by the hash table API to
  * disambiguate entries with the same hash key.

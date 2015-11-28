@@ -85,7 +85,7 @@ struct slrpc_cservice {
 	struct slconn_params	 csvc_params;
 
 	/*
-	 * An import is for sending requests and receiving replies, and its 
+	 * An import is for sending requests and receiving replies, and its
 	 * peer, an export, is for receiving requests and sending replies.
 	 */
 	struct pscrpc_import	*csvc_import;
@@ -403,6 +403,7 @@ void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 	    int, int (*)(void *), void *);
 
 void	 slrpc_initcli(void);
+void	 slrpc_destroy(void);
 
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,
 	    uint32_t, enum slconn_type);
