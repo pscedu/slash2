@@ -83,7 +83,6 @@ int			 msl_predio_window_size = 4 * 1024 * 1024;
 int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
 int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
-struct pfl_iostats_rw	 slc_dio_iostats;
 struct pfl_opstat	*slc_rdcache_iostats;
 
 struct pfl_iostats_grad	 slc_iosyscall_iostats[8];
@@ -1101,8 +1100,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
 	if (rc == 0) {
-		pfl_opstat_add(op == SRMT_WRITE ?
-		    slc_dio_iostats.wr : slc_dio_iostats.rd, size);
+		if (op == SRMT_WRITE)
+			OPSTAT2_ADD("msl.dio-rpc-wr", size);
+		else
+			OPSTAT2_ADD("msl.dio-rpc-rd", size);
+
 		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		q->mfsrq_flags |= MFSRQ_COPIED;
