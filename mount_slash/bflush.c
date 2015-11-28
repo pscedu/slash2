@@ -185,9 +185,9 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 			usleep(1000);
 		else
 			usleep(1000000);
-		OPSTAT_INCR("offline-retry");
+		OPSTAT_INCR("msl.offline-retry");
 	} else
-		OPSTAT_INCR("offline-no-retry");
+		OPSTAT_INCR("msl.offline-no-retry");
 
 	if (pfr->pfr_interrupted)
 		retry = 0;
@@ -317,7 +317,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		DEBUG_REQ(PLL_ERROR, rq,
 		    "negative timeout: off=%u sz=%u op=%u",
 		    mq->offset, mq->size, mq->op);
-		OPSTAT_INCR("flush-rpc-expire");
+		OPSTAT_INCR("msl.flush-rpc-expire");
 		goto out;
 	}
 
@@ -377,7 +377,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BMAP_LOCK(b);
 	if (rc == -PFLERR_KEYEXPIRED) {
-		OPSTAT_INCR("bmap-flush-expired");
+		OPSTAT_INCR("msl.bmap-flush-expired");
 		b->bcm_flags |= BMAPF_LEASEEXPIRED;
 	}
 
@@ -404,7 +404,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
-	OPSTAT_INCR("bmap-flush-resched");
+	OPSTAT_INCR("msl.bmap-flush-resched");
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
@@ -609,7 +609,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 
 		tot_reqsz -= bwc->bwc_iovs[i].iov_len;
 		bwc->bwc_niovs++;
-		OPSTAT_INCR("write-coalesce");
+		OPSTAT_INCR("msl.write-coalesce");
 	}
 	psc_atomic32_setmax(&slc_write_coalesce_max, bwc->bwc_niovs);
 
@@ -635,7 +635,7 @@ bmap_flushable(struct bmap *b)
 		if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
 		    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec < BMAP_CLI_EXTREQSECS) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
-			OPSTAT_INCR("flush-skip-expire");
+			OPSTAT_INCR("msl.flush-skip-expire");
 			flush = 0;
 		}
 	}
@@ -710,7 +710,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				} else {
 					bwc->bwc_size += sz;
 				}
-				OPSTAT_INCR("bmap-flush-coalesce-contig");
+				OPSTAT_INCR("msl.bmap-flush-coalesce-contig");
 			}
 			/*
 			 * All subsequent requests that do not extend
@@ -728,7 +728,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * If the current set is expired send it out
 			 * now.
 			 */
-			OPSTAT_INCR("bmap-flush-coalesce-expire");
+			OPSTAT_INCR("msl.bmap-flush-coalesce-expire");
 			break;
 
 		} else {
@@ -740,7 +740,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
 			psc_dynarray_add(&bwc->bwc_biorqs, curr);
-			OPSTAT_INCR("bmap-flush-coalesce-restart");
+			OPSTAT_INCR("msl.bmap-flush-coalesce-restart");
 		}
 	}
 
@@ -788,7 +788,7 @@ _msl_resm_throttle(struct sl_resm *m, int wait)
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("flush-wait-usecs",
+		OPSTAT_ADD("msl.flush-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
 	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
@@ -843,7 +843,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR("lease-refresh");
+		OPSTAT_INCR("msl.lease-refresh");
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			/*
@@ -972,7 +972,7 @@ msflushthr_main(struct psc_thread *thr)
 		if (lc_peekheadwait(&slc_bmapflushq) == NULL)
 			break;
 
-		OPSTAT_INCR("bmap-flush");
+		OPSTAT_INCR("msl.bmap-flush");
 
 		PFL_GETTIMESPEC(&tmp1);
 		while (bmap_flush())
