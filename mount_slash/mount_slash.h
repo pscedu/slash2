@@ -369,8 +369,6 @@ extern struct psc_hashtbl	 slc_uidmap_ext;
 extern struct psc_hashtbl	 slc_uidmap_int;
 extern struct psc_hashtbl	 slc_gidmap_int;
 
-extern struct pfl_opstat	*slc_rdcache_iostats;
-
 extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
 extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
 

@@ -3871,8 +3871,6 @@ msl_init(void)
 	/* Start up service threads. */
 	msctlthr_spawn();
 
-	slc_rdcache_iostats = pfl_opstat_init("msl.rd-cache-hit");
-
 	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
 	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
 	slc_iosyscall_iostats[2].size = slc_iorpc_iostats[2].size =   16 * 1024;

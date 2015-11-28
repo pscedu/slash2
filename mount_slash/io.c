@@ -83,8 +83,6 @@ int			 msl_predio_window_size = 4 * 1024 * 1024;
 int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
 int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
-struct pfl_opstat	*slc_rdcache_iostats;
-
 struct pfl_iostats_grad	 slc_iosyscall_iostats[8];
 struct pfl_iostats_grad	 slc_iorpc_iostats[8];
 
@@ -132,16 +130,15 @@ _msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 
 		if (e->bmpce_flags & BMPCEF_DATARDY) {
 			if (accounting)
-				pfl_opstat_add(slc_rdcache_iostats,
-				    nbytes);
+				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
+
 			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			if (accounting) {
-				pfl_opstat_add(slc_rdcache_iostats,
-				    nbytes);
+				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
 				OPSTAT_INCR("msl.read-part-valid");
 			}
 			return (1);
