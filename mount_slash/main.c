@@ -3064,6 +3064,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lnet_process_id_t peer;
 	struct psc_thread *thr, *thr_next;
 	struct slashrpc_cservice *csvc;
+	struct pfl_opstat *opst;
 	struct sl_resource *r;
 	struct pfl_fault *flt;
 	struct sl_resm *m;
@@ -3182,6 +3183,13 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	msl_readahead_svc_destroy();
 	dircache_mgr_destroy();
 	slrpc_destroy();
+
+	spinlock(&pfl_opstats_lock);
+	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
+		if (strncmp(opst->opst_name, "msl.",
+		    strlen("msl.")) == 0)
+			pfl_opstat_destroy_pos(i--);
+	freelock(&pfl_opstats_lock);
 
 	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
