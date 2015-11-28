@@ -76,7 +76,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 
 	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT &&
 	    fcmh_2_gen(f) > sstb->sst_gen) {
-		OPSTAT_INCR("generation-backwards");
+		OPSTAT_INCR("msl.generation-backwards");
 		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 		    "gen %"PRIu64" from old gen %"PRIu64,
 		    fcmh_2_gen(f), sstb->sst_gen);

@@ -151,7 +151,7 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 
-	OPSTAT_INCR("dircache-ent-zap");
+	OPSTAT_INCR("msl.dircache-ent-zap");
 
 	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "delete");
 
@@ -199,7 +199,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
-		OPSTAT_INCR("dircache-unused-page");
+		OPSTAT_INCR("msl.dircache-unused-page");
 
 	while (p->dcp_refcnt)
 		DIRCACHE_WAIT(d);
@@ -435,7 +435,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	off_t adj;
 	int i;
 
-	OPSTAT_INCR("dircache-reg-ents");
+	OPSTAT_INCR("msl.dircache-reg-ents");
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 
 	da_off = PSCALLOC(sizeof(*da_off));
@@ -479,7 +479,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 #if 0
 		if (d->fcmh_sstb.sst_fg.fg_gen !=
 		    mq->fg.fg_gen) {
-			OPSTAT_INCR("readdir-stale");
+			OPSTAT_INCR("msl.readdir-stale");
 			PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
 		}
 #endif
@@ -593,12 +593,12 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 			goto retry_hold;
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
-		OPSTAT_INCR("namecache-get-hold");
+		OPSTAT_INCR("msl.namecache-get-hold");
 		return (-1);
 	}
 	psc_hashbkt_unlock(b);
 	if (dce) {
-		OPSTAT_INCR("namecache-get-hit");
+		OPSTAT_INCR("msl.namecache-get-hit");
 		return (0);
 	}
 
@@ -622,13 +622,13 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		PSCFREE(new_dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, new_dce);
-		OPSTAT_INCR("namecache-race-hold");
+		OPSTAT_INCR("msl.namecache-race-hold");
 		return (-1);
 	}
 	if (dce) {
-		OPSTAT_INCR("namecache-race-lost");
+		OPSTAT_INCR("msl.namecache-race-lost");
 	} else {
-		OPSTAT_INCR("namecache-race-won");
+		OPSTAT_INCR("msl.namecache-race-won");
 
 		dce = new_dce;
 		new_dce = NULL;
@@ -724,7 +724,7 @@ _namecache_update(const struct pfl_callerinfo *pci,
 		psc_hashbkt_lock(dcu->dcu_bkt);
 		dcu->dcu_dce->dce_pfd->pfd_ino = fid;
 		namecache_release_entry_locked(dcu);
-		OPSTAT_INCR("namecache-update");
+		OPSTAT_INCR("msl.namecache-update");
 	}
 	dcu->dcu_d = NULL;
 }

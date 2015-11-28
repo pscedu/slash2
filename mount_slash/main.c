@@ -3883,8 +3883,10 @@ msl_init(void)
 	slc_iosyscall_iostats[5].size = slc_iorpc_iostats[5].size =  512 * 1024;
 	slc_iosyscall_iostats[6].size = slc_iorpc_iostats[6].size = 1024 * 1024;
 	slc_iosyscall_iostats[7].size = slc_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10, "iosz");
-	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10, "iorpc");
+	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10,
+	    "msl.iosz");
+	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10,
+	    "msl.iorpc");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");

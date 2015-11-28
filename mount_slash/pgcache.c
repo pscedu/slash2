@@ -253,7 +253,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
 	    BMPCEF_READAHEAD)
-		OPSTAT2_ADD("readahead-waste", BMPC_BUFSZ);
+		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
