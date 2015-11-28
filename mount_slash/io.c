@@ -1806,6 +1806,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	struct msl_fsrqinfo *q;
 
 	q = psc_pool_get(msl_iorq_pool);
+	memset(q, 0, sizeof(*q));
+	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 	q->mfsrq_pfr = pfr;
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
