@@ -167,7 +167,6 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
-	struct sl_fidgen		 mfh_fg;	/* used during serialization */
 	char				 mfh_uprog[128];
 };
 

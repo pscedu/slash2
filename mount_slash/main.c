@@ -4040,34 +4040,51 @@ usage(void)
 	exit(1);
 }
 
+struct msl_filehandle_frozen {
+	struct msl_fhent	mff_mfh;
+	struct sl_fidgen	mff_fg;
+};
+
 /*
  * This routine is called when pscfs fileinfo data is serialized i.e.
  * for purposes of reloading the entire SLASH2 file system module.
  */
 void
-msl_fileinfo_freeze(void *fh)
+msl_filehandle_freeze(struct pflfs_filehandle *pfh)
 {
-	struct msl_fhent *mfh = fh;
+	struct msl_filehandle_frozen *mff;
+	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
+	mfh = pfh->pfh_data;
 	f = mfh->mfh_fcmh;
-	mfh->mfh_fg = f->fcmh_fg;
+	pfh->pfh_data = mff = PSCALLOC(sizeof(*mff));
+	mff->mff_mfh = *mfh;
+	mff->mff_fg = f->fcmh_fg;
 	fcmh_op_done_type(f, FCMH_OPCNT_OPEN);
+	psc_pool_return(slc_mfh_pool, mfh);
 }
 
 /*
  * This routine is called when pscfs fileinfo data is deserialized.
  */
 void
-msl_fileinfo_thaw(void *fh)
+msl_thaw(struct pflfs_filehandle *pfh)
 {
-	struct msl_fhent *mfh = fh;
+	struct msl_filehandle_frozen *mff;
+	struct msl_fhent *mfh;
 	struct fidc_membh *f;
 
-	psc_assert(!sl_fcmh_load_fg(&mfh->mfh_fg, &f));
+	mff = pfh->pfh_data;
+	pfh->pfh_data = mfh = psc_pool_get(slc_mfh_pool);
+	*mfh = mff->mff_mfh;
+	INIT_SPINLOCK(&mfh->mfh_lock);
+	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
+	psc_assert(!sl_fcmh_load_fg(&mff->mff_fg, &f));
 	mfh->mfh_fcmh = f;
 	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
 	fcmh_op_done(f);
+	PSCFREE(mff);
 }
 
 int
@@ -4077,9 +4094,6 @@ pscfs_module_load(struct pscfs *m)
 	int i;
 
 	m->pf_name = "slash2";
-
-//	m->pf_fileinfo_freeze		= msl_fileinfo_freeze;
-//	m->pf_fileinfo_thaw		= msl_fileinfo_thaw;
 
 	m->pf_handle_access		= mslfsop_access;
 	m->pf_handle_release		= mslfsop_release;
@@ -4110,6 +4124,9 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_handle_getxattr		= mslfsop_getxattr;
 	m->pf_handle_setxattr		= mslfsop_setxattr;
 	m->pf_handle_removexattr	= mslfsop_removexattr;
+
+	m->pf_filehandle_freeze		= msl_filehandle_freeze;
+	m->pf_filehandle_thaw		= msl_filehandle_thaw;
 
 	DYNARRAY_FOREACH(opt, i, &m->pf_opts)
 		if (!msl_opt_lookup(opt)) {
