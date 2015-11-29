@@ -3066,10 +3066,11 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct slashrpc_cservice *csvc;
 	struct pfl_opstat *opst;
 	struct sl_resource *r;
+	struct psc_poolmgr *p;
 	struct pfl_fault *flt;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j;
+	int i, j, remaining;
 
 	/* mark listcaches as dead */
 	lc_kill(&slc_bmapflushq);
@@ -3096,9 +3097,21 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	    lc_nitems(&slc_attrtimeoutq));
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
 	    lc_nitems(&msl_readaheadq));
+	
+	/* XXX force flush */
 
-	while (lc_nitems(&sl_fcmh_idle))
-		fidc_reap(FCMH_MAX_REAP, SL_FIDC_REAPF_ROOT);
+	p = sl_fcmh_pool;
+	for (;;) {
+		POOL_LOCK(p);
+		remaining = p->ppm_total - lc_nitems(&p->ppm_lc);
+		POOL_ULOCK(p);
+
+		if (!remaining)
+			break;
+
+		if (!fidc_reap(FCMH_MAX_REAP, SL_FIDC_REAPF_ROOT))
+			usleep(10);
+	}
 
 	peer.nid = LNET_NID_ANY;
 	pscrpc_drop_conns(&peer);
