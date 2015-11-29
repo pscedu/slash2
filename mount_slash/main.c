@@ -4069,7 +4069,7 @@ msl_filehandle_freeze(struct pflfs_filehandle *pfh)
  * This routine is called when pscfs fileinfo data is deserialized.
  */
 void
-msl_thaw(struct pflfs_filehandle *pfh)
+msl_filehandle_thaw(struct pflfs_filehandle *pfh)
 {
 	struct msl_filehandle_frozen *mff;
 	struct msl_fhent *mfh;
