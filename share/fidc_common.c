@@ -392,12 +392,6 @@ fcmh_getsize(struct fidc_membh *h)
 	return (size);
 }
 
-/*
- * We only move a cache item to the busy list if we know that the
- * reference being taken is a long one.  For short-lived references, we
- * avoid moving the cache item around.  Also, we only move a cache item
- * back to the idle list when the _last_ reference is dropped.
- */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, int type)
