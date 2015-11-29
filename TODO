@@ -881,7 +881,7 @@ s2re
   setup
 - users lacking write permission yet are in member in group of file
   should be able to replicate
-- make ctl -s rpcsvc more useful
+- make ctl -s rpcsvc more useful (pool fields)
 - NODIO support in MDS
 - EDQUOT hit by awetzel@psc.edu
 - du is broke on /crucible
@@ -892,8 +892,3 @@ s2re
 - SIGBUS
 
 - tune metaslab_df_free_pct zfs/slashd
-
-sft
-- if encounter a certain number of IO errors, fatal out
-- $ sft -RKZ linux-4.2
-  sft: open ./include/linux/taskstats_kern.h: Too many open files
