@@ -32,6 +32,7 @@
 #include "pfl/fsmod.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
+#include "pfl/sys.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -75,7 +76,7 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 void
 slmzfskstatmthr_main(__unusedx struct psc_thread *thr)
 {
-	pscfs_main(PFL_THRT_FS, "slmzk");
+	pscfs_main(4, PFL_THRT_FS, "slmzk");
 }
 
 #define _PATH_KSTAT "/zfs-kstat"
@@ -83,16 +84,8 @@ slmzfskstatmthr_main(__unusedx struct psc_thread *thr)
 void
 slm_unmount_kstat(void)
 {
-	char buf[BUFSIZ];
-	int rc;
-
-	rc = snprintf(buf, sizeof(buf), "umount %s", _PATH_KSTAT);
-	if (rc == -1)
-		psc_fatal("snprintf: umount %s", _PATH_KSTAT);
-	if (rc >= (int)sizeof(buf))
-		psc_fatalx("snprintf: umount %s: too long", _PATH_KSTAT);
-	if (system(buf) == -1)
-		psclog_warn("system(%s)", buf);
+	if (pfl_systemf("umount %s", _PATH_KSTAT) == -1)
+		psclog_warn("umount %s", _PATH_KSTAT);
 }
 
 int
@@ -101,26 +94,20 @@ zfsslash2_init(void)
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	extern struct fuse_lowlevel_ops pscfs_fuse_ops;
 	extern struct fuse_session *fuse_session;
-	extern struct pollfd pscfs_fds[];
-	extern int newfs_fd[2], pscfs_nfds;
+	extern struct pollfd pflfs_fds[];
+	extern int newfs_fd[2], pflfs_nfds;
 	extern char *fuse_mount_options;
-	char buf[BUFSIZ];
 	int rc;
 
-	rc = snprintf(buf, sizeof(buf), "umount %s", _PATH_KSTAT);
-	if (rc == -1)
-		psc_fatal("snprintf: umount %s", _PATH_KSTAT);
-	if (rc >= (int)sizeof(buf))
-		psc_fatalx("snprintf: umount %s: too long", _PATH_KSTAT);
-	if (system(buf) == -1)
-		psclog_warn("system(%s)", buf);
+	if (pfl_systemf("umount %s", _PATH_KSTAT) == -1)
+		psclog_warn("umount %s", _PATH_KSTAT);
 
 	if (pipe(newfs_fd) == -1)
 		psc_fatal("pipe");
 
-	pscfs_fds[0].fd = newfs_fd[0];
-	pscfs_fds[0].events = POLLIN;
-	pscfs_nfds = 1;
+	pflfs_fds[0].fd = newfs_fd[0];
+	pflfs_fds[0].events = POLLIN;
+	pflfs_nfds = 1;
 
 	fuse_session = fuse_lowlevel_new(&args.pfa_av, &pscfs_fuse_ops,
 	    sizeof(pscfs_fuse_ops), NULL);
