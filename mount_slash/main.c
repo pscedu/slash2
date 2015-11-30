@@ -1620,8 +1620,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		    p->dcp_flags & DIRCACHEPGF_EOF) {
 			DIRCACHE_ULOCK(d);
 			OPSTAT_INCR("msl.dircache-hit-eof");
-			pscfs_reply_readdir(pfr, NULL, 0, rc);
-			return;
+			PFL_GOTOERR(out, rc = 0);
 		}
 
 		if (dircache_hasoff(p, off)) {
@@ -1630,9 +1629,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				dircache_free_page(d, p);
 				if (!slc_rmc_retry(pfr, &rc)) {
 					DIRCACHE_ULOCK(d);
-					pscfs_reply_readdir(pfr, NULL,
-					    0, rc);
-					return;
+					PFL_GOTOERR(out, rc);
 				}
 				break;
 			} else {
@@ -1671,6 +1668,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				if (hit)
 					OPSTAT_INCR("msl.dircache-hit");
 
+				psclogs_diag(SLCSS_FSOP, "READDIR: "
+				    "fid="SLPRI_FID" size=%zd "
+				    "off=%"PSCPRIdOFFT" rc=%d",
+				    fcmh_2_fid(d), size, off, rc);
+
 				if ((p->dcp_flags &
 				    DIRCACHEPGF_EOF) == 0) {
 					/*
@@ -1699,21 +1701,20 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(pfr, d, off, size, 1);
-		if (rc && !slc_rmc_retry(pfr, &rc)) {
-			pscfs_reply_readdir(pfr, NULL, 0, rc);
-			return;
-		}
+		if (rc && !slc_rmc_retry(pfr, &rc))
+			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}
 
-	/*
-	 * XXX consolidate three pscfs_reply_readdir() calls above
-	 * into the following one.
-	 */
-	if (0)
+	if (0) {
  out:
+		psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
+		    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
+		    fcmh_2_fid(d), size, off, rc);
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
+		raoff = 0;
+	}
 
 	if (raoff) {
 		msl_readdir_issue(NULL, d, raoff, size, 0);
