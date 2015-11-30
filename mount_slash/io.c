@@ -1447,7 +1447,13 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 
 		if (e->bmpce_flags & BMPCEF_READAHEAD) {
 			if (!(r->biorq_flags & BIORQ_READAHEAD))
-				OPSTAT2_ADD("readahead-hit", BMPC_BUFSZ);
+				/*
+				 * BMPC_BUFSZ here is a lie but often
+				 * true as the original size isn't
+				 * available.
+				 */
+				OPSTAT2_ADD("readahead-hit",
+				    BMPC_BUFSZ);
 		} else
 			perfect_ra = 0;
 
