@@ -20,6 +20,11 @@
  * %END_LICENSE%
  */
 
+/*
+ * Main SLASH2 client (mount_slash) logic: file system handling
+ * routines, daemon initialization, etc.
+ */
+
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -4136,6 +4141,6 @@ main(int argc, char *argv[])
 	pflfs_module_init(&m, NULL);
 	pflfs_module_add(0, &m);
 
-	exit(pscfs_main(MSTHRT_FS, "ms"));
+	exit(pscfs_main(32, MSTHRT_FS, "ms"));
 }
 #endif
