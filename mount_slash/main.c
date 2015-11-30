@@ -3796,7 +3796,7 @@ msl_init(void)
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
-#ifndef SLASH2_CLI_PFLFS_MODULE
+#ifndef MSL_PFLFS_MODULE
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
 	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
@@ -4050,7 +4050,7 @@ pscfs_module_load(struct pscfs *m)
 	return (msl_init());
 }
 
-#ifndef SLASH2_CLI_PFLFS_MODULE
+#ifndef MSL_PFLFS_MODULE
 int
 main(int argc, char *argv[])
 {

@@ -66,7 +66,7 @@ enum {
 	MSTHRT_WORKER			/* generic worker */
 };
 
-#ifdef SLASH2_CLI_PFLFS_MODULE
+#ifdef MSL_PFLFS_MODULE
 # define MSTHRT_FS PFL_THRT_FS
 #endif
 
