@@ -47,7 +47,7 @@ struct dircache_page;
 
 /* mount_slash thread types */
 enum {
-	MSTHRT_ATTR_FLUSH,		/* attr write data flush thread */
+	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BRELEASE,		/* bmap lease releaser */
 	MSTHRT_BWATCH,			/* bmap lease watcher */
@@ -66,6 +66,16 @@ enum {
 	MSTHRT_WORKER			/* generic worker */
 };
 
+#ifdef SLASH2_CLI_PFLFS_MODULE
+# define MSTHRT_FS PFL_THRT_FS
+#endif
+
+struct msfs_thread {
+	struct psc_multiwait		 mft_mw;
+};
+
+#define msfsthr(thr)	((struct msfs_thread *)pfl_fsthr_getpri(thr))
+
 struct msattrflush_thread {
 	struct psc_multiwait		 maft_mw;
 };
@@ -81,13 +91,6 @@ struct msbwatch_thread {
 struct msflush_thread {
 	int				 mflt_failcnt;
 	struct psc_multiwait		 mflt_mw;
-};
-
-struct msfs_thread {
-	size_t				 mft_uniqid;
-	struct psc_multiwait		 mft_mw;
-	char				 mft_uprog[128];
-	struct pscfs_req		*mft_pfr;
 };
 
 struct msrci_thread {
@@ -108,7 +111,6 @@ PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
-PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);

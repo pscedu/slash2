@@ -27,6 +27,7 @@
 
 #include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fs.h"
 #include "pfl/random.h"
 #include "pfl/rpc.h"
 
@@ -190,16 +191,16 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct srm_bmap_chwrmode_rep *mp;
 	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
-	struct msfs_thread *mft;
 	struct psc_thread *thr;
 	struct psc_compl compl;
+	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == MSTHRT_FS) {
-		mft = thr->pscthr_private;
-		pfr = mft->mft_pfr;
+		pft = thr->pscthr_private;
+		pfr = pft->pft_pfr;
 	}
 
 	f = b->bcm_fcmh;
@@ -685,16 +686,16 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	struct srm_leasebmap_rep *mp;
 	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
-	struct msfs_thread *mft;
 	struct psc_thread *thr;
 	struct psc_compl compl;
+	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == MSTHRT_FS) {
-		mft = thr->pscthr_private;
-		pfr = mft->mft_pfr;
+		pft = thr->pscthr_private;
+		pfr = pft->pft_pfr;
 	}
 
 	f = b->bcm_fcmh;

@@ -49,29 +49,29 @@ struct bmap_mds_lease;
 
 /* MDS thread types. */
 enum {
-	SLMTHRT_BATCHRQ,	/* batch RPC reaper */
-	SLMTHRT_FREAP,		/* file reaper */
-	SLMTHRT_BKDB,		/* upsch database backup */
-	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
-	SLMTHRT_CONN,		/* peer resource connection monitor */
-	SLMTHRT_CTL,		/* control processor */
-	SLMTHRT_CTLAC,		/* control acceptor */
-	SLMTHRT_CURSOR,		/* cursor update thread */
-	SLMTHRT_DBWORKER,	/* database worker */
-	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
-	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
-	SLMTHRT_JRNL,		/* journal distill thread */
-	SLMTHRT_LNETAC,		/* lustre net accept thr */
-	SLMTHRT_NBRQ,		/* non-blocking RPC reply handler */
-	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
-	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
-	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
-	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
-	SLMTHRT_OPSTIMER,	/* opstats updater */
-	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
-	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
-	SLMTHRT_WORKER,		/* miscellaneous work */
-	SLMTHRT_ZFS_KSTAT	/* ZFS stats */
+	SLMTHRT_BATCHRQ = _PFL_NTHRT,	/* batch RPC reaper */
+	SLMTHRT_FREAP,			/* file reaper */
+	SLMTHRT_BKDB,			/* upsch database backup */
+	SLMTHRT_BMAPTIMEO,		/* bmap timeout thread */
+	SLMTHRT_CONN,			/* peer resource connection monitor */
+	SLMTHRT_CTL,			/* control processor */
+	SLMTHRT_CTLAC,			/* control acceptor */
+	SLMTHRT_CURSOR,			/* cursor update thread */
+	SLMTHRT_DBWORKER,		/* database worker */
+	SLMTHRT_JNAMESPACE,		/* namespace propagating thread */
+	SLMTHRT_JRECLAIM,		/* garbage reclamation thread */
+	SLMTHRT_JRNL,			/* journal distill thread */
+	SLMTHRT_LNETAC,			/* lustre net accept thr */
+	SLMTHRT_NBRQ,			/* non-blocking RPC reply handler */
+	SLMTHRT_RCM,			/* CLI <- MDS msg issuer */
+	SLMTHRT_RMC,			/* MDS <- CLI msg svc handler */
+	SLMTHRT_RMI,			/* MDS <- I/O msg svc handler */
+	SLMTHRT_RMM,			/* MDS <- MDS msg svc handler */
+	SLMTHRT_OPSTIMER,		/* opstats updater */
+	SLMTHRT_UPSCHED,		/* update scheduler for site resources */
+	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
+	SLMTHRT_WORKER,			/* miscellaneous work */
+	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
 };
 
 struct slmthr_dbh {
