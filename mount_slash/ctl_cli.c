@@ -777,47 +777,26 @@ const struct slctl_res_field slctl_resios_fields[] = {
 };
 
 struct psc_ctlop msctlops[] = {
-	PSC_CTLDEFOPS
-/* ADDREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
-/* DELREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
-/* GETCONNS		*/ , { slctlrep_getconn,	sizeof(struct slctlmsg_conn) }
-/* GETFCMH		*/ , { slctlrep_getfcmh,	sizeof(struct slctlmsg_fcmh) }
-/* GETREPLST		*/ , { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
-/* GETREPLST_SLAVE	*/ , { NULL,			0 }
-/* GET_BMAPREPLPOL	*/ , { NULL,			0 }
-/* GET_FATTR		*/ , { msctlhnd_get_fattr,	sizeof(struct msctlmsg_fattr) }
-/* SET_BMAPREPLPOL	*/ , { msctlhnd_set_bmapreplpol,sizeof(struct msctlmsg_bmapreplpol) }
-/* SET_FATTR		*/ , { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) }
-/* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
-/* GETBIORQ		*/ , { msctlrep_getbiorq,	sizeof(struct msctlmsg_biorq) }
-/* GETBMPCE		*/ , { msctlrep_getbmpce,	sizeof(struct msctlmsg_bmpce) }
+	PSC_CTLDEFOPS,
+/* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* DELREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* GETCONNS		*/ { slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
+/* GETFCMH		*/ { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
+/* GETREPLST		*/ { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) },
+/* GETREPLST_SLAVE	*/ { NULL,			0 },
+/* GET_BMAPREPLPOL	*/ { NULL,			0 },
+/* GET_FATTR		*/ { msctlhnd_get_fattr,	sizeof(struct msctlmsg_fattr) },
+/* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
+/* SET_FATTR		*/ { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) },
+/* GETBMAP		*/ { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
+/* GETBIORQ		*/ { msctlrep_getbiorq,		sizeof(struct msctlmsg_biorq) },
+/* GETBMPCE		*/ { msctlrep_getbmpce,		sizeof(struct msctlmsg_bmpce) },
 };
-
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* ATTR_FLSH	*/ NULL,
-/* BENCH	*/ NULL,
-/* BRELEASE	*/ NULL,
-/* BWATCH	*/ NULL,
-/* CTL		*/ psc_ctlthr_get,
-/* CTLAC	*/ psc_ctlacthr_get,
-/* FCMHREAP	*/ NULL,
-/* FLUSH	*/ NULL,
-/* FS		*/ NULL,
-/* FSMGR	*/ NULL,
-/* NBRQ		*/ NULL,
-/* RCI		*/ NULL,
-/* RCM		*/ NULL,
-/* READAHEAD	*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
-};
-
-PFLCTL_SVR_DEFS;
 
 void
 msctlthr_main(struct psc_thread *thr)
 {
+	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
 	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
 	    MSTHRT_CTLAC);

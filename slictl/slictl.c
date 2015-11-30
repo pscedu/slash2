@@ -73,18 +73,6 @@ packshow_fcmhs(__unusedx char *fid)
 }
 
 void
-sliricthr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #write %8u", pcst->pcst_nwrite);
-}
-
-void
-sliriithr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #read %8u", pcst->pcst_nread);
-}
-
-void
 replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %28s %4s %7s %7s %6s\n",
@@ -257,29 +245,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ NULL,			NULL,			0,					NULL },
 	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL },
 	{ slvr_prhdr,		slvr_prdat,		sizeof(struct slictlmsg_slvr),		NULL }
-};
-
-psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* AIO		*/ NULL,
-/* BMAPRLS	*/ NULL,
-/* BREAP	*/ NULL,
-/* CONN		*/ NULL,
-/* CRUD		*/ NULL,
-/* CTL		*/ psc_ctlthr_pr,
-/* CTLAC	*/ psc_ctlacthr_pr,
-/* FREAP	*/ NULL,
-/* HEALTH	*/ NULL,
-/* LNETAC	*/ NULL,
-/* NBRQ		*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* REPLPND	*/ NULL,
-/* RIC		*/ sliricthr_pr,
-/* RII		*/ sliriithr_pr,
-/* RIM		*/ NULL,
-/* SLVR_CRC	*/ NULL,
-/* STATFS	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {

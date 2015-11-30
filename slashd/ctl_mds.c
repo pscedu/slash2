@@ -572,44 +572,16 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 struct psc_ctlop slmctlops[] = {
-	PSC_CTLDEFOPS
-	, { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
-	, { slctlrep_getconn,		sizeof(struct slctlmsg_conn) }
-	, { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
-	, { slmctlrep_getreplqueued,	sizeof(struct slmctlmsg_replqueued) }
-	, { slmctlrep_getstatfs,	sizeof(struct slmctlmsg_statfs) }
-	, { slmctlcmd_stop,		0 }
-	, { slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }
-	, { slmctlcmd_upsch_query,	0 },
+	PSC_CTLDEFOPS,
+	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
+	{ slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
+	{ slmctlrep_getreplqueued,	sizeof(struct slmctlmsg_replqueued) },
+	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs) },
+	{ slmctlcmd_stop,		0 },
+	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) },
+	{ slmctlcmd_upsch_query,	0 },
 };
-
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* BATCHRQ	*/ NULL,
-/* BKDB		*/ NULL,
-/* BMAPTIMEO	*/ NULL,
-/* COH		*/ NULL,
-/* CONN		*/ NULL,
-/* CTL		*/ psc_ctlthr_get,
-/* CTLAC	*/ psc_ctlacthr_get,
-/* CURSOR	*/ NULL,
-/* DBWORKER	*/ NULL,
-/* JNAMESPACE	*/ NULL,
-/* JRECLAIM	*/ NULL,
-/* JRNL		*/ NULL,
-/* LNETAC	*/ NULL,
-/* NBRQ		*/ NULL,
-/* RCM		*/ NULL,
-/* RMC		*/ NULL,
-/* RMI		*/ NULL,
-/* RMM		*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* UPSCHED	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL,
-/* ZFS_KSTAT	*/ NULL
-};
-
-PFLCTL_SVR_DEFS;
 
 void
 slmctlthr_main(const char *fn)

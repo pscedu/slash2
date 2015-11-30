@@ -27,12 +27,12 @@
 #include <term.h>
 #include <unistd.h>
 
-#include "pfl/pfl.h"
 #include "pfl/cdefs.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 #include "pfl/fmt.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
 
 #include "ctl.h"
 #include "ctlcli.h"
@@ -42,19 +42,6 @@
 #include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/repl_mds.h"
-
-void
-slmrmcthr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #open %8d #close %8d #stat %8d",
-	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
-}
-
-void
-slmrmmthr_pr(const struct psc_ctlmsg_thread *pcst)
-{
-	printf(" #open %8d", pcst->pcst_nopen);
-}
 
 void
 packshow_bmaps(__unusedx char *bmaps)
@@ -287,29 +274,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ slm_statfs_prhdr,	slm_statfs_prdat,	sizeof(struct slmctlmsg_statfs),	NULL },
 	{ NULL,			NULL,			0,					NULL },
 	{ slm_bml_prhdr,	slm_bml_prdat,		sizeof(struct slmctlmsg_bml),		NULL }
-};
-
-psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* BMAPTIMEO	*/ NULL,
-/* COH		*/ NULL,
-/* CONN		*/ NULL,
-/* CTL		*/ psc_ctlthr_pr,
-/* CTLAC	*/ psc_ctlacthr_pr,
-/* CURSOR	*/ NULL,
-/* JNAMESPACE	*/ NULL,
-/* JRECLAIM	*/ NULL,
-/* JRNL		*/ NULL,
-/* LNETAC	*/ NULL,
-/* NBRQ		*/ NULL,
-/* RCM		*/ NULL,
-/* RMC		*/ slmrmcthr_pr,
-/* RMI		*/ NULL,
-/* RMM		*/ slmrmmthr_pr,
-/* OPSTIMER	*/ NULL,
-/* UPSCHED	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL,
-/* ZFS_KSTAT	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {

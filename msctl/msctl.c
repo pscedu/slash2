@@ -946,26 +946,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 /* GETBMPCE		*/ , { ms_bmpce_prhdr,	ms_bmpce_prdat,	sizeof(struct msctlmsg_bmpce),	NULL }
 };
 
-psc_ctl_prthr_t psc_ctl_prthrs[] = {
-/* ATTR_FLUSH	*/ NULL,
-/* BENCH	*/ NULL,
-/* BRELEASE	*/ NULL,
-/* BWATCH	*/ NULL,
-/* CTL		*/ psc_ctlthr_pr,
-/* CTLAC	*/ psc_ctlacthr_pr,
-/* FCMHREAP	*/ NULL,
-/* FLUSH	*/ NULL,
-/* FS		*/ NULL,
-/* FSMGR	*/ NULL,
-/* NBRQ		*/ NULL,
-/* RCI		*/ NULL,
-/* RCM		*/ NULL,
-/* READAHEAD	*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
-};
-
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "bmap-repl-policy:",		cmd_bmap_repl_policy },
 	{ "fattr:",			cmd_fattr },

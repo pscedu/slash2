@@ -62,10 +62,6 @@ struct slictlmsg_slvr {
 #define SLI_CTL_FOPF_VERBOSE	(1 << 2)
 #define SLI_CTL_FOPF_XREPL	(1 << 3)
 
-/* sliricthr thread stat aliases */
-#define pcst_nwrite		pcst_u32_1
-#define pcst_nread		pcst_u32_2
-
 /* sliod message types */
 #define SLICMT_GET_REPLWKST	(NPCMT + 0)
 #define SLICMT_GETCONN		(NPCMT + 1)

@@ -592,12 +592,6 @@ slictlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	exit(0);
 }
 
-void
-sliriithr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
-{
-	pcst->pcst_nread = sliriithr(thr)->sirit_st_nread;
-}
-
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
@@ -609,31 +603,6 @@ struct psc_ctlop slictlops[] = {
 	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
 	{ slictlrep_getslvr,		sizeof(struct slictlmsg_slvr) }
 };
-
-psc_ctl_thrget_t psc_ctl_thrgets[] = {
-/* AIO		*/ NULL,
-/* BMAPRLS	*/ NULL,
-/* BREAP	*/ NULL,
-/* CONN		*/ NULL,
-/* CRUD		*/ NULL,
-/* CTL		*/ psc_ctlthr_get,
-/* CTLAC	*/ psc_ctlacthr_get,
-/* FREAP	*/ NULL,
-/* HEALTH	*/ NULL,
-/* LNETAC	*/ NULL,
-/* NBRQ		*/ NULL,
-/* OPSTIMER	*/ NULL,
-/* REPLPND	*/ NULL,
-/* RIC		*/ NULL,
-/* RII		*/ sliriithr_get,
-/* RIM		*/ NULL,
-/* SLVR_CRC	*/ NULL,
-/* STATFS	*/ NULL,
-/* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
-};
-
-PFLCTL_SVR_DEFS;
 
 void
 slictlthr_main(const char *fn)
