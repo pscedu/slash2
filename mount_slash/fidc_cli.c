@@ -267,8 +267,10 @@ dump_fcmh_flags(int flags)
 	_dump_fcmh_flags_common(&flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_DIRTY_ATTRS, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_DSIZE, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_MTIME, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_QUEUE, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_XATTR_INFO, &flags, &seq);
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
