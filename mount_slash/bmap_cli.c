@@ -198,7 +198,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS) {
+	if (thr->pscthr_type == PFL_THRT_FS) {
 		pft = thr->pscthr_private;
 		pfr = pft->pft_pfr;
 	}
@@ -693,7 +693,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	int rc, nretries = 0;
 
 	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS) {
+	if (thr->pscthr_type == PFL_THRT_FS) {
 		pft = thr->pscthr_private;
 		pfr = pft->pft_pfr;
 	}

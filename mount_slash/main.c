@@ -2161,7 +2161,7 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 	if (pld->pld_uprog)
 		return (pld->pld_uprog);
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return "<n/a>";
 
 	pft = thr->pscthr_private;
@@ -2189,7 +2189,7 @@ slc_log_get_fsctx_pid(struct psc_thread *thr)
 {
 	struct pfl_fsthr *pft;
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return (-1);
 
 	pft = thr->pscthr_private;
@@ -2204,7 +2204,7 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 	struct pscfs_creds pcr;
 	struct pfl_fsthr *pft;
 
-	if (thr->pscthr_type != MSTHRT_FS)
+	if (thr->pscthr_type != PFL_THRT_FS)
 		return (-1);
 
 	pft = thr->pscthr_private;
@@ -4142,6 +4142,6 @@ main(int argc, char *argv[])
 	pflfs_module_init(&m, NULL);
 	pflfs_module_add(0, &m);
 
-	exit(pscfs_main(32, MSTHRT_FS, "ms"));
+	exit(pscfs_main(32, "ms"));
 }
 #endif

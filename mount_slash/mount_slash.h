@@ -55,7 +55,6 @@ enum {
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
-	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
@@ -65,10 +64,6 @@ enum {
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
 };
-
-#ifdef MSL_PFLFS_MODULE
-# define MSTHRT_FS PFL_THRT_FS
-#endif
 
 struct msfs_thread {
 	struct psc_multiwait		 mft_mw;
