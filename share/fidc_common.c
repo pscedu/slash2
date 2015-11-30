@@ -180,11 +180,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	*fp = NULL;
 	fnew = NULL; /* gcc */
 
-	/* sanity checks */
-#ifndef _SLASH_CLIENT
-	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
-#endif
-
 	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&sl_fcmh_hashtbl, &fid);
  restart:
