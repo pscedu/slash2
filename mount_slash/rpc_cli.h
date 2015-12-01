@@ -159,6 +159,7 @@ msl_getmw(void)
 		return (&msreadaheadthr(thr)->mrat_mw);
 	case MSTHRT_CTL:
 	case MSTHRT_WORKER:
+	case PFL_THRT_CTL:
 		return (NULL);
 	}
 	psc_fatalx("unknown thread type");
