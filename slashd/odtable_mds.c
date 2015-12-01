@@ -36,6 +36,7 @@
 
 #include "mdsio.h"
 #include "slashd.h"
+#include "pathnames.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -180,16 +181,44 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 	h = t->odt_hdr;
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
-	psc_assert(rc == 0);
+	if (rc == 0) {
+		rc = mdsio_opencreate(current_vfsid,
+			mf, 
+			&rootcreds, O_RDWR, 0, NULL, NULL, 
+			NULL, &t->odt_mfh, NULL, NULL, 0);
+		if (rc)
+			psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
 
-	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
-	    NULL, NULL, NULL, &t->odt_mfh, NULL, NULL, 0);
-	if (rc)
-		psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
+		rc = mdsio_read(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
+			0, t->odt_mfh);
+		if (rc || nb != sizeof(*h))
+			psc_fatalx("failed to read odtable %s, rc=%d", fn, rc);
+		return;
+	}
+#if 0
+	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
+		rc = mdsio_opencreate(current_vfsid, 
+			mds_metadir_inum[current_vfsid], 
+			&rootcreds, O_RDWR|O_CREAT, 0, fn, NULL, 
+			NULL, &t->odt_mfh, NULL, NULL, 0);
+		if (rc)
+			psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
 
-	rc = mdsio_read(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
-	    0, t->odt_mfh);
-	psc_assert(rc == 0 && nb == sizeof(*h));
+		h->odth_nelems = 1024 * 128;
+		h->odth_objsz = 128;
+		h->odth_options = ODTBL_OPT_CRC;
+		h->odth_slotsz = 128 + sizeof(struct pfl_odt_receipt);
+		h->odth_start = 0x1000;
+		psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
+
+		rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
+			0, t->odt_mfh, NULL, NULL);
+		if (rc || nb != sizeof(*h))
+			psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
+		return;
+	}
+#endif
+	psc_fatalx("failed to lookup odtable %s, rc=%d", fn, rc);
 }
 
 void
