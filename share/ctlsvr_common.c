@@ -98,9 +98,9 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
 		    sizeof(scc->scc_addrbuf));
 		scc->scc_stkvers = r->res_stkvers;
-		if (scc->scc_stkvers < SL_STK_VERSION)
+		if (scc->scc_stkvers < sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_OLDER;
-		else if (scc->scc_stkvers > SL_STK_VERSION)
+		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = resm->resm_type;
 
@@ -127,9 +127,9 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    sizeof(scc->scc_addrbuf));
 		expc = (void *)csvc->csvc_params.scp_csvcp;
 		scc->scc_stkvers = expc->stkvers;
-		if (scc->scc_stkvers < SL_STK_VERSION)
+		if (scc->scc_stkvers < sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_OLDER;
-		else if (scc->scc_stkvers > SL_STK_VERSION)
+		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = SLCTL_REST_CLI;
 
@@ -319,7 +319,7 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 void
 slctlparam_version_get(char *val)
 {
-	snprintf(val, PCP_VALUE_MAX, "%d", SL_STK_VERSION);
+	snprintf(val, PCP_VALUE_MAX, "%d", sl_stk_version);
 }
 
 void

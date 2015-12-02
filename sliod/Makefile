@@ -34,6 +34,7 @@ SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/slutil.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
+SRCS+=		${SLASH_BASE}/share/version.c
 
 MODULES+=	pthread lnet gcrypt rpc ctl clock futimens pfl
 

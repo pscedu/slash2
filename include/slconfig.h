@@ -315,6 +315,7 @@ extern int		 cfg_lineno;
 extern struct psclist_head cfg_lnetif_pairs;
 
 extern uint32_t		 sl_sys_upnonce;
+extern int		 sl_stk_version;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a

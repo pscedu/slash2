@@ -243,7 +243,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", SL_STK_VERSION);
+			errx(0, "revision is %d", sl_stk_version);
 		default:
 			usage();
 		}

@@ -290,7 +290,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
-	mq->stkvers = SL_STK_VERSION;
+	mq->stkvers = sl_stk_version;
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
@@ -446,7 +446,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	default:
 		psc_fatal("choke");
 	}
-	mp->stkvers = SL_STK_VERSION;
+	mp->stkvers = sl_stk_version;
 	return (0);
 }
 

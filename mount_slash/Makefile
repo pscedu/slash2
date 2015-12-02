@@ -25,6 +25,7 @@ SRCS+=		rci.c
 SRCS+=		rcm.c
 SRCS+=		rpc_cli.c
 SRCS+=		usermap.c
+SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
