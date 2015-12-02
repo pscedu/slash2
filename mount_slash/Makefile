@@ -38,7 +38,7 @@ SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/slutil.c
-SRCS+=		${SLASH_BASE}/share/version.y
+SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 
 ifeq ($(filter module,${SLASH_OPTIONS}),)
