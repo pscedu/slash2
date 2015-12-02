@@ -20,3 +20,5 @@
 
 include ${SLASH_BASE}/mk/pre.mk
 include ${MAINMK}
+
+${OBJDIR}/version.o: $(filter-out ${SLASH_BASE}/share/version.c},${SRCS})
