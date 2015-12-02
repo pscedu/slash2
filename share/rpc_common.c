@@ -983,7 +983,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			    &(*csvcp)->csvc_mwc, 1);
 		else
 			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
-		PSCTHR_LOCK(thr);
+		PSCTHR_ULOCK(thr);
 	}
 	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
@@ -1042,6 +1042,7 @@ slconnthr_main(struct psc_thread *thr)
 				 * reconnect while we wait.
 				 */
 				goto next;
+
 			/*
 			 * Only used by MDS to watch for its I/O servers.
 			 * So scp_useablef is always mds_sliod_alive().
