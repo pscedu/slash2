@@ -32,7 +32,7 @@ struct slctlmsg_conn {
 	int32_t			scc_refcnt;
 	int32_t			scc_flags;	/* CSVCF_* */
 	int32_t			scc_txcr;
-	uint32_t		scc_stkvers;
+	int32_t			scc_stkvers;
 };
 
 #define CSVCF_CTL_OLDER		CSVCF_FLAGSHIFT
