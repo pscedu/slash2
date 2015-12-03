@@ -1452,7 +1452,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 				 * true as the original size isn't
 				 * available.
 				 */
-				OPSTAT2_ADD("readahead-hit",
+				OPSTAT2_ADD("msl.readahead-hit",
 				    BMPC_BUFSZ);
 		} else
 			perfect_ra = 0;
@@ -1487,7 +1487,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 	if (rc == 0 && !aiowait && perfect_ra)
-		OPSTAT2_ADD("readahead-perfect", r->biorq_len);
+		OPSTAT2_ADD("msl.readahead-perfect", r->biorq_len);
 
  out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
