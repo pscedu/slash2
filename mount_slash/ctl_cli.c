@@ -833,13 +833,13 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_max_nretries);
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_max_nretries);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &slc_direct_io);
+	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
 	psc_ctlparam_register_var("sys.predio_window_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_window_size);
@@ -850,7 +850,7 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_issue_maxpages);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &slc_root_squash);
+	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

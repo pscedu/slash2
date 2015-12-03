@@ -157,8 +157,8 @@ struct psc_hashtbl		 slc_gidmap_int;
  * Before that, O_DIRECT and the FUSE direct_io path were not fully
  * integrated.
  */
-int				 slc_direct_io = 1;
-int				 slc_root_squash;
+int				 msl_direct_io = 1;
+int				 msl_root_squash;
 int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
@@ -182,7 +182,7 @@ fcmh_checkcreds(struct fidc_membh *f,
 {
 	int rc, locked;
 
-	if (slc_root_squash && pcrp->pcr_uid == 0)
+	if (msl_root_squash && pcrp->pcr_uid == 0)
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
@@ -447,7 +447,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
 	FCMH_ULOCK(c);
@@ -563,7 +563,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && slc_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
@@ -3755,7 +3755,7 @@ msl_init(void)
 
 	slcfg_parse(msl_cfgfn);
 	if (slcfg_local->cfg_root_squash)
-		slc_root_squash = 1;
+		msl_root_squash = 1;
 	parse_allowexe();
 	if (slc_use_mapfile) {
 		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
@@ -3903,7 +3903,7 @@ msl_opt_lookup(const char *opt)
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
-		{ "root_squash",	LOOKUP_TYPE_BOOL,	&slc_root_squash },
+		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
 	};
