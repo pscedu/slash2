@@ -358,10 +358,6 @@ API rename
    - write a tool to purge specified IOS's from the garbage reclaim log files
 
 - msctl is broken on 32-bit because of ino # compression
-- have msctl access a special $DIR/.slctlsock file?
-- move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
-  that on arguments?
-- add authbuf file path to slcfg
 
 reimport
 - add a scanner to DELETE things in .slmd/fidns with st_nlink==1 in sliod
@@ -381,7 +377,7 @@ reimport
    (o) crc update doesn't replay nblks setattr
 
 - watch out for EMFILE on freebsd
-- wolverine/single cpu missed wakeup
+- wolverine/single cpu missed wakeup in lnet?
 - file system-level and/or xattr replication controls, e.g.
 
     $ cp myfile .slrpl/foo@BAR
@@ -394,21 +390,19 @@ reimport
     $ getfattr myfile
 
 - kill -D argument; provide arg/slcfg var for authbuf key
-- add -d arg to daemons to stop daemonization and make that behavior
-  default in developer builds
 - test msctl -Q <symlink>
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
 
 - convert MDS rcmc.c to async RPCs
-- add du(1) functionality in dumpfid via extattr
 - add slmctl -ss fstypes for linux with f_type
    - parse /proc/mounts if it's there for sliod statfs f_fstype
 - make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
 - fix bug when no IODs are online yet CLI writes are somehow successful
+    - dup?: EIO is not being delivered to app when IOS is down
 - UNLINK is very slow when interspersed with READDIR
 
 - TRUNCATE should wipe out the inode reptbl
@@ -418,8 +412,6 @@ reimport
 - while :; do dmesg > file; done      produces lots of EBADMSG from sliod
 
 - investigate diaser(1)
-- listxattr returns ERANGE
-- extattr are broke
 - ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
 - msl timeout change no longer waits when server offline, EIO immediately
 - client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
@@ -449,8 +441,7 @@ reimport
 - FID modifications details in docs/supporting_recovery.txt.  Without
   these changes we'll be forced to modify internal MDS structures
   manually and will be forced to restart all clients and sliods.
-- imported files should create CRCs
-- stash directory replication settings in dir/.sldir
+- sliod-imported files should create CRCs
 - ensure flush() wakeups are being called from failed/timedout RPC
   callbacks
 - import should utilize fallocate(2) where available
@@ -473,8 +464,6 @@ reimport
 [1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
 - survey all threads loops to ensure clean shutdown (pscthr_run() can
   exit on slmctl stop)
-- EIO is not being delivered to app when IOS is down
-- slash2root /var should be root 0700 so users can't see authbuf.key size
 - convert msbrathr to wkthr
 - mds_inode_update_interrupted is slowing CREATE
 - make READDIR as fast as possible and return the prefetch attrs OOB
@@ -482,24 +471,16 @@ reimport
 - use pahole(1) to examine cacheline flushes
 - port slash2 openstack
     - make a file system driver that intercepts calls and issues libsl2 APIs
-- discover which JBOD/physical characteristics from sense3 errors
-    - write generic archiver visual monitor
-- vtune license for profiling
 - open file descriptors after UNLINK run into risk of accessing
   reclaimed data on the IOS
-- change notion of mtime clocks in readdir to deal with time
-  synchronization problems in a more robust fashion
-- increment directory fcmh generation on modification
 - changes made by upsch dont get reverted in sqlite because they aren't
   written to disk so don't go through slm_repl_upd_write
 - when write IO is done in mount_slash, we should set BREPLST_VALID
   if it isn't
-- check svn histories for when small I/Os performance broke
+- is small I/Os performance broken?
 - we should reload the file inode in CLI from MDS
   (o) normal attr expiration
   (o) specifically when mtime gets updated (uptime mtime when ino changes)
-- is fuse OPEN for mmap/dio still broke?  double check and open
-  turn off PSCFS_OPENF_DIO for non-X_OK files on older fuse
 - we should move the mds_bmap_crc_write() code that turns off SGID and
   SUID bits on the file to mds_bmap_ion_assign()
 - we should use a flag SETATTRF_MTIME_NOW that updates a file's mtim
@@ -512,23 +493,18 @@ reimport
    - parallelize tar/scp
    - parallelize far and toolchain on tg-login (scp/sftp/ssh-tar)
    - after successful first I/O: cache all user requests in memory
-- there shouldnt be two fs_root options: one for gconf and one for res,
-  make it just for res
-- add psclog for slashd to get hostname of client in rmc
-- grace is reporting bogus inums in /arc
-- implement lz4 as compression in zfs
-- illusion2 can use more of its RAM
+- add psclog log_format fmtstr specifier for slashd to get hostname of
+  client in rmc
 - bmap.odtab, ptrunc.odt, op-* should not be on SSD
 - why aren't cursor and bmap.odt getting updated?
 - add TRIM support to our zfs-fuse
-- add LZ4 support to our zfs-fuse
 - DEBUG_BMAP() should do everything inside the shouldlog()
 - can errors be injected into our scheme circumventing authbuf?
+	- at the LNET level: yes
+	- at the SLASH2 level: no
 - if high priority work cannot be done in upsch, do some lower priority
   work
 - bia odtable should move to /dev/shm
-- PFLERR_OPNOTSUP is being returned back to FUSE somewhere in sl2 'make
-  build'
 - lots of time in fidlink() lookup
   Thread 27 (Thread 0x7fef8b7cb700 (LWP 2221)):
 #0  0x00007ff229137ff4 in __lll_lock_wait () from /lib64/libpthread.so.0
@@ -551,10 +527,6 @@ reimport
 #17 0x00007ff2291317f1 in start_thread () from /lib64/libpthread.so.0
 #18 0x00007ff228e6e70d in clone () from /lib64/libc.so.6
 - merge authbuf bulkhash and hash into single buf
-- sessid from mount_slash 'file closed' info psclog is not correct
-- progname from mount_slash 'file closed' info psclog is not correct
-- reclaim logs should be async as synchronous waiting doesnt scale with
-  large numbers of deletes
 
 - metadata constitutes almost as much as the data????
 MDS:
@@ -569,9 +541,6 @@ peer-54321-128.182.99.29@tcp10-snd          46.1M
   until it times out then EIO/ENOTCONN comes.  by this logic,
   asynchronous FLUSH should be OK as long as connection is actually
   established
-- add 'msctl softstop' that exits when all procs are done
-- add tunables ctlparam - similar to opstats
-- add ctl -p pid to get the pid
 
 - remove ./src/lib/libsolkerncompat/include/sys/zfs_debug.h
 
@@ -625,10 +594,6 @@ st_blocks
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
 
-- use global mount to supported distributed MDS, no forwarding after
-  initial contact, no division of a pool into multiple file systems.
-
-
 
 ls /slfs/.slfidns/0x101010 should return ENOENT not ERANGE
    (bad site ID?)
@@ -639,7 +604,7 @@ slashd
 
 - piggyback small GETXATTR/LISTXATTR directly into RPC
 
-add rpc xid to psc_log_fmt
+add rpc xid as pflog log_format specifier
 
 - fuse: bad error value: 101 (ENETUNREACH) probably from bmap_to_csvc
 1297480 fuse: bad error value: 504
@@ -648,6 +613,8 @@ add rpc xid to psc_log_fmt
    msctl -r /supercell/tmp/foo
      -> statfs() parent dir until fsid changes
      -> connect(AF_LOCAL, .slctlsock)
+- move msctl sock to $MOUNTPOINT/.slctlsock and have msctl ascend to
+  that on arguments?
 
 honor .slmd/resid on startup for MDS and IOD
 
@@ -676,11 +643,12 @@ leaks:
   rpcimp       A--      0   3136   3136   100%     64  <inf> 80          0   0   0
 
 - use XATTR_MAXNAMELEN to check on xattr name length
-- how do multiple user streams affect mount_slash readahead tracking?
-- synchronous bmap lease fetching in readahead is probably killing
-  readahead effectiveness
-- ensure readahead window can properly fill 10gE, 20gE, 40gE
+- how do multiple application thread streams affect mount_slash
+  readahead tracking?  can the mfh store per-thread streams?  any
+  benefit?
+- ensure readahead window can properly fill 10gE, 20gE, 40gE, 100gE
 - bim_getcurseq() shouldnt hold a mutex during an RPC:
+- hash slcfg and use as a verify sanity check when connecting to peers
 - does mount_slash flush_attr_wait impose synchronous SETATTR flush
   waiting on I/O path?
 - change IP addr for sliod in slcfg *on client slcfg only* and notice
@@ -693,9 +661,9 @@ leaks:
 - lnet export refcnt leak: export@0xefbee0 ref=5664
 - get rid of fmid_dino_mfid and fmid_dino_mfh
 - write FSUUID into sliod and check
-- authbuf file dir should not be world readable so people can
+- authbuf file's parent dir should not be world readable so people can
   determine key size
-   - make default size much bigger, and random
+   - make default authbuf key size much bigger, and random size
 - breleasethr 'skip due to not expire' should put such bmaps at
   the end of the list and stop processing when encountering one
 - ensure buffered IO mode with reads past EOF still issue RPCs to sliod
@@ -832,7 +800,7 @@ make sure no fts() invoke ever does unlink() without checking that
   will infinitely wait when write IO is attempted
 
 SLASH2 should immediately return an error when Frank compute nodes try
-to access sense51
+to access data with sense51-only residency
 
 - track unused predictive accesses
    - writeahead
@@ -875,10 +843,6 @@ s2re
 - add back blanket (ERANGE) assert to FUSE
 - should usocklnd bind the local port to ACCEPT_PORT instead of the
   LNET_ACCEPTOR_MAX_RESERVED_PORT range?
-- seems there are more >1 mount_slash client file CREATE visibility
-  issues
-- fix slash2 wiki documentation about not using zfs-fuse for IOS backend fs
-  setup
 - users lacking write permission yet are in member in group of file
   should be able to replicate
 - make ctl -s rpcsvc more useful (pool fields)
@@ -887,6 +851,7 @@ s2re
 - du is broke on /crucible
 - awetzel: use something better than tar
 	- 0 length files
+- zhihui can still trigger the read-returns-all-zeroes racy I/O bug
 - PINNED crash
 - psc_assert(msl_biorq_page_valid_accounting(r, i));
 - SIGBUS
