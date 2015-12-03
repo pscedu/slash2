@@ -373,8 +373,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	 * Otherwise, the following assert will be triggered.
 	 */
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
-	psc_assert(!rc);
 	BMAP_ULOCK(w->srw_bcm);
+	if (rc)
+		goto out;
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
