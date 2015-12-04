@@ -317,7 +317,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	msl_biorq_del(r);
 
 	OPSTAT_INCR("msl.biorq-destroy");
-	psc_pool_return(slc_biorq_pool, r);
+	psc_pool_return(msl_biorq_pool, r);
 }
 
 #define biorq_incref(r)		_biorq_incref(PFL_CALLERINFO(), (r))
@@ -368,7 +368,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 {
 	struct msl_fhent *mfh;
 
-	mfh = psc_pool_get(slc_mfh_pool);
+	mfh = psc_pool_get(msl_mfh_pool);
 	memset(mfh, 0, sizeof(*mfh));
 	mfh->mfh_refcnt = 1;
 	mfh->mfh_fcmh = f;
@@ -474,7 +474,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	m = libsl_nid2resm(rq->rq_peer.nid);
 
-	car = psc_pool_get(slc_async_req_pool);
+	car = psc_pool_get(msl_async_req_pool);
 	memset(car, 0, sizeof(*car));
 	INIT_LISTENTRY(&car->car_lentry);
 	car->car_id = mp->id;

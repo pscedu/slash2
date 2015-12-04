@@ -230,7 +230,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 			psclog_diag("return car=%p car_id=%"PRIx64" q=%p",
 			    car, car->car_id, car->car_fsrqinfo);
 
-			psc_pool_return(slc_async_req_pool, car);
+			psc_pool_return(msl_async_req_pool, car);
 		}
 	}
 }

@@ -326,7 +326,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	struct timespec issue;
 	struct bmpc_ioreq *r;
 
-	r = psc_pool_get(slc_biorq_pool);
+	r = psc_pool_get(msl_biorq_pool);
 	memset(r, 0, sizeof(*r));
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_exp_lentry);
@@ -355,8 +355,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
-//	OPSTAT_SET_MAX("msl.biorq-max", slc_biorq_pool->ppm_total -
-//	    slc_biorq_pool->ppm_used);
+//	OPSTAT_SET_MAX("msl.biorq-max", msl_biorq_pool->ppm_total -
+//	    msl_biorq_pool->ppm_used);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "creating");
 

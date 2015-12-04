@@ -131,14 +131,14 @@ int				 msl_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 char				*msl_cfgfn = SL_PATH_CONF;
 
-struct psc_poolmaster		 slc_async_req_poolmaster;
-struct psc_poolmgr		*slc_async_req_pool;
+struct psc_poolmaster		 msl_async_req_poolmaster;
+struct psc_poolmgr		*msl_async_req_pool;
 
-struct psc_poolmaster		 slc_biorq_poolmaster;
-struct psc_poolmgr		*slc_biorq_pool;
+struct psc_poolmaster		 msl_biorq_poolmaster;
+struct psc_poolmgr		*msl_biorq_pool;
 
-struct psc_poolmaster		 slc_mfh_poolmaster;
-struct psc_poolmgr		*slc_mfh_pool;
+struct psc_poolmaster		 msl_mfh_poolmaster;
+struct psc_poolmgr		*msl_mfh_pool;
 
 struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
@@ -2052,7 +2052,7 @@ mfh_decref(struct msl_fhent *mfh)
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
-		psc_pool_return(slc_mfh_pool, mfh);
+		psc_pool_return(msl_mfh_pool, mfh);
 	} else
 		MFH_ULOCK(mfh);
 }
@@ -3131,10 +3131,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	bmap_pagecache_destroy();
 	bmap_cache_destroy();
 
-	pfl_poolmaster_destroy(&slc_async_req_poolmaster);
-	pfl_poolmaster_destroy(&slc_biorq_poolmaster);
+	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
+	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
-	pfl_poolmaster_destroy(&slc_mfh_poolmaster);
+	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
 	    //csvc
 
 	msl_readahead_svc_destroy();
@@ -3782,20 +3782,20 @@ msl_init(void)
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
 
-	psc_poolmaster_init(&slc_async_req_poolmaster,
+	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "asyncrq");
-	slc_async_req_pool = psc_poolmaster_getmgr(&slc_async_req_poolmaster);
+	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
-	psc_poolmaster_init(&slc_biorq_poolmaster,
+	psc_poolmaster_init(&msl_biorq_poolmaster,
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "biorq");
-	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
+	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
-	psc_poolmaster_init(&slc_mfh_poolmaster,
+	psc_poolmaster_init(&msl_mfh_poolmaster,
 	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "mfh");
-	slc_mfh_pool = psc_poolmaster_getmgr(&slc_mfh_poolmaster);
+	msl_mfh_pool = psc_poolmaster_getmgr(&msl_mfh_poolmaster);
 
 	psc_poolmaster_init(&msl_iorq_poolmaster, struct msl_fsrqinfo,
 	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
@@ -3972,7 +3972,7 @@ msl_filehandle_freeze(struct pflfs_filehandle *pfh)
 	mff->mff_mfh = *mfh;
 	mff->mff_fg = f->fcmh_fg;
 	fcmh_op_done_type(f, FCMH_OPCNT_OPEN);
-	psc_pool_return(slc_mfh_pool, mfh);
+	psc_pool_return(msl_mfh_pool, mfh);
 }
 
 /*
@@ -3986,7 +3986,7 @@ msl_filehandle_thaw(struct pflfs_filehandle *pfh)
 	struct fidc_membh *f;
 
 	mff = pfh->pfh_data;
-	pfh->pfh_data = mfh = psc_pool_get(slc_mfh_pool);
+	pfh->pfh_data = mfh = psc_pool_get(msl_mfh_pool);
 	*mfh = mff->mff_mfh;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);

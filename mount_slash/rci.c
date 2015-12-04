@@ -191,7 +191,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
 
-	psc_pool_return(slc_async_req_pool, car);
+	psc_pool_return(msl_async_req_pool, car);
 
  out:
 	if (mp->rc)

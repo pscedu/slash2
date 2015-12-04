@@ -367,9 +367,9 @@ extern struct psc_listcache	 slc_bmaptimeoutq;
 extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;
-extern struct psc_poolmgr	*slc_async_req_pool;
-extern struct psc_poolmgr	*slc_biorq_pool;
-extern struct psc_poolmgr	*slc_mfh_pool;
+extern struct psc_poolmgr	*msl_async_req_pool;
+extern struct psc_poolmgr	*msl_biorq_pool;
+extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_direct_io;
 extern int			 msl_root_squash;
