@@ -195,62 +195,64 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 			psc_fatalx("failed to read odtable %s, rc=%d", fn, rc);
 		return;
 	}
-#if 0
 	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
-		rc = mdsio_opencreate(current_vfsid, 
-			mds_metadir_inum[current_vfsid], 
-			&rootcreds, O_RDWR|O_CREAT, 0, fn, NULL, 
-			NULL, &t->odt_mfh, NULL, NULL, 0);
-		if (rc)
-			psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
-
-		h->odth_nelems = 1024 * 128;
-		h->odth_objsz = 128;
-		h->odth_options = ODTBL_OPT_CRC;
-		h->odth_slotsz = 128 + sizeof(struct pfl_odt_receipt);
-		h->odth_start = 0x1000;
-		psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
-
-		rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
-			0, t->odt_mfh, NULL, NULL);
-		if (rc || nb != sizeof(*h))
-			psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
+		t->odt_ops.odtop_create(t, fn, -1);
 		return;
 	}
-#endif
 	psc_fatalx("failed to lookup odtable %s, rc=%d", fn, rc);
 }
 
+/*
+ * Create a default on-disk table if no one is found.
+ */
 void
 slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
+	struct pfl_odt_entftr f;
+	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
-	mdsio_fid_t mf;
 	size_t nb;
 	int rc;
 
-	h = t->odt_hdr;
-	rc = mdsio_lookup(current_vfsid,
-	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
-	psc_assert(rc == 0);
-
-	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
-	    NULL, NULL, NULL, &t->odt_mfh, NULL, NULL, 0);
+	rc = mdsio_opencreate(current_vfsid, 
+		mds_metadir_inum[current_vfsid], 
+		&rootcreds, O_RDWR|O_CREAT, 0, fn, NULL, 
+		NULL, &t->odt_mfh, NULL, NULL, 0);
 	if (rc)
-		psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
+		psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
 
-	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
-	    0, t->odt_mfh, NULL, NULL);
-	psc_assert(rc == 0 && nb == sizeof(*h));
+	h = t->odt_hdr;
+	h->odth_nelems = ODT_ELEM_NUMBER;
+	h->odth_objsz = ODT_ELEM_SIZE;
+
+	h->odth_options = ODTBL_OPT_CRC;
+	h->odth_slotsz = ODT_ELEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
+	h->odth_start = 0x1000;
+	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
+
+	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
+		0, t->odt_mfh, NULL, NULL);
+	if (rc || nb != sizeof(*h))
+		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
+
+	for (r.odtr_elem = 0; r.odtr_elem < h->odth_nelems; r.odtr_elem++) {
+		f.odtf_flags = 0;
+		f.odtf_slotno = r.odtr_elem;
+		psc_crc64_init(&f.odtf_crc);
+		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
+		psc_crc64_fini(&f.odtf_crc);
+		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_elem);
+	}
+	t->odt_ops.odtop_sync(t, -1);
 }
 
 struct pfl_odt_ops slm_odtops = {
-	slm_odt_close,
-	slm_odt_create,
-	NULL,
-	slm_odt_open,
-	slm_odt_read,
-	slm_odt_resize,
-	slm_odt_sync,
-	slm_odt_write
+	slm_odt_close,		/* odtop_close() */
+	slm_odt_create,		/* odtop_create() */
+	NULL,			/* odtop_mapslot() */
+	slm_odt_open,		/* odtop_open() */
+	slm_odt_read,		/* odtop_read() */
+	slm_odt_resize,		/* odtop_resize() */
+	slm_odt_sync,		/* odtop_sync() */
+	slm_odt_write		/* odtop_write() */
 };
