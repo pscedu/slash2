@@ -78,7 +78,7 @@ enum {
 									\
 		(mq) = NULL;						\
 		(mp) = NULL;						\
-		_resm = (f) ? fcmh_2_fci(f)->fci_resm : slc_rmc_resm;	\
+		_resm = (f) ? fcmh_2_fci(f)->fci_resm : msl_rmc_resm;	\
 		if (rq) {						\
 			pscrpc_req_finished(rq);			\
 			(rq) = NULL;					\

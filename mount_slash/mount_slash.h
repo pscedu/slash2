@@ -347,23 +347,16 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_RPCDONE	(1 << 4)
 #define BMAPFLSH_REAP		(1 << 5)
 
-enum {
-	SLC_FAULT_READAHEAD_CB_EIO,
-	SLC_FAULT_READRPC_OFFLINE,
-	SLC_FAULT_READ_CB_EIO,
-	SLC_FAULT_REQUEST_TIMEOUT
-};
-
 extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
-extern struct sl_resm		*slc_rmc_resm;
+extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];
-extern int			 slc_use_mapfile;
+extern int			 msl_use_mapfile;
 
-extern struct psc_hashtbl	 slc_uidmap_ext;
-extern struct psc_hashtbl	 slc_uidmap_int;
-extern struct psc_hashtbl	 slc_gidmap_int;
+extern struct psc_hashtbl	 msl_uidmap_ext;
+extern struct psc_hashtbl	 msl_uidmap_int;
+extern struct psc_hashtbl	 msl_gidmap_int;
 
 extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
 extern struct pfl_iostats_grad	 slc_iorpc_iostats[];

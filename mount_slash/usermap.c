@@ -36,11 +36,11 @@ uidmap_ext_cred(struct srt_creds *cr)
 {
 	struct uid_mapping *um, q;
 
-	if (!slc_use_mapfile)
+	if (!msl_use_mapfile)
 		return (0);
 
 	q.um_key = cr->scr_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, &q.um_key);
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
 	if (um == NULL)
 		return (0);
 	cr->scr_uid = um->um_val;
@@ -52,11 +52,11 @@ gidmap_int_cred(struct pscfs_creds *cr)
 {
 	struct gid_mapping *gm, q;
 
-	if (!slc_use_mapfile)
+	if (!msl_use_mapfile)
 		return (0);
 
 	q.gm_key = cr->pcr_uid;
-	gm = psc_hashtbl_search(&slc_gidmap_int, &q.gm_key);
+	gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
 	if (gm == NULL)
 		return (0);
 	cr->pcr_gid = gm->gm_gid;
@@ -69,11 +69,11 @@ uidmap_ext_stat(struct srt_stat *sstb)
 {
 	struct uid_mapping *um, q;
 
-	if (!slc_use_mapfile)
+	if (!msl_use_mapfile)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, &q.um_key);
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
 	if (um == NULL)
 		return (0);
 	sstb->sst_uid = um->um_val;
@@ -85,11 +85,11 @@ uidmap_int_stat(struct srt_stat *sstb)
 {
 	struct uid_mapping *um, q;
 
-	if (!slc_use_mapfile)
+	if (!msl_use_mapfile)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_int, &q.um_key);
+	um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
 	if (um == NULL)
 		return (0);
 	sstb->sst_uid = um->um_val;
@@ -150,16 +150,16 @@ mapfile_parse_user(char *start)
 		goto malformed;
 
 	um = PSCALLOC(sizeof(*um));
-	psc_hashent_init(&slc_uidmap_ext, um);
+	psc_hashent_init(&msl_uidmap_ext, um);
 	um->um_key = local;
 	um->um_val = remote;
-	psc_hashtbl_add_item(&slc_uidmap_ext, um);
+	psc_hashtbl_add_item(&msl_uidmap_ext, um);
 
 	um = PSCALLOC(sizeof(*um));
-	psc_hashent_init(&slc_uidmap_int, um);
+	psc_hashent_init(&msl_uidmap_int, um);
 	um->um_key = remote;
 	um->um_val = local;
-	psc_hashtbl_add_item(&slc_uidmap_int, um);
+	psc_hashtbl_add_item(&msl_uidmap_int, um);
 
 	return (1);
  malformed:
@@ -196,15 +196,15 @@ mapfile_parse_group(char *start)
 		goto malformed;
 
 	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&slc_gidmap_int, &remote);
+		gm = psc_hashtbl_search(&msl_gidmap_int, &remote);
 		if (gm) {
 			gm->gm_gidv[gm->gm_ngid++] = remote;
 		} else {
 			gm = PSCALLOC(sizeof(*gm));
-			psc_hashent_init(&slc_gidmap_int, gm);
+			psc_hashent_init(&msl_gidmap_int, gm);
 			gm->gm_key = (uint64_t)p;
 			gm->gm_gid = remote;
-			psc_hashtbl_add_item(&slc_gidmap_int, gm);
+			psc_hashtbl_add_item(&msl_gidmap_int, gm);
 		}
 	}
 	rc = 1;

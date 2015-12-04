@@ -218,7 +218,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
 	if (fcmh_2_fid(f) != SLFID_ROOT &&
-	    siteid != slc_rmc_resm->resm_siteid) {
+	    siteid != msl_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
 			psclog_errorx("fid "SLPRI_FID" has "
@@ -236,7 +236,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		    fcmh_2_fid(f), siteid);
 		return (ESTALE);
 	}
-	fci->fci_resm = slc_rmc_resm;
+	fci->fci_resm = msl_rmc_resm;
 
 	return (0);
 }

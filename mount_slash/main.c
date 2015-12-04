@@ -127,7 +127,7 @@ sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 
 char				 mountpoint[PATH_MAX];
-int				 slc_use_mapfile;
+int				 msl_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 char				*msl_cfgfn = SL_PATH_CONF;
 
@@ -148,9 +148,9 @@ struct psc_poolmgr		*msl_iorq_pool;
 
 uint32_t			 sl_sys_upnonce;
 
-struct psc_hashtbl		 slc_uidmap_ext;
-struct psc_hashtbl		 slc_uidmap_int;
-struct psc_hashtbl		 slc_gidmap_int;
+struct psc_hashtbl		 msl_uidmap_ext;
+struct psc_hashtbl		 msl_uidmap_int;
+struct psc_hashtbl		 msl_gidmap_int;
 
 /*
  * This allows io_submit(2) to work before Linux kernel version 4.1.
@@ -1040,7 +1040,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 			return (EACCES);
 
 		fid = SLFID_NS;
-		FID_SET_SITEID(fid, slc_rmc_resm->resm_siteid);
+		FID_SET_SITEID(fid, msl_rmc_resm->resm_siteid);
 		if (fgp) {
 			fgp->fg_fid = fid;
 			fgp->fg_gen = 0;
@@ -3103,10 +3103,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_hashtbl_destroy(&msl_namecache_hashtbl);
 	slcfg_destroy();
 
-	if (slc_use_mapfile) {
-		psc_hashtbl_destroy(&slc_uidmap_ext);
-		psc_hashtbl_destroy(&slc_uidmap_int);
-		psc_hashtbl_destroy(&slc_gidmap_int);
+	if (msl_use_mapfile) {
+		psc_hashtbl_destroy(&msl_uidmap_ext);
+		psc_hashtbl_destroy(&msl_uidmap_int);
+		psc_hashtbl_destroy(&msl_gidmap_int);
 	}
 
 	spinlock(&pfl_faults_lock);
@@ -3757,13 +3757,13 @@ msl_init(void)
 	if (slcfg_local->cfg_root_squash)
 		msl_root_squash = 1;
 	parse_allowexe();
-	if (slc_use_mapfile) {
-		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
+	if (msl_use_mapfile) {
+		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
-		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
+		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
 
-		psc_hashtbl_init(&slc_gidmap_int, 0, struct gid_mapping,
+		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
 		    gm_key, gm_hentry, 191, NULL, "gidmapint");
 
 		parse_mapfile();
@@ -3901,7 +3901,7 @@ msl_opt_lookup(const char *opt)
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
-		{ "mapfile",		LOOKUP_TYPE_BOOL,	&slc_use_mapfile },
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },

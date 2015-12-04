@@ -878,7 +878,7 @@ msl_bmap_release(struct sl_resm *resm)
 
 	rmci = resm2rmci(resm);
 
-	csvc = (resm == slc_rmc_resm) ?
+	csvc = (resm == msl_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
 		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
@@ -934,7 +934,7 @@ msbreleasethr_main(struct psc_thread *thr)
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
-	 * the bid's, assume an ion unless resm == slc_rmc_resm.
+	 * the bid's, assume an ion unless resm == msl_rmc_resm.
 	 */
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
