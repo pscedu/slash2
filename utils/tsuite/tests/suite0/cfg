@@ -11,7 +11,7 @@ set net=tcp10;
 set pref_mds="md0@SITE0";
 set pref_ios="io@SITE0";
 
-site @site0 {
+site @SITE0 {
 	site_id		= 0x100;
 
 	resource md0 {
