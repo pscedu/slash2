@@ -195,11 +195,10 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 			psc_fatalx("failed to read odtable %s, rc=%d", fn, rc);
 		return;
 	}
-#if 0
 	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
+		t->odt_ops.odtop_create(t, fn, -1);
 		return;
 	}
-#endif
 	psc_fatalx("failed to lookup odtable %s, rc=%d", fn, rc);
 }
 
