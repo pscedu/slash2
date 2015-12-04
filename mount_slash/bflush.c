@@ -59,8 +59,8 @@
 
 struct timespec			 msl_bflush_timeout = { 1, 0L };
 struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
-struct psc_listcache		 slc_bmapflushq;
-struct psc_listcache		 slc_bmaptimeoutq;
+struct psc_listcache		 msl_bmapflushq;
+struct psc_listcache		 msl_bmaptimeoutq;
 
 int				 msl_max_nretries = 256;
 
@@ -239,7 +239,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 	}
 
 	if (reason == BMAPFLSH_TRUNCATE)
-		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
+		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
@@ -810,16 +810,16 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		/*
-		 * A bmap can be on both slc_bmapflushq and
-		 * slc_bmaptimeoutq.  It is taken off the slc_bmapflushq
+		 * A bmap can be on both msl_bmapflushq and
+		 * msl_bmaptimeoutq.  It is taken off the msl_bmapflushq
 		 * after all its biorqs are flushed if any.
 		 */
-		LIST_CACHE_LOCK(&slc_bmapflushq);
-		if (lc_peekheadwait(&slc_bmapflushq) == NULL) {
-			LIST_CACHE_ULOCK(&slc_bmapflushq);
+		LIST_CACHE_LOCK(&msl_bmapflushq);
+		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_bmapflushq);
 			break;
 		}
-		LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
+		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			DEBUG_BMAP(PLL_DEBUG, b, "begin");
@@ -836,7 +836,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				psc_dynarray_add(&bmaps, b);
 			BMAP_ULOCK(b);
 		}
-		LIST_CACHE_ULOCK(&slc_bmapflushq);
+		LIST_CACHE_ULOCK(&msl_bmapflushq);
 
 		if (!psc_dynarray_len(&bmaps)) {
 			usleep(1000);
@@ -876,8 +876,8 @@ bmap_flush(void)
 	struct bmap *b, *tmpb;
 	int i, j, didwork = 0;
 
-	LIST_CACHE_LOCK(&slc_bmapflushq);
-	LIST_CACHE_FOREACH_SAFE(b, tmpb, &slc_bmapflushq) {
+	LIST_CACHE_LOCK(&msl_bmapflushq);
+	LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
 
 		DEBUG_BMAP(PLL_DIAG, b, "flushable?");
 
@@ -904,7 +904,7 @@ bmap_flush(void)
 		if (psc_dynarray_len(&bmaps) >= RESM_MAX_OUTSTANDING_RPCS)
 			break;
 	}
-	LIST_CACHE_ULOCK(&slc_bmapflushq);
+	LIST_CACHE_ULOCK(&msl_bmapflushq);
 
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 		b = psc_dynarray_getpos(&bmaps, i);
@@ -969,7 +969,7 @@ msflushthr_main(struct psc_thread *thr)
 		mflt->mflt_failcnt = 1;
 
 		/* wait until some work appears */
-		if (lc_peekheadwait(&slc_bmapflushq) == NULL)
+		if (lc_peekheadwait(&msl_bmapflushq) == NULL)
 			break;
 
 		OPSTAT_INCR("msl.bmap-flush");
@@ -1026,10 +1026,10 @@ msbmapthr_spawn(void)
 
 	psc_waitq_init(&slc_bflush_waitq);
 
-	lc_reginit(&slc_bmapflushq, struct bmap,
+	lc_reginit(&msl_bmapflushq, struct bmap,
 	    bcm_lentry, "bmapflushq");
 
-	lc_reginit(&slc_bmaptimeoutq, struct bmap_cli_info,
+	lc_reginit(&msl_bmaptimeoutq, struct bmap_cli_info,
 	    bci_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {

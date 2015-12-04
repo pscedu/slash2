@@ -119,7 +119,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 struct psc_hashtbl		 msl_namecache_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
-struct psc_listcache		 slc_attrtimeoutq;
+struct psc_listcache		 msl_attrtimeoutq;
 
 sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
@@ -2003,7 +2003,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 		// XXX locking order violation
-		lc_remove(&slc_attrtimeoutq, fcmh_2_fci(f));
+		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		if (waslocked == PSLRV_WASLOCKED)
 			FCMH_LOCK(f);
@@ -2920,7 +2920,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				fci = fcmh_2_fci(c);
 				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&slc_attrtimeoutq, fci);
+				lc_remove(&msl_attrtimeoutq, fci);
 				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 			}
 			if (rc) {
@@ -3017,15 +3017,15 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	int i, j, remaining;
 
 	/* mark listcaches as dead */
-	lc_kill(&slc_bmapflushq);
-	lc_kill(&slc_bmaptimeoutq);
-	lc_kill(&slc_attrtimeoutq);
+	lc_kill(&msl_bmapflushq);
+	lc_kill(&msl_bmaptimeoutq);
+	lc_kill(&msl_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
 
 	/* notify of termination */
-	LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-	psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
-	LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+	LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 	psc_waitq_wakeall(&msl_flush_attrq);
 
@@ -3033,12 +3033,12 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_waitq_wakeall(&sl_freap_waitq);
 
 	/* wait for drain */
-	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_bmapflushq,
-	    lc_nitems(&slc_bmapflushq));
-	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_bmaptimeoutq,
-	    lc_nitems(&slc_bmaptimeoutq));
-	LISTCACHE_WAITEMPTY_UNLOCKED(&slc_attrtimeoutq,
-	    lc_nitems(&slc_attrtimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmapflushq,
+	    lc_nitems(&msl_bmapflushq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmaptimeoutq,
+	    lc_nitems(&msl_bmaptimeoutq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_attrtimeoutq,
+	    lc_nitems(&msl_attrtimeoutq));
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
 	    lc_nitems(&msl_readaheadq));
 
@@ -3118,9 +3118,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	/* XXX wait for wkq to drain, or perhaps at the pflfs layer? */
 
-	pfl_listcache_destroy_registered(&slc_attrtimeoutq);
-	pfl_listcache_destroy_registered(&slc_bmapflushq);
-	pfl_listcache_destroy_registered(&slc_bmaptimeoutq);
+	pfl_listcache_destroy_registered(&msl_attrtimeoutq);
+	pfl_listcache_destroy_registered(&msl_bmapflushq);
+	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
 	pfl_listcache_destroy_registered(&msl_readaheadq);
 	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
@@ -3594,13 +3594,13 @@ msattrflushthr_main(struct psc_thread *thr)
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
-		LIST_CACHE_LOCK(&slc_attrtimeoutq);
-		if (lc_peekheadwait(&slc_attrtimeoutq) == NULL) {
-			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
+		LIST_CACHE_LOCK(&msl_attrtimeoutq);
+		if (lc_peekheadwait(&msl_attrtimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			break;
 		}
 		PFL_GETTIMESPEC(&ts);
-		LIST_CACHE_FOREACH(fci, &slc_attrtimeoutq) {
+		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
 				continue;
@@ -3617,7 +3617,7 @@ msattrflushthr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			LIST_CACHE_ULOCK(&slc_attrtimeoutq);
+			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 
 			msl_flush_ioattrs(NULL, f);
 			FCMH_ULOCK(f);
@@ -3626,7 +3626,7 @@ msattrflushthr_main(struct psc_thread *thr)
 		if (fci == NULL) {
 			OPSTAT_INCR("msl.flush-attr-wait");
 			psc_waitq_waitrel_ts(&msl_flush_attrq,
-			    &slc_attrtimeoutq.plc_lock, &nexttimeo);
+			    &msl_attrtimeoutq.plc_lock, &nexttimeo);
 		}
 	}
 }
@@ -3638,7 +3638,7 @@ msattrflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	lc_reginit(&slc_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
+	lc_reginit(&msl_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
 	    "attrtimeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {

@@ -262,9 +262,9 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		if (!bmpc->bmpc_pndg_writes) {
 			b->bcm_flags &= ~BMAPF_FLUSHQ;
 			// XXX locking violation
-			lc_remove(&slc_bmapflushq, b);
+			lc_remove(&msl_bmapflushq, b);
 			DEBUG_BMAP(PLL_DIAG, b,
-			    "remove from slc_bmapflushq");
+			    "remove from msl_bmapflushq");
 		}
 	}
 
@@ -1160,8 +1160,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	if (!(b->bcm_flags & BMAPF_FLUSHQ)) {
 		b->bcm_flags |= BMAPF_FLUSHQ;
-		lc_addtail(&slc_bmapflushq, b);
-		DEBUG_BMAP(PLL_DIAG, b, "add to slc_bmapflushq");
+		lc_addtail(&msl_bmapflushq, b);
+		DEBUG_BMAP(PLL_DIAG, b, "add to msl_bmapflushq");
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA);
 
@@ -1861,7 +1861,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fci->fci_etime.tv_sec = ts.tv_sec + FCMH_ATTR_TIMEO;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-		lc_addtail(&slc_attrtimeoutq, fci);
+		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	}
 	FCMH_ULOCK(f);

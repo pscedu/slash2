@@ -361,9 +361,9 @@ extern struct psc_hashtbl	 msl_gidmap_int;
 extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
 extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
 
-extern struct psc_listcache	 slc_attrtimeoutq;
-extern struct psc_listcache	 slc_bmapflushq;
-extern struct psc_listcache	 slc_bmaptimeoutq;
+extern struct psc_listcache	 msl_attrtimeoutq;
+extern struct psc_listcache	 msl_bmapflushq;
+extern struct psc_listcache	 msl_bmaptimeoutq;
 extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;

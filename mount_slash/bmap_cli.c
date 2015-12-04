@@ -59,8 +59,8 @@ msl_bmap_reap(void)
 	bmap_flushq_wake(BMAPFLSH_REAP);
 
 	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&slc_bmaptimeoutq) > bmap_max_cache)
-		psc_waitq_wakeall(&slc_bmaptimeoutq.plc_wq_empty);
+	if (lc_nitems(&msl_bmaptimeoutq) > bmap_max_cache)
+		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
 /*
@@ -839,7 +839,7 @@ msl_bmap_reap_init(struct bmap *b)
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
 	 */
-	lc_addtail(&slc_bmaptimeoutq, bci);
+	lc_addtail(&msl_bmaptimeoutq, bci);
 }
 
 int
@@ -940,17 +940,17 @@ msbreleasethr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
 		PFL_GETTIMESPEC(&crtime);
-		LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-		if (lc_peekheadwait(&slc_bmaptimeoutq) == NULL) {
-			LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 			break;
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		timespecadd(&crtime, &msl_bmap_max_lease, &nto);
 
-		nitems = lc_nitems(&slc_bmaptimeoutq);
-		exiting = pfl_listcache_isdead(&slc_bmaptimeoutq);
-		LIST_CACHE_FOREACH(bci, &slc_bmaptimeoutq) {
+		nitems = lc_nitems(&msl_bmaptimeoutq);
+		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -997,12 +997,12 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
 		}
-		LIST_CACHE_ULOCK(&slc_bmaptimeoutq);
+		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
-			lc_remove(&slc_bmaptimeoutq, bci);
+			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
 				/* Setup a msg to an ION. */
@@ -1039,9 +1039,9 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		PFL_GETTIMESPEC(&crtime);
 		if (timespeccmp(&crtime, &nto, <) && !exiting) {
-			LIST_CACHE_LOCK(&slc_bmaptimeoutq);
-			psc_waitq_waitabs(&slc_bmaptimeoutq.plc_wq_empty,
-			    &slc_bmaptimeoutq.plc_lock, &nto);
+			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+			    &msl_bmaptimeoutq.plc_lock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
