@@ -1,0 +1,3 @@
+dep iozone
+
+iozone -a

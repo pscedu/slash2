@@ -206,8 +206,8 @@ my $ssh_init = <<EOF;
 EOF
 
 # Setup configuration
-my $conf = slash_conf(base => $base);
-open SLCONF, ">", "$base/slash.conf" or fatal "open $base/slash.conf";
+my $conf = slcfg(base => $base);
+open SLCONF, ">", "$base/slcfg" or fatal "open $base/slcfg";
 print SLCONF $conf;
 close SLCONF;
 
@@ -304,9 +304,7 @@ close CLICMD;
 parse_conf();
 
 if ($build) {
-	execute "cd $src/zfs && make build >/dev/null";
-	fatalx "make failed" if $?;
-	execute "cd $src/slash2 && make build >/dev/null";
+	execute "cd $src && make build >/dev/null";
 	fatalx "make failed" if $?;
 }
 
@@ -572,7 +570,31 @@ if ($opts{r}) {
 
 }; # end of eval
 
+# @set logbase
+# @set
+logbase = "/home/slog";
+rootdir = "/home/sltest";
+giturl = 'ssh://source/a';
+intvtimeout = 60*7;	# single op interval timeout
+runtimeout = 60*60*8;	# entire client run duration
+src = "/home/yanovich/code/advsys/p";
+
+# run each test serially without faults for performance regressions
+
+# run all tests in parallel without faults for performance regressions
+# and exercise
+
+# now run the entire thing again injecting faults at random places to test
+# failure tolerance
+
 my $emsg = $@;
+
+
+LOCAL_TMP=$TMPDIR/$test_name
+rm -rf $LOCAL_TMP
+mkdir -p $LOCAL_TMP
+dd if=/dev/urandom of=/dev/shm/r000 bs=1048576 count=1024
+RANDOM=/dev/shm/r000
 
 if ($opts{m}) {
 	close WR;

@@ -1,0 +1,78 @@
+# @client omnitopia:mount_slash:TMPDIR=/local/tmp
+# @client polybius:mount_slash:TMPDIR=/local/tmp
+# @client zebes:mount_slash:TMPDIR=/local/tmp
+# @client lavos:mount_slash:TMPDIR=/local/tmp
+# @client yuzu:mount_slash:TMPDIR=/local/tmp
+# @client kiwi:mount_slash:TMPDIR=/local/tmp
+
+set port=7001;
+set net=tcp10;
+
+set pref_mds="md0@SITE0";
+set pref_ios="io@SITE0";
+
+site @site0 {
+	site_id		= 0x100;
+
+	resource md0 {
+		# @zpool create ${zpool_name} sdf
+		zpool_name	=;
+		journal = sde;
+		type	= mds;
+		id	= 0x1;
+		nids	= polybius;
+	}
+
+	resource io0 {
+		type	= standalone_fs;
+		id	= 0x10;
+		fsroot	= /local/slio.tsuite0;
+		nids	= omnitopia;
+	}
+
+	resource io1 {
+		type	= standalone_fs;
+		id	= 0x11;
+		fsroot	= /local/slio.tsuite0;
+		nids	= zebes;
+	}
+
+	resource io {
+		type    = cluster_noshare_lfs;
+		id      = 0x100;
+		ios     = io0, io1;
+	}
+}
+
+#site @site1 {
+#	site_id		= 0x101;
+
+#	resource md1 {
+		# @zpool create ${zpool_name} sdf
+#		zpool_name	=;
+#		journal = sde;
+#		type	= mds;
+#		id	= 0x1;
+#		nids	= yuzu;
+#	}
+
+#	resource io0 {
+#		type	= standalone_fs;
+#		id	= 0x10;
+#		fsroot	= /local/slio.tsuite0;
+#		nids	= polybius;
+#	}
+
+#	resource io1 {
+#		type	= standalone_fs;
+#		id	= 0x11;
+#		fsroot	= /local/slio.tsuite0;
+#		nids	= zebes;
+#	}
+
+#	resource io {
+#		type    = cluster_noshare_lfs;
+#		id      = 0x100;
+#		ios     = io0, io1;
+#	}
+}
