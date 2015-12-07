@@ -20,23 +20,36 @@ site @SITE0 {
 		id		= 0x1;
 		type		= mds;
 		nids		= polybius-ib0;
-		# @zpool_args /dev/disk/by-id/supertalent0
+
+		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd rm -rf /tsuite
+		# @fmtcmd mkdir /tsuite
+		# @fmtcmd mount -t tmpfs -o size=12g tmpfs /tsuite
+		# @fmtcmd dd if=/dev/zero of=/tsuite/disk bs=1048576 count=10240
+		# @fmtcmd touch /tsuite/journal
+
+		# @zpool_args /tsuite/disk
 		zpool_name	= tsuite0_s2md;
-		journal		= /dev/disk/by-id/supertalent1;
+		journal		= /tsuite/journal;
+		# @tmpdir /local/tmp
 	}
 
 	resource io0 {
 		type		= standalone_fs;
 		id		= 0x10;
-		fsroot		= /local/slio.tsuite0;
+		fsroot		= /tsuite/slio;
 		nids		= omnitopia-ib0;
+		# @tmpfs 40g
+		# @tmpdir /local/tmp
 	}
 
 	resource io1 {
 		type		= standalone_fs;
 		id		= 0x11;
-		fsroot		= /local/slio.tsuite0;
+		fsroot		= /tsuite/slio;
 		nids		= zebes;
+		# @tmpfs 40g
+		# @tmpdir /local/tmp
 	}
 
 	resource io {
