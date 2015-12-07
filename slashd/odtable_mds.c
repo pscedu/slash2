@@ -222,12 +222,12 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
 
 	h = t->odt_hdr;
-	h->odth_nelems = ODT_ELEM_NUMBER;
-	h->odth_objsz = ODT_ELEM_SIZE;
+	h->odth_nelems = ODT_ITEM_COUNT;
+	h->odth_objsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
-	h->odth_slotsz = ODT_ELEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
-	h->odth_start = ODT_ELEM_START;
+	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
+	h->odth_start = ODT_ITEM_START;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
