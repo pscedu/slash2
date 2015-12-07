@@ -231,7 +231,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	h->odth_itemsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
-	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
+	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_entftr);
 	h->odth_start = ODT_ITEM_START;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
