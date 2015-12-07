@@ -122,6 +122,8 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 
 	h = t->odt_hdr;
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
+	psc_assert(!pad);
+
 	_slm_odt_zerobuf_ensurelen(pad);
 
 	off = h->odth_start + r->odtr_item * h->odth_slotsz;
