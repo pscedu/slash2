@@ -227,7 +227,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 	h->odth_options = ODTBL_OPT_CRC;
 	h->odth_slotsz = ODT_ELEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
-	h->odth_start = 0x1000;
+	h->odth_start = ODT_ELEM_START;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
