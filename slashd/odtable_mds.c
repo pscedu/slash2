@@ -81,7 +81,10 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	memset(iov, 0, sizeof(iov));
 
 	h = t->odt_hdr;
+
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
+	psc_assert(!pad);
+
 	_slm_odt_zerobuf_ensurelen(pad);
 
 	off = item * h->odth_slotsz + h->odth_start;
