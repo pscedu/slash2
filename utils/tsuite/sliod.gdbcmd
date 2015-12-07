@@ -1,5 +1,0 @@
-# $Id$
-
-set confirm off
-set height 0
-run -S ctl/sliod.%h.sock -f slash.conf -D %datadir% %prefmds%

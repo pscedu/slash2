@@ -37,7 +37,17 @@ sub fatal {
 }
 
 sub usage {
-	fatalx "usage: $0 [-mNqr] test-file";
+	die <<EOF
+usage: $0 [-mqRr] [-P patchfile] testdir
+
+options:
+  -m	send e-mail report
+  -P patchfile
+	apply patches from the specified file
+  -R	record results to database
+  -v	verbose (debugging) output
+
+EOF
 }
 
 sub init_env {
@@ -46,7 +56,7 @@ sub init_env {
 }
 
 sub debug_msg {
-	print WR @_, "\n" unless $opts{q};
+	print WR @_, "\n" if $opts{v};
 }
 
 sub execute {
@@ -73,7 +83,7 @@ sub dump_res {
 	print "\n";
 }
 
-getopts("mNqr", \%opts) or usage();
+getopts("mP:Rv", \%opts) or usage();
 usage() unless @ARGV == 1;
 
 if ($opts{m}) {
@@ -159,16 +169,16 @@ mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
 mkdir $mp		or fatal "mkdir $mp";
 
+giturl = 'ssh://source/a';
+intvtimeout = 60*7;	# single op interval timeout
+runtimeout = 60*60*8;	# entire client run duration
+
+
 # Checkout the source and build it
 chdir $base		or fatal "chdir $base";
-my $build = 0;
-unless (defined($src)) {
-	$src = "$base/src";
-	execute "git clone $giturl $src";
-	fatalx "git failed" if $?;
-
-	$build = 1;
-}
+$src = "$base/src";
+execute "git clone $giturl $src";
+fatalx "git failed" if $?;
 
 my $slbase = "$src/slash2";
 my $tsbase = "$slbase/utils/tsuite";
@@ -184,24 +194,6 @@ my $slmkfs = "$slbase/slmkfs/slmkfs";
 
 my $ssh_init = <<EOF;
 	set -ex
-
-	runscreen()
-	{
-		scrname=TS.\$1
-		shift
-		screen -S \$scrname -X quit || true
-		screen -d -m -S \$scrname.$tsid "\$\@"
-	}
-
-	waitforscreen()
-	{
-		scrname=\$1
-		while screen -ls | grep -q \$scrname.$tsid; do
-			[ \$SECONDS -lt $runtimeout ]
-			sleep 1
-		done
-	}
-
 	cd $base;
 EOF
 
@@ -297,18 +289,16 @@ print CLICMD cli_cmd(
 	logbase	=> $logbase,
 	gdbtry	=> "$src/tools/gdbtry.pl",
 	doresults => "perl $src/tools/tsuite_results.pl " .
-		($opts{N} ? "-N " : "") . ($opts{m} ? "-m " : "") .
+		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
 		" $testname $logbase");
 close CLICMD;
 
 parse_conf();
 
-if ($build) {
-	execute "cd $src && make build >/dev/null";
-	fatalx "make failed" if $?;
-}
+execute "cd $src && make build >/dev/null";
+fatalx "make failed" if $?;
 
-my ($i);
+my $i;
 my $make_authbuf_key = 1;
 
 # Create the MDS file systems
@@ -317,8 +307,6 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
-
-		screen -S TS.SLMDS -X quit || true
 
 		# run pickle probe tests
 		(cd $src && make printvar-CC >/dev/null)
@@ -371,8 +359,7 @@ foreach $i (@mds) {
 		$ssh_init
 		@{[init_env(%$global_env)]}
 		cp -p $base/authbuf.key $datadir
-		runscreen SLMDS \\
-		    gdb -f -x $gdbfn $slbase/slashd/slashd
+		$slbase/slashd/slashd -S ctl/slashd.%h.sock -f slcfg -D %datadir%
 EOF
 }
 
@@ -419,8 +406,7 @@ foreach $i (@ion) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
-		runscreen SLIOD \\
-		    gdb -f -x $gdbfn $slbase/sliod/sliod
+		$slbase/sliod/sliod -S ctl/sliod.%h.sock -f slcfg -D %datadir%
 EOF
 }
 
@@ -452,8 +438,7 @@ foreach $i (@cli) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}
-		runscreen MSL sh -c "gdb -f -x $gdbfn \\
-		    $slbase/mount_slash/mount_slash; umount $mp"
+		$slbase/mount_slash/mount_slash -S ctl/msl.%h.sock -f slcfg -D %datadir$mp
 EOF
 	$mslid++;
 }
@@ -465,47 +450,12 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
 alarm 0;
 
-# Spawn monitors/gatherers of control stats
-foreach $i (@mds) {
-	debug_msg "spawning slashd stats tracker: $i->{rname} : $i->{host}";
-	runcmd "ssh $i->{host} sh", <<EOF;
-		$ssh_init
-		runscreen SLMCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slmctl -S ctl/slashd.$i->{host}.sock -sP -sL -sI || \$SHELL"
-EOF
-}
-
-waitjobs $intvtimeout;
-
-foreach $i (@ion) {
-	debug_msg "spawning sliod stats tracker: $i->{rname} : $i->{host}";
-	runcmd "ssh $i->{host} sh", <<EOF;
-		$ssh_init
-		runscreen SLICTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slictl -S ctl/sliod.$i->{host}.sock -sP -sL -sI || \$SHELL"
-EOF
-}
-
-waitjobs $intvtimeout;
-
-foreach $i (@cli) {
-	debug_msg "spawning mount_slash stats tracker: $i->{host}";
-	runcmd "ssh $i->{host} sh", <<EOF;
-		$ssh_init
-		runscreen MSCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -sP -sL -sI || \$SHELL"
-EOF
-}
-
-waitjobs $intvtimeout;
-
 # Run the client applications
 foreach $i (@cli) {
 	debug_msg "client: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		runscreen SLCLI sh -c "sh $clicmd $i->{host} || \$SHELL"
-		waitforscreen SLCLI
+		sh $clicmd $i->{host}
 EOF
 }
 
@@ -545,39 +495,27 @@ EOF
 waitjobs $intvtimeout;
 
 foreach $i (@cli) {
-	debug_msg "force quitting mount_slash screens: $i->{host}";
-	execute "ssh $i->{host} screen -S TS.MSL.$tsid -X quit";
-	execute "ssh $i->{host} screen -S TS.MSCTL.$tsid -X quit";
+	debug_msg "force quitting mount_slash: $i->{host}";
+	execute "ssh $i->{host} kill $cli_pid";
 }
 
 foreach $i (@ion) {
-	debug_msg "force quitting sliod screens: $i->{rname} : $i->{host}";
-	execute "ssh $i->{host} screen -S TS.SLIOD.$tsid -X quit";
-	execute "ssh $i->{host} screen -S TS.SLICTL.$tsid -X quit";
+	debug_msg "force quitting sliod: $i->{rname} : $i->{host}";
+	execute "ssh $i->{host} kill $ios_pid";
 }
 
 foreach $i (@mds) {
-	debug_msg "force quitting slashd screens: $i->{rname} : $i->{host}";
-	execute "ssh $i->{host} screen -S TS.SLMDS.$tsid -X quit";
-	execute "ssh $i->{host} screen -S TS.SLMCTL.$tsid -X quit";
+	debug_msg "force quitting slashd: $i->{rname} : $i->{host}";
+	execute "ssh $i->{host} kill $mds_pid";
 }
 
 # Clean up files
-if ($opts{r}) {
+if ($status == 0) {
 	debug_msg "deleting base dir";
 	execute "rm -rf $base";
 }
 
 }; # end of eval
-
-# @set logbase
-# @set
-logbase = "/home/slog";
-rootdir = "/home/sltest";
-giturl = 'ssh://source/a';
-intvtimeout = 60*7;	# single op interval timeout
-runtimeout = 60*60*8;	# entire client run duration
-src = "/home/yanovich/code/advsys/p";
 
 # run each test serially without faults for performance regressions
 

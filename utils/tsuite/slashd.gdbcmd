@@ -1,5 +1,0 @@
-# $Id$
-
-set confirm off
-set height 0
-run -S ctl/slashd.%h.sock -f slash.conf -D %datadir% -p %zpool_cache% %zpool_name%

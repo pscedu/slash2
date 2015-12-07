@@ -1,78 +1,80 @@
-# @client omnitopia:mount_slash:TMPDIR=/local/tmp
-# @client polybius:mount_slash:TMPDIR=/local/tmp
-# @client zebes:mount_slash:TMPDIR=/local/tmp
-# @client lavos:mount_slash:TMPDIR=/local/tmp
-# @client yuzu:mount_slash:TMPDIR=/local/tmp
-# @client kiwi:mount_slash:TMPDIR=/local/tmp
+# @client omnitopia:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client polybius:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client zebes:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client lavos:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+
+# @client yuzu:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client kiwi:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 
 set port=7001;
-set net=tcp10;
+set net=sdp4;
 
 set pref_mds="md0@SITE0";
 set pref_ios="io@SITE0";
+set fsuuid="4c0fa37db6e31719";
 
 site @SITE0 {
-	site_id		= 0x100;
+	site_id			= 0x100;
 
 	resource md0 {
-		# @zpool create ${zpool_name} sdf
-		zpool_name	=;
-		journal = sde;
-		type	= mds;
-		id	= 0x1;
-		nids	= polybius;
+		id		= 0x1;
+		type		= mds;
+		nids		= polybius-ib0;
+		# @zpool_args /dev/disk/by-id/supertalent0
+		zpool_name	= tsuite0_s2md;
+		journal		= /dev/disk/by-id/supertalent1;
 	}
 
 	resource io0 {
-		type	= standalone_fs;
-		id	= 0x10;
-		fsroot	= /local/slio.tsuite0;
-		nids	= omnitopia;
+		type		= standalone_fs;
+		id		= 0x10;
+		fsroot		= /local/slio.tsuite0;
+		nids		= omnitopia-ib0;
 	}
 
 	resource io1 {
-		type	= standalone_fs;
-		id	= 0x11;
-		fsroot	= /local/slio.tsuite0;
-		nids	= zebes;
+		type		= standalone_fs;
+		id		= 0x11;
+		fsroot		= /local/slio.tsuite0;
+		nids		= zebes;
 	}
 
 	resource io {
-		type    = cluster_noshare_lfs;
-		id      = 0x100;
-		ios     = io0, io1;
+		type		= cluster_noshare_lfs;
+		id		= 0x100;
+		ios		= io0, io1;
 	}
 }
 
 #site @site1 {
-#	site_id		= 0x101;
+#	site_id			= 0x101;
 
 #	resource md1 {
 		# @zpool create ${zpool_name} sdf
 #		zpool_name	=;
-#		journal = sde;
-#		type	= mds;
-#		id	= 0x1;
-#		nids	= yuzu;
+#		journal		= sde;
+#		type		= mds;
+#		id		= 0x1;
+#		nids		= yuzu;
 #	}
 
 #	resource io0 {
-#		type	= standalone_fs;
-#		id	= 0x10;
-#		fsroot	= /local/slio.tsuite0;
-#		nids	= polybius;
+#		type		= standalone_fs;
+#		id		= 0x10;
+#		fsroot		= /local/slio.tsuite0;
+#		nids		= polybius;
 #	}
 
 #	resource io1 {
-#		type	= standalone_fs;
-#		id	= 0x11;
-#		fsroot	= /local/slio.tsuite0;
-#		nids	= zebes;
+#		type		= standalone_fs;
+#		id		= 0x11;
+#		fsroot		= /local/slio.tsuite0;
+#		nids		= zebes;
 #	}
 
 #	resource io {
-#		type    = cluster_noshare_lfs;
-#		id      = 0x100;
-#		ios     = io0, io1;
+#		type		= cluster_noshare_lfs;
+#		id		= 0x100;
+#		ios		= io0, io1;
 #	}
 }
