@@ -564,7 +564,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	sjar->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_elem;
+	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign->odtr_item;
 
 	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
 	    sizeof(*sjar));
@@ -590,7 +590,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	struct resm_mds_info *rmmi;
 	struct bmap_ios_assign *bia;
 	struct sl_resm *resm;
-	size_t elem;
+	size_t item;
 
 	psc_assert(!bmi->bmi_wr_ion);
 	psc_assert(!bmi->bmi_assign);
@@ -625,10 +625,10 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 * so that the assignment may be restored on reboot.
 	 */
-	elem = pfl_odt_allocslot(slm_bia_odt);
+	item = pfl_odt_allocslot(slm_bia_odt);
 
 	BMAP_LOCK(b);
-	if (elem == ODTBL_SLOT_INV) {
+	if (item == ODTBL_SLOT_INV) {
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
@@ -639,7 +639,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	b->bcm_flags &= ~BMAPF_NOION;
 	BMAP_ULOCK(b);
 
-	pfl_odt_mapitem(slm_bia_odt, elem, &bia);
+	pfl_odt_mapitem(slm_bia_odt, item, &bia);
 
 	bia->bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
 	bia->bia_lastcli = bml->bml_cli_nidpid;
@@ -649,7 +649,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_start = time(NULL);
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, elem, bia);
+	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia);
 
 	if (mds_bmap_add_repl(b, bia)) {
 		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
@@ -659,8 +659,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	bml->bml_seq = bia->bia_seq;
 
-	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, elem=%zd",
-	    bmi->bmi_assign->odtr_elem);
+	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, item=%zd",
+	    bmi->bmi_assign->odtr_item);
 	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
 	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmi_wr_ion, bmi->bmi_assign);
@@ -709,8 +709,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	if (rc)
 		return (rc);
 
-	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, elem=%zd",
-	    bmi->bmi_assign->odtr_elem);
+	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, item=%zd",
+	    bmi->bmi_assign->odtr_item);
 
 	return (0);
 }
@@ -1114,7 +1114,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bml->bml_bmi;
 	struct pfl_odt_receipt *odtr = NULL;
 	struct fidc_membh *f = b->bcm_fcmh;
-	size_t elem;
+	size_t item;
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
@@ -1272,12 +1272,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if (odtr) {
 		struct slmds_jent_assign_rep *sjar;
 
-		elem = odtr->odtr_elem;
+		item = odtr->odtr_item;
 
 		mds_reserve_slot(1);
 		sjar = pjournal_get_buf(slm_journal,
 		    sizeof(*sjar));
-		sjar->sjar_elem = elem;
+		sjar->sjar_item = item;
 		sjar->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,
 		    0, sjar, sizeof(*sjar));
@@ -1403,7 +1403,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
-		    r->odtr_elem, fg.fg_fid);
+		    r->odtr_item, fg.fg_fid);
 		PFL_GOTOERR(out, rc);
 	}
 
