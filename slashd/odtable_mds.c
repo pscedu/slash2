@@ -81,15 +81,15 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	memset(iov, 0, sizeof(iov));
 
 	h = t->odt_hdr;
-	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
+	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
 	off = item * h->odth_slotsz + h->odth_start;
 
 	if (p)
-		PACK_IOV(p, h->odth_objsz);
+		PACK_IOV(p, h->odth_itemsz);
 	else
-		off += h->odth_objsz;
+		off += h->odth_itemsz;
 
 	if (p && f)
 		PACK_IOV(slm_odt_zerobuf, pad);
@@ -118,15 +118,15 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	memset(iov, 0, sizeof(iov));
 
 	h = t->odt_hdr;
-	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
+	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
 	off = h->odth_start + r->odtr_item * h->odth_slotsz;
 
 	if (p)
-		PACK_IOV(p, h->odth_objsz);
+		PACK_IOV(p, h->odth_itemsz);
 	else
-		off += h->odth_objsz;
+		off += h->odth_itemsz;
 
 	if (p && f)
 		PACK_IOV(slm_odt_zerobuf, pad);
@@ -223,7 +223,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 	h = t->odt_hdr;
 	h->odth_nitems = ODT_ITEM_COUNT;
-	h->odth_objsz = ODT_ITEM_SIZE;
+	h->odth_itemsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
 	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_receipt);
