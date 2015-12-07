@@ -69,7 +69,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 
 void
 slm_odt_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_entftr *f, size_t elem)
+    struct pfl_odt_entftr *f, size_t item)
 {
 	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
@@ -84,7 +84,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	off = elem * h->odth_slotsz + h->odth_start;
+	off = item * h->odth_slotsz + h->odth_start;
 
 	if (p)
 		PACK_IOV(p, h->odth_objsz);
@@ -222,7 +222,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
 
 	h = t->odt_hdr;
-	h->odth_nelems = ODT_ITEM_COUNT;
+	h->odth_nitems = ODT_ITEM_COUNT;
 	h->odth_objsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
@@ -235,7 +235,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	if (rc || nb != sizeof(*h))
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
-	for (r.odtr_elem = 0; r.odtr_elem < h->odth_nelems; r.odtr_elem++) {
+	for (r.odtr_elem = 0; r.odtr_elem < h->odth_nitems; r.odtr_elem++) {
 		f.odtf_flags = 0;
 		f.odtf_slotno = r.odtr_elem;
 		psc_crc64_init(&f.odtf_crc);
