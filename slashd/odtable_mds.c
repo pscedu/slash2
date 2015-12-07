@@ -69,7 +69,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 
 void
 slm_odt_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_entftr *f, size_t item)
+    struct pfl_odt_slotftr *f, size_t item)
 {
 	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
@@ -109,7 +109,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 
 void
 slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
-    void *p, struct pfl_odt_entftr *f)
+    void *p, struct pfl_odt_slotftr *f)
 {
 	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
@@ -213,7 +213,7 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 void
 slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
-	struct pfl_odt_entftr f;
+	struct pfl_odt_slotftr f;
 	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	size_t nb;
@@ -231,7 +231,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	h->odth_itemsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
-	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_entftr);
+	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_slotftr);
 	h->odth_start = ODT_ITEM_START;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
