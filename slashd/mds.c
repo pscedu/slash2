@@ -564,7 +564,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	sjar->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_elem;
+	sjar->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_item;
 
 	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
 	    sizeof(*sjar));
@@ -660,7 +660,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bml->bml_seq = bia->bia_seq;
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, elem=%zd",
-	    bmi->bmi_assign->odtr_elem);
+	    bmi->bmi_assign->odtr_item);
 	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
 	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmi_wr_ion, bmi->bmi_assign);
@@ -710,7 +710,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		return (rc);
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, elem=%zd",
-	    bmi->bmi_assign->odtr_elem);
+	    bmi->bmi_assign->odtr_item);
 
 	return (0);
 }
@@ -1272,7 +1272,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if (odtr) {
 		struct slmds_jent_assign_rep *sjar;
 
-		elem = odtr->odtr_elem;
+		elem = odtr->odtr_item;
 
 		mds_reserve_slot(1);
 		sjar = pjournal_get_buf(slm_journal,
@@ -1403,7 +1403,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
-		    r->odtr_elem, fg.fg_fid);
+		    r->odtr_item, fg.fg_fid);
 		PFL_GOTOERR(out, rc);
 	}
 

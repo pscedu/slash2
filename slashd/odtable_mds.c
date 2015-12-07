@@ -121,7 +121,7 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	pad = h->odth_slotsz - h->odth_objsz - sizeof(*f);
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	off = h->odth_start + r->odtr_elem * h->odth_slotsz;
+	off = h->odth_start + r->odtr_item * h->odth_slotsz;
 
 	if (p)
 		PACK_IOV(p, h->odth_objsz);
@@ -235,13 +235,13 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	if (rc || nb != sizeof(*h))
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
-	for (r.odtr_elem = 0; r.odtr_elem < h->odth_nitems; r.odtr_elem++) {
+	for (r.odtr_item = 0; r.odtr_item < h->odth_nitems; r.odtr_item++) {
 		f.odtf_flags = 0;
-		f.odtf_slotno = r.odtr_elem;
+		f.odtf_slotno = r.odtr_item;
 		psc_crc64_init(&f.odtf_crc);
 		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
-		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_elem);
+		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
 	}
 	t->odt_ops.odtop_sync(t, -1);
 }
