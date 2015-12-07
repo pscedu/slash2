@@ -145,7 +145,7 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 }
 
 void
-slm_odt_sync(struct pfl_odt *t, __unusedx size_t elem)
+slm_odt_sync(struct pfl_odt *t, __unusedx size_t item)
 {
 	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 }
