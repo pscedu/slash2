@@ -133,7 +133,7 @@ struct slmds_jent_bmapseq {
  */
 struct slmds_jent_assign_rep {
 	uint32_t			sjar_flags;
-	 int32_t			sjar_elem;
+	 int32_t			sjar_item;
 	struct slmds_jent_ino_repls	sjar_ino;
 	struct slmds_jent_bmap_repls	sjar_rep;
 	struct slmds_jent_bmap_assign	sjar_bmap;

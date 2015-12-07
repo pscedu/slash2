@@ -332,23 +332,23 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	struct slmds_jent_assign_rep *sjar;
 	struct slmds_jent_bmap_assign *sjba;
 	struct bmap_ios_assign *bia;
-	size_t elem;
+	size_t item;
 
 	sjar = PJE_DATA(pje);
-	elem = sjar->sjar_elem;
+	item = sjar->sjar_item;
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_FREE)
-		psclog_diag("free item %zd", elem);
+		psclog_diag("free item %zd", item);
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_INO)
 		mds_replay_ino(&sjar->sjar_ino, I_REPLAY_OP_REPLS);
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_replay_bmap(&sjar->sjar_rep, B_REPLAY_OP_REPLS);
 
-	pfl_odt_mapitem(slm_bia_odt, elem, &bia);
+	pfl_odt_mapitem(slm_bia_odt, item, &bia);
 
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
 		sjba = &sjar->sjar_bmap;
 		psclog_diag("replay item %zd, fid="SLPRI_FID", flags=%d",
-		    elem, sjba->sjba_fid, sjar->sjar_flags);
+		    item, sjba->sjba_fid, sjar->sjar_flags);
 		bia->bia_lastcli.pid = sjba->sjba_lastcli.pid;
 		bia->bia_lastcli.nid = sjba->sjba_lastcli.nid;
 		bia->bia_ios = sjba->sjba_ios;
@@ -359,7 +359,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		bia->bia_flags = sjba->sjba_flags;
 	}
 
-	pfl_odt_putitemf(slm_bia_odt, elem, bia,
+	pfl_odt_putitemf(slm_bia_odt, item, bia,
 	    sjar->sjar_flags & SLJ_ASSIGN_REP_FREE ? 0 : 1);
 
 	return (0);

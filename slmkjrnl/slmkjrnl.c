@@ -216,7 +216,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		break;
 	case MDS_LOG_BMAP_ASSIGN:
 		if (u.logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-			printf("bia item=%d", u.logentry->sjar_elem);
+			printf("bia item=%d", u.logentry->sjar_item);
 		else {
 			printf("fid=%016"PRIx64" bia flags=%x",
 			    u.logentry->sjar_bmap.sjba_fid,

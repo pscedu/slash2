@@ -564,7 +564,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	sjar->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_item;
+	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign->odtr_item;
 
 	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
 	    sizeof(*sjar));
@@ -1114,7 +1114,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bml->bml_bmi;
 	struct pfl_odt_receipt *odtr = NULL;
 	struct fidc_membh *f = b->bcm_fcmh;
-	size_t elem;
+	size_t item;
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
@@ -1272,12 +1272,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if (odtr) {
 		struct slmds_jent_assign_rep *sjar;
 
-		elem = odtr->odtr_item;
+		item = odtr->odtr_item;
 
 		mds_reserve_slot(1);
 		sjar = pjournal_get_buf(slm_journal,
 		    sizeof(*sjar));
-		sjar->sjar_elem = elem;
+		sjar->sjar_item = item;
 		sjar->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,
 		    0, sjar, sizeof(*sjar));
