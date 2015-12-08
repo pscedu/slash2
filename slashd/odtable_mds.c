@@ -249,6 +249,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
 	}
 	t->odt_ops.odtop_sync(t, -1);
+	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
 }
 
 struct pfl_odt_ops slm_odtops = {
