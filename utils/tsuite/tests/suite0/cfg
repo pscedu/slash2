@@ -1,10 +1,15 @@
-# @client omnitopia:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client polybius:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client zebes:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client lavos:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @bounce pscuxa.psc.edu
 
-# @client yuzu:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client kiwi:mount_slash:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
+# mkcfg DEBUG=0
+
+# @client omnitopia-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client polybius-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client zebes-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client lavos-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+
+# client yuzu:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# client kiwi:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 
 set port=7001;
 set net=sdp4;
@@ -39,7 +44,7 @@ site @SITE0 {
 		id		= 0x10;
 		fsroot		= /tsuite/slio;
 		nids		= omnitopia-ib0;
-		# @tmpfs 40g
+		# @tmpfs 40g /tsuite
 		# @tmpdir /local/tmp
 	}
 
@@ -47,8 +52,8 @@ site @SITE0 {
 		type		= standalone_fs;
 		id		= 0x11;
 		fsroot		= /tsuite/slio;
-		nids		= zebes;
-		# @tmpfs 40g
+		nids		= zebes-ib0;
+		# @tmpfs 40g /tsuite
 		# @tmpdir /local/tmp
 	}
 

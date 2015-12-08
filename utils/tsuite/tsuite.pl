@@ -19,6 +19,7 @@
 # ---------------------------------------------------------------------
 # %END_LICENSE%
 
+use File::Basename;
 use Getopt::Std;
 use POSIX qw(:sys_wait_h :errno_h);
 use IPC::Open3;
@@ -28,7 +29,11 @@ use strict;
 use warnings;
 
 my %opts;
+my @mds;
+my @ios;
+my @cli;
 
+# Low level utility routines.
 sub fatalx {
 	die "$0: @_";
 }
@@ -50,8 +55,18 @@ EOF
 }
 
 sub init_env {
-	my %r = @_;
-	return join '', map { "export $_='$r{$_}'\n" } keys %r;
+	my $n = shift;
+
+	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
+	$n->{src_dir} = "$n->{TMPDIR}/src" unless exists $n->{src_dir};
+
+	return <<EOF;
+	set -e
+	@{[ $opts{v} ? "set -x" : "" ]}
+	mkdir -p $n->{src_dir}
+	cd $n->{src_dir}
+	@{[map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
+EOF
 }
 
 sub debug_msg {
@@ -72,56 +87,6 @@ sub slurp {
 	close F;
 	return ($data);
 }
-
-sub dump_res {
-	my ($res) = @_;
-	print "resource:\n";
-	while (my ($k, $v) = each %$res) {
-		print "  $k: $v\n";
-	}
-	print "\n";
-}
-
-getopts("mRv", \%opts) or usage();
-usage() if @ARGV > 1;
-
-my $tsuite_name = "suite0";
-if (@ARGV > 0) {
-	$tsuite_base = realpath($1) or die "realpath $1";
-	-d $tsuite_base or die "$1: not a directory";
-}
-
-my $tsuite_fn = realpath($0);
-my $TSUITE_REL_FN = 'slash2/utils/tsuite/tsuite.pl';
-$tsuite_fn =~ /\Q$TSUITE_REL_FN\E$/ or
-    die "$tsuite_fn: does not contain $TSUITE_REL_FN";
-my $launch_dir = $`;
-
-chdir($launch_dir) or die "chdir $launch_dir";
-my $diff = join '', `gmake scm-diff`;
-
-if ($opts{m}) {
-	pipe RD, WR;
-} else {
-	*WR = *STDERR;
-}
-
-eval {
-
-my $cfg = slurp "$tsuite_base/cfg";
-
-our ($rootdir, $giturl, @cli, $src, $intvtimeout, $runtimeout,
-    $logbase);
-
-# Sanity check variables
-fatalx "rootdir not defined"	unless defined $rootdir;
-fatalx "giturl not defined"	unless defined $giturl;
-fatalx "cli not defined"	unless defined @cli;
-fatalx "intvtimeout not defined" unless defined $intvtimeout;
-fatalx "runtimeout not defined"	unless defined $runtimeout;
-fatalx "logbase not defined"	unless defined $logbase;
-
-local $SIG{ALRM} = sub { fatal "interval timeout exceeded" };
 
 sub waitjobs {
 	my ($to) = @_;
@@ -158,102 +123,42 @@ sub mkdirs {
 	return 1;
 }
 
-fatal $rootdir unless -d $rootdir;
-
-my $base;
-my $tsid;
-
-# Grab a unique base directory
-do {
-	$tsid = sprintf "%06d", int rand 1_000_000;
-	$base = "$rootdir/slsuite.$tsid";
-} while -d $base;
-
-debug_msg "base dir: $base";
-
-my $mp = "$base/mp";
-my $datadir = "$base/data";
-
-mkdirs $base		or fatal "mkdirs $base";
-mkdir $datadir		or fatal "mkdir $datadir";
-mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
-mkdir "$base/fs"	or fatal "mkdir $base/fs";
-mkdir $mp		or fatal "mkdir $mp";
-
-intvtimeout = 60*7;	# single op interval timeout
-runtimeout = 60*60*8;	# entire client run duration
-
-my $repo_url = 'ssh://source/a';
-
-# Checkout the source and build it
-sub getsrc {
-	my ($tmpdir) = shift;
-
-	print <<EOF;
-set -e
-git clone $repo_url $tmpdir
-cd $tmpdir
-./bootstrap.sh
-EOF
+sub push_vectorize {
+	my ($n, $k, $v) = @_;
+	if (exists $n->{$k}) {
+		if (ref $n->{$k} eq "ARRAY") {
+			push @{ $n->{$k} }, $v;
+		} else {
+			$n->{$k} = [ $n->{$k}, $v ];
+		}
+	} else {
+		$n->{$k} = $v;
+	}
 }
 
-my $clicmd = "$base/cli_cmd.sh";
-
-my $mount_slash = "mount_slash/mount_slash";
-my $slashd = "slashd/slashd";
-my $slictl = "slictl/slictl";
-my $sliod = "sliod/sliod";
-my $slkeymgt = "slkeymgt/slkeymgt";
-my $slmctl = "slmctl/slmctl";
-my $slmkfs = "slmkfs/slmkfs";
-my $slmkjrnl = "slmkjrnl/slmkjrnl";
-my $zfs_fuse = "utils/zfs-fuse.sh";
-my $zpool = "utils/zpool.sh";
-
-my $ssh_init = <<EOF;
-	set -ex
-	cd $base;
-EOF
-
-# Setup configuration
-my $conf = slcfg(base => $base);
-open SLCONF, ">", "$base/slcfg" or fatal "open $base/slcfg";
-print SLCONF $conf;
-close SLCONF;
-
-my @mds;
-my @ion;
-
-sub new_res {
-	my ($rname, $site) = @_;
-
-	my %r = (
-		rname	=> $rname,
-		site	=> $site,
-	);
-	return \%r;
-}
-
+# High level (application-level) utility routines.
 sub res_done {
 	my ($r) = @_;
 
 	if ($r->{type} eq "mds") {
-		fatalx "MDS $r->{rname} has no \@zfspool configuration"
+		fatalx "MDS $r->{res_name} has no \@zfspool configuration"
 		    unless $r->{zpool_args};
 		push @mds, $r;
 	} else {
-		fatalx "MDS $r->{rname} has no \@prefmds configuration"
+		fatalx "MDS $r->{res_name} has no \@prefmds configuration"
 		    unless $r->{prefmds};
-		push @ion, $r;
+		push @ios, $r;
 	}
 }
 
-# Parse configuration for MDS and IONs
+# Parse configuration for MDS and IOS resources
 sub parse_conf {
+	my $cfg = shift;
+
 	my $in_site = 0;
 	my $site_name;
-	my $r = undef;
-	my @lines = split /\n/, $conf;
+	my @lines = split /\n/, $cfg;
+	my $r;
 
 	for (my $ln = 0; $ln < @lines; $ln++) {
 		my $line = $lines[$ln];
@@ -265,7 +170,7 @@ sub parse_conf {
 					$r->{id} = $1;
 				} elsif ($line =~ m{^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$}) {
 					$r->{zpool_name} = $1;
-					$r->{zpool_cache} = "$base/$1.zcf";
+					$r->{zpool_cache} = "$1.zcf";
 					$r->{zpool_args} = $2;
 				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
 					$r->{prefmds} = $1;
@@ -285,7 +190,10 @@ sub parse_conf {
 				}
 			} else {
 				if ($line =~ /^\s*resource\s+(\w+)\s*{\s*$/) {
-					$r = new_res($1, $site_name);
+					$r = {
+						res_name => $1,
+						site => $site_name,
+					};
 				}
 			}
 		} else {
@@ -297,234 +205,322 @@ sub parse_conf {
 	}
 }
 
-# Setup client commands
-open CLICMD, ">", $clicmd or fatal "open $clicmd";
-print CLICMD "set -e;\n";
-print CLICMD cli_cmd(
-	fspath	=> $mp,
-	base	=> $base,
-	src	=> $src,
-	logbase	=> $logbase,
-	gdbtry	=> "$src/tools/gdbtry.pl",
-	doresults => "perl $src/tools/tsuite_results.pl " .
-		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
-		" $testname $logbase");
-close CLICMD;
+getopts("mRv", \%opts) or usage();
+usage() if @ARGV > 1;
 
-parse_conf();
+my $ts_dir = dirname($0);
+my $ts_name = "suite0";
+$ts_name = $ARGV[0] if @ARGV > 0;
 
-execute "cd $src && make build >/dev/null";
-fatalx "make failed" if $?;
+my $ts_relbase = "$ts_dir/tests/$ts_name";
+my $ts_base = realpath($ts_relbase) or fatal "realpath $ts_relbase";
+-d $ts_base or die "$ts_base not a directory";
 
-my $h;
-my $make_authbuf_key = 1;
+my $ts_fn = realpath($0);
+my $TSUITE_REL_FN = 'slash2/utils/tsuite/tsuite.pl';
+$ts_fn =~ /\Q$TSUITE_REL_FN\E$/ or
+    die "$ts_fn: does not contain $TSUITE_REL_FN";
+my $src_dir = $`;
+
+chdir($src_dir) or die "chdir $src_dir";
+my $diff = join '', `gmake scm-diff`;
+
+my $ts_cfg = slurp "$ts_base/cfg";
+my %cfg;
+
+while (grep /^#\s*\@(\w+)\s+(.*)/cgm, $ts_cfg) {
+	my $name = $1;
+	my $value = $2;
+	debug_msg "parsed parameter: $name=$value";
+	push_vectorize(\%cfg, $name, $value);
+}
+
+my $op_timeout = 60 * 7;		# single op interval timeout
+my $total_timeout = 60 * 60 * 8;	# entire client run duration
+
+my $mount_slash = "sudo mount_slash/mount_slash";
+my $slashd = "sudo slashd/slashd";
+my $slictl = "slictl/slictl";
+my $sliod = "sudo sliod/sliod";
+my $slkeymgt = "slkeymgt/slkeymgt";
+my $slmctl = "slmctl/slmctl";
+my $slmkfs = "sudo slmkfs/slmkfs";
+my $slmkjrnl = "sudo slmkjrnl/slmkjrnl";
+my $zfs_fuse = "sudo utils/zfs-fuse.sh";
+my $zpool = "sudo utils/zpool.sh";
+
+my $repo_url = 'ssh://source/a';
+
+my $ssh = "ssh -oControlPath=yes " .
+    "-oControlPersist=yes " .
+    "-oKbdInteractiveAuthentication=no " .
+    "-oNumberOfPasswordPrompts=1";
+
+if (exists $cfg{bounce}) {
+	$ssh .= " $cfg{bounce} ssh";
+}
+
+fatalx "no client(s) specified" unless exists $cfg{client};
+
+my $clients = ref $cfg{client} eq "ARRAY" ?
+    $cfg{client} : [ $cfg{client} ];
+
+foreach my $client_spec (@$clients) {
+	my @fields = split /:/, $client_spec;
+	my $host = shift @fields;
+	my %n = (
+		host	=> $host,
+		type	=> "client",
+		src_dir	=> ,
+	);
+	foreach my $field (@fields) {
+		my ($k, $v) = split /=/, $field, 2;
+		$n{$k} = $v;
+	}
+	debug_msg "parsed client: $host";
+	push @cli, \%n;
+}
+
+if ($opts{m}) {
+	pipe RD, WR;
+} else {
+	*WR = *STDERR;
+}
+
+eval {
+
+local $SIG{ALRM} = sub { fatal "timeout exceeded" };
+
+my $n;
+# Checkout the source and build it
+foreach $n (@mds, @ios, @cli) {
+	$n->{src_dir} = "$n->{base}/src";
+
+	my $mp = "$base/mp";
+	my $datadir = "$base/data";
+
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		mkdir -p $n->{ts_dir}/coredumps
+
+		git clone $repo_url $n->{src_dir}
+		cd $n->{src_dir}
+		./bootstrap.sh
+
+		cat <<'___MKCFG_EOF' > mk/local.mk
+$cfg{mkcfg}
+___MKCFG_EOF
+
+		patch -p0 <<'___PATCH_EOF'
+$diff
+___PATCH_EOF
+
+		make build >/dev/null
+EOF
+}
+
+waitjobs $op_timeout;
+
+parse_conf($ts_cfg);
 
 # Create the MDS file systems
-foreach $h (@mds) {
-	debug_msg "initializing slashd environment: $h->{rname} : $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		@{[init_env(%{$h->{env}})]}
-		${[getsrc $h->{srcdir}]}
-
-		# run pickle probe tests
-		(cd $src && make printvar-CC >/dev/null)
+foreach $n (@mds) {
+	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
 
 		pkill zfs-fuse || true
+		sleep 5 &
 		$zfs_fuse &
 		sleep 2
-		$zpool destroy $h->{zpool_name} || true
-		$zpool create -f $h->{zpool_name} $h->{zpool_args}
-		$zpool set cachefile=$h->{zpool_cache} $h->{zpool_name}
-		$slmkfs /$h->{zpool_name}
-		sync; sync
-		umount /$h->{zpool_name}
+		$zpool destroy $n->{zpool_name} || true
+		$zpool create -f $n->{zpool_name} $n->{zpool_args}
+		#$zpool set cachefile=$n->{zpool_cache} $n->{zpool_name}
+		$slmkfs /$n->{zpool_name}
+		umount /$n->{zpool_name}
 		pkill zfs-fuse
 
-		mkdir -p $datadir
+		mkdir -p $n->{datadir}
 
-		$slmkjrnl -D $datadir -f
-
-		@{[$make_authbuf_key ? <<EOS : "" ]}
-		$slkeymgt -c -D $datadir
-		cp -p $datadir/authbuf.key $base
-EOS
+		$slmkjrnl -D $n->{datadir} -f
 EOF
-	$make_authbuf_key = 0;
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
+
+# Generate and capture the authbuf key
+$n = $mds[0];
+my $infh;
+my $outfh;
+open3($infh, $outfh, ">&WR", "$ssh $n->{host} sh")
+    or fatal "$ssh $n->{host} sh";
+print $infh <<EOF;
+	@{[init_env($n)]}
+	$slkeymgt -c -D $n->{datadir}
+	base64 $n->{authbuf}
+EOF
+$n->{has_authbuf} = 1;
+close $infh;
+my $authbuf = <$outfn>;
+close $outfh;
 
 # Launch MDS servers
-foreach $h (@mds) {
-	debug_msg "launching slashd: $h->{rname} : $h->{host}";
+my $first = 1;
+foreach $n (@mds, @ios, @cli) {
+	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
-	my %tr_vars = (
-		datadir		=> $datadir,
-		zpool_cache	=> $h->{zpool_cache},
-		zpool_name	=> $h->{zpool_name},
-	);
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		mkdir -p $n->{datadir}
 
-	my $dat = $slmgdb;
-	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
+		@{[$n->{has_authbuf} ? "" : <<EOC]}
+		base64 -dd <<'___AUTHBUF_EOF' > $n->{authbuf}
+$authbuf
+___AUTHBUF_EOF
+EOC
 
-	my $gdbfn = "$base/slashd.$h->{id}.gdbcmd";
-	open G, ">", $gdbfn or fatal "write $gdbfn";
-	print G $dat;
-	close G;
-
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		@{[init_env(%{$h->{env}})]}
-		cp -p $base/authbuf.key $datadir
-		$slashd -S ctl/slashd.%h.sock -f slcfg -D %datadir%
+		$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir}
 EOF
+
+	$first = 0;
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
 
 # Wait for the server control sockets to appear
-alarm $intvtimeout;
+alarm $op_timeout;
 sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
 alarm 0;
 
-# Create the ION file systems
-foreach $h (@ion) {
-	debug_msg "initializing sliod environment: $h->{rname} : $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		@{[init_env(%{$h->{env}})]}
-		${[getsrc $h->{srcdir}]}
-		mkdir -p $datadir
-		mkdir -p $h->{fsroot}
-		$slmkfs -Wi $h->{fsroot}
-		cp -p $base/authbuf.key $datadir
+# Create the IOS file systems
+foreach $n (@ios) {
+	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		mkdir -p $n->{datadir}
+		mkdir -p $n->{fsroot}
+		$slmkfs -Wi $n->{fsroot}
+
+		base64 -d <<'___AUTHBUF_EOF' > $n->{authbuf}
+$authbuf
+___AUTHBUF_EOF
+
 EOF
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
 
-# Launch the ION servers
-foreach $h (@ion) {
-	debug_msg "launching sliod: $h->{rname} : $h->{host}";
+# Launch the IOS servers
+foreach $n (@ios) {
+	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
-	my %tr_vars = (
-		datadir		=> $datadir,
-		prefmds		=> $h->{prefmds},
-	);
-
-	my $dat = $sligdb;
-	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
-
-	my $gdbfn = "$base/sliod.$h->{id}.gdbcmd";
-	open G, ">", $gdbfn or fatal "write $gdbfn";
-	print G $dat;
-	close G;
-
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		@{[init_env(%{$h->{env}})]}
-		$sliod -S ctl/sliod.%h.sock -f slcfg -D %datadir%
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir}
 EOF
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
 
 # Wait for the server control sockets to appear
-alarm $intvtimeout;
-sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
+alarm $op_timeout;
+sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ios;
 alarm 0;
 
 # Launch the client mountpoints
-my $mslid = 0;
-foreach $h (@cli) {
-	debug_msg "launching mount_slash: $h->{host}";
+foreach $n (@cli) {
+	debug_msg "launching mount_slash: $n->{host}";
 
-	my %tr_vars = (
-		datadir		=> $datadir,
-	);
-
-	my $dat = $slcgdb;
-	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
-
-	my $gdbfn = "$base/msl.$mslid.gdbcmd";
-	open G, ">", $gdbfn or fatal "write $gdbfn";
-	print G $dat;
-	close G;
-
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		@{[init_env(%{$h->{env}})]}
-		${[getsrc $h->{srcdir}]}
-		$mount_slash -S ctl/msl.%h.sock -f slcfg -D %datadir$mp
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		$mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir} $n->{mp}
 EOF
-	$mslid++;
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
 
 # Wait for the client control sockets to appear
-alarm $intvtimeout;
+alarm $op_timeout;
 sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
 alarm 0;
 
 # Run the client applications
-foreach $h (@cli) {
-	debug_msg "client: $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		sh $clicmd $h->{host}
+foreach $n (@cli) {
+	debug_msg "client: $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+
+		export RANDOM=/dev/shm/r000
+		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
+
+		cd $n->{src_dir}/slash2/utils/tsuite/tests/$ts_name/cmd
+
+		for test in *; do
+			export LOCAL_TMP=$n->{tmp_dir}/\$test
+			rm -rf \$LOCAL_TMP
+			mkdir -p \$LOCAL_TMP
+			./\$test $n->{host}
+		done
+
+
+	doresults => "perl $src/tools/tsuite_results.pl " .
+		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
+		" $testname $logbase");
 EOF
 }
 
-waitjobs $runtimeout;
+# run each test serially without faults for performance regressions
+
+# run all tests in parallel without faults for performance regressions
+# and exercise
+
+# now run the entire thing again injecting faults at random places to test
+# failure tolerance
+
+waitjobs $total_timeout;
 
 # Unmount mountpoints
-foreach $h (@cli) {
-	debug_msg "unmounting mount_slash: $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
+foreach $n (@cli) {
+	debug_msg "unmounting mount_slash: $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
 		umount $mp
 EOF
 }
 
-waitjobs $intvtimeout;
-
-# Kill IONs
-foreach $h (@ion) {
-	debug_msg "stopping sliod: $h->{rname} : $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		$slictl -S $base/ctl/sliod.%h.sock stop
+# Kill IOS daemons
+foreach $n (@ios) {
+	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		$slictl -S $n->{ctlsock} stop
 EOF
 }
 
-waitjobs $intvtimeout;
-
-# Kill MDS's
-foreach $h (@mds) {
-	debug_msg "stopping slashd: $h->{rname} : $h->{host}";
-	runcmd "ssh $h->{host} sh", <<EOF;
-		$ssh_init
-		$slmctl -S $base/ctl/slashd.%h.sock stop
+# Kill MDS daemons
+foreach $n (@mds) {
+	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
+	runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		$slmctl -S $n->{ctlsock} stop
 EOF
 }
 
-waitjobs $intvtimeout;
+waitjobs $op_timeout;
 
-foreach $h (@cli) {
-	debug_msg "force quitting mount_slash: $h->{host}";
-	execute "ssh $h->{host} kill $cli_pid";
+foreach $n (@cli) {
+	debug_msg "force quitting mount_slash: $n->{host}";
+	execute "$ssh $n->{host} kill $cli_pid";
 }
 
-foreach $h (@ion) {
-	debug_msg "force quitting sliod: $h->{rname} : $h->{host}";
-	execute "ssh $h->{host} kill $ios_pid";
+foreach $n (@ios) {
+	debug_msg "force quitting sliod: $n->{res_name} : $n->{host}";
+	execute "$ssh $n->{host} kill $ios_pid";
 }
 
-foreach $h (@mds) {
-	debug_msg "force quitting slashd: $h->{rname} : $h->{host}";
-	execute "ssh $h->{host} kill $mds_pid";
+foreach $n (@mds) {
+	debug_msg "force quitting slashd: $n->{res_name} : $n->{host}";
+	execute "$ssh $n->{host} kill $mds_pid";
 }
 
 # Clean up files
@@ -535,22 +531,7 @@ if ($status == 0) {
 
 }; # end of eval
 
-# run each test serially without faults for performance regressions
-
-# run all tests in parallel without faults for performance regressions
-# and exercise
-
-# now run the entire thing again injecting faults at random places to test
-# failure tolerance
-
 my $emsg = $@;
-
-
-LOCAL_TMP=$TMPDIR/$test_name
-rm -rf $LOCAL_TMP
-mkdir -p $LOCAL_TMP
-dd if=/dev/urandom of=/dev/shm/r000 bs=1048576 count=1024
-RANDOM=/dev/shm/r000
 
 if ($opts{m}) {
 	close WR;
