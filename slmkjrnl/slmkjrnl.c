@@ -74,7 +74,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
-	uint32_t i, slot;
+	uint32_t i, slot, tmpnents;
 	int fd;
 	ssize_t nb;
 	size_t numblocks;
@@ -95,7 +95,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (nents == 0 && !block_dev)
 		nents = SLJ_MDS_JNENTS;
 
-	if (nents == 0 && block_dev) {
+	if (block_dev) {
 		if (ioctl(fd, BLKGETSIZE, &numblocks))
 			errx(1, "ioctl fails on: %s", fn);
 
@@ -103,13 +103,17 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		verbose = 1;
 
 		/* deal with large disks */
-		nents = numblocks > ((1UL << 32) - 1) ? ((1UL << 32) - 1) : numblocks;
+		tmpnents = numblocks > ((1UL << 32) - 1) ? ((1UL << 32) - 1) : numblocks;
 
 		/* leave room on both ends */
-		nents = nents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
+		tmpnents = tmpnents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
 
 		/* efficiency */
-		nents = (nents / rs) * rs;
+		tmpnents = (tmpnents / rs) * rs;
+		if (!nents)
+			nents = tmpnents;
+		else
+			nents = (nents > tmpnents) ? tmpnents : nents;
 	}
 
 	if (nents % rs)
