@@ -102,7 +102,14 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 		/* show progress, it is going to be a while */
 		verbose = 1;
-		nents = numblocks - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
+
+		/* deal with large disks */
+		nents = numblocks > ((1UL << 32) - 1) ? ((1UL << 32) - 1) : numblocks;
+
+		/* leave room on both ends */
+		nents = nents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
+
+		/* efficiency */
 		nents = (nents / rs) * rs;
 	}
 
