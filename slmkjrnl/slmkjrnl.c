@@ -74,7 +74,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
-	uint32_t i, j, slot;
+	uint32_t i, slot;
 	int fd;
 	ssize_t nb;
 	size_t numblocks;
@@ -157,7 +157,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_crc64_fini(&pje->pje_chksum);
 	}
 
-	j = 0;
+	i = 0;
 	/* XXX use an option to write only one entry in fast create mode */
 	for (slot = 0; slot < pj.pj_hdr->pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
@@ -169,13 +169,13 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 			printf(".");
 			fflush(stdout);
 			fsync(pj.pj_fd);
-			if (++j == 80) {
+			if (++i == 80) {
 				printf("\n");
-				j = 0;
+				i = 0;
 			}
 		}
 	}
-	if (verbose && j)
+	if (verbose && i)
 		printf("\n");
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
