@@ -62,11 +62,11 @@ usage(void)
 /*
  * Initialize an on-disk journal.
  * @fn: file path to store journal.
- * @nents: number of entries journal may contain.
+ * @nents: number of entries journal may contain if non-zero.
  * @entsz: size of a journal entry.
- * Returns 0 on success, errno on error.
+ * Returns the number of entries created.
  */
-void
+uint32_t
 sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
     uint32_t rs, uint64_t uuid, int block_dev)
 {
@@ -75,13 +75,12 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct stat stb;
 	unsigned char *jbuf;
 	uint32_t i, j, slot;
-	int rc, fd;
+	int fd;
 	ssize_t nb;
 	size_t numblocks;
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 
-	rc = 0;
 	fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
 		psc_fatal("%s", fn);
@@ -181,8 +180,8 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
 	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(&pj) * rs);
-	psclog_info("journal %s formatted: %d slots, %d readsize, error=%d",
-	    fn, nents, rs, rc);
+
+	return (nents);
 }
 
 void
@@ -461,7 +460,7 @@ int
 main(int argc, char *argv[])
 {
 	int block_dev = 0;
-	ssize_t nents = 0;
+	ssize_t newnents, nents = 0;
 	char *endp, c, fn[PATH_MAX];
 	uint64_t uuid = 0;
 	long l;
@@ -523,9 +522,9 @@ main(int argc, char *argv[])
 	if (format) {
 		if (!uuid)
 			psc_fatalx("no fsuuid specified");
-		sl_journal_format(fn, nents, SLJ_MDS_ENTSIZE,
+		newnents = sl_journal_format(fn, nents, SLJ_MDS_ENTSIZE,
 		    SLJ_MDS_READSZ, uuid, block_dev);
-		if (verbose || !nents)
+		if (verbose || nents != newnents)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
