@@ -202,12 +202,12 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_touchfile("%s/%s", metadir, SL_FN_RECLAIMPROG);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	pfl_odt_create(fn, 128 * 1024, 128 - 16, wipe, 0x1000, 0,
-	    ODTBL_OPT_CRC);
+	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe, 
+	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	pfl_odt_create(fn, 128 * 1024, 128 - 16, wipe, 0x1000, 0,
-	    ODTBL_OPT_CRC);
+	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe, 
+	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
 }
 
 __dead void
