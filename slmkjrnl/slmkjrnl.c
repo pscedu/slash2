@@ -103,7 +103,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		verbose = 1;
 
 		/* deal with large disks */
-		tmpnents = numblocks > ((1UL << 32) - 1) ? ((1UL << 32) - 1) : numblocks;
+		tmpnents = MIN(numblocks, SLJ_MDS_MAX_JNENTS);
 
 		/* leave room on both ends */
 		tmpnents = tmpnents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
