@@ -223,7 +223,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = sl_fcmh_load_fg(&mq->fg, &f);
+	mp->rc = slm_fcmh_peek(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

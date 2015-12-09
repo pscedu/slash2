@@ -1700,7 +1700,7 @@ mds_bmap_load_fg(const struct sl_fidgen *fg, sl_bmapno_t bmapno,
 
 	psc_assert(*bp == NULL);
 
-	rc = sl_fcmh_load_fg(fg, &f);
+	rc = slm_fcmh_peek(fg, &f);
 	if (rc)
 		return (rc);
 
