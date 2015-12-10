@@ -219,9 +219,10 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	size_t nb;
 	int rc;
 
-	rc = mdsio_opencreate(current_vfsid, 
+	rc = mdsio_opencreatef(current_vfsid, 
 		mds_metadir_inum[current_vfsid], 
-		&rootcreds, O_RDWR|O_CREAT, 0, fn, NULL, 
+		&rootcreds, O_RDWR|O_CREAT, 
+		MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, 
 		NULL, &t->odt_mfh, NULL, NULL, 0);
 	if (rc)
 		psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
@@ -249,6 +250,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
 	}
 	t->odt_ops.odtop_sync(t, -1);
+	zfsslash2_wait_synced(0);
 	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
 }
 
