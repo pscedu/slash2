@@ -28,10 +28,21 @@ use Cwd;
 use strict;
 use warnings;
 
-my %opts;
-my @mds;
-my @ios;
-my @cli;
+my $TSUITE_REL_BASE = 'slash2/utils/tsuite';
+my $TSUITE_REL_FN = "$TSUITE_REL_BASE/tsuite.pl";
+
+my %gcfg;	# suite's global configuration settings
+my %opts;	# runtime options
+my @mds;	# suite MDS nodes
+my @ios;	# suite IOS nodes
+my @cli;	# suite CLI nodes
+
+getopts("mRv", \%opts) or usage();
+usage() if @ARGV > 1;
+
+my $ts_dir = dirname($0);
+my $ts_name = "suite0";
+$ts_name = $ARGV[0] if @ARGV > 0;
 
 # Low level utility routines.
 sub fatalx {
@@ -57,15 +68,10 @@ EOF
 sub init_env {
 	my $n = shift;
 
-	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
-	$n->{src_dir} = "$n->{TMPDIR}/src" unless exists $n->{src_dir};
-
 	return <<EOF;
 	set -e
 	@{[ $opts{v} ? "set -x" : "" ]}
-	mkdir -p $n->{src_dir}
 	cd $n->{src_dir}
-	@{[map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
 EOF
 }
 
@@ -137,46 +143,37 @@ sub push_vectorize {
 }
 
 # High level (application-level) utility routines.
-sub res_done {
-	my ($r) = @_;
-
-	if ($r->{type} eq "mds") {
-		fatalx "MDS $r->{res_name} has no \@zfspool configuration"
-		    unless $r->{zpool_args};
-		push @mds, $r;
-	} else {
-		fatalx "MDS $r->{res_name} has no \@prefmds configuration"
-		    unless $r->{prefmds};
-		push @ios, $r;
-	}
-}
 
 # Parse configuration for MDS and IOS resources
 sub parse_conf {
-	my $cfg = shift;
+	my $ts_cfg = shift;
 
 	my $in_site = 0;
 	my $site_name;
-	my @lines = split /\n/, $cfg;
+	my @lines = split /\n/, $ts_cfg;
+	my $cfg = \%gcfg;
 	my $r;
 
 	for (my $ln = 0; $ln < @lines; $ln++) {
 		my $line = $lines[$ln];
-		if ($in_site) {
+
+		if ($line =~ /^\s*#\s*\@(\w+)\s+(.*)$/) {
+			debug_msg "parsed parameter: $1=$2";
+			push_vectorize($cfg, $1, $2);
+		} elsif ($in_site) {
 			if ($r) {
 				if ($line =~ /^\s*type\s*=\s*(\S+)\s*;\s*$/) {
 					$r->{type} = $1;
+					if ($r->{type} eq "mds") {
+						push @mds, $r;
+					} else {
+						push @ios, $r;
+					}
 				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
 					$r->{id} = $1;
-				} elsif ($line =~ m{^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$}) {
-					$r->{zpool_name} = $1;
-					$r->{zpool_cache} = "$1.zcf";
-					$r->{zpool_args} = $2;
-				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
-					$r->{prefmds} = $1;
 				} elsif ($line =~ /^\s*fsroot\s*=\s*(\S+)\s*;\s*$/) {
 					($r->{fsroot} = $1) =~ s/^"|"$//g;
-				} elsif ($line =~ /^\s*ifs\s*=\s*(.*)$/) {
+				} elsif ($line =~ /^\s*nids\s*=\s*(.*)$/) {
 					my $tmp = $1;
 
 					for (; ($line = $lines[$ln]) !~ /;/; $ln++) {
@@ -194,6 +191,7 @@ sub parse_conf {
 						res_name => $1,
 						site => $site_name,
 					};
+					$cfg = $r;
 				}
 			}
 		} else {
@@ -205,19 +203,11 @@ sub parse_conf {
 	}
 }
 
-getopts("mRv", \%opts) or usage();
-usage() if @ARGV > 1;
-
-my $ts_dir = dirname($0);
-my $ts_name = "suite0";
-$ts_name = $ARGV[0] if @ARGV > 0;
-
 my $ts_relbase = "$ts_dir/tests/$ts_name";
 my $ts_base = realpath($ts_relbase) or fatal "realpath $ts_relbase";
 -d $ts_base or die "$ts_base not a directory";
 
 my $ts_fn = realpath($0);
-my $TSUITE_REL_FN = 'slash2/utils/tsuite/tsuite.pl';
 $ts_fn =~ /\Q$TSUITE_REL_FN\E$/ or
     die "$ts_fn: does not contain $TSUITE_REL_FN";
 my $src_dir = $`;
@@ -226,14 +216,8 @@ chdir($src_dir) or die "chdir $src_dir";
 my $diff = join '', `gmake scm-diff`;
 
 my $ts_cfg = slurp "$ts_base/cfg";
-my %cfg;
 
-while (grep /^#\s*\@(\w+)\s+(.*)/cgm, $ts_cfg) {
-	my $name = $1;
-	my $value = $2;
-	debug_msg "parsed parameter: $name=$value";
-	push_vectorize(\%cfg, $name, $value);
-}
+parse_conf($ts_cfg);
 
 my $op_timeout = 60 * 7;		# single op interval timeout
 my $total_timeout = 60 * 60 * 8;	# entire client run duration
@@ -251,19 +235,21 @@ my $zpool = "sudo utils/zpool.sh";
 
 my $repo_url = 'ssh://source/a';
 
-my $ssh = "ssh -oControlPath=yes " .
+my $ssh_opts = "-oControlPath=yes " .
     "-oControlPersist=yes " .
+    "-oControlPath=/tmp/tsuite.ss.%h " .
     "-oKbdInteractiveAuthentication=no " .
     "-oNumberOfPasswordPrompts=1";
+my $ssh = "ssh $ssh_opts ";
 
-if (exists $cfg{bounce}) {
-	$ssh .= " $cfg{bounce} ssh";
+if (exists $gcfg{bounce_host}) {
+	$ssh .= " $gcfg{bounce_host} ssh $ssh_opts ";
 }
 
-fatalx "no client(s) specified" unless exists $cfg{client};
+fatalx "no client(s) specified" unless exists $gcfg{client};
 
-my $clients = ref $cfg{client} eq "ARRAY" ?
-    $cfg{client} : [ $cfg{client} ];
+my $clients = ref $gcfg{client} eq "ARRAY" ?
+    $gcfg{client} : [ $gcfg{client} ];
 
 foreach my $client_spec (@$clients) {
 	my @fields = split /:/, $client_spec;
@@ -271,7 +257,6 @@ foreach my $client_spec (@$clients) {
 	my %n = (
 		host	=> $host,
 		type	=> "client",
-		src_dir	=> ,
 	);
 	foreach my $field (@fields) {
 		my ($k, $v) = split /=/, $field, 2;
@@ -294,21 +279,35 @@ local $SIG{ALRM} = sub { fatal "timeout exceeded" };
 my $n;
 # Checkout the source and build it
 foreach $n (@mds, @ios, @cli) {
-	$n->{src_dir} = "$n->{base}/src";
+	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
+	$n->{base_dir} = "$n->{tmpdir}/tsuite/run";
+	$n->{src_dir} = "$n->{base_dir}/src";
+	$n->{data_dir} = "$n->{base_dir}/data";
+	$n->{slcfg} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cfg";
+	$n->{authbuf} = "$n->{base_dir}/data";
 
-	my $mp = "$base/mp";
-	my $datadir = "$base/data";
+	my @mkdir = (
+		"$n->{ts_dir}/coredumps",
+		$n->{src_dir},
+		$n->{data_dir}
+	);
+
+	if ($n->{type} eq "client") {
+		$n->{mp} = "$n->{base_dir}/mp";
+		push @mkdir, $n->{mp};
+	}
 
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{ts_dir}/coredumps
 
-		git clone $repo_url $n->{src_dir}
-		cd $n->{src_dir}
+		rm -rf $n->{base_dir}
+		mkdir -p @mkdir
+
+		git clone $repo_url .
 		./bootstrap.sh
 
 		cat <<'___MKCFG_EOF' > mk/local.mk
-$cfg{mkcfg}
+$gcfg{mkcfg}
 ___MKCFG_EOF
 
 		patch -p0 <<'___PATCH_EOF'
@@ -316,12 +315,13 @@ $diff
 ___PATCH_EOF
 
 		make build >/dev/null
+
+		@{[ map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
+
 EOF
 }
 
 waitjobs $op_timeout;
-
-parse_conf($ts_cfg);
 
 # Create the MDS file systems
 foreach $n (@mds) {
@@ -340,9 +340,9 @@ foreach $n (@mds) {
 		umount /$n->{zpool_name}
 		pkill zfs-fuse
 
-		mkdir -p $n->{datadir}
+		mkdir -p $n->{data_dir}
 
-		$slmkjrnl -D $n->{datadir} -f
+		$slmkjrnl -D $n->{data_dir} -f
 EOF
 }
 
@@ -356,12 +356,12 @@ open3($infh, $outfh, ">&WR", "$ssh $n->{host} sh")
     or fatal "$ssh $n->{host} sh";
 print $infh <<EOF;
 	@{[init_env($n)]}
-	$slkeymgt -c -D $n->{datadir}
+	$slkeymgt -c -D $n->{data_dir}
 	base64 $n->{authbuf}
 EOF
 $n->{has_authbuf} = 1;
 close $infh;
-my $authbuf = <$outfn>;
+my $authbuf = <$outfh>;
 close $outfh;
 
 # Launch MDS servers
@@ -371,7 +371,7 @@ foreach $n (@mds, @ios, @cli) {
 
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{datadir}
+		mkdir -p $n->{data_dir}
 
 		@{[$n->{has_authbuf} ? "" : <<EOC]}
 		base64 -dd <<'___AUTHBUF_EOF' > $n->{authbuf}
@@ -379,7 +379,7 @@ $authbuf
 ___AUTHBUF_EOF
 EOC
 
-		$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir}
+		$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 
 	$first = 0;
@@ -397,7 +397,7 @@ foreach $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{datadir}
+		mkdir -p $n->{data_dir}
 		mkdir -p $n->{fsroot}
 		$slmkfs -Wi $n->{fsroot}
 
@@ -416,7 +416,7 @@ foreach $n (@ios) {
 
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir}
+		$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 }
 
@@ -433,7 +433,7 @@ foreach $n (@cli) {
 
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{datadir} $n->{mp}
+		$mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
 EOF
 }
 
@@ -453,10 +453,10 @@ foreach $n (@cli) {
 		export RANDOM=/dev/shm/r000
 		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
 
-		cd $n->{src_dir}/slash2/utils/tsuite/tests/$ts_name/cmd
+		cd $n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 
 		for test in *; do
-			export LOCAL_TMP=$n->{tmp_dir}/\$test
+			export LOCAL_TMP=$n->{TMPDIR}/\$test
 			rm -rf \$LOCAL_TMP
 			mkdir -p \$LOCAL_TMP
 			./\$test $n->{host}

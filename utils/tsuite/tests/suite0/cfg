@@ -1,4 +1,4 @@
-# @bounce pscuxa.psc.edu
+# @bounce_host pscuxa.psc.edu
 
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
@@ -36,7 +36,7 @@ site @SITE0 {
 		# @zpool_args /tsuite/disk
 		zpool_name	= tsuite0_s2md;
 		journal		= /tsuite/journal;
-		# @tmpdir /local/tmp
+		# @TMPDIR /local/tmp
 	}
 
 	resource io0 {
@@ -45,7 +45,7 @@ site @SITE0 {
 		fsroot		= /tsuite/slio;
 		nids		= omnitopia-ib0;
 		# @tmpfs 40g /tsuite
-		# @tmpdir /local/tmp
+		# @TMPDIR /local/tmp
 	}
 
 	resource io1 {
@@ -54,7 +54,7 @@ site @SITE0 {
 		fsroot		= /tsuite/slio;
 		nids		= zebes-ib0;
 		# @tmpfs 40g /tsuite
-		# @tmpdir /local/tmp
+		# @TMPDIR /local/tmp
 	}
 
 	resource io {
