@@ -255,12 +255,12 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 }
 
 struct pfl_odt_ops slm_odtops = {
-	slm_odt_close,		/* odtop_close() */
 	slm_odt_create,		/* odtop_create() */
-	NULL,			/* odtop_mapslot() */
 	slm_odt_open,		/* odtop_open() */
+	slm_odt_close,		/* odtop_close() */
 	slm_odt_read,		/* odtop_read() */
+	slm_odt_write,		/* odtop_write() */
+	NULL,			/* odtop_mapslot() */
 	slm_odt_resize,		/* odtop_resize() */
-	slm_odt_sync,		/* odtop_sync() */
-	slm_odt_write		/* odtop_write() */
+	slm_odt_sync		/* odtop_sync() */
 };
