@@ -52,7 +52,7 @@
 
 psc_atomic64_t	 sl_authbuf_nonce = PSC_ATOMIC64_INIT(0);
 unsigned char	*sl_authbuf_key;
-size_t		 sl_authbuf_keysize;
+ssize_t		 sl_authbuf_keysize;
 gcry_md_hd_t	 sl_authbuf_hd;
 
 /*
@@ -116,11 +116,11 @@ authbuf_checkkey(const char *fn, struct stat *stb)
 {
 	if (stb->st_size < AUTHBUF_MINKEYSIZE)
 		psc_fatalx("key file %s is too small; "
-		    "should be at least %zu bytes",
+		    "should be at least %d bytes",
 		    fn, AUTHBUF_MINKEYSIZE);
 	if (stb->st_size > AUTHBUF_MAXKEYSIZE)
 		psc_fatalx("key file %s is too big; "
-		    "should be at least %zu bytes",
+		    "should be at least %d bytes",
 		    fn, AUTHBUF_MAXKEYSIZE);
 	sl_authbuf_keysize = stb->st_size;
 
@@ -147,8 +147,7 @@ void
 authbuf_createkeyfile(void)
 {
 	char keyfn[PATH_MAX];
-	int i, j, fd;
-	uint32_t r;
+	int fd;
 
 	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_AUTHBUFKEY);
 	if ((fd = open(keyfn, O_EXCL | O_WRONLY | O_CREAT, 0600)) == -1) {
