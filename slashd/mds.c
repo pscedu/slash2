@@ -1447,6 +1447,10 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 
  out:
 	if (rc)
+		/*
+		 * XXX On startup, this will stuck at dmu_tx_try_assign()
+		 * which calls cv_wait().
+		 */
 		pfl_odt_freeitem(slm_bia_odt, r);
 	if (b)
 		bmap_op_done(b);
