@@ -37,6 +37,7 @@
 #include <gcrypt.h>
 #include <unistd.h>
 
+#include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/cdefs.h"
 #include "pfl/lock.h"
@@ -65,6 +66,7 @@ authbuf_readkeyfile(void)
 	gcry_error_t gerr;
 	struct stat stb;
 	int alg, fd;
+	ssize_t rc;
 
 	psc_assert(gcry_md_get_algo_dlen(GCRY_MD_SHA256) ==
 	    AUTHBUF_ALGLEN);
@@ -76,9 +78,11 @@ authbuf_readkeyfile(void)
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", keyfn);
 	authbuf_checkkey(keyfn, &stb);
-	if (read(fd, sl_authbuf_key, sl_authbuf_keysize) !=
-	    sl_authbuf_keysize)
-		psc_fatal("read %s", keyfn);
+	sl_authbuf_key = PSCALLOC(sl_authbuf_keysize);
+	rc = read(fd, sl_authbuf_key, sl_authbuf_keysize);
+	if (rc != sl_authbuf_keysize)
+		psc_fatal("read %s; wanted=%zd got=%zd", keyfn,
+		    sl_authbuf_keysize, rc);
 	close(fd);
 
 	alg = GCRY_MD_SHA256;
@@ -88,11 +92,13 @@ authbuf_readkeyfile(void)
 	gcry_md_write(sl_authbuf_hd, sl_authbuf_key,
 	    sl_authbuf_keysize);
 
+	PSCFREE(sl_authbuf_key);
+
 	psc_atomic64_set(&sl_authbuf_nonce, psc_random64());
 }
 
 /*
- * authbuf_checkkeyfile - Perform sanity checks on the secret key file.
+ * Perform sanity checks on the secret key file.
  */
 void
 authbuf_checkkeyfile(void)
@@ -107,7 +113,7 @@ authbuf_checkkeyfile(void)
 }
 
 /*
- * authbuf_checkkey - Perform sanity checks on a secret key file.
+ * Perform sanity checks on a secret key file.
  * @fn: the key file name for use in error messages.
  * @stb: stat(2) buffer used to perform checks.
  */
@@ -141,7 +147,7 @@ authbuf_checkkey(const char *fn, struct stat *stb)
 }
 
 /*
- * authbuf_createkey - Generate a secret key file.
+ * Generate a secret key file.
  */
 void
 authbuf_createkeyfile(void)
@@ -159,9 +165,11 @@ authbuf_createkeyfile(void)
 	}
 	sl_authbuf_keysize = AUTHBUF_MINKEYSIZE	+
 	    psc_random32u(AUTHBUF_MAXKEYSIZE - AUTHBUF_MINKEYSIZE + 1);
+	sl_authbuf_key = PSCALLOC(sl_authbuf_keysize);
 	pfl_random_getbytes(sl_authbuf_key, sl_authbuf_keysize);
 	if (write(fd, sl_authbuf_key, sl_authbuf_keysize) !=
 	    sl_authbuf_keysize)
 		psc_fatal("write %s", keyfn);
+	PSCFREE(sl_authbuf_key);
 	close(fd);
 }
