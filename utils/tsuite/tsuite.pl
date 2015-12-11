@@ -71,6 +71,7 @@ sub init_env {
 	return <<EOF;
 	set -e
 	@{[ $opts{v} ? "set -x" : "" ]}
+	@{[ map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
 	cd $n->{src_dir}
 EOF
 }
@@ -95,23 +96,29 @@ sub slurp {
 }
 
 sub waitjobs {
-	my ($to) = @_;
+	my ($pids, $to) = @_;
 	local $_;
 
 	alarm $to;
-	until (wait == -1) {
+	for my $pid (@$pids) {
+		my $status = waitpid $pid, 0;
+		fatal "waitpid" if $status == -1;
 		fatalx "child process exited nonzero: " . ($? >> 8) if $?;
 	}
 	alarm 0;
+
+	@$pids = ();
 }
 
 sub runcmd {
 	my ($cmd, $in) = @_;
 
 	my $infh;
-	open3($infh, ">&WR", ">&WR", $cmd);
+	my $pid = open3($infh, ">&WR", ">&WR", $cmd);
 	print $infh $in;
 	close $infh;
+
+	return $pid;
 }
 
 sub mkdirs {
@@ -219,7 +226,47 @@ my $ts_cfg = slurp "$ts_base/cfg";
 
 parse_conf($ts_cfg);
 
-my $op_timeout = 60 * 7;		# single op interval timeout
+# sanity checks
+fatalx "no client(s) specified" unless exists $gcfg{client};
+
+my $clients = ref $gcfg{client} eq "ARRAY" ?
+    $gcfg{client} : [ $gcfg{client} ];
+
+foreach my $client_spec (@$clients) {
+	my @fields = split /:/, $client_spec;
+	my $host = shift @fields;
+	my %n = (
+		host	=> $host,
+		type	=> "client",
+	);
+	foreach my $field (@fields) {
+		my ($k, $v) = split /=/, $field, 2;
+		$n{$k} = $v;
+	}
+	debug_msg "parsed client: $host";
+	push @cli, \%n;
+}
+
+foreach my $n (@mds) {
+	fatalx "no zpool_args specified for $n->{host}"
+	    unless exists $n->{zpool_args};
+}
+
+foreach my $n (@mds, @ios) {
+	if (exists $n->{fmtcmd}) {
+		if (ref $n->{fmtcmd} eq "ARRAY") {
+			for my $cmd (@$n->{fmtcmd}) {
+				$cmd =~ s/^/sudo /;
+			}
+		} else {
+			$n->{fmtcmd} = [ "sudo " . $n->{fmtcmd} ];
+		}
+	} else {
+		$n->{fmtcmd} = [ ];
+	}
+}
+
+my $step_timeout = 60 * 7;		# single op interval timeout
 my $total_timeout = 60 * 60 * 8;	# entire client run duration
 
 my $mount_slash = "sudo mount_slash/mount_slash";
@@ -246,26 +293,6 @@ if (exists $gcfg{bounce_host}) {
 	$ssh .= " $gcfg{bounce_host} ssh $ssh_opts ";
 }
 
-fatalx "no client(s) specified" unless exists $gcfg{client};
-
-my $clients = ref $gcfg{client} eq "ARRAY" ?
-    $gcfg{client} : [ $gcfg{client} ];
-
-foreach my $client_spec (@$clients) {
-	my @fields = split /:/, $client_spec;
-	my $host = shift @fields;
-	my %n = (
-		host	=> $host,
-		type	=> "client",
-	);
-	foreach my $field (@fields) {
-		my ($k, $v) = split /=/, $field, 2;
-		$n{$k} = $v;
-	}
-	debug_msg "parsed client: $host";
-	push @cli, \%n;
-}
-
 if ($opts{m}) {
 	pipe RD, WR;
 } else {
@@ -276,6 +303,24 @@ eval {
 
 local $SIG{ALRM} = sub { fatal "timeout exceeded" };
 
+# Generate authbuf key
+my $authbuf_minkeysize =
+    `grep AUTHBUF_MINKEYSIZE $src_dir/slash2/include/authbuf.h`;
+my $authbuf_maxkeysize =
+    `grep AUTHBUF_MAXKEYSIZE $src_dir/slash2/include/authbuf.h`;
+$authbuf_minkeysize =~ s/(?<=AUTHBUF_MINKEYSIZE).*/$&/e;
+$authbuf_maxkeysize =~ s/(?<=AUTHBUF_MAXKEYSIZE).*/$&/e;
+my $authbuf_keysize = $authbuf_minkeysize +
+    int rand($authbuf_maxkeysize - $authbuf_minkeysize + 1);
+
+my $authbuf;
+open R, "<", "/dev/urandom" or fatal "open /dev/urandom",
+read(R, $authbuf, $authbuf_keysize) == $authbuf_keysize
+    or fatal "read /dev/urandom";
+close R;
+
+my @pids;
+
 my $n;
 # Checkout the source and build it
 foreach $n (@mds, @ios, @cli) {
@@ -284,7 +329,7 @@ foreach $n (@mds, @ios, @cli) {
 	$n->{src_dir} = "$n->{base_dir}/src";
 	$n->{data_dir} = "$n->{base_dir}/data";
 	$n->{slcfg} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cfg";
-	$n->{authbuf} = "$n->{base_dir}/data";
+	$n->{ctlsock} = "$n->{base_dir}/ctlsock";
 
 	my @mkdir = (
 		"$n->{ts_dir}/coredumps",
@@ -297,12 +342,16 @@ foreach $n (@mds, @ios, @cli) {
 		push @mkdir, $n->{mp};
 	}
 
-	runcmd "$ssh $n->{host} sh", <<EOF;
-		@{[init_env($n)]}
+	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
+
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+		set -e
+		@{[ $opts{v} ? "set -x" : "" ]}
 
 		rm -rf $n->{base_dir}
 		mkdir -p @mkdir
 
+		cd $n->{src_dir}
 		git clone $repo_url .
 		./bootstrap.sh
 
@@ -316,177 +365,151 @@ ___PATCH_EOF
 
 		make build >/dev/null
 
-		@{[ map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
-
+		touch $authbuf_fn
+		chmod 400 $authbuf_fn
+		base64 -d <<'___AUTHBUF_EOF' > $authbuf_fn;
+$authbuf
+___AUTHBUF_EOF
+		truncate -s $authbuf_keysize $authbuf_fn
 EOF
 }
 
-waitjobs $op_timeout;
+waitjobs \@pids, $step_timeout;
 
 # Create the MDS file systems
 foreach $n (@mds) {
 	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 
-		pkill zfs-fuse || true
+		sudo pkill zfs-fuse || true
 		sleep 5 &
 		$zfs_fuse &
 		sleep 2
+		@$n->{fmtcmd}
 		$zpool destroy $n->{zpool_name} || true
 		$zpool create -f $n->{zpool_name} $n->{zpool_args}
-		#$zpool set cachefile=$n->{zpool_cache} $n->{zpool_name}
 		$slmkfs /$n->{zpool_name}
-		umount /$n->{zpool_name}
-		pkill zfs-fuse
-
-		mkdir -p $n->{data_dir}
+		sudo umount /$n->{zpool_name}
+		sudo pkill zfs-fuse
 
 		$slmkjrnl -D $n->{data_dir} -f
 EOF
 }
 
-waitjobs $op_timeout;
-
-# Generate and capture the authbuf key
-$n = $mds[0];
-my $infh;
-my $outfh;
-open3($infh, $outfh, ">&WR", "$ssh $n->{host} sh")
-    or fatal "$ssh $n->{host} sh";
-print $infh <<EOF;
-	@{[init_env($n)]}
-	$slkeymgt -c -D $n->{data_dir}
-	base64 $n->{authbuf}
-EOF
-$n->{has_authbuf} = 1;
-close $infh;
-my $authbuf = <$outfh>;
-close $outfh;
+waitjobs \@pids, $step_timeout;
 
 # Launch MDS servers
-my $first = 1;
+my @mds_pids;
 foreach $n (@mds, @ios, @cli) {
 	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		mkdir -p $n->{data_dir}
 
-		@{[$n->{has_authbuf} ? "" : <<EOC]}
-		base64 -dd <<'___AUTHBUF_EOF' > $n->{authbuf}
-$authbuf
-___AUTHBUF_EOF
-EOC
 
 		$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
-
-	$first = 0;
 }
-
-waitjobs $op_timeout;
-
-# Wait for the server control sockets to appear
-alarm $op_timeout;
-sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
-alarm 0;
 
 # Create the IOS file systems
 foreach $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		mkdir -p $n->{data_dir}
 		mkdir -p $n->{fsroot}
 		$slmkfs -Wi $n->{fsroot}
-
-		base64 -d <<'___AUTHBUF_EOF' > $n->{authbuf}
-$authbuf
-___AUTHBUF_EOF
-
 EOF
 }
 
-waitjobs $op_timeout;
+waitjobs \@pids, $step_timeout;
 
 # Launch the IOS servers
+my @ios_pids;
 foreach $n (@ios) {
 	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 }
 
-waitjobs $op_timeout;
-
-# Wait for the server control sockets to appear
-alarm $op_timeout;
-sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ios;
-alarm 0;
-
 # Launch the client mountpoints
+my @cli_pids;
 foreach $n (@cli) {
 	debug_msg "launching mount_slash: $n->{host}";
 
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		$mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
 EOF
 }
 
-waitjobs $op_timeout;
-
-# Wait for the client control sockets to appear
-alarm $op_timeout;
-sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
-alarm 0;
-
 # Run the client applications
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 
 		export RANDOM=/dev/shm/r000
 		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
 
-		cd $n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
+		test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
+		cd \$test_src_dir
 
-		for test in *; do
+		runtest()
+		{
 			export LOCAL_TMP=$n->{TMPDIR}/\$test
 			rm -rf \$LOCAL_TMP
 			mkdir -p \$LOCAL_TMP
-			./\$test $n->{host}
+			cd \$LOCAL_TMP
+
+			\$test_src_dir/\$test
+		}
+
+		for test in *; do
+			time0=\$(date +%s.%N)
+			(runtest \$test)
+			time1=\$(date +%s.%N)
 		done
 
+		# run all tests in parallel without faults for
+		# performance regressions and exercise
+		time0=\$(date +%s.%N)
+		for test in *; do
+			(runtest \$test &)
+		done
+		wait
+		time1=\$(date +%s.%N)
 
-	doresults => "perl $src/tools/tsuite_results.pl " .
-		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
-		" $testname $logbase");
+		# now run the entire thing again injecting faults at
+		# random places to test failure tolerance
 EOF
 }
 
-# run each test serially without faults for performance regressions
+=cut
+	doresults => "perl $src/tools/tsuite_results.pl " .
+		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
+		" $testname $logbase");
 
-# run all tests in parallel without faults for performance regressions
-# and exercise
+=cut
 
-# now run the entire thing again injecting faults at random places to test
-# failure tolerance
-
-waitjobs $total_timeout;
+waitjobs \@pids, $total_timeout;
 
 # Unmount mountpoints
 foreach $n (@cli) {
 	debug_msg "unmounting mount_slash: $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		umount $mp
+		sudo umount $n->{mp}
 EOF
 }
+
+waitjobs \@pids, $step_timeout;
 
 # Kill IOS daemons
 foreach $n (@ios) {
@@ -497,6 +520,8 @@ foreach $n (@ios) {
 EOF
 }
 
+waitjobs \@pids, $step_timeout;
+
 # Kill MDS daemons
 foreach $n (@mds) {
 	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
@@ -506,28 +531,11 @@ foreach $n (@mds) {
 EOF
 }
 
-waitjobs $op_timeout;
+waitjobs \@pids, $step_timeout;
 
-foreach $n (@cli) {
-	debug_msg "force quitting mount_slash: $n->{host}";
-	execute "$ssh $n->{host} kill $cli_pid";
-}
-
-foreach $n (@ios) {
-	debug_msg "force quitting sliod: $n->{res_name} : $n->{host}";
-	execute "$ssh $n->{host} kill $ios_pid";
-}
-
-foreach $n (@mds) {
-	debug_msg "force quitting slashd: $n->{res_name} : $n->{host}";
-	execute "$ssh $n->{host} kill $mds_pid";
-}
-
-# Clean up files
-if ($status == 0) {
-	debug_msg "deleting base dir";
-	execute "rm -rf $base";
-}
+waitjobs \@cli_pids, $step_timeout;
+waitjobs \@ios_pids, $step_timeout;
+waitjobs \@mds_pids, $step_timeout;
 
 }; # end of eval
 
