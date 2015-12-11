@@ -37,7 +37,8 @@ struct stat;
 struct pscrpc_request;
 
 #define AUTHBUF_ALGLEN		32
-#define AUTHBUF_KEYSIZE		1024
+#define AUTHBUF_MINKEYSIZE	1024
+#define AUTHBUF_MAXKEYSIZE	(128 * 1024)
 
 int	authbuf_check(struct pscrpc_request *, int, int);
 void	authbuf_sign(struct pscrpc_request *, int);
@@ -48,7 +49,6 @@ void	authbuf_createkeyfile(void);
 void	authbuf_readkeyfile(void);
 
 extern psc_atomic64_t	sl_authbuf_nonce;
-extern unsigned char	sl_authbuf_key[AUTHBUF_KEYSIZE];
 extern gcry_md_hd_t	sl_authbuf_hd;
 
 #endif /* _SL_AUTHBUF_H_ */
