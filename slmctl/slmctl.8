@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl rpc %
-.Dd November 10, 2015
+.Dd December 11, 2015
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -289,7 +289,20 @@ The default is
 .\"	show => {
 .\"		bmap		=> qq{In-memory bmaps},
 .\"		bml		=> qq{Outstanding bmap leases.},
-.\"		connections	=> qq{Status of\n.Tn SLASH2\npeers on network.},
+.\"		connections	=> <<EOF,
+.\"			Status of peer nodes on the SLASH2 deployment.
+.\"			.Pp
+.\"			The following flag values may appear:
+.\"			.Pp
+.\"			.Bl -column "Flagxx" -offset 3n
+.\"			.It Sy Flag Ta Sy Description
+.\"			.It =====================================
+.\"			.It Li C Ta Connecting
+.\"			.It Li O Ta Connected
+.\"			.It Li F Ta Freeing
+.\"			.It Li P Ta Registered for keep alive (ping)
+.\"			.El
+.\"			EOF
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
 .\"		odtables	=> qq{Disk-backed data files.},
 .\"		replpairs	=> qq{Replica endpoint traffic.},
@@ -342,9 +355,18 @@ In-memory bmaps
 .It Cm bml
 Outstanding bmap leases.
 .It Cm connections
-Status of
-.Tn SLASH2
-peers on network. C = Connecting, O = Connected, F = To Be Freed, P - Ping.
+Status of peer nodes on the SLASH2 deployment.
+.Pp
+The following flag values may appear:
+.Pp
+.Bl -column "Flagxx" -offset 3n
+.It Sy Flag Ta Sy Description
+.It =====================================
+.It Li C Ta Connecting
+.It Li O Ta Connected
+.It Li F Ta Freeing
+.It Li P Ta Registered for keep alive (ping)
+.El
 .It Cm fidcache
 .Tn FID
 .Pq file- Ns Tn ID
