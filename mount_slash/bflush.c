@@ -981,8 +981,6 @@ msflushthr_main(struct psc_thread *thr)
 
 		timespecsub(&tmp2, &tmp1, &work);
 
-		PFL_GETTIMESPEC(&tmp1);
-
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		psc_waitq_waitrel_ts(&slc_bflush_waitq,
@@ -991,8 +989,8 @@ msflushthr_main(struct psc_thread *thr)
 		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
 		freelock(&slc_bflush_lock);
 
-		PFL_GETTIMESPEC(&tmp2);
-		timespecsub(&tmp2, &tmp1, &wait);
+		PFL_GETTIMESPEC(&tmp1);
+		timespecsub(&tmp1, &tmp2, &wait);
 
 		psclogs_debug(SLSS_BMAP, "work time ("PSCPRI_TIMESPEC"),"
 		    "wait time ("PSCPRI_TIMESPEC")",
