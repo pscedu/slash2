@@ -51,7 +51,6 @@ slcfg_init_resm(struct sl_resm *resm)
 		lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
 		    car_lentry, "aiorq-%s:%d", r->res_name,
 		    psc_dynarray_len(&r->res_members));
-	psc_atomic32_set(&rmci->rmci_infl_rpcs, 0);
 }
 
 void

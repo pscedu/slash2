@@ -225,6 +225,7 @@ struct resprof_cli_info {
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
+	int				 rpci_infl_rpcs;
 };
 
 #define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
@@ -246,7 +247,6 @@ res2rpci(struct sl_resource *res)
 struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
-	psc_atomic32_t			 rmci_infl_rpcs;
 };
 
 static __inline struct resm_cli_info *

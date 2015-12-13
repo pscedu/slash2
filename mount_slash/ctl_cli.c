@@ -750,17 +750,14 @@ mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
-	struct resm_cli_info *rmci;
-	struct sl_resm *m;
+	struct resprof_cli_info *rpci;
 	char nbuf[16];
 
 	if (set)
 		return (psc_ctlsenderr(fd, mh,
 		    "infl_rpcs: field is read-only"));
-	m = res_getmemb(r);
-	rmci = resm2rmci(m);
-	snprintf(nbuf, sizeof(nbuf), "%d",
-	    atomic_read(&rmci->rmci_infl_rpcs));
+	rpci = res2rpci(r);
+	snprintf(nbuf, sizeof(nbuf), "%d", rpci->rpci_infl_rpcs);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
 	    levels, nlevels, nbuf));
 }
