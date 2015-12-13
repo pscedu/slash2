@@ -235,7 +235,10 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 
 	if (slc_bflush_tmout_flags & BMAPFLSH_RPCWAIT) {
 		wake = 1;
-		psc_waitq_wakeall(&slc_bflush_waitq);
+		if (reason == BMAPFLSH_EXPIRE)
+			psc_waitq_wakeall(&slc_bflush_waitq);
+		else
+			psc_waitq_wakeone(&slc_bflush_waitq);
 	}
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
