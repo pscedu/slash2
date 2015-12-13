@@ -342,7 +342,7 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
-#define BMAPFLSH_TIMEOA		(1 << 2)
+#define BMAPFLSH_TIMEOADD	(1 << 2)
 #define BMAPFLSH_TRUNCATE	(1 << 3)
 #define BMAPFLSH_RPCDONE	(1 << 4)
 #define BMAPFLSH_REAP		(1 << 5)
