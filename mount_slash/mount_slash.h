@@ -343,9 +343,6 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
 #define BMAPFLSH_TIMEOADD	(1 << 2)
-#define BMAPFLSH_TRUNCATE	(1 << 3)
-#define BMAPFLSH_RPCDONE	(1 << 4)
-#define BMAPFLSH_REAP		(1 << 5)
 
 extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;
