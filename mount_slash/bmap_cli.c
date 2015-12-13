@@ -50,13 +50,10 @@ void msl_bmap_reap_init(struct bmap *);
 
 int bmap_max_cache = BMAP_CACHE_MAX;
 
-/*
- * XXX Avoid ENOMEM
- */
 void
 msl_bmap_reap(void)
 {
-	bmap_flushq_wake(BMAPFLSH_REAP);
+	/* XXX force expire and issue a wakeup */
 
 	/* wake up the reaper if we are out of resources */
 	if (lc_nitems(&msl_bmaptimeoutq) > bmap_max_cache)

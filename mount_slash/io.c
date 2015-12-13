@@ -868,7 +868,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	msl_biorq_release(r);
 
-	rpci = res2rpci(m->resm_res); 
+	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
@@ -1171,8 +1171,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_flags |= BMAPF_FLUSHQ;
 		lc_addtail(&msl_bmapflushq, b);
 		DEBUG_BMAP(PLL_DIAG, b, "add to msl_bmapflushq");
-	}
-	bmap_flushq_wake(BMAPFLSH_TIMEOA);
+	} else
+		bmap_flushq_wake(BMAPFLSH_TIMEOADD);
 
 	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty=%d",
 	    r, pll_empty(&bmpc->bmpc_pndg_biorqs));
@@ -1281,7 +1281,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_interpret_reply = msl_read_cb;
 
-	rpci = res2rpci(m->resm_res); 
+	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	rpci->rpci_infl_rpcs++;
 	RPCI_ULOCK(rpci);
