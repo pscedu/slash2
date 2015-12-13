@@ -1171,8 +1171,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_flags |= BMAPF_FLUSHQ;
 		lc_addtail(&msl_bmapflushq, b);
 		DEBUG_BMAP(PLL_DIAG, b, "add to msl_bmapflushq");
-	}
-	bmap_flushq_wake(BMAPFLSH_TIMEOA);
+	} else
+		bmap_flushq_wake(BMAPFLSH_TIMEOA);
 
 	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty=%d",
 	    r, pll_empty(&bmpc->bmpc_pndg_biorqs));
