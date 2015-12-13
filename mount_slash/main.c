@@ -2233,7 +2233,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	PFL_GETTIMESPEC(&fci->fci_etime);
 	fci->fci_etime.tv_sec--;
 	FCMH_ULOCK(f);
-	psc_waitq_wakeall(&msl_flush_attrq);
+	psc_waitq_wakeone(&msl_flush_attrq);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
