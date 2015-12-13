@@ -868,7 +868,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	msl_biorq_release(r);
 
-	rpci = res2rpci(m->resm_res); 
+	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
@@ -1281,7 +1281,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_interpret_reply = msl_read_cb;
 
-	rpci = res2rpci(m->resm_res); 
+	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	rpci->rpci_infl_rpcs++;
 	RPCI_ULOCK(rpci);
