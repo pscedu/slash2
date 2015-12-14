@@ -2030,7 +2030,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 void
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
-    int to_set)
+    int to_set, struct slashrpc_cservice *csvc)
 {
 	int locked, deref = 0, rc = 0;
 	struct slm_wkdata_ptrunc *wk;
@@ -2057,6 +2057,8 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		wk = pfl_workq_getitem(slm_ptrunc_prepare,
 		    struct slm_wkdata_ptrunc);
 		wk->f = f;
+		if (csvc)
+			psc_dynarray_add(&fmi->fmi_ptrunc_clients, csvc);
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
 		pfl_workq_putitem(wk);
 
