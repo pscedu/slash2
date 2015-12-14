@@ -2119,30 +2119,7 @@ slm_ptrunc_prepare(void *p)
 	 * Wait until any leases for this or any bmap after have been
 	 * relinquished.
 	 */
-	FCMH_LOCK(f);
-
-	/*
-	 * XXX bmaps issued in the wild not accounted for in fcmh_fsz
-	 * are skipped here.
-	 */
-	if (fmi->fmi_ptrunc_size >= fcmh_2_fsz(f)) {
-		FCMH_WAIT_BUSY(f);
-		if (fmi->fmi_ptrunc_size > fcmh_2_fsz(f)) {
-			struct srt_stat sstb;
-
-			sstb.sst_size = fmi->fmi_ptrunc_size;
-			mds_fcmh_setattr_nolog(current_vfsid, f,
-			    PSCFS_SETATTRF_DATASIZE, &sstb);
-		}
-		(void)FCMH_RLOCK(f);
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		FCMH_UNBUSY(f);
-		slm_ptrunc_wake_clients(wk);
-		return (0);
-	}
-
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
-	FCMH_ULOCK(f);
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
