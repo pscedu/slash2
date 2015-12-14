@@ -49,7 +49,7 @@ bcr_update_inodeinfo(struct bcrcupd *bcr)
 	b = bcr_2_bmap(bcr);
 	f = b->bcm_fcmh;
 
-	if (bcr->bcr_crcup.fg.fg_gen == FID_ANY)
+	if (bcr->bcr_crcup.fg.fg_fid == FID_ANY)
 		return (EINVAL);
 
 	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
