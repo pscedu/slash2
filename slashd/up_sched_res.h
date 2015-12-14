@@ -46,7 +46,7 @@ struct slm_update_data {
 /* upd_flags */
 #define UPDF_BUSY			(1 << 0)	/* item is being modified */
 
-/* upd_type */
+/* upd_type, which is used, among other things, to index *upd_proctab[] */
 enum {
 	UPDT_BMAP,
 	UPDT_HLDROP,
