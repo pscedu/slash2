@@ -2148,7 +2148,6 @@ slm_ptrunc_prepare(void *p)
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
 
-		BMAP_LOCK(b);
 		BMAP_FOREACH_LEASE(b, bml) {
 			BMAP_ULOCK(b);
 
