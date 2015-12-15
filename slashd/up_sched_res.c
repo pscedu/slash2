@@ -506,7 +506,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
 		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
-	av.pointer_arg[IP_CSVC] = csvc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
@@ -518,25 +517,25 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG_SCHED;
-	brepls_init_idx(retifset);
+	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (rc != BREPLST_TRUNCPNDG)
+		PFL_GOTOERR(fail, rc = -1);
 
-	if (rc == BREPLST_TRUNCPNDG) {
-		av.pointer_arg[IP_BMAP] = b;
+	av.pointer_arg[IP_CSVC] = csvc;
+	av.pointer_arg[IP_BMAP] = b;
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+
+	upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
+
+	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
+	rq->rq_async_args = av;
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc == 0) {
 		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
-		upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
-
-		rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
-		rq->rq_async_args = av;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0) {
-			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
-			return (1);
-		}
-	} else
-		rc = -ENODEV;
+		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+		return (1);
+	}
 
  fail:
 	if (rq)
