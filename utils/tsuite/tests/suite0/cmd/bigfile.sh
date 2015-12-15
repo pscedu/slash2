@@ -1,3 +1,5 @@
+#!/bin/sh
+
 dep sft
 
 niters=100

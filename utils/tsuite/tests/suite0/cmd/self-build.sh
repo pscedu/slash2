@@ -1,4 +1,6 @@
-@dep git md5deep
+#!/bin/sh
+
+dep git
 
 git clone ssh://source/a proj
 cd proj
@@ -13,5 +15,4 @@ make test
 cd ..
 
 cp -R proj $LOCAL_TMP/proj
-md5deep proj $LOCAL_TMP/proj
 diff -qr proj $LOCAL_TMP/proj

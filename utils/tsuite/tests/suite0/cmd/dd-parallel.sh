@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 
 ndirs=100
 nfiles_per_dir=100
