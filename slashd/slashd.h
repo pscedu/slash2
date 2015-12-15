@@ -36,10 +36,10 @@
 #include "pfl/workthr.h"
 
 #include "inode.h"
-#include "slconn.h"
 #include "namespace.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slconn.h"
 #include "sltypes.h"
 
 struct fidc_membh;
@@ -353,40 +353,40 @@ enum {
 //	SLM_OPSTATE_EXITING
 };
 
-int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
-int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
-			struct srt_bmapdesc *, struct pscrpc_export *);
-int		 mds_lease_reassign(struct fidc_membh *,
-			struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
-			int, struct srt_bmapdesc *, struct pscrpc_export *);
+int	 mds_handle_rls_bmap(struct pscrpc_request *, int);
+int	 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
+	    struct srt_bmapdesc *, struct pscrpc_export *);
+int	 mds_lease_reassign(struct fidc_membh *, struct srt_bmapdesc *,
+	    sl_ios_id_t, sl_ios_id_t *, int, struct srt_bmapdesc *,
+	    struct pscrpc_export *);
 
-int		 mds_sliod_alive(void *);
+int	 mds_sliod_alive(void *);
 
-void		 slmbkdbthr_main(struct psc_thread *);
-void		 slmbmaptimeothr_spawn(void);
-void		 slmctlthr_main(const char *);
-void		 slmrcmthr_main(struct psc_thread *);
+void	 slmbkdbthr_main(struct psc_thread *);
+void	 slmbmaptimeothr_spawn(void);
+void	 slmctlthr_main(const char *);
+void	 slmrcmthr_main(struct psc_thread *);
 
-slfid_t		 slm_get_curr_slashfid(void);
-void		 slm_set_curr_slashfid(slfid_t);
-int		 slm_get_next_slashfid(slfid_t *);
+slfid_t	 slm_get_curr_slashfid(void);
+void	 slm_set_curr_slashfid(slfid_t);
+int	 slm_get_next_slashfid(slfid_t *);
 
-int		 slm_ptrunc_prepare(void *);
-void		 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
-int		 slm_ptrunc_wake_clients(void *);
-void		 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
-void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int, 
-				struct slashrpc_cservice *);
+int	 slm_ptrunc_prepare(void *);
+void	 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
+int	 slm_ptrunc_wake_clients(void *);
+void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
+void	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int,
+	    struct slashrpc_cservice *);
 
-int		 mdscoh_req(struct bmap_mds_lease *);
+int	 mdscoh_req(struct bmap_mds_lease *);
 
-void		 psc_scan_filesystems(void);
-void		 mds_note_update(int);
+void	 psc_scan_filesystems(void);
+void	 mds_note_update(int);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
-void		 _dbdo(const struct pfl_callerinfo *,
-			int (*)(struct slm_sth *, void *), void *,
-			const char *, ...);
+void	 _dbdo(const struct pfl_callerinfo *,
+	    int (*)(struct slm_sth *, void *), void *, const char *,
+	    ...);
 
 extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;

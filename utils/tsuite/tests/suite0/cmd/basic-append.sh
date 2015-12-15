@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 
 fn=tf
 echo line1 >> $fn

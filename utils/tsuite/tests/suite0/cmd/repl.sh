@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 
 repl_wait()
 {

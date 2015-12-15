@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 
-@dep gtdownload
+#dep gtdownload
 

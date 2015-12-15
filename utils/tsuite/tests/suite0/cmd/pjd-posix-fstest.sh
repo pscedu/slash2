@@ -1,3 +1,5 @@
+#!/bin/sh
+
 dir=$SRC/distrib/posix-fstest
 
 (

@@ -1,4 +1,3 @@
 #!/bin/sh
-# $Id$
 
-dep ctorrent
+#dep ctorrent
