@@ -1033,6 +1033,13 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
+
+		PFL_GETTIMESPEC(&crtime);
+		if (timespeccmp(&crtime, &nto, <) && !exiting) {
+			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+			    &msl_bmaptimeoutq.plc_lock, &nto);
+		}
 	}
 	psc_dynarray_free(&rels);
 	psc_dynarray_free(&bcis);
