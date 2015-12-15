@@ -493,14 +493,14 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	/*
-	 * If another ION is already handling this ptrunc CRC
-	 * recomputation, go do something else.
+	 * Make sure that a truncation is not already scheduled on this
+	 * bmap.
 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
-		return (-1);
+		psc_fatal("trunc is already scheduled: b = %p\n", b);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
