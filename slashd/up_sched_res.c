@@ -500,12 +500,14 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
-		psc_fatal("trunc is already scheduled: b = %p\n", b);
+		DEBUG_BMAPOD(PLL_FATAL, b,
+		    "truncate already scheduled");
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
 		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+	av.pointer_arg[IP_CSVC] = csvc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
@@ -522,7 +524,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	if (rc != BREPLST_TRUNCPNDG)
 		PFL_GOTOERR(fail, rc = -1);
 
-	av.pointer_arg[IP_CSVC] = csvc;
 	av.pointer_arg[IP_BMAP] = b;
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
