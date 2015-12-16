@@ -146,6 +146,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 			rc = mp->rc;
 	}
 	if (w->srw_status)
+		/* e.g., PFLERR_NOTCONN = 503 */
 		psclog_errorx("sent error rc=%d", w->srw_status);
 
  out:
