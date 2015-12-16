@@ -276,7 +276,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 
 	pe.fg = b->bcm_fcmh->fcmh_fg;
 	pe.bno = b->bcm_bmapno;
@@ -295,7 +295,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
-			PFL_GOTOERR(fail, rc = -ENODATA);
+			PFL_GOTOERR(out, rc = -ENODATA);
 
 		pe.len = MIN(sz, SLASH_BMAP_SIZE);
 	}
@@ -317,7 +317,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * replication request or something.
 	 */
 	if (rc != BREPLST_REPL_QUEUED)
-		PFL_GOTOERR(fail, rc = -ENODEV);
+		PFL_GOTOERR(out, rc = -ENODEV);
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
@@ -343,7 +343,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
 
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 	}
 
 	OPSTAT2_ADD("replsched", amt);
@@ -365,7 +365,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	return (1);
 
- fail:
+ out:
 	DEBUG_BMAP(PLL_DIAG, b, "dst_resm=%s src_resm=%s rc=%d",
 	    dst_resm->resm_name, src_resm->resm_name, rc);
 
@@ -578,7 +578,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 			mds_bmap_write_logrepls(b);
 		}
- fail:
+ out:
 		if (b)
 			bmap_op_done(b);
 		fcmh_op_done(f);
@@ -602,7 +602,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
 	    &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(m));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
 	pe.fg = b->bcm_fcmh->fcmh_fg;
 	pe.bno = b->bcm_bmapno;
@@ -612,7 +612,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	    SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
 	    slm_batch_preclaim_cb, 30);
 	if (rc)
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
@@ -624,7 +624,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	rc = mds_bmap_write_logrepls(b);
 
- fail:
+ out:
 	if (rc && rc != -PFLERR_NOTCONN)
 		psclog_errorx("error rc=%d", rc);
 	if (csvc)
