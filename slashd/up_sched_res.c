@@ -502,12 +502,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 	av.pointer_arg[IP_CSVC] = csvc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
@@ -532,7 +532,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	if (rc == 0)
 		return (0);
 
- fail:
+ out:
 	if (rq)
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
