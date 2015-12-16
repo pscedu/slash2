@@ -464,11 +464,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Try to issue a PTRUNC resolution to an ION.
- * Returns:
- *   -1	: The activity can never happen; give up.
- *    0	: Unsuccessful.
- *    1	: Success.
+ * Try to issue a PTRUNC RPC to an ION.
  */
 int
 slm_upsch_tryptrunc(struct bmap *b, int off,
@@ -522,7 +518,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNCPNDG)
-		PFL_GOTOERR(fail, rc = -1);
+		DEBUG_BMAPOD(PLL_FATAL, b,
+		    "bmap is corrupted");
 
 	av.pointer_arg[IP_BMAP] = b;
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
@@ -533,14 +530,14 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rq->rq_async_args = av;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
-		return (1);
+		return (0);
 
  fail:
 	if (rq)
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
 	    dst_resm, av.pointer_arg[IP_BMAP], rc, off);
-	return (0);
+	return (rc);
 }
 
 void
@@ -850,7 +847,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 		case BREPLST_TRUNCPNDG:
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
-			if (rc > 0)
+			if (rc == 0)
 				continue;
 			break;
 
