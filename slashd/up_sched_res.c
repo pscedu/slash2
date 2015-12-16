@@ -844,6 +844,12 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 
 		case BREPLST_TRUNCPNDG:
+			/*
+			 * If we got at least one success, we can mark
+			 * any unresponsive IOS as garbage to open up
+			 * new bmap request at & beyond the truncation
+			 * point.
+			 */
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
 			if (rc == 0)
 				continue;
