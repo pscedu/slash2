@@ -1117,7 +1117,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		} else if (mq->attr.sst_size < fcmh_2_fsz(f)) {
 
 			OPSTAT_INCR("truncate-shrink");
-		//	PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
+#if 1
+			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
+#endif
 
 			/* partial truncate */
 			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
