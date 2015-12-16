@@ -1586,10 +1586,10 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rq = NULL;
 		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 		if (csvc == NULL)
-			PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
+			PFL_GOTOERR(out, rc = SLERR_ION_OFFLINE);
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq, mp);
 		if (rc)
-			PFL_GOTOERR(fail, rc);
+			PFL_GOTOERR(out, rc);
 
 		iov.iov_len = total;
 		iov.iov_base = r;
@@ -1609,7 +1609,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rc = SL_NBRQSETX_ADD(set, csvc, rq);
 		if (!rc)
 			continue;
- fail:
+ out:
 		if (rq)
 			pscrpc_req_finished(rq);
 		if (csvc)
