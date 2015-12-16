@@ -1926,6 +1926,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	    buf, size, off, (rw == SL_READ) ? "read" : "write");
 
 	FCMH_LOCK(f);
+	/*
+	 * All I/O's block here for pending truncate requests.
+	 *
+	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
+	 * until we are done setting up the I/O to block intervening
+	 * truncates.
+	 */
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
 	fsz = fcmh_getsize(f);
 
 	if (rw == SL_READ) {
