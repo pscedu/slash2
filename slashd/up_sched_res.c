@@ -710,8 +710,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	if (b->bcm_flags & BMAPF_REPLMODWR)
 		return;
 
-//	if (IN_PTRUNC)
-
 	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
