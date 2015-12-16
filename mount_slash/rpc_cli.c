@@ -166,6 +166,13 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 //	retry = hard timeout
 	*rc = retry ? 0 : ETIMEDOUT;
 
+	if (retry) {
+		usleep(10);
+		if (pfr && pfr->pfr_interrupted) {
+			*rc = EINTR;
+			retry = 0;
+		}
+	}
 	return (retry);
 }
 
