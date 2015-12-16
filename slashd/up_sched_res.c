@@ -570,7 +570,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 			continue;
 		rc = bmap_get(f, pe->bno, SL_WRITE, &b);
 		if (rc)
-			goto fail;
+			goto out;
 		BMAP_ULOCK(b);
 		rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f),
 		    &repl, &idx, 1);
