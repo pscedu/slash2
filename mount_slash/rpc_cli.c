@@ -154,6 +154,10 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 		return (0);
 	}
 
+	/* 
+	 * We only need to set returned rc if we are not 
+ 	 * going to retry.
+ 	 */
 	if (pfr) {
 		if (pfr->pfr_interrupted) {
 			retry = 0;
