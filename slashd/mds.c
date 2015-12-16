@@ -1772,21 +1772,19 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	struct bmap *b;
 	int rc, bflags;
 
+	/*
+ 	 * Reject any bmap request at or beyond the truncation point.
+ 	 * It is up to the client to either retry or bail out. The
+ 	 * MDS does NOT provide any notification upon completion,
+ 	 * which may never happen in the worst case.
+ 	 */
 	FCMH_LOCK(f);
-	rc = (f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
-	    bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-	FCMH_ULOCK(f);
-	if (rc) {
-		csvc = slm_getclcsvc(exp);
-		FCMH_LOCK(f);
-		if (csvc && (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)) {
-			psc_dynarray_add(
-			    &fcmh_2_fmi(f)->fmi_ptrunc_clients, csvc);
-			FCMH_ULOCK(f);
-			return (SLERR_BMAP_IN_PTRUNC);
-		}
+	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
+	    (bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE)) {
 		FCMH_ULOCK(f);
+		return (SLERR_BMAP_IN_PTRUNC);
 	}
+	FCMH_ULOCK(f);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
