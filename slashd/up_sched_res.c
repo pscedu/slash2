@@ -851,7 +851,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 		case BREPLST_TRUNCPNDG:
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
 			if (rc > 0)
-				return;
+				continue;
 			break;
 
 		case BREPLST_GARBAGE:
