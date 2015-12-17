@@ -2063,8 +2063,8 @@ slm_ptrunc_prepare(void *p)
 	fmi = fcmh_2_fmi(f);
 
 	/*
-	 * Wait until any leases for this or any bmap after have been
-	 * relinquished.
+	 * Inform lease holders to give up their leases.  This is only
+	 * best-effort.
 	 */
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	for (;; i++) {
@@ -2094,22 +2094,13 @@ slm_ptrunc_prepare(void *p)
 
 			BMAP_LOCK(b);
 		}
-		if (pll_nitems(&bmap_2_bmi(b)->bmi_leases))
-			wait = 1;
 		bmap_op_done(b);
 	}
-	if (wait)
-		return (1);
-
-	/* all client leases have been relinquished */
-	/* XXX: wait for any CRC updates coming from sliods */
 
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
-	// grab busy
-	// ulock
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
