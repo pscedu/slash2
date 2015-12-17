@@ -150,14 +150,21 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ENOTCONN:
 	case ETIMEDOUT:
 		break;
+
+	/*
+	 * Translate error codes from the SLASH2 level to the OS level.
+	 */
+	case PFLERR_NOTSUP:
+		*rc = ENOTSUP;
+		/* FALLTHROUGH */
 	default:
 		return (0);
 	}
 
-	/* 
-	 * We only need to set returned rc if we are not 
- 	 * going to retry.
- 	 */
+	/*
+	 * We only need to set returned rc if we are not
+	 * going to retry.
+	 */
 	if (pfr) {
 		if (pfr->pfr_interrupted) {
 			retry = 0;
