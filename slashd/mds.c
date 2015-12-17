@@ -2081,15 +2081,16 @@ slm_ptrunc_prepare(void *p)
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL)
 				continue;
-			if (SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
-			    mq, mp) == 0) {
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, 
+				rq, mq, mp);
+			if (!rc) {
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
 				mq->sbd[0].sbd_bmapno = i;
 				mq->nbmaps = 1;
 				(void)SL_RSX_WAITREP(csvc, rq, mp);
 				pscrpc_req_finished(rq);
-			} else
-				sl_csvc_decref(csvc);
+			}
+			sl_csvc_decref(csvc);
 
 			BMAP_LOCK(b);
 		}
