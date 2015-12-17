@@ -2044,6 +2044,69 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 }
 
+__static void
+slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
+{
+	int done = 0, tract[NBREPLST];
+	struct ios_list ios_list;
+	struct fidc_membh *f;
+	struct bmap *b;
+	sl_bmapno_t i;
+
+	f = wk->f;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+
+	ios_list.nios = 0;
+
+	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
+	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
+		/*
+		 * If a bmap sliver was sliced, we must await for a
+		 * sliod to reply with the new CRC.
+		 */
+		if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+			BMAP_ULOCK(b);
+			mds_repl_bmap_walkcb(b, tract, NULL, 0,
+			    ptrunc_tally_ios, &ios_list);
+			mds_bmap_write_repls_rel(b);
+
+			upsch_enqueue(bmap_2_upd(b));
+		}
+		i++;
+	} else {
+		done = 1;
+	}
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+
+	for (;; i++) {
+		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
+		    BMAPGETF_NOAUTOINST, &b))
+			break;
+
+		BMAP_ULOCK(b);
+		BHGEN_INCREMENT(b);
+		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		    ptrunc_tally_ios, &ios_list);
+		mds_bmap_write_repls_rel(b);
+	}
+
+	if (done) {
+		FCMH_LOCK(f);
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+		fcmh_wake_locked(f);
+		FCMH_ULOCK(f);
+	}
+
+	/* XXX adjust nblks */
+
+	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
+}
+
 int
 slm_ptrunc_prepare(void *p)
 {
@@ -2116,68 +2179,6 @@ slm_ptrunc_prepare(void *p)
 	return (0);
 }
 
-void
-slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
-{
-	int done = 0, tract[NBREPLST];
-	struct ios_list ios_list;
-	struct fidc_membh *f;
-	struct bmap *b;
-	sl_bmapno_t i;
-
-	f = wk->f;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
-
-	ios_list.nios = 0;
-
-	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
-		/*
-		 * If a bmap sliver was sliced, we must await for a
-		 * sliod to reply with the new CRC.
-		 */
-		if (bmap_get(f, i, SL_WRITE, &b) == 0) {
-			BMAP_ULOCK(b);
-			mds_repl_bmap_walkcb(b, tract, NULL, 0,
-			    ptrunc_tally_ios, &ios_list);
-			mds_bmap_write_repls_rel(b);
-
-			upsch_enqueue(bmap_2_upd(b));
-		}
-		i++;
-	} else {
-		done = 1;
-	}
-
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
-
-	for (;; i++) {
-		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
-		    BMAPGETF_NOAUTOINST, &b))
-			break;
-
-		BMAP_ULOCK(b);
-		BHGEN_INCREMENT(b);
-		mds_repl_bmap_walkcb(b, tract, NULL, 0,
-		    ptrunc_tally_ios, &ios_list);
-		mds_bmap_write_repls_rel(b);
-	}
-
-	if (done) {
-		FCMH_LOCK(f);
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		fcmh_wake_locked(f);
-		FCMH_ULOCK(f);
-	}
-
-	/* XXX adjust nblks */
-
-	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
-}
 
 /*
 	psc_mutex_lock(&slm_dbh_mut);
