@@ -478,7 +478,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		rc = mdsio_redo_setattr(current_vfsid,
 		    sjnm->sjnm_target_fid, sjnm->sjnm_mask, &sstb);
 		slm_setattr_core(f, &sstb,
-		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask), NULL);
+		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		if (!replay) {
 			if (f) {
 				/* setattr() above has filled sstb */

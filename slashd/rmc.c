@@ -1159,7 +1159,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 
 		csvc = slm_getclcsvc(rq->rq_export);
-		slm_setattr_core(f, &mq->attr, to_set | tadj, csvc);
+		slm_setattr_core(f, &mq->attr, to_set | tadj);
 		mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 	}
 

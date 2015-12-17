@@ -1979,7 +1979,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 void
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
-    int to_set, struct slashrpc_cservice *csvc)
+    int to_set)
 {
 	int locked, deref = 0, rc = 0;
 	struct slm_wkdata_ptrunc *wk;

@@ -375,8 +375,7 @@ int	 slm_ptrunc_prepare(void *);
 void	 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
 int	 slm_ptrunc_wake_clients(void *);
 void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
-void	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int,
-	    struct slashrpc_cservice *);
+void	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 int	 mdscoh_req(struct bmap_mds_lease *);
 
