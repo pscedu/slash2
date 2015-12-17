@@ -2179,13 +2179,6 @@ slm_ptrunc_prepare(void *p)
 	return (0);
 }
 
-
-/*
-	psc_mutex_lock(&slm_dbh_mut);
-	slm_dbh = NULL;
-	sqlite3_close(dbh);
-*/
-
 int
 str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
 {
