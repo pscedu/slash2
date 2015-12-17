@@ -1,0 +1,21 @@
+Setup notes
+-----------
+
+Diagram:
+
+					    Node pool
+					  +--------+
+					  | Node 0 |
+  +----------+       +-------------+      +---------+
+  | Launcher | <---> | Coordinator | <---> | Node 1 |
+  +----------+       +-------------+       +---------+
+			  /   \             | Node N |
+			 /     \            +--------+
+			/       \
+		       /         \
+		    mail      database stats
+
+(1) The user tsuite runs as must have sudo privileges.
+(2) ssh keys must be set up on each machine for the user to ssh to the
+    local machine as well as from the launching node.
+
