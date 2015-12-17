@@ -56,6 +56,8 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+__static int slm_ptrunc_prepare(void *);
+
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {
@@ -2107,10 +2109,10 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
-int
+__static int
 slm_ptrunc_prepare(void *p)
 {
-	int to_set, rc, wait = 0;
+	int to_set, rc;
 	struct slm_wkdata_ptrunc *wk = p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;

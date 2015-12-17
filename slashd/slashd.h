@@ -371,7 +371,6 @@ slfid_t	 slm_get_curr_slashfid(void);
 void	 slm_set_curr_slashfid(slfid_t);
 int	 slm_get_next_slashfid(slfid_t *);
 
-int	 slm_ptrunc_prepare(void *);
 void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 void	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
