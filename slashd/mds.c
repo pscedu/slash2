@@ -2166,6 +2166,7 @@ slm_ptrunc_prepare(void *p)
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
+	FCMH_ULOCK(f);
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
@@ -2176,7 +2177,6 @@ slm_ptrunc_prepare(void *p)
 	if (rc)
 		psclog_error("setattr rc=%d", rc);
 
-	FCMH_ULOCK(f);
 	slm_ptrunc_apply(wk);
 	return (0);
 }
