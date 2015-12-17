@@ -1570,54 +1570,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	/* Call the journal and update the in-memory CRCs. */
 	rc = mds_bmap_crc_update(bmap, iosid, c);
 
-	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
-		struct slash_inode_handle *ih;
-		struct slm_wkdata_ptrunc *wk;
-		int iosidx, tract[NBREPLST];
-		uint32_t bpol;
-
-		ih = fcmh_2_inoh(f);
-		iosidx = mds_repl_ios_lookup(vfsid, ih, iosid);
-		if (iosidx < 0)
-			psclog_errorx("ios not found");
-		else {
-			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG] = BREPLST_VALID;
-			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_VALID;
-			mds_repl_bmap_apply(bmap, tract, NULL,
-			    SL_BITS_PER_REPLICA * iosidx);
-
-			BHREPL_POLICY_GET(bmap, &bpol);
-
-			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG] = bpol == BRPOL_PERSIST ?
-			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
-			mds_repl_bmap_walk(bmap, tract, NULL,
-			    REPL_WALKF_MODOTH, &iosidx, 1);
-
-			// XXX write bmap!!!
-			BMAPOD_MODIFY_DONE(bmap, 0);
-
-			/*
-			 * XXX modify all bmaps after this one and mark
-			 * them INVALID since the sliod will have zeroed
-			 * those regions.
-			 */
-			UPD_WAKE(&bmi->bmi_upd);
-		}
-
-		FCMH_LOCK(f);
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		fcmh_wake_locked(f);
-		FCMH_ULOCK(f);
-
-		wk = pfl_workq_getitem(slm_ptrunc_wake_clients,
-		    struct slm_wkdata_ptrunc);
-		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		wk->f = f;
-		pfl_workq_putitem(wk);
-	}
-
 	/*
 	 * As a security precaution, most systems disable setuid or
 	 * setgid when a file is modified by nonsuperuser.  Since
@@ -1766,7 +1718,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
     struct pscrpc_export *exp, uint8_t *repls, int new)
 {
-	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
@@ -2055,8 +2006,6 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		wk = pfl_workq_getitem(slm_ptrunc_prepare,
 		    struct slm_wkdata_ptrunc);
 		wk->f = f;
-		if (csvc)
-			psc_dynarray_add(&fmi->fmi_ptrunc_clients, csvc);
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
 		pfl_workq_putitem(wk);
 
@@ -2106,14 +2055,12 @@ slm_ptrunc_prepare(void *p)
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;
-	struct psc_dynarray *da;
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
 
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
-	da = &fcmh_2_fmi(f)->fmi_ptrunc_clients;
 
 	/*
 	 * Wait until any leases for this or any bmap after have been
@@ -2134,18 +2081,13 @@ slm_ptrunc_prepare(void *p)
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL)
 				continue;
-			if (!psc_dynarray_exists(da, csvc) &&
-			    SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
+			if (SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp) == 0) {
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
 				mq->sbd[0].sbd_bmapno = i;
 				mq->nbmaps = 1;
 				(void)SL_RSX_WAITREP(csvc, rq, mp);
 				pscrpc_req_finished(rq);
-
-				FCMH_LOCK(f);
-				psc_dynarray_add(da, csvc);
-				FCMH_ULOCK(f);
 			} else
 				sl_csvc_decref(csvc);
 
@@ -2238,49 +2180,11 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
-		slm_ptrunc_wake_clients(wk);
 	}
 
 	/* XXX adjust nblks */
 
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
-}
-
-int
-slm_ptrunc_wake_clients(void *p)
-{
-	struct slm_wkdata_ptrunc *wk = p;
-	struct slashrpc_cservice *csvc;
-	struct srm_bmap_wake_req *mq;
-	struct srm_bmap_wake_rep *mp;
-	struct pscrpc_request *rq;
-	struct fcmh_mds_info *fmi;
-	struct psc_dynarray *da;
-	struct fidc_membh *f;
-	int rc;
-
-	f = wk->f;
-	fmi = fcmh_2_fmi(f);
-	da = &fmi->fmi_ptrunc_clients;
-	FCMH_LOCK(f);
-	while (psc_dynarray_len(da)) {
-		csvc = psc_dynarray_getpos(da, 0);
-		psc_dynarray_remove(da, csvc);
-		FCMH_ULOCK(f);
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_WAKE, rq, mq, mp);
-		if (rc == 0) {
-			mq->fg = f->fcmh_fg;
-			mq->bmapno = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-			(void)SL_RSX_WAITREP(csvc, rq, mp);
-			pscrpc_req_finished(rq);
-		}
-		sl_csvc_decref(csvc);
-
-		FCMH_LOCK(f);
-	}
-	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
-	return (0);
 }
 
 /*

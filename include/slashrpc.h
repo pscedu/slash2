@@ -555,8 +555,6 @@ struct srm_bmap_crcwrt_req {
 	uint32_t		flags;
 } __packed;
 
-#define SRM_BMAPCRCWRT_PTRUNC	(1 << 0)	/* in response to partial trunc CRC recalc */
-
 struct srm_bmap_crcwrt_rep {
 	 int32_t		crcup_rc[MAX_BMAP_NCRC_UPDATES];
 	 int32_t		rc;
