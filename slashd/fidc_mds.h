@@ -54,15 +54,12 @@ struct fcmh_mds_info {
 		} d;
 		struct {
 			uint64_t  fmif_ptrunc_size;	/* new truncate(2) size */
-			struct psc_dynarray
-				  fmif_ptrunc_clients;	/* clients awaiting CRC recalc */
 		} f;
 	} u;
 #define fmi_dino_mfid		u.d.fmid_dino_mfid
 #define fmi_dino_mfh		u.d.fmid_dino_mfh
 
 #define fmi_ptrunc_size		u.f.fmif_ptrunc_size
-#define fmi_ptrunc_clients	u.f.fmif_ptrunc_clients
 };
 
 /* mds-specific fcmh_flags */

@@ -2763,7 +2763,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
- wait_trunc_res:
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 		/*
@@ -2889,20 +2888,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	switch (rc) {
-	case -SLERR_BMAP_IN_PTRUNC:
-		if (getting_attrs) {
-			getting_attrs = 0;
-			FCMH_LOCK(c);
-			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		}
+
+	if (rc == -SLERR_BMAP_IN_PTRUNC)
+		rc = EAGAIN;
+	if (rc == -SLERR_BMAP_PTRUNC_STARTED)
 		rc = 0;
-		goto wait_trunc_res;
-	case -SLERR_BMAP_PTRUNC_STARTED:
-		unset_trunc = 0;
-		rc = 0;
-		break;
-	}
 
  out:
 	if (c) {

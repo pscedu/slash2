@@ -276,7 +276,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 
 	pe.fg = b->bcm_fcmh->fcmh_fg;
 	pe.bno = b->bcm_bmapno;
@@ -295,7 +295,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
-			PFL_GOTOERR(fail, rc = -ENODATA);
+			PFL_GOTOERR(out, rc = -ENODATA);
 
 		pe.len = MIN(sz, SLASH_BMAP_SIZE);
 	}
@@ -317,7 +317,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * replication request or something.
 	 */
 	if (rc != BREPLST_REPL_QUEUED)
-		PFL_GOTOERR(fail, rc = -ENODEV);
+		PFL_GOTOERR(out, rc = -ENODEV);
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
@@ -343,7 +343,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
 
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 	}
 
 	OPSTAT2_ADD("replsched", amt);
@@ -365,7 +365,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	return (1);
 
- fail:
+ out:
 	DEBUG_BMAP(PLL_DIAG, b, "dst_resm=%s src_resm=%s rc=%d",
 	    dst_resm->resm_name, src_resm->resm_name, rc);
 
@@ -464,11 +464,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Try to issue a PTRUNC resolution to an ION.
- * Returns:
- *   -1	: The activity can never happen; give up.
- *    0	: Unsuccessful.
- *    1	: Success.
+ * Try to issue a PTRUNC RPC to an ION.
  */
 int
 slm_upsch_tryptrunc(struct bmap *b, int off,
@@ -506,12 +502,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 	av.pointer_arg[IP_CSVC] = csvc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
@@ -522,7 +518,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNCPNDG)
-		PFL_GOTOERR(fail, rc = -1);
+		DEBUG_BMAPOD(PLL_FATAL, b,
+		    "bmap is corrupted");
 
 	av.pointer_arg[IP_BMAP] = b;
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
@@ -532,18 +529,15 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc == 0) {
-		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
-		return (1);
-	}
+	if (rc == 0)
+		return (0);
 
- fail:
+ out:
 	if (rq)
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
 	    dst_resm, av.pointer_arg[IP_BMAP], rc, off);
-	return (0);
+	return (rc);
 }
 
 void
@@ -576,7 +570,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 			continue;
 		rc = bmap_get(f, pe->bno, SL_WRITE, &b);
 		if (rc)
-			goto fail;
+			goto out;
 		BMAP_ULOCK(b);
 		rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f),
 		    &repl, &idx, 1);
@@ -584,7 +578,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 			mds_bmap_write_logrepls(b);
 		}
- fail:
+ out:
 		if (b)
 			bmap_op_done(b);
 		fcmh_op_done(f);
@@ -608,7 +602,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
 	    &slm_upsch_mw);
 	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(m));
+		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
 	pe.fg = b->bcm_fcmh->fcmh_fg;
 	pe.bno = b->bcm_bmapno;
@@ -618,7 +612,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	    SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
 	    slm_batch_preclaim_cb, 30);
 	if (rc)
-		PFL_GOTOERR(fail, rc);
+		PFL_GOTOERR(out, rc);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
@@ -630,7 +624,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	rc = mds_bmap_write_logrepls(b);
 
- fail:
+ out:
 	if (rc && rc != -PFLERR_NOTCONN)
 		psclog_errorx("error rc=%d", rc);
 	if (csvc)
@@ -715,8 +709,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	/* skip, there is more important work to do */
 	if (b->bcm_flags & BMAPF_REPLMODWR)
 		return;
-
-//	if (IN_PTRUNC)
 
 	UPD_UNBUSY(upd);
 
@@ -852,9 +844,15 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 
 		case BREPLST_TRUNCPNDG:
+			/*
+			 * If we got at least one success, we can mark
+			 * any unresponsive IOS as garbage to open up
+			 * new bmap request at & beyond the truncation
+			 * point.
+			 */
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
-			if (rc > 0)
-				return;
+			if (rc == 0)
+				continue;
 			break;
 
 		case BREPLST_GARBAGE:

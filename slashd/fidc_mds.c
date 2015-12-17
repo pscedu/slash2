@@ -196,9 +196,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		ino_mfh = fcmh_2_dino_mfhp(f);
 	}
 
-	if (fcmh_isreg(f))
-		psc_dynarray_init(&fmi->fmi_ptrunc_clients);
-
 	if (fcmh_isdir(f) || fcmh_isreg(f)) {
 		/*
 		 * We shouldn't need O_LARGEFILE because SLASH2
@@ -240,12 +237,6 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	int rc, vfsid;
 
 	fmi = fcmh_2_fmi(f);
-
-	if (fcmh_isreg(f)) {
-		psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
-		psc_dynarray_free(&fmi->fmi_ptrunc_clients);
-	}
-
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {

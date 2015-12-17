@@ -56,6 +56,8 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+__static int slm_ptrunc_prepare(void *);
+
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {
@@ -1570,54 +1572,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	/* Call the journal and update the in-memory CRCs. */
 	rc = mds_bmap_crc_update(bmap, iosid, c);
 
-	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
-		struct slash_inode_handle *ih;
-		struct slm_wkdata_ptrunc *wk;
-		int iosidx, tract[NBREPLST];
-		uint32_t bpol;
-
-		ih = fcmh_2_inoh(f);
-		iosidx = mds_repl_ios_lookup(vfsid, ih, iosid);
-		if (iosidx < 0)
-			psclog_errorx("ios not found");
-		else {
-			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG] = BREPLST_VALID;
-			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_VALID;
-			mds_repl_bmap_apply(bmap, tract, NULL,
-			    SL_BITS_PER_REPLICA * iosidx);
-
-			BHREPL_POLICY_GET(bmap, &bpol);
-
-			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG] = bpol == BRPOL_PERSIST ?
-			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
-			mds_repl_bmap_walk(bmap, tract, NULL,
-			    REPL_WALKF_MODOTH, &iosidx, 1);
-
-			// XXX write bmap!!!
-			BMAPOD_MODIFY_DONE(bmap, 0);
-
-			/*
-			 * XXX modify all bmaps after this one and mark
-			 * them INVALID since the sliod will have zeroed
-			 * those regions.
-			 */
-			UPD_WAKE(&bmi->bmi_upd);
-		}
-
-		FCMH_LOCK(f);
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		fcmh_wake_locked(f);
-		FCMH_ULOCK(f);
-
-		wk = pfl_workq_getitem(slm_ptrunc_wake_clients,
-		    struct slm_wkdata_ptrunc);
-		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		wk->f = f;
-		pfl_workq_putitem(wk);
-	}
-
 	/*
 	 * As a security precaution, most systems disable setuid or
 	 * setgid when a file is modified by nonsuperuser.  Since
@@ -1766,27 +1720,24 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
     struct pscrpc_export *exp, uint8_t *repls, int new)
 {
-	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	int rc, bflags;
 
+	/*
+ 	 * Reject any bmap request at or beyond the truncation point.
+ 	 * It is up to the client to either retry or bail out. The
+ 	 * MDS does NOT provide any notification upon completion,
+ 	 * which may never happen in the worst case.
+ 	 */
 	FCMH_LOCK(f);
-	rc = (f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
-	    bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-	FCMH_ULOCK(f);
-	if (rc) {
-		csvc = slm_getclcsvc(exp);
-		FCMH_LOCK(f);
-		if (csvc && (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)) {
-			psc_dynarray_add(
-			    &fcmh_2_fmi(f)->fmi_ptrunc_clients, csvc);
-			FCMH_ULOCK(f);
-			return (SLERR_BMAP_IN_PTRUNC);
-		}
+	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
+	    (bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE)) {
 		FCMH_ULOCK(f);
+		return (SLERR_BMAP_IN_PTRUNC);
 	}
+	FCMH_ULOCK(f);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
@@ -2030,7 +1981,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 void
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
-    int to_set, struct slashrpc_cservice *csvc)
+    int to_set)
 {
 	int locked, deref = 0, rc = 0;
 	struct slm_wkdata_ptrunc *wk;
@@ -2057,8 +2008,6 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		wk = pfl_workq_getitem(slm_ptrunc_prepare,
 		    struct slm_wkdata_ptrunc);
 		wk->f = f;
-		if (csvc)
-			psc_dynarray_add(&fmi->fmi_ptrunc_clients, csvc);
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
 		pfl_workq_putitem(wk);
 
@@ -2097,94 +2046,7 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 }
 
-int
-slm_ptrunc_prepare(void *p)
-{
-	int to_set, rc, wait = 0;
-	struct slm_wkdata_ptrunc *wk = p;
-	struct srm_bmap_release_req *mq;
-	struct srm_bmap_release_rep *mp;
-	struct slashrpc_cservice *csvc;
-	struct bmap_mds_lease *bml;
-	struct pscrpc_request *rq;
-	struct fcmh_mds_info *fmi;
-	struct psc_dynarray *da;
-	struct fidc_membh *f;
-	struct bmap *b;
-	sl_bmapno_t i;
-
-	f = wk->f;
-	fmi = fcmh_2_fmi(f);
-	da = &fcmh_2_fmi(f)->fmi_ptrunc_clients;
-
-	/*
-	 * Wait until any leases for this or any bmap after have been
-	 * relinquished.
-	 */
-	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
-	for (;; i++) {
-		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
-		    BMAPGETF_NOAUTOINST, &b))
-			break;
-
-		BMAP_FOREACH_LEASE(b, bml) {
-			BMAP_ULOCK(b);
-
-			/* we are recovering after restart */
-			if (bml->bml_exp == NULL)
-				continue;
-			csvc = slm_getclcsvc(bml->bml_exp);
-			if (csvc == NULL)
-				continue;
-			if (!psc_dynarray_exists(da, csvc) &&
-			    SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
-			    mq, mp) == 0) {
-				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
-				mq->sbd[0].sbd_bmapno = i;
-				mq->nbmaps = 1;
-				(void)SL_RSX_WAITREP(csvc, rq, mp);
-				pscrpc_req_finished(rq);
-
-				FCMH_LOCK(f);
-				psc_dynarray_add(da, csvc);
-				FCMH_ULOCK(f);
-			} else
-				sl_csvc_decref(csvc);
-
-			BMAP_LOCK(b);
-		}
-		if (pll_nitems(&bmap_2_bmi(b)->bmi_leases))
-			wait = 1;
-		bmap_op_done(b);
-	}
-	if (wait)
-		return (1);
-
-	/* all client leases have been relinquished */
-	/* XXX: wait for any CRC updates coming from sliods */
-
-	FCMH_LOCK(f);
-	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
-	fcmh_2_ptruncgen(f)++;
-	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
-	// grab busy
-	// ulock
-
-	mds_reserve_slot(1);
-	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
-	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb, // outbuf
-	    fcmh_2_mfh(f), mdslog_namespace);
-	mds_unreserve_slot(1);
-
-	if (rc)
-		psclog_error("setattr rc=%d", rc);
-
-	FCMH_ULOCK(f);
-	slm_ptrunc_apply(wk);
-	return (0);
-}
-
-void
+__static void
 slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
 	int done = 0, tract[NBREPLST];
@@ -2240,7 +2102,6 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
-		slm_ptrunc_wake_clients(wk);
 	}
 
 	/* XXX adjust nblks */
@@ -2248,48 +2109,77 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
-int
-slm_ptrunc_wake_clients(void *p)
+__static int
+slm_ptrunc_prepare(void *p)
 {
+	int to_set, rc;
 	struct slm_wkdata_ptrunc *wk = p;
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
 	struct slashrpc_cservice *csvc;
-	struct srm_bmap_wake_req *mq;
-	struct srm_bmap_wake_rep *mp;
+	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;
-	struct psc_dynarray *da;
 	struct fidc_membh *f;
-	int rc;
+	struct bmap *b;
+	sl_bmapno_t i;
 
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
-	da = &fmi->fmi_ptrunc_clients;
-	FCMH_LOCK(f);
-	while (psc_dynarray_len(da)) {
-		csvc = psc_dynarray_getpos(da, 0);
-		psc_dynarray_remove(da, csvc);
-		FCMH_ULOCK(f);
 
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_WAKE, rq, mq, mp);
-		if (rc == 0) {
-			mq->fg = f->fcmh_fg;
-			mq->bmapno = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-			(void)SL_RSX_WAITREP(csvc, rq, mp);
-			pscrpc_req_finished(rq);
+	/*
+	 * Inform lease holders to give up their leases.  This is only
+	 * best-effort.
+	 */
+	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
+	for (;; i++) {
+		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
+		    BMAPGETF_NOAUTOINST, &b))
+			break;
+
+		BMAP_FOREACH_LEASE(b, bml) {
+			BMAP_ULOCK(b);
+
+			/* we are recovering after restart */
+			if (bml->bml_exp == NULL)
+				continue;
+			csvc = slm_getclcsvc(bml->bml_exp);
+			if (csvc == NULL)
+				continue;
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, 
+				rq, mq, mp);
+			if (!rc) {
+				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
+				mq->sbd[0].sbd_bmapno = i;
+				mq->nbmaps = 1;
+				(void)SL_RSX_WAITREP(csvc, rq, mp);
+				pscrpc_req_finished(rq);
+			}
+			sl_csvc_decref(csvc);
+
+			BMAP_LOCK(b);
 		}
-		sl_csvc_decref(csvc);
-
-		FCMH_LOCK(f);
+		bmap_op_done(b);
 	}
-	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
+
+	FCMH_LOCK(f);
+	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
+	fcmh_2_ptruncgen(f)++;
+	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
+	FCMH_ULOCK(f);
+
+	mds_reserve_slot(1);
+	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
+	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb, // outbuf
+	    fcmh_2_mfh(f), mdslog_namespace);
+	mds_unreserve_slot(1);
+
+	if (rc)
+		psclog_error("setattr rc=%d", rc);
+
+	slm_ptrunc_apply(wk);
 	return (0);
 }
-
-/*
-	psc_mutex_lock(&slm_dbh_mut);
-	slm_dbh = NULL;
-	sqlite3_close(dbh);
-*/
 
 int
 str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
