@@ -431,8 +431,8 @@ slm_upsch_wk_finish_ptrunc(void *p)
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
 	slm_upsch_finish_ptrunc(wk->csvc, wk->dst_resm, wk->b, wk->rc,
 	    wk->off);
-	if (FCMH_HAS_BUSY(f))
-		FCMH_UNBUSY(f);
+
+	FCMH_UNBUSY(f);
 	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
 	return (0);
 }
