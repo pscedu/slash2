@@ -2094,7 +2094,6 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
 		mds_bmap_write_repls_rel(b);
-		upsch_enqueue(bmap_2_upd(b));
 	}
 
 	if (done) {
