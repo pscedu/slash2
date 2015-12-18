@@ -53,12 +53,14 @@ struct fcmh_mds_info {
 				  fmid_dino_mfh;
 		} d;
 		struct {
+			int	  fmif_ptrunc_nios;
 			uint64_t  fmif_ptrunc_size;	/* new truncate(2) size */
 		} f;
 	} u;
 #define fmi_dino_mfid		u.d.fmid_dino_mfid
 #define fmi_dino_mfh		u.d.fmid_dino_mfh
 
+#define fmi_ptrunc_nios		u.f.fmif_ptrunc_nios
 #define fmi_ptrunc_size		u.f.fmif_ptrunc_size
 };
 
