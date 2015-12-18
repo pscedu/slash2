@@ -1726,11 +1726,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	int rc, bflags;
 
 	/*
- 	 * Reject any bmap request at or beyond the truncation point.
- 	 * It is up to the client to either retry or bail out. The
- 	 * MDS does NOT provide any notification upon completion,
- 	 * which may never happen in the worst case.
- 	 */
+	 * Reject any bmap request at or beyond the truncation point.
+	 * It is up to the client to either retry or bail out.  The MDS
+	 * does NOT provide any notification upon completion, which may
+	 * never happen in the worst case.
+	 */
 	FCMH_LOCK(f);
 	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    (bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE)) {
@@ -2073,6 +2073,12 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
 			mds_bmap_write_repls_rel(b);
+
+			/*
+			 * Queue work immediately instead of waiting for
+			 * it to be causally paged to reduce latency to
+			 * the client.
+			 */
 			upsch_enqueue(bmap_2_upd(b));
 		}
 		i++;
@@ -2145,7 +2151,7 @@ slm_ptrunc_prepare(void *p)
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL)
 				continue;
-			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, 
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP,
 				rq, mq, mp);
 			if (!rc) {
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
