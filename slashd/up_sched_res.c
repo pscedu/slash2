@@ -408,6 +408,8 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		upd_rpmi_remove(rpmi, upd);
 	}
 
+	/* Clear pending flag when number of PTRUNC drops to zero */
+
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution failed rc=%d", rc);
 
