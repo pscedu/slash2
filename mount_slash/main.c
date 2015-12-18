@@ -1485,7 +1485,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 int
 msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
-    off_t off, size_t size, int wait)
+    off_t off, size_t size, int block)
 {
 	void *dentbuf = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1496,7 +1496,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	struct iovec iov;
 	int rc, nents;
 
-	p = dircache_new_page(d, off, wait);
+	p = dircache_new_page(d, off, block);
 	if (p == NULL)
 		return (-ESRCH);
 
@@ -2831,6 +2831,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 */
 			DYNARRAY_FOREACH(b, i, &a) {
 				struct bmap_pagecache *bmpc;
+
 				bmpc = bmap_2_bmpc(b);
 				BMAP_LOCK(b);
 				bmpc_expire_biorqs(bmpc);
