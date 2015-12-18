@@ -763,7 +763,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 }
 
 int
-_msl_resm_throttle(struct sl_resm *m, int wait)
+_msl_resm_throttle(struct sl_resm *m, int block)
 {
 	struct timespec ts0, ts1, tsd;
 	struct resprof_cli_info *rpci;
@@ -774,7 +774,7 @@ _msl_resm_throttle(struct sl_resm *m, int wait)
 	 * XXX use resm multiwait?
 	 */
 	RPCI_LOCK(rpci);
-	if (!wait && rpci->rpci_infl_rpcs >=
+	if (!block && rpci->rpci_infl_rpcs >=
 	    RESM_MAX_OUTSTANDING_RPCS) {
 		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
@@ -958,7 +958,7 @@ bmap_flush(void)
 void
 msflushthr_main(struct psc_thread *thr)
 {
-	struct timespec work, wait, tmp1, tmp2;
+	struct timespec work, delta, tmp1, tmp2;
 	struct msflush_thread *mflt;
 
 	mflt = msflushthr(thr);
@@ -992,12 +992,12 @@ msflushthr_main(struct psc_thread *thr)
 		freelock(&slc_bflush_lock);
 
 		PFL_GETTIMESPEC(&tmp1);
-		timespecsub(&tmp1, &tmp2, &wait);
+		timespecsub(&tmp1, &tmp2, &delta);
 
 		psclogs_debug(SLSS_BMAP, "work time ("PSCPRI_TIMESPEC"),"
 		    "wait time ("PSCPRI_TIMESPEC")",
 		    PSCPRI_TIMESPEC_ARGS(&work),
-		    PSCPRI_TIMESPEC_ARGS(&wait));
+		    PSCPRI_TIMESPEC_ARGS(&delta));
 	}
 }
 

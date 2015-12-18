@@ -553,14 +553,14 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 void
 slmbchrqthr_main(struct psc_thread *thr)
 {
-	struct timeval now, wait;
+	struct timeval now, stall;
 	struct psc_listcache *ml;
 	struct batchrq *br;
 
 	ml = &batchrqs_delayed;
 
-	wait.tv_sec = 0;
-	wait.tv_usec = 0;
+	stall.tv_sec = 0;
+	stall.tv_usec = 0;
 
 	while (pscthr_run(thr)) {
 		LIST_CACHE_LOCK(ml);
@@ -569,13 +569,13 @@ slmbchrqthr_main(struct psc_thread *thr)
 		if (timercmp(&now, &br->br_expire, >))
 			batchrq_send(br);
 		else
-			timersub(&br->br_expire, &now, &wait);
+			timersub(&br->br_expire, &now, &stall);
 		LIST_CACHE_ULOCK(ml);
 
-		usleep(wait.tv_sec * 1000000 + wait.tv_usec);
+		usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 
-		wait.tv_sec = 0;
-		wait.tv_usec = 0;
+		stall.tv_sec = 0;
+		stall.tv_usec = 0;
 	}
 }
 

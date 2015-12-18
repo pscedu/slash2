@@ -177,11 +177,11 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
  * Release a page of dirents from cache.
  * @d: directory handle.
  * @p: page to release.
- * @wait: whether to wait for all other references to release.
+ * @block: whether to block for all other references to release.
  */
 int
 _dircache_free_page(const struct pfl_callerinfo *pci,
-    struct fidc_membh *d, struct dircache_page *p, int wait)
+    struct fidc_membh *d, struct dircache_page *p, int block)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
@@ -193,7 +193,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	if (p->dcp_flags & DIRCACHEPGF_FREEING)
 		return (0);
 
-	if (p->dcp_refcnt && !wait)
+	if (p->dcp_refcnt && !block)
 		return (0);
 
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
@@ -326,10 +326,10 @@ dircache_hasoff(struct dircache_page *p, off_t off)
  * Allocate a new page of dirents.
  * @d: directory handle.
  * @off: offset into directory for this slew of dirents.
- * @wait: whether this call should be non-blocking or not.
+ * @block: whether this call should be non-blocking or not.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, off_t off, int wait)
+dircache_new_page(struct fidc_membh *d, off_t off, int block)
 {
 	struct dircache_page *p, *np, *newp;
 	struct dircache_expire dexp;
@@ -350,7 +350,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			if (p->dcp_off == off) {
-				if (wait) {
+				if (block) {
 					DIRCACHE_WAIT(d);
 					goto restart;
 				}
@@ -362,7 +362,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 				p = NULL;
 				goto out;
 			}
-			if (wait) {
+			if (block) {
 				DIRCACHE_WAIT(d);
 				goto restart;
 			}
@@ -370,7 +370,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 		}
 		if (dircache_hasoff(p, off)) {
 			/* Stale page in cache; purge and refresh. */
-			if (wait)
+			if (block)
 				dircache_free_page(d, p);
 			else if (!dircache_free_page_nowait(d, p)) {
 				p = NULL;
