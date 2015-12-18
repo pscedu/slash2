@@ -1,21 +1,43 @@
+SLASH2 Testing Suite README
+---------------------------
+
+  System Architecture Diagram:
+
+					Node pool
+				    +--------+
+				    | Node 0 |
+  +----------+       +--------+     +----------+
+  | Launcher | <---> | Bounce | <---> | Node 1 |
+  +----------+       +--------+       +----------+
+		       /    \           |  ...   |
+		      /      \          +----------+
+		     /        \           | Node N |
+		    /          \          +--------+
+		   /            \
+		mail         database stats
+
+  Legend:
+
+    - Launcher is the machine where tsuite is executed from.
+      It may be a build server or even laptop.  Any diffs in the tree
+      where tsuite is launched from are copied to the trees for the
+      suite invocation.  The launcher is responsible for suite execution
+      coordination directly by SSH'ing to each node specified by the
+      testing suite.
+
+    - Bounce is an optional host primarily for situations where node
+      pools are behind an internal network.
+
+    - Node pool are hosts directly specified in the testing suite
+      configuration.
+
+  Other services, such as mail and database, are accessed depending on
+  the invocation parameters of tsuite.
+
 Setup notes
 -----------
 
-Diagram:
+(1) The user tsuite runs as ("tsuite-user") must have sudo privileges.
 
-					    Node pool
-					  +--------+
-					  | Node 0 |
-  +----------+       +-------------+      +---------+
-  | Launcher | <---> | Coordinator | <---> | Node 1 |
-  +----------+       +-------------+       +---------+
-			  /   \             | Node N |
-			 /     \            +--------+
-			/       \
-		       /         \
-		    mail      database stats
-
-(1) The user tsuite runs as must have sudo privileges.
-(2) ssh keys must be set up on each machine for the user to ssh to the
-    local machine as well as from the launching node.
-
+(2) SSH pubkeys must be set up on each node so tsuite-user can SSH to
+    the localhost on each node, which may be used by some tests.
