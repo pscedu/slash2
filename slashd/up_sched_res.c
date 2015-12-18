@@ -442,8 +442,10 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct slm_wkdata_upsch_cb *wk;
-	int rc = 0;
+	struct fidc_membh *f;
+	struct bmap *b = av->pointer_arg[IP_BMAP];
+	int rc = 0, off = av->space[IN_OFF];
+	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 	if (rc == 0)
@@ -452,14 +454,14 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	if (rc)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 
-	wk = pfl_workq_getitem(slm_upsch_wk_finish_ptrunc,
-	    struct slm_wkdata_upsch_cb);
-	wk->rc = rc;
-	wk->csvc = csvc;
-	wk->b = av->pointer_arg[IP_BMAP];
-	wk->off = av->space[IN_OFF];
-	wk->dst_resm = av->pointer_arg[IP_DSTRESM];
-	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+	f = b->bcm_fcmh;
+
+	FCMH_WAIT_BUSY(f);
+	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
+	slm_upsch_finish_ptrunc(csvc, dst_resm, b, rc, off);
+	FCMH_UNBUSY(f);
+
+	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
 	return (0);
 }
 
