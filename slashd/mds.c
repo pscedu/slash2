@@ -2049,7 +2049,7 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 __static void
 slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
-	int done = 0, tract[NBREPLST];
+	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
 	struct bmap *b;
@@ -2078,6 +2078,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			    ptrunc_tally_ios, &ios_list);
 			fmi->fmi_ptrunc_nios = ios_list.nios;
 			if (fmi->fmi_ptrunc_nios) {
+				done = 0;
 				mds_bmap_write_repls_rel(b);
 				/*
 				 * Queue work immediately instead 
@@ -2089,8 +2090,6 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			}
 		}
 		i++;
-	} else {
-		done = 1;
 	}
 
 	brepls_init(tract, -1);
