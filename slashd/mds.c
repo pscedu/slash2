@@ -2054,13 +2054,17 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
+	struct fcmh_mds_info *fmi;
 
 	f = wk->f;
+	fmi = fcmh_2_fmi(f);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
+	/* get the number of replies we expect */
 	ios_list.nios = 0;
+	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
 	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
@@ -2072,14 +2076,17 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			BMAP_ULOCK(b);
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
-			mds_bmap_write_repls_rel(b);
-
-			/*
-			 * Queue work immediately instead of waiting for
-			 * it to be causally paged to reduce latency to
-			 * the client.
-			 */
-			upsch_enqueue(bmap_2_upd(b));
+			fmi->fmi_ptrunc_nios = ios_list.nios;
+			if (fmi->fmi_ptrunc_nios) {
+				mds_bmap_write_repls_rel(b);
+				/*
+				 * Queue work immediately instead 
+				 * of waiting for it to be causally 
+				 * paged to reduce latency to the 
+				 * client.
+				 */
+				upsch_enqueue(bmap_2_upd(b));
+			}
 		}
 		i++;
 	} else {
