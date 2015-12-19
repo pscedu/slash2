@@ -55,7 +55,7 @@ sub fatal {
 
 sub usage {
 	die <<EOF
-usage: $0 [-mqR] [test-name]
+usage: $0 [-mRv] [test-name]
 
 options:
   -m	send e-mail report
@@ -95,8 +95,10 @@ sub slurp {
 	return ($data);
 }
 
+use constant NONBLOCK => 1;
+
 sub waitjobs {
-	my ($pids, $to) = @_;
+	my ($pids, $to, $flags) = @_;
 	local $_;
 
 	alarm $to;
@@ -409,8 +411,12 @@ foreach $n (@mds, @ios, @cli) {
 		@{[init_env($n)]}
 		mkdir -p $n->{data_dir}
 
-
-		$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
+		while :; do
+			$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
+			if crashed; then
+				collect gdb
+			fi
+		done
 EOF
 }
 
@@ -434,7 +440,13 @@ foreach $n (@ios) {
 
 	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
+
+		while :; do
+			$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
+			if crashed;
+				collect gdb report
+			fi
+		done
 EOF
 }
 
@@ -449,56 +461,83 @@ foreach $n (@cli) {
 EOF
 }
 
-# Run the client applications
+my $setup = <<EOF;
+	export RANDOM=/dev/shm/r000
+	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
+	cd \$test_src_dir
+
+	runtest()
+	{
+		export LOCAL_TMP=$n->{TMPDIR}/\$test
+		rm -rf \$LOCAL_TMP
+		mkdir -p \$LOCAL_TMP
+		cd \$LOCAL_TMP
+
+		\$test_src_dir/\$test
+	}
+EOF
+
+# Run the client application tests
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 
-		export RANDOM=/dev/shm/r000
 		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
 
-		test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
-		cd \$test_src_dir
-
-		runtest()
-		{
-			export LOCAL_TMP=$n->{TMPDIR}/\$test
-			rm -rf \$LOCAL_TMP
-			mkdir -p \$LOCAL_TMP
-			cd \$LOCAL_TMP
-
-			\$test_src_dir/\$test
-		}
+		$setup
 
 		for test in *; do
 			time0=\$(date +%s.%N)
-			(runtest \$test)
+			(runtest \$test $n)
 			time1=\$(date +%s.%N)
 		done
+EOF
+}
+
+waitjobs \@pids, $total_timeout;
+
+foreach $n (@cli) {
+	debug_msg "client: $n->{host}";
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+
+		$setup
 
 		# run all tests in parallel without faults for
 		# performance regressions and exercise
 		time0=\$(date +%s.%N)
 		for test in *; do
-			(runtest \$test &)
+			(runtest \$test $n &)
 		done
 		wait
 		time1=\$(date +%s.%N)
-
-		# now run the entire thing again injecting faults at
-		# random places to test failure tolerance
 EOF
 }
 
-=cut
-	doresults => "perl $src/tools/tsuite_results.pl " .
-		($opts{R} ? "-R " : "") . ($opts{m} ? "-m " : "") .
-		" $testname $logbase");
-
-=cut
-
 waitjobs \@pids, $total_timeout;
+
+foreach $n (@cli) {
+	debug_msg "client: $n->{host}";
+	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+
+		$setup
+
+		# now run the entire thing again injecting faults at
+		# random places to test failure tolerance
+		for test in *; do
+			time0=\$(date +%s.%N)
+			(runtest \$test $n)
+			time1=\$(date +%s.%N)
+		done
+EOF
+}
+
+do {
+	sleep $random
+	kill;
+} while (waitjobs \@pids, $total_timeout, NONBLOCK);
 
 # Unmount mountpoints
 foreach $n (@cli) {
@@ -541,6 +580,9 @@ waitjobs \@mds_pids, $step_timeout;
 
 my $emsg = $@;
 
+if ($opts{R}) {
+}
+
 if ($opts{m}) {
 	close WR;
 
@@ -548,19 +590,27 @@ if ($opts{m}) {
 
 	if (@lines || $emsg) {
 		my $smtp = Net::SMTP->new('mailer.psc.edu');
-		$smtp->mail('slash2-devel@psc.edu');
-		$smtp->to('slash2-devel@psc.edu');
+
+		my $to = 'slash2-devel+report@psc.edu';
+		my $from = 'slash2-devel@psc.edu';
+
+		$smtp->mail($from);
+		$smtp->to($to);
 		$smtp->data();
-		$smtp->datasend("To: slash2-devel\@psc.edu\n");
-		$smtp->datasend("Subject: tsuite errors\n\n");
-		$smtp->datasend("Output from run by ",
-		    ($ENV{SUDO_USER} || $ENV{USER}), ":\n\n");
-		$smtp->datasend(@lines) if @lines;
-		$smtp->datasend("error: $emsg") if $emsg;
+		$smtp->datasend(<<EOM);
+To: $to
+From: $from
+Subject: tsuite report
+
+Output from run by @{[$ENV{SUDO_USER} || $ENV{USER}]}:
+
+@lines
+error: $emsg
+EOM
 		$smtp->dataend();
 		$smtp->quit;
 	}
+} else {
+	warn "error: $emsg\n" if $emsg;
+	exit 1 if $emsg;
 }
-
-warn "error: $emsg" if $emsg;
-exit 1 if $emsg;
