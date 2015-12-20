@@ -5,6 +5,7 @@
 # bonnie
 # postmark
 # filebench
+# spiobench
 # tiobench
 # dbench
 # OS file system testing suites:

@@ -271,16 +271,17 @@ foreach my $n (@mds, @ios) {
 my $step_timeout = 60 * 7;		# single op interval timeout
 my $total_timeout = 60 * 60 * 8;	# entire client run duration
 
-my $mount_slash = "sudo mount_slash/mount_slash";
-my $slashd = "sudo slashd/slashd";
+my $mount_slash = "mount_slash/mount_slash";
+my $slashd = "slashd/slashd";
 my $slictl = "slictl/slictl";
-my $sliod = "sudo sliod/sliod";
+my $sliod = "sliod/sliod";
 my $slkeymgt = "slkeymgt/slkeymgt";
 my $slmctl = "slmctl/slmctl";
-my $slmkfs = "sudo slmkfs/slmkfs";
-my $slmkjrnl = "sudo slmkjrnl/slmkjrnl";
-my $zfs_fuse = "sudo utils/zfs-fuse.sh";
-my $zpool = "sudo utils/zpool.sh";
+my $slmkfs = "slmkfs/slmkfs";
+my $slmkjrnl = "slmkjrnl/slmkjrnl";
+my $zfs_fuse = "utils/zfs-fuse.sh";
+my $zpool = "utils/zpool.sh";
+my $sudo = "sudo";
 
 my $repo_url = 'ssh://source/a';
 
@@ -385,22 +386,48 @@ foreach $n (@mds) {
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 
-		sudo pkill zfs-fuse || true
+		$sudo pkill zfs-fuse || true
 		sleep 5 &
-		$zfs_fuse &
+		$sudo $zfs_fuse &
 		sleep 2
 		@$n->{fmtcmd}
-		$zpool destroy $n->{zpool_name} || true
-		$zpool create -f $n->{zpool_name} $n->{zpool_args}
-		$slmkfs /$n->{zpool_name}
-		sudo umount /$n->{zpool_name}
-		sudo pkill zfs-fuse
+		$sudo $zpool destroy $n->{zpool_name} || true
+		$sudo $zpool create -f $n->{zpool_name} $n->{zpool_args}
+		$sudo $slmkfs /$n->{zpool_name}
+		$sudo umount /$n->{zpool_name}
+		$sudo pkill zfs-fuse
 
-		$slmkjrnl -D $n->{data_dir} -f
+		$sudo $slmkjrnl -D $n->{data_dir} -f
 EOF
 }
 
 waitjobs \@pids, $step_timeout;
+
+sub daemon_setup {
+	my $n = shift;
+
+	return <<EOF;
+	rundaemon()
+	{
+		export PSC_LOG_FILE=
+		prog=\$1
+		while :; do
+			sudo \$@
+			status=\$?
+			[ \$status -eq 0 ] && break
+			corefile=\$prog.core
+			mv -f *core* \$corefile
+			if [ -e "\$corefile" ]; then
+				[ \$status -gt 128 ] && \
+				    echo exited via signal \$((status - 128))
+				tail \$PSC_LOG_FILE
+				gdb -batch -c \$corefile -x \$cmdfile \$prog 2>&1 | \
+				    $n->{src_dir}/tools/filter-pstack
+			fi
+		done
+	}
+EOF
+}
 
 # Launch MDS servers
 my @mds_pids;
@@ -409,14 +436,9 @@ foreach $n (@mds, @ios, @cli) {
 
 	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{data_dir}
-
-		while :; do
-			$slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
-			if crashed; then
-				collect gdb
-			fi
-		done
+		@{[daemon_setup($n)]}
+		rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
+		    -D $n->{data_dir}
 EOF
 }
 
@@ -425,9 +447,8 @@ foreach $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{data_dir}
 		mkdir -p $n->{fsroot}
-		$slmkfs -Wi $n->{fsroot}
+		$sudo $slmkfs -Wi $n->{fsroot}
 EOF
 }
 
@@ -440,13 +461,9 @@ foreach $n (@ios) {
 
 	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-
-		while :; do
-			$sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
-			if crashed;
-				collect gdb report
-			fi
-		done
+		@{[daemon_setup($n)]}
+		rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
+		    -D $n->{data_dir}
 EOF
 }
 
@@ -457,11 +474,16 @@ foreach $n (@cli) {
 
 	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
+		@{[daemon_setup($n)]}
+		rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
+		    -D $n->{data_dir} $n->{mp}
 EOF
 }
 
-my $setup = <<EOF;
+sub test_setup {
+	my $n = shift;
+
+	return <<EOF;
 	export RANDOM=/dev/shm/r000
 	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 	cd \$test_src_dir
@@ -475,68 +497,117 @@ my $setup = <<EOF;
 
 		\$test_src_dir/\$test
 	}
-EOF
 
-# Run the client application tests
+	die()
+	{
+		echo \$@ >&2
+		exit 1
+	}
+
+	checkprog()
+	{
+	}
+
+	addpath()
+	{
+		export PATH=\$PATH:\$1
+	}
+
+	dep()
+	{
+		for prog; do
+			case \$prog in
+			iozone)	addpath $n->{src_dir}/distrib/iozone ;;
+			esac
+
+			hasprog \$prog && continue
+
+			case \$prog in
+			iozone)
+				cd $n->{src_dir}/distrib/iozone
+				make linux-AMD64
+				;;
+			*)	die "unhandled dependency \$i"
+				;;
+			esac
+		done
+	}
+EOF
+}
+
+# Run the client application tests, serially, measuring stats on each so
+# we can present historical performance analysis.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
+		@{[test_setup($n)]}
 
 		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
-
-		$setup
 
 		for test in *; do
 			time0=\$(date +%s.%N)
 			(runtest \$test $n)
 			time1=\$(date +%s.%N)
+
+			delta=\$((time1 - time0))
+			echo \$delta
 		done
 EOF
 }
 
 waitjobs \@pids, $total_timeout;
 
+# Run all tests in parallel without faults for performance regressions
+# and exercise.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
+		@{[test_setup($n)]}
 
-		$setup
-
-		# run all tests in parallel without faults for
-		# performance regressions and exercise
 		time0=\$(date +%s.%N)
 		for test in *; do
 			(runtest \$test $n &)
 		done
 		wait
 		time1=\$(date +%s.%N)
+
+		delta=\$((time1 - time0))
 EOF
 }
 
 waitjobs \@pids, $total_timeout;
 
+# Now run the entire suite again, injecting faults at random places to
+# test failure tolerance.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
+		@{[test_setup($n)]}
 
-		$setup
-
-		# now run the entire thing again injecting faults at
-		# random places to test failure tolerance
 		for test in *; do
-			time0=\$(date +%s.%N)
 			(runtest \$test $n)
-			time1=\$(date +%s.%N)
 		done
 EOF
 }
 
 do {
-	sleep $random
-	kill;
+	my $random = 5 * 60 + int rand(10 * 60);
+	sleep $random;
+
+	$random = int rand(@mds + @ios);
+	my $n = (@mds, @ios)[$random];
+	my $ctlcmd = $n->{type} eq "mds" ? $slmctl : $slictl;
+	my @killpid;
+	push @killpid, runcmd "$ssh $n->{host} sh", <<EOF;
+		@{[init_env($n)]}
+		pid=\$($ctlcmd -S $n->{ctlsock} -p pid)
+		kill -HUP \$pid
+EOF
+	waitjobs \@killpid, $step_timeout;
+
 } while (waitjobs \@pids, $total_timeout, NONBLOCK);
 
 # Unmount mountpoints
