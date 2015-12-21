@@ -257,7 +257,6 @@ sli_rim_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_BMAP_PTRUNC:
-return (-PFLERR_NOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
 	case SRMT_BATCH_RQ:
