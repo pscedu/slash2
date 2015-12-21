@@ -1735,7 +1735,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    (bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE)) {
 		FCMH_ULOCK(f);
-		return (SLERR_BMAP_IN_PTRUNC);
+		return (-SLERR_BMAP_IN_PTRUNC);
 	}
 	FCMH_ULOCK(f);
 
