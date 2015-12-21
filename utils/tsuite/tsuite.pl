@@ -234,12 +234,14 @@ fatalx "no client(s) specified" unless exists $gcfg{client};
 my $clients = ref $gcfg{client} eq "ARRAY" ?
     $gcfg{client} : [ $gcfg{client} ];
 
+my $nclients = 0;
 foreach my $client_spec (@$clients) {
 	my @fields = split /:/, $client_spec;
 	my $host = shift @fields;
 	my %n = (
 		host	=> $host,
 		type	=> "client",
+		id	=> $nclients++,
 	);
 	foreach my $field (@fields) {
 		my ($k, $v) = split /=/, $field, 2;
@@ -340,9 +342,13 @@ foreach $n (@mds, @ios, @cli) {
 		$n->{data_dir}
 	);
 
+	my @cmds;
+
 	if ($n->{type} eq "client") {
 		$n->{mp} = "$n->{base_dir}/mp";
 		push @mkdir, $n->{mp};
+
+		push @cmds, q[dd if=/dev/urandom of=$RANDOM bs=1048576 count=1024];
 	}
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
@@ -374,6 +380,9 @@ ___PATCH_EOF
 $authbuf
 ___AUTHBUF_EOF
 		truncate -s $authbuf_keysize $authbuf_fn
+
+		@cmds
+
 EOF
 }
 
@@ -532,6 +541,17 @@ sub test_setup {
 			esac
 		done
 	}
+			time0=\$(date +%s.%N)
+			time1=\$(date +%s.%N)
+
+			delta=\$((time1 - time0))
+			echo \$delta
+
+		time0=\$(date +%s.%N)
+		time1=\$(date +%s.%N)
+
+		delta=\$((time1 - time0))
+
 EOF
 }
 
@@ -543,15 +563,8 @@ foreach $n (@cli) {
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
-		dd if=/dev/urandom of=\$RANDOM bs=1048576 count=1024
-
 		for test in *; do
-			time0=\$(date +%s.%N)
-			(runtest \$test $n)
-			time1=\$(date +%s.%N)
-
-			delta=\$((time1 - time0))
-			echo \$delta
+			runtimedtest \$test $n
 		done
 EOF
 }
@@ -566,14 +579,15 @@ foreach $n (@cli) {
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
-		time0=\$(date +%s.%N)
-		for test in *; do
-			(runtest \$test $n &)
-		done
-		wait
-		time1=\$(date +%s.%N)
+		runalltests()
+		{
+			for test in *; do
+				(runtest \$test $n &)
+			done
+			wait
+		}
 
-		delta=\$((time1 - time0))
+		runtimedtest runalltests
 EOF
 }
 
@@ -588,7 +602,7 @@ foreach $n (@cli) {
 		@{[test_setup($n)]}
 
 		for test in *; do
-			(runtest \$test $n)
+			runtest \$test $n
 		done
 EOF
 }
@@ -604,7 +618,7 @@ do {
 	push @killpid, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		pid=\$($ctlcmd -S $n->{ctlsock} -p pid)
-		kill -HUP \$pid
+		sudo kill -HUP \$pid
 EOF
 	waitjobs \@killpid, $step_timeout;
 
@@ -626,7 +640,7 @@ foreach $n (@ios) {
 	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$slictl -S $n->{ctlsock} stop
+		sudo $slictl -S $n->{ctlsock} stop
 EOF
 }
 
@@ -637,7 +651,7 @@ foreach $n (@mds) {
 	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$slmctl -S $n->{ctlsock} stop
+		sudo $slmctl -S $n->{ctlsock} stop
 EOF
 }
 
