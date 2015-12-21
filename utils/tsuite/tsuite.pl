@@ -24,12 +24,14 @@ use Getopt::Std;
 use POSIX qw(:sys_wait_h :errno_h);
 use IPC::Open3;
 use Net::SMTP;
-use Cwd;
+use Cwd qw(realpath);
 use strict;
 use warnings;
 
 my $TSUITE_REL_BASE = 'slash2/utils/tsuite';
 my $TSUITE_REL_FN = "$TSUITE_REL_BASE/tsuite.pl";
+
+my $TSUITE_RANDOM = "/dev/shm/tsuite.random";
 
 my %gcfg;	# suite's global configuration settings
 my %opts;	# runtime options
@@ -71,18 +73,12 @@ sub init_env {
 	return <<EOF;
 	set -e
 	@{[ $opts{v} ? "set -x" : "" ]}
-	@{[ map { "export $_='$n->{env}{$_}'\n" } keys $n->{env} ]}
 	cd $n->{src_dir}
 EOF
 }
 
 sub debug_msg {
 	print WR @_, "\n" if $opts{v};
-}
-
-sub execute {
-	debug_msg "executing: @_";
-	system @_ or fatal @_;
 }
 
 sub slurp {
@@ -191,7 +187,6 @@ sub parse_conf {
 					$tmp =~ s/;\s*$//;
 					$r->{host} = (split /\s*,\s*/, $tmp, 1)[0];
 				} elsif ($line =~ /^\s*}\s*$/) {
-					res_done($r);
 					$r = undef;
 				}
 			} else {
@@ -222,9 +217,15 @@ $ts_fn =~ /\Q$TSUITE_REL_FN\E$/ or
 my $src_dir = $`;
 
 chdir($src_dir) or die "chdir $src_dir";
-my $diff = join '', `gmake scm-diff`;
+my $diff = join '', `make scm-diff`;
 
 my $ts_cfg = slurp "$ts_base/cfg";
+
+if ($opts{m}) {
+	pipe RD, WR;
+} else {
+	*WR = *STDERR;
+}
 
 parse_conf($ts_cfg);
 
@@ -233,6 +234,15 @@ fatalx "no client(s) specified" unless exists $gcfg{client};
 
 my $clients = ref $gcfg{client} eq "ARRAY" ?
     $gcfg{client} : [ $gcfg{client} ];
+
+if (exists $gcfg{mkcfg}) {
+	if (ref $gcfg{mkcfg} eq "ARRAY") {
+	} else {
+		$gcfg{mkcfg} = [ $gcfg{mkcfg} ];
+	}
+} else {
+	$gcfg{mkcfg} = [];
+}
 
 my $nclients = 0;
 foreach my $client_spec (@$clients) {
@@ -259,7 +269,7 @@ foreach my $n (@mds) {
 foreach my $n (@mds, @ios) {
 	if (exists $n->{fmtcmd}) {
 		if (ref $n->{fmtcmd} eq "ARRAY") {
-			for my $cmd (@$n->{fmtcmd}) {
+			for my $cmd (@{ $n->{fmtcmd} }) {
 				$cmd =~ s/^/sudo /;
 			}
 		} else {
@@ -288,7 +298,6 @@ my $sudo = "sudo";
 my $repo_url = 'ssh://source/a';
 
 my $ssh_opts = "-oControlPath=yes " .
-    "-oControlPersist=yes " .
     "-oControlPath=/tmp/tsuite.ss.%h " .
     "-oKbdInteractiveAuthentication=no " .
     "-oNumberOfPasswordPrompts=1";
@@ -296,12 +305,6 @@ my $ssh = "ssh $ssh_opts ";
 
 if (exists $gcfg{bounce_host}) {
 	$ssh .= " $gcfg{bounce_host} ssh $ssh_opts ";
-}
-
-if ($opts{m}) {
-	pipe RD, WR;
-} else {
-	*WR = *STDERR;
 }
 
 eval {
@@ -313,16 +316,17 @@ my $authbuf_minkeysize =
     `grep AUTHBUF_MINKEYSIZE $src_dir/slash2/include/authbuf.h`;
 my $authbuf_maxkeysize =
     `grep AUTHBUF_MAXKEYSIZE $src_dir/slash2/include/authbuf.h`;
-$authbuf_minkeysize =~ s/(?<=AUTHBUF_MINKEYSIZE).*/$&/e;
-$authbuf_maxkeysize =~ s/(?<=AUTHBUF_MAXKEYSIZE).*/$&/e;
+$authbuf_minkeysize =~ s/^.*AUTHBUF_MINKEYSIZE(.*)/eval $1/e;
+$authbuf_maxkeysize =~ s/^.*AUTHBUF_MAXKEYSIZE(.*)/eval $1/e;
 my $authbuf_keysize = $authbuf_minkeysize +
     int rand($authbuf_maxkeysize - $authbuf_minkeysize + 1);
 
 my $authbuf;
-open R, "<", "/dev/urandom" or fatal "open /dev/urandom",
+open R, "<", "/dev/urandom" or fatal "open /dev/urandom";
 read(R, $authbuf, $authbuf_keysize) == $authbuf_keysize
     or fatal "read /dev/urandom";
 close R;
+$authbuf =~ s/\0/0/g;
 
 my @pids;
 
@@ -330,16 +334,16 @@ my $n;
 # Checkout the source and build it
 foreach $n (@mds, @ios, @cli) {
 	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
-	$n->{base_dir} = "$n->{tmpdir}/tsuite/run";
+	$n->{base_dir} = "$n->{TMPDIR}/tsuite/run";
 	$n->{src_dir} = "$n->{base_dir}/src";
 	$n->{data_dir} = "$n->{base_dir}/data";
 	$n->{slcfg} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cfg";
 	$n->{ctlsock} = "$n->{base_dir}/ctlsock";
 
 	my @mkdir = (
-		"$n->{ts_dir}/coredumps",
+		"$n->{base_dir}/coredumps",
 		$n->{src_dir},
-		$n->{data_dir}
+		$n->{data_dir},
 	);
 
 	my @cmds;
@@ -348,7 +352,7 @@ foreach $n (@mds, @ios, @cli) {
 		$n->{mp} = "$n->{base_dir}/mp";
 		push @mkdir, $n->{mp};
 
-		push @cmds, q[dd if=/dev/urandom of=$RANDOM bs=1048576 count=1024];
+		push @cmds, qq[dd if=/dev/urandom of=$TSUITE_RANDOM bs=1048576 count=1024];
 	}
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
@@ -365,7 +369,7 @@ foreach $n (@mds, @ios, @cli) {
 		./bootstrap.sh
 
 		cat <<'___MKCFG_EOF' > mk/local.mk
-$gcfg{mkcfg}
+@{$gcfg{mkcfg}}
 ___MKCFG_EOF
 
 		patch -p0 <<'___PATCH_EOF'
@@ -376,13 +380,12 @@ ___PATCH_EOF
 
 		touch $authbuf_fn
 		chmod 400 $authbuf_fn
-		base64 -d <<'___AUTHBUF_EOF' > $authbuf_fn;
+		base64 -d <<'___AUTHBUF_EOF' > $authbuf_fn
 $authbuf
 ___AUTHBUF_EOF
 		truncate -s $authbuf_keysize $authbuf_fn
 
 		@cmds
-
 EOF
 }
 
@@ -399,7 +402,7 @@ foreach $n (@mds) {
 		sleep 5 &
 		$sudo $zfs_fuse &
 		sleep 2
-		@$n->{fmtcmd}
+		@{$n->{fmtcmd}}
 		$sudo $zpool destroy $n->{zpool_name} || true
 		$sudo $zpool create -f $n->{zpool_name} $n->{zpool_args}
 		$sudo $slmkfs /$n->{zpool_name}
@@ -416,7 +419,7 @@ sub daemon_setup {
 	my $n = shift;
 
 	return <<EOF;
-	rundaemon()
+	ts_rundaemon()
 	{
 		export PSC_LOG_FILE=
 		prog=\$1
@@ -446,7 +449,7 @@ foreach $n (@mds, @ios, @cli) {
 	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
+		ts_rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -456,7 +459,7 @@ foreach $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		mkdir -p $n->{fsroot}
+		@{$n->{fmtcmd}}
 		$sudo $slmkfs -Wi $n->{fsroot}
 EOF
 }
@@ -471,7 +474,7 @@ foreach $n (@ios) {
 	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
+		ts_rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -484,7 +487,7 @@ foreach $n (@cli) {
 	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
+		ts_rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir} $n->{mp}
 EOF
 }
@@ -493,11 +496,11 @@ sub test_setup {
 	my $n = shift;
 
 	return <<EOF;
-	export RANDOM=/dev/shm/r000
+	export RANDOM=$TSUITE_RANDOM
 	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 	cd \$test_src_dir
 
-	runtest()
+	run_test()
 	{
 		export LOCAL_TMP=$n->{TMPDIR}/\$test
 		rm -rf \$LOCAL_TMP
@@ -513,8 +516,9 @@ sub test_setup {
 		exit 1
 	}
 
-	checkprog()
+	hasprog()
 	{
+		type \$1 >/dev/null 2>&1
 	}
 
 	addpath()
@@ -541,22 +545,20 @@ sub test_setup {
 			esac
 		done
 	}
-			time0=\$(date +%s.%N)
-			time1=\$(date +%s.%N)
 
-			delta=\$((time1 - time0))
-			echo \$delta
-
+	run_timed_test()
+	{
 		time0=\$(date +%s.%N)
+		\$@
 		time1=\$(date +%s.%N)
-
 		delta=\$((time1 - time0))
-
+		echo %TSUITE_RESULT% \$1 \$delta
+	}
 EOF
 }
 
-# Run the client application tests, serially, measuring stats on each so
-# we can present historical performance analysis.
+# Set 1: run the client application tests, serially, measuring stats on
+# each so we can present historical performance analysis.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
@@ -564,37 +566,37 @@ foreach $n (@cli) {
 		@{[test_setup($n)]}
 
 		for test in *; do
-			runtimedtest \$test $n
+			run_timed_test \$test $n->{id} $nclients
 		done
 EOF
 }
 
 waitjobs \@pids, $total_timeout;
 
-# Run all tests in parallel without faults for performance regressions
-# and exercise.
+# Set 2: run all tests in parallel without faults for performance
+# regressions and exercise.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
-		runalltests()
+		run_all_tests()
 		{
 			for test in *; do
-				(runtest \$test $n &)
+				(run_test \$test $n->{id} $nclients &)
 			done
 			wait
 		}
 
-		runtimedtest runalltests
+		run_timed_test run_all_tests
 EOF
 }
 
 waitjobs \@pids, $total_timeout;
 
-# Now run the entire suite again, injecting faults at random places to
-# test failure tolerance.
+# Set 3: now run the entire suite again, injecting faults at random
+# places to test failure tolerance.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
@@ -602,7 +604,7 @@ foreach $n (@cli) {
 		@{[test_setup($n)]}
 
 		for test in *; do
-			runtest \$test $n
+			run_test \$test $n->{id} $nclients
 		done
 EOF
 }

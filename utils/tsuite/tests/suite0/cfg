@@ -1,4 +1,4 @@
-# @bounce_host pscuxa.psc.edu
+# @bounce_host warden.psc.edu
 
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
@@ -28,7 +28,7 @@ site @SITE0 {
 
 		# @fmtcmd umount -f -l /tsuite
 		# @fmtcmd rm -rf /tsuite
-		# @fmtcmd mkdir /tsuite
+		# @fmtcmd mkdir -p /tsuite
 		# @fmtcmd mount -t tmpfs -o size=12g tmpfs /tsuite
 		# @fmtcmd dd if=/dev/zero of=/tsuite/disk bs=1048576 count=10240
 		# @fmtcmd touch /tsuite/journal
@@ -44,7 +44,11 @@ site @SITE0 {
 		id		= 0x10;
 		fsroot		= /tsuite/slio;
 		nids		= omnitopia-ib0;
-		# @tmpfs 40g /tsuite
+		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd rm -rf /tsuite
+		# @fmtcmd mkdir -p /tsuite
+		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
+		# @fmtcmd mkdir -p /tsuite/slio
 		# @TMPDIR /local/tmp
 	}
 
@@ -53,7 +57,11 @@ site @SITE0 {
 		id		= 0x11;
 		fsroot		= /tsuite/slio;
 		nids		= zebes-ib0;
-		# @tmpfs 40g /tsuite
+		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd rm -rf /tsuite
+		# @fmtcmd mkdir -p /tsuite
+		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
+		# @fmtcmd mkdir -p /tsuite/slio
 		# @TMPDIR /local/tmp
 	}
 
@@ -66,33 +74,32 @@ site @SITE0 {
 
 #site @site1 {
 #	site_id			= 0x101;
-
+#
 #	resource md1 {
-		# @zpool create ${zpool_name} sdf
 #		zpool_name	=;
 #		journal		= sde;
 #		type		= mds;
 #		id		= 0x1;
 #		nids		= yuzu;
 #	}
-
+#
 #	resource io0 {
 #		type		= standalone_fs;
 #		id		= 0x10;
 #		fsroot		= /local/slio.tsuite0;
 #		nids		= polybius;
 #	}
-
+#
 #	resource io1 {
 #		type		= standalone_fs;
 #		id		= 0x11;
 #		fsroot		= /local/slio.tsuite0;
 #		nids		= zebes;
 #	}
-
+#
 #	resource io {
 #		type		= cluster_noshare_lfs;
 #		id		= 0x100;
 #		ios		= io0, io1;
 #	}
-}
+#}
