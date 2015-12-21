@@ -2155,8 +2155,12 @@ slm_ptrunc_prepare(void *p)
 			if (bml->bml_exp == NULL)
 				continue;
 			csvc = slm_getclcsvc(bml->bml_exp);
-			if (csvc == NULL)
+			if (csvc == NULL) {
+				psclog_warnx("Unable to get csvc: %p", 
+				    bml->bml_exp);
+				BMAP_LOCK(b);
 				continue;
+			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP,
 				rq, mq, mp);
 			if (!rc) {
