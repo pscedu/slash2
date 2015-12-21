@@ -737,6 +737,7 @@ namecache_delete(struct dircache_ent_update *dcu, int rc)
 {
 	if (dcu->dcu_d == NULL)
 		return;
+	/* XXX: when rc = 13, dcu is empty, and we segfault */
 	if (rc && dcu->dcu_dce->dce_pfd->pfd_ino != FID_ANY)
 		namecache_release_entry(dcu);
 	else {
