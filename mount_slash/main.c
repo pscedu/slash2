@@ -1881,7 +1881,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
     const struct srt_stat *sstb, const struct sl_fidgen *fgp,
     const struct stat *stb)
 {
-	int rc, ptrunc_started = 0, flags = 0;
+	int rc, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
@@ -1912,7 +1912,6 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc == -SLERR_BMAP_PTRUNC_STARTED) {
-		ptrunc_started = 1;
 		rc = 0;
 	}
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
@@ -1929,8 +1928,6 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	if (ptrunc_started)
-		return (-SLERR_BMAP_PTRUNC_STARTED);
 	return (rc);
 }
 
