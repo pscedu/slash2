@@ -396,6 +396,8 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	int tract[NBREPLST];
+	struct fidc_membh *f;
+	struct fcmh_mds_info *fmi;
 
 	if (rc && b) {
 		/* undo brepls changes */
@@ -407,8 +409,11 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
 	}
-
-	/* Clear pending flag when number of PTRUNC drops to zero */
+	f = b->bcm_fcmh;
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_nios--;
+	if (!fmi->fmi_ptrunc_nios)
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution failed rc=%d", rc);
