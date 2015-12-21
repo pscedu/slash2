@@ -41,3 +41,6 @@ Setup notes
 
 (2) SSH pubkeys must be set up on each node so tsuite-user can SSH to
     the localhost on each node, which may be used by some tests.
+
+(3) TMPDIR has to be setup.  Really, all the configuration in the tsuite
+    configuration file needs to be checked and true.

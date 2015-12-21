@@ -40,8 +40,11 @@ my @mds;	# suite MDS nodes
 my @ios;	# suite IOS nodes
 my @cli;	# suite CLI nodes
 
-getopts("mRv", \%opts) or usage();
+getopts("mRu:v", \%opts) or usage();
 usage() if @ARGV > 1;
+
+my $ssh_user = "";
+$ssh_user = " -l $opts{u} " if $opts{u};
 
 my $ts_dir = dirname($0);
 my $ts_name = "suite0";
@@ -61,9 +64,10 @@ sub usage {
 usage: $0 [-mRv] [test-name]
 
 options:
-  -m	send e-mail report
-  -R	record results to database
-  -v	verbose (debugging) output
+  -m		send e-mail report
+  -R		record results to database
+  -u user	user for SSH
+  -v		verbose (debugging) output
 
 EOF
 }
@@ -73,6 +77,7 @@ sub init_env {
 
 	return <<EOF;
 	set -e
+	PS4='\\h+ '
 	@{[ $opts{v} ? "set -x" : "" ]}
 	cd $n->{src_dir}
 
@@ -315,12 +320,16 @@ my $repo_url = 'ssh://source/a';
 my $ssh_opts = "-oControlPath=yes " .
     "-oControlPath=/tmp/tsuite.ss.%h.%u " .
     "-oKbdInteractiveAuthentication=no " .
-    "-oNumberOfPasswordPrompts=0";
+    "-oNumberOfPasswordPrompts=0 $ssh_user";
 my $ssh = "ssh $ssh_opts ";
 
 if (exists $gcfg{bounce_host}) {
-	$ssh .= " $gcfg{bounce_host} ssh $ssh_opts ";
+	my $ssh_opts_esc = $ssh_opts;
+	$ssh_opts_esc =~ s/%/%%/g;
+	$ssh .= " -o 'ProxyCommand ssh $ssh_opts_esc $gcfg{bounce_host} nc %h %p' ";
 }
+
+system("rm -f /tmp/tsuite.ss.*");
 
 eval {
 
@@ -345,9 +354,15 @@ $authbuf =~ s/\0/0/g;
 
 my @pids;
 
+my %hosts;
+
 my $n;
 # Checkout the source and build it
 foreach $n (@mds, @ios, @cli) {
+	if (ref $n->{host} eq "ARRAY") {
+		$n->{host} = pop @{ $n->{host} };
+	}
+
 	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
 	$n->{base_dir} = "$n->{TMPDIR}/tsuite/run";
 	$n->{src_dir} = "$n->{base_dir}/src";
@@ -363,7 +378,12 @@ foreach $n (@mds, @ios, @cli) {
 
 	my @cmds;
 
+	push @cmds, q[setup_src] unless exists $hosts{$n->{host}};
+	$hosts{$n->{host}} = 1;
+
 	if ($n->{type} eq "client") {
+		$n->{wok_ctlsock} = "$n->{base_dir}/wok.ctlsock";
+
 		$n->{mp} = "$n->{base_dir}/mp";
 		push @mkdir, $n->{mp};
 
@@ -372,39 +392,39 @@ foreach $n (@mds, @ios, @cli) {
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
 
-	if (ref $n->{host} eq "ARRAY") {
-		$n->{host} = pop @{ $n->{host} };
-	}
-
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		set -e
+		PS4='\\h+ '
 		@{[ $opts{v} ? "set -x" : "" ]}
 
-		rm -rf $n->{base_dir}
-		mkdir -p @mkdir
+		setup_src()
+		{
+			rm -rf $n->{base_dir}
+			mkdir -p @mkdir
 
-		cd $n->{src_dir}
-		git clone $repo_url .
-		./bootstrap.sh
+			cd $n->{src_dir}
+			git clone $repo_url .
+			./bootstrap.sh
 
-		cat <<'___MKCFG_EOF' > mk/local.mk
+			cat <<'___MKCFG_EOF' > mk/local.mk
 @{$gcfg{mkcfg}}
 ___MKCFG_EOF
 
-		patch -p0 <<'___PATCH_EOF'
+			patch -p0 <<'___PATCH_EOF'
 $diff
 ___PATCH_EOF
 
-		make build >/dev/null
+			make build >/dev/null
 
-		touch $authbuf_fn
-		chmod 400 $authbuf_fn
-		base64 -d <<'___AUTHBUF_EOF' > $authbuf_fn
-$authbuf
+			touch $authbuf_fn
+			chmod 600 $authbuf_fn
+			cat <<'___AUTHBUF_EOF' > $authbuf_fn
 ___AUTHBUF_EOF
-		truncate -s $authbuf_keysize $authbuf_fn
+			chmod 400 $authbuf_fn
+		}
 
 		@cmds
+		mkdir -p @mkdir
 EOF
 }
 
@@ -656,7 +676,7 @@ my @misfortune;
 
 #foreach $n (@cli) {
 #	push @misfortune, {
-#		cmd => "$sudo wokctl -S $n->{ctlsock} reload 0",
+#		cmd => "$sudo wokctl -S $n->{wok_ctlsock} reload 0",
 #		host => $n->{host},
 #	};
 #	add_fault(\@misfortune, $n, 'msl.request_timeout');
