@@ -19,12 +19,13 @@
 # ---------------------------------------------------------------------
 # %END_LICENSE%
 
+use Cwd qw(realpath);
+use Data::Dumper;
 use File::Basename;
 use Getopt::Std;
-use POSIX qw(:sys_wait_h :errno_h);
 use IPC::Open3;
 use Net::SMTP;
-use Cwd qw(realpath);
+use POSIX qw(:sys_wait_h :errno_h);
 use strict;
 use warnings;
 
@@ -111,6 +112,8 @@ sub waitjobs {
 sub runcmd {
 	my ($cmd, $in) = @_;
 
+	debug_msg "launching: $cmd";
+
 	my $infh;
 	my $pid = open3($infh, ">&WR", ">&WR", $cmd);
 	print $infh $in;
@@ -172,7 +175,8 @@ sub parse_conf {
 					if ($r->{type} eq "mds") {
 						push @mds, $r;
 					} else {
-						push @ios, $r;
+						push @ios, $r
+						    if $r->{type} eq "standalone_fs";
 					}
 				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
 					$r->{id} = $1;
@@ -185,7 +189,8 @@ sub parse_conf {
 						$tmp .= $line;
 					}
 					$tmp =~ s/;\s*$//;
-					$r->{host} = (split /\s*,\s*/, $tmp, 1)[0];
+					$r->{host} = (split /\s*,\s*/, $tmp, 1)[0]
+					    unless exists $r->{host};
 				} elsif ($line =~ /^\s*}\s*$/) {
 					$r = undef;
 				}
@@ -298,9 +303,9 @@ my $sudo = "sudo";
 my $repo_url = 'ssh://source/a';
 
 my $ssh_opts = "-oControlPath=yes " .
-    "-oControlPath=/tmp/tsuite.ss.%h " .
+    "-oControlPath=/tmp/tsuite.ss.%h.%u " .
     "-oKbdInteractiveAuthentication=no " .
-    "-oNumberOfPasswordPrompts=1";
+    "-oNumberOfPasswordPrompts=0";
 my $ssh = "ssh $ssh_opts ";
 
 if (exists $gcfg{bounce_host}) {
@@ -356,6 +361,10 @@ foreach $n (@mds, @ios, @cli) {
 	}
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
+
+	if (ref $n->{host} eq "ARRAY") {
+		$n->{host} = pop @{ $n->{host} };
+	}
 
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		set -e
@@ -419,12 +428,12 @@ sub daemon_setup {
 	my $n = shift;
 
 	return <<EOF;
-	ts_rundaemon()
+	rundaemon()
 	{
-		export PSC_LOG_FILE=
+		export PSC_LOG_FILE=$n->{base_dir}/log
 		prog=\$1
 		while :; do
-			sudo \$@
+			$sudo \$@
 			status=\$?
 			[ \$status -eq 0 ] && break
 			corefile=\$prog.core
@@ -449,7 +458,7 @@ foreach $n (@mds, @ios, @cli) {
 	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		ts_rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -474,7 +483,7 @@ foreach $n (@ios) {
 	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		ts_rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -487,7 +496,7 @@ foreach $n (@cli) {
 	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		ts_rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir} $n->{mp}
 EOF
 }
@@ -500,14 +509,24 @@ sub test_setup {
 	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 	cd \$test_src_dir
 
+	msctl()
+	{
+		command $n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
+	}
+
 	run_test()
 	{
+		test=\$1
+		id=\$2
+		max=\$3
+
 		export LOCAL_TMP=$n->{TMPDIR}/\$test
+		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
 		mkdir -p \$LOCAL_TMP
 		cd \$LOCAL_TMP
 
-		\$test_src_dir/\$test
+		\$test_src_dir/\$test \$id \$max
 	}
 
 	die()
@@ -531,13 +550,13 @@ sub test_setup {
 		for prog; do
 			case \$prog in
 			iozone)	addpath $n->{src_dir}/distrib/iozone ;;
+			sft)	addpath $n->{src_dir}/sft ;;
 			esac
 
 			hasprog \$prog && continue
 
 			case \$prog in
-			iozone)
-				cd $n->{src_dir}/distrib/iozone
+			iozone)	cd $n->{src_dir}/distrib/iozone
 				make linux-AMD64
 				;;
 			*)	die "unhandled dependency \$i"
@@ -548,11 +567,14 @@ sub test_setup {
 
 	run_timed_test()
 	{
+		test=\$1
+		id=\$2
+
 		time0=\$(date +%s.%N)
 		\$@
 		time1=\$(date +%s.%N)
-		delta=\$((time1 - time0))
-		echo %TSUITE_RESULT% \$1 \$delta
+		delta=\$(echo \$time1 - \$time0 | bc)
+		echo %TSUITE_RESULT% \$test:\$id \$delta
 	}
 EOF
 }
@@ -620,7 +642,7 @@ do {
 	push @killpid, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		pid=\$($ctlcmd -S $n->{ctlsock} -p pid)
-		sudo kill -HUP \$pid
+		$sudo kill -HUP \$pid
 EOF
 	waitjobs \@killpid, $step_timeout;
 
@@ -631,7 +653,7 @@ foreach $n (@cli) {
 	debug_msg "unmounting mount_slash: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		sudo umount $n->{mp}
+		$sudo umount $n->{mp}
 EOF
 }
 
@@ -642,7 +664,7 @@ foreach $n (@ios) {
 	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		sudo $slictl -S $n->{ctlsock} stop
+		$sudo $slictl -S $n->{ctlsock} stop
 EOF
 }
 
@@ -653,7 +675,7 @@ foreach $n (@mds) {
 	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		sudo $slmctl -S $n->{ctlsock} stop
+		$sudo $slmctl -S $n->{ctlsock} stop
 EOF
 }
 

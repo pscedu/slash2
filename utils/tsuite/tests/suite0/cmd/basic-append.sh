@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ $1 -eq 0 ] || exit 0
+
 fn=tf
 echo line1 >> $fn
 echo line2 >> $fn

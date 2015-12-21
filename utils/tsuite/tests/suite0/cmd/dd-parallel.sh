@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ $1 -eq 0 ] || exit 0
+
 ndirs=100
 nfiles_per_dir=100
 jobs_max=100
@@ -13,7 +15,7 @@ for i in $(seq $ndirs); do
 			# sleep for a little to prevent job overspawning
 			nj=(jobs | wc -l)
 			[ $nj -gt $njobs_max ] && break
-			sleep 1;
+			sleep 1
 		done
 	done
 done

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ $1 -eq 0 ] || exit 0
+
 dep wget
 
 V=4.3

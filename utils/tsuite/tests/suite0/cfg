@@ -3,10 +3,10 @@
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
 
-# @client omnitopia-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client polybius-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client zebes-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# @client lavos-ib0:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client polybius:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client zebes:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client lavos:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 
 # client yuzu:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 # client kiwi:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
@@ -24,7 +24,9 @@ site @SITE0 {
 	resource md0 {
 		id		= 0x1;
 		type		= mds;
-		nids		= polybius-ib0;
+		nids		= polybius-ib0.pvt;
+
+		# @host polybius
 
 		# @fmtcmd umount -f -l /tsuite
 		# @fmtcmd rm -rf /tsuite
@@ -43,7 +45,9 @@ site @SITE0 {
 		type		= standalone_fs;
 		id		= 0x10;
 		fsroot		= /tsuite/slio;
-		nids		= omnitopia-ib0;
+		nids		= omnitopia-ib0.pvt;
+		# @host omnitopia
+
 		# @fmtcmd umount -f -l /tsuite
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
@@ -56,7 +60,9 @@ site @SITE0 {
 		type		= standalone_fs;
 		id		= 0x11;
 		fsroot		= /tsuite/slio;
-		nids		= zebes-ib0;
+		nids		= zebes-ib0.pvt;
+		# @host zebes
+
 		# @fmtcmd umount -f -l /tsuite
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
