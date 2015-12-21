@@ -75,6 +75,24 @@ sub init_env {
 	set -e
 	@{[ $opts{v} ? "set -x" : "" ]}
 	cd $n->{src_dir}
+
+	addpath()
+	{
+		export PATH=\$PATH:\$1
+	}
+
+	addpath $n->{src_dir}/slash2/mount_slash
+	addpath $n->{src_dir}/slash2/msctl
+	addpath $n->{src_dir}/slash2/slashd
+	addpath $n->{src_dir}/slash2/slictl
+	addpath $n->{src_dir}/slash2/sliod
+	addpath $n->{src_dir}/slash2/slkeymgt
+	addpath $n->{src_dir}/slash2/slmctl
+	addpath $n->{src_dir}/slash2/slmkfs
+	addpath $n->{src_dir}/slash2/slmkjrnl
+	addpath $n->{src_dir}/slash2/utils
+	addpath $n->{src_dir}/wokfs/mount_wokfs
+	addpath $n->{src_dir}/wokfs/wokctl
 EOF
 }
 
@@ -288,16 +306,8 @@ foreach my $n (@mds, @ios) {
 my $step_timeout = 60 * 7;		# single op interval timeout
 my $total_timeout = 60 * 60 * 8;	# entire client run duration
 
-my $mount_slash = "mount_slash/mount_slash";
-my $slashd = "slashd/slashd";
-my $slictl = "slictl/slictl";
-my $sliod = "sliod/sliod";
-my $slkeymgt = "slkeymgt/slkeymgt";
-my $slmctl = "slmctl/slmctl";
-my $slmkfs = "slmkfs/slmkfs";
-my $slmkjrnl = "slmkjrnl/slmkjrnl";
-my $zfs_fuse = "utils/zfs-fuse.sh";
-my $zpool = "utils/zpool.sh";
+my $zfs_fuse = "zfs-fuse.sh";
+my $zpool = "zpool.sh";
 my $sudo = "sudo";
 
 my $repo_url = 'ssh://source/a';
@@ -409,16 +419,16 @@ foreach $n (@mds) {
 
 		$sudo pkill zfs-fuse || true
 		sleep 5 &
-		$sudo $zfs_fuse &
+		$sudo zfs_fuse &
 		sleep 2
 		@{$n->{fmtcmd}}
-		$sudo $zpool destroy $n->{zpool_name} || true
-		$sudo $zpool create -f $n->{zpool_name} $n->{zpool_args}
-		$sudo $slmkfs /$n->{zpool_name}
+		$sudo zpool destroy $n->{zpool_name} || true
+		$sudo zpool create -f $n->{zpool_name} $n->{zpool_args}
+		$sudo slmkfs /$n->{zpool_name}
 		$sudo umount /$n->{zpool_name}
 		$sudo pkill zfs-fuse
 
-		$sudo $slmkjrnl -D $n->{data_dir} -f
+		$sudo slmkjrnl -D $n->{data_dir} -f
 EOF
 }
 
@@ -458,7 +468,7 @@ foreach $n (@mds, @ios, @cli) {
 	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $slashd -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon slashd -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -469,7 +479,7 @@ foreach $n (@ios) {
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{$n->{fmtcmd}}
-		$sudo $slmkfs -Wi $n->{fsroot}
+		$sudo slmkfs -Wi $n->{fsroot}
 EOF
 }
 
@@ -483,7 +493,7 @@ foreach $n (@ios) {
 	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $sliod -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon sliod -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir}
 EOF
 }
@@ -496,7 +506,7 @@ foreach $n (@cli) {
 	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon $mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
+		rundaemon mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
 		    -D $n->{data_dir} $n->{mp}
 EOF
 }
@@ -538,11 +548,6 @@ sub test_setup {
 	hasprog()
 	{
 		type \$1 >/dev/null 2>&1
-	}
-
-	addpath()
-	{
-		export PATH=\$PATH:\$1
 	}
 
 	dep()
@@ -631,18 +636,65 @@ foreach $n (@cli) {
 EOF
 }
 
+sub add_fault {
+	my ($ra, $n, $name) = @_;
+
+	my $ctlcmd = "slictl";
+	if ($n->{type} eq "client") {
+		$ctlcmd = "msctl";
+	} elsif ($n->{type} eq "mds") {
+		$ctlcmd = "slmctl";
+	}
+
+	push @$ra, {
+		cmd => "$sudo $ctlcmd -p faults.$name.count+=1",
+		host => $n->{host},
+	};
+}
+
+my @misfortune;
+
+#foreach $n (@cli) {
+#	push @misfortune, {
+#		cmd => "$sudo wokctl -S $n->{ctlsock} reload 0",
+#		host => $n->{host},
+#	};
+#	add_fault(\@misfortune, $n, 'msl.request_timeout');
+#	add_fault(\@misfortune, $n, 'msl.read_cb');
+#	add_fault(\@misfortune, $n, 'msl.readrpc_offline');
+#}
+
+foreach $n (@mds) {
+	push @misfortune, {
+		cmd => "$sudo kill -HUP \$(slmctl -S $n->{ctlsock} -p pid)",
+		host => $n->{host},
+	};
+}
+
+foreach $n (@ios) {
+	push @misfortune, {
+		cmd => "$sudo kill -HUP \$(slictl -S $n->{ctlsock} -p pid)",
+		host => $n->{host},
+	};
+	#add_fault(\@misfortune, $n, 'sliod.fsio_read_fail');
+	#add_fault(\@misfortune, $n, 'sliod.crcup_fail');
+}
+
+sub rand_array {
+	my ($ra) = @_;
+
+	return $ra->[int rand(@$ra)];
+}
+
 do {
 	my $random = 5 * 60 + int rand(10 * 60);
 	sleep $random;
 
-	$random = int rand(@mds + @ios);
-	my $n = (@mds, @ios)[$random];
-	my $ctlcmd = $n->{type} eq "mds" ? $slmctl : $slictl;
+	my $a = rand_array(\@misfortune);
 	my @killpid;
 	push @killpid, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		pid=\$($ctlcmd -S $n->{ctlsock} -p pid)
-		$sudo kill -HUP \$pid
+		$a->{cmd}
 EOF
 	waitjobs \@killpid, $step_timeout;
 
@@ -664,7 +716,7 @@ foreach $n (@ios) {
 	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$sudo $slictl -S $n->{ctlsock} stop
+		$sudo slictl -S $n->{ctlsock} stop
 EOF
 }
 
@@ -675,7 +727,7 @@ foreach $n (@mds) {
 	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
 	runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
-		$sudo $slmctl -S $n->{ctlsock} stop
+		$sudo slmctl -S $n->{ctlsock} stop
 EOF
 }
 
