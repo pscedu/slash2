@@ -1911,9 +1911,12 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = -mp->rc;
-	if (rc == -SLERR_BMAP_PTRUNC_STARTED) {
+
+	if (rc == SLERR_BMAP_IN_PTRUNC)
+		rc = EAGAIN;
+	else if (rc == SLERR_BMAP_PTRUNC_STARTED)
 		rc = 0;
-	}
+
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%x rc=%d", to_set, rc);
 	if (rc)
@@ -2886,11 +2889,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-
-	if (rc == -SLERR_BMAP_IN_PTRUNC)
-		rc = EAGAIN;
-	if (rc == -SLERR_BMAP_PTRUNC_STARTED)
-		rc = 0;
 
  out:
 	if (c) {
