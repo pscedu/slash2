@@ -130,7 +130,7 @@ slc_rmc_setmds(const char *name)
 int
 slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 {
-	int retry = 1;
+	int retry;
 
 	switch (abs(*rc)) {
 	case PFLERR_TIMEDOUT:
@@ -160,6 +160,8 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	default:
 		return (0);
 	}
+
+	retry = 1;
 
 	/*
 	 * We only need to set returned rc if we are not
