@@ -1,4 +1,4 @@
-# @bounce_host warden.psc.edu
+# @bounce_host pscuxa.psc.edu
 
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0

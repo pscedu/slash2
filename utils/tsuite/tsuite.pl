@@ -61,25 +61,29 @@ sub fatal {
 
 sub usage {
 	die <<EOF
-usage: $0 [-mRv] [test-name]
+usage: $0 [-BmRv] [-u user] [test-name]
 
 options:
+  -B		whether to use any configured SSH bounce host
   -m		send e-mail report
   -R		record results to database
-  -u user	user for SSH
+  -u user	override user for SSH connection establishment
   -v		verbose (debugging) output
 
 EOF
 }
 
 sub init_env {
-	my $n = shift;
+	my ($n, $first) = shift;
+
+	my @cmd;
+
+	push @cmd, "cd $n->{src_dir}" unless $first;
 
 	return <<EOF;
 	set -e
-	PS4='\\h+ '
+	PS4='[\\h] + '
 	@{[ $opts{v} ? "set -x" : "" ]}
-	cd $n->{src_dir}
 
 	addpath()
 	{
@@ -98,6 +102,8 @@ sub init_env {
 	addpath $n->{src_dir}/slash2/utils
 	addpath $n->{src_dir}/wokfs/mount_wokfs
 	addpath $n->{src_dir}/wokfs/wokctl
+
+	@cmd
 EOF
 }
 
@@ -181,6 +187,7 @@ sub parse_conf {
 
 	my $in_site = 0;
 	my $site_name;
+	my $site_id;
 	my @lines = split /\n/, $ts_cfg;
 	my $cfg = \%gcfg;
 	my $r;
@@ -193,28 +200,27 @@ sub parse_conf {
 			push_vectorize($cfg, $1, $2);
 		} elsif ($in_site) {
 			if ($r) {
-				if ($line =~ /^\s*type\s*=\s*(\S+)\s*;\s*$/) {
-					$r->{type} = $1;
+				if ($line =~ /^\s*(\w+)\s*=\s*(\S+)\s*;\s*$/) {
+					$r->{$1} = $2;
+
+					if ($1 eq "nids") {
+						my $tmp = $1;
+
+						for (; ($line = $lines[$ln]) !~ /;/; $ln++) {
+							$tmp .= $line;
+						}
+						$tmp =~ s/;\s*$//;
+						$r->{host} = (split /\s*,\s*/, $tmp, 1)[0]
+						unless exists $r->{host};
+					}
+				} elsif ($line =~ /^\s*}\s*$/) {
+
 					if ($r->{type} eq "mds") {
 						push @mds, $r;
-					} else {
+					} elsif ($r->{type} eq "standalone_fs") {
 						push @ios, $r
-						    if $r->{type} eq "standalone_fs";
 					}
-				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
-					$r->{id} = $1;
-				} elsif ($line =~ /^\s*fsroot\s*=\s*(\S+)\s*;\s*$/) {
-					($r->{fsroot} = $1) =~ s/^"|"$//g;
-				} elsif ($line =~ /^\s*nids\s*=\s*(.*)$/) {
-					my $tmp = $1;
 
-					for (; ($line = $lines[$ln]) !~ /;/; $ln++) {
-						$tmp .= $line;
-					}
-					$tmp =~ s/;\s*$//;
-					$r->{host} = (split /\s*,\s*/, $tmp, 1)[0]
-					    unless exists $r->{host};
-				} elsif ($line =~ /^\s*}\s*$/) {
 					$r = undef;
 				}
 			} else {
@@ -222,8 +228,11 @@ sub parse_conf {
 					$r = {
 						res_name => $1,
 						site => $site_name,
+						site_id => $site_id,
 					};
 					$cfg = $r;
+				} elsif ($line =~ /^\s*site_id\s*=\s*(\S+)\s*;\s*$/) {
+					$site_id = $1;
 				}
 			}
 		} else {
@@ -294,39 +303,41 @@ foreach my $n (@mds) {
 	    unless exists $n->{zpool_args};
 }
 
-foreach my $n (@mds, @ios) {
-	if (exists $n->{fmtcmd}) {
-		if (ref $n->{fmtcmd} eq "ARRAY") {
-			for my $cmd (@{ $n->{fmtcmd} }) {
-				$cmd =~ s/^/sudo /;
-			}
-		} else {
-			$n->{fmtcmd} = [ "sudo " . $n->{fmtcmd} ];
-		}
-	} else {
-		$n->{fmtcmd} = [ ];
-	}
-}
-
 my $step_timeout = 60 * 7;		# single op interval timeout
 my $total_timeout = 60 * 60 * 8;	# entire client run duration
 
 my $zfs_fuse = "zfs-fuse.sh";
 my $zpool = "zpool.sh";
-my $sudo = "sudo";
+my $zfs = "zfs.sh";
+my $sudo = "command sudo";
 
 my $repo_url = 'ssh://source/a';
 
-my $ssh_opts = "-oControlPath=yes " .
+my $ssh_opts = "-oControlMaster=yes " .
     "-oControlPath=/tmp/tsuite.ss.%h.%u " .
     "-oKbdInteractiveAuthentication=no " .
+    "-oStrictHostKeyChecking=yes " .
     "-oNumberOfPasswordPrompts=0 $ssh_user";
 my $ssh = "ssh $ssh_opts ";
 
-if (exists $gcfg{bounce_host}) {
+if ($opts{B} && exists $gcfg{bounce_host}) {
 	my $ssh_opts_esc = $ssh_opts;
 	$ssh_opts_esc =~ s/%/%%/g;
 	$ssh .= " -o 'ProxyCommand ssh $ssh_opts_esc $gcfg{bounce_host} nc %h %p' ";
+}
+
+foreach my $n (@mds, @ios) {
+	if (exists $n->{fmtcmd}) {
+		if (ref $n->{fmtcmd} eq "ARRAY") {
+			for my $cmd (@{ $n->{fmtcmd} }) {
+				$cmd =~ s/^/\n$sudo /;
+			}
+		} else {
+			$n->{fmtcmd} = [ "$sudo " . $n->{fmtcmd} ];
+		}
+	} else {
+		$n->{fmtcmd} = [ ];
+	}
 }
 
 system("rm -f /tmp/tsuite.ss.*");
@@ -352,6 +363,8 @@ read(R, $authbuf, $authbuf_keysize) == $authbuf_keysize
 close R;
 $authbuf =~ s/\0/0/g;
 
+my $fsuuid = sprintf "%#x", rand 1e19;
+
 my @pids;
 
 my %hosts;
@@ -368,7 +381,7 @@ foreach $n (@mds, @ios, @cli) {
 	$n->{src_dir} = "$n->{base_dir}/src";
 	$n->{data_dir} = "$n->{base_dir}/data";
 	$n->{slcfg} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cfg";
-	$n->{ctlsock} = "$n->{base_dir}/ctlsock";
+	$n->{ctlsock} = "$n->{base_dir}/$n->{type}.ctlsock";
 
 	my @mkdir = (
 		"$n->{base_dir}/coredumps",
@@ -393,9 +406,7 @@ foreach $n (@mds, @ios, @cli) {
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
 
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
-		set -e
-		PS4='\\h+ '
-		@{[ $opts{v} ? "set -x" : "" ]}
+		@{[init_env($n, 1)]}
 
 		setup_src()
 		{
@@ -419,6 +430,7 @@ ___PATCH_EOF
 			touch $authbuf_fn
 			chmod 600 $authbuf_fn
 			cat <<'___AUTHBUF_EOF' > $authbuf_fn
+$authbuf
 ___AUTHBUF_EOF
 			chmod 400 $authbuf_fn
 		}
@@ -434,6 +446,8 @@ waitjobs \@pids, $step_timeout;
 foreach $n (@mds) {
 	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
 
+	print Dumper $n;
+
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 
@@ -444,11 +458,12 @@ foreach $n (@mds) {
 		@{$n->{fmtcmd}}
 		$sudo zpool destroy $n->{zpool_name} || true
 		$sudo zpool create -f $n->{zpool_name} $n->{zpool_args}
-		$sudo slmkfs /$n->{zpool_name}
+		$sudo zfs set atime=off $n->{zpool_name}
+		$sudo slmkfs -I $n->{site_id}:$n->{id} -u $fsuuid /$n->{zpool_name}
 		$sudo umount /$n->{zpool_name}
 		$sudo pkill zfs-fuse
 
-		$sudo slmkjrnl -D $n->{data_dir} -f
+		$sudo slmkjrnl -f -b $n->{journal} -u $fsuuid
 EOF
 }
 
@@ -499,7 +514,7 @@ foreach $n (@ios) {
 	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
 		@{[init_env($n)]}
 		@{$n->{fmtcmd}}
-		$sudo slmkfs -Wi $n->{fsroot}
+		$sudo slmkfs -i -u $fsuuid -I $n->{site_id}:$n->{id} $n->{fsroot}
 EOF
 }
 
