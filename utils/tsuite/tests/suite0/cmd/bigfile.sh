@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 [ $1 -eq 0 ] || exit 0
 
 dep sft
@@ -15,7 +17,7 @@ sizes=$(cat <<EOF)
 	52478900
 	2111524789
 	3111520000
-EOF)
+EOF
 
 for i in $(seq $niters); do
 	for j in $(seq $sizes); do

@@ -74,7 +74,7 @@ EOF
 }
 
 sub init_env {
-	my ($n, $first) = shift;
+	my ($n, $first) = @_;
 
 	my @cmd;
 
@@ -82,14 +82,39 @@ sub init_env {
 
 	return <<EOF;
 	set -e
-	PS4='[\\h] + '
-	@{[ $opts{v} ? "set -x" : "" ]}
+	PS4='[\\h:\$LINENO] + '
+
+	die()
+	{
+		echo \$@ >&2
+		exit 1
+	}
+
+	hasprog()
+	{
+		type \$1 >/dev/null 2>&1
+	}
 
 	addpath()
 	{
 		export PATH=\$PATH:\$1
 	}
 
+	runbg()
+	{
+		(\$@ 0<&- &>/dev/null &) &
+	}
+
+	nproc()
+	{
+		np=\$(command nproc)
+		echo \$((np / 2))
+	}
+
+	export MAKEFLAGS=-j\$(nproc)
+	export SCONSFLAGS=-j\$(nproc)
+
+	addpath /sbin
 	addpath $n->{src_dir}/slash2/mount_slash
 	addpath $n->{src_dir}/slash2/msctl
 	addpath $n->{src_dir}/slash2/slashd
@@ -102,6 +127,10 @@ sub init_env {
 	addpath $n->{src_dir}/slash2/utils
 	addpath $n->{src_dir}/wokfs/mount_wokfs
 	addpath $n->{src_dir}/wokfs/wokctl
+
+	data_dir=$n->{data_dir}
+
+	@{[ $opts{v} ? "set -x" : "" ]}
 
 	@cmd
 EOF
@@ -377,7 +406,7 @@ foreach $n (@mds, @ios, @cli) {
 	}
 
 	$n->{TMPDIR} = "/tmp" unless exists $n->{TMPDIR};
-	$n->{base_dir} = "$n->{TMPDIR}/tsuite/run";
+	$n->{base_dir} = "$n->{TMPDIR}/tsuite";
 	$n->{src_dir} = "$n->{base_dir}/src";
 	$n->{data_dir} = "$n->{base_dir}/data";
 	$n->{slcfg} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cfg";
@@ -405,12 +434,13 @@ foreach $n (@mds, @ios, @cli) {
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
 
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n, 1)]}
 
 		setup_src()
 		{
-			rm -rf $n->{base_dir}
+			$sudo umount -l -f $n->{data_dir} || true
+			$sudo rm -rf $n->{base_dir}
 			mkdir -p @mkdir
 
 			cd $n->{src_dir}
@@ -446,24 +476,34 @@ waitjobs \@pids, $step_timeout;
 foreach $n (@mds) {
 	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
 
-	print Dumper $n;
+	my @cmds;
+	if (exists $n->{journal}) {
+		push @cmds, "$sudo slmkjrnl -f -b $n->{journal} -u $fsuuid";
+	} else {
+		push @cmds, "$sudo slmkjrnl -f -D $n->{data_dir} -u $fsuuid";
+	}
 
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 
 		$sudo pkill zfs-fuse || true
-		sleep 5 &
-		$sudo zfs_fuse &
+		sleep 5
+		$sudo modprobe fuse
+		runbg $sudo $zfs_fuse
 		sleep 2
+
 		@{$n->{fmtcmd}}
-		$sudo zpool destroy $n->{zpool_name} || true
-		$sudo zpool create -f $n->{zpool_name} $n->{zpool_args}
-		$sudo zfs set atime=off $n->{zpool_name}
+		$sudo $zpool destroy $n->{zpool_name} || true
+		$sudo $zpool create -f $n->{zpool_name} $n->{zpool_args}
+		$sudo $zfs set atime=off $n->{zpool_name}
 		$sudo slmkfs -I $n->{site_id}:$n->{id} -u $fsuuid /$n->{zpool_name}
+		sync
+		sleep 2
 		$sudo umount /$n->{zpool_name}
+		sleep 2
 		$sudo pkill zfs-fuse
 
-		$sudo slmkjrnl -f -b $n->{journal} -u $fsuuid
+		@cmds
 EOF
 }
 
@@ -473,7 +513,7 @@ sub daemon_setup {
 	my $n = shift;
 
 	return <<EOF;
-	rundaemon()
+	run_daemon()
 	{
 		export PSC_LOG_FILE=$n->{base_dir}/log
 		prog=\$1
@@ -484,11 +524,9 @@ sub daemon_setup {
 			corefile=\$prog.core
 			mv -f *core* \$corefile
 			if [ -e "\$corefile" ]; then
-				[ \$status -gt 128 ] && \
-				    echo exited via signal \$((status - 128))
+				[ \$status -gt 128 ] && echo exited via signal \$((status - 128))
 				tail \$PSC_LOG_FILE
-				gdb -batch -c \$corefile -x \$cmdfile \$prog 2>&1 | \
-				    $n->{src_dir}/tools/filter-pstack
+				gdb -batch -c \$corefile -x \$cmdfile \$prog 2>&1 | $n->{src_dir}/tools/filter-pstack
 			fi
 		done
 	}
@@ -500,18 +538,17 @@ my @mds_pids;
 foreach $n (@mds, @ios, @cli) {
 	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
-	push @mds_pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @mds_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon slashd -S $n->{ctlsock} -f $n->{slcfg} \
-		    -D $n->{data_dir}
+		run_daemon slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 }
 
 # Create the IOS file systems
 foreach $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{$n->{fmtcmd}}
 		$sudo slmkfs -i -u $fsuuid -I $n->{site_id}:$n->{id} $n->{fsroot}
@@ -525,11 +562,10 @@ my @ios_pids;
 foreach $n (@ios) {
 	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
-	push @ios_pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @ios_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon sliod -S $n->{ctlsock} -f $n->{slcfg} \
-		    -D $n->{data_dir}
+		run_daemon sliod -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 }
 
@@ -538,11 +574,10 @@ my @cli_pids;
 foreach $n (@cli) {
 	debug_msg "launching mount_slash: $n->{host}";
 
-	push @cli_pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @cli_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		rundaemon mount_slash -S $n->{ctlsock} -f $n->{slcfg} \
-		    -D $n->{data_dir} $n->{mp}
+		run_daemon mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
 EOF
 }
 
@@ -556,8 +591,9 @@ sub test_setup {
 
 	msctl()
 	{
-		command $n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
+		$n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
 	}
+	export -f msctl
 
 	run_test()
 	{
@@ -574,15 +610,16 @@ sub test_setup {
 		\$test_src_dir/\$test \$id \$max
 	}
 
-	die()
+	run_timed_test()
 	{
-		echo \$@ >&2
-		exit 1
-	}
+		test=\$1
+		id=\$2
 
-	hasprog()
-	{
-		type \$1 >/dev/null 2>&1
+		time0=\$(date +%s.%N)
+		run_test \$@
+		time1=\$(date +%s.%N)
+		delta=\$(echo \$time1 - \$time0 | bc)
+		echo %TSUITE_RESULT% \$test:\$id \$delta
 	}
 
 	dep()
@@ -604,18 +641,7 @@ sub test_setup {
 			esac
 		done
 	}
-
-	run_timed_test()
-	{
-		test=\$1
-		id=\$2
-
-		time0=\$(date +%s.%N)
-		\$@
-		time1=\$(date +%s.%N)
-		delta=\$(echo \$time1 - \$time0 | bc)
-		echo %TSUITE_RESULT% \$test:\$id \$delta
-	}
+	export -f dep
 EOF
 }
 
@@ -623,7 +649,7 @@ EOF
 # each so we can present historical performance analysis.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
@@ -639,7 +665,7 @@ waitjobs \@pids, $total_timeout;
 # regressions and exercise.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
@@ -651,7 +677,7 @@ foreach $n (@cli) {
 			wait
 		}
 
-		run_timed_test run_all_tests
+		run_timed_test run_all_tests $n->{id} $nclients
 EOF
 }
 
@@ -661,7 +687,7 @@ waitjobs \@pids, $total_timeout;
 # places to test failure tolerance.
 foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
@@ -727,7 +753,7 @@ do {
 
 	my $a = rand_array(\@misfortune);
 	my @killpid;
-	push @killpid, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @killpid, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		$a->{cmd}
 EOF
@@ -738,7 +764,7 @@ EOF
 # Unmount mountpoints
 foreach $n (@cli) {
 	debug_msg "unmounting mount_slash: $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} sh", <<EOF;
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		$sudo umount $n->{mp}
 EOF
@@ -749,7 +775,7 @@ waitjobs \@pids, $step_timeout;
 # Kill IOS daemons
 foreach $n (@ios) {
 	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		$sudo slictl -S $n->{ctlsock} stop
 EOF
@@ -760,7 +786,7 @@ waitjobs \@pids, $step_timeout;
 # Kill MDS daemons
 foreach $n (@mds) {
 	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} sh", <<EOF;
+	runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		$sudo slmctl -S $n->{ctlsock} stop
 EOF

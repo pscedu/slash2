@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 [ $1 -eq 0 ] || exit 0
 
 ndirs=100
@@ -13,8 +15,8 @@ for i in $(seq $ndirs); do
 
 		while :; do
 			# sleep for a little to prevent job overspawning
-			nj=(jobs | wc -l)
-			[ $nj -gt $njobs_max ] && break
+			nj=$(jobs | wc -l)
+			[ $nj -gt $jobs_max ] && break
 			sleep 1
 		done
 	done

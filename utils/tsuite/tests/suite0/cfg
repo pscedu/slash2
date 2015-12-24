@@ -25,19 +25,21 @@ site @SITE0 {
 		id		= 0x1;
 		type		= mds;
 		nids		= polybius-ib0.pvt;
-
 		# @host polybius
 
-		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd umount -f -l /tsuite || true
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
-		# @fmtcmd mount -t tmpfs -o size=12g tmpfs /tsuite
-		# @fmtcmd dd if=/dev/zero of=/tsuite/disk bs=1048576 count=10240
-		# @fmtcmd touch /tsuite/journal
+		# @fmtcmd mount -t tmpfs -o size=4128m tmpfs /tsuite
+		# @fmtcmd dd if=/dev/zero of=/tsuite/disk bs=1048576 count=4096
+
+		# @fmtcmd mv $data_dir $data_dir.old
+		# @fmtcmd mkdir -p $data_dir
+		# @fmtcmd mount -t tmpfs -o size=1080m tmpfs $data_dir
+		# @fmtcmd dd if=/dev/zero of=$data_dir/op-journal bs=1048576 count=1024
 
 		# @zpool_args /tsuite/disk
-		zpool_name	= tsuite0_s2md;
-		journal		= /tsuite/journal;
+		zpool_name	= "tsuite0_s2md";
 		# @TMPDIR /local/tmp
 	}
 
@@ -48,7 +50,7 @@ site @SITE0 {
 		nids		= omnitopia-ib0.pvt;
 		# @host omnitopia
 
-		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd umount -f -l /tsuite || true
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
 		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
@@ -63,7 +65,7 @@ site @SITE0 {
 		nids		= zebes-ib0.pvt;
 		# @host zebes
 
-		# @fmtcmd umount -f -l /tsuite
+		# @fmtcmd umount -f -l /tsuite || true
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
 		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
