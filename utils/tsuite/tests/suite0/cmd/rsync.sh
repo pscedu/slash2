@@ -4,5 +4,6 @@
 
 dep rsync
 
-# XXX make this actually use sockets
-rsync $RANDOM r000
+rsync $RANDOM_DATA r000
+rsync r000 localhost:$(pwd)/r001
+diff -q r000 r001

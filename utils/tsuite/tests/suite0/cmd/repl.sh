@@ -15,7 +15,7 @@ repl_wait()
 
 fn=t000
 
-dd if=$RANDOM of=$fn
+dd if=$RANDOM_DATA of=$fn
 msctl repl-add io0@SITE0:*:$fn
 msctl repl-add io1@SITE0:*:$fn
 
