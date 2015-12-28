@@ -36,6 +36,7 @@ site @SITE0 {
 		# @fmtcmd mv $data_dir $data_dir.old
 		# @fmtcmd mkdir -p $data_dir
 		# @fmtcmd mount -t tmpfs -o size=1080m tmpfs $data_dir
+		# @fmtcmd mv $data_dir.old/* $data_dir/
 		# @fmtcmd dd if=/dev/zero of=$data_dir/op-journal bs=1048576 count=1024
 
 		# @zpool_args /tsuite/disk

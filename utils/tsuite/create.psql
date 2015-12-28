@@ -1,0 +1,10 @@
+CREATE TABLE s2ts_result (
+	id		INT		NOT NULL	AUTO_INCREMENT,
+	suite_name	VARCHAR(16),
+	test_name	VARCHAR(32),
+	launch_date	TIMESTAMP,
+	duration_ms	LONG,
+
+	PRIMARY KEY(),
+	INDEX()
+);

@@ -25,7 +25,7 @@ use File::Basename;
 use Getopt::Std;
 use IPC::Open3;
 use Net::SMTP;
-use POSIX qw(:sys_wait_h :errno_h);
+use POSIX qw(:sys_wait_h :errno_h :signal_h);
 use strict;
 use warnings;
 
@@ -50,13 +50,22 @@ my $ts_dir = dirname($0);
 my $ts_name = "suite0";
 $ts_name = $ARGV[0] if @ARGV > 0;
 
+sub stackdump {
+	my $s = "";
+	my $n = 0;
+	while (my @f = caller $n++) {
+		$s .= "  $f[3]:$f[1]:$f[2]\n";
+	}
+	return $s;
+}
+
 # Low level utility routines.
 sub fatalx {
-	die "$0: @_";
+	die "$0: @_\nstackdump:\n", stackdump();
 }
 
 sub fatal {
-	die "$0: @_: $!";
+	fatalx "@_: $!";
 }
 
 sub usage {
@@ -78,10 +87,43 @@ sub init_env {
 
 	my @cmd;
 
-	push @cmd, "cd $n->{src_dir}" unless $first;
+	push @cmd, "cd $n->{src_dir}\n" unless $first;
+
+	if ($n->{type} eq "client") {
+		push @cmd, <<EOF;
+			msctl()
+			{
+				sudo $n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
+			}
+			export -f msctl
+
+			wokctl()
+			{
+				sudo $n->{src_dir}/wokfs/wokctl/wokctl -S $n->{wok_ctlsock} \$@
+			}
+			export -f wokctl
+EOF
+	} elsif ($n->{type} eq "mds") {
+		push @cmd, <<EOF;
+			slmctl()
+			{
+				sudo $n->{src_dir}/slash2/slmctl/slmctl -S $n->{ctlsock} \$@
+			}
+			export -f slmctl
+EOF
+	} else {
+		push @cmd, <<EOF;
+			slictl()
+			{
+				sudo $n->{src_dir}/slash2/slictl/slictl -S $n->{ctlsock} \$@
+			}
+			export -f slictl
+EOF
+	}
 
 	return <<EOF;
 	set -e
+	set -u
 	PS4='[\\h:\$LINENO] + '
 
 	die()
@@ -116,17 +158,13 @@ sub init_env {
 
 	addpath /sbin
 	addpath $n->{src_dir}/slash2/mount_slash
-	addpath $n->{src_dir}/slash2/msctl
 	addpath $n->{src_dir}/slash2/slashd
-	addpath $n->{src_dir}/slash2/slictl
 	addpath $n->{src_dir}/slash2/sliod
 	addpath $n->{src_dir}/slash2/slkeymgt
-	addpath $n->{src_dir}/slash2/slmctl
 	addpath $n->{src_dir}/slash2/slmkfs
 	addpath $n->{src_dir}/slash2/slmkjrnl
 	addpath $n->{src_dir}/slash2/utils
 	addpath $n->{src_dir}/wokfs/mount_wokfs
-	addpath $n->{src_dir}/wokfs/wokctl
 
 	data_dir=$n->{data_dir}
 
@@ -150,17 +188,28 @@ sub slurp {
 	return ($data);
 }
 
-use constant NONBLOCK => 1;
+use constant WF_NONBLOCK => (1 << 0);
+use constant WF_NONFATAL => (1 << 1);
 
 sub waitjobs {
 	my ($pids, $to, $flags) = @_;
 	local $_;
 
+	$flags ||= 0;
+
 	alarm $to;
 	for my $pid (@$pids) {
 		my $status = waitpid $pid, 0;
 		fatal "waitpid" if $status == -1;
-		fatalx "child process exited nonzero: " . ($? >> 8) if $?;
+		if ($?) {
+			my $msg = "child process exited nonzero: " .
+			    ($? >> 8);
+			if ($flags & WF_NONFATAL) {
+				warn "$msg\n";
+			} else {
+				fatalx $msg;
+			}
+		}
 	}
 	alarm 0;
 
@@ -225,8 +274,8 @@ sub parse_conf {
 		my $line = $lines[$ln];
 
 		if ($line =~ /^\s*#\s*\@(\w+)\s+(.*)$/) {
-			debug_msg "parsed parameter: $1=$2";
 			push_vectorize($cfg, $1, $2);
+			debug_msg "parsed parameter: $1=$2";
 		} elsif ($in_site) {
 			if ($r) {
 				if ($line =~ /^\s*(\w+)\s*=\s*(\S+)\s*;\s*$/) {
@@ -268,6 +317,9 @@ sub parse_conf {
 			if ($line =~ /^\s*site\s+@(\w+)\s*{\s*$/) {
 				$site_name = $1;
 				$in_site = 1;
+			} elsif ($line =~ /^\s*set\s+(\w+)\s*=\s*"?(.*?)"?;$/) {
+				$gcfg{$1} = $2;
+				debug_msg "parsed setting $1=$2";
 			}
 		}
 	}
@@ -371,6 +423,10 @@ foreach my $n (@mds, @ios) {
 
 system("rm -f /tmp/tsuite.ss.*");
 
+my @mds_pids;
+my @ios_pids;
+my @cli_pids;
+
 eval {
 
 local $SIG{ALRM} = sub { fatal "timeout exceeded" };
@@ -392,7 +448,7 @@ read(R, $authbuf, $authbuf_keysize) == $authbuf_keysize
 close R;
 $authbuf =~ s/\0/0/g;
 
-my $fsuuid = sprintf "%#x", rand 1e19;
+my $fsuuid = "0x$gcfg{fsuuid}";
 
 my @pids;
 
@@ -413,7 +469,6 @@ foreach $n (@mds, @ios, @cli) {
 	$n->{ctlsock} = "$n->{base_dir}/$n->{type}.ctlsock";
 
 	my @mkdir = (
-		"$n->{base_dir}/coredumps",
 		$n->{src_dir},
 		$n->{data_dir},
 	);
@@ -440,7 +495,12 @@ foreach $n (@mds, @ios, @cli) {
 		setup_src()
 		{
 			$sudo umount -l -f $n->{data_dir} || true
+			# For hosts with multiple services, a client
+			# may have previously mounted here, so clear it.
+			$sudo umount -l -f $n->{base_dir}/mp || true
+
 			$sudo rm -rf $n->{base_dir}
+			$sudo rm -rf $n->{base_dir}/mp
 			mkdir -p @mkdir
 
 			cd $n->{src_dir}
@@ -458,11 +518,11 @@ ___PATCH_EOF
 			make build >/dev/null
 
 			touch $authbuf_fn
-			chmod 600 $authbuf_fn
 			cat <<'___AUTHBUF_EOF' > $authbuf_fn
 $authbuf
 ___AUTHBUF_EOF
-			chmod 400 $authbuf_fn
+			sudo chown root $authbuf_fn
+			sudo chmod 400 $authbuf_fn
 		}
 
 		@cmds
@@ -486,7 +546,8 @@ foreach $n (@mds) {
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 
-		$sudo pkill zfs-fuse || true
+		$sudo pkill -9 zfs-fuse || true
+		$sudo pkill -9 slashd || true
 		sleep 5
 		$sudo modprobe fuse
 		runbg $sudo $zfs_fuse
@@ -498,10 +559,11 @@ foreach $n (@mds) {
 		$sudo $zfs set atime=off $n->{zpool_name}
 		$sudo slmkfs -I $n->{site_id}:$n->{id} -u $fsuuid /$n->{zpool_name}
 		sync
-		sleep 2
+		# XXX race condition here
+		sleep 3
 		$sudo umount /$n->{zpool_name}
-		sleep 2
 		$sudo pkill zfs-fuse
+		sleep 8
 
 		@cmds
 EOF
@@ -515,27 +577,40 @@ sub daemon_setup {
 	return <<EOF;
 	run_daemon()
 	{
-		export PSC_LOG_FILE=$n->{base_dir}/log
+		ulimit -c unlimited
+		export PSC_LOG_FILE=$n->{base_dir}/$n->{type}.log
+		touch \$PSC_LOG_FILE
+		sudo sh -c 'echo %e.core > /proc/sys/kernel/core_pattern'
 		prog=\$1
 		while :; do
+			set +e
 			$sudo \$@
 			status=\$?
+			set -e
 			[ \$status -eq 0 ] && break
 			corefile=\$prog.core
-			mv -f *core* \$corefile
 			if [ -e "\$corefile" ]; then
 				[ \$status -gt 128 ] && echo exited via signal \$((status - 128))
 				tail \$PSC_LOG_FILE
-				gdb -batch -c \$corefile -x \$cmdfile \$prog 2>&1 | $n->{src_dir}/tools/filter-pstack
+				cmdfile=$n->{base_dir}/$n->{type}.gdbcmd
+				{
+					echo set confirm off
+					echo set height 0
+					echo set width 0
+					echo thr ap all bt
+				} >\$cmdfile
+				sudo gdb -batch -c \$corefile -x \$cmdfile \$(which \$prog) 2>&1 | $n->{src_dir}/tools/filter-pstack
 			fi
+			sleep 2
 		done
 	}
 EOF
 }
 
+$SIG{INT} = \&cleanup;
+
 # Launch MDS servers
-my @mds_pids;
-foreach $n (@mds, @ios, @cli) {
+foreach $n (@mds) {
 	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
 	push @mds_pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -544,6 +619,19 @@ foreach $n (@mds, @ios, @cli) {
 		run_daemon slashd -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir}
 EOF
 }
+
+foreach $n (@mds) {
+	debug_msg "waiting for slashd online: $n->{res_name} : $n->{host}";
+
+	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
+		@{[init_env($n)]}
+		until slmctl -sc >/dev/null 2>&1; do
+			sleep 1
+		done
+EOF
+}
+
+waitjobs \@pids, $step_timeout;
 
 # Create the IOS file systems
 foreach $n (@ios) {
@@ -558,7 +646,6 @@ EOF
 waitjobs \@pids, $step_timeout;
 
 # Launch the IOS servers
-my @ios_pids;
 foreach $n (@ios) {
 	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
@@ -570,14 +657,15 @@ EOF
 }
 
 # Launch the client mountpoints
-my @cli_pids;
 foreach $n (@cli) {
 	debug_msg "launching mount_slash: $n->{host}";
 
 	push @cli_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
-		run_daemon mount_slash -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
+		$sudo modprobe fuse
+		ls -lFa $n->{mp}
+		run_daemon mount_slash -U -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
 EOF
 }
 
@@ -588,12 +676,8 @@ sub test_setup {
 	export RANDOM=$TSUITE_RANDOM
 	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 	cd \$test_src_dir
-
-	msctl()
-	{
-		$n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
-	}
-	export -f msctl
+	sudo mkdir -p $n->{mp}/tmp
+	sudo chmod 1777 $n->{mp}/tmp
 
 	run_test()
 	{
@@ -601,13 +685,25 @@ sub test_setup {
 		id=\$2
 		max=\$3
 
-		export LOCAL_TMP=$n->{TMPDIR}/\$test
+		export LOCAL_TMP=$n->{mp}/tmp/\$test
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
 		mkdir -p \$LOCAL_TMP
 		cd \$LOCAL_TMP
 
-		\$test_src_dir/\$test \$id \$max
+		launcher=
+		if [ x"\$test" != x"\${test%.sh}" ]; then
+			launcher=\"bash -ue@{[ $opts{v} ? "x" : ""]}\"
+		fi
+
+		\$launcher \$test_src_dir/\$test \$id \$max
+	}
+
+	convert_ms()
+	{
+		s=\${1%.*}
+		ns=\${1#*.}
+		echo \$((s * 1000 + ns / 1000000))
 	}
 
 	run_timed_test()
@@ -618,8 +714,9 @@ sub test_setup {
 		time0=\$(date +%s.%N)
 		run_test \$@
 		time1=\$(date +%s.%N)
-		delta=\$(echo \$time1 - \$time0 | bc)
-		echo %TSUITE_RESULT% \$test:\$id \$delta
+		time0_ms=\$(convert_ms \$time0)
+		time1_ms=\$(convert_ms \$time1)
+		echo %TSUITE_RESULT% \$test:\$id \$((time1_ms - time0_ms))
 	}
 
 	dep()
@@ -651,6 +748,11 @@ foreach $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
+
+		until mount | grep -q $n->{mp}; do
+			sleep 1
+		done
+
 		@{[test_setup($n)]}
 
 		for test in *; do
@@ -708,7 +810,7 @@ sub add_fault {
 	}
 
 	push @$ra, {
-		cmd => "$sudo $ctlcmd -p faults.$name.count+=1",
+		cmd => "$ctlcmd -p faults.$name.count+=1",
 		host => $n->{host},
 	};
 }
@@ -717,7 +819,7 @@ my @misfortune;
 
 #foreach $n (@cli) {
 #	push @misfortune, {
-#		cmd => "$sudo wokctl -S $n->{wok_ctlsock} reload 0",
+#		cmd => "$wokctl reload 0",
 #		host => $n->{host},
 #	};
 #	add_fault(\@misfortune, $n, 'msl.request_timeout');
@@ -727,18 +829,18 @@ my @misfortune;
 
 foreach $n (@mds) {
 	push @misfortune, {
-		cmd => "$sudo kill -HUP \$(slmctl -S $n->{ctlsock} -p pid)",
+		cmd => "$sudo kill -HUP $n->{daemon_pid}",
 		host => $n->{host},
 	};
 }
 
 foreach $n (@ios) {
 	push @misfortune, {
-		cmd => "$sudo kill -HUP \$(slictl -S $n->{ctlsock} -p pid)",
+		cmd => "$sudo kill -HUP $n->{daemon_pid}",
 		host => $n->{host},
 	};
-	#add_fault(\@misfortune, $n, 'sliod.fsio_read_fail');
-	#add_fault(\@misfortune, $n, 'sliod.crcup_fail');
+#	add_fault(\@misfortune, $n, 'sliod.fsio_read_fail');
+#	add_fault(\@misfortune, $n, 'sliod.crcup_fail');
 }
 
 sub rand_array {
@@ -759,48 +861,70 @@ do {
 EOF
 	waitjobs \@killpid, $step_timeout;
 
-} while (waitjobs \@pids, $total_timeout, NONBLOCK);
-
-# Unmount mountpoints
-foreach $n (@cli) {
-	debug_msg "unmounting mount_slash: $n->{host}";
-	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
-		@{[init_env($n)]}
-		$sudo umount $n->{mp}
-EOF
-}
-
-waitjobs \@pids, $step_timeout;
-
-# Kill IOS daemons
-foreach $n (@ios) {
-	debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} bash", <<EOF;
-		@{[init_env($n)]}
-		$sudo slictl -S $n->{ctlsock} stop
-EOF
-}
-
-waitjobs \@pids, $step_timeout;
-
-# Kill MDS daemons
-foreach $n (@mds) {
-	debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
-	runcmd "$ssh $n->{host} bash", <<EOF;
-		@{[init_env($n)]}
-		$sudo slmctl -S $n->{ctlsock} stop
-EOF
-}
-
-waitjobs \@pids, $step_timeout;
-
-waitjobs \@cli_pids, $step_timeout;
-waitjobs \@ios_pids, $step_timeout;
-waitjobs \@mds_pids, $step_timeout;
+} while (waitjobs \@pids, $total_timeout, WF_NONBLOCK);
 
 }; # end of eval
 
 my $emsg = $@;
+
+sub cleanup {
+	my $n;
+	foreach $n (@cli) {
+		debug_msg "unmounting mount_slash: $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			$sudo umount -l -f $n->{mp}
+EOF
+	}
+
+	foreach $n (@ios) {
+		debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			slictl stop
+EOF
+	}
+
+	foreach $n (@mds) {
+		debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			slmctl stop
+EOF
+	}
+
+	kill SIGHUP, @cli_pids, @ios_pids, @mds_pids;
+
+	waitjobs \@cli_pids, $step_timeout, WF_NONFATAL;
+	waitjobs \@ios_pids, $step_timeout, WF_NONFATAL;
+	waitjobs \@mds_pids, $step_timeout, WF_NONFATAL;
+
+	foreach $n (@cli) {
+		debug_msg "unmounting mount_slash: $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			$sudo pkill -9 mount_slash
+EOF
+	}
+
+	foreach $n (@ios) {
+		debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			$sudo pkill -9 sliod
+EOF
+	}
+
+	foreach $n (@mds) {
+		debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
+		runcmd "$ssh $n->{host} bash", <<EOF;
+			@{[init_env($n)]}
+			$sudo pkill -9 slashd
+EOF
+	}
+}
+
+cleanup();
 
 if ($opts{R}) {
 }
