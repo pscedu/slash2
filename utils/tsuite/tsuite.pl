@@ -694,7 +694,7 @@ sub test_setup {
 		id=\$2
 		max=\$3
 
-		export LOCAL_TMP=$n->{mp}/tmp/\$test
+		export LOCAL_TMP=$n->{mp}/tmp/\${test%.*}
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
 		mkdir -p \$LOCAL_TMP

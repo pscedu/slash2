@@ -16,5 +16,6 @@ dir=$(pwd)
 )
 diff -qr $LOCAL_TMP/linux-$V linux-$V
 
+cd linux-$V
 make oldconfig </dev/null
 make -j$(nproc) bzImage
