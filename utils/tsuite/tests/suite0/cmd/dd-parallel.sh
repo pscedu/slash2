@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -e
-
 [ $1 -eq 0 ] || exit 0
 
 ndirs=100
