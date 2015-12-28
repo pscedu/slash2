@@ -2081,9 +2081,9 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 				done = 0;
 				mds_bmap_write_repls_rel(b);
 				/*
-				 * Queue work immediately instead 
-				 * of waiting for it to be causally 
-				 * paged to reduce latency to the 
+				 * Queue work immediately instead
+				 * of waiting for it to be causally
+				 * paged to reduce latency to the
 				 * client.
 				 */
 				upsch_enqueue(bmap_2_upd(b));
@@ -2156,13 +2156,13 @@ slm_ptrunc_prepare(void *p)
 				continue;
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL) {
-				psclog_warnx("Unable to get csvc: %p", 
+				psclog_warnx("Unable to get csvc: %p",
 				    bml->bml_exp);
 				BMAP_LOCK(b);
 				continue;
 			}
-			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP,
-				rq, mq, mp);
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
+			    mq, mp);
 			if (!rc) {
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
 				mq->sbd[0].sbd_bmapno = i;
