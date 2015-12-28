@@ -50,20 +50,12 @@ const char	*progname;
 struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
 
-__dead void
-usage(void)
-{
-	fprintf(stderr,
-	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] [-u uuid]\n",
-	    progname);
-	exit(1);
-}
-
 /*
  * Initialize an on-disk journal.
  * @fn: file path to store journal.
  * @nents: number of entries journal may contain if non-zero.
  * @entsz: size of a journal entry.
+ * @rs: read size.
  * Returns the number of entries created.
  */
 uint32_t
@@ -73,13 +65,13 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal_enthdr *pje;
 	struct psc_journal pj;
 	struct stat stb;
-	unsigned char *jbuf;
 	uint32_t i, slot, tmpnents;
-	int fd;
-	ssize_t nb;
+	unsigned char *jbuf;
 	size_t numblocks;
+	ssize_t nb;
+	int fd;
 
-	memset(&pj, 0, sizeof(struct psc_journal));
+	memset(&pj, 0, sizeof(pj));
 
 	fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
@@ -460,6 +452,15 @@ sl_journal_dump(const char *fn)
 	    highest_xid, highest_slot);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] [-u uuid]\n",
+	    progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -531,7 +532,7 @@ main(int argc, char *argv[])
 		if (verbose || nents != newnents)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
-			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
+			      fn, newnents, SLJ_MDS_ENTSIZE, uuid);
 	} else if (query)
 		sl_journal_dump(fn);
 	else
