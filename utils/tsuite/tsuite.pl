@@ -136,11 +136,13 @@ EOF
 	{
 		type \$1 >/dev/null 2>&1
 	}
+	export -f hasprog
 
 	addpath()
 	{
 		export PATH=\$PATH:\$1
 	}
+	export -f addpath
 
 	runbg()
 	{
@@ -489,6 +491,15 @@ foreach $n (@mds, @ios, @cli) {
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
 
+	my @patch;
+	if ($diff) {
+		push @patch, <<EOF;
+			patch -p0 <<'___PATCH_EOF'
+$diff
+___PATCH_EOF
+EOF
+	}
+
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n, 1)]}
 
@@ -511,9 +522,7 @@ foreach $n (@mds, @ios, @cli) {
 @{$gcfg{mkcfg}}
 ___MKCFG_EOF
 
-			patch -p0 <<'___PATCH_EOF'
-$diff
-___PATCH_EOF
+			@patch
 
 			make build >/dev/null
 
@@ -673,7 +682,7 @@ sub test_setup {
 	my $n = shift;
 
 	return <<EOF;
-	export RANDOM=$TSUITE_RANDOM
+	export RANDOM_DATA=$TSUITE_RANDOM
 	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
 	cd \$test_src_dir
 	sudo mkdir -p $n->{mp}/tmp
@@ -702,7 +711,7 @@ sub test_setup {
 	convert_ms()
 	{
 		s=\${1%.*}
-		ns=\${1#*.}
+		ns=\$(echo \${1#*.} | sed 's/^0*//')
 		echo \$((s * 1000 + ns / 1000000))
 	}
 
