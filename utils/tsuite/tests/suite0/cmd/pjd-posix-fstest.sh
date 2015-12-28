@@ -9,4 +9,4 @@ dir=$SRC/distrib/posix-fstest
 	make
 )
 
-prove -r $dir
+sudo prove -r $dir
