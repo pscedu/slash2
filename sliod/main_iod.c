@@ -42,6 +42,7 @@
 #include "pfl/pfl.h"
 #include "pfl/random.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
@@ -104,15 +105,10 @@ void
 slistatfsthr_main(struct psc_thread *thr)
 {
 	struct statvfs sfb;
+	char type[LINE_MAX];
 	int rc;
 
-#ifdef HAVE_STATFS_FSTYPE
-	struct statfs b;
-
-	rc = statfs(slcfg_local->cfg_fsroot, &b);
-	if (rc == -1)
-		psclog_error("statfs %s", slcfg_local->cfg_fsroot);
-#endif
+	pfl_getfstype(slcfg_local->cfg_fsroot, type, sizeof(type));
 
 	while (pscthr_run(thr)) {
 		rc = statvfs(slcfg_local->cfg_fsroot, &sfb);
@@ -123,10 +119,8 @@ slistatfsthr_main(struct psc_thread *thr)
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
 			sl_externalize_statfs(&sfb, &sli_ssfb);
-#ifdef HAVE_STATFS_FSTYPE
-			strlcpy(sli_ssfb.sf_type, b.f_fstypename,
+			strlcpy(sli_ssfb.sf_type, type,
 			    sizeof(sli_ssfb.sf_type));
-#endif
 			freelock(&sli_ssfb_lock);
 		}
 		sleep(60);
@@ -134,7 +128,7 @@ slistatfsthr_main(struct psc_thread *thr)
 }
 
 /*
- * Occassionally run the self health test.
+ * Occasionally run the self health test.
  *
  * @thr: our thread.
  */
