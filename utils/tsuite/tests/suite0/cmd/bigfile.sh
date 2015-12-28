@@ -5,7 +5,7 @@
 dep sft
 
 niters=100
-sizes=$(cat <<EOF)
+sizes=$(cat <<EOF
 	123
 	24789
 	770924789
@@ -16,6 +16,7 @@ sizes=$(cat <<EOF)
 	2111524789
 	3111520000
 EOF
+)
 
 for i in $(seq $niters); do
 	for j in $(seq $sizes); do
