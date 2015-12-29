@@ -377,6 +377,15 @@ foreach my $client_spec (@$clients) {
 		my ($k, $v) = split /=/, $field, 2;
 		$n{$k} = $v;
 	}
+
+	if (exists $n{args}) {
+		if (ref eq "ARRAY") {
+		} else {
+			$n{args} = [ $n{args} ];
+		}
+	} else {
+		$n{args} = [ ];
+	}
 	debug_msg "parsed client: $host";
 	push @cli, \%n;
 }
@@ -673,8 +682,7 @@ foreach $n (@cli) {
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		ls -lFa $n->{mp}
-		run_daemon mount_slash -U -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} $n->{mp}
+		run_daemon mount_slash -U -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} @{$n->{args}} $n->{mp}
 EOF
 }
 

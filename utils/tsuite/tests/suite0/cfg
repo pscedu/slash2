@@ -3,7 +3,7 @@
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
 
-# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=-opagecache_maxsize=2g
 # client polybius:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 # client zebes:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
 # client lavos:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
