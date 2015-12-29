@@ -6,7 +6,7 @@ dep wget
 
 V=4.3
 
-wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
+wget -nv https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
 tar xf linux-$V.tar.xz
 
 dir=$(pwd)
