@@ -2681,20 +2681,25 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct timespec ts;
 
-	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_UID;
-	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_GID;
-
-	if (to_set == 0)
-		goto out;
-
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
+
+	/*
+	 * pscfs_reply_setattr() needs a fresh statbuf to refresh the
+	 * entry, so we have to defer the short circuit processing till
+	 * after loading the fcmh to avoid sending garbage resulting in
+	 * EIO.
+	 */
+	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_UID;
+	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_GID;
+	if (to_set == 0)
+		goto out;
 
 	FCMH_WAIT_BUSY(c);
 
@@ -2918,8 +2923,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 					    FCMH_CLI_DIRTY_DSIZE;
 			}
 		}
-		FCMH_UNBUSY(c);
 
+	}
+
+	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
+
+	if (c) {
 		/*
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
@@ -2934,8 +2943,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * XXX Something may have been evicted from our cache
 		 * but still held by the kernel.  Whenever we evict, we
 		 * should clear the kernel cache too.
+		 *
+		 * XXX should we block access to the namecache until
+		 * this operation completes?
 		 */
-#if 0
 		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
 		    fcmh_isdir(c)) {
 			struct msl_dc_inv_entry_data mdie;
@@ -2945,12 +2956,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
 			    NULL);
 		}
-#endif
 
+		if (FCMH_HAS_BUSY(c))
+			FCMH_UNBUSY(c);
 		fcmh_op_done(c);
 	}
-
-	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
