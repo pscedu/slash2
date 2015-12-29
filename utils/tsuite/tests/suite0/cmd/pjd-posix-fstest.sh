@@ -9,4 +9,6 @@ dir=$SRC/distrib/posix-fstest
 	make
 )
 
-sudo prove -r $dir
+shopt -s extglob
+
+sudo prove -r $dir/!(truncate)
