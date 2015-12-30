@@ -1411,6 +1411,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
+			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+
 			if (!f->fcmh_sstb.sst_nlink)
 				// XXX don't enter into namecache
 				OPSTAT_INCR("msl.namecache-junk");
