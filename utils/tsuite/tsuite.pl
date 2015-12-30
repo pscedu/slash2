@@ -151,7 +151,7 @@ EOF
 
 	nproc()
 	{
-		np=\$(command nproc)
+		local np=\$(command nproc)
 		echo \$((np / 2))
 	}
 
@@ -599,18 +599,18 @@ sub daemon_setup {
 		export PSC_LOG_FILE=$n->{base_dir}/$n->{type}.log
 		touch \$PSC_LOG_FILE
 		sudo sh -c 'echo %e.core > /proc/sys/kernel/core_pattern'
-		prog=\$1
+		local prog=\$1
 		while :; do
 			set +e
 			$sudo \$@
-			status=\$?
+			local status=\$?
 			set -e
 			[ \$status -eq 0 ] && break
-			corefile=\$prog.core
+			local corefile=\$prog.core
 			if [ -e "\$corefile" ]; then
 				[ \$status -gt 128 ] && echo exited via signal \$((status - 128))
 				tail \$PSC_LOG_FILE
-				cmdfile=$n->{base_dir}/$n->{type}.gdbcmd
+				local cmdfile=$n->{base_dir}/$n->{type}.gdbcmd
 				{
 					echo set confirm off
 					echo set height 0
@@ -689,18 +689,19 @@ EOF
 sub test_setup {
 	my $n = shift;
 
+	my $test_src_dir = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd";
+
 	return <<EOF;
 	export RANDOM_DATA=$TSUITE_RANDOM
-	test_src_dir=$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd
-	cd \$test_src_dir
+	cd $test_src_dir
 	sudo mkdir -p $n->{mp}/tmp
 	sudo chmod 1777 $n->{mp}/tmp
 
 	run_test()
 	{
-		test=\$1
-		id=\$2
-		max=\$3
+		local test=\$1
+		local id=\$2
+		local max=\$3
 
 		export LOCAL_TMP=$n->{mp}/tmp/\${test%.*}
 		export SRC=$n->{src_dir}
@@ -708,36 +709,50 @@ sub test_setup {
 		mkdir -p \$LOCAL_TMP
 		cd \$LOCAL_TMP
 
-		launcher=
+		local launcher=
 		if [ x"\$test" != x"\${test%.sh}" ]; then
 			launcher=\"bash -ue@{[ $opts{v} ? "x" : ""]}\"
 		fi
 
-		\$launcher \$test_src_dir/\$test \$id \$max
+		\$launcher $test_src_dir/\$test \$id \$max
 	}
 
 	convert_ms()
 	{
-		s=\${1%.*}
-		ns=\$(echo \${1#*.} | sed 's/^0*//')
+		local s=\${1%.*}
+		local ns=\$(echo \${1#*.} | sed 's/^0*//')
 		echo \$((s * 1000 + ns / 1000000))
 	}
 
 	run_timed_test()
 	{
-		test=\$1
-		id=\$2
+		local test=\$1
+		local id=\$2
 
-		time0=\$(date +%s.%N)
+		local time0=\$(date +%s.%N)
 		run_test \$@
-		time1=\$(date +%s.%N)
-		time0_ms=\$(convert_ms \$time0)
-		time1_ms=\$(convert_ms \$time1)
+		local time1=\$(date +%s.%N)
+		local time0_ms=\$(convert_ms \$time0)
+		local time1_ms=\$(convert_ms \$time1)
 		echo %TSUITE_RESULT% \$test:\$id \$((time1_ms - time0_ms))
 	}
 
+	_dep_guts()
+	{
+		case \$1 in
+		iozone)	cd $n->{src_dir}/distrib/iozone
+			make linux-AMD64
+			;;
+		*)	die "unhandled dependency \$i"
+			;;
+		esac
+	}
+	export -f _dep_guts
+
 	dep()
 	{
+		local prog
+
 		for prog; do
 			case \$prog in
 			iozone)	addpath $n->{src_dir}/distrib/iozone ;;
@@ -746,13 +761,7 @@ sub test_setup {
 
 			hasprog \$prog && continue
 
-			case \$prog in
-			iozone)	cd $n->{src_dir}/distrib/iozone
-				make linux-AMD64
-				;;
-			*)	die "unhandled dependency \$i"
-				;;
-			esac
+			(_dep_guts \$prog)
 		done
 	}
 	export -f dep
