@@ -11,10 +11,12 @@ cd proj
 make build
 make test
 
-# XXX it would be valuable to perform a build in the local and compare
-# binaries but debugging symbols probably contain filenames
+# XXX it would be valuable to perform a build on a local file system and
+# compare binaries between there and here but debugging symbols probably
+# contain filenames...
 
 cd ..
 
-cp -R proj $LOCAL_TMP/proj
-diff -qr proj $LOCAL_TMP/proj
+# XXX this should use a local file system
+cp -R proj proj.bak
+diff -qr proj proj.bak
