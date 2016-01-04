@@ -90,6 +90,7 @@ sub init_env {
 	push @cmd, "cd $n->{src_dir}\n" unless $first;
 
 	if ($n->{type} eq "client") {
+		$n->{ctlcmd} = "msctl";
 		push @cmd, <<EOF;
 			msctl()
 			{
@@ -104,6 +105,7 @@ sub init_env {
 			export -f wokctl
 EOF
 	} elsif ($n->{type} eq "mds") {
+		$n->{ctlcmd} = "slmctl";
 		push @cmd, <<EOF;
 			slmctl()
 			{
@@ -112,6 +114,7 @@ EOF
 			export -f slmctl
 EOF
 	} else {
+		$n->{ctlcmd} = "slictl";
 		push @cmd, <<EOF;
 			slictl()
 			{
@@ -153,6 +156,11 @@ EOF
 	{
 		local np=\$(command nproc)
 		echo \$((np / 2))
+	}
+
+	daemon_pid()
+	{
+		$n->{ctlcmd} -Hp pid | awk '{print \$1}'
 	}
 
 	export MAKEFLAGS=-j\$(nproc)
@@ -465,9 +473,8 @@ my @pids;
 
 my %hosts;
 
-my $n;
 # Checkout the source and build it
-foreach $n (@mds, @ios, @cli) {
+foreach my $n (@mds, @ios, @cli) {
 	if (ref $n->{host} eq "ARRAY") {
 		$n->{host} = pop @{ $n->{host} };
 	}
@@ -551,7 +558,7 @@ EOF
 waitjobs \@pids, $step_timeout;
 
 # Create the MDS file systems
-foreach $n (@mds) {
+foreach my $n (@mds) {
 	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
 
 	my @cmds;
@@ -628,7 +635,7 @@ EOF
 $SIG{INT} = \&cleanup;
 
 # Launch MDS servers
-foreach $n (@mds) {
+foreach my $n (@mds) {
 	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
 	push @mds_pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -638,7 +645,7 @@ foreach $n (@mds) {
 EOF
 }
 
-foreach $n (@mds) {
+foreach my $n (@mds) {
 	debug_msg "waiting for slashd online: $n->{res_name} : $n->{host}";
 
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -652,7 +659,7 @@ EOF
 waitjobs \@pids, $step_timeout;
 
 # Create the IOS file systems
-foreach $n (@ios) {
+foreach my $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
@@ -664,7 +671,7 @@ EOF
 waitjobs \@pids, $step_timeout;
 
 # Launch the IOS servers
-foreach $n (@ios) {
+foreach my $n (@ios) {
 	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
 	push @ios_pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -675,8 +682,10 @@ EOF
 }
 
 # Launch the client mountpoints
-foreach $n (@cli) {
+foreach my $n (@cli) {
 	debug_msg "launching mount_slash: $n->{host}";
+
+	$n->{test_src_dir} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd";
 
 	push @cli_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
@@ -689,11 +698,9 @@ EOF
 sub test_setup {
 	my $n = shift;
 
-	my $test_src_dir = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd";
-
 	return <<EOF;
 	export RANDOM_DATA=$TSUITE_RANDOM
-	cd $test_src_dir
+	cd $n->{test_src_dir}
 	sudo mkdir -p $n->{mp}/tmp
 	sudo chmod 1777 $n->{mp}/tmp
 
@@ -714,7 +721,7 @@ sub test_setup {
 			launcher=\"bash -ue@{[ $opts{v} ? "x" : ""]}\"
 		fi
 
-		\$launcher $test_src_dir/\$test \$id \$max
+		\$launcher \$test \$id \$max
 	}
 
 	convert_ms()
@@ -770,7 +777,7 @@ EOF
 
 # Set 1: run the client application tests, serially, measuring stats on
 # each so we can present historical performance analysis.
-foreach $n (@cli) {
+foreach my $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
@@ -782,7 +789,7 @@ foreach $n (@cli) {
 		@{[test_setup($n)]}
 
 		for test in *; do
-			run_timed_test \$test $n->{id} $nclients
+			run_timed_test $n->{test_src_dir}/\$test $n->{id} $nclients
 		done
 EOF
 }
@@ -791,7 +798,7 @@ waitjobs \@pids, $total_timeout;
 
 # Set 2: run all tests in parallel without faults for performance
 # regressions and exercise.
-foreach $n (@cli) {
+foreach my $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
@@ -800,7 +807,7 @@ foreach $n (@cli) {
 		run_all_tests()
 		{
 			for test in *; do
-				(run_test \$test $n->{id} $nclients &)
+				(run_test $n->{test_src_dir}/\$test $n->{id} $nclients &)
 			done
 			wait
 		}
@@ -813,14 +820,14 @@ waitjobs \@pids, $total_timeout;
 
 # Set 3: now run the entire suite again, injecting faults at random
 # places to test failure tolerance.
-foreach $n (@cli) {
+foreach my $n (@cli) {
 	debug_msg "client: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
 
 		for test in *; do
-			run_test \$test $n->{id} $nclients
+			run_test $n->{test_src_dir}/\$test $n->{id} $nclients
 		done
 EOF
 }
@@ -828,15 +835,8 @@ EOF
 sub add_fault {
 	my ($ra, $n, $name) = @_;
 
-	my $ctlcmd = "slictl";
-	if ($n->{type} eq "client") {
-		$ctlcmd = "msctl";
-	} elsif ($n->{type} eq "mds") {
-		$ctlcmd = "slmctl";
-	}
-
 	push @$ra, {
-		cmd => "$ctlcmd -p faults.$name.count+=1",
+		cmd => "$n->{ctlcmd} -p faults.$name.count+=1",
 		host => $n->{host},
 	};
 }
@@ -846,24 +846,24 @@ my @misfortune;
 #foreach $n (@cli) {
 #	push @misfortune, {
 #		cmd => "$wokctl reload 0",
-#		host => $n->{host},
+#		node => $n,
 #	};
 #	add_fault(\@misfortune, $n, 'msl.request_timeout');
 #	add_fault(\@misfortune, $n, 'msl.read_cb');
 #	add_fault(\@misfortune, $n, 'msl.readrpc_offline');
 #}
 
-foreach $n (@mds) {
+foreach my $n (@mds) {
 	push @misfortune, {
-		cmd => "$sudo kill -HUP $n->{daemon_pid}",
-		host => $n->{host},
+		cmd => "$sudo kill -HUP \$(daemon_pid)",
+		node => $n,
 	};
 }
 
-foreach $n (@ios) {
+foreach my $n (@ios) {
 	push @misfortune, {
-		cmd => "$sudo kill -HUP $n->{daemon_pid}",
-		host => $n->{host},
+		cmd => "$sudo kill -HUP \$(daemon_pid)",
+		node => $n,
 	};
 #	add_fault(\@misfortune, $n, 'sliod.fsio_read_fail');
 #	add_fault(\@misfortune, $n, 'sliod.crcup_fail');
@@ -881,8 +881,8 @@ do {
 
 	my $a = rand_array(\@misfortune);
 	my @killpid;
-	push @killpid, runcmd "$ssh $n->{host} bash", <<EOF;
-		@{[init_env($n)]}
+	push @killpid, runcmd "$ssh $a->{node}{host} bash", <<EOF;
+		@{[init_env($a->{node})]}
 		$a->{cmd}
 EOF
 	waitjobs \@killpid, $step_timeout;
