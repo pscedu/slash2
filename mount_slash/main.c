@@ -2643,8 +2643,15 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		sl_csvc_decref(csvc);
 }
 
+/*
+ * Used for sending asynchronous invalidation requests to PFLFS.
+ */
 struct msl_dc_inv_entry_data {
-	struct pscfs_req	*mdie_pfr;
+	/*
+	 * Private data used by the PFLFS module to send the
+	 * invalidation request.
+	 */
+	void			*mdie_pri;
 	pscfs_inum_t		 mdie_pinum;
 };
 
@@ -2654,7 +2661,7 @@ msl_dc_inv_entry(__unusedx struct dircache_page *p,
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
-	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
+	pscfs_notify_inval_entry(mdie->mdie_pri, mdie->mdie_pinum,
 	    d->dce_pfd->pfd_name, d->dce_pfd->pfd_namelen);
 }
 
@@ -2676,12 +2683,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	int flush_mtime = 0, flush_size = 0;
 	struct slashrpc_cservice *csvc = NULL;
+	struct msl_dc_inv_entry_data mdie;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
 	struct timespec ts;
+
+	memset(&mdie, 0, sizeof(mdie));
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -2926,6 +2936,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 		}
 
+		/* See note below. */
+		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
+		    fcmh_isdir(c)) {
+			mdie.mdie_pri = pflfs_notify_getprivate(pfr);
+			mdie.mdie_pinum = fcmh_2_fid(c);
+		}
+
 	}
 
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
@@ -2949,15 +2966,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * XXX should we block access to the namecache until
 		 * this operation completes?
 		 */
-		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
-		    fcmh_isdir(c)) {
-			struct msl_dc_inv_entry_data mdie;
-
-			mdie.mdie_pfr = pfr;
-			mdie.mdie_pinum = fcmh_2_fid(c);
+		if (mdie.mdie_pri)
 			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
 			    NULL);
-		}
 
 		if (FCMH_HAS_BUSY(c))
 			FCMH_UNBUSY(c);
