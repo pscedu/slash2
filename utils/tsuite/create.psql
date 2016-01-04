@@ -1,10 +1,25 @@
-CREATE TABLE s2ts_result (
+CREATE TABLE s2ts_run (
 	id		INT		NOT NULL	AUTO_INCREMENT,
 	suite_name	VARCHAR(16),
-	test_name	VARCHAR(32),
 	launch_date	TIMESTAMP,
+	user		VARCHAR(32),
+	descr		VARCHAR(256),
+	diff		MEDIUMTEXT,
+	output		MEDIUMTEXT,
+	sl2_commid	CHAR(40),
+	pfl_commid	CHAR(40),
+
+	PRIMARY KEY(id),
+	INDEX(user)
+);
+
+CREATE TABLE s2ts_result (
+	id		INT		NOT NULL	AUTO_INCREMENT,
+	run_id		INT		NOT NULL,
+	test_name	VARCHAR(32),
 	duration_ms	LONG,
 
-	PRIMARY KEY(),
-	INDEX()
+	PRIMARY KEY(id),
+	INDEX(run_id),
+	INDEX(test_name)
 );
