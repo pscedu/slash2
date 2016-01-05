@@ -410,10 +410,13 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		upd_rpmi_remove(rpmi, upd);
 	}
 	f = b->bcm_fcmh;
+
+	FCMH_LOCK(f);
 	fmi = fcmh_2_fmi(f);
 	fmi->fmi_ptrunc_nios--;
 	if (!fmi->fmi_ptrunc_nios)
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+	FCMH_ULOCK(f);
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution failed rc=%d", rc);
