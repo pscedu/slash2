@@ -631,8 +631,6 @@ main(int argc, char *argv[])
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
-	slm_opstate = SLM_OPSTATE_NORMAL;
-
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
 	    "slmwkthr%d");
@@ -675,6 +673,7 @@ main(int argc, char *argv[])
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
+	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	slmbmaptimeothr_spawn();
 	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
