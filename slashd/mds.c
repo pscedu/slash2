@@ -2189,10 +2189,14 @@ slm_ptrunc_prepare(void *p)
 	    fcmh_2_mfh(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
-	if (rc)
-		psclog_error("setattr rc=%d", rc);
-
-	slm_ptrunc_apply(wk);
+	if (rc) {
+		FCMH_LOCK(f);
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+		fcmh_2_ptruncgen(f)--;
+		FCMH_ULOCK(f);
+		psclog_error("partical truncate setattr: rc=%d", rc);
+	} else
+		slm_ptrunc_apply(wk);
 	return (0);
 }
 
