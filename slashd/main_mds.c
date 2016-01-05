@@ -645,6 +645,12 @@ main(int argc, char *argv[])
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
+	/*
+ 	 * As soon as log replay is over, we should be able to set the 
+ 	 * state to NORMAL. However, we had issues when trying to write
+ 	 * new log entries while replaying odtable. So keep it this 
+ 	 * way for now.
+ 	 */
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	pfl_workq_lock();
