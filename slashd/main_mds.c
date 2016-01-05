@@ -631,6 +631,22 @@ main(int argc, char *argv[])
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
+	dbdo(slm_upsch_revert_cb, NULL,
+	    " SELECT	fid,"
+	    "		bno"
+	    " FROM	upsch"
+	    " WHERE	status = 'S'");
+
+	dbdo(NULL, NULL,
+	    " UPDATE	upsch"
+	    " SET	status = 'Q'"
+	    " WHERE	status = 'S'");
+
+	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
+	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
+
+	slm_opstate = SLM_OPSTATE_NORMAL;
+
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
 	    "slmwkthr%d");
@@ -656,24 +672,8 @@ main(int argc, char *argv[])
 	psc_waitq_wait(&slm_db_hipri_workq.plc_wq_want,
 	    &slm_db_hipri_workq.plc_lock);
 
-	dbdo(slm_upsch_revert_cb, NULL,
-	    " SELECT	fid,"
-	    "		bno"
-	    " FROM	upsch"
-	    " WHERE	status = 'S'");
-
-	dbdo(NULL, NULL,
-	    " UPDATE	upsch"
-	    " SET	status = 'Q'"
-	    " WHERE	status = 'S'");
-
 	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, NULL, 0,
 	    "slmbkdbthr");
-
-	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
-	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
-
-	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	slmbmaptimeothr_spawn();
 	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
