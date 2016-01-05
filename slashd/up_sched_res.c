@@ -319,6 +319,11 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(out, rc = -ENODEV);
 
+	/*
+	 * The residency table is not written back to persistent
+	 * storage, so the upschdb must be updated manually to prevent
+	 * immediate re-scheduling of this work.
+	 */
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
 	    " SET	status = 'S'"
@@ -404,6 +409,7 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		brepls_init(tract, -1);
 		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 		mds_repl_bmap_apply(b, tract, NULL, off);
+		/* XXX clear REPLMOD? */
 
 		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
@@ -451,11 +457,11 @@ int
 slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct fidc_membh *f;
-	struct bmap *b = av->pointer_arg[IP_BMAP];
 	int rc = 0, off = av->space[IN_OFF];
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
+	struct bmap *b = av->pointer_arg[IP_BMAP];
+	struct fidc_membh *f;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 	if (rc == 0)

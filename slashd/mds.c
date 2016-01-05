@@ -2233,6 +2233,14 @@ slmbkdbthr_main(struct psc_thread *thr)
 	}
 }
 
+/*
+ * Execute an SQL query on the SQLite database.
+ *
+ * @cb: optional; callback to retrieve fields for a SELECT.
+ * @cbarg: optional; argument to provide to callback.
+ * @fmt: printf(3)-like format string to properly escape any
+ * interpolated values in the SQL query.
+ */
 void
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *cbarg,
