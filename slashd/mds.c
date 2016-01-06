@@ -1983,7 +1983,7 @@ void
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int locked, deref = 0, rc = 0;
+	int deref = 0, rc = 0;
 	struct slm_wkdata_ptrunc *wk;
 	struct fcmh_mds_info *fmi;
 
@@ -1999,11 +1999,11 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 			deref = 1;
 		}
 
-		locked = FCMH_RLOCK(f);
+		FCMH_LOCK(f);
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
-		FCMH_URLOCK(f, locked);
+		FCMH_ULOCK(f);
 
 		wk = pfl_workq_getitem(slm_ptrunc_prepare,
 		    struct slm_wkdata_ptrunc);
