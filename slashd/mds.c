@@ -2135,6 +2135,8 @@ slm_ptrunc_prepare(void *p)
 	struct bmap *b;
 	sl_bmapno_t i;
 
+	mds_note_update(1);
+
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
@@ -2197,6 +2199,8 @@ slm_ptrunc_prepare(void *p)
 		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
 		slm_ptrunc_apply(wk);
+
+	mds_note_update(-1);
 	return (0);
 }
 
