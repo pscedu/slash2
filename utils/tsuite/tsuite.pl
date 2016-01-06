@@ -160,8 +160,18 @@ EOF
 
 	daemon_pid()
 	{
-		$n->{ctlcmd} -Hp pid | awk '{print \$1}'
+		$n->{ctlcmd} -Hp pid | awk '{print \$2}'
 	}
+
+	decompress_xz()
+	{
+		if hasprog pixz; then
+			pixz -d -t < \$1
+		else
+			xz -dc \$1
+		fi
+	}
+	export -f decompress_xz
 
 	export MAKEFLAGS=-j\$(nproc)
 	export SCONSFLAGS=-j\$(nproc)
@@ -489,6 +499,7 @@ foreach my $n (@mds, @ios, @cli) {
 	my @mkdir = (
 		$n->{src_dir},
 		$n->{data_dir},
+		"$n->{base_dir}/tmp",
 	);
 
 	my @cmds;
@@ -710,6 +721,7 @@ sub test_setup {
 		local id=\$2
 		local max=\$3
 
+		#export LOCAL_TMP=$n->{basedir}/tmp/\${test%.*}
 		export LOCAL_TMP=$n->{mp}/tmp/\${test%.*}
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
@@ -892,6 +904,11 @@ EOF
 }; # end of eval
 
 my $emsg = $@;
+
+if ($emsg) {
+	# Give some time for the daemons to be examined for coredumps...
+	sleep 10;
+}
 
 sub cleanup {
 	my $n;
