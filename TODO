@@ -855,5 +855,15 @@ s2re
 - PINNED crash
 - psc_assert(msl_biorq_page_valid_accounting(r, i));
 - SIGBUS
+- instead of set pfr_interrupted=1, perhaps reply immediately then let
+  the fsthr no-op?
+- 512-byte writes are only getting coalesced into 64k RPCs because of
+  the definition of BMPC_COALESCE_MAX_IOV, although by my math it should
+  be 16k
+- namecache rc=13 crash
+- namecache/readdir race
+- ENOSPC loops
+- IOS is down and MDS crash loops trying to find op-reclaim.0
+- why are queued replicas always repl-status 'q' and never 's'?
 
 - tune metaslab_df_free_pct zfs/slashd
