@@ -273,6 +273,7 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 #define namecache_hold_entry(dcu, d, name)				\
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
 
+/* XXX capitalize this name to inform it's a macro */
 #define namecache_update(dcu, fid, rc)					\
 	_namecache_update(PFL_CALLERINFO(), (dcu),			\
 	    (rc) ? FID_ANY : (fid), (rc))
