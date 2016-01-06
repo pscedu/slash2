@@ -1082,6 +1082,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		return (0);
 
 	FCMH_WAIT_BUSY(f);
+	/*
+	 * Disallow new settattr while a ptruncate is still in progress.
+	 */
+	if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
+		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
 
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 
@@ -1121,9 +1126,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 #endif
 
 			/* partial truncate */
-			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
-				PFL_GOTOERR(out, mp->rc =
-				    -SLERR_BMAP_IN_PTRUNC);
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 
