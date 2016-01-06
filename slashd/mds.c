@@ -1996,14 +1996,14 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 				    sstb->sst_fid, slstrerror(rc));
 				return;
 			}
+			FCMH_LOCK(f);
 			deref = 1;
 		}
 
-		FCMH_LOCK(f);
+		FCMH_LOCK_ENSURE(f);
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
-		FCMH_ULOCK(f);
 
 		wk = pfl_workq_getitem(slm_ptrunc_prepare,
 		    struct slm_wkdata_ptrunc);
