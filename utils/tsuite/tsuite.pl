@@ -20,6 +20,7 @@
 # %END_LICENSE%
 
 use Cwd qw(realpath);
+use DBI;
 use Data::Dumper;
 use File::Basename;
 use Getopt::Std;
@@ -48,7 +49,12 @@ $ssh_user = " -l $opts{u} " if $opts{u};
 
 my $ts_dir = dirname($0);
 my $ts_name = "suite0";
+my $ts_user = `id -un`;
 $ts_name = $ARGV[0] if @ARGV > 0;
+
+sub min {
+	$_[0] < $_[1] ? $_[0] : $_[1];
+}
 
 sub stackdump {
 	my $s = "";
@@ -74,6 +80,7 @@ usage: $0 [-BmRv] [-u user] [test-name]
 
 options:
   -B		whether to use any configured SSH bounce host
+  -D descr	optional description to include in report
   -m		send e-mail report
   -R		record results to database
   -u user	override user for SSH connection establishment
@@ -456,6 +463,8 @@ my @mds_pids;
 my @ios_pids;
 my @cli_pids;
 
+my $success = 0;
+
 eval {
 
 local $SIG{ALRM} = sub { fatal "timeout exceeded" };
@@ -552,6 +561,15 @@ ___MKCFG_EOF
 			@patch
 
 			make build >/dev/null
+
+			echo -n '%PFL_COMMID% '
+			git log -n 1 --pretty=format:%H
+
+			(
+				cd slash2
+				echo -n '%SL2_COMMID% '
+				git log -n 1 --pretty=format:%H
+			)
 
 			touch $authbuf_fn
 			cat <<'___AUTHBUF_EOF' > $authbuf_fn
@@ -901,6 +919,8 @@ EOF
 
 } while (waitjobs \@pids, $total_timeout, WF_NONBLOCK);
 
+$success = 1;
+
 }; # end of eval
 
 my $emsg = $@;
@@ -969,36 +989,103 @@ EOF
 
 cleanup();
 
+close WR;
+my @output = <RD>;
+my $output = join '', @output;
+
+my $pfl_commid = $output =~ /^%PFL_COMMID% (\S+?)/m;
+my $sl2_commid = $output =~ /^%SL2_COMMID% (\S+?)/m;
+
+# Record results to database for historical performance.
 if ($opts{R}) {
+	my @results;
+
+	my $dbh = DBI::connect(@gcfg{qw(dsn db_user db_pass)}) or
+	    fatal "unable to connect to database: $DBI::errstr";
+
+	my @param;
+	push @param, $ts_name;		# $1
+	push @param, $ts_user;		# $2
+	push @param, $diff;		# $3
+	push @param, $success;		# $4
+	push @param, $output;		# $5
+	push @param, $sl2_commid;	# $6
+	push @param, $pfl_commid;	# $7
+
+	$dbh->do(<<'SQL', {}, @param);
+		INSERT INTO s2ts_run (
+			suite_name,
+			launch_date,
+			user,
+			diff,
+			status,
+			output,
+			sl2_commid,
+			pfl_commid
+		) VALUES (
+			?,		-- $1: suite_name
+			NOW(),		--     launch_date
+			?,		-- $2: user
+			?,		-- $3: diff
+			?,		-- $4: status
+			?,		-- $5: output
+			?,		-- $6: sl2_commid
+			?		-- $7: pfl_commid
+		)
+SQL
+	my $run_id = $dbh->last_insert_id;
+
+	my $sth = $dbh->prepare(<<SQL);
+		INSERT INTO s2ts_result (
+			run_id,
+			test_name,
+			duration_ms
+		) VALUES (
+			?,
+			?,
+			?
+		)
+SQL
+	foreach my $r (@results) {
+		$sth->execute($run_id, $r->{name}, $r->{duration})
+		    or warn "$DBI::errstr";
+	}
+
+	$dbh->disconnect;
 }
 
+# Send e-mail report.
 if ($opts{m}) {
-	close WR;
+	my $smtp = Net::SMTP->new('mailer.psc.edu');
 
-	my @lines = <RD>;
+	my $to = 'slash2-devel+report@psc.edu';
+	my $from = 'slash2-devel@psc.edu';
 
-	if (@lines || $emsg) {
-		my $smtp = Net::SMTP->new('mailer.psc.edu');
+	# Trim output to last N lines.
+	my $index = min(75, @output);
+	my $output_small = splice @output, -$index;
 
-		my $to = 'slash2-devel+report@psc.edu';
-		my $from = 'slash2-devel@psc.edu';
-
-		$smtp->mail($from);
-		$smtp->to($to);
-		$smtp->data();
-		$smtp->datasend(<<EOM);
+	$smtp->mail($from);
+	$smtp->to($to);
+	$smtp->data();
+	$smtp->datasend(<<EOM);
 To: $to
 From: $from
 Subject: tsuite report
 
-Output from run by @{[$ENV{SUDO_USER} || $ENV{USER}]}:
+Launched by user: $ts_user
 
-@lines
+@{[$emsg ? <<__EOE : ""]}
+------------------------------------------------------------------------
 error: $emsg
+------------------------------------------------------------------------
+__EOE
+
+$output_small
+
 EOM
-		$smtp->dataend();
-		$smtp->quit;
-	}
+	$smtp->dataend();
+	$smtp->quit;
 } else {
 	warn "error: $emsg\n" if $emsg;
 	exit 1 if $emsg;
