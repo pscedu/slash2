@@ -2087,6 +2087,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 				 * client.
 				 */
 				upsch_enqueue(bmap_2_upd(b));
+				OPSTAT_INCR("ptrunc-pending");
 			}
 		}
 		i++;
