@@ -593,11 +593,15 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		if (vold == vnew)
 			;
+
+		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vnew == BREPLST_GARBAGE &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid, NULL);
+
+		/* Work has finished. */
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
 		     vold == BREPLST_TRUNCPNDG_SCHED ||
@@ -608,14 +612,21 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
 			PUSH_IOS(b, &del, resid, NULL);
+
+		/*
+		 * Work that was previously scheduled failed so requeue
+		 * it.
+		 */
 		else if (vold == BREPLST_REPL_SCHED ||
 		    vold == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
-		else if ((vold != BREPLST_REPL_QUEUED &&
-		      vnew == BREPLST_REPL_QUEUED) ||
-		     (vold != BREPLST_TRUNCPNDG &&
-		      vnew == BREPLST_TRUNCPNDG))
+
+		/* Work was scheduled. */
+		else if (vnew == BREPLST_REPL_SCHED ||
+		    vnew == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
+
+		/* Work was reprioritized. */
 		else if (sprio != -1 || uprio != -1)
 			PUSH_IOS(b, &chg, resid, NULL);
 	}
