@@ -264,6 +264,8 @@ void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),
 	    void *, struct psc_compl *);
 int	dircache_ent_cmp(const void *, const void *);
+void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
+	    struct dircache_ent *, void *), void *);
 
 #define namecache_get_entry(dcu, d, name)				\
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 0)

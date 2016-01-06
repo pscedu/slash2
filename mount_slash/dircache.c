@@ -227,31 +227,40 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 }
 
 /*
- * Perform a batch operation across all cached dirents.
+ * Perform an operation on each cached dirent referenced by an fcmh.
+ *
  * @d: directory handle.
  * @cbf: callback to run.
  * @cbarg: callback argument.
  */
-int
-dircache_walk_wkcb(void *arg)
+void
+dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
+    struct dircache_ent *, void *), void *cbarg)
 {
-	struct slc_wkdata_dircache *wk = arg;
-	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
+	struct dircache_page *p, *np;
 	struct dircache_ent *dce;
 	int n;
 
-	fci = fcmh_2_fci(wk->d);
-	DIRCACHE_RDLOCK(wk->d);
+	fci = fcmh_2_fci(d);
+	DIRCACHE_RDLOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
 			continue;
 		DYNARRAY_FOREACH(dce, n, p->dcp_dents_off)
-			wk->cbf(p, dce, wk->cbarg);
+			cbf(p, dce, cbarg);
 	}
 	DYNARRAY_FOREACH(dce, n, &fci->fcid_ents)
-		wk->cbf(NULL, dce, wk->cbarg);
-	DIRCACHE_ULOCK(wk->d);
+		cbf(NULL, dce, cbarg);
+	DIRCACHE_ULOCK(d);
+}
+
+int
+dircache_walk_async_wkcb(void *arg)
+{
+	struct slc_wkdata_dircache *wk = arg;
+
+	dircache_walk(wk->d, wk->cbf, wk->cbarg);
 
 	fcmh_op_done_type(wk->d, FCMH_OPCNT_DIRCACHE);
 
@@ -261,6 +270,10 @@ dircache_walk_wkcb(void *arg)
 	return (0);
 }
 
+/*
+ * Perform an operation on each cached dirent referenced by an fcmh
+ * asynchronously.
+ */
 void
 dircache_walk_async(struct fidc_membh *d, void (*cbf)(
     struct dircache_page *, struct dircache_ent *, void *), void *cbarg,
@@ -268,7 +281,7 @@ dircache_walk_async(struct fidc_membh *d, void (*cbf)(
 {
 	struct slc_wkdata_dircache *wk;
 
-	wk = pfl_workq_getitem(dircache_walk_wkcb,
+	wk = pfl_workq_getitem(dircache_walk_async_wkcb,
 	    struct slc_wkdata_dircache);
 	fcmh_op_start_type(d, FCMH_OPCNT_DIRCACHE);
 	wk->d = d;
@@ -769,13 +782,6 @@ dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
 void
 dircache_dbgpr(struct fidc_membh *d)
 {
-	struct slc_wkdata_dircache wk;
-	void *p = NULL;
-
 	printf("pages %d\n", pll_nitems(&fcmh_2_fci(d)->fci_dc_pages));
-	memset(&wk, 0, sizeof(wk));
-	wk.d = d;
-	wk.cbf = dircache_ent_dbgpr;
-	wk.cbarg = &p;
-	dircache_walk_wkcb(&wk);
+	dircache_walk(d, dircache_ent_dbgpr, NULL);
 }

@@ -175,6 +175,9 @@ sl_resource_put(__unusedx struct sl_resource *res)
 {
 }
 
+/*
+ * Perform a access check on a file against the specified credentials.
+ */
 int
 fcmh_checkcreds(struct fidc_membh *f,
     struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
@@ -199,6 +202,10 @@ fcmh_checkcreds(struct fidc_membh *f,
 	return (rc);
 }
 
+/*
+ * Select the group for a new entity (file or directory) that is being
+ * created.
+ */
 gid_t
 newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 {
@@ -269,6 +276,10 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 #define msl_progallowed(r)						\
 	(psc_dynarray_len(&allow_exe) == 0 || _msl_progallowed(r))
 
+/*
+ * For ProgACLs, determine if the user process that is accessing a file
+ * is on the allowed program list.
+ */
 int
 _msl_progallowed(struct pscfs_req *pfr)
 {
@@ -315,6 +326,11 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+/*
+ * Convert an error code acquired from RPC (either from the RPC stack,
+ * underlying network stack, OS, or from the remote SLASH2 peer) to an
+ * error value native to this system.
+ */
 int
 msl_io_convert_errno(int rc)
 {
@@ -1012,6 +1028,15 @@ slc_wk_issue_readdir(void *p)
 	msl_lookup_fidcache_dcu((pfr), (pcrp), (pinum), (name), (fgp),	\
 	    (sstb), (fp), NULL)
 
+/*
+ * Query the fidcache for a file system entity name.
+ *
+ * Special handling for pseudo files is made first.
+ *
+ * Then the local caches are queried.  If not present and fresh, remote
+ * RPCs are made to perform classic UNIX-style "namei" resolution and
+ * refresh file attribute metadata.
+ */
 __static int
 msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
@@ -1381,6 +1406,9 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 	DIRCACHE_ULOCK(d);
 }
 
+/*
+ * Perform successful READDIR RPC reception processing.
+ */
 void
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
@@ -1432,6 +1460,9 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	DIRCACHE_ULOCK(d);
 }
 
+/*
+ * Callback triggered when READDIR RPC is received.
+ */
 int
 msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 {
@@ -1485,6 +1516,9 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	return (0);
 }
 
+/*
+ * Send out an asynchronous READDIR RPC.
+ */
 int
 msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
     off_t off, size_t size, int block)
@@ -1936,6 +1970,11 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	return (rc);
 }
 
+/*
+ * Send out a synchronous RPC to update file attribute metadata (e.g.
+ * mtime) as a result of I/O operation.  These updates are sent out
+ * periodically instead of continuously to reduce traffic.
+ */
 int
 msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
@@ -2655,8 +2694,11 @@ struct msl_dc_inv_entry_data {
 	pscfs_inum_t		 mdie_pinum;
 };
 
+/*
+ * Send an name entry cache invalidation notification to the kernel.
+ */
 void
-msl_dc_inv_entry(__unusedx struct dircache_page *p,
+msl_dircache_inval_entry(__unusedx struct dircache_page *p,
     struct dircache_ent *d, void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
@@ -2939,7 +2981,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		/* See note below. */
 		if (!rc && (to_set & PSCFS_SETATTRF_MODE) &&
 		    fcmh_isdir(c)) {
-			mdie.mdie_pri = pflfs_notify_getprivate(pfr);
+			mdie.mdie_pri = pflfs_inval_getprivate(pfr);
 			mdie.mdie_pinum = fcmh_2_fid(c);
 		}
 
@@ -2967,8 +3009,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * this operation completes?
 		 */
 		if (mdie.mdie_pri)
-			dircache_walk_async(c, msl_dc_inv_entry, &mdie,
-			    NULL);
+			dircache_walk(c, msl_dircache_inval_entry, &mdie);
 
 		if (FCMH_HAS_BUSY(c))
 			FCMH_UNBUSY(c);
@@ -3679,6 +3720,9 @@ unmount(const char *mp)
 		psclog_warn("system(%s)", buf);
 }
 
+/*
+ * Set preferred I/O system.
+ */
 void
 slc_setprefios(sl_ios_id_t id)
 {
