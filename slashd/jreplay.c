@@ -133,7 +133,7 @@ mds_replay_bmap(void *jent, int op)
 		struct srt_stat sstb;
 		int fl, idx;
 
-		FCMH_WAIT_BUSY(f);
+		FCMH_LOCK(f);
 		ih = fcmh_2_inoh(f);
 		idx = mds_repl_ios_lookup(current_vfsid, ih,
 		    sjbc->sjbc_iosid);
@@ -162,7 +162,6 @@ mds_replay_bmap(void *jent, int op)
 		}
 		rc = mds_fcmh_setattr_nolog(current_vfsid, f, fl,
 		    &sstb);
-		FCMH_UNBUSY(f);
 		if (rc)
 			goto out;
 

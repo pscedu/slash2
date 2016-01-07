@@ -1081,7 +1081,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 
 	/*
@@ -1143,6 +1143,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				fcmh_2_gen(f)--;
 			goto out;
 		}
+		FCMH_LOCK(f);
 	}
 
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
@@ -1154,10 +1155,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
  out:
 
 	if (f) {
-		(void)FCMH_RLOCK(f);
+		FCMH_LOCK_ENSURE(f);
 		if (mp->rc == 0 || mp->rc == -SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = f->fcmh_sstb;
-		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
 	}
 	return (0);

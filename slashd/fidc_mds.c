@@ -82,7 +82,6 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 	int rc;
 
 	FCMH_LOCK_ENSURE(f);
-	FCMH_BUSY_ENSURE(f);
 	FCMH_ULOCK(f);
 
 	if (log)

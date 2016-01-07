@@ -359,7 +359,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 				    -SLERR_IMPORT_XREPL_DIFF);
 		} else {
 			/* reclaim old data */
-			FCMH_WAIT_BUSY(c);
+			FCMH_LOCK(c);
 			sstb.sst_fg.fg_gen = fcmh_2_gen(c) + 1;
 			sstb.sst_size = 0;
 			sstb.sst_blocks = 0;
@@ -372,7 +372,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			    SL_SETATTRF_NBLKS, &sstb);
 
 			mds_inodes_odsync(vfsid, c, NULL);
-			FCMH_UNBUSY(c);
 
 			if (rc)
 				PFL_GOTOERR(out, mp->rc = -rc);
@@ -421,7 +420,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 
 	/* XXX fire off any persistent replications */
 
-	FCMH_WAIT_BUSY(c);
+	FCMH_LOCK(c);
 	mp->fg = c->fcmh_sstb.sst_fg;
 	/* set nblks regardless of XREPL. */
 	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
@@ -440,8 +439,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	rc = mds_inodes_odsync(vfsid, c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
-
-	FCMH_UNBUSY(c);
 
  out:
 	psclog_info("import: parent="SLPRI_FG" name=%s rc=%d",
@@ -485,7 +482,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 		return (rc);
 	if (mp->rc && mp->rc != -EEXIST)
 		return (0);
-	FCMH_WAIT_BUSY(d);
+	FCMH_LOCK(d);
 	/*
 	 * XXX if mp->rc == -EEXIST, only update attrs if target isn't
 	 * newer
@@ -494,7 +491,6 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);
-	FCMH_UNBUSY(d);
 	fcmh_op_done(d);
 	if (rc)
 		mp->rc = rc;
