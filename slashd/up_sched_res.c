@@ -736,6 +736,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_WAIT_BUSY(b);
 	BMAP_ULOCK(b);
 
+	mds_note_update(1);
+
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
@@ -884,6 +886,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
+
+	mds_note_update(-1);
 }
 
 void
