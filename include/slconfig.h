@@ -171,6 +171,10 @@ struct lnetif_pair {
 #define LPF_NOACCEPTOR		(1 << 0)
 #define LPF_SKIP		(1 << 1)
 
+#define	MDS_FIDCACHE_SIZE	65536
+#define	IOS_FIDCACHE_SIZE	4096
+#define	MSL_FIDCACHE_SIZE	1024
+
 /* local (host-specific settings) configuration */
 struct slcfg_local {
 	char			*cfg_journal;

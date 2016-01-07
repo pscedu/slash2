@@ -461,7 +461,7 @@ main(int argc, char *argv[])
 
 	sl_sys_upnonce = psc_random32();
 
-	slcfg_local->cfg_fidcachesz = 65536;
+	slcfg_local->cfg_fidcachesz = MDS_FIDCACHE_SIZE;
 	slcfg_parse(cfn);
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));

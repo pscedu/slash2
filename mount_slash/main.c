@@ -3803,8 +3803,7 @@ msl_init(void)
 
 	sl_sys_upnonce = psc_random32();
 
-	/* defaults */
-	slcfg_local->cfg_fidcachesz = 1024;
+	slcfg_local->cfg_fidcachesz = MSL_FIDCACHE_SIZE;
 
 	slcfg_parse(msl_cfgfn);
 	if (slcfg_local->cfg_root_squash)
