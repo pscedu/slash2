@@ -1072,14 +1072,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount) {
-		mp->rc = -EACCES;
-		return (0);
-	}
+	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount)
+		PFL_GOTOERR(out, mp->rc = -EACCES);
 
 	mp->rc = -slm_fcmh_get(&mq->attr.sst_fg, &f);
 	if (mp->rc)
-		return (0);
+		PFL_GOTOERR(out, mp->rc);
 
 	FCMH_LOCK(f);
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
