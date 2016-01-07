@@ -1092,12 +1092,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-#if 0
-		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = -PFLERR_NOSYS;
-			goto out;
-		}
-#endif
+
 		/* our client should really do this on its own */
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			psclog_warnx("missing MTIME flag in RPC request");
@@ -1137,13 +1132,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	if (to_set) {
-		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = slm_rmm_forward_namespace(
-			    SLM_FORWARD_SETATTR, &mq->attr.sst_fg, NULL,
-			    NULL, NULL, 0, NULL, &mq->attr, to_set);
-			if (mp->rc)
-				PFL_GOTOERR(out, mp->rc);
-		}
 		/*
 		 * If the file is open, mfh will be valid and used.
 		 * Otherwise, it will be NULL, and we'll use the
