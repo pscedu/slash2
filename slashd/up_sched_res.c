@@ -837,7 +837,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 					if (slm_upsch_tryrepl(b, off, m,
 					    dst_res))
-						return;
+						goto out;
 				}
 			}
 			if (!valid_exists) {
@@ -858,7 +858,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (mds_repl_bmap_apply(b, tract,
 				    retifset, off)) {
 					mds_bmap_write_logrepls(b);
-					return;
+					goto out;
 				}
 			}
 			break;
@@ -878,7 +878,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 		case BREPLST_GARBAGE:
 			rc = slm_upsch_trypreclaim(dst_res, b, off);
 			if (rc > 0)
-				return;
+				goto out;
 			break;
 		}
 	}
@@ -887,6 +887,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
 
+ out:
 	mds_note_update(-1);
 }
 
