@@ -660,7 +660,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	sl_replica_t repl;
-return;
 
 	upg = upd_getpriv(tupd);
 	repl.bs_id = upg->upg_resm->resm_res_id;
