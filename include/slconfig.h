@@ -173,7 +173,7 @@ struct lnetif_pair {
 
 #define	MDS_FIDCACHE_SIZE	65536
 #define	IOS_FIDCACHE_SIZE	4096
-#define	MSL_FIDCACHE_SIZE	1024
+#define	MSL_FIDCACHE_SIZE	2048	
 
 /* local (host-specific settings) configuration */
 struct slcfg_local {
