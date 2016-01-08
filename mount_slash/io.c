@@ -671,8 +671,9 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	}
 
 	f = mfh->mfh_fcmh;
-	DEBUG_FCMH(PLL_DIAG, f, "off=%"PRId64", size=%zu, rw=%s, rc = %d",
-	    q->mfsrq_off, q->mfsrq_len, (q->mfsrq_flags & MFSRQ_READ) ? 
+	DEBUG_FCMH(PLL_DIAG, f, "reply: off=%"PRId64", size=%zu, rw=%s, "
+	    "rc = %d", q->mfsrq_off, q->mfsrq_len, 
+	    (q->mfsrq_flags & MFSRQ_READ) ? 
 	    "read" : "write", q->mfsrq_err);
 
 	PSCFREE(oiov);
@@ -1929,8 +1930,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
-	    buf, size, off, (rw == SL_READ) ? "read" : "write");
+	DEBUG_FCMH(PLL_DIAG, f, "request: off=%"PRId64", size=%zu, "
+	    "buf=%p, rw=%s", off, size, buf, (rw == SL_READ) ? 
+	    "read" : "write");
 
 	FCMH_LOCK(f);
 	/*
