@@ -866,4 +866,9 @@ s2re
 - IOS is down and MDS crash loops trying to find op-reclaim.0
 - why are queued replicas always repl-status 'q' and never 's'?
 
+
 - tune metaslab_df_free_pct zfs/slashd
+
+- 01/11/2016: We still have connection issue: MDS can't contact IOS because 
+  it is down.  When I restart IOS (lime), it took ages to connect. Perhaps 
+  each side is waiting for the other side to respond its request first.
