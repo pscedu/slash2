@@ -414,13 +414,17 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			rc = fsync(fcmh_2_fd(f));
 			fsync_time = CURRENT_SECONDS - fsync_time;
 
-			if (fsync_time > NOTIFY_FSYNC_TIMEOUT)
+			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
+				OPSTAT_INCR("fsync-slow");
 				DEBUG_FCMH(PLL_NOTICE, f,
 				    "long fsync %d", fsync_time);
-			if (rc)
+			}
+			if (rc) {
+				OPSTAT_INCR("fsync-fail");
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
 				    rc, fcmh_2_fd(f), errno);
+			}
 			OPSTAT_INCR("fsync");
 		} else
 			FCMH_ULOCK(f);

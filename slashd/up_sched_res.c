@@ -660,7 +660,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	sl_replica_t repl;
-return;
 
 	upg = upd_getpriv(tupd);
 	repl.bs_id = upg->upg_resm->resm_res_id;
@@ -1179,6 +1178,10 @@ slmupschthr_main(struct psc_thread *thr)
 		if (upd)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
 		else {
+			/*
+ 			 * In theory we should avoid this. However, there
+ 			 * might be outside updates to the upsch database.
+ 			 */
 			rc = psc_multiwait_secs(&slm_upsch_mw, &upd, 30);
 			if (rc == -ETIMEDOUT)
 				upschq_resm(NULL, UPDT_PAGEIN);
