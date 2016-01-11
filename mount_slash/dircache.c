@@ -499,18 +499,20 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 		if (dce2 && dce2->dce_flags & DCEF_HOLD) {
+			dce2 = NULL;
 			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "skip");
 			dce->dce_pfd->pfd_ino = FID_ANY;
 		} else {
 			if (dce2) {
 				psc_hashbkt_del_item(
 				    &msl_namecache_hashtbl, b, dce2);
-				dircache_ent_zap(d, dce2);
 			}
 			psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
 			    dce);
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		if (dce2)
+			dircache_ent_zap(d, dce2);
 	}
 
 	DIRCACHE_WRLOCK(d);
