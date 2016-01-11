@@ -249,11 +249,6 @@ struct bmap_ios_assign {
 
 int	 mds_bmap_read(struct bmap *, int);
 int	 mds_bmap_write(struct bmap *, void *, void *);
-int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmap *, void *);
-
-#define mds_bmap_write_rel(b, logf)	_mds_bmap_write_rel(PFL_CALLERINFOSS(SLSS_BMAP), (b), (logf))
-
-#define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
 #define mds_bmap_write_logrepls(b)	mds_bmap_write((b), mdslog_bmap_repls, (b))
 

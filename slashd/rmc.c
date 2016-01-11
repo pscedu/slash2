@@ -1242,10 +1242,12 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	BMAP_WAIT_BUSY(b);
 	BHREPL_POLICY_SET(b, mq->pol);
 
-	mds_bmap_write_repls_rel(b);
+	mds_bmap_write_logrepls(b);
 	/* XXX upd_enqueue */
 
  out:
+	if (b)
+		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
 	return (0);

@@ -240,7 +240,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
 	mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
-	mds_bmap_write_repls_rel(b);
+	mds_bmap_write_logrepls(b);
 
 //	brepls_init(retifset, 1);
 	tract[BREPLST_GARBAGE] = BREPLST_INVALID;
@@ -253,7 +253,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 			continue;
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
-		mds_bmap_write_repls_rel(b);
+		mds_bmap_write_logrepls(b);
 
 		if (bno == 0)
 			break;
@@ -413,7 +413,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			rc = mds_repl_inv_except(b, idx);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
-		rc = mds_bmap_write_repls_rel(b);
+		rc = mds_bmap_write_logrepls(b);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
 	}

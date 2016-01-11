@@ -2079,7 +2079,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			fmi->fmi_ptrunc_nios = ios_list.nios;
 			if (fmi->fmi_ptrunc_nios) {
 				done = 0;
-				mds_bmap_write_repls_rel(b);
+				mds_bmap_write_logrepls(b);
 				/*
 				 * Queue work immediately instead
 				 * of waiting for it to be causally
@@ -2106,7 +2106,8 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		BHGEN_INCREMENT(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
-		mds_bmap_write_repls_rel(b);
+		mds_bmap_write_logrepls(b);
+		bmap_op_done(b);
 	}
 
 	if (done) {
