@@ -404,7 +404,8 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
 
-	if (rc && b) {
+	psc_assert(b);
+	if (rc) {
 		/* undo brepls changes */
 		brepls_init(tract, -1);
 		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
