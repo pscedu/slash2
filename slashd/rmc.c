@@ -1119,7 +1119,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 #endif
 
-			/* partial truncate */
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 
