@@ -2049,6 +2049,7 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 __static void
 slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
+	int rc;
 	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
@@ -2082,7 +2083,11 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			fmi->fmi_ptrunc_nios = ios_list.nios;
 			if (fmi->fmi_ptrunc_nios) {
 				done = 0;
-				mds_bmap_write_logrepls(b);
+				rc = mds_bmap_write_logrepls(b);
+				if (rc) {
+				 	done = 1;
+				     	goto out;
+				}
 				/*
 				 * Queue work immediately instead
 				 * of waiting for it to be causally
@@ -2113,6 +2118,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		bmap_op_done(b);
 	}
 
+ out:
 	if (done) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
