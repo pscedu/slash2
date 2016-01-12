@@ -408,20 +408,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
 }
 
-/*
- * Release a bmap after use.
- */
-int
-_mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
-    void *logf)
-{
-	int rc;
-
-	rc = mds_bmap_write(b, logf, b);
-	bmap_op_done(b);
-	return (rc);
-}
-
 void
 dump_bmapod(struct bmap *bmap)
 {
