@@ -436,25 +436,6 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 }
 
 int
-slm_upsch_wk_finish_ptrunc(void *p)
-{
-	struct slm_wkdata_upsch_cb *wk = p;
-	struct fidc_membh *f;
-
-	f = wk->b->bcm_fcmh;
-	/* skip; there is more important work to do */
-	if (!FCMH_TRYBUSY(f))
-		return (1);
-	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
-	slm_upsch_finish_ptrunc(wk->csvc, wk->dst_resm, wk->b, wk->rc,
-	    wk->off);
-
-	FCMH_UNBUSY(f);
-	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
-	return (0);
-}
-
-int
 slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
