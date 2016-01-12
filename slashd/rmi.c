@@ -62,8 +62,8 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
-	struct bmap *b = NULL;
 	struct bmap_mds_info *bmi;
+	struct bmap *b = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
@@ -121,7 +121,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 	len = mq->ncrc_updates * sizeof(struct srt_bmap_crcup);
 	for (i = 0; i < mq->ncrc_updates; i++) {
-		// XXX sanity check mq->ncrcs_per_update[i]
+		/* XXX sanity check mq->ncrcs_per_update[i] */
 		len += mq->ncrcs_per_update[i] *
 		    sizeof(struct srt_bmap_crcwire);
 	}
@@ -232,8 +232,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	BMAP_ULOCK(b);
-	iosidx = mds_repl_ios_lookup(current_vfsid,
-	    fcmh_2_inoh(b->bcm_fcmh),
+	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
 	    c_peer.nid)->resm_res_id);
 
@@ -241,6 +240,8 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
 	mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
 	mds_bmap_write_logrepls(b);
+	/* XXX handle error */
+	bmap_op_done(b);
 
 //	brepls_init(retifset, 1);
 	tract[BREPLST_GARBAGE] = BREPLST_INVALID;
@@ -254,6 +255,8 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
 		mds_bmap_write_logrepls(b);
+		/* XXX handle error */
+		bmap_op_done(b);
 
 		if (bno == 0)
 			break;
@@ -282,7 +285,7 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 int
 slm_rmi_handle_import(struct pscrpc_request *rq)
 {
-	int fl, rc, rc2, idx, vfsid;
+	int fl, rc, rc2, idx, vfsid, tract[NBREPLST];
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
@@ -403,17 +406,18 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 				    BMAP_SLVR_CRCABSENT;
 
 		if (mq->flags & SRM_IMPORTF_XREPL) {
-			int tract[NBREPLST];
-
 			brepls_init(tract, -1);
 			tract[BREPLST_INVALID] = BREPLST_VALID;
 			tract[BREPLST_GARBAGE] = BREPLST_VALID;
 			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 		} else
 			rc = mds_repl_inv_except(b, idx);
-		if (rc)
+		if (rc) {
+			bmap_op_done(b);
 			PFL_GOTOERR(out, mp->rc = rc);
+		}
 		rc = mds_bmap_write_logrepls(b);
+		bmap_op_done(b);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
 	}
@@ -441,7 +445,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		mp->rc = rc;
 
  out:
-	psclog_info("import: parent="SLPRI_FG" name=%s rc=%d",
+	psclog_diag("import: parent="SLPRI_FG" name=%s rc=%d",
 	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn, mp->rc);
 
 	/*
