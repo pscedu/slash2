@@ -1085,7 +1085,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	/*
 	 * Disallow new settattr while a ptruncate is still in progress.
 	 */
-	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) && 
+	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    (to_set & PSCFS_SETATTRF_DATASIZE))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
 
@@ -1214,8 +1214,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
+	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
