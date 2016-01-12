@@ -2059,6 +2059,9 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
+	/*
+ 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
+ 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
