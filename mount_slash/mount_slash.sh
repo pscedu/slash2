@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # $Id$
 
-prog=mount_slash
+prog=mount_wokfs
+mod=slash2.so
 ctl=msctl
 
-. $(dirname $0)/pfl_daemon.sh
+PATH=$(dirname $0):$PATH
+. pfl_daemon.sh
 
 usage()
 {
@@ -49,6 +51,6 @@ xargs+=(datadir=$base/var)
 xargs+=(slcfg=$base/slcfg)
 opts=$(IFS=, ; echo "${xargs[*]}")
 
-bindir=$(dirname $(which $prog))
+mod_dir=$(dirname $(which $prog))/../lib/wokfs
 
-rundaemon $filter $prog -L "insert 0 $bindir/slash2.so $opts" -U $mp
+rundaemon $filter $prog -L "insert 0 $mod_dir/$mod $opts" -U $mp
