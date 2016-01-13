@@ -8,6 +8,7 @@ ifeq ($(filter module,${SLASH_OPTIONS}),)
   PROG=		mount_slash
 else
   SHLIB=	slash2.so
+  INST_LIBDIR=	${WOK_MOD_DIR}
 endif
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
