@@ -872,3 +872,9 @@ s2re
 - 01/11/2016: We still have connection issue: MDS can't contact IOS because 
   it is down.  When I restart IOS (lime), it took ages to connect. Perhaps 
   each side is waiting for the other side to respond its request first.
+
+- 01/13/2016: Saw the following error on illusion2, but the slash2 comes up Okay. 
+
+  cannot import 'arc_s2ssd_prod': a pool with that name is already created/imported,
+  and no additional pools with that name were found
+  cannot mount 'arc_s2ssd_prod': mountpoint or dataset is busy
