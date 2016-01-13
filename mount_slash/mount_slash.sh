@@ -42,8 +42,13 @@ export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
 export PSC_LOG_LEVEL_info=info
 export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
 export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
-export CONFIG_FILE=$base/slcfg
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
-rundaemon $filter $prog -D $base/var -U ${xargs[@]} $mp
+xargs+=(datadir=$base/var)
+xargs+=(slcfg=$base/slcfg)
+opts=$(IFS=, ; echo "${xargs[*]}")
+
+bindir=$(dirname $(which $prog))
+
+rundaemon $filter $prog -L "insert 0 $bindir/slash2.so $opts" -U $mp
