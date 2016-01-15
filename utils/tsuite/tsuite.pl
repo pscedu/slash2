@@ -996,9 +996,26 @@ my $output = join '', @output;
 my $pfl_commid = $output =~ /^%PFL_COMMID% (\S+?)/m;
 my $sl2_commid = $output =~ /^%SL2_COMMID% (\S+?)/m;
 
+sub parse_results {
+	my ($output) = @_;
+
+	my @out;
+	foreach my $result ($output =~
+	    /^%TSUITE_RESULT% (.*)$/gm) {
+		$result =~ /^([^:]+):(\d+) (\d+)$/ or next;
+		push @out, {
+			name		=> $1,
+			task_id		=> $2,
+			duration	=> $3,
+		};
+	}
+
+	return @out;
+}
+
 # Record results to database for historical performance.
 if ($opts{R}) {
-	my @results;
+	my @results = parse_results($output);
 
 	my $dbh = DBI::connect(@gcfg{qw(dsn db_user db_pass)}) or
 	    fatal "unable to connect to database: $DBI::errstr";
@@ -1011,6 +1028,8 @@ if ($opts{R}) {
 	push @param, $output;		# $5
 	push @param, $sl2_commid;	# $6
 	push @param, $pfl_commid;	# $7
+
+	$dbh->do("BEGIN");
 
 	$dbh->do(<<'SQL', {}, @param);
 		INSERT INTO s2ts_run (
@@ -1039,17 +1058,21 @@ SQL
 		INSERT INTO s2ts_result (
 			run_id,
 			test_name,
+			task_id,
 			duration_ms
 		) VALUES (
+			?,
 			?,
 			?,
 			?
 		)
 SQL
 	foreach my $r (@results) {
-		$sth->execute($run_id, $r->{name}, $r->{duration})
+		$sth->execute($run_id, @{$r}{qw(name task_id duration)})
 		    or warn "$DBI::errstr";
 	}
+
+	$dbh->do("COMMIT");
 
 	$dbh->disconnect;
 }

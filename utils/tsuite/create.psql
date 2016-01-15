@@ -16,6 +16,7 @@ CREATE TABLE s2ts_run (
 CREATE TABLE s2ts_result (
 	id		INT		NOT NULL	AUTO_INCREMENT,
 	run_id		INT		NOT NULL,
+	task_id		INT		NOT NULL,
 	test_name	VARCHAR(32),
 	duration_ms	LONG,
 
