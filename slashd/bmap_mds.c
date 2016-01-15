@@ -363,7 +363,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 
 	/* 
 	 * Only update the block usage when there is a real change.
-	 * If there are more then one replica, the last writer wins.
 	 */
 	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
 		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
