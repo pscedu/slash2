@@ -1035,6 +1035,8 @@ upd_proc(struct slm_update_data *upd)
 	if (locked)
 		UPSCH_ULOCK();
 
+	DPRINTF_UPD(PLL_DIAG, upd, "start");
+
 	UPD_LOCK(upd);
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
