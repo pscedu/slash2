@@ -2094,8 +2094,8 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 				 * paged to reduce latency to the
 				 * client.
 				 */
+				OPSTAT_INCR("ptrunc-enqueue");
 				upsch_enqueue(bmap_2_upd(b));
-				OPSTAT_INCR("ptrunc-pending");
 			}
 		}
 		i++;
@@ -2128,6 +2128,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 
 	/* XXX adjust nblks */
 
+	OPSTAT_INCR("ptrunc-apply");
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
