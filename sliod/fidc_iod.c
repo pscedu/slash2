@@ -63,6 +63,7 @@ bcr_update_inodeinfo(struct bcrcupd *bcr)
 	if (fstat(fcmh_2_fd(f), &stb) == -1)
 		return (errno);
 
+	/* Used by mds_bmap_crc_update() */
 	bcr->bcr_crcup.fsize = stb.st_size;
 	bcr->bcr_crcup.nblks = stb.st_blocks;
 	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;
