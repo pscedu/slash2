@@ -1125,7 +1125,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		} else if (mq->attr.sst_size > fcmh_2_fsz(f))
 			OPSTAT_INCR("truncate-extend");
 		else
-			OPSTAT_INCR("truncate-same");
+			OPSTAT_INCR("truncate-noop");
 	}
 
 	if (to_set) {
