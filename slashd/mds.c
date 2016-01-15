@@ -2099,7 +2099,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			 */
 			OPSTAT_INCR("ptrunc-enqueue");
 			upd = bmap_2_upd(b);
-			DPRINTF_UPD(PLL_DIAG, upd, "fid="SLPRI_FID" bno=%u",
+			DPRINTF_UPD(PLL_MAX, upd, "fid="SLPRI_FID" bno=%u",
 			    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
 			upsch_enqueue(upd);
 		}
