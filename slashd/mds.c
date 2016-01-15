@@ -2072,39 +2072,41 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-	if (fcmh_2_fsz(f) % SLASH_BMAP_SIZE) {
-		/*
-		 * If a bmap sliver was sliced, we must await for a
-		 * sliod to reply with the new CRC.
-		 */
-		if (bmap_get(f, i, SL_WRITE, &b) == 0) {
-			BMAP_ULOCK(b);
-			mds_repl_bmap_walkcb(b, tract, NULL, 0,
-			    ptrunc_tally_ios, &ios_list);
-			fmi->fmi_ptrunc_nios = ios_list.nios;
-			if (fmi->fmi_ptrunc_nios) {
-				done = 0;
-				rc = mds_bmap_write_logrepls(b);
-				if (rc) {
-				 	done = 1;
-				     	goto out;
-				}
-				/*
-				 * Queue work immediately instead
-				 * of waiting for it to be causally
-				 * paged to reduce latency to the
-				 * client.
-				 */
-				OPSTAT_INCR("ptrunc-enqueue");
-				upd = bmap_2_upd(b);
-				DPRINTF_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
-				    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
-				upsch_enqueue(upd);
-			}
-		}
-		i++;
-	}
+	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
+		goto out1;
 
+	/*
+	 * If a bmap sliver was sliced, we must await for a
+	 * sliod to reply with the new CRC.
+	 */
+	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+		BMAP_ULOCK(b);
+		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		    ptrunc_tally_ios, &ios_list);
+		fmi->fmi_ptrunc_nios = ios_list.nios;
+		if (fmi->fmi_ptrunc_nios) {
+			done = 0;
+			rc = mds_bmap_write_logrepls(b);
+			if (rc) {
+			 	done = 1;
+			     	goto out2;
+			}
+			/*
+			 * Queue work immediately instead
+			 * of waiting for it to be causally
+			 * paged to reduce latency to the
+			 * client.
+			 */
+			OPSTAT_INCR("ptrunc-enqueue");
+			upd = bmap_2_upd(b);
+			DPRINTF_UPD(PLL_DIAG, upd, "fid="SLPRI_FID" bno=%u",
+			    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+			upsch_enqueue(upd);
+		}
+	}
+	i++;
+
+ out1:
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
@@ -2122,7 +2124,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		bmap_op_done(b);
 	}
 
- out:
+ out2:
 	if (done) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
