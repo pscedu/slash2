@@ -2056,6 +2056,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	struct bmap *b;
 	sl_bmapno_t i;
 	struct fcmh_mds_info *fmi;
+	struct slm_update_data *upd;
 
 	f = wk->f;
 	fmi = fcmh_2_fmi(f);
@@ -2095,7 +2096,10 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 				 * client.
 				 */
 				OPSTAT_INCR("ptrunc-enqueue");
-				upsch_enqueue(bmap_2_upd(b));
+				upd = bmap_2_upd(b);
+				DPRINTF_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
+				    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+				upsch_enqueue(upd);
 			}
 		}
 		i++;
