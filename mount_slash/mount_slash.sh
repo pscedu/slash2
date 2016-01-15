@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # $Id$
 
-prog=mount_slash
+prog=mount_wokfs
+mod=slash2.so
 ctl=msctl
 
-. $(dirname $0)/pfl_daemon.sh
+PATH=$(dirname $0):$PATH
+. pfl_daemon.sh
 
 usage()
 {
@@ -42,8 +44,13 @@ export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
 export PSC_LOG_LEVEL_info=info
 export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
 export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
-export CONFIG_FILE=$base/slcfg
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
-rundaemon $filter $prog -D $base/var -U ${xargs[@]} $mp
+xargs+=(datadir=$base/var)
+xargs+=(slcfg=$base/slcfg)
+opts=$(IFS=, ; echo "${xargs[*]}")
+
+mod_dir=$(dirname $(which $prog))/../lib/wokfs
+
+rundaemon $filter $prog -L "insert 0 $mod_dir/$mod $opts" -U $mp

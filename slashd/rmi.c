@@ -254,7 +254,10 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 			continue;
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
+#if 0
+		/* this trigger bmap ensure valid assert, disable for now */
 		mds_bmap_write_logrepls(b);
+#endif
 		/* XXX handle error */
 		bmap_op_done(b);
 

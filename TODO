@@ -865,10 +865,20 @@ s2re
 - ENOSPC loops
 - IOS is down and MDS crash loops trying to find op-reclaim.0
 - why are queued replicas always repl-status 'q' and never 's'?
-
+- move mds_note_update() from RPC handling to mdsio
+- install pixz, DBI on advsys netboot
+- try disabling BIOS config option C-states on firehose6 to avoid perf
+  hangs
 
 - tune metaslab_df_free_pct zfs/slashd
 
-- 01/11/2016: We still have connection issue: MDS can't contact IOS because 
-  it is down.  When I restart IOS (lime), it took ages to connect. Perhaps 
+- 01/11/2016: We still have connection issue: MDS can't contact IOS because
+  it is down.  When I restart IOS (lime), it took ages to connect. Perhaps
   each side is waiting for the other side to respond its request first.
+
+- 01/13/2016: Investigate the following issues on illusion2:
+
+  ggggxgggggggggggggggggggggggxgxggggggggggxgggxggg} crcstates=[0x3] no replicas marked valid we can use; repls=59 nskip=0
+  [1452717547:822814 slmrmcthr12:7f9baa1fc700:def mds.c mds_bmap_ios_assign 613] unable to contact IOS 0x1fff (sense@PSCARCH) for lease
+  [1452717547:823237 slmrmcthr12:7f9baa1fc700:bmap mds.c mds_bmap_bml_add 1015] bmap@0x7f9ba000fdd0 bno:0 flg:0x406:WL+ fid:0x000000001713c799 opcnt=2 : bml_add (mion=(nil)) bml=0x7236120 (seq=0) (rw=43) (nwtrs=1 nrdrs=0) (rc=-1010)
+  [1452717547:823315 slmrmcthr12:7f9baa1fc700:rpc service.c pscrpc_target_send_reply_msg 591] req@0x8373d80 x1091/t0 cb=(nil) c0 o10->@128.182.99.214@tcp12:-1 lens 208/528 ref 0 res 0 ret 0 fl Interpret:/0/0 replyc 0 rc 0/0 to=0 sent=0 :: processing error (-1010)

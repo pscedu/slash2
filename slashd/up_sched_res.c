@@ -443,7 +443,6 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
-	struct fidc_membh *f;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 	if (rc == 0)
@@ -452,14 +451,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	if (rc)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 
-	f = b->bcm_fcmh;
-
-	FCMH_WAIT_BUSY(f);
-	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
 	slm_upsch_finish_ptrunc(csvc, dst_resm, b, rc, off);
-	FCMH_UNBUSY(f);
-
-	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
 	return (0);
 }
 
@@ -613,6 +605,8 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	    slm_batch_preclaim_cb, 30);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	csvc = NULL;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
@@ -1041,6 +1035,8 @@ upd_proc(struct slm_update_data *upd)
 	if (locked)
 		UPSCH_ULOCK();
 
+	DPRINTF_UPD(PLL_DIAG, upd, "start");
+
 	UPD_LOCK(upd);
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
@@ -1161,10 +1157,12 @@ slmupschthr_main(struct psc_thread *thr)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
 		else {
 			/*
- 			 * In theory we should avoid this. However, there
- 			 * might be outside updates to the upsch database.
- 			 */
-			rc = psc_multiwait_secs(&slm_upsch_mw, &upd, 30);
+			 * In theory we should avoid this.  However,
+			 * there might be outside updates to the upsch
+			 * database.
+			 */
+			rc = psc_multiwait_secs(&slm_upsch_mw, &upd,
+			    30);
 			if (rc == -ETIMEDOUT)
 				upschq_resm(NULL, UPDT_PAGEIN);
 		}

@@ -361,7 +361,9 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (idx < 0)
 		psc_fatal("not found");
 
-	/* only update the block usage when there is a real change */
+	/* 
+	 * Only update the block usage when there is a real change.
+	 */
 	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
 		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
 		    fcmh_2_repl_nblks(f, idx);
