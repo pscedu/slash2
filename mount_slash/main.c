@@ -490,7 +490,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc2)
 		PFL_GOTOERR(out, rc2);
 
-	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload");
+	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload", 1);
 	msl_bmap_reap_init(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,

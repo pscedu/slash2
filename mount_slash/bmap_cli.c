@@ -140,7 +140,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	BMAP_LOCK(b);
-	msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange", compl);
+	msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange", !!compl);
 	if (!rc) {
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
@@ -642,7 +642,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		FCMH_ULOCK(f);
 	}
 	BMAP_LOCK(b);
-	msl_bmap_stash_lease(b, &mp->sbd, rc, "get", compl);
+	msl_bmap_stash_lease(b, &mp->sbd, rc, "get", !!compl);
 	if (!rc) {
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b);
