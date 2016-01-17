@@ -767,6 +767,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		goto retry;
 	}
 
+	DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
+
 	return (rc);
 
  out:
