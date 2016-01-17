@@ -540,7 +540,7 @@ void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
-//	struct pscrpc_connection *c;
+	struct pscrpc_import *imp;
 	int rc;
 
 	(void)CSVC_RLOCK(csvc);
@@ -551,10 +551,16 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		if (csvc->csvc_flags & CSVCF_WANTFREE) {
 			if (csvc->csvc_peertype == SLCONNT_CLI)
 				pll_remove(&sl_clients, csvc);
-//			c = csvc->csvc_import->imp_connection;
-//			if (c)
-//				c->c_imp = NULL;
-			pscrpc_import_put(csvc->csvc_import);
+
+			/*
+			 * Due to the nature of non-blocking CONNECT,
+			 * the import may or may not actually be
+			 * present.
+			 */
+			imp = csvc->csvc_import;
+			if (imp)
+				pscrpc_import_put(imp);
+
 			DEBUG_CSVC(PLL_DIAG, csvc, "freed");
 			// XXX assert(mutex.nwaiters == 0)
 			psc_mutex_unlock(&csvc->csvc_mutex);
