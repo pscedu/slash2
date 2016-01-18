@@ -184,7 +184,7 @@ mapfile_parse_group(char *start)
 			while (isdigit(*start)) {
 				uid = PARSENUM(start, run);
 				psc_dynarray_add(&uids,
-				    (void *)(unsigned long)uid);
+				    (void *)(uintptr_t)uid);
 			}
 		} else if (strcmp(start, "remote") == 0) {
 			start = run;
