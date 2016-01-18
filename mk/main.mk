@@ -21,4 +21,6 @@
 include ${SLASH_BASE}/mk/pre.mk
 include ${MAINMK}
 
+$(call ADD_FILE_CFLAGS,${SLASH_BASE}/share/adler32.c,${COPT})
+
 ${OBJDIR}/version.o: $(filter-out ${SLASH_BASE}/share/version.c},${SRCS})
