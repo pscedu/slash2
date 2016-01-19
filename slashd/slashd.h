@@ -398,6 +398,7 @@ extern int			 slm_opstate;
 extern struct pfl_odt_ops	 slm_odtops;
 
 extern int			 use_global_mount;
+extern int			 ptrunc_enabled;
 
 extern struct psc_hashtbl	 slm_roots;
 

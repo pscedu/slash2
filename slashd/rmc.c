@@ -66,6 +66,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			ptrunc_enabled;
 int			use_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -1115,9 +1116,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		} else if (mq->attr.sst_size < fcmh_2_fsz(f)) {
 
 			OPSTAT_INCR("truncate-shrink");
-#if 1
-			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
-#endif
+
+			if (!ptrunc_enabled)
+				PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
