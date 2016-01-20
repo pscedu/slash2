@@ -67,7 +67,7 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int			slm_ptrunc_enabled;
-int			use_global_mount;
+int			slm_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
@@ -180,7 +180,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 	psclog_diag("pfid="SLPRI_FID, mq->fg.fg_fid);
 
-	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
+	if (mq->fg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		mp->attr.sst_fg.fg_fid = SLFID_ROOT;
 		mp->attr.sst_fg.fg_gen = FGEN_ANY-1;
 		slm_root_attributes(&mp->attr);
@@ -433,7 +433,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+	if (mq->pfg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		uint64_t fid;
 		struct sl_site *site;
 
@@ -560,7 +560,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+	if (mq->pfg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		mp->rc = -EACCES;
 		return (0);
 	}
@@ -624,7 +624,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->pfg.fg_fid == SLFID_ROOT && use_global_mount) {
+	if (mq->pfg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		mp->rc = -EACCES;
 		return (0);
 	}
@@ -862,7 +862,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mq->fg.fg_fid == SLFID_ROOT)
 		psc_scan_filesystems();
 
-	if (mq->fg.fg_fid == SLFID_ROOT && use_global_mount) {
+	if (mq->fg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		slm_rmc_handle_readdir_global_mount(mp, iov);
 	} else {
 		int nents, eof;
@@ -1073,7 +1073,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && use_global_mount)
+	if (mq->attr.sst_fg.fg_fid == SLFID_ROOT && slm_global_mount)
 		PFL_GOTOERR(out, mp->rc = -EACCES);
 
 	mp->rc = -slm_fcmh_get(&mq->attr.sst_fg, &f);
@@ -1405,7 +1405,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->pfid == SLFID_ROOT && use_global_mount) {
+	if (mq->pfid == SLFID_ROOT && slm_global_mount) {
 		mp->rc = -EACCES;
 		return (0);
 	}

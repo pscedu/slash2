@@ -613,7 +613,7 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_simple("sys.nextfid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 	psc_ctlparam_register_var("sys.global",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &use_global_mount);
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_global_mount);
 	psc_ctlparam_register_var("sys.ptrunc",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_ptrunc_enabled);
 	psc_ctlparam_register_var("sys.reclaim_xid",
