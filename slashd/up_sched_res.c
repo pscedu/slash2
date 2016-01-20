@@ -65,9 +65,8 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 /* RPC callback numeric arg indexes */
-#define IN_RC		0
-#define IN_OFF		1
-#define IN_AMT		2
+#define IN_OFF		0
+#define IN_AMT		1
 
 /* RPC callback pointer arg indexes */
 #define IP_CSVC		0
@@ -445,8 +444,6 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
 
 	if (rc)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
@@ -1087,6 +1084,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
+	// XXX mds_note_update(1)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
