@@ -615,7 +615,7 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.global",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &use_global_mount);
 	psc_ctlparam_register_var("sys.ptrunc",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &ptrunc_enabled);
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_ptrunc_enabled);
 	psc_ctlparam_register_var("sys.reclaim_xid",
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_xid);
 	psc_ctlparam_register_var("sys.reclaim_batchno",
