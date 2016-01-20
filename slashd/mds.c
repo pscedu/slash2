@@ -1988,6 +1988,10 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
+		if (!slm_ptrunc_enabled) {
+			DEBUG_SSTB(PLL_MAX, sstb, "ptrunc averted");
+			return;
+		}
 		if (f == NULL) {
 			rc = slm_fcmh_get(&sstb->sst_fg, &f);
 			if (rc) {
