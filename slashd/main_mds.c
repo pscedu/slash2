@@ -397,6 +397,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	time_t now;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int rc, vfsid, c, found;
@@ -688,6 +689,9 @@ main(int argc, char *argv[])
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
+
+	time(&now);
+	psclog_max("MDS has started at %s\n", ctime(&now));	
 
 	slmctlthr_main(sfn);
 	exit(0);
