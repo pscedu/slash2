@@ -348,6 +348,7 @@ extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*msl_rmc_resm;
+extern char			 datadir[];
 extern char			 mountpoint[];
 extern int			 msl_use_mapfile;
 

@@ -126,6 +126,7 @@ sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 
+char				 datadir[PATH_MAX];
 char				 mountpoint[PATH_MAX];
 int				 msl_use_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
@@ -3824,6 +3825,8 @@ msl_init(void)
 
 		parse_mapfile();
 	}
+
+	strcpy(datadir, sl_datadir);
 
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
