@@ -44,6 +44,7 @@
 #include "ctlsvr_cli.h"
 #include "fidc_cli.h"
 #include "mount_slash.h"
+#include "pathnames.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "subsys_cli.h"
@@ -830,7 +831,7 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &bmap_max_cache);
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
-	    0, datadir);
+	    0, (char *)sl_datadir);
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
