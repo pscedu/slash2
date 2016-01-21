@@ -691,7 +691,7 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclog_max("MDS has started at %s\n", ctime(&now));	
+	psclog_max("MDS has started at %s", ctime(&now));	
 
 	slmctlthr_main(sfn);
 	exit(0);
