@@ -465,6 +465,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
 	dst_resm = res_getmemb(dst_res);
@@ -507,7 +509,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		    "bmap is corrupted");
 
 	av.pointer_arg[IP_BMAP] = b;
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
