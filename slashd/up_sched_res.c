@@ -432,7 +432,6 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
-	UPSCH_WAKE();
 }
 
 int
@@ -475,8 +474,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	/*
-	 * Make sure that a truncation is not already scheduled on this
-	 * bmap.
+	 * Make sure that a truncation is not already scheduled on 
+	 * this bmap.
 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
@@ -519,8 +518,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
-	    av.pointer_arg[IP_BMAP], rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (rc);
 }
 
