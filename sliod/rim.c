@@ -232,16 +232,31 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 int
 sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	const struct srm_bmap_ptrunc_req *mq;
+	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
+	struct fidc_membh *f;
+	struct sl_fidgen *fgp;
+	int fd;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
 		mp->rc = -EINVAL;
 		return (0);
 	}
+
+	fgp = &mq->fg;
+
+	mp->rc = sli_fcmh_get(fgp, &f);
+	if (mp->rc)
+		return (mp->rc);
+
+	fd = fcmh_2_fd(f);
+	ftruncate(fd, mq->offset);
+
+#if 0
 	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
 	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
+#endif
 	return (0);
 }
 
