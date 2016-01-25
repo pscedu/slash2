@@ -32,7 +32,6 @@ base=$dir/$prof.s2
 # Initialization/configuration
 ulimit -n 100000
 ulimit -c $((1024 * 1024 * 1024 * 50))
-sysctl $( [ $verbose -eq 0 ] && printf %s -q ) -w vm.max_map_count=500000
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG=1
 export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
