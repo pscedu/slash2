@@ -35,6 +35,7 @@ SRC_PATH+=		${SLASH_BASE}/slashd
 SRC_PATH+=		${SLASH_BASE}/sliod
 
 SLASH_MODULES?=		cli ion mds
+SLASH_OPTIONS?=		module
 
 -include ${SLASH_BASE}/mk/local.mk
 
