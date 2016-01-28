@@ -1585,6 +1585,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 
  out2:
 	DIRCACHE_WRLOCK(d);
+	p->dcp_refcnt--;
 	dircache_free_page(d, p);
 	DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
