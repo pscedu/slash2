@@ -129,7 +129,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	uint32_t i;
 	int rc;
 
-	if (pfl_fault_here_rc("sliod.crcup_fail", &rc, EHOSTDOWN))
+	if (pfl_fault_here_rc("sliod:crcup_fail", &rc, EHOSTDOWN))
 		return (rc);
 
 	rc = sli_rmi_getcsvc(&csvc);

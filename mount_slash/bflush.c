@@ -310,7 +310,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
 
-	(void)pfl_fault_here_rc("msl.request_timeout",
+	(void)pfl_fault_here_rc("slash2:request_timeout",
 	    &rq->rq_timeout, -1);
 
 	if (rq->rq_timeout < 0) {
