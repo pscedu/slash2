@@ -3161,8 +3161,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	spinlock(&pfl_faults_lock);
 	DYNARRAY_FOREACH(flt, i, &pfl_faults)
-		if (strncmp(flt->pflt_name, "slash2:",
-		    strlen("slash2:")) == 0)
+		if (strncmp(flt->pflt_name, "slash2/",
+		    strlen("slash2/")) == 0)
 			pfl_fault_destroy(i--);
 	freelock(&pfl_faults_lock);
 

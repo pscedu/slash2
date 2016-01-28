@@ -519,7 +519,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    foff);
 
-		if (pfl_fault_here_rc("sliod:fsio_read_fail", &errno,
+		if (pfl_fault_here_rc("sliod/fsio_read_fail", &errno,
 		    EBADF))
 			rc = -1;
 
@@ -1059,7 +1059,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
 
-			(void)pfl_fault_here_rc("sliod:aio_fail",
+			(void)pfl_fault_here_rc("sliod/aio_fail",
 			    &iocb->iocb_rc, EIO);
 
 			psclog_diag("got signal: iocb=%p", iocb);

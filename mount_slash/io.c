@@ -848,7 +848,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq,
 		    "bmap=%p biorq=%p", b, r);
 
-	(void)pfl_fault_here_rc("slash2:read_cb", &rc, EIO);
+	(void)pfl_fault_here_rc("slash2/read_cb", &rc, EIO);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b, "rc=%d "
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
@@ -1239,7 +1239,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		psc_dynarray_add(a, e);
 	}
 
-	(void)pfl_fault_here_rc("slash2:readrpc_offline", &rc,
+	(void)pfl_fault_here_rc("slash2/readrpc_offline", &rc,
 	    -ETIMEDOUT);
 	if (rc)
 		PFL_GOTOERR(out, rc);
