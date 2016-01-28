@@ -95,6 +95,7 @@ struct dircache_page {
 #define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
 #define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
 
+/* See pfl/pthrutil.c */
 #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_REQWRLOCK(d)	pfl_rwlock_reqwrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_UREQLOCK(d, l)	pfl_rwlock_ureqlock(fcmh_2_dc_rwlock(d), (l))
