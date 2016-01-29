@@ -218,11 +218,12 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 	return (pcr->pcr_gid);
 }
 
-void
+struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
 	gidmap_int_cred(pcr);
+	return (pcr);
 }
 
 __static void
@@ -2285,16 +2286,19 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	}
 
 	if (!fcmh_isdir(f) &&
-	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr))
+	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
+		struct pscfs_creds pcr;
+
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
-		    "uid=%u gid=%u "
+		    "euid=%u owner=%u fgrp=%u "
 		    "fsize=%"PRId64" "
 		    "oatime="PFLPRI_PTIMESPEC" "
 		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
 		    fcmh_2_fid(f),
+		    slc_getfscreds(pfr, &pcr)->pcr_uid,
 		    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 		    f->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
@@ -2303,6 +2307,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 		    mfh->mfh_uprog);
+	}
 
 	mfh_decref(mfh);
 }
