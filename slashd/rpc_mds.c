@@ -328,6 +328,8 @@ batchrq_sched_finish(struct batchrq *br, int rc)
 
 	wk = pfl_workq_getitem(batchrq_finish_wkcb,
 	    struct slm_wkdata_batchrq_cb);
+
+	/* need reference count here? */
 	wk->br = br;
 	wk->rc = rc;
 	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
