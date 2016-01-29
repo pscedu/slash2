@@ -482,7 +482,16 @@ main(int argc, char *argv[])
 	fidc_init(sizeof(struct fcmh_mds_info));
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
-	/* Start up ZFS threads and import the MDS zpool. */
+	/* 
+ 	 * Start up ZFS threads and import the MDS zpool.
+ 	 * Also, make sure ARC max size is finalized
+ 	 * before calling arc_init().
+ 	 */
+	if (slcfg_local->cfg_arc_max) {
+		void arc_set_maxsize(uint64_t);
+
+		arc_set_maxsize(slcfg_local->cfg_arc_max);
+	}
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
@@ -503,11 +512,6 @@ main(int argc, char *argv[])
 	/* startup meter */
 	psc_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
-	if (slcfg_local->cfg_arc_max) {
-		void arc_set_maxsize(uint64_t);
-
-		arc_set_maxsize(slcfg_local->cfg_arc_max);
-	}
 
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++)
 		psc_register_filesystem(vfsid);
