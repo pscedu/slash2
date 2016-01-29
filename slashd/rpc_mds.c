@@ -382,6 +382,10 @@ batchrq_send(struct batchrq *br)
 
 	ml = &batchrqs_delayed;
 
+	/*
+ 	 * The following list lock is the same as BATCHMGR_LOCK()
+ 	 * due to the way list lock is set up.
+ 	 */
 	LIST_CACHE_LOCK_ENSURE(ml);
 
 	rq = br->br_rq;
