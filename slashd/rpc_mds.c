@@ -274,8 +274,6 @@ batchrq_decref(struct batchrq *br, int rc)
 {
 	int finish = 0;
 
-	// LOCK_ENSURE(&batchrqs_lock);
-
 	if (br->br_rc == 0)
 		br->br_rc = rc;
 
