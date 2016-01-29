@@ -106,6 +106,13 @@ struct batchrq {
 #define BATCHF_RQINFL			(1 << 0)	/* request RPC inflight */
 #define BATCHF_WAITREPLY		(1 << 1)	/* awaiting RPC reply */
 
+#define PFLOG_BATCHRPC(level, br, fmt, ...)				\
+	psclogs((level), PSS_RPC,					\
+	    "batch@%p bid=%"PRIu64" refs=%d buf=%p "			\
+	    "flags=%#x len=%zd rc=%d "fmt,				\
+	    (br), (br)->br_bid, (br)->br_refcnt, (br)->br_buf,		\
+	    (br)->br_flags, (br)->br_len, (br)->br_rc, ##__VA_ARGS__)
+
 #define batchrq_2_lc(br)		(&res2rpmi((br)->br_res)->rpmi_batchrqs)
 
 void	slm_rpc_initsvc(void);
