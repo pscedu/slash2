@@ -411,8 +411,6 @@ batchrq_send(struct batchrq *br)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
-
-		br->br_refcnt--;
 		br->br_rq = rq;
 		br->br_flags &= ~BATCHF_RQINFL;
 		batchrq_decref(br, rc);
