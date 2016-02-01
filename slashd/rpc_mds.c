@@ -324,9 +324,9 @@ batchrq_finish_wkcb(void *p)
 void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
+	int locked, already_sched = 0;
 	struct slm_wkdata_batchrq_cb *wk;
 	struct psc_listcache *lc;
-	int already_sched = 0;
 
 	lc = &batchrqs_waitreply;
 	locked = LIST_CACHE_RLOCK(lc);
