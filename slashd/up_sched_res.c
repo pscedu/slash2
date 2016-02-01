@@ -465,11 +465,16 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
+
+	if (!slm_ptrunc_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
+		return (0);
+	}
+
 	dst_resm = res_getmemb(dst_res);
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
