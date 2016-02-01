@@ -325,6 +325,19 @@ void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
 	struct slm_wkdata_batchrq_cb *wk;
+	struct psc_listcache *lc;
+	int already_sched = 0;
+
+	lc = &batchrqs_waitreply;
+	locked = LIST_CACHE_RLOCK(lc);
+	if (br->br_flags & BATCHF_SCHED)
+		already_sched = 1;
+	else
+		br->br_flags |= BATCHF_SCHED;
+	LIST_CACHE_URLOCK(lc, locked);
+
+	if (already_sched)
+		return;
 
 	wk = pfl_workq_getitem(batchrq_finish_wkcb,
 	    struct slm_wkdata_batchrq_cb);
@@ -500,6 +513,9 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 		if ((br->br_flags & (BATCHF_RQINFL |
 		    BATCHF_WAITREPLY)) == 0 &&
 		    opc == br->br_rq->rq_reqmsg->opc) {
+			/*
+			 * Tack this request onto the pending batch set.
+			 */
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
