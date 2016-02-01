@@ -324,25 +324,23 @@ batchrq_finish_wkcb(void *p)
 void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
-	int locked, already_sched = 0;
-	struct slm_wkdata_batchrq_cb *wk;
+	int locked = 0;
 	struct psc_listcache *lc;
+	struct slm_wkdata_batchrq_cb *wk;
 
 	lc = &batchrqs_waitreply;
 	locked = LIST_CACHE_RLOCK(lc);
-	if (br->br_flags & BATCHF_SCHED)
-		already_sched = 1;
-	else
-		br->br_flags |= BATCHF_SCHED;
-	LIST_CACHE_URLOCK(lc, locked);
-
-	if (already_sched)
+	if (br->br_flags & BATCHF_CLEANUP) {
+		LIST_CACHE_URLOCK(lc, locked);
 		return;
+	}
+
+	br->br_flags |= BATCHF_CLEANUP;
+	LIST_CACHE_URLOCK(lc, locked);
 
 	wk = pfl_workq_getitem(batchrq_finish_wkcb,
 	    struct slm_wkdata_batchrq_cb);
 
-	/* need reference count here? */
 	wk->br = br;
 	wk->rc = rc;
 	pfl_workq_putitemq(&slm_db_lopri_workq, wk);
