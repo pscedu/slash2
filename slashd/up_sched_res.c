@@ -581,6 +581,13 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	struct srt_preclaim_reqent pe;
 	struct sl_mds_iosinfo *si;
 	struct sl_resm *m;
+	struct fidc_membh *f;
+
+	f = b->bcm_fcmh;
+	if (!slm_preclaim_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "preclaim averted");
+		return (0);
+	}
 
 	si = res2iosinfo(r);
 	if (si->si_flags & SIF_PRECLAIM_NOTSUP)
