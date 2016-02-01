@@ -246,6 +246,12 @@ mds_replay_ino(void *jent, int op)
 	if (rc)
 		goto out;
 
+	if (fcmh_isdir(f)) {
+		DEBUG_FCMH(PLL_ERROR, f, "file/directory corruption");	
+		rc = EINVAL;
+		goto out;
+	}
+
 	/* It's possible this replay created this inode. */
 	ih = fcmh_2_inoh(f);
 
