@@ -225,6 +225,10 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 
 /*
  * Replay an inode update.
+ *
+ * Note that the replica table can be stored for a directory for inheritance purposes,
+ * and it is named according to /deployment_s2md/.slmd/fidns/a/b/c/d/$fid.ino. 
+ * See slm_fcmh_ctor() for details.
  */
 static int
 mds_replay_ino(void *jent, int op)
@@ -245,12 +249,6 @@ mds_replay_ino(void *jent, int op)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
-
-	if (fcmh_isdir(f)) {
-		DEBUG_FCMH(PLL_ERROR, f, "file/directory corruption");	
-		rc = EINVAL;
-		goto out;
-	}
 
 	/* It's possible this replay created this inode. */
 	ih = fcmh_2_inoh(f);
