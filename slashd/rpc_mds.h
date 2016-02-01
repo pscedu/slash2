@@ -35,7 +35,7 @@ struct pscrpc_export;
 #define SLM_RMM_REPSZ			512
 #define SLM_RMM_SVCNAME			"slmrmm"
 
-#define SLM_RMI_NTHREADS		8
+#define SLM_RMI_NTHREADS		32
 #define SLM_RMI_NBUFS			1024
 #define SLM_RMI_BUFSZ			768
 #define SLM_RMI_REPSZ			1320

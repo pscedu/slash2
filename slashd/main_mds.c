@@ -487,11 +487,9 @@ main(int argc, char *argv[])
  	 * Also, make sure ARC max size is finalized
  	 * before calling arc_init().
  	 */
-	if (slcfg_local->cfg_arc_max) {
-		void arc_set_maxsize(uint64_t);
-
+	if (slcfg_local->cfg_arc_max)
 		arc_set_maxsize(slcfg_local->cfg_arc_max);
-	}
+
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
@@ -695,7 +693,9 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclog_max("MDS has started at %s", ctime(&now));	
+	psclog_max("MDS revision %d has started at %s", sl_stk_version, 
+	    ctime(&now));	
+	psclog_max("Max ARC caching size is %"PRIu64, arc_get_maxsize());
 
 	slmctlthr_main(sfn);
 	exit(0);

@@ -465,11 +465,16 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
+
+	if (!slm_ptrunc_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
+		return (0);
+	}
+
 	dst_resm = res_getmemb(dst_res);
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -576,6 +581,13 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	struct srt_preclaim_reqent pe;
 	struct sl_mds_iosinfo *si;
 	struct sl_resm *m;
+	struct fidc_membh *f;
+
+	f = b->bcm_fcmh;
+	if (!slm_preclaim_enabled) {
+		DEBUG_FCMH(PLL_MAX, f, "preclaim averted");
+		return (0);
+	}
 
 	si = res2iosinfo(r);
 	if (si->si_flags & SIF_PRECLAIM_NOTSUP)
