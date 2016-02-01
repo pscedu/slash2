@@ -105,6 +105,7 @@ struct batchrq {
 
 #define BATCHF_RQINFL			(1 << 0)	/* request RPC inflight */
 #define BATCHF_WAITREPLY		(1 << 1)	/* awaiting RPC reply */
+#define BATCHF_SCHED			(1 << 2)	/* scheduled for cleanup */
 
 #define PFLOG_BATCHRPC(level, br, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
