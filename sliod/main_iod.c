@@ -330,7 +330,7 @@ main(int argc, char *argv[])
 	OPSTAT_INCR("min-seqno");
 
 	time(&now);
-	psclog_info("IOS revision %d has started at %s", sl_stk_version,
+	psclog_max("IOS revision %d has started at %s", sl_stk_version,
 	    ctime(&now));
 
 	slictlthr_main(sfn);
