@@ -41,7 +41,7 @@ my @mds;	# suite MDS nodes
 my @ios;	# suite IOS nodes
 my @cli;	# suite CLI nodes
 
-getopts("mRu:v", \%opts) or usage();
+getopts("BmRu:v", \%opts) or usage();
 usage() if @ARGV > 1;
 
 my $ssh_user = "";
