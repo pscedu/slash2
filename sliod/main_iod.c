@@ -204,6 +204,7 @@ main(int argc, char *argv[])
 	sigset_t signal_set;
 	struct stat stb;
 	int rc, c;
+	time_t now;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -327,6 +328,10 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
 	OPSTAT_INCR("min-seqno");
+
+	time(&now);
+	psclog_max("IOS revision %d has started at %s", sl_stk_version, 
+	    ctime(&now));	
 
 	slictlthr_main(sfn);
 	exit(0);
