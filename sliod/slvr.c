@@ -1076,7 +1076,7 @@ void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct slvr, slvr_lentry, PPMF_AUTO, 512, 512, 0,
 	    NULL, NULL, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
