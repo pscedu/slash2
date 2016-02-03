@@ -3793,6 +3793,7 @@ msl_init(void)
 	struct sl_resource *r;
 	char *name;
 	int rc;
+	time_t now;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION)) {
@@ -3920,6 +3921,10 @@ msl_init(void)
 
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
+
+	time(&now);
+	psclog_max("slash2 client revision %d has started at %s", sl_stk_version, 
+	    ctime(&now));	
 
 	return (0);
 }
