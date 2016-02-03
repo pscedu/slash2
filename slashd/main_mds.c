@@ -480,7 +480,7 @@ main(int argc, char *argv[])
 	}
 
 	fidc_init(sizeof(struct fcmh_mds_info));
-	bmap_cache_init(sizeof(struct bmap_mds_info));
+	bmap_cache_init(sizeof(struct bmap_mds_info), 64);
 
 	/* 
  	 * Start up ZFS threads and import the MDS zpool.

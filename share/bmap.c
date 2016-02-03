@@ -328,12 +328,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 }
 
 void
-bmap_cache_init(size_t priv_size)
+bmap_cache_init(size_t priv_size, int count)
 {
 	_psc_poolmaster_init(&bmap_poolmaster,
 	    sizeof(struct bmap) + priv_size,
 	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
+	    PPMF_AUTO, count, count, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 
