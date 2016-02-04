@@ -587,6 +587,7 @@ static int test_large()
 			return (1);
 		}
 	}
+	free(buf);
 	close(fd);
 	unlink(filename);
 	return (0);
