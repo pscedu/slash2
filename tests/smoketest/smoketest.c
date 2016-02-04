@@ -704,7 +704,7 @@ main(int argc, char *argv[])
 			continue;
 		}
 		total++;
-		printf("Checking item %d: %s...\n",index+1, test_list[index].descp);
+		printf("Running test %d: %s...\n",index+1, test_list[index].descp);
 		rc = (*test_list[index].funcp)();
 		if (!rc)
 			success++;
