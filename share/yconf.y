@@ -675,7 +675,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 		if (rc == -1)
 			yyerror("resource member %s address %s: %s",
 			    currentRes->res_name, addr,
-			    slstrerror(errno));
+			    sl_strerror(errno));
 
 		psc_dynarray_add(&m->resm_nids, resm_nidp);
 	}

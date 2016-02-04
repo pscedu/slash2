@@ -362,7 +362,7 @@ sli_import(FTSENT *f, void *arg)
 		if (lstat(fn, &tstb) == -1) {
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
+			    sl_strerror(rc));
 		} else if (tstb.st_ino == stb->st_ino) {
 			rc = 0;
 			if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
@@ -378,7 +378,7 @@ sli_import(FTSENT *f, void *arg)
 		}
 	} else if (rc)
 		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-		    slstrerror(rc));
+		    sl_strerror(rc));
 	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
 		a->rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
 		    S_ISDIR(stb->st_mode) ? "/" : "");
@@ -406,10 +406,10 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	sfop->sfop_fn2[sizeof(sfop->sfop_fn2) - 1] = '\0';
 	if (sfop->sfop_fn[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "import source: %s",
-		    slstrerror(ENOENT)));
+		    sl_strerror(ENOENT)));
 	if (sfop->sfop_fn2[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "import destination: %s",
-		    slstrerror(ENOENT)));
+		    sl_strerror(ENOENT)));
 
 	/*
 	 * XXX: we should disallow recursive import of a parent
@@ -419,15 +419,15 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (stat(slcfg_local->cfg_fsroot, &sb1) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(errno)));
+		    sfop->sfop_fn, sl_strerror(errno)));
 
 	if (lstat(sfop->sfop_fn, &sb2) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(errno)));
+		    sfop->sfop_fn, sl_strerror(errno)));
 
 	if (sb1.st_dev != sb2.st_dev)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(EXDEV)));
+		    sfop->sfop_fn, sl_strerror(EXDEV)));
 
 	/*
 	 * The following checks are done to avoid EXDEV down the road.
@@ -436,15 +436,15 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (S_ISREG(sb2.st_mode)) {
 		if (statvfs(slcfg_local->cfg_fsroot, &vfssb1) == -1)
 			return (psc_ctlsenderr(fd, mh, "%s: %s",
-			    sfop->sfop_fn, slstrerror(errno)));
+			    sfop->sfop_fn, sl_strerror(errno)));
 
 		if (statvfs(sfop->sfop_fn, &vfssb2) == -1)
 			return (psc_ctlsenderr(fd, mh, "%s: %s",
-			    sfop->sfop_fn, slstrerror(errno)));
+			    sfop->sfop_fn, sl_strerror(errno)));
 
 		if (vfssb1.f_fsid != vfssb2.f_fsid)
 			return (psc_ctlsenderr(fd, mh, "%s: %s",
-			    sfop->sfop_fn, slstrerror(EXDEV)));
+			    sfop->sfop_fn, sl_strerror(EXDEV)));
 	}
 
 	memset(&a, 0, sizeof(a));
@@ -457,7 +457,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (realpath(sfop->sfop_fn, buf) == NULL)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(errno)));
+		    sfop->sfop_fn, sl_strerror(errno)));
 	strlcpy(sfop->sfop_fn, buf, sizeof(sfop->sfop_fn));
 	pfl_filewalk(sfop->sfop_fn, fl, NULL, sli_import, &a);
 	return (a.rc);

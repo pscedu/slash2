@@ -3905,7 +3905,7 @@ msl_init(void)
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
-		psc_fatalx("invalid MDS %s: %s", name, slstrerror(rc));
+		psc_fatalx("invalid MDS %s: %s", name, sl_strerror(rc));
 
 	name = getenv("PREF_IOS");
 	if (name) {

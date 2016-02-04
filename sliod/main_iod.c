@@ -315,7 +315,7 @@ main(int argc, char *argv[])
 	rc = sli_rmi_setmds(prefmds);
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", prefmds,
-		    slstrerror(rc));
+		    sl_strerror(rc));
 
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);

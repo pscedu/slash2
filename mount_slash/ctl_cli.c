@@ -116,23 +116,23 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (mrq->mrq_nios < 1 ||
 	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
 		return (psc_ctlsenderr(fd, mh,
-		    "replication request: %s", slstrerror(EINVAL)));
+		    "replication request: %s", sl_strerror(EINVAL)));
 
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
 	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
@@ -148,7 +148,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_ADDRQ, rq, mq,
@@ -158,7 +158,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc));
+		    mrq->mrq_fid, sl_strerror(rc));
 		goto out;
 	}
 
@@ -178,7 +178,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc)
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc));
+		    mrq->mrq_fid, sl_strerror(rc));
 	else {
 		char iosbuf[LINE_MAX];
 
@@ -224,17 +224,17 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
 	rc = msl_fcmh_load_fid(mrq->mrq_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
@@ -246,13 +246,13 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc)));
+		    mrq->mrq_fid, sl_strerror(rc)));
 
  issue:
 	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    fg.fg_fid, slstrerror(rc));
+		    fg.fg_fid, sl_strerror(rc));
 		goto out;
 	}
 
@@ -276,7 +276,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    fg.fg_fid, slstrerror(rc));
+		    fg.fg_fid, sl_strerror(rc));
 		goto out;
 	}
 
@@ -303,7 +303,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    fg.fg_fid, slstrerror(mrsq.mrsq_rc));
+		    fg.fg_fid, sl_strerror(mrsq.mrsq_rc));
 
  out:
 	if (added) {
@@ -330,17 +330,17 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 
 	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
@@ -354,7 +354,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc));
+		    mfa->mfa_fid, sl_strerror(rc));
 		goto out;
 	}
 
@@ -369,7 +369,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		break;
 	default:
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc));
+		    mfa->mfa_fid, sl_strerror(rc));
 		goto out;
 	}
 	FCMH_ULOCK(f);
@@ -400,17 +400,17 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 
 	rc = msl_fcmh_load_fid(mfa->mfa_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f))
@@ -422,12 +422,12 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc)));
+		    mfa->mfa_fid, sl_strerror(rc)));
 
 	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_SET_FATTR, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfa->mfa_fid, slstrerror(rc));
+		    mfa->mfa_fid, sl_strerror(rc));
 		goto out;
 	}
 	mq->attrid = mfa->mfa_attrid;
@@ -438,7 +438,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc)
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfa->mfa_fid, slstrerror(rc));
+		    mfa->mfa_fid, sl_strerror(rc));
 
  out:
 	if (rq)
@@ -466,17 +466,17 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc)));
+		    mfbrp->mfbrp_fid, sl_strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc)));
+		    mfbrp->mfbrp_fid, sl_strerror(rc)));
 
 	rc = msl_fcmh_load_fid(mfbrp->mfbrp_fid, &f, NULL);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc)));
+		    mfbrp->mfbrp_fid, sl_strerror(rc)));
 
 	FCMH_LOCK(f);
 	if (fcmh_isreg(f))
@@ -488,13 +488,13 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc)));
+		    mfbrp->mfbrp_fid, sl_strerror(rc)));
 
 	MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp,
 	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc));
+		    mfbrp->mfbrp_fid, sl_strerror(rc));
 		goto out;
 	}
 	mq->pol = mfbrp->mfbrp_pol;
@@ -506,7 +506,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc)
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc));
+		    mfbrp->mfbrp_fid, sl_strerror(rc));
 
  out:
 	if (rq)

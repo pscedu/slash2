@@ -275,7 +275,7 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 
 	if (rc && rc != ENOENT)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
-		    slstrerror(rc));
+		    sl_strerror(rc));
 	if (!rc) {
 		psclog_info("Log file %s has been removed", logfn);
 		OPSTAT_INCR("logfile-remove");
@@ -339,7 +339,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	rc = mds_open_file(logfn, O_CREAT | O_TRUNC | O_WRONLY, handle);
 	if (rc)
 		psc_fatalx("Failed to create log file %s: %s", logfn,
-		    slstrerror(rc));
+		    sl_strerror(rc));
 	OPSTAT_INCR("logfile-create");
 	return (rc);
 }
@@ -386,7 +386,7 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 		if (rc || size != sstb.sst_size)
 			psc_fatalx("Failed to read reclaim log file, "
 			    "batchno=%"PRId64": %s",
-			    reclaim_prg.cur_batchno, slstrerror(rc));
+			    reclaim_prg.cur_batchno, sl_strerror(rc));
 
 		r = reclaimbuf;
 		if (r->xid != RECLAIM_MAGIC_VER ||
@@ -559,7 +559,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				psc_fatalx("Failed to read update log "
 				    "file, batchno=%"PRId64": %s",
 				    nsupd_prg.cur_batchno,
-				    slstrerror(rc));
+				    sl_strerror(rc));
 
 			total = size / U_ENTSZ;
 			u = nsupd_prg.log_buf;
@@ -1021,7 +1021,7 @@ mds_send_batch_update(uint64_t batchno)
 		if (rc != ENOENT)
 			psc_fatalx("failed to open update log file, "
 			    "batchno=%"PRId64": %s",
-			    batchno, slstrerror(rc));
+			    batchno, sl_strerror(rc));
 		return (didwork);
 	}
 	rc = mds_read_file(handle, nsupd_prg.log_buf,
@@ -1427,7 +1427,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		if (rc != ENOENT)
 			psc_fatalx("Failed to open reclaim log file, "
 			    "batchno=%"PRId64": %s",
-			    batchno, slstrerror(rc));
+			    batchno, sl_strerror(rc));
 
 		/*
 		 * However, if the log file is missing for some reason,
@@ -2060,7 +2060,7 @@ mds_journal_init(uint64_t fsuuid)
 	}
 	if (rc)
 		psc_fatalx("Failed to open reclaim log file, "
-		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
+		    "batchno=%"PRId64": %s", batchno, sl_strerror(rc));
 
 	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
 	psc_assert(rc == 0);
@@ -2187,7 +2187,7 @@ mds_journal_init(uint64_t fsuuid)
 	}
 	if (rc)
 		psc_fatalx("Failed to open update log file, "
-		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
+		    "batchno=%"PRId64": %s", batchno, sl_strerror(rc));
 
 	nsupd_prg.cur_batchno = batchno;
 	nsupd_prg.log_buf = PSCALLOC(SLM_UPDATE_BATCH_NENTS * U_ENTSZ);
