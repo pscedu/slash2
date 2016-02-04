@@ -515,6 +515,7 @@ struct test_desc test_list[] = {
 int
 main(int argc, char *argv[])
 {
+	int total, success;
 	int c, rc, pid, index, testindex, listonly;
 
 	listonly = 0;
@@ -574,6 +575,7 @@ main(int argc, char *argv[])
 	srandom(seed);
 
 	index = 0;
+	total = success = 0;
 	while (1) {
 		if (test_list[index].descp == NULL)
 			break;
@@ -581,11 +583,13 @@ main(int argc, char *argv[])
 			index++;
 			continue;
 		}
-		printf("Checking item %d: %s\n",index+1, test_list[index].descp);
+		total++;
+		printf("Checking item %d: %s...\n",index+1, test_list[index].descp);
 		rc = (*test_list[index].funcp)();
-		if (rc)
-			break;
+		if (!rc)
+			success++;
 		index++;
 	}
+	printf("Total number of tests = %d, number of successes = %d\n", total, success);
 	exit(0);
 }
