@@ -27,8 +27,6 @@
 
 #include "pfl/err.h"
 
-#define slstrerror(rc)			strerror(rc)
-
 #define _SLERR_START			1000		/* must be >max errno */
 
 #if defined(ELAST) && ELAST >= _SLERR_START
@@ -72,5 +70,10 @@
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
 /* 35 - reuse me */
 /* 36 - reuse me */
+
+#undef strerror
+#define strerror(rc)			sl_strerror(rc)
+
+const char *sl_strerror(int);
 
 #endif /* _SLERR_H_ */

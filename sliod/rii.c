@@ -245,7 +245,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		 */
 		psclog_errorx("failed to load bmap: fid="SLPRI_FID" "
 		    "bmap=%u: %s",
-		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
+		    mq->fg.fg_fid, mq->bmapno, sl_strerror(mp->rc));
 		goto out;
 	}
 

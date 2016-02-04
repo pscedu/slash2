@@ -869,6 +869,8 @@ s2re
 - install pixz, DBI on advsys netboot
 - try disabling BIOS config option C-states on firehose6 to avoid perf
   hangs
+- writeahead now creates +1 bmap beyond EOF when using
+  `msctl repl-status`
 
 - tune metaslab_df_free_pct zfs/slashd
 

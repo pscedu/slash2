@@ -529,7 +529,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
-		    slstrerror(iosidx));
+		    sl_strerror(iosidx));
 
 //	BMAP_WAIT_BUSY(b);
 
@@ -1997,7 +1997,7 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 			if (rc) {
 				psclog_errorx("unable to retrieve FID "
 				    SLPRI_FID": %s",
-				    sstb->sst_fid, slstrerror(rc));
+				    sstb->sst_fid, sl_strerror(rc));
 				return;
 			}
 			deref = 1;

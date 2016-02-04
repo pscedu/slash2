@@ -20,36 +20,11 @@
  * %END_LICENSE%
  */
 
-#include <string.h>
-#include <stdlib.h>
-
-const char *
-sys_strerror(int rc)
-{
-	return (strerror(rc));
-}
-
 #include "pfl/cdefs.h"
 
 #include "slerr.h"
 
-char *pfl_errstrs[] = {
-/*  0 */ "Bad message",
-/*  1 */ "Key has expired",
-/*  2 */ "No connection to peer",
-/*  3 */ "Operation already in progress",
-/*  4 */ "Operation not supported",
-/*  5 */ "Function not implemented",
-/*  6 */ "Operation canceled",
-/*  7 */ "Stale file handle",
-/*  8 */ "Bad magic",
-/*  9 */ "Required key not available",
-/* 10 */ "Invalid checksum",
-/* 11 */ "Operation timed out",
-	  NULL
-};
-
-char *slash_errstrs[] = {
+char *sl_errstrs[] = {
 /*  0 */ "Specified replica(s) already exist",
 /*  1 */ "Specified replica(s) do not exist",
 /*  2 */ "Generic RPC error",
@@ -89,15 +64,10 @@ char *slash_errstrs[] = {
 };
 
 const char *
-pfl_strerror(int error)
+sl_strerror(int error)
 {
-	error = abs(error);
-
-	if (error >= _PFLERR_START &&
-	    error < _PFLERR_START + nitems(pfl_errstrs))
-		return (pfl_errstrs[error - _PFLERR_START]);
 	if (error >= _SLERR_START &&
-	    error < _SLERR_START + nitems(slash_errstrs))
-		return (slash_errstrs[error - _SLERR_START]);
-	return (sys_strerror(error));
+	    error < _SLERR_START + nitems(sl_errstrs))
+		return (sl_errstrs[error - _SLERR_START]);
+	return (pfl_strerror(error));
 }
