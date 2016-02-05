@@ -414,17 +414,17 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	    BREPLST_TRUNCPNDG : BREPLST_VALID;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 
-	if (!rc)
-	    mds_bmap_write_logrepls(b);
+	mds_bmap_write_logrepls(b);
 
-	f = b->bcm_fcmh;
-
-	FCMH_LOCK(f);
-	fmi = fcmh_2_fmi(f);
-	fmi->fmi_ptrunc_nios--;
-	if (!fmi->fmi_ptrunc_nios)
-		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-	FCMH_ULOCK(f);
+	if (!rc) {
+		f = b->bcm_fcmh;
+		FCMH_LOCK(f);
+		fmi = fcmh_2_fmi(f);
+		fmi->fmi_ptrunc_nios--;
+		if (!fmi->fmi_ptrunc_nios)
+			f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+		FCMH_ULOCK(f);
+	}
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
 	    "partial truncation resolution: rc=%d", rc);
