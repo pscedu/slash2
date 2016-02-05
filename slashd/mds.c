@@ -2089,6 +2089,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
 			 	done = 1;
+				bmap_op_done(b);
 			     	goto out2;
 			}
 			/*
@@ -2135,7 +2136,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	/* XXX adjust nblks */
 
 	OPSTAT_INCR("ptrunc-apply");
-	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
 int
