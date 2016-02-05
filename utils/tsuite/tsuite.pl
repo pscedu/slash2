@@ -184,7 +184,6 @@ EOF
 	export SCONSFLAGS=-j\$(nproc)
 
 	addpath /sbin
-	addpath $n->{src_dir}/slash2/mount_slash
 	addpath $n->{src_dir}/slash2/slashd
 	addpath $n->{src_dir}/slash2/sliod
 	addpath $n->{src_dir}/slash2/slkeymgt
@@ -192,6 +191,7 @@ EOF
 	addpath $n->{src_dir}/slash2/slmkjrnl
 	addpath $n->{src_dir}/slash2/utils
 	addpath $n->{src_dir}/wokfs/mount_wokfs
+	addpath $n->{src_dir}/wokfs/wokctl
 
 	data_dir=$n->{data_dir}
 
@@ -522,7 +522,7 @@ foreach my $n (@mds, @ios, @cli) {
 		$n->{mp} = "$n->{base_dir}/mp";
 		push @mkdir, $n->{mp};
 
-		push @cmds, qq[dd if=/dev/urandom of=$TSUITE_RANDOM bs=1048576 count=1024];
+		push @cmds, qq[$sudo dd if=/dev/urandom of=$TSUITE_RANDOM bs=1048576 count=1024];
 	}
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
@@ -562,13 +562,17 @@ ___MKCFG_EOF
 
 			make build >/dev/null
 
-			echo -n '%PFL_COMMID% '
-			git log -n 1 --pretty=format:%H
-
 			(
+				set +x
+
+				echo -n '%PFL_COMMID% '
+				git log -n 1 --pretty=format:%H
+				echo
+
 				cd slash2
 				echo -n '%SL2_COMMID% '
 				git log -n 1 --pretty=format:%H
+				echo
 			)
 
 			touch $authbuf_fn
@@ -604,6 +608,7 @@ foreach my $n (@mds) {
 		$sudo pkill -9 slashd || true
 		sleep 5
 		$sudo modprobe fuse
+		$sudo mkdir -p /var/run/zfs
 		runbg $sudo $zfs_fuse
 		sleep 2
 
@@ -638,7 +643,7 @@ sub daemon_setup {
 		local prog=\$1
 		while :; do
 			set +e
-			$sudo \$@
+			$sudo "\$@"
 			local status=\$?
 			set -e
 			[ \$status -eq 0 ] && break
@@ -712,15 +717,20 @@ EOF
 
 # Launch the client mountpoints
 foreach my $n (@cli) {
-	debug_msg "launching mount_slash: $n->{host}";
+	debug_msg "launching mount_wokfs: $n->{host}";
 
 	$n->{test_src_dir} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd";
+
+	my $opts = join ',', @{ $n->{args} },
+	    "ctlsock=$n->{ctlsock}",
+	    "datadir=$n->{data_dir}",
+	    "slcfg=$n->{slcfg}";
 
 	push @cli_pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		run_daemon mount_slash -U -S $n->{ctlsock} -f $n->{slcfg} -D $n->{data_dir} @{$n->{args}} $n->{mp}
+		run_daemon mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $opts" $n->{mp}
 EOF
 }
 
@@ -926,6 +936,8 @@ $success = 1;
 my $emsg = $@;
 
 if ($emsg) {
+	debug_msg "error encountered";
+
 	# Give some time for the daemons to be examined for coredumps...
 	sleep 10;
 }
@@ -933,7 +945,7 @@ if ($emsg) {
 sub cleanup {
 	my $n;
 	foreach $n (@cli) {
-		debug_msg "unmounting mount_slash: $n->{host}";
+		debug_msg "unmounting mount_wokfs: $n->{host}";
 		runcmd "$ssh $n->{host} bash", <<EOF;
 			@{[init_env($n)]}
 			$sudo umount -l -f $n->{mp}
@@ -963,10 +975,10 @@ EOF
 	waitjobs \@mds_pids, $step_timeout, WF_NONFATAL;
 
 	foreach $n (@cli) {
-		debug_msg "unmounting mount_slash: $n->{host}";
+		debug_msg "killing mount_wokfs: $n->{host}";
 		runcmd "$ssh $n->{host} bash", <<EOF;
 			@{[init_env($n)]}
-			$sudo pkill -9 mount_slash
+			$sudo pkill -9 mount_wokfs
 EOF
 	}
 
@@ -1015,6 +1027,8 @@ sub parse_results {
 
 # Record results to database for historical performance.
 if ($opts{R}) {
+	debug_msg "collecting results";
+
 	my @results = parse_results($output);
 
 	my $dbh = DBI::connect(@gcfg{qw(dsn db_user db_pass)}) or
