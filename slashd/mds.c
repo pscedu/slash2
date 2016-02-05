@@ -56,7 +56,7 @@
 
 struct pfl_odt		*slm_bia_odt;
 
-__static int slm_ptrunc_prepare(void *);
+__static int slm_ptrunc_prepare(struct fidc_membh *);
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -1979,18 +1979,17 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	return (rc);
 }
 
-void
+int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
 	int locked, deref = 0, rc = 0;
-	struct slm_wkdata_ptrunc *wk;
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (!slm_ptrunc_enabled) {
 			DEBUG_SSTB(PLL_MAX, sstb, "ptrunc averted");
-			return;
+			return 0;
 		}
 		if (f == NULL) {
 			rc = slm_fcmh_get(&sstb->sst_fg, &f);
@@ -1998,7 +1997,7 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 				psclog_errorx("unable to retrieve FID "
 				    SLPRI_FID": %s",
 				    sstb->sst_fid, sl_strerror(rc));
-				return;
+				return (rc);
 			}
 			deref = 1;
 		}
@@ -2009,15 +2008,12 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		fmi->fmi_ptrunc_size = sstb->sst_size;
 		FCMH_URLOCK(f, locked);
 
-		wk = pfl_workq_getitem(slm_ptrunc_prepare,
-		    struct slm_wkdata_ptrunc);
-		wk->f = f;
-		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		pfl_workq_putitem(wk);
+		rc = slm_ptrunc_prepare(f);
 
 		if (deref)
 			fcmh_op_done(f);
 	}
+	return (rc);
 }
 
 struct ios_list {
@@ -2051,18 +2047,16 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 }
 
 __static void
-slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
+slm_ptrunc_apply(struct fidc_membh *f)
 {
 	int rc;
 	int done = 1, tract[NBREPLST];
 	struct ios_list ios_list;
-	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
-	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
 	/*
@@ -2143,23 +2137,20 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 }
 
 __static int
-slm_ptrunc_prepare(void *p)
+slm_ptrunc_prepare(struct fidc_membh *f)
 {
 	int to_set, rc;
-	struct slm_wkdata_ptrunc *wk = p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;
-	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t i;
 
 	mds_note_update(1);
 
-	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 
 	/*
@@ -2220,7 +2211,7 @@ slm_ptrunc_prepare(void *p)
 		FCMH_ULOCK(f);
 		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
-		slm_ptrunc_apply(wk);
+		slm_ptrunc_apply(f);
 
 	mds_note_update(-1);
 	return (0);
