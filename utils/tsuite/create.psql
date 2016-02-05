@@ -1,5 +1,5 @@
 CREATE TABLE s2ts_run (
-	id		INT		NOT NULL	AUTO_INCREMENT,
+	id		INT		NOT NULL	PRIMARY KEY,
 	suite_name	VARCHAR(16),
 	launch_date	TIMESTAMP,
 	user		VARCHAR(32),
@@ -7,20 +7,18 @@ CREATE TABLE s2ts_run (
 	status		INT,
 	output		MEDIUMTEXT,
 	sl2_commid	CHAR(40),
-	pfl_commid	CHAR(40),
-
-	PRIMARY KEY(id),
-	INDEX(user)
+	pfl_commid	CHAR(40)
 );
 
+CREATE INDEX user ON s2ts_run (user);
+
 CREATE TABLE s2ts_result (
-	id		INT		NOT NULL	AUTO_INCREMENT,
+	id		INT		NOT NULL	PRIMARY KEY,
 	run_id		INT		NOT NULL,
 	task_id		INT		NOT NULL,
 	test_name	VARCHAR(32),
-	duration_ms	LONG,
-
-	PRIMARY KEY(id),
-	INDEX(run_id),
-	INDEX(test_name)
+	duration_ms	LONG
 );
+
+CREATE INDEX run_id ON s2ts_result (run_id);
+CREATE INDEX test_name ON s2ts_result (test_name);
