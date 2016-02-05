@@ -236,6 +236,7 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	struct srm_bmap_ptrunc_rep *mp;
 	struct fidc_membh *f;
 	struct sl_fidgen *fgp;
+	off_t size;
 	int fd;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -251,7 +252,9 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		return (mp->rc);
 
 	fd = fcmh_2_fd(f);
-	ftruncate(fd, mq->offset);
+	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
+	ftruncate(fd, size);
+	fcmh_op_done(f);
 
 #if 0
 	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
