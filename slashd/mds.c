@@ -54,6 +54,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+#define	SLM_CBARG_SLOT_CSVC	0
+
 struct pfl_odt		*slm_bia_odt;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *);
@@ -2136,6 +2138,16 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
 }
 
+int
+slm_bmap_release_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
+
+	sl_csvc_decref(csvc);
+	return (0);
+}
+
 __static int
 slm_ptrunc_prepare(struct fidc_membh *f)
 {
@@ -2178,14 +2190,13 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp);
-			if (!rc) {
-				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
-				mq->sbd[0].sbd_bmapno = i;
-				mq->nbmaps = 1;
-				(void)SL_RSX_WAITREP(csvc, rq, mp);
-				pscrpc_req_finished(rq);
-			}
-			sl_csvc_decref(csvc);
+			if (rc) 
+				continue;
+			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
+			rq->rq_interpret_reply = NULL;
+			rc = SL_NBRQSET_ADD(csvc, rq);
+			if (rc)
+				sl_csvc_decref(csvc);
 
 			BMAP_LOCK(b);
 		}
