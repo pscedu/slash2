@@ -2160,6 +2160,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	struct fcmh_mds_info *fmi;
 	struct bmap *b;
 	sl_bmapno_t i;
+	uint64_t size;
 
 	mds_note_update(1);
 
@@ -2206,6 +2207,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
+	size = f->fcmh_sstb.sst_size;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 	FCMH_ULOCK(f);
 
@@ -2219,13 +2221,14 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_2_ptruncgen(f)--;
+		f->fcmh_sstb.sst_size = size;
 		FCMH_ULOCK(f);
 		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
 		slm_ptrunc_apply(f);
 
 	mds_note_update(-1);
-	return (0);
+	return (rc);
 }
 
 int
