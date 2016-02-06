@@ -2194,10 +2194,12 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 			if (rc) 
 				continue;
 			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
-			rq->rq_interpret_reply = NULL;
+			rq->rq_interpret_reply = slm_bmap_release_cb;
 			rc = SL_NBRQSET_ADD(csvc, rq);
-			if (rc)
+			if (rc) {
 				sl_csvc_decref(csvc);
+				pscrpc_req_finished(rq);
+			}
 
 			BMAP_LOCK(b);
 		}
