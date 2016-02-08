@@ -33,6 +33,7 @@ struct srt_stat;
 struct srt_statfs;
 
 #define	SL_FS_BLKSIZE	(128 * 1024)
+#define	SL_FS_FRGSIZE	(128 * 1024)
 
 enum rw	fflags_2_rw(int);
 
