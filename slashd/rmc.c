@@ -1285,8 +1285,8 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		mp->rc = -SLERR_RES_UNKNOWN;
 		return (0);
 	}
-	mp->ssfb.sf_bsize = SL_FS_BLKSIZE;
-	mp->ssfb.sf_frsize = SL_FS_FRGSIZE;
+	mp->ssfb.sf_bsize = 0;
+	mp->ssfb.sf_frsize = 0;
 	mp->ssfb.sf_blocks = 0;
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
