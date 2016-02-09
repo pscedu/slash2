@@ -940,7 +940,7 @@ slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
 }
 
 /*
- * Parse slash2 configuration file.
+ * Parse SLASH2 configuration file.
  */
 void
 slcfg_parse(const char *config_file)
