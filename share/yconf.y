@@ -939,6 +939,9 @@ slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
 	    psc_dynarray_getpos(&peer->res_members, 0));
 }
 
+/*
+ * Parse slash2 configuration file.
+ */
 void
 slcfg_parse(const char *config_file)
 {
@@ -975,6 +978,8 @@ slcfg_parse(const char *config_file)
 	}
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
+	if (!globalConfig.gconf_port)
+		errx(1, "no port number specified in %s", cfg_filename);
 	if (pll_empty(&globalConfig.gconf_sites))
 		errx(1, "no configuration could be loaded");
 
