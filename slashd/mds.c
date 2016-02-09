@@ -2062,8 +2062,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	fmi = fcmh_2_fmi(f);
 
 	/*
- 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
- 	 */
+	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
+	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
@@ -2088,9 +2088,9 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			done = 0;
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
-			 	done = 1;
+				done = 1;
 				bmap_op_done(b);
-			     	goto out2;
+				goto out2;
 			}
 			/*
 			 * Queue work immediately instead
@@ -2191,7 +2191,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp);
-			if (rc) 
+			if (rc)
 				continue;
 			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 			rq->rq_interpret_reply = slm_bmap_release_cb;
