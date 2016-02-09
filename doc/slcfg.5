@@ -255,53 +255,53 @@ set port=1000;
 set nets=tcp10;
 
 site @MYSITE {
-	site_desc	= "my site name";
-	site_id		= 1;
+  site_desc	= "my site name";
+  site_id		= 1;
 
-	resource test {
-		desc	= "test network";
-		type	= mds;
-		id	= 1;
-		fsroot	= /tmp/slashfs;
-		nid	= 10.32.5.82;
-	}
+  resource test {
+    desc	= "test network";
+    type	= mds;
+    id		= 1;
+    fsroot	= /tmp/slashfs;
+    nid		= 10.32.5.82;
+  }
 
-	resource parfs0 { type = parallel_lfs_compnt; id = 100; nids = 128.182.112.110; }
-	resource parfs1 { type = parallel_lfs_compnt; id = 101; nids = 128.182.112.111; }
-	resource parfs2 { type = parallel_lfs_compnt; id = 102; nids = 128.182.112.112; }
-	resource parfs3 { type = parallel_lfs_compnt; id = 103; nids = 128.182.112.113; }
+  resource par0 { type = parallel_lfs_compnt; id = 101; nids = 10.1.1.1; }
+  resource par1 { type = parallel_lfs_compnt; id = 102; nids = 10.1.1.2; }
+  resource par2 { type = parallel_lfs_compnt; id = 103; nids = 10.1.1.3; }
+  resource par3 { type = parallel_lfs_compnt; id = 104; nids = 10.1.1.4; }
 
-	resource parfs {
-		desc	= "my parallel file system";
-		type	= parallel_lfs;
-		id	= 199;
-		ios	= parfs0,
-			  parfs1,
-			  parfs2,
-			  parfs3;
-	}
+  resource parfs {
+    desc	= "my parallel file system";
+    type	= parallel_lfs;
+    id		= 199;
+    ios		= parfs0,
+		  parfs1,
+		  parfs2,
+		  parfs3;
+  }
 
-	resource bigstore0 { type = archival_fs; id = 200; nids = 128.182.112.242; }
-	resource bigstore1 { type = archival_fs; id = 201; nids = 128.182.112.240; }
-	resource bigstore2 { type = archival_fs; id = 202; nids = 128.182.112.105; }
-	resource bigstore3 { type = archival_fs; id = 203; nids = 128.182.112.226; }
+  resource bigstore0 { type = archival_fs; id = 201; nids = 10.1.2.1; }
+  resource bigstore1 { type = archival_fs; id = 202; nids = 10.1.2.2; }
+  resource bigstore2 { type = archival_fs; id = 203; nids = 10.1.2.3; }
+  resource bigstore3 { type = archival_fs; id = 204; nids = 10.1.2.4; }
 
-	resource bigstore {
-		desc	= "my archival storage system";
-		type	= cluster_noshare_lfs;
-		id	= 299;
-		ios	= bigstore0@MYSITE,
-			  bigstore1@MYSITE,
-			  bigstore2@MYSITE,
-			  bigstore3@MYSITE;
-	}
+  resource bigstore {
+    desc	= "my archival storage system";
+    type	= cluster_noshare_lfs;
+    id		= 299;
+    ios		= bigstore0@MYSITE,
+		  bigstore1@MYSITE,
+		  bigstore2@MYSITE,
+		  bigstore3@MYSITE;
+  }
 
-	resource user_pc {
-		desc	= "user home network";
-		type	= standalone_fs;
-		id	= 400;
-		nid	= 67.171.74.150;
-	}
+  resource user_pc {
+    desc	= "user home network";
+    type	= standalone_fs;
+    id	= 400;
+    nid	= 67.171.74.150;
+  }
 }
 .Ed
 .Sh SEE ALSO
