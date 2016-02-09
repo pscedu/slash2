@@ -1294,10 +1294,6 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		single = 1;
 		goto single;
 	}
-	/*
- 	 * The following assumes that all IOSes in the cluster are
- 	 * homogeneous in terms of block/fragment sizes.
- 	 */
 	DYNARRAY_FOREACH(ri, j, &r->res_peers) {
  single:
 		rpmi = res2rpmi(r);
