@@ -28,6 +28,8 @@ use IPC::Open3;
 use Net::SMTP;
 use POSIX qw(:sys_wait_h :errno_h :signal_h);
 use strict;
+use threads;
+use threads::shared;
 use warnings;
 
 my $TSUITE_REL_BASE = 'slash2/utils/tsuite';
@@ -40,6 +42,21 @@ my %opts;	# runtime options
 my @mds;	# suite MDS nodes
 my @ios;	# suite IOS nodes
 my @cli;	# suite CLI nodes
+
+sub usage {
+	die <<EOF
+usage: $0 [-BmRv] [-u user] [test-name]
+
+options:
+  -B		whether to use any configured SSH bounce host
+  -D descr	optional description to include in report
+  -m		send e-mail report
+  -R		record results to database
+  -u user	override user for SSH connection establishment
+  -v		verbose (debugging) output
+
+EOF
+}
 
 getopts("BmRu:v", \%opts) or usage();
 usage() if @ARGV > 1;
@@ -72,21 +89,6 @@ sub fatalx {
 
 sub fatal {
 	fatalx "@_: $!";
-}
-
-sub usage {
-	die <<EOF
-usage: $0 [-BmRv] [-u user] [test-name]
-
-options:
-  -B		whether to use any configured SSH bounce host
-  -D descr	optional description to include in report
-  -m		send e-mail report
-  -R		record results to database
-  -u user	override user for SSH connection establishment
-  -v		verbose (debugging) output
-
-EOF
 }
 
 sub init_env {
@@ -202,7 +204,7 @@ EOF
 }
 
 sub debug_msg {
-	print WR @_, "\n" if $opts{v};
+	print STDERR "[debug] ", @_, "\n" if $opts{v};
 }
 
 sub slurp {
@@ -218,18 +220,32 @@ sub slurp {
 use constant WF_NONBLOCK => (1 << 0);
 use constant WF_NONFATAL => (1 << 1);
 
+sub vsleep {
+	select undef, undef, undef, $_[0];
+}
+
+use constant MAX_TRIES => 16;
+
 sub waitjobs {
 	my ($pids, $to, $flags) = @_;
-	local $_;
 
 	$flags ||= 0;
 
 	alarm $to;
+	debug_msg "waiting on @$pids";
 	for my $pid (@$pids) {
+		my $ntries = 0;
+ RESTART:
 		my $status = waitpid $pid, 0;
-		fatal "waitpid" if $status == -1;
+		if ($status == -1 && $! == EINTR) {
+			fatalx "max tries reached"
+			    if $ntries++ > MAX_TRIES;
+			vsleep(.001);
+			goto RESTART;
+		}
+		fatal "waitpid $pid" if $status == -1;
 		if ($?) {
-			my $msg = "child process exited nonzero: " .
+			my $msg = "child process $pid exited nonzero: " .
 			    ($? >> 8);
 			if ($flags & WF_NONFATAL) {
 				warn "$msg\n";
@@ -237,6 +253,7 @@ sub waitjobs {
 				fatalx $msg;
 			}
 		}
+		debug_msg "reaped child $pid";
 	}
 	alarm 0;
 
@@ -252,6 +269,8 @@ sub runcmd {
 	my $pid = open3($infh, ">&WR", ">&WR", $cmd);
 	print $infh $in;
 	close $infh;
+
+	debug_msg "launched '$cmd' as pid $pid";
 
 	return $pid;
 }
@@ -366,16 +385,31 @@ my $diff = join '', `make scm-diff`;
 
 my $ts_cfg = slurp "$ts_base/cfg";
 
-if ($opts{m}) {
-	pipe RD, WR;
-} else {
-	*WR = *STDERR;
-}
+# Capture all output from all child processes into a pipe so we can
+# parse it.
+pipe RD, WR;
+
+my @all_output : shared;
+
+my $reader_thr = threads->create(sub {
+	{
+		close WR;
+
+		lock(@all_output);
+
+		while (<RD>) {
+			print STDERR if $opts{v};
+			push @all_output, $_;
+		}
+	}
+});
 
 parse_conf($ts_cfg);
 
-# sanity checks
+# Perform configuration sanity checks.
 fatalx "no client(s) specified" unless exists $gcfg{client};
+fatalx "no database source (dsn) specified"
+    if $opts{R} and !exists $gcfg{dsn};
 
 my $clients = ref $gcfg{client} eq "ARRAY" ?
     $gcfg{client} : [ $gcfg{client} ];
@@ -464,6 +498,8 @@ my @ios_pids;
 my @cli_pids;
 
 my $success = 0;
+
+local $SIG{CHLD} = sub { };
 
 eval {
 
@@ -565,14 +601,10 @@ ___MKCFG_EOF
 			(
 				set +x
 
-				echo -n '%PFL_COMMID% '
-				git log -n 1 --pretty=format:%H
-				echo
+				echo %PFL_COMMID% \$(git log -n 1 --pretty=format:%H)
 
 				cd slash2
-				echo -n '%SL2_COMMID% '
-				git log -n 1 --pretty=format:%H
-				echo
+				echo %SL2_COMMID% \$(git log -n 1 --pretty=format:%H)
 			)
 
 			touch $authbuf_fn
@@ -666,7 +698,11 @@ sub daemon_setup {
 EOF
 }
 
-$SIG{INT} = \&cleanup;
+$SIG{INT} = sub {
+	debug_msg "handling interrupt";
+	cleanup();
+	exit 1;
+};
 
 # Launch MDS servers
 foreach my $n (@mds) {
@@ -721,7 +757,7 @@ foreach my $n (@cli) {
 
 	$n->{test_src_dir} = "$n->{src_dir}/$TSUITE_REL_BASE/tests/$ts_name/cmd";
 
-	my $opts = join ',', @{ $n->{args} },
+	my $args = join ',', @{ $n->{args} },
 	    "ctlsock=$n->{ctlsock}",
 	    "datadir=$n->{data_dir}",
 	    "slcfg=$n->{slcfg}";
@@ -730,7 +766,7 @@ foreach my $n (@cli) {
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		run_daemon mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $opts" $n->{mp}
+		run_daemon mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $args" $n->{mp}
 EOF
 }
 
@@ -818,7 +854,7 @@ EOF
 # Set 1: run the client application tests, serially, measuring stats on
 # each so we can present historical performance analysis.
 foreach my $n (@cli) {
-	debug_msg "client: $n->{host}";
+	debug_msg "client stage 1: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 
@@ -839,7 +875,7 @@ waitjobs \@pids, $total_timeout;
 # Set 2: run all tests in parallel without faults for performance
 # regressions and exercise.
 foreach my $n (@cli) {
-	debug_msg "client: $n->{host}";
+	debug_msg "client stage 2: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
@@ -847,7 +883,8 @@ foreach my $n (@cli) {
 		run_all_tests()
 		{
 			for test in *; do
-				(run_test $n->{test_src_dir}/\$test $n->{id} $nclients &)
+				echo launching test from all: \$test
+				run_test $n->{test_src_dir}/\$test $n->{id} $nclients &
 			done
 			wait
 		}
@@ -861,7 +898,7 @@ waitjobs \@pids, $total_timeout;
 # Set 3: now run the entire suite again, injecting faults at random
 # places to test failure tolerance.
 foreach my $n (@cli) {
-	debug_msg "client: $n->{host}";
+	debug_msg "client stage 3: $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{[test_setup($n)]}
@@ -888,9 +925,9 @@ my @misfortune;
 #		cmd => "$wokctl reload 0",
 #		node => $n,
 #	};
-#	add_fault(\@misfortune, $n, 'msl.request_timeout');
-#	add_fault(\@misfortune, $n, 'msl.read_cb');
-#	add_fault(\@misfortune, $n, 'msl.readrpc_offline');
+#	add_fault(\@misfortune, $n, 'slash2/request_timeout');
+#	add_fault(\@misfortune, $n, 'slash2/read_cb');
+#	add_fault(\@misfortune, $n, 'slash2/readrpc_offline');
 #}
 
 foreach my $n (@mds) {
@@ -905,8 +942,8 @@ foreach my $n (@ios) {
 		cmd => "$sudo kill -HUP \$(daemon_pid)",
 		node => $n,
 	};
-#	add_fault(\@misfortune, $n, 'sliod.fsio_read_fail');
-#	add_fault(\@misfortune, $n, 'sliod.crcup_fail');
+#	add_fault(\@misfortune, $n, 'sliod/fsio_read_fail');
+#	add_fault(\@misfortune, $n, 'sliod/crcup_fail');
 }
 
 sub rand_array {
@@ -929,6 +966,8 @@ EOF
 
 } while (waitjobs \@pids, $total_timeout, WF_NONBLOCK);
 
+debug_msg "completed test suite successfully";
+
 $success = 1;
 
 }; # end of eval
@@ -936,7 +975,7 @@ $success = 1;
 my $emsg = $@;
 
 if ($emsg) {
-	debug_msg "error encountered";
+	debug_msg "error encountered: $emsg";
 
 	# Give some time for the daemons to be examined for coredumps...
 	sleep 10;
@@ -968,7 +1007,7 @@ EOF
 EOF
 	}
 
-	kill SIGHUP, @cli_pids, @ios_pids, @mds_pids;
+	kill 'HUP', @cli_pids, @ios_pids, @mds_pids;
 
 	waitjobs \@cli_pids, $step_timeout, WF_NONFATAL;
 	waitjobs \@ios_pids, $step_timeout, WF_NONFATAL;
@@ -1002,8 +1041,12 @@ EOF
 cleanup();
 
 close WR;
-my @output = <RD>;
-my $output = join '', @output;
+
+$reader_thr->join();
+
+lock @all_output;
+
+my $output = join '', @all_output;
 
 my $pfl_commid = $output =~ /^%PFL_COMMID% (\S+?)/m;
 my $sl2_commid = $output =~ /^%SL2_COMMID% (\S+?)/m;
@@ -1014,7 +1057,7 @@ sub parse_results {
 	my @out;
 	foreach my $result ($output =~
 	    /^%TSUITE_RESULT% (.*)$/gm) {
-		$result =~ /^([^:]+):(\d+) (\d+)$/ or next;
+		$result =~ m!^.*?([^:/]+):(\d+) (\d+)$! or next;
 		push @out, {
 			name		=> $1,
 			task_id		=> $2,
@@ -1025,27 +1068,39 @@ sub parse_results {
 	return @out;
 }
 
-# Record results to database for historical performance.
+# Record results to database to track/analyze historical performance.
 if ($opts{R}) {
-	debug_msg "collecting results";
+	debug_msg "parsing output $output";
 
 	my @results = parse_results($output);
 
-	my $dbh = DBI::connect(@gcfg{qw(dsn db_user db_pass)}) or
-	    fatal "unable to connect to database: $DBI::errstr";
+	debug_msg "collecting results: ", Dumper(@results);
+
+	my @keys = qw(dsn);
+	for my $arg (qw(db_user db_pass)) {
+		push @keys, $arg if exists $gcfg{$arg};
+	}
+	my @args = @gcfg{@keys};
+
+	my $dbh = DBI->connect(@args);
+	unless ($dbh) {
+		$gcfg{db_pass} = "YES" if exists $gcfg{db_pass};
+		my @safe_args = @gcfg{@keys};
+		fatal "unable to connect to database (@safe_args): $DBI::errstr";
+	}
 
 	my @param;
-	push @param, $ts_name;		# $1
-	push @param, $ts_user;		# $2
-	push @param, $diff;		# $3
-	push @param, $success;		# $4
-	push @param, $output;		# $5
-	push @param, $sl2_commid;	# $6
-	push @param, $pfl_commid;	# $7
+	push @param, $ts_name;			# $1
+	push @param, $ts_user;			# $2
+	push @param, $diff;			# $3
+	push @param, $success;			# $4
+	push @param, $output;			# $5
+	push @param, $sl2_commid;		# $6
+	push @param, $pfl_commid;		# $7
 
 	$dbh->do("BEGIN");
 
-	$dbh->do(<<'SQL', {}, @param);
+	my $query = <<'SQL';
 		INSERT INTO s2ts_run (
 			suite_name,
 			launch_date,
@@ -1056,17 +1111,21 @@ if ($opts{R}) {
 			sl2_commid,
 			pfl_commid
 		) VALUES (
-			?,		-- $1: suite_name
-			NOW(),		--     launch_date
-			?,		-- $2: user
-			?,		-- $3: diff
-			?,		-- $4: status
-			?,		-- $5: output
-			?,		-- $6: sl2_commid
-			?		-- $7: pfl_commid
+			?,			-- $1: suite_name
+			CURRENT_TIMESTAMP,	--     launch_date
+			?,			-- $2: user
+			?,			-- $3: diff
+			?,			-- $4: status
+			?,			-- $5: output
+			?,			-- $6: sl2_commid
+			?			-- $7: pfl_commid
 		)
 SQL
-	my $run_id = $dbh->last_insert_id;
+	$dbh->do($query, {}, @param)
+	    or die "failed to execute query; query=$query; " .
+		   "params=@param; error=$DBI::errstr";
+
+	my $run_id = $dbh->last_insert_id("", "", "", "");
 
 	my $sth = $dbh->prepare(<<SQL);
 		INSERT INTO s2ts_result (
@@ -1082,25 +1141,33 @@ SQL
 		)
 SQL
 	foreach my $r (@results) {
-		$sth->execute($run_id, @{$r}{qw(name task_id duration)})
-		    or warn "$DBI::errstr";
+		my @params = ($run_id, @{$r}{qw(name task_id duration)});
+		$sth->execute(@params)
+		    or die "failed to execute query; params=@params; " .
+			   "error=$DBI::errstr";
 	}
 
-	$dbh->do("COMMIT");
+	$query = "COMMIT";
+	$dbh->do($query) or die "failed to execute query; " .
+	    "query=$query; error=$DBI::errstr";
 
 	$dbh->disconnect;
+} else {
+	debug_msg "not collecting results";
 }
 
 # Send e-mail report.
 if ($opts{m}) {
+	debug_msg "sending e-mail report";
+
 	my $smtp = Net::SMTP->new('mailer.psc.edu');
 
 	my $to = 'slash2-devel+report@psc.edu';
 	my $from = 'slash2-devel@psc.edu';
 
 	# Trim output to last N lines.
-	my $index = min(75, @output);
-	my $output_small = splice @output, -$index;
+	my $index = min(75, @all_output);
+	my $output_small = splice @all_output, -$index;
 
 	$smtp->mail($from);
 	$smtp->to($to);
@@ -1124,6 +1191,8 @@ EOM
 	$smtp->dataend();
 	$smtp->quit;
 } else {
-	warn "error: $emsg\n" if $emsg;
+	debug_msg "not sending e-mail report";
+
+	warn "$output\n\nerror: $emsg\n" if $emsg;
 	exit 1 if $emsg;
 }
