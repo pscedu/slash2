@@ -33,12 +33,13 @@
 
 int		 create;
 const char	*sl_datadir = SL_PATH_DATA_DIR;
-const char	*progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-c] [-D dir]\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s [-c] [-D dir]\n", __progname);
 	exit(1);
 }
 
@@ -48,7 +49,6 @@ main(int argc, char *argv[])
 	int c;
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "cD:")) != -1)
 		switch (c) {
 		case 'c':

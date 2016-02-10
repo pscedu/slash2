@@ -39,7 +39,7 @@
 
 #include "slconfig.h"
 
-char	*progname;
+extern const char *__progname;
 
 int	 cfg_site_pri_sz;
 int	 cfg_res_pri_sz;
@@ -76,7 +76,7 @@ slcfg_init_site(__unusedx struct sl_site *site)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-c file]\n", progname);
+	fprintf(stderr, "usage: %s [-c file]\n", __progname);
 	exit(1);
 }
 
@@ -86,10 +86,9 @@ main(int argc, char *argv[])
 	char *cp, fn[PATH_MAX];
 	int c;
 
-	progname = argv[0];
 	pfl_init();
 
-	cp = pfl_strdup(progname);
+	cp = pfl_strdup(__progname);
 	snprintf(fn, sizeof(fn), "%s/example.slcfg", dirname(cp));
 	PSCFREE(cp);
 

@@ -32,12 +32,13 @@
 #include "bmap.h"
 
 unsigned char buf[80];
-char *progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	extern const char *__progname;
+
+	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);
 }
 
@@ -54,7 +55,6 @@ main(int argc, char *argv[])
 {
 	int i;
 
-	progname = argv[0];
 	pfl_init();
 	if (getopt(argc, argv, "") != -1)
 		usage();

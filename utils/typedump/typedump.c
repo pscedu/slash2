@@ -65,7 +65,7 @@ char buf[1024 * 1024];
 __dead void
 usage(void)
 {
-	extern char *__progname;
+	extern const char *__progname;
 
 	fprintf(stderr, "usage: %s\n", __progname);
 	exit(1);

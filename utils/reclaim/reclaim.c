@@ -41,7 +41,6 @@ enum {
 	POP_DELETE
 };
 
-const char	*progname;
 int		 delete;
 
 struct reclaim_prog_entry {
@@ -54,9 +53,11 @@ struct reclaim_prog_entry {
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-D] [-b batchno] [-i id] [-p prog-file] [-r reclaim-file]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -157,7 +158,6 @@ main(int argc, char *argv[])
 	int32_t id = 0;
 	ssize_t nr;
 
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "b:Di:p:r:")) != -1)
 		switch (c) {
 		case 'b':

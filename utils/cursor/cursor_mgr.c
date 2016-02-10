@@ -35,13 +35,13 @@
 
 #include "fid.h"
 
-const char *progname;
-
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr, "usage: %s [-dv] [-f fid] [-x txg] -c cursor_file\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -53,7 +53,6 @@ main(int argc, char *argv[])
 	int dump = 0, verbose = 0, fd, rc;
 	struct psc_journal_cursor cursor;
 
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "c:df:vx:")) != -1)
 		switch (c) {
 		case 'c':

@@ -51,7 +51,6 @@
 
 void wipefs(const char *);
 
-const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
@@ -213,9 +212,11 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-iW] [-R siteid:resid] [-u fsuuid] fsroot\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -228,7 +229,6 @@ main(int argc, char *argv[])
 	int c;
 
 	pfl_init();
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "iI:R:u:W")) != -1)
 		switch (c) {
 		case 'I':

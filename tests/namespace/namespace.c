@@ -77,14 +77,15 @@ time_t			 time1;
 time_t			 time2;
 
 volatile sig_atomic_t	 caughtint;
-const char		*progname;
 
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-s seed] [-o operations] [-f fileperdir] empty-directory\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -96,7 +97,6 @@ main(int argc, char *argv[])
 	char *buf;
 	char *ptr;
 
-	progname = argv[0];
 	while ((c = getopt (argc, argv, "f:o:s:")) != -1) {
 		switch (c) {
 		case 's':

@@ -24,33 +24,34 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <dirent.h>
 #include <err.h>
-#include <grp.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
 
 #define		 DEFAULT_SEED		123456
-#define 	 TOTAL_WRITES		65537
+#define		 TOTAL_WRITES		65537
 
 unsigned int	 seed = DEFAULT_SEED;
-char		*progname;
 
 char		 workdir[1024];
 
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-s seed] [-r test] [-l] [directory]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -164,7 +165,7 @@ test_random(void)
 		};
 	} * ptr;
 
-	ptr = malloc(TOTAL_WRITES * sizeof(struct writes)); 
+	ptr = malloc(TOTAL_WRITES * sizeof(struct writes));
 
 	ptr[0].value = 0x1234;
 	/* make sure we run on a 64-bit little endian machine */
@@ -186,7 +187,7 @@ test_random(void)
 	for (i = 0; i < TOTAL_WRITES; i++) {
 		ret = pwrite(fd, &ptr[i].value, sizeof(ptr[i].value), ptr[i].offset);
 		if (ret != sizeof(ptr[i].value)) {
-			printf("Fail to write (%lu: %lu), errno = %d at line %d!\n", 
+			printf("Fail to write (%lu: %lu), errno = %d at line %d!\n",
 				ptr[i].value, ptr[i].offset, errno, __LINE__);
 			return (1);
 		}
@@ -227,12 +228,12 @@ test_random(void)
 	for (i = 0; i < TOTAL_WRITES; i++) {
 		ret = pread(fd, &value, sizeof(ptr[i].value), ptr[i].offset);
 		if (ret != sizeof(ptr[i].value)) {
-			printf("Fail to read at %lu, errno = %d at line %d!\n", 
+			printf("Fail to read at %lu, errno = %d at line %d!\n",
 				ptr[i].offset, errno, __LINE__);
 			return (1);
 		}
 		if (value != ptr[i].value) {
-			printf("Fail to read at %lu (%lu versus %lu) at line %d!\n", 
+			printf("Fail to read at %lu (%lu versus %lu) at line %d!\n",
 				ptr[i].offset, value, ptr[i].value, __LINE__);
 			return (1);
 		}
@@ -252,7 +253,7 @@ test_random(void)
 }
 
 /*
- * See if we handle chown() properly. 
+ * See if we handle chown() properly.
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
@@ -307,7 +308,7 @@ test_chown(void)
 }
 
 /*
- * See if we handle link() properly. 
+ * See if we handle link() properly.
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
@@ -356,7 +357,7 @@ test_link(void)
 }
 
 /*
- * See if we handle truncate() properly. 
+ * See if we handle truncate() properly.
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
@@ -407,7 +408,7 @@ test_truncate(void)
 }
 
 /*
- * See if we handle open() properly. 
+ * See if we handle open() properly.
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
@@ -582,7 +583,7 @@ static int test_large()
 			return (1);
 		}
 		ch2 = buf[i];
-		if (ch1 != ch2) { 
+		if (ch1 != ch2) {
 			printf("Unexpected contents: 0x%02x vs 0x%02x", ch1, ch2);
 			return (1);
 		}
@@ -641,17 +642,12 @@ main(int argc, char *argv[])
 
 	listonly = 0;
 	testindex = 0;
-	progname = strrchr(argv[0], '/');
-	if (progname == NULL)
-		progname = argv[0];
-	else
-		progname++;
 
 	if (geteuid() != 0) {
 		printf("Please run this program as root.\n");
 		exit(0);
 	}
-		
+
 	while ((c = getopt(argc, argv, "s:r:l")) != -1) {
 		switch (c) {
 		    case 's':
@@ -692,7 +688,7 @@ main(int argc, char *argv[])
 	if (rc < 0)
 		err(1, "chdir %s", workdir);
 
-	printf("program = %s, seed = %u, workdir = %s\n", progname, seed, workdir);
+	warnx("seed = %u, workdir = %s", seed, workdir);
 	srandom(seed);
 
 	index = 0;

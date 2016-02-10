@@ -1,4 +1,4 @@
-/* $Id$ */ 
+/* $Id$ */
 /*
  * Create a large amount of files while crashing the MDS from time to time.
  * Filenames are made unique by permutation.
@@ -29,16 +29,16 @@ int		 verbose = 0;
 long		 file_count = 0;
 long		 total_files = 1000000;
 
-const char	*progname;
-
-char		filename[NAME_LENGTH+1];
+char		 filename[NAME_LENGTH+1];
 
 void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-n total files] [-v] empty-directory\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -68,7 +68,7 @@ void doit(const int *values, const int size)
 		if (verbose)
 			printf("Creating filename: %s\n", filename);
 		fd = creat(filename, S_IRWXU);
-		if (fd < 0) 
+		if (fd < 0)
 			err(1, "Failed to create file %s", filename);
 		close(fd);
 		break;
@@ -102,7 +102,7 @@ void visit(int *values, int n, int k)
 	int i;
 	static int level = -1;
 
-	level = level + 1; 
+	level = level + 1;
 	values[k] = level;
 
 	if (level == n)
@@ -111,7 +111,7 @@ void visit(int *values, int n, int k)
 		for (i = 0; i < n; i++)
 			if (values[i] == 0)
 				visit(values, n, i);
-	level = level-1; 
+	level = level-1;
 	values[k] = 0;
 }
 
@@ -123,7 +123,6 @@ main(int argc, char *argv[])
 	int *values;
 	double elapsetime;
 
-	progname = argv[0];
 	while ((ch = getopt(argc, argv, "n:sdvt")) != -1) {
 		switch (ch) {
 		case 'n':
@@ -154,7 +153,7 @@ main(int argc, char *argv[])
 		err(1, "chdir %s", argv[0]);
 
 	values = (int *)malloc(sizeof(int) * NAME_LENGTH);
-  
+
 	for (i = 0; i < NAME_LENGTH; i++) {
 		values[i] = 0;
 	}

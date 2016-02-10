@@ -46,7 +46,6 @@ int		 format;
 int		 query;
 int		 verbose;
 const char	*datadir = SL_PATH_DATA_DIR;
-const char	*progname;
 struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
 
@@ -455,9 +454,11 @@ sl_journal_dump(const char *fn)
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] [-u uuid]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -474,7 +475,6 @@ main(int argc, char *argv[])
 	sl_subsys_register();
 
 	fn[0] = '\0';
-	progname = argv[0];
 	while ((c = getopt(argc, argv, "b:D:fn:qu:v")) != -1)
 		switch (c) {
 		case 'b':
