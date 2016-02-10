@@ -871,6 +871,8 @@ s2re
   hangs
 - writeahead now creates +1 bmap beyond EOF when using
   `msctl repl-status`
+- application errno's still don't registered via psclog() which calls
+  pfl_strerror()
 
 - tune metaslab_df_free_pct zfs/slashd
 
