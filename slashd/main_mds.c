@@ -64,9 +64,9 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-int			 current_vfsid;
+extern const char *__progname;
 
-const char		*progname;
+int			 current_vfsid;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
@@ -390,25 +390,24 @@ usage(void)
 	fprintf(stderr,
 	    "usage: %s [-V] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
 	    "\t[zpoolname]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	time_t now;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int rc, vfsid, c, found;
 	struct psc_thread *thr;
+	time_t now;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
-	progname = argv[0];
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLMSS_ZFS, "zfs");
@@ -693,9 +692,10 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclog_max("MDS revision %d has started at %s", sl_stk_version,
-	    ctime(&now));
-	psclog_max("Max ARC caching size is %"PRIu64, arc_get_maxsize());
+	psclogs_info(SLMSS_INFO, "SLASH2 %s revision %d started at %s",
+	    __progname, sl_stk_version, ctime(&now));
+	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
+	    arc_get_maxsize());
 
 	slmctlthr_main(sfn);
 	exit(0);

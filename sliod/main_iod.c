@@ -66,6 +66,8 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+extern const char *__progname;
+
 int			 sli_selftest_rc;
 
 struct srt_bwqueued	 sli_bwqueued;
@@ -79,8 +81,6 @@ struct pfl_iostats_rw	 sli_backingstore_iostats;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
-
-const char		*progname;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -193,7 +193,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-V] [-D datadir] [-f cfgfile] [-S socket] [mds-resource]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -203,18 +203,18 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
 	struct stat stb;
-	int rc, c;
 	time_t now;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
-	progname = argv[0];
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLISS_SLVR, "slvr");
+	psc_subsys_register(SLISS_INFO, "info");
 
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
@@ -330,8 +330,8 @@ main(int argc, char *argv[])
 	OPSTAT_INCR("min-seqno");
 
 	time(&now);
-	psclog_max("IOS revision %d has started at %s", sl_stk_version,
-	    ctime(&now));
+	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
+	    __progname, sl_stk_version, ctime(&now));
 
 	slictlthr_main(sfn);
 	exit(0);
