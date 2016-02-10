@@ -26,5 +26,6 @@
 #include "slsubsys.h"
 
 #define SLISS_SLVR	(_SLSS_LAST + 0)
+#define SLISS_INFO	(_SLSS_LAST + 1)
 
 #endif /* _SUBSYS_IOD_H_ */
