@@ -1152,10 +1152,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		return (0);
 	}
 
-	/*
-	 * While holding the last reference to the lease, take the lease
-	 * off the timeout list to avoid a race with the timeout thread.
-	 */
 	if (bml->bml_flags & BML_TIMEOQ) {
 		BML_ULOCK(bml);
 		mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
