@@ -8,6 +8,7 @@ git clone ssh://source/a proj
 cd proj
 ./bootstrap.sh
 
+OBJBASE=$(pwd)/obj
 make build
 make test
 
