@@ -214,31 +214,31 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		if (!bml) {
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = BMAP_TIMEO_MAX;
-			goto sleep;
+			goto out;
 		}
 
 		if (!BML_TRYLOCK(bml)) {
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
-			goto sleep;
+			goto out;
 		}
 		if (bml->bml_refcnt) {
 			BML_ULOCK(bml);
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
-			goto sleep;
+			goto out;
 		}
 		if (bml->bml_flags & BML_FREEING) {
 			BML_ULOCK(bml);
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
-			goto sleep;
+			goto out;
 		}
 		nsecs = bml->bml_expire - time(NULL);
 		if (nsecs > 0) {
 			BML_ULOCK(bml);
 			freelock(&slm_bmap_leases.btt_lock);
-			goto sleep;
+			goto out;
 		}
 
 		bml->bml_refcnt++;
@@ -255,7 +255,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			nsecs = 1;
 		} else
 			nsecs = 0;
- sleep:
+ out:
 		psclog_debug("nsecs=%d", nsecs);
 
 		if (nsecs > 0)
