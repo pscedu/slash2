@@ -62,7 +62,6 @@
 int				 verbose;
 int				 recursive;
 
-const char			*progname;
 const char			*daemon_name = "mount_slash";
 
 struct msctlmsg_replst		 current_mrs;
@@ -1011,9 +1010,11 @@ parse_dequeue(char *arg)
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -1034,7 +1035,7 @@ int
 main(int argc, char *argv[])
 {
 	pfl_init();
-	progname = argv[0];
+
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 97, NULL, "fnfidpairs");
 

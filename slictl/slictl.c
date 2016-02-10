@@ -42,7 +42,6 @@
 #include "ctlcli.h"
 #include "pathnames.h"
 
-const char	*progname;
 const char	*daemon_name = "sliod";
 
 void
@@ -258,9 +257,11 @@ PFLCTL_CLI_DEFS;
 __dead void
 usage(void)
 {
+	extern const char *__progname;
+
 	fprintf(stderr,
 	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
-	    progname);
+	    __progname);
 	exit(1);
 }
 
@@ -276,7 +277,6 @@ int
 main(int argc, char *argv[])
 {
 	pfl_init();
-	progname = argv[0];
 	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	exit(0);
