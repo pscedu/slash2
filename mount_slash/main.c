@@ -2289,7 +2289,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
 		struct pscfs_creds pcr;
 
-		psclogs(PLL_INFO, SLCSS_INFO,
+		psclogs_info(SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "euid=%u owner=%u fgrp=%u "
 		    "fsize=%"PRId64" "
@@ -3917,8 +3917,8 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclog_max("slash2 client revision %d has started at %s", sl_stk_version,
-	    ctime(&now));
+	psclogs_info(SLCSS_INFO, "SLASH2 client revision %d "
+	    "started at %s", sl_stk_version, ctime(&now));
 
 	return (0);
 }
@@ -4001,7 +4001,7 @@ msl_opt_lookup(const char *opt)
 __dead void
 usage(void)
 {
-	extern char *__progname;
+	extern const char *__progname;
 
 	fprintf(stderr, "usage: %s [-dUV] [-o mountopt] node\n",
 	    __progname);
