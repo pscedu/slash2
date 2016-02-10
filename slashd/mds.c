@@ -1142,9 +1142,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	b->bcm_flags |= BMAPF_IOSASSIGNED;
 
 	BML_LOCK(bml);
-	if (bml->bml_refcnt > 1 || !(bml->bml_flags & BML_FREEING)) {
-		psc_assert(bml->bml_refcnt > 0);
-		bml->bml_refcnt--;
+	bml->bml_refcnt--;
+	psc_assert(bml->bml_refcnt >= 0);
+	if (bml->bml_refcnt > 0 || !(bml->bml_flags & BML_FREEING)) {
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 		bmap_wake_locked(b);
@@ -1162,10 +1162,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		BML_LOCK(bml);
 	}
 
-	/*
-	 * If I am called by the timeout thread, then the refcnt is
-	 * zero.
-	 */
 	if (!(bml->bml_flags & BML_BMI)) {
 		BML_ULOCK(bml);
 		goto out;

@@ -239,6 +239,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			bml->bml_flags |= BML_FREEING;
 		}
 
+		bml->bml_refcnt++;
 		BML_ULOCK(bml);
 		freelock(&slm_bmap_leases.btt_lock);
 
