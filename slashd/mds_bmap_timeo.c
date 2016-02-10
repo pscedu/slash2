@@ -228,18 +228,22 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			nsecs = 1;
 			goto sleep;
 		}
-
-		if (!(bml->bml_flags & BML_FREEING)) {
-			nsecs = bml->bml_expire - time(NULL);
-			if (nsecs > 0) {
-				BML_ULOCK(bml);
-				freelock(&slm_bmap_leases.btt_lock);
-				goto sleep;
-			}
-			bml->bml_flags |= BML_FREEING;
+		if (bml->bml_flags & BML_FREEING) {
+			BML_ULOCK(bml);
+			freelock(&slm_bmap_leases.btt_lock);
+			nsecs = 1;
+			goto sleep;
+		}
+		nsecs = bml->bml_expire - time(NULL);
+		if (nsecs > 0) {
+			BML_ULOCK(bml);
+			freelock(&slm_bmap_leases.btt_lock);
+			goto sleep;
 		}
 
 		bml->bml_refcnt++;
+		bml->bml_flags |= BML_FREEING;
+
 		BML_ULOCK(bml);
 		freelock(&slm_bmap_leases.btt_lock);
 
