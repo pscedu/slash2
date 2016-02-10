@@ -692,9 +692,9 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
 	time(&now);
-	psclogs_info(SLMSS_INFO, "SLASH2 %s revision %d started at %s",
+	psclog_max("SLASH2 %s revision %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
-	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
+	psclog_max("Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
 
 	slmctlthr_main(sfn);

@@ -330,7 +330,7 @@ main(int argc, char *argv[])
 	OPSTAT_INCR("min-seqno");
 
 	time(&now);
-	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
+	psclog_max("SLASH2 %s revision %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
 	slictlthr_main(sfn);
