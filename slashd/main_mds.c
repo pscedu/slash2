@@ -485,10 +485,10 @@ main(int argc, char *argv[])
 	 * Start up ZFS threads and import the MDS zpool.  Also, make
 	 * sure ARC max size is finalized before calling arc_init().
 	 */
+	arc_set_slashd();
 	if (slcfg_local->cfg_arc_max)
 		arc_set_maxsize(slcfg_local->cfg_arc_max);
 
-	arc_set_slashd();
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
