@@ -1309,7 +1309,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		}
 		if (mp->ssfb.sf_frsize == 0)
 			mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
-		adj = mp->ssfb.sf_frsize * 1. / si->si_ssfb.sf_frsize;
+		adj = si->si_ssfb.sf_frsize * 1. / mp->ssfb.sf_frsize;
 		mp->ssfb.sf_blocks += adj * si->si_ssfb.sf_blocks;
 		mp->ssfb.sf_bfree  += adj * si->si_ssfb.sf_bfree;
 		mp->ssfb.sf_bavail += adj * si->si_ssfb.sf_bavail;
