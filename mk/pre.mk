@@ -35,7 +35,7 @@ SRC_PATH+=		${SLASH_BASE}/slashd
 SRC_PATH+=		${SLASH_BASE}/sliod
 
 SLASH_MODULES?=		cli ion mds
-SLASH_OPTIONS?=		module
+SLASH_OPTIONS?=
 
 -include ${SLASH_BASE}/mk/local.mk
 
@@ -50,10 +50,6 @@ ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
   DEFINES+=		-DSLOPT_POSIX_ACLS_REVERT
   LDFLAGS+=		-lacl
  endif
-endif
-
-ifneq ($(filter module,${SLASH_OPTIONS}),)
-  DEFINES+=		-DMSL_PFLFS_MODULE
 endif
 
 endif

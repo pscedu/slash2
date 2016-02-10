@@ -3862,12 +3862,6 @@ msl_init(void)
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
-#ifndef MSL_PFLFS_MODULE
-	pfl_workq_init(128);
-	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
-	pfl_opstimerthr_spawn(MSTHRT_OPSTIMER, "msopstimerthr");
-#endif
-
 	/* Start up service threads. */
 	slrpc_initcli();
 	slc_rpc_initsvc();
@@ -3923,8 +3917,8 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclog_max("slash2 client revision %d has started at %s", sl_stk_version, 
-	    ctime(&now));	
+	psclog_max("slash2 client revision %d has started at %s", sl_stk_version,
+	    ctime(&now));
 
 	return (0);
 }
@@ -4119,93 +4113,3 @@ pscfs_module_load(struct pscfs *m)
 
 	return (msl_init());
 }
-
-#ifndef MSL_PFLFS_MODULE
-int
-main(int argc, char *argv[])
-{
-	struct pscfs m;
-	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
-	char c, *p, *noncanon_mp;
-	int unmount_first = 0;
-
-	pfl_init();
-
-	pscfs_addarg(&args, "");		/* progname/argv[0] */
-	pscfs_addarg(&args, "-o");
-	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
-
-	p = getenv("CTL_SOCK_FILE");
-	if (p)
-		msl_ctlsockfn = p;
-
-	p = getenv("CONFIG_FILE");
-	if (p)
-		msl_cfgfn = p;
-
-	optind = 1;
-	while ((c = getopt(argc, argv, "D:df:I:M:o:S:UV")) != -1)
-		switch (c) {
-		case 'D':
-			sl_datadir = optarg;
-			break;
-		case 'd':
-			pscfs_addarg(&args, "-odebug");
-			break;
-		case 'f':
-			msl_cfgfn = optarg;
-			break;
-		case 'I':
-			setenv("PREF_IOS", optarg, 1);
-			break;
-		case 'M':
-			setenv("MDS", optarg, 1);
-			break;
-		case 'o':
-			if (!msl_opt_lookup(optarg)) {
-				pscfs_addarg(&args, "-o");
-				pscfs_addarg(&args, optarg);
-			}
-			break;
-		case 'S':
-			msl_ctlsockfn = optarg;
-			break;
-		case 'U':
-			unmount_first = 1;
-			break;
-		case 'V':
-			errx(0, "revision is %d", sl_stk_version);
-		default:
-			usage();
-		}
-	argc -= optind;
-	argv += optind;
-	if (argc != 1)
-		usage();
-
-	pscthr_init(MSTHRT_FSMGR, NULL, NULL, 0, "msfsmgrthr");
-
-	noncanon_mp = argv[0];
-	if (unmount_first)
-		unmount(noncanon_mp);
-
-	/* canonicalize mount path */
-	if (realpath(noncanon_mp, mountpoint) == NULL)
-		psc_fatal("realpath %s", noncanon_mp);
-
-	pscfs_mount(mountpoint, &args);
-	pscfs_freeargs(&args);
-
-	sl_drop_privs(1);
-
-	if (msl_init())
-		exit(1);
-
-	memset(&m, 0, sizeof(m));
-	msl_populate_module(&m);
-	pflfs_module_init(&m, NULL);
-	pflfs_module_add(0, &m);
-
-	exit(pscfs_main(32, "ms"));
-}
-#endif

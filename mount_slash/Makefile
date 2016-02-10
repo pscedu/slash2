@@ -4,12 +4,8 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 include ${SLASH_BASE}/mk/pre.mk
 
-ifeq ($(filter module,${SLASH_OPTIONS}),)
-  PROG=		mount_slash
-else
-  SHLIB=	slash2.so
-  INST_LIBDIR=	${WOK_MOD_DIR}
-endif
+SHLIB=		slash2.so
+INST_LIBDIR=	${WOK_MOD_DIR}
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
 
@@ -42,12 +38,7 @@ SRCS+=		${SLASH_BASE}/share/slutil.c
 SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 
-ifeq ($(filter module,${SLASH_OPTIONS}),)
-  SRCS+=	${PFL_BASE}/fuse.c
-  MODULES+=	lnet pthread gcrypt pscfs ctl rpc clock pfl
-else
-  MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl
-endif
+MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl
 
 DEFINES+=	-D_SLASH_CLIENT
 
