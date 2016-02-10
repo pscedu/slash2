@@ -1,5 +1,5 @@
 CREATE TABLE s2ts_run (
-	id		INT		NOT NULL	PRIMARY KEY,
+	id		INTEGER		PRIMARY KEY,
 	suite_name	VARCHAR(16),
 	launch_date	TIMESTAMP,
 	user		VARCHAR(32),
@@ -13,7 +13,7 @@ CREATE TABLE s2ts_run (
 CREATE INDEX user ON s2ts_run (user);
 
 CREATE TABLE s2ts_result (
-	id		INT		NOT NULL	PRIMARY KEY,
+	id		INTEGER		PRIMARY KEY,
 	run_id		INT		NOT NULL,
 	task_id		INT		NOT NULL,
 	test_name	VARCHAR(32),
