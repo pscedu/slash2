@@ -1166,7 +1166,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * If I am called by the timeout thread, then the refcnt is
 	 * zero.
 	 */
-	psc_assert(bml->bml_refcnt <= 1);
 	if (!(bml->bml_flags & BML_BMI)) {
 		BML_ULOCK(bml);
 		goto out;
