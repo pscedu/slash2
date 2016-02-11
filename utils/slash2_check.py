@@ -30,15 +30,27 @@ nagios_server="saint-100.psc.edu"
 # This is a dummy return value used to signify a thread was killed
 termFlag = -10000
 
-# Per-I/O node settings
-ion_cfg = {
-	"sense0"  : { "npools" : 8, "path" : "/arc_sliod/%i" },
-	"sense1"  : { "npools" : 7, "path" : "/arc_sliod/%i" },
-	"sense2"  : { "npools" : 8, "path" : "/arc_sliod/%i" },
-	"sense3"  : { "npools" : 7, "path" : "/arc_sliod/%i" },
-	"sense4"  : { "npools" : 8, "path" : "/arc_sliod/%i" },
-	"sense5"  : { "npools" : 7, "path" : "/arc_sliod/%i" },
-	"sense51" : { "npools" : 7, "path" : "/sense51_pool%i" },
+# Per-host settings
+# XXX should be read in from a configuration file.
+hostcfg = {
+	"illusion1":	{ "type": "mds" },
+	"illusion2":	{ "type": "mds" },
+	"burton":	{ "type": "mds" },
+	"dennis":	{ "type": "mds" },
+
+	"sense0":	{ "npools": 8, "path": "/arc_sliod/%i" },
+	"sense1":	{ "npools": 7, "path": "/arc_sliod/%i" },
+	"sense2":	{ "npools": 8, "path": "/arc_sliod/%i" },
+	"sense3":	{ "npools": 7, "path": "/arc_sliod/%i" },
+	"sense4":	{ "npools": 8, "path": "/arc_sliod/%i" },
+	"sense5":	{ "npools": 7, "path": "/arc_sliod/%i" },
+	"sense51":	{ "npools": 7, "path": "/sense51_pool%i" },
+
+	"dxcsbb01":	{ "npools": 8, "path": "/sbb1_pool%i" },
+	"dxcsbb02":	{ "npools": 8, "path": "/sbb2_pool%i" },
+	"dxcsbb03":	{ "npools": 8, "path": "/sbb3_pool%i" },
+	"dxcsbb04":	{ "npools": 8, "path": "/sbb4_pool%i" },
+	"dxcsbb05":	{ "npools": 8, "path": "/sbb5_pool%i" },
 }
 
 testdir = '/arc/users/root'
@@ -574,50 +586,47 @@ def test_ioserver():
 		return
 
 	# Test the expected number of sliods on each node
-	if not ion_cfg.has_key(hn):
-		print "ERROR: # of sliods not defined for host " + hn + "; aborting now"
-	else :
-		i = 0
-		cfg = ion_cfg[hn]
+	i = 0
+	cfg = hostcfg[hn]
 
-		while ( i < cfg["npools"] ):
+	while ( i < cfg["npools"] ):
 
-			# Check zpool i
-			test_cmd='zpool status -v %s_pool%i' % (hn,i)
+		# Check zpool i
+		test_cmd='zpool status -v %s_pool%i' % (hn,i)
+		bc = boundcmd(cmd=test_cmd,maxtries=2,timeout=5,verbose=options.pdebug)
+		(rc,tout,terr)=bc.run()
+		zpoolEval(hn,'zpool%i' % i,test_cmd,rc,tout,terr)
+
+		tname = 'sliod%i' % i
+		rc = 0
+
+		backfspath = cfg["path"] % i
+
+		if not options.quick:
+			# Perform functional test of sliod
+			bc = boundcmd(sliodPoke,args=backfspath,maxtries=2,timeout=10,verbose=options.pdebug)
+			(rc,tout,terr) = bc.run()
+
+		# If the functional test succeeded, then gather list of connections via slictl
+		if rc == 0 :
+			test_cmd="slictl%i -sconn" % i
 			bc = boundcmd(cmd=test_cmd,maxtries=2,timeout=5,verbose=options.pdebug)
 			(rc,tout,terr)=bc.run()
-			zpoolEval(hn,'zpool%i' % i,test_cmd,rc,tout,terr)
+			slashEval(hn,tname,test_cmd,rc,tout,terr)
 
-			tname = 'sliod%i' % i
-			rc = 0
+			# Record the SLASH2 version number
+			test_cmd = 'slictl%i -p version' % i
+			bc = boundcmd(cmd=test_cmd,maxtries=2,timeout=5,verbose=options.pdebug)
+			(rc,tout,terr)=bc.run()
+			versionEval(hn,tname,test_cmd,rc,tout,terr)
 
-			backfspath = cfg["path"] % i
+		# If the functional test failed, tell Nagios
+		else :
+			dprint("DEBUG: /arc write failed (%s);; %i:%s" % (test_cmd,rc,terr))
+			nsca_queue(hn,tname,nagios.critical,'sliod zpool/filesystem FAILED functional test : ' + terr)
 
-			if not options.quick:
-				# Perform functional test of sliod
-				bc = boundcmd(sliodPoke,args=backfspath,maxtries=2,timeout=10,verbose=options.pdebug)
-				(rc,tout,terr) = bc.run()
-
-			# If the functional test succeeded, then gather list of connections via slictl
-			if rc == 0 :
-				test_cmd="slictl%i -sconn" % i
-				bc = boundcmd(cmd=test_cmd,maxtries=2,timeout=5,verbose=options.pdebug)
-				(rc,tout,terr)=bc.run()
-				slashEval(hn,tname,test_cmd,rc,tout,terr)
-
-				# Record the SLASH2 version number
-				test_cmd = 'slictl%i -p version' % i
-				bc = boundcmd(cmd=test_cmd,maxtries=2,timeout=5,verbose=options.pdebug)
-				(rc,tout,terr)=bc.run()
-				versionEval(hn,tname,test_cmd,rc,tout,terr)
-
-			# If the functional test failed, tell Nagios
-			else :
-				dprint("DEBUG: /arc write failed (%s);; %i:%s" % (test_cmd,rc,terr))
-				nsca_queue(hn,tname,nagios.critical,'sliod zpool/filesystem FAILED functional test : ' + terr)
-
-			# increment the counter and loop again
-			i = i+1
+		# increment the counter and loop again
+		i = i+1
 
 def test_mdserver():
 
@@ -690,11 +699,8 @@ def get_version(args):
 # Define the rules for interpretting command line arguments
 usage = "usage %prog [options]\n\tNOTE:  without any specified options, script will guess\n\twhich tests to run based on hostname"
 parser = OptionParser(usage)
-parser.add_option("-c", "--client", action="store_true", dest="client", default=False, help="Run/report client tests")
 parser.add_option("-d", "--dont-send", action="store_true", dest="dontSend", default=False, help="Disable updates to Nagios and syslog servers")
 parser.add_option("-f", "--force", action="store_true",dest="force", default=False, help="Bypass checks to prevent multiple instances")
-parser.add_option("-i", "--ioserver", action="store_true", dest="ioserver", default=False, help="Run/report I/O server tests")
-parser.add_option("-m", "--mdserver", action="store_true", dest="mdserver", default=False, help="Run/Report Metadata server tests")
 parser.add_option("-q", "--quick", action="store_true", dest="quick", default=False, help="Skip I/O tests that make be slow or block")
 parser.add_option("-v", "--verbose", action="store_true", dest="pdebug", default=False, help="Enable verbose debugging information")
 
@@ -725,22 +731,16 @@ path_munge('/local/bin')
 path_munge('/local/psc/sbin')
 path_munge('/local/psc/bin')
 
-shouldguess = True
-if options.client   : test_client()   ; shouldguess = False
-if options.ioserver : test_ioserver() ; shouldguess = False
-if options.mdserver : test_mdserver() ; shouldguess = False
-
-# If not command list tests were specific, guess which tests to run based on hostname
-if shouldguess:
-	if check_list(hn,['firehose[0-9]*','pscux[a-z]','tg-login[0-9]','arclog[0-1]','lemur[0-9]*','xfer-admin','kollman0','kollman2','reed']) :
-		test_client()
-	elif check_list(hn,['sense[0-9]*']) :
-		test_ioserver()
-	elif check_list(hn,['illusion[0-9]*']) :
+if hostcfg.has_key(hn):
+	h = hostcfg[hn]
+	if h.has_key("type") and h["type"] == "mds":
 		test_mdserver()
-	else :
-		#Assume the node is a client
-		print "ERROR: could not determine which tests to run; unfamiliar hostname (" + hn + ")"
+	else:
+		test_ioserver()
+else:
+	# Assume the node is a client
+	print "WARNING: no configuration for this host (", hn, "), ", "defaulting to client"
+	test_client()
 
 # Calculate an md5sum of this file for reference
 payload = ''
