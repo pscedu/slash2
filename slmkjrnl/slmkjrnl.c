@@ -469,7 +469,7 @@ main(int argc, char *argv[])
 	ssize_t newnents, nents = 0;
 	char *endp, c, fn[PATH_MAX];
 	uint64_t uuid = 0;
-	long l;
+	long long ll;
 
 	pfl_init();
 	sl_subsys_register();
@@ -489,12 +489,12 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			endp = NULL;
-			l = strtol(optarg, &endp, 10);
-			if (l <= 0 || l > INT_MAX ||
+			ll = strtoll(optarg, &endp, 10);
+			if (ll <= 0 || ll > (long long)SLJ_MDS_MAX_JNENTS ||
 			    endp == optarg || *endp)
 				errx(1, "invalid -n nentries: %s",
 				    optarg);
-			nents = (ssize_t)l;
+			nents = (ssize_t)ll;
 			break;
 		case 'q':
 			query = 1;
