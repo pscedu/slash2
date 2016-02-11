@@ -85,7 +85,8 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 
 	ureqlock(&slm_bmap_leases.btt_lock, locked);
 
-	psclog_debug("low watermark = %"PRIu64", high watermark = %"PRIu64, 
+	psclog_debug("retrieve: low watermark = %"PRIu64", "
+	    "high watermark = %"PRIu64, 
 	    minseq ? (*minseq) : BMAPSEQ_ANY, 
 	    maxseq ? (*maxseq) : BMAPSEQ_ANY);
 
@@ -102,13 +103,14 @@ mds_bmap_timeotbl_journal_seqno(void)
 	sjbsq.sjbsq_high_wm = slm_bmap_leases.btt_maxseq;
 
 	log++;
-	if (!(log % BMAP_SEQLOG_FACTOR)) {
-		mds_bmap_journal_bmapseq(&sjbsq);
-		psclog_debug("low watermark = %"PRIu64","
-		    "high watermark = %"PRIu64, 
-		    sjbsq.sjbsq_low_wm,
-		    sjbsq.sjbsq_high_wm);
-	}
+	if (log % BMAP_SEQLOG_FACTOR)
+		return;
+
+	mds_bmap_journal_bmapseq(&sjbsq);
+	psclog_debug("journal: low watermark = %"PRIu64", "
+	    "high watermark = %"PRIu64, 
+	    sjbsq.sjbsq_low_wm,
+	    sjbsq.sjbsq_high_wm);
 }
 
 uint64_t
