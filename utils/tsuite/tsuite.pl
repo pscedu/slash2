@@ -136,7 +136,18 @@ EOF
 	return <<EOF;
 	set -e
 	set -u
-	PS4='[\\h:\$LINENO] + '
+
+	_make_ps4()
+	{
+		local host=\$1
+		local line=\$2
+		local n=\$((SHLVL - 2))
+		printf "%\${n}s[%s:%5d:%3d] " "" \$host \$\$ \$line
+	}
+	export -f _make_ps4
+
+	PS4='\$(_make_ps4 "\\h" \$LINENO)'
+	export PS4
 
 	die()
 	{
@@ -228,6 +239,8 @@ use constant MAX_TRIES => 16;
 
 sub waitjobs {
 	my ($pids, $to, $flags) = @_;
+
+	fatalx "no pids specified" unless @$pids;
 
 	$flags ||= 0;
 
@@ -770,6 +783,9 @@ foreach my $n (@cli) {
 EOF
 }
 
+# XXX delay for slash2.so to initialize...
+sleep 5;
+
 sub test_setup {
 	my $n = shift;
 
@@ -785,8 +801,9 @@ sub test_setup {
 		local id=\$2
 		local max=\$3
 
-		#export LOCAL_TMP=$n->{basedir}/tmp/\${test%.*}
-		export LOCAL_TMP=$n->{mp}/tmp/\${test%.*}
+		# XXX need some local storage next to mp to do
+		# comparisons
+		export LOCAL_TMP=$n->{mp}/tmp/\${test##*/}
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
 		mkdir -p \$LOCAL_TMP
@@ -794,7 +811,7 @@ sub test_setup {
 
 		local launcher=
 		if [ x"\$test" != x"\${test%.sh}" ]; then
-			launcher=\"bash -ue@{[ $opts{v} ? "x" : ""]}\"
+			launcher='bash -eu@{[ $opts{v} ? "x" : ""]}'
 		fi
 
 		\$launcher \$test \$id \$max
@@ -806,6 +823,7 @@ sub test_setup {
 		local ns=\$(echo \${1#*.} | sed 's/^0*//')
 		echo \$((s * 1000 + ns / 1000000))
 	}
+	export -f convert_ms
 
 	run_timed_test()
 	{
@@ -817,7 +835,7 @@ sub test_setup {
 		local time1=\$(date +%s.%N)
 		local time0_ms=\$(convert_ms \$time0)
 		local time1_ms=\$(convert_ms \$time1)
-		echo %TSUITE_RESULT% \$test:\$id \$((time1_ms - time0_ms))
+		echo %TSUITE_RESULT% \$test:\$id \$((time1_ms - time0_ms - _EXCLUDE_TIME_MS))
 	}
 
 	_dep_guts()
@@ -848,6 +866,22 @@ sub test_setup {
 		done
 	}
 	export -f dep
+
+	exclude_time_start()
+	{
+		_EXCLUDE_TIME0=\$(date +%s.%N)
+	}
+	export -f exclude_time_start
+
+	_EXCLUDE_TIME_MS=0
+	exclude_time_end()
+	{
+		local time1=\$(date +%s.%N)
+		local time0_ms=\$(convert_ms \$_EXCLUDE_TIME0)
+		local time1_ms=\$(convert_ms \$time1)
+		_EXCLUDE_TIME_MS+=\$((time1_ms - time0_ms))
+	}
+	export -f exclude_time_end
 EOF
 }
 
@@ -882,9 +916,8 @@ foreach my $n (@cli) {
 
 		run_all_tests()
 		{
-			for test in *; do
-				echo launching test from all: \$test
-				run_test $n->{test_src_dir}/\$test $n->{id} $nclients &
+			for test in $n->{test_src_dir}/*; do
+				run_test \$test $n->{id} $nclients &
 			done
 			wait
 		}
@@ -982,6 +1015,8 @@ if ($emsg) {
 }
 
 sub cleanup {
+	debug_msg "running cleanup";
+
 	my $n;
 	foreach $n (@cli) {
 		debug_msg "unmounting mount_wokfs: $n->{host}";
@@ -1007,15 +1042,14 @@ EOF
 EOF
 	}
 
-	kill 'HUP', @cli_pids, @ios_pids, @mds_pids;
+	my @pids = (@cli_pids, @ios_pids, @mds_pids);
+	kill 'HUP', @pids;
 
-	waitjobs \@cli_pids, $step_timeout, WF_NONFATAL;
-	waitjobs \@ios_pids, $step_timeout, WF_NONFATAL;
-	waitjobs \@mds_pids, $step_timeout, WF_NONFATAL;
+	waitjobs \@pids, $step_timeout, WF_NONFATAL;
 
 	foreach $n (@cli) {
 		debug_msg "killing mount_wokfs: $n->{host}";
-		runcmd "$ssh $n->{host} bash", <<EOF;
+		push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 			@{[init_env($n)]}
 			$sudo pkill -9 mount_wokfs
 EOF
@@ -1023,7 +1057,7 @@ EOF
 
 	foreach $n (@ios) {
 		debug_msg "stopping sliod: $n->{res_name} : $n->{host}";
-		runcmd "$ssh $n->{host} bash", <<EOF;
+		push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 			@{[init_env($n)]}
 			$sudo pkill -9 sliod
 EOF
@@ -1031,11 +1065,13 @@ EOF
 
 	foreach $n (@mds) {
 		debug_msg "stopping slashd: $n->{res_name} : $n->{host}";
-		runcmd "$ssh $n->{host} bash", <<EOF;
+		push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 			@{[init_env($n)]}
 			$sudo pkill -9 slashd
 EOF
 	}
+
+	waitjobs \@pids, $step_timeout, WF_NONFATAL;
 }
 
 cleanup();
