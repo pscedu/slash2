@@ -6,7 +6,10 @@ dep wget
 
 V=4.3
 
+exclude_time_start
 wget -nv https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
+exclude_time_end
+
 decompress_xz linux-$V.tar.xz | tar fx -
 
 dir=$(pwd)
