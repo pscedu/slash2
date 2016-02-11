@@ -282,7 +282,8 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 	struct srm_getbmapminseq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	return (mds_bmap_getcurseq(NULL, &mp->seqno));
+	mds_bmap_getcurseq(NULL, &mp->seqno);
+	return (0);
 }
 
 int

@@ -269,7 +269,7 @@ void	 mds_bmap_ensure_valid(struct bmap *);
 struct bmap_mds_lease * mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
-int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
+void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 
 void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);

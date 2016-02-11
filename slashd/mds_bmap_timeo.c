@@ -71,7 +71,7 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 	slm_bmap_leases.btt_minseq = minseq;
 }
 
-int
+void
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
@@ -89,8 +89,6 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 	    "high watermark = %"PRIu64, 
 	    minseq ? (*minseq) : BMAPSEQ_ANY, 
 	    maxseq ? (*maxseq) : BMAPSEQ_ANY);
-
-	return (0);
 }
 
 void
