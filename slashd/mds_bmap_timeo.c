@@ -46,9 +46,10 @@ mds_bmap_timeotbl_init(void)
 	    bml_timeo_lentry, &slm_bmap_leases.btt_lock);
 }
 
-static void
+static uint32_t
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
+	uint32_t slot;
 	struct slmds_jent_bmapseq *buf;
 
 	buf = pjournal_get_buf(slm_journal,
@@ -57,11 +58,12 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 	*buf = *sjbsq;
 
 	mds_reserve_slot(1);
-	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_SEQ, 0, buf,
+	slot = pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_SEQ, 0, buf,
 	    sizeof(struct slmds_jent_bmapseq));
 	mds_unreserve_slot(1);
 
 	pjournal_put_buf(slm_journal, buf);
+	return slot;
 }
 
 void
@@ -92,6 +94,7 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 void
 mds_bmap_timeotbl_journal_seqno(void)
 {
+	uint32_t slot;
 	static int log = 0;
 	struct slmds_jent_bmapseq sjbsq;
 
@@ -102,8 +105,8 @@ mds_bmap_timeotbl_journal_seqno(void)
 	if (log % BMAP_SEQLOG_FACTOR)
 		return;
 
-	mds_bmap_journal_bmapseq(&sjbsq);
-	psclog_debug("journal: low watermark = %"PRIu64", "
+	slot = mds_bmap_journal_bmapseq(&sjbsq);
+	psclog_debug("journal: slot = %u, low watermark = %"PRIu64", "
 	    "high watermark = %"PRIu64, 
 	    sjbsq.sjbsq_low_wm,
 	    sjbsq.sjbsq_high_wm);
