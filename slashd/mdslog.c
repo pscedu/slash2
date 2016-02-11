@@ -1160,7 +1160,7 @@ mds_send_batch_update(uint64_t batchno)
 
 /*
  * Write some system information into our cursor file.  Note that every
- * field must be protected by a spinlock.
+ * field must be protected by a spinlock. It is called from zfs_write().
  */
 void
 mds_update_cursor(void *buf, uint64_t txg, int flag)
