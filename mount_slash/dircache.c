@@ -437,9 +437,9 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  * @size: size of @base buffer.
  * @eof: whether this signifies the last READDIR for this directory.
  */
-void
+int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    size_t nents, void *base, size_t size, int eof)
+    int *nents, void *base, size_t size, int eof, slfgen_t fgen)
 {
 	struct pscfs_dirent *dirent = NULL;
 	struct dircache_ent *dce, *dce2;
@@ -454,9 +454,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	da_off = PSCALLOC(sizeof(*da_off));
 	psc_dynarray_init(da_off);
 
-	psc_dynarray_ensurelen(da_off, nents);
+	psc_dynarray_ensurelen(da_off, *nents);
 
-	for (i = 0, adj = 0; i < (int)nents; i++, dce++) {
+	for (i = 0, adj = 0; i < *nents; i++, dce++) {
 		dirent = PSC_AGP(base, adj);
 
 		psclog_debug("fid="SLPRI_FID" pfd_off=%"PRId64" "
@@ -489,13 +489,38 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl,
 		    &dce->dce_key);
-#if 0
-		if (d->fcmh_sstb.sst_fg.fg_gen !=
-		    mq->fg.fg_gen) {
+
+		/*
+		 * As the bucket lock is now held, this entry is
+		 * immutable and cannot race with other operations (e.g.
+		 * unlink).
+		  */
+		if (d->fcmh_sstb.sst_fg.fg_gen != fgen) {
+			psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+			*nents = i;
+			DYNARRAY_FOREACH_CONT(dce, i, da_off)
+				psc_pool_return(dircache_ent_pool, dce);
+			pfl_dynarray_truncate(da_off, *nents);
+
+			if (*nents == 0) {
+				/*
+				 * We were unable to use any ents from
+				 * the page so just treat it like a
+				 * wholesale error and toss the entire
+				 * page out.
+				 */
+				psc_dynarray_free(da_off);
+				PSCFREE(da_off);
+				return (-ESTALE);
+			}
+
+			eof = 0;
+
 			OPSTAT_INCR("msl.readdir-stale");
-			PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
+			break;
 		}
-#endif
+
 		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 		if (dce2 && dce2->dce_flags & DCEF_HOLD) {
@@ -532,6 +557,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
+	return (0);
 }
 
 /*

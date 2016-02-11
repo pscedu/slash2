@@ -1410,19 +1410,21 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 /*
  * Perform successful READDIR RPC reception processing.
  */
-void
+int
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
-    int eof, int nents, int size, void *base)
+    int eof, int nents, int size, void *base, slfgen_t fgen)
 {
 	struct srt_readdir_ent *e;
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
-	int i;
+	int rc, i;
 
 	ebase = PSC_AGP(base, size);
 
-	dircache_reg_ents(d, p, nents, base, size, eof);
+	rc = dircache_reg_ents(d, p, &nents, base, size, eof, fgen);
+	if (rc)
+		return (rc);
 	DIRCACHE_WAKE(d);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		fgp = &e->sstb.sst_fg;
@@ -1440,11 +1442,14 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
-			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
-
-			if (!f->fcmh_sstb.sst_nlink)
-				// XXX don't enter into namecache
-				OPSTAT_INCR("msl.namecache-junk");
+			/*
+			 * Race: entry was entered into namecache, file
+			 * system unlink occurred, then we tried to
+			 * refresh stat(2) attributes.  This is OK
+			 * however, since namecache is synchronized with
+			 * unlink, we just did extra work here.
+			 */
+//			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
 
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
@@ -1459,6 +1464,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	DIRCACHE_ULOCK(d);
+	return (0);
 }
 
 /*
@@ -1505,8 +1511,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			if (rc)
 				PFL_GOTOERR(error, rc);
 		}
-		msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size,
-		    dentbuf);
+		rc = msl_readdir_finish(d, p, mp->eof, mp->nents,
+		    mp->size, dentbuf, mq->fg.fg_gen);
+		if (rc)
+			goto error;
 		dentbuf = NULL;
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -2489,8 +2497,13 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * evict.
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
-	    msl_fcmh_load_fg(&mp->srr_clattr.sst_fg, &ch, pfr) == 0) {
-		slc_fcmh_setattr(ch, &mp->srr_clattr);
+	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
+	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+		if (!mp->srr_clattr.sst_nlink) {
+			c->fcmh_flags |= FCMH_DELETED;
+			OPSTAT_INCR("msl.clobber");
+		}
+		slc_fcmh_setattr_locked(ch, &mp->srr_clattr);
 		fcmh_op_done(ch);
 	}
 
