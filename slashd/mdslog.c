@@ -493,6 +493,8 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
  * We encode the cursor creation time and hostname into the log file
  * names to minimize collisions.  If undetected, these collisions can
  * lead to insidious bugs, especially when on-disk format changes.
+ *
+ * It is called via pj->pj_distill_handler().
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje,
