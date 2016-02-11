@@ -505,7 +505,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 }
 
 /*
- * Handle journal replay events.
+ * Handle journal replay events. It is called from pjournal_replay().
  */
 int
 mds_replay_handler(struct psc_journal_enthdr *pje)
