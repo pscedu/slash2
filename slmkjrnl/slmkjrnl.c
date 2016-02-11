@@ -208,7 +208,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		printf("fid=%016"PRIx64" bmap_crc", u.sjbc->sjbc_fid);
 		break;
 	case MDS_LOG_BMAP_SEQ:
-		printf("lwm=%"PRIx64" hwm=%"PRIx64,
+		printf("lwm=%"PRIu64" hwm=%"PRIu64,
 		    u.sjsq->sjbsq_low_wm,
 		    u.sjsq->sjbsq_high_wm);
 		break;
