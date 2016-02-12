@@ -2500,7 +2500,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
 	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
 		if (!mp->srr_clattr.sst_nlink) {
-			c->fcmh_flags |= FCMH_DELETED;
+			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
 		}
 		slc_fcmh_setattr_locked(ch, &mp->srr_clattr);
