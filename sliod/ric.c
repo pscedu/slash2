@@ -386,6 +386,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap *b;
 	uint32_t i;
 
+	struct timespec ts0, ts1, delta;
+
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
@@ -410,9 +412,17 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
 			FCMH_ULOCK(f);
+
+			PFL_GETTIMESPEC(&ts0);
+
 			fsync_time = CURRENT_SECONDS;
 			rc = fsync(fcmh_2_fd(f));
 			fsync_time = CURRENT_SECONDS - fsync_time;
+
+			PFL_GETTIMESPEC(&ts1);
+			timespecsub(&ts1, &ts0, &delta);
+			OPSTAT_ADD("rlsbmap-fsync-usecs",
+			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
 
 			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
 				OPSTAT_INCR("fsync-slow");
