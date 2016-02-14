@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 	sl_sys_upnonce = psc_random32();
 
 	slcfg_local->cfg_fidcachesz = IOS_FIDCACHE_SIZE;
-	slcfg_local->cfg_slab_cache_size = 64;
+	slcfg_local->cfg_slab_cache_size = (size_t)64 * 1024 * 1024;
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
