@@ -79,7 +79,11 @@ sl_buffer_cache_init(void)
 
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
 
-	nbuf = slcfg_local->cfg_fidcachesz;
+	if (slcfg_local->cfg_slab_cache_size < SLAB_CACHE_MIN)
+		psc_fatalx("invalid slab_cache_size setting; "
+		    "minimum allowed is %zu", SLAB_CACHE_MIN);
+
+	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
 	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",

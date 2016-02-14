@@ -41,6 +41,8 @@ struct sl_buffer {
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
+#define SLAB_CACHE_MIN		((size_t)64 * 1024 * 1024)	/* 64MiB */
+
 void sl_buffer_cache_init(void);
 
 extern struct psc_poolmgr	*sl_bufs_pool;
