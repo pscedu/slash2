@@ -2640,6 +2640,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
