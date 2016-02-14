@@ -173,7 +173,7 @@ struct lnetif_pair {
 
 #define	MDS_FIDCACHE_SIZE	65536
 #define	IOS_FIDCACHE_SIZE	4096
-#define	MSL_FIDCACHE_SIZE	2048	
+#define	MSL_FIDCACHE_SIZE	2048
 
 /* local (host-specific settings) configuration */
 struct slcfg_local {
@@ -182,6 +182,7 @@ struct slcfg_local {
 	char			*cfg_allowexe;
 	size_t			 cfg_arc_max;
 	size_t			 cfg_fidcachesz;
+	size_t			 cfg_slab_cache_size;
 	char			*cfg_fsroot;
 	char			 cfg_prefmds[RES_NAME_MAX];
 	char			 cfg_prefios[RES_NAME_MAX];
