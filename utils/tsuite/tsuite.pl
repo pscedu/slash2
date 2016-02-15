@@ -270,6 +270,8 @@ sub waitjobs {
 	}
 	alarm 0;
 
+	debug_msg "waiting on [@$pids] complete";
+
 	@$pids = ();
 }
 
@@ -1074,11 +1076,17 @@ EOF
 	waitjobs \@pids, $step_timeout, WF_NONFATAL;
 }
 
+$SIG{INT} = 'IGNORE';
 cleanup();
+$SIG{INT} = 'DEFAULT';
 
 close WR;
 
+debug_msg "waiting for reader thread";
+
 $reader_thr->join();
+
+debug_msg "examining output";
 
 lock @all_output;
 
