@@ -2248,12 +2248,10 @@ mds_journal_init(uint64_t fsuuid)
 
 	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
-
 	psclogs_info(SLMSS_INFO, "bmap sequence number LWM after replay is %"PRId64,
-	    mds_cursor.pjc_seqno_lwm);
+	    slm_bmap_leases.btt_minseq);
 	psclogs_info(SLMSS_INFO, "bmap sequence number HWM after replay is %"PRId64,
-	    mds_cursor.pjc_seqno_hwm);
+	    slm_bmap_leases.btt_maxseq);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);
