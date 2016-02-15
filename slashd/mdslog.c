@@ -2251,8 +2251,8 @@ mds_journal_init(uint64_t fsuuid)
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 
 	mds_bmap_getcurseq(&hwm, &lwm);
-	psclog_info("Last bmap sequence number LWM is %"PRId64, lwm);
-	psclog_info("Last bmap sequence number HWM is %"PRId64, hwm);
+	psclogs_info(SLMSS_INFO, "Last bmap sequence number LWM is %"PRId64, lwm);
+	psclogs_info(SLMSS_INFO, "Last bmap sequence number HWM is %"PRId64, hwm);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);
