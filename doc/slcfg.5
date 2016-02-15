@@ -55,7 +55,7 @@ to the given value
 .Ar val .
 The following variables may be set:
 .Bl -tag -offset 3n -width 1n
-.It Ic allow_exec Pq optional; client-only
+.It Ic allow_exec Pq optional; CLI-only
 Executable
 .Xr open 2
 access list, separated by colons
@@ -147,73 +147,72 @@ A resource specification has the following form:
 Resources can specify individual systems or clusters of systems.
 Each member node of a cluster must also have its own resource profile.
 Resource specifications recognize the following variables:
-.Pp
-.Bl -tag -offset 3n -width jnrldevX -compact
+.Bl -tag -offset 3n -width 3n
+.It Ic allow_exec Pq optional; CLI-only
+Specify a list of colon-delimited pathnames that are allowed to be used
+to access the file system.
 .It Ic arc_max Pq optional; MDS-only
+Set the maximum size of the general runtime file system cache in MDS,
+which internally is the ZFS ARC.
 .It Ic desc Pq optional
 Short description of the resource.
 .It Ic fidcachesz Pq optional
+Set the number of entries in the FID cache.
 .It Ic flags
-.It Ic fsroot
-For
-.Xr sliod 8 ,
-the file system root where backend data is stored.
+Set parameters.
+The following parameters are recognized:
+.Pp
+.Bl -tag -width disable_biaXX -offset 3n -compact
+.It Ic disable_bia
+disable writes
+.El
+.It Ic fsroot Pq IOS-only
+The file system root where backend data is stored.
 This directory must be initialized with
 .Xr slmkfs 8 .
 .It Ic id
 Numerical identifier for the resource, required to be unique for all
 resources in a site.
-.It Ic ios
+.It Ic ios Pq IOS-only
 One or more resource names comprising the cluster, separated by comma
 delimiters
-.Pq applies only to clusters .
-.It Ic journal
+.Pq applies only to resources of cluster types .
+.It Ic journal Pq MDS-only
 Set the path of the operation journal file.
 May be a direct device for increased performance.
 Defaults to
 .Pa /var/lib/slash/op-journal .
-This setting applies to
-.Xr slashd 8
-only.
 .It Ic nids
 One or more host addresses this resource identifies through.
 Domain name services are accessed as necessary and the
 .Tn LNET
 network may be specified if it cannot be unambiguously determined.
-.It Ic pref_ios
+.It Ic pref_ios Pq CLI-only
 Preferred
 .Tn I/O
 system resource name.
-This setting applies to
-.Xr mount_slash 8
-only.
-.It Ic pref_mds
+.It Ic pref_mds Pq CLI- and IOS-only
 Default
 .Tn MDS
 resource name.
-This setting applies to
-.Xr sliod 8
-and
-.Xr mount_slash 8
-only.
-.It Ic self_test
+.It Ic self_test Pq IOS-only
 Command to run occasionally as a self health test to report to the
 .Tn MDS
 to indicate high level file system backend or other kinds of problems
-.Pq ION only .
 .It Ic type
 A required resource type used to distinguish behavioral characteristics:
 .Pp
 .Bl -tag -width cluster_noshare_fsX -offset 3n -compact
-.It Ic archival_fs
-Potentially long delay storage e.g. tape archiver systems
 .It Ic mds
 .Tn SLASH2
-metadata servers
+metadata server
+.Pp
+.It Ic archival_fs
+Potentially long delay storage e.g. tape archiver systems
 .It Ic parallel_lfs_compnt
 Node in shared parallel file system
 .It Ic standalone_fs
-Independent file systems
+Independent file system
 .Pp
 .It Ic parallel_lfs
 Cluster composed of one or more nodes sharing a parallel file system
@@ -222,23 +221,17 @@ Cluster composed of one or more nodes with independent
 .Pq non-shared
 file systems
 .El
+.It Ic slab_cache_size Pq IOS-only
+Set the maximum size of the slab cache.
+Slabs are used to hold file data in memory.
 .It Ic zpool_name Pq MDS-only
 The
 .Tn ZFS
 pool name for the backend metadata storage.
-This setting applies to
-.Xr slashd 8
-only.
 .It Ic zpool_cache Pq MDS-only
 The
 .Tn ZFS
 pool cache file for loading the backend metadata storage.
-This setting applies to
-.Xr slashd 8
-only.
-
-
-
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -255,53 +248,93 @@ set port=1000;
 set nets=tcp10;
 
 site @MYSITE {
-  site_desc	= "my site name";
-  site_id		= 1;
+	site_desc	= "my site name";
+	site_id		= 1;
 
-  resource test {
-    desc	= "test network";
-    type	= mds;
-    id		= 1;
-    fsroot	= /tmp/slashfs;
-    nid		= 10.32.5.82;
-  }
+	resource test {
+		desc	= "test network";
+		type	= mds;
+		id	= 1;
+		fsroot	= /tmp/slashfs;
+		nid	= 10.32.5.82;
+	}
 
-  resource par0 { type = parallel_lfs_compnt; id = 101; nids = 10.1.1.1; }
-  resource par1 { type = parallel_lfs_compnt; id = 102; nids = 10.1.1.2; }
-  resource par2 { type = parallel_lfs_compnt; id = 103; nids = 10.1.1.3; }
-  resource par3 { type = parallel_lfs_compnt; id = 104; nids = 10.1.1.4; }
+	resource par0 {
+		type	= parallel_lfs_compnt;
+		id	= 101;
+		nids	= 10.1.1.1;
+		fsroot	= /parstore;
+	}
 
-  resource parfs {
-    desc	= "my parallel file system";
-    type	= parallel_lfs;
-    id		= 199;
-    ios		= parfs0,
-		  parfs1,
-		  parfs2,
-		  parfs3;
-  }
+	resource par1 {
+		type	= parallel_lfs_compnt;
+		id	= 102;
+		nids	= 10.1.1.2;
+		fsroot	= /parstore;
+	}
 
-  resource bigstore0 { type = archival_fs; id = 201; nids = 10.1.2.1; }
-  resource bigstore1 { type = archival_fs; id = 202; nids = 10.1.2.2; }
-  resource bigstore2 { type = archival_fs; id = 203; nids = 10.1.2.3; }
-  resource bigstore3 { type = archival_fs; id = 204; nids = 10.1.2.4; }
+	resource par2 {
+		type	= parallel_lfs_compnt;
+		id	= 103;
+		nids	= 10.1.1.3;
+		fsroot	= /parstore;
+	}
 
-  resource bigstore {
-    desc	= "my archival storage system";
-    type	= cluster_noshare_lfs;
-    id		= 299;
-    ios		= bigstore0@MYSITE,
-		  bigstore1@MYSITE,
-		  bigstore2@MYSITE,
-		  bigstore3@MYSITE;
-  }
+	resource par3 {
+		type	= parallel_lfs_compnt;
+		id	= 104;
+		nids	= 10.1.1.4;
+		fsroot	= /parstore;
+	}
 
-  resource user_pc {
-    desc	= "user home network";
-    type	= standalone_fs;
-    id	= 400;
-    nid	= 67.171.74.150;
-  }
+	resource parfs {
+		desc	= "my parallel file system";
+		type	= parallel_lfs;
+		id	= 199;
+		ios	= parfs0,
+			  parfs1,
+			  parfs2,
+			  parfs3;
+	}
+}
+
+site @B {
+	resource bigstore0 {
+		type	= archival_fs;
+		id	= 201;
+		nids	= 10.1.2.1;
+		fsroot	= /bigstore0_root;
+	}
+
+	resource bigstore1 {
+		type	= archival_fs;
+		id	= 202;
+		nids	= 10.1.2.2;
+		fsroot	= /bigstore1_root;
+	}
+
+	resource bigstore2 {
+		type	= archival_fs;
+		id	= 203;
+		nids	= 10.1.2.3;
+		fsroot	= /bigstore2_root;
+	}
+
+	resource bigstore3 {
+		type	= archival_fs;
+		id	= 204;
+		nids	= 10.1.2.4;
+	}
+
+	resource bigstore {
+		desc	= "my archival storage system";
+		type	= cluster_noshare_lfs;
+		id	= 299;
+		ios	= bigstore0@B,
+			  bigstore1@B,
+			  bigstore2@B,
+			  bigstore3@B;
+	}
 }
 .Ed
 .Sh SEE ALSO
