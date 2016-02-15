@@ -2248,6 +2248,8 @@ mds_journal_init(uint64_t fsuuid)
 
 	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
+
 	mds_bmap_getcurseq(&hwm, &lwm);
 	psclog_info("Last bmap sequence number LWM is %"PRId64, lwm);
 	psclog_info("Last bmap sequence number HWM is %"PRId64, hwm);
