@@ -1317,9 +1317,9 @@ mds_open_cursor(void)
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
 	    mds_cursor.pjc_seqno_lwm);
 
-	psclog_info("Last bmap sequence number LWM prior to replay is %"PRId64,
+	psclogs_info(SLMSS_INFO, "bmap sequence number LWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
-	psclog_info("Last bmap sequence number HWM prior to replay is %"PRId64,
+	psclogs_info(SLMSS_INFO, "bmap sequence number HWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
 
 	tm = mds_cursor.pjc_timestamp;
@@ -1903,7 +1903,7 @@ mds_journal_init(uint64_t fsuuid)
 	char *journalfn, fn[PATH_MAX];
 	int i, ri, rc, max, nios, count, stale, total, idx, npeers;
 	uint64_t last_update_xid = 0, last_distill_xid = 0;
-	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0;
+	uint64_t lwm, batchno, last_reclaim_xid = 0;
 	struct reclaim_prog_entry *rbase, *rp;
 	struct update_prog_entry *ubase, *up;
 	struct resprof_mds_info *rpmi;
@@ -2250,9 +2250,10 @@ mds_journal_init(uint64_t fsuuid)
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 
-	mds_bmap_getcurseq(&hwm, &lwm);
-	psclogs_info(SLMSS_INFO, "Last bmap sequence number LWM is %"PRId64, lwm);
-	psclogs_info(SLMSS_INFO, "Last bmap sequence number HWM is %"PRId64, hwm);
+	psclogs_info(SLMSS_INFO, "bmap sequence number LWM after replay is %"PRId64,
+	    mds_cursor.pjc_seqno_lwm);
+	psclogs_info(SLMSS_INFO, "bmap sequence number HWM after replay is %"PRId64,
+	    mds_cursor.pjc_seqno_hwm);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);
