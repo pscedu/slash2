@@ -198,7 +198,7 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	u.p = PJE_DATA(pje);
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	printf("%6d: %3x %4"PRIx64" %4"PRIx64" ",
+	printf("%10d  %3x %12"PRId64" %12"PRId64"  ",
 	    slot, type, pje->pje_xid, pje->pje_txg);
 	switch (type) {
 	case MDS_LOG_BMAP_REPLS:
@@ -360,11 +360,11 @@ sl_journal_dump(const char *fn)
 	    "  entry start offset: %"PRId64"\n"
 	    "  format time: %s"
 	    "  uuid: %"PRIx64"\n"
-	    "  %4s  %3s %4s %4s %s\n",
+	    "  %8s %3s %12s %12s  %s\n",
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off,
 	    ctime(&ts), pjh->pjh_fsuuid,
-	    "idx", "typ", "xid", "txg", "details");
+	    "idx", "type", "xid", "txg", "details");
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 	    PAF_PAGEALIGN);
