@@ -38,7 +38,7 @@ SRCS+=		${SLASH_BASE}/share/slutil.c
 SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 
-MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl
+MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl pfl-hdrs
 
 DEFINES+=	-D_SLASH_CLIENT
 
