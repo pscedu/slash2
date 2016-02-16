@@ -1208,12 +1208,9 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		PFL_GOTOERR(out, rc);
 
  retry:
-	if (isfile)
-		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp,
-		    rc);
-	else
-		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_RMDIR, rq, mq, mp,
-		    rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR, 
+	    rq, mq, mp, rc);
+
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
