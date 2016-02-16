@@ -439,7 +439,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  */
 int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int *nents, void *base, size_t size, int eof, slfgen_t fgen)
+    int *nents, void *base, size_t size, int eof)
 {
 	struct pscfs_dirent *dirent = NULL;
 	struct dircache_ent *dce, *dce2;
@@ -495,7 +495,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		 * immutable and cannot race with other operations (e.g.
 		 * unlink).
 		  */
-		if (d->fcmh_sstb.sst_fg.fg_gen != fgen) {
+		if (p->dcp_dirgen != fcmh_2_gen(d)) {
 			psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 			*nents = i;

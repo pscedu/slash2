@@ -1410,7 +1410,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
  */
 int
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
-    int eof, int nents, int size, void *base, slfgen_t fgen)
+    int eof, int nents, int size, void *base)
 {
 	struct srt_readdir_ent *e;
 	struct sl_fidgen *fgp;
@@ -1420,7 +1420,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 	ebase = PSC_AGP(base, size);
 
-	rc = dircache_reg_ents(d, p, &nents, base, size, eof, fgen);
+	rc = dircache_reg_ents(d, p, &nents, base, size, eof);
 	if (rc)
 		return (rc);
 	DIRCACHE_WAKE(d);
@@ -1510,7 +1510,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 				PFL_GOTOERR(error, rc);
 		}
 		rc = msl_readdir_finish(d, p, mp->eof, mp->nents,
-		    mp->size, dentbuf, mq->fg.fg_gen);
+		    mp->size, dentbuf);
 		if (rc)
 			goto error;
 		dentbuf = NULL;
