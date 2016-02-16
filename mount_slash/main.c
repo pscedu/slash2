@@ -1155,14 +1155,14 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#define msl_unlink_file(pfr, pinum, name, pp)			\
-	msl_unlink((pfr), (pinum), (name), (pp), 1)
-#define msl_unlink_dir(pfr, pinum, name, pp)			\
-	msl_unlink((pfr), (pinum), (name), (pp), 0)
+#define msl_unlink_file(pfr, pinum, name)			\
+	msl_unlink((pfr), (pinum), (name), 1)
+#define msl_unlink_dir(pfr, pinum, name)			\
+	msl_unlink((pfr), (pinum), (name), 0)
 
 __static void 
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
-    struct fidc_membh **pp, int isfile)
+    int isfile)
 {
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1268,7 +1268,9 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 	if (c)
 		fcmh_op_done(c);
-	*pp = p;
+	if (p)
+		fcmh_op_done(p);
+
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1278,22 +1280,14 @@ void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct fidc_membh *p = NULL;
-
-	msl_unlink_file(pfr, pinum, name, &p);
-	if (p)
-		fcmh_op_done(p);
+	msl_unlink_file(pfr, pinum, name);
 }
 
 void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct fidc_membh *p = NULL;
-
-	msl_unlink_dir(pfr, pinum, name, &p);
-	if (p)
-		fcmh_op_done(p);
+	msl_unlink_dir(pfr, pinum, name);
 }
 
 void
