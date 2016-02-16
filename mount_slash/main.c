@@ -1160,7 +1160,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 #define msl_unlink_dir(pfr, pinum, name, pp)			\
 	msl_unlink((pfr), (pinum), (name), (pp), 0)
 
-__static int
+__static void 
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     struct fidc_membh **pp, int isfile)
 {
@@ -1253,11 +1253,18 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	}
 
  out:
-	namecache_delete(&dcu, rc);
 	psclogs_diag(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
+
+
+	if (isfile)
+		pscfs_reply_unlink(pfr, rc);
+	else
+		pscfs_reply_rmdir(pfr, rc);
+
+	namecache_delete(&dcu, rc);
 
 	if (c)
 		fcmh_op_done(c);
@@ -1265,7 +1272,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
 }
 
 void
@@ -1273,10 +1279,8 @@ mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct fidc_membh *p = NULL;
-	int rc;
 
-	rc = msl_unlink_file(pfr, pinum, name, &p);
-	pscfs_reply_unlink(pfr, rc);
+	msl_unlink_file(pfr, pinum, name, &p);
 	if (p)
 		fcmh_op_done(p);
 }
@@ -1286,10 +1290,8 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct fidc_membh *p = NULL;
-	int rc;
 
-	rc = msl_unlink_dir(pfr, pinum, name, &p);
-	pscfs_reply_rmdir(pfr, rc);
+	msl_unlink_dir(pfr, pinum, name, &p);
 	if (p)
 		fcmh_op_done(p);
 }
