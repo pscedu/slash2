@@ -1155,11 +1155,6 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#define msl_unlink_file(pfr, pinum, name)			\
-	msl_unlink((pfr), (pinum), (name), 1)
-#define msl_unlink_dir(pfr, pinum, name)			\
-	msl_unlink((pfr), (pinum), (name), 0)
-
 __static void 
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     int isfile)
@@ -1280,14 +1275,14 @@ void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	msl_unlink_file(pfr, pinum, name);
+	msl_unlink(pfr, pinum, name, 1);
 }
 
 void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	msl_unlink_dir(pfr, pinum, name);
+	msl_unlink(pfr, pinum, name, 0);
 }
 
 void
