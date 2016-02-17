@@ -491,10 +491,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    &dce->dce_key);
 
 		/*
-		 * As the bucket lock is now held, this entry is
-		 * immutable and cannot race with other operations (e.g.
-		 * unlink).
-		  */
+		 * As the bucket lock is now held, this entry is immutable 
+		 * and cannot race with other operations (e.g. unlink).
+		 */
 		if (p->dcp_dirgen != fcmh_2_gen(d)) {
 			psc_hashbkt_put(&msl_namecache_hashtbl, b);
 

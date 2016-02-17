@@ -1117,6 +1117,10 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
 	}
+	/*
+ 	 * Note that the name cache is actually disconnected from the
+ 	 * fcmh cache. So we must populate the name cache carefully.
+ 	 */
 	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
 	FCMH_ULOCK(c);
 
