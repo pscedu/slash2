@@ -159,10 +159,17 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
+int				 msl_df_mode;
 int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
+
+struct statvfs			 statfs_sfb;
+int				 statfs_flag;
+struct timespec			 statfs_time;
+struct psc_spinlock		 statfs_lock = SPINLOCK_INIT;
+struct psc_waitq		 statfs_waitq = PSC_WAITQ_INIT;
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -2526,9 +2533,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		sl_csvc_decref(csvc);
 }
 
+#define MSL_STATFS_EXPIRE_S 4
+
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
+	int rc = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct resprof_cli_info *rpci;
@@ -2537,35 +2547,53 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct srm_statfs_rep *mp;
 	struct timespec expire;
 	struct statvfs sfb;
-	int rc = 0;
+	sl_ios_id_t iosid;
 
-//	slc_getfscreds(pfr, &pcr);
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
+	int *flagp;
+	struct statvfs *sfbp;
+	struct timespec *timep;
+	struct psc_waitq *waitqp;
+	struct psc_spinlock *lockp;
 
-	pref_ios = msl_get_pref_ios();
 	PFL_GETTIMESPEC(&expire);
-#define MSL_STATFS_EXPIRE_S 4
 	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
-	rpci = res2rpci(pref_ios);
-	RPCI_LOCK(rpci);
-	while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
-		RPCI_WAIT(rpci);
-		RPCI_LOCK(rpci);
+	if (msl_df_mode) {
+		pref_ios = msl_get_pref_ios();
+		iosid = pref_ios->res_id;
+		rpci = res2rpci(pref_ios);
+
+		sfbp = &rpci->rpci_sfb;
+		flagp = &rpci->rpci_flags;
+		lockp = &rpci->rpci_lock;
+		waitqp = &rpci->rpci_waitq;
+		timep = &rpci->rpci_sfb_time;
+	} else {
+		iosid = 0;
+		sfbp = &statfs_sfb;
+		flagp = &statfs_flag;
+		lockp = &statfs_lock;
+		waitqp = &statfs_waitq;
+		timep = &statfs_time;
 	}
-	if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
-		memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
-		RPCI_ULOCK(rpci);
+	spinlock(lockp);
+	while (*flagp & RPCIF_STATFS_FETCHING) {
+		psc_waitq_wait(waitqp, lockp);
+		spinlock(lockp);
+	}
+	if (timespeccmp(timep, &expire, >)) {
+		memcpy(&sfb, sfbp, sizeof(sfb));
+		freelock(lockp);
 		PFL_GOTOERR(out, 0);
 	}
-	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
-	RPCI_ULOCK(rpci);
+	*flagp |= RPCIF_STATFS_FETCHING;
+	freelock(lockp);
 
  retry:
 	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
-	mq->iosid = pref_ios->res_id;
+	mq->iosid = iosid;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2581,16 +2609,14 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sfb.f_fsid = SLASH_FSID;
 
 	PFL_GETTIMESPEC(&expire);
-	RPCI_LOCK(rpci);
-	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
-	rpci->rpci_sfb_time = expire;
+	memcpy(sfbp, &sfb, sizeof(sfb));
+	*timep = expire;
 
-	if (0)
  out:
-		RPCI_LOCK(rpci);
-	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
+	spinlock(lockp);
+	*flagp &= ~RPCIF_STATFS_FETCHING;
+	psc_waitq_wakeall(waitqp);
+	freelock(lockp);
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
