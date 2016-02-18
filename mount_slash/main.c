@@ -2527,9 +2527,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		sl_csvc_decref(csvc);
 }
 
+#define MSL_STATFS_EXPIRE_S 4
+
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
+	int rc = 0, valid = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct resprof_cli_info *rpci;
@@ -2538,35 +2541,35 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct srm_statfs_rep *mp;
 	struct timespec expire;
 	struct statvfs sfb;
-	int rc = 0;
+	sl_ios_id_t iosid;
 
-//	slc_getfscreds(pfr, &pcr);
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
-
-	pref_ios = msl_get_pref_ios();
 	PFL_GETTIMESPEC(&expire);
-#define MSL_STATFS_EXPIRE_S 4
 	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
-	rpci = res2rpci(pref_ios);
-	RPCI_LOCK(rpci);
-	while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
-		RPCI_WAIT(rpci);
+	if (msl_df_mode) {
+		pref_ios = msl_get_pref_ios();
+		rpci = res2rpci(pref_ios);
 		RPCI_LOCK(rpci);
-	}
-	if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
-		memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
+		while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
+			RPCI_WAIT(rpci);
+			RPCI_LOCK(rpci);
+		}
+		if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
+			memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
+			RPCI_ULOCK(rpci);
+			PFL_GOTOERR(out, 0);
+		}
+		rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
 		RPCI_ULOCK(rpci);
-		PFL_GOTOERR(out, 0);
-	}
-	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
-	RPCI_ULOCK(rpci);
+		iosid = pref_ios->res_id;
+	} else
+		iosid = 0;
 
  retry:
 	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->fid = inum;
-	mq->iosid = pref_ios->res_id;
+	mq->iosid = iosid;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2580,18 +2583,19 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sl_internalize_statfs(&mp->ssfb, &sfb);
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
-
 	PFL_GETTIMESPEC(&expire);
-	RPCI_LOCK(rpci);
-	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
-	rpci->rpci_sfb_time = expire;
+	if (msl_df_mode) {
+		memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
+		rpci->rpci_sfb_time = expire;
+	}
 
-	if (0)
  out:
+	if (msl_df_mode) {
 		RPCI_LOCK(rpci);
-	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
+		rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
+		RPCI_WAKE(rpci);
+		RPCI_ULOCK(rpci);
+	}
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
