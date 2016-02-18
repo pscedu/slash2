@@ -1272,6 +1272,17 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		return (0);
 
 	/*
+ 	 * If target to a specific IOS, its ID must be valid.
+ 	 */
+	if (mq->iosid) {
+		r = libsl_id2res(mq->iosid);
+		if (r == NULL) {
+			mp->rc = -SLERR_RES_UNKNOWN;
+			return (0);
+		}
+	}
+
+	/*
 	 * STATFS is gathered from the metadata file system (nfiles) and
 	 * the client's preferred IOS' recent statvfs data (data
 	 * capacity/usage), sent periodically.  When the preferred IOS
@@ -1280,11 +1291,6 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	 */
 	mp->rc = -mdsio_statfs(vfsid, &sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
-	r = libsl_id2res(mq->iosid);
-	if (r == NULL) {
-		mp->rc = -SLERR_RES_UNKNOWN;
-		return (0);
-	}
 	mp->ssfb.sf_frsize = 0;
 	mp->ssfb.sf_blocks = 0;
 	mp->ssfb.sf_bfree = 0;
