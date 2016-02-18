@@ -1294,7 +1294,11 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		return (0);
 
 	sl_externalize_statfs(&sfb, &mp->ssfb);
-	mp->ssfb.sf_frsize = 0;
+
+	/*
+	 * Leave block size and fragment size intact while zeroing all
+	 * other counters.
+	 */
 	mp->ssfb.sf_blocks = 0;
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
