@@ -165,6 +165,12 @@ uint64_t			 msl_pagecache_maxsize;
 
 int				 msl_newent_inherit_groups = 1;
 
+struct statvfs			 statfs_sfb;
+int				 statfs_flag;
+struct timespec			 statfs_time;
+struct psc_spinlock		 statfs_lock = SPINLOCK_INIT;
+struct psc_waitq		 statfs_waitq = PSC_WAITQ_INIT;
+
 struct sl_resource *
 msl_get_pref_ios(void)
 {
@@ -2532,7 +2538,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
-	int rc = 0, valid = 0;
+	int rc = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct resprof_cli_info *rpci;
@@ -2543,26 +2549,44 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct statvfs sfb;
 	sl_ios_id_t iosid;
 
+	int *flagp;
+	struct statvfs *sfbp;
+	struct timespec *timep;
+	struct psc_waitq *waitqp;
+	struct psc_spinlock *lockp;
+
 	PFL_GETTIMESPEC(&expire);
 	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
 	if (msl_df_mode) {
 		pref_ios = msl_get_pref_ios();
-		rpci = res2rpci(pref_ios);
-		RPCI_LOCK(rpci);
-		while (rpci->rpci_flags & RPCIF_STATFS_FETCHING) {
-			RPCI_WAIT(rpci);
-			RPCI_LOCK(rpci);
-		}
-		if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
-			memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
-			RPCI_ULOCK(rpci);
-			PFL_GOTOERR(out, 0);
-		}
-		rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
-		RPCI_ULOCK(rpci);
 		iosid = pref_ios->res_id;
-	} else
+		rpci = res2rpci(pref_ios);
+
+		sfbp = &rpci->rpci_sfb;
+		flagp = &rpci->rpci_flags;
+		lockp = &rpci->rpci_lock;
+		waitqp = &rpci->rpci_waitq;
+		timep = &rpci->rpci_sfb_time;
+	} else {
 		iosid = 0;
+		sfbp = &statfs_sfb;
+		flagp = &statfs_flag;
+		lockp = &statfs_lock;
+		waitqp = &statfs_waitq;
+		timep = &statfs_time;
+	}
+	spinlock(lockp);
+	while (*flagp & RPCIF_STATFS_FETCHING) {
+		psc_waitq_wait(waitqp, lockp);
+		spinlock(lockp);
+	}
+	if (timespeccmp(timep, &expire, >)) {
+		memcpy(&sfb, sfbp, sizeof(sfb));
+		freelock(lockp);
+		PFL_GOTOERR(out, 0);
+	}
+	*flagp |= RPCIF_STATFS_FETCHING;
+	freelock(lockp);
 
  retry:
 	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
@@ -2590,12 +2614,10 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	}
 
  out:
-	if (msl_df_mode) {
-		RPCI_LOCK(rpci);
-		rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
-	}
+	spinlock(lockp);
+	*flagp &= ~RPCIF_STATFS_FETCHING;
+	psc_waitq_wakeall(waitqp);
+	freelock(lockp);
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
