@@ -1290,6 +1290,9 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	 * space.
 	 */
 	mp->rc = -mdsio_statfs(vfsid, &sfb);
+	if (mp->rc)
+		return (0);
+
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	mp->ssfb.sf_frsize = 0;
 	mp->ssfb.sf_blocks = 0;
