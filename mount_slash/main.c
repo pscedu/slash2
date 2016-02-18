@@ -159,6 +159,7 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
+int				 msl_df_mode;
 int				 msl_acl;
 uint64_t			 msl_pagecache_maxsize;
 
