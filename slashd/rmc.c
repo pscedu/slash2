@@ -1321,8 +1321,14 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
-		if (mp->ssfb.sf_frsize == 0)
+		/*
+ 		 * Use the fragment and block sizes of the first
+ 		 * live IOS.
+ 		 */
+		if (mp->ssfb.sf_frsize == 0) {
+			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
 			mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
+		}
 		adj = si->si_ssfb.sf_frsize * 1. / mp->ssfb.sf_frsize;
 		mp->ssfb.sf_blocks += adj * si->si_ssfb.sf_blocks;
 		mp->ssfb.sf_bfree  += adj * si->si_ssfb.sf_bfree;
