@@ -1296,12 +1296,13 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 
 	/*
-	 * Leave block size and fragment size intact while zeroing all
-	 * other counters.
+	 * Zero all except inode related information.
 	 */
-	mp->ssfb.sf_blocks = 0;
+	mp->ssfb.sf_bsize = 0;
+	mp->ssfb.sf_frsize = 0;
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
+
 	if (!RES_ISCLUSTER(r)) {
 		ri = r;
 		single = 1;
