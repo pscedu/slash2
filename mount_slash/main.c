@@ -2607,11 +2607,10 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sl_internalize_statfs(&mp->ssfb, &sfb);
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
+
 	PFL_GETTIMESPEC(&expire);
-	if (msl_df_mode) {
-		memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
-		rpci->rpci_sfb_time = expire;
-	}
+	memcpy(sfbp, &sfb, sizeof(sfb));
+	*timep = expire;
 
  out:
 	spinlock(lockp);
