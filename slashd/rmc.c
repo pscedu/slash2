@@ -1254,17 +1254,49 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	return (0);
 }
 
+void slm_add_statfs(struct srm_statfs_rep *mp, struct sl_resource *ri)
+{
+	double adj;
+	struct sl_mds_iosinfo *si;
+	struct resprof_mds_info *rpmi;
+
+	rpmi = res2rpmi(ri);
+	si = res2iosinfo(ri);
+
+	RPMI_LOCK(rpmi);
+	/*
+	 * IOS has not come online yet and sent us its stats;
+	 * skip it.
+	 */
+	if (si->si_ssfb.sf_frsize == 0) {
+		RPMI_ULOCK(rpmi);
+		return;
+	}
+	/*
+ 	 * Use the fragment and block sizes of the first
+ 	 * live IOS.
+ 	 */
+	if (mp->ssfb.sf_frsize == 0) {
+		mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
+		mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
+	}
+	adj = si->si_ssfb.sf_frsize * 1. / mp->ssfb.sf_frsize;
+	mp->ssfb.sf_blocks += adj * si->si_ssfb.sf_blocks;
+	mp->ssfb.sf_bfree  += adj * si->si_ssfb.sf_bfree;
+	mp->ssfb.sf_bavail += adj * si->si_ssfb.sf_bavail;
+	RPMI_ULOCK(rpmi);
+}
+
 int
 slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
-	int j = 0, single = 0, vfsid;
-	struct resprof_mds_info *rpmi;
-	struct sl_resource *r, *ri;
+	int i, j, vfsid;
+	struct sl_resource *r;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
-	struct sl_mds_iosinfo *si;
 	struct statvfs sfb;
-	double adj;
+	struct sl_site *s;
+	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->fid, &vfsid);
@@ -1274,6 +1306,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	/*
  	 * If target to a specific IOS, its ID must be valid.
  	 */
+	r = NULL;
 	if (mq->iosid) {
 		r = libsl_id2res(mq->iosid);
 		if (r == NULL) {
@@ -1303,40 +1336,20 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
 
-	if (!RES_ISCLUSTER(r)) {
-		ri = r;
-		single = 1;
-		goto single;
+	if (r) {
+		if (RES_ISCLUSTER(r)) {
+			CONF_FOREACH_RESM(s, r, i, m, j)
+				slm_add_statfs(mp, r);
+		} else {
+			slm_add_statfs(mp, r);
+		}
+		return (0);
 	}
-	DYNARRAY_FOREACH(ri, j, &r->res_peers) {
- single:
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(ri);
-		RPMI_LOCK(rpmi);
-		/*
-		 * IOS has not come online yet and sent us its stats;
-		 * skip it.
-		 */
-		if (si->si_ssfb.sf_frsize == 0) {
-			RPMI_ULOCK(rpmi);
-			continue;
-		}
-		/*
- 		 * Use the fragment and block sizes of the first
- 		 * live IOS.
- 		 */
-		if (mp->ssfb.sf_frsize == 0) {
-			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
-			mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
-		}
-		adj = si->si_ssfb.sf_frsize * 1. / mp->ssfb.sf_frsize;
-		mp->ssfb.sf_blocks += adj * si->si_ssfb.sf_blocks;
-		mp->ssfb.sf_bfree  += adj * si->si_ssfb.sf_bfree;
-		mp->ssfb.sf_bavail += adj * si->si_ssfb.sf_bavail;
-		RPMI_ULOCK(rpmi);
 
-		if (single)
-			break;
+	CONF_FOREACH_RESM(s, r, i, m, j) {
+		if (!RES_ISFS(r))
+			continue;
+		slm_add_statfs(mp, r);
 	}
 	return (0);
 }
