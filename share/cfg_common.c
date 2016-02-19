@@ -368,13 +368,16 @@ slcfg_destroy(void)
 			RES_FOREACH_MEMB(r, m, j) {
 				RESM_FOREACH_NID(m, n, k)
 					PSCFREE(n);
+				slcfg_destroy_resm(m);
 				psc_dynarray_free(&m->resm_nids);
 				PSCFREE(m);
 			}
  release_res:
+			slcfg_destroy_res(r);
 			psc_dynarray_free(&r->res_members);
 			PSCFREE(r);
 		}
+		slcfg_destroy_site(s);
 		psc_dynarray_free(&s->site_resources);
 		PSCFREE(s);
 	}

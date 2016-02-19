@@ -50,7 +50,7 @@ slcfg_init_res(struct sl_resource *r)
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
-		if (RES_ISFS(r)) 
+		if (RES_ISFS(r))
 			psc_meter_init(&si->si_batchmeter, 0,
 			    "reclaim-%s", r->res_name);
 		if (r->res_flags & RESF_DISABLE_BIA)
@@ -59,6 +59,11 @@ slcfg_init_res(struct sl_resource *r)
 	if (RES_ISFS(r) || r->res_type == SLREST_MDS)
 		lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq,
 		    br_lentry, "bchrq-%s", r->res_name);
+}
+
+void
+slcfg_destroy_res(__unusedx struct sl_resource *r)
+{
 }
 
 void
@@ -71,7 +76,17 @@ slcfg_init_resm(struct sl_resm *m)
 }
 
 void
+slcfg_destroy_resm(__unusedx struct sl_resm *m)
+{
+}
+
+void
 slcfg_init_site(__unusedx struct sl_site *site)
+{
+}
+
+void
+slcfg_destroy_site(__unusedx struct sl_site *site)
 {
 }
 

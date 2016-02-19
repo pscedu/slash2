@@ -276,6 +276,10 @@ void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
 void			 slcfg_init_site(struct sl_site *);
 
+void			 slcfg_destroy_res(struct sl_resource *);
+void			 slcfg_destroy_resm(struct sl_resm *);
+void			 slcfg_destroy_site(struct sl_site *);
+
 int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
@@ -322,9 +326,9 @@ extern struct psclist_head cfg_lnetif_pairs;
 extern uint32_t		 sl_sys_upnonce;
 extern int		 sl_stk_version;
 
-/**
- * sl_global_id_build - Produce a global, unique identifier for a
- *	resource from its internal identifier.
+/*
+ * Produce a global, unique identifier for a resource from its internal
+ * identifier.
  * @site_id: site identifier.
  * @intres_id: resource identifier, internal to site.
  */

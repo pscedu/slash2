@@ -30,14 +30,36 @@
 #include "slconfig.h"
 
 void
+slc_init_rpci(struct resprof_cli_info *rpci)
+{
+	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
+	INIT_SPINLOCK(&rpci->rpci_lock);
+	psc_waitq_init(&rpci->rpci_waitq);
+}
+
+void
+slc_destroy_rpci(struct resprof_cli_info *rpci)
+{
+	psc_dynarray_free(&rpci->rpci_pinned_bmaps);
+	psc_waitq_destroy(&rpci->rpci_waitq);
+}
+
+void
 slcfg_init_res(struct sl_resource *res)
 {
 	struct resprof_cli_info *rpci;
 
 	rpci = res2rpci(res);
-	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
-	INIT_SPINLOCK(&rpci->rpci_lock);
-	psc_waitq_init(&rpci->rpci_waitq);
+	slc_init_rpci(rpci);
+}
+
+void
+slcfg_destroy_res(struct sl_resource *res)
+{
+	struct resprof_cli_info *rpci;
+
+	rpci = res2rpci(res);
+	slc_destroy_rpci(rpci);
 }
 
 void
@@ -49,12 +71,29 @@ slcfg_init_resm(struct sl_resm *resm)
 	rmci = resm2rmci(resm);
 	if (resm->resm_type == SLREST_ARCHIVAL_FS)
 		lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
-		    car_lentry, "aiorq-%s:%d", r->res_name,
+		    car_lentry, "slash2/aiorq-%s:%d", r->res_name,
 		    psc_dynarray_len(&r->res_members));
 }
 
 void
+slcfg_destroy_resm(struct sl_resm *resm)
+{
+	struct sl_resource *r = resm->resm_res;
+	struct resm_cli_info *rmci;
+
+	rmci = resm2rmci(resm);
+	if (resm->resm_type == SLREST_ARCHIVAL_FS)
+		pfl_listcache_destroy_registered(
+		    &rmci->rmci_async_reqs);
+}
+
+void
 slcfg_init_site(__unusedx struct sl_site *site)
+{
+}
+
+void
+slcfg_destroy_site(__unusedx struct sl_site *site)
 {
 }
 
