@@ -3231,7 +3231,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pflog_get_fsctx_uid = NULL;
 	pflog_get_fsctx_pid = NULL;
 
-	msl_destroy_rpci(&msl_statfs_aggr_rpci);
+	slc_destroy_rpci(&msl_statfs_aggr_rpci);
 
 	psc_subsys_unregister(SLCSS_FSOP);
 	psc_subsys_unregister(SLCSS_INFO);
@@ -3833,7 +3833,7 @@ msl_init(void)
 	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
 
 	sl_sys_upnonce = psc_random32();
-	msl_init_rpci(&msl_statfs_aggr_rpci);
+	slc_init_rpci(&msl_statfs_aggr_rpci);
 
 	slcfg_local->cfg_fidcachesz = MSL_FIDCACHE_SIZE;
 

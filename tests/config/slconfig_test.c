@@ -64,12 +64,27 @@ slcfg_init_res(__unusedx struct sl_resource *res)
 }
 
 void
+slcfg_destroy_res(__unusedx struct sl_resource *res)
+{
+}
+
+void
 slcfg_init_resm(__unusedx struct sl_resm *resm)
 {
 }
 
 void
+slcfg_destroy_resm(__unusedx struct sl_resm *resm)
+{
+}
+
+void
 slcfg_init_site(__unusedx struct sl_site *site)
+{
+}
+
+void
+slcfg_destroy_site(__unusedx struct sl_site *site)
 {
 }
 

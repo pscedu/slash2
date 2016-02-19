@@ -78,7 +78,6 @@ slcfg_init_resm(struct sl_resm *resm)
 void
 slcfg_destroy_resm(struct sl_resm *resm)
 {
-	struct sl_resource *r = resm->resm_res;
 	struct resm_cli_info *rmci;
 
 	rmci = resm2rmci(resm);
