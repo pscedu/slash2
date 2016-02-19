@@ -296,8 +296,7 @@ batchrq_decref(struct batchrq *br, int rc)
 	BATCHMGR_ULOCK();
 
 	if (finish) {
-		if (br->br_rq)
-			pscrpc_req_finished(br->br_rq);
+		pscrpc_req_finished(br->br_rq);
 		sl_csvc_decref(br->br_csvc);
 
 		br->br_cbf(br, br->br_rc);
