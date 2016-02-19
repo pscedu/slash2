@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# mfio
 # fio
 # IOR
 # bonnie
@@ -18,4 +19,4 @@
 #	zfs
 #	lustre testing suite
 # torture
-# mysql
+# gcc

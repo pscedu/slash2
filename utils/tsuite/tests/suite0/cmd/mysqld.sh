@@ -4,13 +4,15 @@
 
 dep wget
 
-V=5.7.11
+V=5.6.28
 
 exclude_time_start
-wget -nv http://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-$V.tar.gz
+wget -nv http://downloads.mysql.com/archives/get/file/mysql-$V.tar.gz
 exclude_time_end
 
-tar zxf mysql-$V.tar.gz
+decompress_gz mysql-$V.tar.gz | tar fx -
 cd mysql-$V
-./configure
+cmake .
 make
+cd mysql-test
+./mysql-test-run
