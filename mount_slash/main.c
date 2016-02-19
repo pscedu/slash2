@@ -2529,7 +2529,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		sl_csvc_decref(csvc);
 }
 
-#define MSL_STATFS_EXPIRE_S 4
+#define MSL_STATFS_EXPIRE_S	4
+#define MSL_STATFS_AGGR_IOSID	0
 
 void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
@@ -2552,7 +2553,6 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		iosid = pref_ios->res_id;
 		rpci = res2rpci(pref_ios);
 	} else {
-#define MSL_STATFS_AGGR_IOSID 0
 		iosid = MSL_STATFS_AGGR_IOSID;
 		rpci = &msl_statfs_aggr_rpci;
 	}
