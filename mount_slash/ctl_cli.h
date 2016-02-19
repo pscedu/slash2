@@ -117,6 +117,8 @@ struct msctlmsg_bmpce {
 #define MSCMT_GETBIORQ		(NPCMT + 11)
 #define MSCMT_GETBMPCE		(NPCMT + 12)
 
+#define SLASH_FSID		0x51a54
+
 extern struct psc_thread	*msl_ctlthr0;
 
 #endif /* _SL_CTL_CLI_H_ */
