@@ -1254,28 +1254,34 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	return (0);
 }
 
-void slm_add_statfs(struct srm_statfs_rep *mp, struct sl_resource *ri)
+/*
+ * Add a resource's statfs metrics to the accumulator in @mp.
+ * Clusters and aggregates need to to be adjusted for a uniform fragment
+ * size (f_frsize).
+ */
+void
+slm_add_statfs(struct srm_statfs_rep *mp, struct sl_resource *r)
 {
 	double adj;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
 
-	rpmi = res2rpmi(ri);
-	si = res2iosinfo(ri);
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
 	RPMI_LOCK(rpmi);
+
 	/*
-	 * IOS has not come online yet and sent us its stats;
-	 * skip it.
+	 * IOS has not come online yet and sent us its stats; skip it.
 	 */
 	if (si->si_ssfb.sf_frsize == 0) {
 		RPMI_ULOCK(rpmi);
 		return;
 	}
+
 	/*
- 	 * Use the fragment and block sizes of the first
- 	 * live IOS.
- 	 */
+	 * Use the fragment and block sizes of the first live IOS.
+	 */
 	if (mp->ssfb.sf_frsize == 0) {
 		mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
 		mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
@@ -1304,8 +1310,8 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		return (0);
 
 	/*
- 	 * If target to a specific IOS, its ID must be valid.
- 	 */
+	 * If target to a specific IOS, its ID must be valid.
+	 */
 	r = NULL;
 	if (mq->iosid) {
 		r = libsl_id2res(mq->iosid);
