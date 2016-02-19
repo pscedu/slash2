@@ -32,9 +32,6 @@ struct statfs;
 struct srt_stat;
 struct srt_statfs;
 
-#define	SL_FS_BLKSIZE	(128 * 1024)
-#define	SL_FS_FRGSIZE	(128 * 1024)
-
 enum rw	fflags_2_rw(int);
 
 void	sl_externalize_stat(const struct stat *, struct srt_stat *);
