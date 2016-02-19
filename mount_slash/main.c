@@ -2588,13 +2588,11 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sl_internalize_statfs(&mp->ssfb, &sfb);
 
 	PFL_GETTIMESPEC(&expire);
-	RPCI_LOCK(rpci);
 	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
 	rpci->rpci_sfb_time = expire;
 
-	if (0)
  out:
-		RPCI_LOCK(rpci);
+	RPCI_LOCK(rpci);
 	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
