@@ -2586,7 +2586,6 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-	sfb.f_bsize = MSL_FS_BLKSIZ;
 
 	PFL_GETTIMESPEC(&expire);
 	RPCI_LOCK(rpci);
