@@ -854,8 +854,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
-	psc_ctlparam_register_var("sys.df", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &msl_df_mode);
+	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_statfs_pref_ios_only);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

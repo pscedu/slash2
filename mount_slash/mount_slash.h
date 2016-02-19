@@ -243,6 +243,9 @@ res2rpci(struct sl_resource *res)
 	return (resprof_get_pri(res));
 }
 
+void	slc_init_rpci(struct resprof_cli_info *);
+void	slc_destroy_rpci(struct resprof_cli_info *);
+
 /* CLI-specific data for struct sl_resm */
 struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
@@ -370,7 +373,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_direct_io;
 extern int			 msl_root_squash;
-extern int			 msl_df_mode;
+extern int			 msl_statfs_pref_ios_only;
 extern int			 msl_max_nretries;
 extern int			 msl_acl;
 extern int			 msl_predio_window_size;

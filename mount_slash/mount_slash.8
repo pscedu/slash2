@@ -117,6 +117,14 @@ against accidental behavior.
 Specify an alternative configuration file.
 Defaults to
 .Pa /etc/slash/slcfg .
+.It Ic statfs_pref_ios_only
+When retrieving
+.Xr statfs 2
+information
+.Pq e.g.\& via Xr df 1 ,
+only include the configured preferred IOS instead of the aggregate sum
+across all resources in the deployment.
+Defaults to off.
 .El
 .It Fl U
 Perform a
