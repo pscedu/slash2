@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl rpc %
-.Dd December 11, 2015
+.Dd February 20, 2016
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -83,9 +83,10 @@ lookups for network addresses.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	log_xr => "in\n.Xr slashd 8\n",
 .\"	params => {
-.\"		"sys.namespace.stats" => "Communication statistics for\n.Tn MDS Ns -to- Ns Tn MDS\nnamespace updates.",
-.\"		"sys.nextfid" => "Next file identifier\n.Pq Tn FID\nthat will be used for new file creation.",
+.\"		"sys.next_fid" => "Next file identifier\n.Pq Tn FID\nthat will be used for new file creation.",
 .\"		"sys.global" => "Boolean switch to enable the global mount feature.",
+.\"		'sys.nbrq_outstanding'
+.\"		     => "Number of currently outstanding asynchronous RPCs.",
 .\"		"sys.resources" => <<EOF .
 .\"			Settings and fields specific to network peers.
 .\"			.Bl -tag -width 13n -offset 3n
@@ -237,11 +238,9 @@ See
 .Xr getrusage 2 .
 .It Cm sys.global
 Boolean switch to enable the global mount feature.
-.It Cm sys.namespace.stats
-Communication statistics for
-.Tn MDS Ns -to- Ns Tn MDS
-namespace updates.
-.It Cm sys.nextfid
+.It Cm sys.nbrq_outstanding
+Number of currently outstanding asynchronous RPCs.
+.It Cm sys.next_fid
 Next file identifier
 .Pq Tn FID
 that will be used for new file creation.
