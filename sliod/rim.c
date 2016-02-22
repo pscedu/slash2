@@ -51,6 +51,9 @@
 uint64_t	current_reclaim_xid;
 uint64_t	current_reclaim_batchno;
 
+/*
+ * Handle SRMT_BATCH_RQ request from the MDS.
+ */
 int
 sli_rim_handle_batch(struct pscrpc_request *rq)
 {
