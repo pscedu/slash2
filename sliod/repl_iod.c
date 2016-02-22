@@ -115,6 +115,8 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	struct sl_resource *res = NULL;
 	struct bmap_iod_info *bii;
 	int rc, i;
+	struct fidc_membh *f;
+	struct bmap *b;
 
 	if (fgp->fg_fid == FID_ANY)
 		PFL_GOTOERR(out, rc = -EINVAL);
@@ -136,6 +138,17 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	if (sli_repl_findwq(fgp, bmapno))
 		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);
 
+	/* get an fcmh for the file */
+	rc = sli_fcmh_get(fgp, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	/* get the replication chunk's bmap */
+	rc = bmap_get(f, bmapno, SL_READ, &b);
+	if (rc) {
+		fcmh_op_done(f);
+		PFL_GOTOERR(out, rc);
+	}
+
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
 	INIT_PSC_LISTENTRY(&w->srw_active_lentry);
@@ -149,17 +162,10 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	w->srw_op = op;
 	w->srw_bchrp = bchrp;
 	w->srw_pp = pp;
+	w->srw_fcmh = f;
+	w->srw_bcm = b;
 
-	/* get an fcmh for the file */
-	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	DEBUG_SRW(w, PLL_DEBUG, "created");
-
-	/* get the replication chunk's bmap */
-	rc = bmap_get(w->srw_fcmh, w->srw_bmapno, SL_READ, &w->srw_bcm);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
 	bmap_op_done(w->srw_bcm);
@@ -192,12 +198,6 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 			wk.srw_op = SLI_REPLWKOP_REPL;
 			wk.srw_pp = pp;
 			sli_rmi_issue_repl_schedwk(&wk);
-		}
-
-		if (w) {
-			if (w->srw_fcmh)
-				fcmh_op_done(w->srw_fcmh);
-			psc_pool_return(sli_replwkrq_pool, w);
 		}
 	} else {
 		/* add to current processing list */
