@@ -19,4 +19,4 @@
 #	zfs
 #	lustre testing suite
 # torture
-# gcc
+# libreoffice
