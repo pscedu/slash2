@@ -1306,7 +1306,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	if (!S_ISFIFO(mode))
+	if (!S_ISFIFO(mode) && !S_ISSOCK(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);

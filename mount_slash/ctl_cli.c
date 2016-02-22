@@ -819,7 +819,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
-	psc_ctlparam_register_var("sys.nbrq-outstanding",
+	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
@@ -827,7 +827,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
 
-	psc_ctlparam_register_var("sys.bmap-max-cache",
+	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &bmap_max_cache);
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
