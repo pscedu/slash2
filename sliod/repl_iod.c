@@ -190,6 +190,7 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 
  out:
 	if (rc) {
+		/* send back error code now if we can't queue work */
 		if (pp) {
 			struct sli_repl_workrq wk;
 
