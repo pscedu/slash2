@@ -404,13 +404,13 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	psc_assert(b);
 
 	/*
- 	 * If successful, the IOS is responsible to send a 
- 	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
- 	 * and the disk usage. However, we don't wait for 
- 	 * it to happen.
- 	 */
+	 * If successful, the IOS is responsible to send a
+	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+	 * and the disk usage. However, we don't wait for
+	 * it to happen.
+	 */
 	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG_SCHED] = rc ? 
+	tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
 	    BREPLST_TRUNCPNDG : BREPLST_VALID;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 
@@ -481,7 +481,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	/*
-	 * Make sure that a truncation is not already scheduled on 
+	 * Make sure that a truncation is not already scheduled on
 	 * this bmap.
 	 */
 	brepls_init(retifset, 0);
@@ -949,6 +949,8 @@ int
 upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_wkdata_upschq *wk;
+
+	OPSTAT_INCR("upsch-db-pagein");
 
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
