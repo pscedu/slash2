@@ -885,8 +885,9 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
-//	retifset[BREPLST_GARBAGE_QUEUED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
+	if (slm_preclaim_enabled)
+		retifset[BREPLST_GARBAGE] = 1;
 
 	BMAP_WAIT_BUSY(b);
 	BMAPOD_WRLOCK(bmi);
