@@ -4,7 +4,7 @@
 
 dep wget
 
-V=5.3.0
+V=5.1.0
 
 exclude_time_start
 wget -nv http://mirrors-usa.go-parts.com/gcc/releases/gcc-$V/gcc-$V.tar.bz2
@@ -12,6 +12,6 @@ exclude_time_end
 
 decompress_bz2 gcc-$V.tar.bz2 | tar fx -
 cd gcc-$V
-./configure
+./configure --disable-multilib
 make
-make test
+make check
