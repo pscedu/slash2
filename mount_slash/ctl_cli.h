@@ -53,9 +53,10 @@ struct msctlmsg_replst_slave {
 struct msctlmsg_replrq {
 	slfid_t			mrq_fid;
 	char			mrq_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
-	uint32_t		mrq_nios;
-	sl_bmapno_t		mrq_bmapno;
-	 int32_t		mrq_sys_prio;
+	uint32_t		mrq_nios;	/* # elements in iosv */
+	sl_bmapno_t		mrq_bmapno;	/* start position */
+	sl_bmapno_t		mrq_nbmaps;	/* length */
+	 int32_t		mrq_sys_prio;	/* priority of request */
 	 int32_t		mrq_usr_prio;
 };
 
