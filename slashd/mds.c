@@ -1461,7 +1461,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
  */
 int
 mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
-    const struct srm_bmap_crcwrt_req *mq)
+    __unusedx const struct srm_bmap_crcwrt_req *mq)
 {
 	struct sl_resource *res = libsl_id2res(iosid);
 	struct bmap *bmap = NULL;
@@ -2130,7 +2130,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 }
 
 int
-slm_bmap_release_cb(struct pscrpc_request *rq,
+slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];

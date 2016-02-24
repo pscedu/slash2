@@ -106,6 +106,7 @@ mds_bmap_timeotbl_journal_seqno(void)
 		return;
 
 	slot = mds_bmap_journal_bmapseq(&sjbsq);
+	(void)slot;
 	psclog_debug("journal: slot = %u, "
 	    "low watermark = %"PRIu64", "
 	    "high watermark = %"PRIu64, 
