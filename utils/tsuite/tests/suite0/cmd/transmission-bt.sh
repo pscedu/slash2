@@ -16,21 +16,57 @@ cd transmission-$V
 ./configure enable-cli
 make
 
+min_sysctl net.core.rmem_max=4194304
+min_sysctl net.core.wmem_max=1048576
+
 exit 0
 
 torrent_fn=random_data.torrent
 
 if [ $1 -eq 0 ]; then
-	# Hosting client
-	./utils/transmission-create -o $torrent_fn $RANDOM_DATA
-	./utils/transmission-daemon -c .
-else
-	# Peers that will download the file.
+	# Hosting client: launch tracker.
+	(
+		exclude_time_start
+		exclude_time_end
+		cd udpt
+		make
+	)
+	(
+		cd udpt
+		pkill udpt || :
+		./udpt
+	) &
 
-	# Wait for the .torrent file to appear.
+	# Create torrent.
+	port=9091
+	./utils/transmission-create -o $torrent_fn -t udp://$(hostname):$port $RANDOM_DATA
+
+	# Seed.
+	pkill transmission-daemon || :
+	./utils/transmission-daemon -c .
+
+	# Wait for peers to finish.
+	shopt -s nullglob
+	while :; do
+		finished=(me ../finished-*)
+		[ ${#finished[@]} -eq $2 ] && break
+		sleep 1
+	done
+
+	# Cleanup.
+	pkill transmission-daemon
+	pkill udpt
+	wait
+else
+	# Peers that will download the file.  Wait for the torrent to
+	# appear, download it, then exit.
 	until [ -e $torrent_fn ]; do
 		sleep 1
 	done
 
-	./utils/transmission-cli random_data.torrent
+	dir=dl-$1
+	mkdir -p $dir
+	./utils/transmission-cli -w $dir $torrent_fn
+
+	touch ../finished-$1
 fi
