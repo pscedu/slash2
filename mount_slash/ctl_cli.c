@@ -767,7 +767,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *m;
-	char nbuf[8];
+	char nbuf[32];
 
 	if (set)
 		return (psc_ctlsenderr(fd, mh,
@@ -778,7 +778,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 	else
 		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
-	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
+	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET, csvc->csvc_mtime);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
