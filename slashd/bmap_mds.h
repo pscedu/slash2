@@ -266,7 +266,8 @@ int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmap *);
 
-struct bmap_mds_lease * mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
+struct bmap_mds_lease *
+	 mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);

@@ -1679,8 +1679,9 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno, mq->repls,
-	    mq->nrepls, mq->sys_prio, mq->usr_prio);
+	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno, &mq->nbmaps,
+	    mq->repls, mq->nrepls, mq->sys_prio, mq->usr_prio);
+	mp->nbmaps_processed = mq->nbmaps;
 	return (0);
 }
 
