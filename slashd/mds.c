@@ -2100,8 +2100,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
  out1:
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+	tract[BREPLST_VALID] = BREPLST_INVALID;
 
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
