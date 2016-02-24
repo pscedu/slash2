@@ -199,7 +199,6 @@ mds_bmap_read(struct bmap *b, int flags)
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mfh(b));
-
 	if (rc)
 		goto out1;
 
@@ -227,7 +226,6 @@ mds_bmap_read(struct bmap *b, int flags)
 	}
 
  out1:
-
 	/*
 	 * At this point, the short I/O is an error since the bmap isn't
 	 * zeros.
@@ -361,7 +359,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (idx < 0)
 		psc_fatal("not found");
 
-	/* 
+	/*
 	 * Only update the block usage when there is a real change.
 	 */
 	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
