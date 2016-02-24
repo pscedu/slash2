@@ -1,15 +1,16 @@
 # @bounce_host pscuxa.psc.edu
+# @dsn dbi:SQLite:dbname=/local/tmp/s2tsuite.db
 
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
 
-# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=-opagecache_maxsize=2g
-# client polybius:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# client zebes:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# client lavos:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# @client polybius:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# client zebes:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# client lavos:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
 
-# client yuzu:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
-# client kiwi:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0)
+# client yuzu:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# client kiwi:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
 
 set port=7001;
 set net=sdp4;
@@ -49,12 +50,13 @@ site @SITE0 {
 		id		= 0x10;
 		fsroot		= /tsuite/slio;
 		nids		= omnitopia-ib0.pvt;
+		slab_cache_size	= 8g;
 		# @host omnitopia
 
 		# @fmtcmd umount -f -l /tsuite || true
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
-		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
+		# @fmtcmd mount -t tmpfs -o size=60G tmpfs /tsuite
 		# @fmtcmd mkdir -p /tsuite/slio
 		# @TMPDIR /local/tmp
 	}
@@ -64,12 +66,13 @@ site @SITE0 {
 		id		= 0x11;
 		fsroot		= /tsuite/slio;
 		nids		= zebes-ib0.pvt;
+		slab_cache_size	= 8g;
 		# @host zebes
 
 		# @fmtcmd umount -f -l /tsuite || true
 		# @fmtcmd rm -rf /tsuite
 		# @fmtcmd mkdir -p /tsuite
-		# @fmtcmd mount -t tmpfs -o size=40G tmpfs /tsuite
+		# @fmtcmd mount -t tmpfs -o size=60G tmpfs /tsuite
 		# @fmtcmd mkdir -p /tsuite/slio
 		# @TMPDIR /local/tmp
 	}
