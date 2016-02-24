@@ -28,7 +28,7 @@ char *sl_errstrs[] = {
 /*  0 */ "Specified replica(s) already exist",
 /*  1 */ "Specified replica(s) do not exist",
 /*  2 */ "Generic RPC error",
-/*  3 */ "unknown code 3",
+/*  3 */ "Invalid replica state",
 /*  4 */ "Invalid bmap",
 /*  5 */ "Bmap direct I/O must wait",
 /*  6 */ "Uninitialized bmap",
