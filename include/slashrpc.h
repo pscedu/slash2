@@ -547,7 +547,7 @@ struct srt_bmap_crcup {				/* a batch of CRC updates for the same file */
 	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
-#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in a RPC */
+#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in an RPC */
 
 struct srm_bmap_crcwrt_req {
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
