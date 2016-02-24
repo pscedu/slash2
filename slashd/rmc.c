@@ -1690,8 +1690,9 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno, mq->repls,
-	    mq->nrepls);
+	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno, &mq->nbmaps,
+	    mq->repls, mq->nrepls);
+	mp->nbmaps_processed = mq->nbmaps;
 	return (0);
 }
 

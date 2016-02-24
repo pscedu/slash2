@@ -73,8 +73,6 @@ struct msctlmsg_bmapreplpol {
 	int32_t			mfbrp_pol;
 };
 
-#define REPLRQ_BMAPNO_ALL	(-1)
-
 struct msctlmsg_biorq {
 	slfid_t			msr_fid;
 	sl_bmapno_t		msr_bno;

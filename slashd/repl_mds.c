@@ -681,24 +681,58 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 }
 
+#define FLAG_DIRTY			(1 << 0)	/* bmap was modified and must be saved */
+#define FLAG_REPLICA_STATE_INVALID	(1 << 1)	/* return SLERR_REPLICA_STATE_INVALID */
+
+/*
+ * Change operation state depending on replica state.
+ *
+ * Flag dirty if replicas get enqueued for replication so the bmap can
+ * be written to persistent storage.
+ */
+void
+slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
+    int val, void *arg)
+{
+	int *flags = arg;
+
+	switch (val) {
+	case BREPLST_REPL_QUEUED:
+	case BREPLST_REPL_SCHED:
+	case BREPLST_VALID:
+		break;
+
+	case BREPLST_GARBAGE:
+	case BREPLST_GARBAGE_SCHED:
+	case BREPLST_INVALID:
+		 *flags |= FLAG_DIRTY;
+		 break;
+
+	default:
+		 /* Report that the replica will not be made valid. */
+		 *flags |= FLAG_REPLICA_STATE_INVALID;
+		 break;
+	}
+}
+
 /*
  * Handle a request to do replication from a client.  May also
  * reinitialize some parameters of the replication, such as priority, if
- * the request already exists.
+ * the request already exists in the system.
  */
 int
 mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_bmapno_t *nbmaps, sl_replica_t *iosv, int nios, int sys_prio,
     int usr_prio)
 {
-	int retifset[NBREPLST], retifzero[NBREPLST], ret_if_inact[NBREPLST];
-	int iosidx[SL_MAX_REPLICAS], tract[NBREPLST], rc, i, report = 0;
-	int repl_some_act = 0, repl_all_act = 1;
+	int tract[NBREPLST], ret_hasvalid[NBREPLST];
+	int iosidx[SL_MAX_REPLICAS], rc, flags;
 	sl_bmapno_t nbmaps_processed = 0;
 	struct fidc_membh *f;
 	struct bmap *b;
 
-	if (nios < 1 || nios > SL_MAX_REPLICAS)
+	/* Perform sanity checks on request. */
+	if (nios < 1 || nios > SL_MAX_REPLICAS || *nbmaps == 0)
 		return (-EINVAL);
 
 	rc = slm_fcmh_get(fgp, &f);
@@ -706,86 +740,71 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		return (-rc);
 
 	if (!fcmh_isdir(f) && !fcmh_isreg(f))
-		PFL_GOTOERR(out, rc = -ENOTSUP);
+		PFL_GOTOERR(out, rc = -PFLERR_NOTSUP);
 
-	/* Find/add our replica's IOS' ID. */
+	/* Lookup replica(s)' indexes in our replica table. */
 	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f),
 	    iosv, iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	/*
+	 * If we are modifying a directory, we are done as just the
+	 * replica table needs to be updated.
+	 */
 	if (fcmh_isdir(f))
 		PFL_GOTOERR(out, 0);
 
 	/*
-	 * Check inode's bmap state.  INVALID and VALID states become
-	 * OLD, signifying that replication needs to happen.
+	 * Setup structure to ensure at least one VALID replica exists.
+	 */
+	brepls_init(ret_hasvalid, 0);
+	ret_hasvalid[BREPLST_VALID] = 1;
+
+	/*
+	 * Setup transitions to enqueue a replication.
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED; /* XXX check gen */
 	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
 
-	brepls_init(retifzero, 0);
-	retifzero[BREPLST_VALID] = 1;
-
-#define FLAG_DIRTY	(1 << 0)	/* bmap was modified and must be saved */
-#define FLAG_REPORT	(1 << 1)	/* return an error code indicating */
-#define FLAG_ALREADY	(1 << 2)	/* return PFLERR_ALREADY */
-
-	/*
-	 * The handling for specifically requested bmaps should produce
-	 * more detailed information whereas a range is more forgiving
-	 * if e.g. some are already replicated.  Errors are reported the
-	 * same way in both cases.
-	 */
-	if (*nbmaps == 1)
-		report = FLAG_REPORT;
-
-	/*
-	 * Check if all bmaps are already old/queued or can be enqueued.
-	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_VALID] = FLAG_ALREADY | report;
-	retifset[BREPLST_INVALID] = FLAG_DIRTY | report;
-	retifset[BREPLST_REPL_QUEUED] = FLAG_ALREADY;
-	retifset[BREPLST_REPL_SCHED] = FLAG_ALREADY;
-	retifset[BREPLST_GARBAGE] = FLAG_DIRTY | report;
-	retifset[BREPLST_GARBAGE_SCHED] = FLAG_DIRTY | report;
-
-	/* Check for when all bmaps are already valid. */
-	brepls_init(ret_if_inact, 1);
-	ret_if_inact[BREPLST_VALID] = 0;
-
 	rc = -SLERR_BMAP_INVALID;
-	for (; nbmaps_processed < SLM_REPLRQ_NBMAPS_MAX	&& *nbmaps &&
-	    bmapno < fcmh_nvalidbmaps(f); bmapno++, --*nbmaps,
-	    nbmaps_processed++) {
+	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
+	    bmapno++, --*nbmaps, nbmaps_processed++) {
+		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
+			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
+
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc)
-			break;
+		if (rc) {
+			if (rc == -SLERR_BMAP_ZERO) {
+				rc = 0;
+				break;
+			}
+			PFL_GOTOERR(out, rc);
+		}
 
 		/*
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
-		if (mds_repl_bmap_walk_all(b, NULL, retifzero,
+		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
 			bmap_op_done(b);
 			continue;
 		}
 
-		i = mds_repl_bmap_walk(b, tract, retifset, 0, iosidx,
-		    nios);
-		if (i & FLAG_REPORT)
-			repl_some_act |= 1;
-		if (repl_all_act && mds_repl_bmap_walk(b, NULL,
-		    ret_if_inact, REPL_WALKF_SCIRCUIT, iosidx, nios))
-			repl_all_act = 0;
+		/*
+		 * We do not follow the standard "retifset" API here
+		 * because we need to preserve DIRTY if it gets set
+		 * instead of some other state getting returned.
+		 */
+		flags = 0;
+		_mds_repl_bmap_walk(b, tract, NULL, 0, iosidx, nios,
+		    slm_repl_addrq_cb, &flags);
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
-		if (i & FLAG_DIRTY) {
+		if (flags & FLAG_DIRTY) {
 			struct slm_update_data *upd;
 
 			upd = &bmap_2_bmi(b)->bmi_upd;
@@ -801,29 +820,16 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			UPD_UNBUSY(upd);
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
-		if (i & FLAG_ALREADY)
-			rc = -PFLERR_ALREADY;
-		else
-			rc = -SLERR_REPL_NOT_ACT;
 		slm_repl_bmap_rel(b);
-	}
-
-	/*
-	 * Empty files should not return any errors (think
-	 * `msctl repl-add -R dir`).
-	 */
-	if (*nbmaps == (sl_bmapno_t)-1 && bmapno) {
-		if (repl_some_act == 0)
-			rc = -PFLERR_ALREADY;
-		else if (bmapno && repl_all_act)
-			rc = -SLERR_REPL_ALREADY_ACT;
+		if (flags & FLAG_REPLICA_STATE_INVALID)
+			PFL_GOTOERR(out,
+			    rc = -SLERR_REPLICA_STATE_INVALID);
 	}
 
  out:
 	if (f)
 		fcmh_op_done(f);
-	if (rc == 0)
-		*nbmaps = nbmaps_processed;
+	*nbmaps = nbmaps_processed;
 	return (rc);
 }
 
@@ -858,28 +864,52 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
 	t->n++;
 }
 
+void
+slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
+    int val, void *arg)
+{
+	int *flags = arg;
+
+	switch (val) {
+	case BREPLST_INVALID:
+	case BREPLST_REPL_QUEUED:
+	case BREPLST_REPL_SCHED:
+		break;
+
+	case BREPLST_GARBAGE:
+	case BREPLST_GARBAGE_SCHED:
+	case BREPLST_VALID:
+		 *flags |= FLAG_DIRTY;
+		 break;
+
+	default:
+		 /* Report that the replica will not be made invalid. */
+		 *flags |= FLAG_REPLICA_STATE_INVALID;
+		 break;
+	}
+}
+
 int
 mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
-    sl_replica_t *iosv, int nios)
+    sl_bmapno_t *nbmaps, sl_replica_t *iosv, int nios)
 {
-	int rc, flags, empty_tract[NBREPLST], tract[NBREPLST],
-	    retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
+	int tract[NBREPLST], rc, iosidx[SL_MAX_REPLICAS], flags = 0;
+	sl_bmapno_t nbmaps_processed = 0;
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
 	struct bmap *b;
 
-	if (nios < 1 || nios > SL_MAX_REPLICAS)
+	if (nios < 1 || nios > SL_MAX_REPLICAS || *nbmaps == 0)
 		return (-EINVAL);
 
 	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
 		return (-rc);
 
-	flags = 0;
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
 
-	/* Find replica IOS indexes */
+	/* Find replica IOS indexes. */
 	rc = -_mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
 	    iosidx, nios, flags);
 	if (rc)
@@ -891,81 +921,56 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	replv.nios = nios;
 	replv.idx = iosidx;
 
-	brepls_init(empty_tract, -1);
-
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
-	if (bmapno == (sl_bmapno_t)-1) {
-		sl_bmapno_t all_invalid = 0;
-
-		brepls_init(retifset, 0);
-		retifset[BREPLST_VALID] = 1;
-		retifset[BREPLST_REPL_QUEUED] = 1;
-		retifset[BREPLST_REPL_SCHED] = 1;
-
-		rc = -SLERR_REPL_NOT_ACT;
-		for (bmapno = 0; bmapno < fcmh_nvalidbmaps(f);
-		    bmapno++) {
-			if (bmap_get(f, bmapno, SL_WRITE, &b))
-				continue;
-
-			BMAP_ULOCK(b);
-			replv.n = 0;
-			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
-			    slm_repl_countvalid_cb, &replv);
-			if (replv.n > 0) {
-				if (mds_repl_bmap_walk(b, tract,
-				    retifset, 0, iosidx, nios)) {
-					mds_bmap_write_logrepls(b);
-					rc = 0;
-				}
-			} else
-				all_invalid++;
-			slm_repl_bmap_rel(b);
-		}
-		if (all_invalid == bmapno)
-			rc = -SLERR_LASTREPL;
-	} else if (mds_bmap_exists(f, bmapno)) {
-		brepls_init(retifset, 0);
-		/* XXX BREPLST_TRUNCPNDG : FLAG_REPORT ? */
-		retifset[BREPLST_GARBAGE] = FLAG_REPORT;
-		retifset[BREPLST_GARBAGE_SCHED] = FLAG_REPORT;
-		retifset[BREPLST_REPL_QUEUED] = FLAG_DIRTY;
-		retifset[BREPLST_REPL_SCHED] = FLAG_DIRTY;
-		retifset[BREPLST_VALID] = FLAG_DIRTY;
+	rc = -SLERR_BMAP_INVALID;
+	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
+	    bmapno++, --*nbmaps, nbmaps_processed++) {
+		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
+			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc == 0) {
-			BMAP_ULOCK(b);
-			replv.n = 0;
-			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
-			    slm_repl_countvalid_cb, &replv);
-			if (replv.n > 0) {
-				rc = mds_repl_bmap_walk(b, tract,
-				    retifset, 0, iosidx, nios);
-				if (rc & FLAG_DIRTY) {
-					mds_bmap_write_logrepls(b);
-					rc = 0;
-				} else if (rc & FLAG_REPORT)
-					rc = -EINVAL;
-				else
-					rc = -SLERR_REPL_NOT_ACT;
-			} else
-				rc = -SLERR_LASTREPL;
-			slm_repl_bmap_rel(b);
+		if (rc) {
+			if (rc == -SLERR_BMAP_ZERO) {
+				rc = 0;
+				break;
+			}
+			PFL_GOTOERR(out, rc);
 		}
-	} else
-		rc = -SLERR_BMAP_INVALID;
+
+		/*
+		 * Before blindly doing the transition, we have
+		 * to check to ensure this operation would retain
+		 * at least one valid replica.
+		 */
+		replv.n = 0;
+		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
+		    slm_repl_countvalid_cb, &replv);
+		if (replv.n == 0)
+			PFL_GOTOERR(bmap_done, rc = -SLERR_LASTREPL);
+
+		flags = 0;
+		rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
+		    nios, slm_repl_delrq_cb, &flags);
+		if (flags & FLAG_DIRTY)
+			mds_bmap_write_logrepls(b);
+ bmap_done:
+		slm_repl_bmap_rel(b);
+		if (flags & FLAG_REPLICA_STATE_INVALID)
+			PFL_GOTOERR(out,
+			    rc = -SLERR_REPLICA_STATE_INVALID);
+
+	}
 
  out:
 	if (f)
 		fcmh_op_done(f);
+	*nbmaps = nbmaps_processed;
 	return (rc);
 }
-
 
 #define HAS_BW(bwd, amt)						\
 	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_bwqueuesz)
