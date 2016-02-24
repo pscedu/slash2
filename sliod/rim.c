@@ -256,7 +256,11 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	fd = fcmh_2_fd(f);
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	ftruncate(fd, size);
+	mp->rc = ftruncate(fd, size);
+	if (mp->rc)
+		OPSTAT_INCR("ftruncate");
+	else
+		OPSTAT_INCR("ftruncate-tail");
 
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
