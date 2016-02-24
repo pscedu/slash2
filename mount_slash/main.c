@@ -3208,7 +3208,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
-	    //csvc
 
 	msl_readahead_svc_destroy();
 	dircache_mgr_destroy();
