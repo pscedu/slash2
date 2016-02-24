@@ -113,12 +113,14 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 			/* XXX clear out sliver pages in memory */
 
 			/* XXX lock */
-			if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE,
-			    pq->bno * SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
+			if (fallocate(fcmh_2_fd(f),
+			    HAVE_FALLOC_FL_PUNCH_HOLE, pq->bno *
+			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
 				mp->rc = -errno;
 
 			fcmh_op_done(f);
 		}
+		break;
 	    }
 #endif
 	default:
