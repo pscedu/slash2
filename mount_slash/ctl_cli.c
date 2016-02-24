@@ -173,6 +173,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	memcpy(&mq->repls, repls, sizeof(mq->repls));
+	mq->nrepls = nrepls;
 	mq->bmapno = mrq->mrq_bmapno;
 	mq->nbmaps = mrq->mrq_nbmaps;
 
