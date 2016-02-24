@@ -710,6 +710,30 @@ slvr_schedule_crc_locked(struct slvr *s)
 }
 
 void
+slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
+{
+	int i, rc;
+	int32_t slvrno;
+	struct slvr *s;
+	struct bmap *bmap;
+
+	rc = bmap_get(f, bmapno, SL_READ, &bmap);
+	if (rc)
+		return;
+
+	slvrno = offset / SLASH_SLVR_SIZE;
+	for (i = slvrno; i < SLASH_SLVRS_PER_BMAP; i++) {
+		s = slvr_lookup(slvrno + i, bmap_2_bii(bmap));
+		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
+		SLVR_LOCK(s);
+		SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
+		SLVR_ULOCK(s);
+		slvr_wio_done(s, 0);
+	}
+	bmap_op_done(bmap);
+}
+
+void
 slvr_remove(struct slvr *s)
 {
 	struct bmap_iod_info *bii;

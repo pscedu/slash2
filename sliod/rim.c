@@ -257,8 +257,10 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	fd = fcmh_2_fd(f);
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
 	ftruncate(fd, size);
-	fcmh_op_done(f);
 
+	slvr_crc_update(f, mq->bmapno, mq->offset);
+
+	fcmh_op_done(f);
 #if 0
 	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
 	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
