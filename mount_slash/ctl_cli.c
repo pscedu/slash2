@@ -58,8 +58,6 @@ psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
-#define REPLRQ_BMAPNO_ALL (-1)
-
 int
 msctl_getcreds(int s, struct pscfs_creds *pcrp)
 {
@@ -778,7 +776,8 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 	else
 		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
-	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET, csvc->csvc_mtime);
+	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET,
+	    csvc->csvc_mtime.tv_sec);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
