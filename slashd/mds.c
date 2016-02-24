@@ -58,6 +58,9 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+int			slm_ptrunc_enabled;
+int			slm_preclaim_enabled;
+
 __static int slm_ptrunc_prepare(struct fidc_membh *);
 
 int
