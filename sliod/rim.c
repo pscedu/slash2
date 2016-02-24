@@ -260,7 +260,7 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		OPSTAT_INCR("ftruncate");
 	else
-		OPSTAT_INCR("ftruncate-tail");
+		OPSTAT_INCR("ftruncate-fail");
 
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
