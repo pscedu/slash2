@@ -500,6 +500,9 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	rq->rq_timeout *= 2;
+
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
