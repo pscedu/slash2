@@ -427,7 +427,7 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	}
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
-	    "partial truncation resolution: rc=%d", rc);
+	    "partial truncation resolution: off=%d, rc=%d", off, rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
