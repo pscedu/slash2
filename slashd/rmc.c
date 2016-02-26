@@ -67,8 +67,6 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int			slm_global_mount;
-int			slm_ptrunc_enabled;
-int			slm_preclaim_enabled = 1;
 
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
@@ -1692,8 +1690,9 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno, mq->repls,
-	    mq->nrepls);
+	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno, &mq->nbmaps,
+	    mq->repls, mq->nrepls);
+	mp->nbmaps_processed = mq->nbmaps;
 	return (0);
 }
 

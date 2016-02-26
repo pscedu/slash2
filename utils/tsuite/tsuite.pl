@@ -45,10 +45,11 @@ my @cli;	# suite CLI nodes
 
 sub usage {
 	die <<EOF
-usage: $0 [-BmRv] [-u user] [test-name]
+usage: $0 [-BCmRv] [-D descr] [-u user] [suite-name]
 
 options:
   -B		whether to use any configured SSH bounce host
+  -C		do not run teardown/cleanup
   -D descr	optional description to include in report
   -m		send e-mail report
   -R		record results to database
@@ -58,7 +59,7 @@ options:
 EOF
 }
 
-getopts("BmRu:v", \%opts) or usage();
+getopts("BCD:mRu:v", \%opts) or usage();
 usage() if @ARGV > 1;
 
 my $ssh_user = "";
@@ -183,6 +184,38 @@ EOF
 		$n->{ctlcmd} -Hp pid | awk '{print \$2}'
 	}
 
+	min_sysctl()
+	{
+		hasprog sysctl || return
+
+		local param=\$1
+		local minval=\$2
+
+		local v=\$(sysctl -n \$param)
+		[ \$v -lt \$minval ] && sudo sysctl \$param=\$minval
+	}
+	export -f min_sysctl
+
+	decompress_gz()
+	{
+		if hasprog pigz; then
+			pigz -dc \$1
+		else
+			gunzip -c \$1
+		fi
+	}
+	export -f decompress_gz
+
+	decompress_bz2()
+	{
+		if hasprog pbunzip2; then
+			pbunzip2 -c \$1
+		else
+			bunzip2 -c \$1
+		fi
+	}
+	export -f decompress_bz2
+
 	decompress_xz()
 	{
 		if hasprog pixz; then
@@ -282,7 +315,7 @@ sub runcmd {
 
 	my $infh;
 	my $pid = open3($infh, ">&WR", ">&WR", $cmd);
-	print $infh $in;
+	print $infh "echo debug: launching command remote pid \$\$ to local pid $pid\n", $in;
 	close $infh;
 
 	debug_msg "launched '$cmd' as pid $pid";
@@ -602,6 +635,7 @@ EOF
 			mkdir -p @mkdir
 
 			cd $n->{src_dir}
+			sleep \$((RANDOM % 10))
 			git clone $repo_url .
 			./bootstrap.sh
 
@@ -690,6 +724,7 @@ sub daemon_setup {
 		local prog=\$1
 		while :; do
 			set +e
+			$sudo pkill \$1 && sleep 3
 			$sudo "\$@"
 			local status=\$?
 			set -e
@@ -715,7 +750,7 @@ EOF
 
 $SIG{INT} = sub {
 	debug_msg "handling interrupt";
-	cleanup();
+	cleanup() unless $opts{C};
 	exit 1;
 };
 
@@ -785,13 +820,11 @@ foreach my $n (@cli) {
 EOF
 }
 
-# XXX delay for slash2.so to initialize...
-sleep 5;
-
 sub test_setup {
 	my $n = shift;
 
 	return <<EOF;
+	export TMPDIR=$n->{mp}/tmp
 	export RANDOM_DATA=$TSUITE_RANDOM
 	cd $n->{test_src_dir}
 	sudo mkdir -p $n->{mp}/tmp
@@ -805,7 +838,7 @@ sub test_setup {
 
 		# XXX need some local storage next to mp to do
 		# comparisons
-		export LOCAL_TMP=$n->{mp}/tmp/\${test##*/}
+		export LOCAL_TMP=$n->{mp}/tmp/\$id/\${test##*/}
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
 		mkdir -p \$LOCAL_TMP
@@ -816,7 +849,7 @@ sub test_setup {
 			launcher='bash -eu@{[ $opts{v} ? "x" : ""]}'
 		fi
 
-		\$launcher \$test \$id \$max
+		\$launcher \$test \$id \$max && rm -rf \$LOCAL_TMP
 	}
 
 	convert_ms()
@@ -894,7 +927,15 @@ foreach my $n (@cli) {
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 
-		until mount | grep -q $n->{mp}; do
+		while :; do
+			mds=\$($n->{ctlcmd} -Hp sys.mds | awk '{print \$2}' | sed 's/\\(.*\\)@\\(.*\\)/\\2.\\1/')
+			[ -n "\$mds" ] && break
+			sleep 1
+		done
+
+		df $n->{mp}
+
+		until $n->{ctlcmd} -p sys.resources.\$mds.connected | grep 1; do
 			sleep 1
 		done
 
@@ -1117,6 +1158,7 @@ if ($opts{R}) {
 	debug_msg "parsing output $output";
 
 	my @results = parse_results($output);
+	$output = "" if $success;
 
 	debug_msg "collecting results: ", Dumper(@results);
 
@@ -1134,35 +1176,38 @@ if ($opts{R}) {
 	}
 
 	my @param;
-	push @param, $ts_name;			# $1
-	push @param, $ts_user;			# $2
-	push @param, $diff;			# $3
-	push @param, $success;			# $4
-	push @param, $output;			# $5
-	push @param, $sl2_commid;		# $6
-	push @param, $pfl_commid;		# $7
+	push @param, $opts{D} || "";		# $1
+	push @param, $ts_name;			# $2
+	push @param, $ts_user;			# $3
+	push @param, $diff;			# $4
+	push @param, $success;			# $5
+	push @param, $output;			# $6
+	push @param, $sl2_commid;		# $7
+	push @param, $pfl_commid;		# $8
 
 	$dbh->do("BEGIN");
 
 	my $query = <<'SQL';
 		INSERT INTO s2ts_run (
-			suite_name,
-			launch_date,
-			user,
-			diff,
-			status,
-			output,
-			sl2_commid,
-			pfl_commid
+			descr,			-- 1
+			suite_name,		-- 2
+			launch_date,		--
+			user,			-- 3
+			diff,			-- 4
+			success,		-- 5
+			output,			-- 6
+			sl2_commid,		-- 7
+			pfl_commid		-- 8
 		) VALUES (
-			?,			-- $1: suite_name
+			?,			-- $1: descr
+			?,			-- $2: suite_name
 			CURRENT_TIMESTAMP,	--     launch_date
-			?,			-- $2: user
-			?,			-- $3: diff
-			?,			-- $4: status
-			?,			-- $5: output
-			?,			-- $6: sl2_commid
-			?			-- $7: pfl_commid
+			?,			-- $3: user
+			?,			-- $4: diff
+			?,			-- $5: success
+			?,			-- $6: output
+			?,			-- $7: sl2_commid
+			?			-- $8: pfl_commid
 		)
 SQL
 	$dbh->do($query, {}, @param)
