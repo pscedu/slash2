@@ -10,7 +10,7 @@ PATH=$(dirname $0):$PATH
 
 usage()
 {
-	echo "usage: $0 [-dgOv] [-F filter] [-P deployment-profile] [instance]" >&2
+	echo "usage: $0 [-dgOTv] [-F filter] [-P deployment-profile] [instance]" >&2
 	exit 1
 }
 
@@ -22,6 +22,7 @@ while getopts "dF:gOP:v" c; do
 	g) filter=mygdb		;;
 	O) once=1		;;
 	P) prof=$OPTARG		;;
+	T) testmail=1		;;
 	v) verbose=1		;;
 	*) usage		;;
 	esac
@@ -31,10 +32,14 @@ shift $(($OPTIND - 1))
 xargs=()
 apply_host_prefs "$@"
 
+base=$dir/$prof.s2
+
+preinit
+
 : ${mp:=/$prof}
 umount -l -f $mp 2>/dev/null
 [ -d $mp ] || mkdir -p $mp
-base=$dir/$prof.s2
+
 # Initialization/configuration
 ulimit -n 100000
 ulimit -c $((1024 * 1024 * 1024 * 50))
