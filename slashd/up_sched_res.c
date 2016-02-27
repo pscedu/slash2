@@ -397,9 +397,9 @@ void
 slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
     struct bmap *b, int rc, int off)
 {
-	int tract[NBREPLST];
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
+	int ret, tract[NBREPLST], retifset[NBREPLST];
 
 	psc_assert(b);
 
@@ -412,9 +412,14 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
 	    BREPLST_TRUNCPNDG : BREPLST_VALID;
-	mds_repl_bmap_apply(b, tract, NULL, off);
+	brepls_init_idx(retifset);
+	ret = mds_repl_bmap_apply(b, tract, retifset, off);
 
-	mds_bmap_write_logrepls(b);
+	/*
+ 	 * Only log if we did some real work.
+ 	 */ 
+	if (ret != BREPLST_TRUNCPNDG_SCHED)
+		mds_bmap_write_logrepls(b);
 
 	if (!rc) {
 		f = b->bcm_fcmh;
@@ -427,7 +432,7 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	}
 
 	psclog(rc ? PLL_WARN: PLL_DIAG,
-	    "partial truncation resolution: rc=%d", rc);
+	    "partial truncation resolution: off=%d, rc=%d", off, rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -500,6 +505,9 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	rq->rq_timeout *= 2;
+
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
