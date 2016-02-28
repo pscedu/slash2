@@ -547,7 +547,7 @@ struct srt_bmap_crcup {				/* a batch of CRC updates for the same file */
 	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
-#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in a RPC */
+#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in an RPC */
 
 struct srm_bmap_crcwrt_req {
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
@@ -893,8 +893,6 @@ struct srm_readdir_req {
 	uint32_t		flags;
 } __packed;
 
-#define srm_replrq_rep		srm_generic_rep
-
 struct srm_readdir_rep {
 	uint64_t		size;		/* sum of dirents, XXX make 32-bit */
 	uint32_t		eof:1;		/* flag: directory read EOF */
@@ -942,12 +940,17 @@ struct srm_replrq_req {
 	struct sl_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	uint32_t		nrepls;
-	uint32_t		usr_prio;
+	uint32_t		usr_prio;	/* priority */
 	uint32_t		sys_prio;
 	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
+	sl_bmapno_t		nbmaps;		/* length */
+	 int32_t		_pad;
 } __packed;
 
-#define srm_replrq_rep		srm_generic_rep
+struct srm_replrq_rep {
+	 int32_t		rc;
+	 sl_bmapno_t		nbmaps_processed;
+} __packed;
 
 struct srm_setattr_req {
 	struct srt_stat		attr;

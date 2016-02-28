@@ -231,4 +231,6 @@ slvr_cmp(const void *x, const void *y)
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
+void slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
+
 #endif /* _SLIOD_SLVR_H_ */

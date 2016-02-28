@@ -198,7 +198,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
 		    bmapno);
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
@@ -249,7 +249,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		else if (rv) {
 			bmap_op_done(bmap);
 			bmap = NULL;
-			PFL_GOTOERR(out, rc = mp->rc = rv);
+			PFL_GOTOERR(out1, rc = mp->rc = rv);
 		}
 
 		/*
@@ -278,7 +278,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 		if (aiocbr == NULL)
-			PFL_GOTOERR(out, 0);
+			PFL_GOTOERR(out1, 0);
 		if (mq->flags & SRM_IOF_DIO) {
 			OPSTAT_INCR("aio-dio");
 			aiocbr->aiocbr_flags |= SLI_AIOCBSF_DIO;
@@ -305,7 +305,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				rc = mp->rc = -SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg,
 				    MSG_ABORT_BULK);
-				goto aio_out;
+				goto out2;
 			}
 			if (!rc)
 				rc = slvr[i]->slvr_err;
@@ -321,7 +321,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (rc) {
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-			goto aio_out;
+			goto out2;
 		}
 	}
 
@@ -335,7 +335,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc=%d",
 		    rw == SL_WRITE ? "write" : "read", rc);
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 	}
 
 	/*
@@ -344,10 +344,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rw == SL_WRITE) {
 		mp->rc = sli_ric_write_sliver(mq->offset, mq->size, slvr,
 		    nslvrs);
-		goto out;
+		goto out1;
 	}
 
- out:
+ out1:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
 		s = slvr[i];
 
@@ -358,7 +358,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			slvr_wio_done(slvr[i], 0);
 	}
 
- aio_out:
+ out2:
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
 	    "rc=%d", bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", rc);

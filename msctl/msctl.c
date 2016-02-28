@@ -80,7 +80,8 @@ struct replrq_arg {
 	char			 iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	int			 nios;
 	int			 opcode;
-	int			 bmapno;
+	sl_bmapno_t		 bmapno;
+	sl_bmapno_t		 nbmaps;
 	int			 sys_prio;
 	int			 usr_prio;
 };
@@ -270,7 +271,7 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 	char *sprio, *uprio, *bmapno, *next, *bend, *iosv, *ios;
 	char replrqspec[LINE_MAX], *endp, *bmapnos;
 	struct replrq_arg ra;
-	int bmax;
+	sl_bmapno_t bmax;
 	long l;
 
 	if (strlcpy(replrqspec, oreplrqspec, sizeof(replrqspec)) >=
@@ -337,7 +338,8 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 
 	/* handle special all-bmap case */
 	if (strcmp(bmapnos, "*") == 0) {
-		ra.bmapno = REPLRQ_BMAPNO_ALL;
+		ra.bmapno = 0;
+		ra.nbmaps = -1;
 		walk(fn, packf, &ra);
 		return;
 	}
@@ -356,15 +358,16 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 			endp++;
 			l = strtol(endp, &bend, 10);
 			if (l < 0 || l < ra.bmapno ||
-			    bend == endp || *bend != '\0')
+			    bend == endp || *bend != '\0' ||
+			    l < ra.bmapno)
 				errx(1, "%s: invalid replication request",
 				    replrqspec);
 			bmax = l;
 		} else if (*endp != '\0')
 			errx(1, "%s: invalid replication request",
 			    replrqspec);
-		for (; ra.bmapno <= bmax; ra.bmapno++)
-			walk(fn, packf, &ra);
+		ra.nbmaps = bmax - ra.bmapno + 1;
+		walk(fn, packf, &ra);
 	}
 }
 
@@ -532,6 +535,7 @@ cmd_replrq_one(FTSENT *f, void *arg)
 
 	mrq = psc_ctlmsg_push(ra->opcode, sizeof(*mrq));
 	mrq->mrq_bmapno = ra->bmapno;
+	mrq->mrq_nbmaps = ra->nbmaps;
 	mrq->mrq_nios = ra->nios;
 	mrq->mrq_sys_prio = ra->sys_prio;
 	mrq->mrq_usr_prio = ra->usr_prio;

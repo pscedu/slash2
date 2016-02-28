@@ -1306,7 +1306,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	if (!S_ISFIFO(mode))
+	if (!S_ISFIFO(mode) && !S_ISSOCK(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -3208,7 +3208,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
-	    //csvc
 
 	msl_readahead_svc_destroy();
 	dircache_mgr_destroy();
@@ -3261,7 +3260,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	if (rc)
 		pscfs_reply_write(pfr, size, rc);
 
-	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
+	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 }
 

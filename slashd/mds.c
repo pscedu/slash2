@@ -58,6 +58,9 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+int			slm_ptrunc_enabled;
+int			slm_preclaim_enabled;
+
 __static int slm_ptrunc_prepare(struct fidc_membh *);
 
 int
@@ -1461,7 +1464,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
  */
 int
 mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
-    const struct srm_bmap_crcwrt_req *mq)
+    __unusedx const struct srm_bmap_crcwrt_req *mq)
 {
 	struct sl_resource *res = libsl_id2res(iosid);
 	struct bmap *bmap = NULL;
@@ -2100,8 +2103,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
  out1:
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+	tract[BREPLST_VALID] = BREPLST_INVALID;
 
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2130,7 +2133,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 }
 
 int
-slm_bmap_release_cb(struct pscrpc_request *rq,
+slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[SLM_CBARG_SLOT_CSVC];
@@ -2443,6 +2446,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 	if (log) {
 		PFL_GETTIMEVAL(&tv);
 		timersub(&tv, &tv0, &tvd);
+		OPSTAT_ADD("sql-wait-usecs",
+		    tvd.tv_sec * 1000000 + tvd.tv_usec);
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
 		    tvd.tv_usec / 1000000.0, dbuf);
 	}

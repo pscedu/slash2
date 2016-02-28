@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd October 16, 2015
+.Dd February 20, 2016
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -457,7 +457,7 @@ lookups for network addresses.
 .\"		     => "Resources/peers in the deployment.",
 .\"		'sys.uptime'
 .\"		     => "Elapsed time since daemon launch.",
-.\"		'sys.bmap-max-cache'
+.\"		'sys.bmap_max_cache'
 .\"		     => "Maximum number of bmaps to allow to be loaded " .
 .\"			"into memory before the reaper is invoked.",
 .\"		'sys.direct_io'
@@ -467,7 +467,7 @@ lookups for network addresses.
 .\"		     => "Software revision number.",
 .\"		'sys.root_squash'
 .\"		     => "Whether root squashing is enabled.",
-.\"		'sys.nbrq-outstanding'
+.\"		'sys.nbrq_outstanding'
 .\"		     => "Number of currently outstanding asynchronous RPCs.",
 .\"		'sys.offline_nretries'
 .\"		     => "Number of times to retry remote peer connection " .
@@ -614,7 +614,7 @@ for more information.
 Process resource usage information.
 See
 .Xr getrusage 2 .
-.It Cm sys.bmap-max-cache
+.It Cm sys.bmap_max_cache
 Maximum number of bmaps to allow to be loaded into memory before the reaper is invoked.
 .It Cm sys.direct_io
 Whether to use the direct I/O facility provided by kernel.
@@ -624,7 +624,7 @@ Preferred MDS resource name.
 File hierarchy node where
 .Tn SLASH2
 file system is mounted.
-.It Cm sys.nbrq-outstanding
+.It Cm sys.nbrq_outstanding
 Number of currently outstanding asynchronous RPCs.
 .It Cm sys.offline_nretries
 Number of times to retry remote peer connection establishment per file system request.

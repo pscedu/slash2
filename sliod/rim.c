@@ -51,6 +51,9 @@
 uint64_t	current_reclaim_xid;
 uint64_t	current_reclaim_batchno;
 
+/*
+ * Handle SRMT_BATCH_RQ request from the MDS.
+ */
 int
 sli_rim_handle_batch(struct pscrpc_request *rq)
 {
@@ -110,12 +113,14 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 			/* XXX clear out sliver pages in memory */
 
 			/* XXX lock */
-			if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE,
-			    pq->bno * SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
+			if (fallocate(fcmh_2_fd(f),
+			    HAVE_FALLOC_FL_PUNCH_HOLE, pq->bno *
+			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
 				mp->rc = -errno;
 
 			fcmh_op_done(f);
 		}
+		break;
 	    }
 #endif
 	default:
@@ -253,9 +258,15 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	fd = fcmh_2_fd(f);
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	ftruncate(fd, size);
-	fcmh_op_done(f);
+	mp->rc = ftruncate(fd, size);
+	if (mp->rc)
+		OPSTAT_INCR("ftruncate");
+	else
+		OPSTAT_INCR("ftruncate-fail");
 
+	slvr_crc_update(f, mq->bmapno, mq->offset);
+
+	fcmh_op_done(f);
 #if 0
 	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
 	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);

@@ -58,8 +58,6 @@ psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
-#define REPLRQ_BMAPNO_ALL (-1)
-
 int
 msctl_getcreds(int s, struct pscfs_creds *pcrp)
 {
@@ -101,16 +99,17 @@ fill_iosbuf(struct msctlmsg_replrq *mrq, char *buf, size_t len)
 int
 msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	sl_replica_t repls[SL_MAX_REPLICAS];
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_replrq *mrq = m;
 	struct pscfs_clientctx pfcc;
-	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
+	struct srm_replrq_rep *mp;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	struct sl_fidgen fg;
-	uint32_t n;
+	uint32_t n, nrepls = 0;
 	int rc;
 
 	if (mrq->mrq_nios < 1 ||
@@ -150,6 +149,16 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, sl_strerror(rc)));
 
+	/* parse I/O systems specified */
+	for (n = 0; n < mrq->mrq_nios; n++, nrepls++)
+		if ((repls[n].bs_id =
+		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
+			rc = psc_ctlsenderr(fd, mh,
+			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
+			goto out;
+		}
+
+ issue:
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(NULL, f, csvc, SRMT_REPL_ADDRQ, rq, mq,
 		    mp, rc);
@@ -162,24 +171,29 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	/* parse I/O systems specified */
-	for (n = 0; n < mrq->mrq_nios; n++, mq->nrepls++)
-		if ((mq->repls[n].bs_id =
-		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
-			rc = psc_ctlsenderr(fd, mh,
-			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
-			goto out;
-		}
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
+	memcpy(&mq->repls, repls, sizeof(mq->repls));
+	mq->nrepls = nrepls;
 	mq->bmapno = mrq->mrq_bmapno;
+	mq->nbmaps = mrq->mrq_nbmaps;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc)
-		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, sl_strerror(rc));
-	else {
+	if (rc) {
+		if (rc == -PFLERR_WOULDBLOCK) {
+			if (mp->nbmaps_processed < mrq->mrq_nbmaps) {
+				mrq->mrq_bmapno += mp->nbmaps_processed;
+				mrq->mrq_nbmaps -= mp->nbmaps_processed;
+				goto issue;
+			}
+			rc = psc_ctlsenderr(fd, mh, SLPRI_FID": "
+			    "invalid reply received from MDS",
+			    mrq->mrq_fid);
+		} else
+			rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+			    mrq->mrq_fid, sl_strerror(rc));
+	} else {
 		char iosbuf[LINE_MAX];
 
 		psclogs(PLL_INFO, SLCSS_INFO,
@@ -192,8 +206,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
  out:
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -747,6 +760,32 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *m;
+	char nbuf[32];
+
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "mtime: field is read-only"));
+
+	m = res_getmemb(r);
+	if (r->res_type == SLREST_MDS)
+		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	else
+		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET,
+	    csvc->csvc_mtime.tv_sec);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
+int
 mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
@@ -765,12 +804,14 @@ mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
+	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
 	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
+	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
 

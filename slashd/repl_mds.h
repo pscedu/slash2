@@ -27,6 +27,8 @@
 
 #include "fidc_mds.h"
 
+#define SLM_REPLRQ_NBMAPS_MAX	64
+
 struct resm_mds_info;
 
 struct slm_replst_workreq {
@@ -40,10 +42,11 @@ typedef void (*brepl_walkcb_t)(struct bmap *, int, int, void *);
 
 #define mds_repl_inv_except(b, idx)	_mds_repl_inv_except((b), (idx), 0)
 
-int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t, sl_replica_t *, int, int, int);
+int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t,
+	    sl_bmapno_t *, sl_replica_t *, int, int, int);
 int	_mds_repl_bmap_apply(struct bmap *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
 int	_mds_repl_bmap_walk(struct bmap *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
-int	 mds_repl_delrq(const struct sl_fidgen *, sl_bmapno_t, sl_replica_t *, int);
+int	 mds_repl_delrq(const struct sl_fidgen *, sl_bmapno_t, sl_bmapno_t *, sl_replica_t *, int);
 int	_mds_repl_inv_except(struct bmap *, int, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
