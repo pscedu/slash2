@@ -66,11 +66,15 @@ Send a test e-mail alert and exit.
 Verbose mode: print out steps while they are being executed; primarily
 for debugging purposes.
 .El
-.Sh FILES
-.Bl -tag -width Pa -compact
-.It Pa /
-default
-.El
+.Sh EXAMPLES
+Launch two client instances on a host for the deployment
+.Li foo :
+.Pp
+.Bd -literal -offset 3n
+# mount_slash.sh -P foo
+# mount_slash.sh -P foo 2
+.Ed
+Note that two entries with differing tags : one for each instance.
 .Sh SEE ALSO
 .Xr dcfg 5 ,
 .Xr slash2.so 8 ,
