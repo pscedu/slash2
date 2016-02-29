@@ -69,7 +69,7 @@ mds_bmap_initnew(struct bmap *b)
 
 	bmi = bmap_2_bmi(b);
 	bod = bmi_2_ondisk(bmi);
-	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 		bod->bod_crcs[i] = BMAP_NULL_CRC;
 
 	INOH_LOCK(fcmh_2_inoh(f));
@@ -467,7 +467,7 @@ _dump_bmapodv(const struct pfl_callerinfo *pci, int level,
     struct bmap *bmap, const char *fmt, va_list ap)
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
-	     cbuf[SLASH_CRCS_PER_BMAP + 1];
+	     cbuf[SLASH_SLVRS_PER_BMAP + 1];
 	int k;
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
@@ -475,7 +475,7 @@ _dump_bmapodv(const struct pfl_callerinfo *pci, int level,
 
 	DUMP_BMAP_REPLS(bmi->bmi_repls, rbuf);
 
-	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
+	for (k = 0; k < SLASH_SLVRS_PER_BMAP; k++)
 		if (bmi->bmi_crcstates[k] > 9)
 			cbuf[k] = 'a' + bmi->bmi_crcstates[k] - 10;
 		else

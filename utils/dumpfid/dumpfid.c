@@ -259,7 +259,7 @@ pr_bmaps(FILE *outfp, struct file *f)
 		fprintf(outfp, "\n");
 
 		fprintf(outfp, "   %5u: crcstates ", bno);
-		for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
+		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 			fprintf(outfp, "%s%d", i ? "," : "",
 			    bd.bod.bod_crcstates[i]);
 		fprintf(outfp, "\n");
