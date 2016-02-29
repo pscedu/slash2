@@ -1,0 +1,85 @@
+.\" $Id$
+.\" %GPL_START_LICENSE%
+.\" ---------------------------------------------------------------------
+.\" Copyright 2016, Google, Inc.
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or (at
+.\" your option) any later version.
+.\"
+.\" This program is distributed WITHOUT ANY WARRANTY; without even the
+.\" implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+.\" PURPOSE.  See the GNU General Public License contained in the file
+.\" `COPYING-GPL' at the top of this distribution or at
+.\" https://www.gnu.org/licenses/gpl-2.0.html for more details.
+.\" ---------------------------------------------------------------------
+.\" %END_LICENSE%
+.Dd February 29, 2016
+.Dt SLIOD.SH 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm sliod.sh
+.Nd deployment launch wrapper for the
+.Tn SLASH2
+file system I/O service
+.Sh SYNOPSIS
+.Nm sliod.sh
+.Op Fl dgOTv
+.Op Fl F Ar filter
+.Op Fl P Ar profile
+.Op Ar instance
+.Sh DESCRIPTION
+The
+.Nm
+utility is a wrapper script that launches the SLASH2 I/O service.
+It provides simplified deployment, automated restart after software
+crashes, alerting/reporting, and more.
+.Pp
+An optional
+.Ar instance
+argument may be provided to specify which instance should be launched in
+configurations that have multiple instances.
+.Pp
+.Nm
+reads configuration from the default or manually specified
+.Pq see Fl P
+deployment configuration file
+.Pq see Xr dcfg 5 ,
+discovers and applies settings specified for the given host, then
+continuously executes the daemon.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d
+Do not daemonize i.e. keep the daemon in the foreground.
+.It Fl F Ar filter
+Launch the daemon through the specified filter
+.Pq primarily for debugging purposes e.g.\& via Xr strace 1 .
+.It Fl g
+Launch the daemon via
+.Xr gdb 1 .
+.It Fl O
+Launch a single execution of the daemon instead of the default of
+continuous restarts.
+.It Fl P Ar profile
+.It Fl T
+Send a test e-mail alert and exit.
+.It Fl v
+Verbose mode: print out steps while they are being executed; primarily
+for debugging purposes.
+.El
+.Sh EXAMPLES
+Launch the first three I/O services on a host for the deployment
+.Li foo :
+.Pp
+.Bd -literal -offset 3n
+# sliod.sh -P foo 0
+# sliod.sh -P foo 1
+# sliod.sh -P foo 2
+.Ed
+.Sh SEE ALSO
+.Xr dcfg 5 ,
+.Xr sliod 8 ,

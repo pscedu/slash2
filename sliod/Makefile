@@ -6,6 +6,7 @@ include ${ROOTDIR}/Makefile.path
 PROG=		sliod
 BIN=		sliod.sh
 MAN+=		sliod.8
+MAN+=		sliod.sh.8
 SRCS+=		bmap_iod.c
 SRCS+=		cfg_iod.c
 SRCS+=		ctl_iod.c
