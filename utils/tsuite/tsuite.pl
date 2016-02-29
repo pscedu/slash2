@@ -226,6 +226,16 @@ EOF
 	}
 	export -f decompress_xz
 
+	mkdir_recurse()
+	{
+		# GNU /bin/mkdir performs a check instead of blindly
+		# trying to create and ignoring EEXIST, which is prone
+		# to races.
+		mkdir -p "\$1" || :
+		[ -d "\$1" ]
+	}
+	export -f mkdir_recurse
+
 	export MAKEFLAGS=-j\$(nproc)
 	export SCONSFLAGS=-j\$(nproc)
 
@@ -827,8 +837,8 @@ sub test_setup {
 	export TMPDIR=$n->{mp}/tmp
 	export RANDOM_DATA=$TSUITE_RANDOM
 	cd $n->{test_src_dir}
-	sudo mkdir -p $n->{mp}/tmp
-	sudo chmod 1777 $n->{mp}/tmp
+	sudo mkdir -p "$n->{mp}/tmp" || :
+	sudo chmod 1777 "$n->{mp}/tmp"
 
 	run_test()
 	{
@@ -841,7 +851,7 @@ sub test_setup {
 		export LOCAL_TMP=$n->{mp}/tmp/\$id/\${test##*/}
 		export SRC=$n->{src_dir}
 		rm -rf \$LOCAL_TMP
-		mkdir -p \$LOCAL_TMP
+		mkdir_recurse "\$LOCAL_TMP"
 		cd \$LOCAL_TMP
 
 		local launcher=

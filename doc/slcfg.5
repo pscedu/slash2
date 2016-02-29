@@ -38,7 +38,13 @@ Empty lines and lines beginning with
 .Sq Li #
 are ignored.
 .Pp
-This file is consists of variables and site configurations.
+The parts of the file fall into several sections:
+.Bl -tag
+.It global settings
+.It sites participating in the deployment
+.It MDS resources in each site
+.It IOS resources in each site
+.El
 .Ss Variables
 Variables ascribe defaults to settings in site configuration profiles
 as well as provide access to per-resource settings.

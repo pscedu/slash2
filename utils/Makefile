@@ -6,7 +6,6 @@ include ${SLASH_BASE}/mk/pre.mk
 
 BIN+=		slash2_check
 BIN+=		slash2_check.py
-BIN+=		fshealthtest
 INSTDIR=	${INST_SBINDIR}
 SUBDIRS+=	prslerr
 SUBDIRS+=	typedump
@@ -22,6 +21,8 @@ endif
 ifneq ($(filter ion,${SLASH_MODULES}),)
   BIN+=		file_lookup.py
   BIN+=		nsliods
+  BIN+=		slictlN
+  BIN+=		fshealthtest
 endif
 
 include ${SLASHMK}
