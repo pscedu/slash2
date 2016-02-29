@@ -498,8 +498,8 @@ struct srm_getbmap_full_req {
 } __packed;
 
 struct srm_getbmap_full_rep {
-	uint64_t		crcs[SLASH_CRCS_PER_BMAP];
-	uint8_t			crcstates[SLASH_CRCS_PER_BMAP];
+	uint64_t		crcs[SLASH_SLVRS_PER_BMAP];
+	uint8_t			crcstates[SLASH_SLVRS_PER_BMAP];
 	uint64_t		minseq;
 	 int32_t		rc;
 	 int32_t		_pad;

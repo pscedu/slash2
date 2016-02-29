@@ -1624,7 +1624,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 		return (rc);
 
 	bmi = bmap_2_bmi(b);
-	for (n = 0; n < SLASH_CRCS_PER_BMAP; n++)
+	for (n = 0; n < SLASH_SLVRS_PER_BMAP; n++)
 		/*
 		 * XXX need a bitmap to see which CRCs are
 		 * actually uninitialized and not just happen

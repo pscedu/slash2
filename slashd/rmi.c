@@ -170,7 +170,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 		/* Verify slot number validity. */
 		for (j = 0; j < c->nups; j++)
-			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP)
+			if (c->crcs[j].slot >= SLASH_SLVRS_PER_BMAP)
 				mp->crcup_rc[i] = -ERANGE;
 
 		/* Look up the bmap in the cache and write the CRCs. */
