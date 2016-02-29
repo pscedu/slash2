@@ -8,6 +8,7 @@ SHLIB=		slash2.so
 INST_LIBDIR=	${WOK_MOD_DIR}
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
+MAN+=		mount_slash.sh.8
 
 SRCS+=		bflush.c
 SRCS+=		bmap_cli.c
