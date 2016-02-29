@@ -1,0 +1,61 @@
+.\" $Id$
+.\" %GPL_LICENSE%
+.Dd November 23, 2015
+.Dt MOUNT_SLASH.SH 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm mount_slash.sh
+.Nd deployment launch wrapper for a
+.Tn SLASH2
+file system client
+.Sh SYNOPSIS
+.Nm mount_slash.sh
+.Op Fl dgOTv
+.Op Fl F Ar filter
+.Op Fl P Ar profile
+.Op Ar instance
+.Sh DESCRIPTION
+The
+.Nm
+utility is a wrapper script that launches the SLASH2 client service.
+It provides simplified deployment, automated restart after software
+crashes, alerting/reporting, and more.
+.Pp
+.Nm
+reads configuration from the default or manually specified
+.Pq see Fl P
+deployment configuration file
+.Pq see Xr dcfg 5 ,
+discovers and applies settings specified for the given host, then
+continuously executes the daemon.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d
+Do not daemonize i.e. keep the daemon in the foreground.
+.It Fl F Ar filter
+Launch the daemon through the specified filter
+.Pq primarily for debugging purposes e.g.\& via Xr strace 1 .
+.It Fl g
+Launch the daemon via
+.Xr gdb 1 .
+.It Fl O
+Launch a single execution of the daemon instead of the default of
+continuous restarts.
+.It Fl P Ar profile
+.It Fl T
+Send a test e-mail alert and exit.
+.It Fl v
+Verbose mode: print out steps while they are being executed; primarily
+for debugging purposes.
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /
+default
+.El
+.Sh SEE ALSO
+.Xr dcfg 5 ,
+.Xr slash2.so 8 ,
+.Xr umount 8 ,
