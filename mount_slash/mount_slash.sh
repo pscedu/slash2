@@ -15,7 +15,7 @@ usage()
 }
 
 bkav=("$@")
-while getopts "dF:gOP:v" c; do
+while getopts "dF:gOP:Tv" c; do
 	case $c in
 	d) nodaemonize=1	;;
 	F) filter=$OPTARG	;;
