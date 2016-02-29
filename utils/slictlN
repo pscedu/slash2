@@ -1,0 +1,7 @@
+#!/bin/sh
+# $Id$
+
+prog=$(basename $0)
+n=${prog#slictl}
+
+exec slictl -S /var/run/%h-sliod$n.sock "$@"
