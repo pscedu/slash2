@@ -1975,6 +1975,9 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	return (rc);
 }
 
+/*
+ * Note: The caller must lock the fcmh if it is not NULL.
+ */
 int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
@@ -1995,19 +1998,22 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 				    sstb->sst_fid, sl_strerror(rc));
 				return (rc);
 			}
+			FCMH_LOCK(f);
 			deref = 1;
 		}
-
-		locked = FCMH_RLOCK(f);
+		FCMH_LOCK_ENSURE(f);
 		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
-		FCMH_URLOCK(f, locked);
+
+		FCMH_ULOCK(f);
 
 		rc = slm_ptrunc_prepare(f);
 
 		if (deref)
 			fcmh_op_done(f);
+		else
+			FCMH_LOCK(f);
 	}
 	return (rc);
 }
