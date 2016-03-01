@@ -2103,12 +2103,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
  out1:
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
 	tract[BREPLST_VALID] = BREPLST_INVALID;
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
 
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
