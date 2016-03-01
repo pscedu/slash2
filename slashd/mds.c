@@ -2075,10 +2075,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
 		goto out1;
 
-	/*
-	 * If a bmap sliver was sliced, we must await for a
-	 * sliod to reply with the new CRC.
-	 */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
@@ -2135,9 +2131,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
 	}
-
-	/* XXX adjust nblks */
-
 	OPSTAT_INCR("ptrunc-apply");
 }
 
