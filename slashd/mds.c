@@ -1982,7 +1982,7 @@ int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int locked, deref = 0, rc = 0;
+	int deref = 0, rc = 0;
 	struct fcmh_mds_info *fmi;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
