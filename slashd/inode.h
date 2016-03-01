@@ -47,7 +47,21 @@
 
 /*
  * Define metafile offsets.  At the beginning of the metafile is the
- * SLASH2 inode, which is always loaded.
+ * basic SLASH2 inode, which is always loaded. After the basic inode, 
+ * we have an extra inode, which are followed by block maps for block 
+ * 0, 1, 2, ...
+ *
+ *               SL_EXTRAS_START_OFF             SL_BMAP_START_OFF
+ *
+ *                     |                             |
+ *                     v                             v
+ * +-------------+-----+-------------------+---------+-------------------+-----
+ * | inode + CRC |     | extra inode + CRC |         | block 0 map + CRC |
+ * +-------------+-----+-------------------+---------+-------------------+-----
+ *       72                   752                          1192
+ *
+ * CRC are 8 bytes.
+ *
  */
 #define SL_EXTRAS_START_OFF	((off_t)0x0200)
 #define SL_BMAP_START_OFF	((off_t)0x0600)
