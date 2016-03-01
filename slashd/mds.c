@@ -2046,7 +2046,7 @@ __static void
 slm_ptrunc_apply(struct fidc_membh *f)
 {
 	int rc;
-	int done = 1, tract[NBREPLST];
+	int done = 1, tract[NBREPLST], retifset[NBREPLST];
 	struct ios_list ios_list;
 	struct bmap *b;
 	sl_bmapno_t i;
@@ -2106,6 +2106,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
 	tract[BREPLST_VALID] = BREPLST_INVALID;
 
+	brepls_init(retifset, 0);
+	retifset[BREPLST_VALID] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
@@ -2113,9 +2117,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
-		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		rc = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
-		mds_bmap_write_logrepls(b);
+		if (rc)
+			mds_bmap_write_logrepls(b);
 		bmap_op_done(b);
 	}
 
