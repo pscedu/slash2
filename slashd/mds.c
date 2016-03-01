@@ -2158,8 +2158,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	sl_bmapno_t i;
 	uint64_t size;
 
-	mds_note_update(1);
-
 	fmi = fcmh_2_fmi(f);
 
 	/*
@@ -2228,7 +2226,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	} else
 		slm_ptrunc_apply(f);
 
-	mds_note_update(-1);
 	return (rc);
 }
 
