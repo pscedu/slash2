@@ -17,31 +17,25 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .Dd February 29, 2016
-.Dt SLIOD.SH 8
+.Dt SLASHD.SH 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm sliod.sh
+.Nm slashd.sh
 .Nd deployment launch wrapper for the
 .Tn SLASH2
 file system I/O service
 .Sh SYNOPSIS
-.Nm sliod.sh
+.Nm slashd.sh
 .Op Fl dgOTv
 .Op Fl F Ar filter
 .Op Fl P Ar profile
-.Op Ar instance
 .Sh DESCRIPTION
 The
 .Nm
 utility is a wrapper script that launches the SLASH2 I/O service.
 It provides simplified deployment, automated restart after software
 crashes, alerting/reporting, and more.
-.Pp
-An optional
-.Ar instance
-argument may be provided to specify which instance should be launched in
-configurations that have multiple instances.
 .Pp
 .Nm
 reads configuration from the default or manually specified
@@ -71,15 +65,6 @@ Send a test e-mail alert and exit.
 Verbose mode: print out steps while they are being executed; primarily
 for debugging purposes.
 .El
-.Sh EXAMPLES
-Launch the first three I/O services on a host for the deployment
-.Li foo :
-.Pp
-.Bd -literal -offset 3n
-# sliod.sh -P foo 0
-# sliod.sh -P foo 1
-# sliod.sh -P foo 2
-.Ed
 .Sh SEE ALSO
 .Xr dcfg 5 ,
-.Xr sliod 8
+.Xr slashd 8
