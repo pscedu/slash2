@@ -479,7 +479,8 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
 		return (0);
 	}
-	DEBUG_FCMH(PLL_MAX, f, "ptrunc request");
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, off = %d, id = %d",
+	    off, dst_res->res_id);
 
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
