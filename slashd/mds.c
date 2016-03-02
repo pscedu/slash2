@@ -2096,8 +2096,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			 */
 			OPSTAT_INCR("ptrunc-enqueue");
 			upd = bmap_2_upd(b);
-			DPRINTF_UPD(PLL_MAX, upd, "fid="SLPRI_FID" bno=%u",
-			    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
 			upsch_enqueue(upd);
 		}
 	}
@@ -2129,6 +2128,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc completed.");
 		FCMH_ULOCK(f);
 	}
 	OPSTAT_INCR("ptrunc-apply");
@@ -2160,6 +2160,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 
 	fmi = fcmh_2_fmi(f);
 
+	DEBUG_FCMH(PLL_MAX, f, "prepare ptrunc");
 	/*
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
@@ -2221,8 +2222,8 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_2_ptruncgen(f)--;
 		f->fcmh_sstb.sst_size = size;
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc aborted, rc = %d", rc);
 		FCMH_ULOCK(f);
-		psclog_error("partical truncate setattr: rc=%d", rc);
 	} else
 		slm_ptrunc_apply(f);
 

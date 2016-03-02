@@ -403,6 +403,9 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 
 	psc_assert(b);
 
+	f = b->bcm_fcmh;
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
+
 	/*
 	 * If successful, the IOS is responsible to send a
 	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
@@ -422,7 +425,6 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		mds_bmap_write_logrepls(b);
 
 	if (!rc) {
-		f = b->bcm_fcmh;
 		FCMH_LOCK(f);
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_nios--;
@@ -477,6 +479,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
 		return (0);
 	}
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc request");
 
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
