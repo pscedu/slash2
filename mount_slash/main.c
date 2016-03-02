@@ -2268,7 +2268,9 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
+	struct pfl_callerinfo pci;
 	struct fidc_membh *f;
+	uid_t euid = -1;
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -2282,6 +2284,11 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	fci->fci_etime.tv_sec--;
 	FCMH_ULOCK(f);
 	psc_waitq_wakeone(&msl_flush_attrq);
+
+	/* Stash process euid if it is needed for the activity log. */
+	pci.pci_subsys = SLCSS_INFO;
+	if (psc_log_shouldlog(&pci, PLL_INFO))
+		euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
@@ -2302,8 +2309,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
 		    fcmh_2_fid(f),
-		    slc_getfscreds(pfr, &pcr)->pcr_uid,
-		    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
+		    euid, f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 		    f->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
 		    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
