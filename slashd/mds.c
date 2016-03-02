@@ -2052,7 +2052,7 @@ __static void
 slm_ptrunc_apply(struct fidc_membh *f)
 {
 	int rc;
-	int done = 1, tract[NBREPLST], retifset[NBREPLST];
+	int queued = 0, tract[NBREPLST], retifset[NBREPLST];
 	struct ios_list ios_list;
 	struct bmap *b;
 	sl_bmapno_t i;
@@ -2081,13 +2081,12 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		    ptrunc_tally_ios, &ios_list);
 		fmi->fmi_ptrunc_nios = ios_list.nios;
 		if (fmi->fmi_ptrunc_nios) {
-			done = 0;
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
-				done = 1;
 				bmap_op_done(b);
 				goto out2;
 			}
+			queued++;
 			/*
 			 * Queue work immediately instead
 			 * of waiting for it to be causally
@@ -2124,7 +2123,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	}
 
  out2:
-	if (done) {
+	if (!queued) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
