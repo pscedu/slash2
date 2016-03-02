@@ -778,7 +778,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 	else
 		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
 	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET,
-	    csvc->csvc_mtime.tv_sec);
+	    csvc ? csvc->csvc_mtime.tv_sec : (time_t)0);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
