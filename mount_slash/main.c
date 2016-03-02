@@ -2287,36 +2287,36 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 
 	/* Stash process euid if it is needed for the activity log. */
 	pci.pci_subsys = SLCSS_INFO;
-	if (psc_log_shouldlog(&pci, PLL_INFO))
+	if (psc_log_shouldlog(&pci, PLL_INFO)) {
+		struct pscfs_creds pcr;
+
 		euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
+	}
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
 	} else {
 		pscfs_reply_release(pfr, 0);
-	}
 
-	if (!fcmh_isdir(f) &&
-	    (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)) {
-		struct pscfs_creds pcr;
-
-		psclogs_info(SLCSS_INFO,
-		    "file closed fid="SLPRI_FID" "
-		    "euid=%u owner=%u fgrp=%u "
-		    "fsize=%"PRId64" "
-		    "oatime="PFLPRI_PTIMESPEC" "
-		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
-		    "otime="PSCPRI_TIMESPEC" "
-		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
-		    fcmh_2_fid(f),
-		    euid, f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
-		    f->fcmh_sstb.sst_size,
-		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
-		    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
-		    mfh->mfh_sid,
-		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
-		    mfh->mfh_uprog);
+		if (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)
+			psclogs_info(SLCSS_INFO,
+			    "file closed fid="SLPRI_FID" "
+			    "euid=%u owner=%u fgrp=%u "
+			    "fsize=%"PRId64" "
+			    "oatime="PFLPRI_PTIMESPEC" "
+			    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
+			    "otime="PSCPRI_TIMESPEC" "
+			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
+			    fcmh_2_fid(f),
+			    euid, f->fcmh_sstb.sst_uid,
+			    f->fcmh_sstb.sst_gid,
+			    f->fcmh_sstb.sst_size,
+			    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
+			    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
+			    mfh->mfh_sid,
+			    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
+			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
+			    mfh->mfh_uprog);
 	}
 
 	mfh_decref(mfh);
