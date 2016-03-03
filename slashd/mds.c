@@ -2075,6 +2075,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
 		goto out1;
 
+	/* When do we drop this reference? */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
@@ -2098,6 +2099,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
 			upsch_enqueue(upd);
 		}
+		bmap_op_done(b);
 	}
 	i++;
 
