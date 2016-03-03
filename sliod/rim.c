@@ -260,9 +260,12 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
 	mp->rc = ftruncate(fd, size);
 	if (!mp->rc)
-		OPSTAT_INCR("ftruncate");
-	else
-		OPSTAT_INCR("ftruncate-fail");
+		OPSTAT_INCR("ftruncate-success");
+	else {
+		psclogs_errorx(SLISS_INFO, "Truncate: fg="SLPRI_FG","
+		    "rc = %d\n", SLPRI_FG_ARGS(fgp), mp->rc);
+		OPSTAT_INCR("ftruncate-failure");
+	}
 
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
