@@ -399,7 +399,7 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 {
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
-	int tract[NBREPLST], retifset[NBREPLST];
+	int ret, tract[NBREPLST], retifset[NBREPLST];
 
 	psc_assert(b);
 
@@ -417,7 +417,9 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
-		mds_repl_bmap_apply(b, tract, retifset, off);
+		ret = mds_repl_bmap_apply(b, tract, retifset, off);
+		if (ret != BREPLST_TRUNCPNDG_SCHED)
+			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
 	}
 
@@ -523,8 +525,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNCPNDG)
-		DEBUG_BMAPOD(PLL_FATAL, b,
-		    "bmap is corrupted");
+		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 
 	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
