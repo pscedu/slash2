@@ -468,6 +468,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
@@ -492,10 +493,13 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	BMAPOD_RDLOCK(bmi);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "truncate already scheduled");
+	BMAPOD_ULOCK(bmi);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
