@@ -201,7 +201,7 @@ struct bmap {
 		    (b)->bcm_owner != _pthr);				\
 		(b)->bcm_flags |= BMAPF_BUSY;				\
 		(b)->bcm_owner = _pthr;					\
-		DEBUG_BMAP(PLL_MAX, (b), "set BUSY");			\
+		DEBUG_BMAP(PLL_DIAG, (b), "set BUSY");			\
 	} while (0)
 
 #define BMAP_UNBUSY(b)							\
@@ -210,7 +210,7 @@ struct bmap {
 		BMAP_BUSY_ENSURE(b);					\
 		(b)->bcm_owner = 0;					\
 		(b)->bcm_flags &= ~BMAPF_BUSY;				\
-		DEBUG_BMAP(PLL_MAX, (b), "cleared BUSY");		\
+		DEBUG_BMAP(PLL_DIAG, (b), "cleared BUSY");		\
 		bmap_wake_locked(b);					\
 		BMAP_ULOCK(b);						\
 	} while (0)
