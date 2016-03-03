@@ -395,34 +395,31 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 void
 slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
-    struct bmap *b, int rc, int off)
+    struct bmap *b, int sched, int rc, int off)
 {
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
-	int ret, tract[NBREPLST], retifset[NBREPLST];
+	int tract[NBREPLST], retifset[NBREPLST];
 
 	psc_assert(b);
 
 	f = b->bcm_fcmh;
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
 
-	/*
-	 * If successful, the IOS is responsible to send a
-	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
-	 * and the disk usage. However, we don't wait for
-	 * it to happen.
-	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
-	    BREPLST_TRUNCPNDG : BREPLST_VALID;
-	brepls_init_idx(retifset);
-	ret = mds_repl_bmap_apply(b, tract, retifset, off);
-
-	/*
- 	 * Only log if we did some real work.
- 	 */ 
-	if (ret != BREPLST_TRUNCPNDG_SCHED)
+	if (sched) {
+		/*
+		 * If successful, the IOS is responsible to send a
+		 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+		 * and the disk usage. However, we don't wait for
+		 * it to happen.
+		 */
+		brepls_init(tract, -1);
+		tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
+		    BREPLST_TRUNCPNDG : BREPLST_VALID;
+		brepls_init_idx(retifset);
+		mds_repl_bmap_apply(b, tract, retifset, off);
 		mds_bmap_write_logrepls(b);
+	}
 
 	if (!rc) {
 		FCMH_LOCK(f);
@@ -451,7 +448,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
 
-	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
 	return (0);
 }
 
@@ -462,7 +459,7 @@ int
 slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc;
+	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_ptrunc_req *mq;
@@ -525,6 +522,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "bmap is corrupted");
 
+	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
 
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
@@ -536,7 +534,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, sched, rc, off);
 	return (rc);
 }
 
