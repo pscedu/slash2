@@ -2032,8 +2032,6 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 
 	switch (val) {
 	case BREPLST_VALID:
-	case BREPLST_REPL_SCHED:
-	case BREPLST_REPL_QUEUED:
 		break;
 	default:
 		return;
@@ -2121,7 +2119,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
 		rc = mds_repl_bmap_walkcb(b, tract, NULL, 0,
-		    ptrunc_tally_ios, &ios_list);
+		    NULL, NULL);
 		if (rc)
 			mds_bmap_write_logrepls(b);
 		bmap_op_done(b);
