@@ -2061,6 +2061,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	/* get the number of replies we expect */
 	ios_list.nios = 0;
+	for (i = 0; i < SL_MAX_REPLICAS; i++)
+		ios_list.iosv[i].bs_id = 0;
 	fmi->fmi_ptrunc_nios = 0;
 
 	i = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
