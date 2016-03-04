@@ -2085,6 +2085,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		if (fmi->fmi_ptrunc_nios) {
 			rc = mds_bmap_write_logrepls(b);
 			if (rc) {
+				FCMH_UNBUSY(f);
 				bmap_op_done(b);
 				goto out2;
 			}
@@ -2099,7 +2100,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			upd = bmap_2_upd(b);
 			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
 			upsch_enqueue(upd);
-		}
+		} else
+			FCMH_UNBUSY(f);
 		bmap_op_done(b);
 	}
 	i++;
