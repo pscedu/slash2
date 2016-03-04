@@ -769,7 +769,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
 
-	rc = -SLERR_BMAP_INVALID;
+	/* Wildcards shouldn't result in errors on zero-length files. */
+	if (*nbmaps != -1)
+		rc = -SLERR_BMAP_INVALID;
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
@@ -926,7 +928,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
-	rc = -SLERR_BMAP_INVALID;
+	/* Wildcards shouldn't result in errors on zero-length files. */
+	if (*nbmaps != -1)
+		rc = -SLERR_BMAP_INVALID;
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
