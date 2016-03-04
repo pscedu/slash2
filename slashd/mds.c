@@ -2077,6 +2077,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	/* When do we drop this reference? */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+		DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
