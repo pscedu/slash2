@@ -2030,20 +2030,14 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 	sl_ios_id_t ios_id;
 	int i;
 
-	switch (val) {
-	case BREPLST_VALID:
-		break;
-	default:
-		return;
+	if (val == BREPLST_VALID) {
+		ios_id = bmap_2_repl(b, iosidx);
+		for (i = 0; i < ios_list->nios; i++)
+			if (ios_list->iosv[i].bs_id == ios_id)
+				return;
+
+		ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 	}
-
-	ios_id = bmap_2_repl(b, iosidx);
-
-	for (i = 0; i < ios_list->nios; i++)
-		if (ios_list->iosv[i].bs_id == ios_id)
-			return;
-
-	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
 }
 
 __static void
