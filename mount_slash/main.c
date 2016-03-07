@@ -3298,7 +3298,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (rc)
 		pscfs_reply_read(pfr, NULL, 0, rc);
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (end): rc=%d sz=%zu "
+	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "read (end): rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, rc, size, off);
 }
 
