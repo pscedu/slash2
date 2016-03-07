@@ -47,7 +47,7 @@ slc_rci_init(void)
 
 	thr = pscthr_get();
 
-	psc_multiwait_init(&msrcithr(thr)->mrci_mw, "%s",
+	pfl_multiwait_init(&msrcithr(thr)->mrci_mw, "%s",
 	    thr->pscthr_name);
 }
 
@@ -58,7 +58,7 @@ slc_rcm_init(void)
 
 	thr = pscthr_get();
 
-	psc_multiwait_init(&msrcmthr(thr)->mrcm_mw, "%s",
+	pfl_multiwait_init(&msrcmthr(thr)->mrcm_mw, "%s",
 	    thr->pscthr_name);
 }
 

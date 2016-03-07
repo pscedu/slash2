@@ -39,7 +39,7 @@ struct slm_update_data {
 	int				 upd_flags;
 	pthread_t			 upd_owner;
 	struct pfl_mutex		 upd_mutex;
-	struct psc_multiwaitcond	 upd_mwc;
+	struct pfl_multiwaitcond	 upd_mwc;
 	struct psc_listentry		 upd_lentry;
 };
 
@@ -74,13 +74,13 @@ struct slm_update_generic {
 #define UPD_RLOCK(upd)			_psc_mutex_reqlock(UPD_CALLERINFO(), &(upd)->upd_mutex)
 #define UPD_URLOCK(upd, lk)		_psc_mutex_ureqlock(UPD_CALLERINFO(), &(upd)->upd_mutex, (lk))
 #define UPD_HASLOCK(upd)		_psc_mutex_haslock(UPD_CALLERINFO(), &(upd)->upd_mutex)
-#define UPD_WAKE(upd)			psc_multiwaitcond_wakeup(&(upd)->upd_mwc)
+#define UPD_WAKE(upd)			pfl_multiwaitcond_wakeup(&(upd)->upd_mwc)
 
 #define UPD_WAIT(upd)							\
 	do {								\
 		UPD_RLOCK(upd);						\
 		while ((upd)->upd_flags & UPDF_BUSY) {			\
-			psc_multiwaitcond_wait(&(upd)->upd_mwc,		\
+			pfl_multiwaitcond_wait(&(upd)->upd_mwc,		\
 			    &(upd)->upd_mutex);				\
 			UPD_LOCK(upd);					\
 		}							\
@@ -173,7 +173,7 @@ void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 #define UPSCH_RLOCK()		MLIST_REQLOCK(&slm_upschq)
 #define UPSCH_URLOCK(lk)	MLIST_URLOCK(&slm_upschq, (lk))
 #define UPSCH_LOCK_ENSURE()	MLIST_LOCK_ENSURE(&slm_upschq)
-#define UPSCH_WAKE()		psc_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
+#define UPSCH_WAKE()		pfl_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
 
 extern struct psc_mlist		 slm_upschq;
 

@@ -243,7 +243,7 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
     struct slashrpc_cservice *csvc, int flags,
-    __unusedx struct psc_multiwait *mw, uint32_t *stkversp)
+    __unusedx struct pfl_multiwait *mw, uint32_t *stkversp)
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
@@ -459,7 +459,7 @@ _sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
 	ts.tv_nsec = ns;
 
 	CSVC_LOCK_ENSURE(csvc);
-	psc_multiwaitcond_waitrel(&csvc->csvc_mwc, &csvc->csvc_mutex,
+	pfl_multiwaitcond_waitrel(&csvc->csvc_mwc, &csvc->csvc_mutex,
 	    &ts);
 }
 
@@ -565,7 +565,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 			// XXX assert(mutex.nwaiters == 0)
 			psc_mutex_unlock(&csvc->csvc_mutex);
 			psc_mutex_destroy(&csvc->csvc_mutex);
-			psc_multiwaitcond_destroy(&csvc->csvc_mwc);
+			pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
 			psc_pool_return(sl_csvc_pool, csvc);
 			return;
 		}
@@ -739,7 +739,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, struct psc_dynarray *peernids,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
-    enum slconn_type peertype, struct psc_multiwait *mw)
+    enum slconn_type peertype, struct pfl_multiwait *mw)
 {
 	void *hldropf, *hldroparg;
 	uint32_t *stkversp = NULL;
@@ -815,7 +815,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		if (exp && exp->exp_connection)
 			pscrpc_id2str(exp->exp_connection->c_peer,
 			    addrbuf);
-		psc_multiwaitcond_init(&csvc->csvc_mwc, csvc,
+		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 		expc = (void *)csvc->csvc_params.scp_csvcp;
 		stkversp = &expc->stkvers;
@@ -826,7 +826,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	    }
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
-		psc_multiwaitcond_init(&csvc->csvc_mwc, csvc,
+		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
 		stkversp = &resm->resm_res->res_stkvers;
 		break;
@@ -888,7 +888,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out;
 		}
 
-		psc_multiwaitcond_wait(&csvc->csvc_mwc,
+		pfl_multiwaitcond_wait(&csvc->csvc_mwc,
 		    &csvc->csvc_mutex);
 		CSVC_LOCK(csvc);
 		goto restart;
@@ -984,11 +984,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		thr = pscthr_get();
 		PSCTHR_LOCK(thr);
-		if (psc_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
-			psc_multiwait_setcondwakeable(mw,
+		if (pfl_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
+			pfl_multiwait_setcondwakeable(mw,
 			    &(*csvcp)->csvc_mwc, 1);
 		else
-			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
+			pfl_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
 		PSCTHR_ULOCK(thr);
 	}
 	CSVC_URLOCK(*csvcp, locked);
@@ -1031,7 +1031,7 @@ slconnthr_main(struct psc_thread *thr)
 			}
 		}
 
-		psc_multiwait_entercritsect(&sct->sct_mw);
+		pfl_multiwait_entercritsect(&sct->sct_mw);
 
 		PSCTHR_LOCK(thr);
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
@@ -1090,7 +1090,7 @@ slconnthr_main(struct psc_thread *thr)
 			(void)PSCTHR_RLOCK(thr);
 		}
 		PSCTHR_ULOCK(thr);
-		psc_multiwait_secs(&sct->sct_mw, &dummy, 1);
+		pfl_multiwait_secs(&sct->sct_mw, &dummy, 1);
 	}
 }
 
@@ -1106,9 +1106,9 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
 	sct = thr->pscthr_private;
 	sct->sct_pingupc = pingupc;
 	sct->sct_pingupcarg = pingupcarg;
-	psc_multiwait_init(&sct->sct_mw, "resmon");
-	psc_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "rebuild");
-	psc_multiwait_addcond(&sct->sct_mw, &sct->sct_mwc);
+	pfl_multiwait_init(&sct->sct_mw, "resmon");
+	pfl_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "rebuild");
+	pfl_multiwait_addcond(&sct->sct_mw, &sct->sct_mwc);
 	pscthr_setready(thr);
 	return (thr);
 }
@@ -1137,8 +1137,8 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	CSVC_ULOCK(csvc);
 
 	PSCTHR_LOCK(thr);
-	if (!psc_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
-		psc_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
+	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
+		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
 	psc_dynarray_add(&sct->sct_monres, scp);
 	PSCTHR_ULOCK(thr);
 }

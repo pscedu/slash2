@@ -73,8 +73,8 @@ struct slconn_thread {
 	int			(*sct_pingupc)(void *);
 	void			 *sct_pingupcarg;
 	struct psc_dynarray	  sct_monres;
-	struct psc_multiwait	  sct_mw;
-	struct psc_multiwaitcond  sct_mwc;
+	struct pfl_multiwait	  sct_mw;
+	struct pfl_multiwaitcond  sct_mwc;
 };
 
 /**
@@ -103,7 +103,7 @@ struct slrpc_cservice {
 	struct timespec		 csvc_mtime;		/* last activity */
 	struct psclist_head	 csvc_lentry;
 	struct pfl_mutex	 csvc_mutex;
-	struct psc_multiwaitcond csvc_mwc;
+	struct pfl_multiwaitcond csvc_mwc;
 #define csvc_flags	csvc_params.scp_flags
 #define csvc_magic	csvc_params.scp_magic
 #define csvc_version	csvc_params.scp_version
@@ -195,8 +195,8 @@ struct sl_expcli_ops {
 #define CSVC_URLOCK(csvc, lk)		_psc_mutex_ureqlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex, (lk))
 #define CSVC_LOCK_ENSURE(csvc)		psc_mutex_ensure_locked(&(csvc)->csvc_mutex)
 
-#define CSVC_WAKE(csvc)			psc_multiwaitcond_wakeup(&(csvc)->csvc_mwc)
-#define CSVC_WAIT(csvc)			psc_multiwaitcond_wait(&(csvc)->csvc_mwc, &(csvc)->csvc_mutex)
+#define CSVC_WAKE(csvc)			pfl_multiwaitcond_wakeup(&(csvc)->csvc_mwc)
+#define CSVC_WAIT(csvc)			pfl_multiwaitcond_wait(&(csvc)->csvc_mwc, &(csvc)->csvc_mutex)
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
@@ -383,7 +383,7 @@ struct slashrpc_cservice *
 	_sl_csvc_get(const struct pfl_callerinfo *,
 	    struct slrpc_cservice **, int, struct pscrpc_export *,
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
-	    uint32_t, enum slconn_type, struct psc_multiwait *);
+	    uint32_t, enum slconn_type, struct pfl_multiwait *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
 	    struct slashrpc_cservice *);

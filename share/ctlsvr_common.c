@@ -317,6 +317,12 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 }
 
 void
+slctlparam_pid_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", getpid());
+}
+
+void
 slctlparam_version_get(char *val)
 {
 	snprintf(val, PCP_VALUE_MAX, "%d", sl_stk_version);
