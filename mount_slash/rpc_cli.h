@@ -132,7 +132,7 @@ extern struct pscrpc_svc_handle	*msl_rci_svh;
 extern struct pscrpc_svc_handle	*msl_rcm_svh;
 
 /* Grab calling thread's multiwait structure. */
-static __inline struct psc_multiwait *
+static __inline struct pfl_multiwait *
 msl_getmw(void)
 {
 	struct psc_thread *thr;

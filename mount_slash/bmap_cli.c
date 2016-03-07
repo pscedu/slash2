@@ -1074,7 +1074,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 {
 	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;
-	struct psc_multiwait *mw;
+	struct pfl_multiwait *mw;
 	struct sl_resm *m;
 	void *p;
 
@@ -1131,8 +1131,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 */
 	has_residency = 0;
 	for (j = 0; j < 2; j++) {
-		psc_multiwait_reset(mw);
-		psc_multiwait_entercritsect(mw);
+		pfl_multiwait_reset(mw);
+		pfl_multiwait_entercritsect(mw);
 
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
 			rc = msl_try_get_replica_res(b,
@@ -1140,7 +1140,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			    pm, csvcp);
 			switch (rc) {
 			case 0:
-				psc_multiwait_leavecritsect(mw);
+				pfl_multiwait_leavecritsect(mw);
 				return (0);
 			case -1: /* resident but offline */
 				has_residency = 1;
@@ -1169,11 +1169,11 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		 * amount of time for any to finish connection
 		 * (re)establishment.
 		 */
-		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
+		pfl_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
 		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
 		// recheck
 	}
-	psc_multiwait_leavecritsect(mw);
+	pfl_multiwait_leavecritsect(mw);
 	return (-ETIMEDOUT);
 }
 

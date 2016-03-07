@@ -66,40 +66,40 @@ enum {
 };
 
 struct msfs_thread {
-	struct psc_multiwait		 mft_mw;
+	struct pfl_multiwait		 mft_mw;
 };
 
 #define msfsthr(thr)	((struct msfs_thread *)pfl_fsthr_getpri(thr))
 
 struct msattrflush_thread {
-	struct psc_multiwait		 maft_mw;
+	struct pfl_multiwait		 maft_mw;
 };
 
 struct msbrelease_thread {
-	struct psc_multiwait		 mbrt_mw;
+	struct pfl_multiwait		 mbrt_mw;
 };
 
 struct msbwatch_thread {
-	struct psc_multiwait		 mbwt_mw;
+	struct pfl_multiwait		 mbwt_mw;
 };
 
 struct msflush_thread {
 	int				 mflt_failcnt;
-	struct psc_multiwait		 mflt_mw;
+	struct pfl_multiwait		 mflt_mw;
 };
 
 struct msrci_thread {
 	struct pscrpc_thread		 mrci_prt;
-	struct psc_multiwait		 mrci_mw;
+	struct pfl_multiwait		 mrci_mw;
 };
 
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
-	struct psc_multiwait		 mrcm_mw;
+	struct pfl_multiwait		 mrcm_mw;
 };
 
 struct msreadahead_thread {
-	struct psc_multiwait		 mrat_mw;
+	struct pfl_multiwait		 mrat_mw;
 };
 
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);

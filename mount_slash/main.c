@@ -234,7 +234,7 @@ msfsthr_destroy(void *arg)
 {
 	struct msfs_thread *mft = arg;
 
-	psc_multiwait_free(&mft->mft_mw);
+	pfl_multiwait_free(&mft->mft_mw);
 	PSCFREE(mft);
 }
 
@@ -244,7 +244,7 @@ msfsthr_init(struct psc_thread *thr)
 	struct msfs_thread *mft;
 
 	mft = PSCALLOC(sizeof(*mft));
-	psc_multiwait_init(&mft->mft_mw, "%s", thr->pscthr_name);
+	pfl_multiwait_init(&mft->mft_mw, "%s", thr->pscthr_name);
 	return (mft);
 }
 
@@ -3727,7 +3727,7 @@ msattrflushthr_spawn(void)
 		    msattrflushthr_main, NULL, sizeof(*maft),
 		    "msattrflushthr%d", i);
 		maft = msattrflushthr(thr);
-		psc_multiwait_init(&maft->maft_mw, "%s",
+		pfl_multiwait_init(&maft->maft_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}

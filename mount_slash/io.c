@@ -2258,7 +2258,7 @@ msreadaheadthr_spawn(void)
 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
 		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);
-		psc_multiwait_init(&mrat->mrat_mw, "%s",
+		pfl_multiwait_init(&mrat->mrat_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}

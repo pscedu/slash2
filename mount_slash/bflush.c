@@ -1036,20 +1036,20 @@ msbmapthr_spawn(void)
 		thr = pscthr_init(MSTHRT_FLUSH, msflushthr_main, NULL,
 		    sizeof(struct msflush_thread), "msflushthr%d", i);
 		mflt = msflushthr(thr);
-		psc_multiwait_init(&mflt->mflt_mw, "%s",
+		pfl_multiwait_init(&mflt->mflt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
 
 	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, NULL,
 	    sizeof(struct msbwatch_thread), "msbwatchthr");
-	psc_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
+	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main, NULL,
 	    sizeof(struct msbrelease_thread), "msbreleasethr");
-	psc_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
+	pfl_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
