@@ -33,6 +33,7 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
+#include "pfl/fault.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -167,6 +168,15 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 	psclog_diag("bmapdesc check okay");
+
+	if (rw == SL_READ)
+		(void)pfl_fault_here_rc("sliod/seqno_read_fail", 
+		    &mp->rc, -PFLERR_KEYEXPIRED);
+	else
+		(void)pfl_fault_here_rc("sliod/seqno_write_fail", 
+		    &mp->rc, -PFLERR_KEYEXPIRED);
+	if (mp->rc)
+		return (mp->rc);
 
 	seqno = bim_getcurseq();
 	if (mq->sbd.sbd_seq < seqno) {
