@@ -118,8 +118,6 @@ mds_bmap_timeotbl_getnextseq(void)
 {
 	uint64_t hwm;
 
-	spinlock(&slm_bmap_leases.btt_lock);
-
 	/*
 	 * Skip a zero sequence number because the client does not like
 	 * it.  More work is needed when an IOS decides if a smaller
@@ -135,8 +133,6 @@ mds_bmap_timeotbl_getnextseq(void)
 	hwm = slm_bmap_leases.btt_maxseq;
 	mds_bmap_timeotbl_journal_seqno();
 
-	freelock(&slm_bmap_leases.btt_lock);
-
 	return (hwm);
 }
 
@@ -146,7 +142,6 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	struct bmap_mds_lease *tmp;
 	int update = 0;
 
-	spinlock(&slm_bmap_leases.btt_lock);
 	if (pll_peekhead(&slm_bmap_leases.btt_leases) == bml)
 		update = 1;
 	pll_remove(&slm_bmap_leases.btt_leases, bml);
@@ -159,7 +154,6 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 			    slm_bmap_leases.btt_maxseq;
 		mds_bmap_timeotbl_journal_seqno();
 	}
-	freelock(&slm_bmap_leases.btt_lock);
 }
 
 /*
@@ -170,15 +164,18 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
 	uint64_t seq = 0;
 
+	BML_LOCK(bml);
+	spinlock(&slm_bmap_leases.btt_lock);
 	if (flags & BTE_DEL) {
 		bml->bml_flags &= ~BML_TIMEOQ;
 		mds_bmap_timeotbl_remove(bml);
+		freelock(&slm_bmap_leases.btt_lock);
+		BML_ULOCK(bml);
 		return (BMAPSEQ_ANY);
 	}
 
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context. */
-		spinlock(&slm_bmap_leases.btt_lock);
 		if (slm_bmap_leases.btt_maxseq < bml->bml_seq)
 			/*
 			 * A lease has been found in odtable whose
@@ -193,22 +190,21 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			seq = BMAPSEQ_ANY;
 		else
 			seq = bml->bml_seq;
-		freelock(&slm_bmap_leases.btt_lock);
 
 	} else {
 		seq = mds_bmap_timeotbl_getnextseq();
 	}
 
-	BML_LOCK(bml);
+	bml->bml_seq = seq;
 	if (bml->bml_flags & BML_TIMEOQ) {
-		psclog_warnx("Move lease: bml = %p, flags = %x, seqno %"PRIx64,
-			bml, bml->bml_flags, bml->bml_seq);
+		OPSTAT_INCR("bml-move");
 		mds_bmap_timeotbl_remove(bml);
 		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	} else {
 		bml->bml_flags |= BML_TIMEOQ;
 		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	}
+	freelock(&slm_bmap_leases.btt_lock);
 	BML_ULOCK(bml);
 
 	return (seq);

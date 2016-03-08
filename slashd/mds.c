@@ -709,7 +709,6 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	pfl_odt_replaceitem(slm_bia_odt, bmi->bmi_assign, bia);
 
 	bml->bml_ios = bia->bia_ios;
-	bml->bml_seq = bia->bia_seq;
 
 	rc = mds_bmap_add_repl(b, bia);
 	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
@@ -1005,8 +1004,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 
 	} else { //rw == SL_READ
-		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
-
 		if (!wlease && !rlease)
 			bmi->bmi_readers++;
 		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
