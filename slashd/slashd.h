@@ -188,7 +188,7 @@ struct slm_nsstats {
  * request per MDS until it responds or timeouts.
  */
 struct rpmi_mds {
-	struct psc_meter	  sp_batchmeter;
+	struct pfl_meter	  sp_batchmeter;
 #define sp_batchno sp_batchmeter.pm_cur
 	uint64_t		  sp_xid;
 	int			  sp_flags;
@@ -223,7 +223,7 @@ struct bw_dir {
 struct rpmi_ios {
 	struct timespec		  si_lastcomm;		/* PING timeout to trigger conn reset */
 	uint64_t		  si_xid;		/* garbage reclaim transaction group identifier */
-	struct psc_meter	  si_batchmeter;
+	struct pfl_meter	  si_batchmeter;
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;

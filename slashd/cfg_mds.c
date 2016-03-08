@@ -45,13 +45,13 @@ slcfg_init_res(struct sl_resource *r)
 	if (r->res_type == SLREST_MDS) {
 		rpmi->rpmi_info = sp = PSCALLOC(sizeof(*sp));
 		sp->sp_flags = SPF_NEED_JRNL_INIT;
-		psc_meter_init(&sp->sp_batchmeter, 0, "nsupd-%s",
+		pfl_meter_init(&sp->sp_batchmeter, 0, "nsupd-%s",
 		    r->res_name);
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
 		if (RES_ISFS(r))
-			psc_meter_init(&si->si_batchmeter, 0,
+			pfl_meter_init(&si->si_batchmeter, 0,
 			    "reclaim-%s", r->res_name);
 		if (r->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_LEASE;

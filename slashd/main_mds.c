@@ -507,8 +507,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	/* startup meter */
-	psc_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
-
+	pfl_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++)
 		psc_register_filesystem(vfsid);
