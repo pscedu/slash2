@@ -74,7 +74,7 @@
 #define IP_SRCRESM	2
 #define IP_BMAP		3
 
-struct psc_mlist	 slm_upschq;
+struct pfl_mlist	 slm_upschq;
 struct pfl_multiwait	 slm_upsch_mw;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
@@ -1179,7 +1179,7 @@ slmupschthr_main(struct psc_thread *thr)
 
 		UPSCH_LOCK();
 		pfl_multiwait_entercritsect(&slm_upsch_mw);
-		upd = psc_mlist_tryget(&slm_upschq);
+		upd = pfl_mlist_tryget(&slm_upschq);
 		if (upd)
 			upd_proc(upd);
 		UPSCH_ULOCK();
@@ -1207,7 +1207,7 @@ slm_upsch_init(void)
 	    NULL, NULL, NULL, "upgen");
 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
 
-	psc_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
+	pfl_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
 	    upd_lentry, "upschq");
 }
 
@@ -1346,12 +1346,12 @@ upsch_enqueue(struct slm_update_data *upd)
 	int locked;
 
 	locked = UPD_RLOCK(upd);
-	if (!psc_mlist_conjoint(&slm_upschq, upd)) {
+	if (!pfl_mlist_conjoint(&slm_upschq, upd)) {
 		if (upd->upd_type == UPDT_BMAP &&
 		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
-			psc_mlist_addtail(&slm_upschq, upd);
+			pfl_mlist_addtail(&slm_upschq, upd);
 		else
-			psc_mlist_addhead(&slm_upschq, upd);
+			pfl_mlist_addhead(&slm_upschq, upd);
 		UPD_INCREF(upd);
 	}
 	UPD_URLOCK(upd, locked);
