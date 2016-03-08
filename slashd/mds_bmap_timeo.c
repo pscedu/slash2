@@ -201,6 +201,8 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 
 	BML_LOCK(bml);
 	if (bml->bml_flags & BML_TIMEOQ) {
+		psclog_warnx("Move bml %p without updating its seqno %"PRIx64,
+			bml, bml->bml_seq);
 		mds_bmap_timeotbl_remove(bml);
 		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	} else {
