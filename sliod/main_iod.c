@@ -332,6 +332,9 @@ main(int argc, char *argv[])
 	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
+	pfl_fault_register("sliod/seqno_read_fail");
+	pfl_fault_register("sliod/seqno_write_fail");
+
 	slictlthr_main(sfn);
 	exit(0);
 }
