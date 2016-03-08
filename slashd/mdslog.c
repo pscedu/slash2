@@ -37,7 +37,6 @@
 #include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
-#include "pfl/hostname.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
