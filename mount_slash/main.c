@@ -3234,8 +3234,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	slc_destroy_rpci(&msl_statfs_aggr_rpci);
 
-	psc_subsys_unregister(SLCSS_FSOP);
-	psc_subsys_unregister(SLCSS_INFO);
+	pfl_subsys_unregister(SLCSS_FSOP);
+	pfl_subsys_unregister(SLCSS_INFO);
 	sl_subsys_unregister();
 }
 
@@ -3826,8 +3826,8 @@ msl_init(void)
 	}
 
 	sl_subsys_register();
-	psc_subsys_register(SLCSS_INFO, "info");
-	psc_subsys_register(SLCSS_FSOP, "fsop");
+	pfl_subsys_register(SLCSS_INFO, "info");
+	pfl_subsys_register(SLCSS_FSOP, "fsop");
 
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;

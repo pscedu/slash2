@@ -410,10 +410,10 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
-	psc_subsys_register(SLMSS_ZFS, "zfs");
-	psc_subsys_register(SLMSS_JOURNAL, "log");
-	psc_subsys_register(SLMSS_UPSCH, "upsch");
-	psc_subsys_register(SLMSS_INFO, "info");
+	pfl_subsys_register(SLMSS_ZFS, "zfs");
+	pfl_subsys_register(SLMSS_JOURNAL, "log");
+	pfl_subsys_register(SLMSS_UPSCH, "upsch");
+	pfl_subsys_register(SLMSS_INFO, "info");
 
 	rc = pfl_asprintf(&path_env, "%s:%s:%s", ZFS_BIN_PATH,
 	    ZPOOL_PATH, getenv("PATH"));

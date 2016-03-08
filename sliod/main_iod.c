@@ -213,8 +213,8 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
-	psc_subsys_register(SLISS_SLVR, "slvr");
-	psc_subsys_register(SLISS_INFO, "info");
+	pfl_subsys_register(SLISS_SLVR, "slvr");
+	pfl_subsys_register(SLISS_INFO, "info");
 
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
