@@ -175,7 +175,7 @@ void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 #define UPSCH_LOCK_ENSURE()	MLIST_LOCK_ENSURE(&slm_upschq)
 #define UPSCH_WAKE()		pfl_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
 
-extern struct psc_mlist		 slm_upschq;
+extern struct pfl_mlist		 slm_upschq;
 
 struct slm_sth {
 	struct pfl_hashentry	 sth_hentry;
