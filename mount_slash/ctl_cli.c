@@ -863,7 +863,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
-
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",

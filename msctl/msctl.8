@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd February 20, 2016
+.Dd March 8, 2016
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -431,6 +431,7 @@ lookups for network addresses.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	log_xr => "in\n.Xr mount_slash 8\n",
 .\"	params => {
+.\"		'pid' => "Daemon system process ID.",
 .\"		'sys.mountpoint'
 .\"		     =>	"File hierarchy node where\n" .
 .\"			".Tn SLASH2\nfile system is mounted.",
@@ -553,6 +554,8 @@ basis.
 Usually assigned to by the
 .Li +=
 operator.
+.It Cm pid
+Daemon system process ID.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
