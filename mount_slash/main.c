@@ -2605,7 +2605,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
-	if (iosid != MSL_STATFS_AGGR_IOSID);
+	if (iosid != MSL_STATFS_AGGR_IOSID)
 		sl_resource_put(pref_ios);
 	pscrpc_req_finished(rq);
 	if (csvc)

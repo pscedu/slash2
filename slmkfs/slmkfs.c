@@ -35,13 +35,13 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/hostname.h"
 #include "pfl/journal.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
 #include "pfl/pfl.h"
 #include "pfl/random.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -153,7 +153,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (p)
 		*p = '\0';
 	fprintf(fp, "This pool was created %s on %s\n", strtm,
-	    psc_get_hostname());
+	    pflsys_get_hostname());
 	fclose(fp);
 
 	if (ion)
@@ -201,11 +201,11 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_touchfile("%s/%s", metadir, SL_FN_RECLAIMPROG);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe, 
+	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe,
 	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe, 
+	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe,
 	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
 }
 
