@@ -775,7 +775,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	 */
 	RPCI_LOCK(rpci);
 	if (!block && rpci->rpci_infl_rpcs >=
-	    RESM_MAX_OUTSTANDING_RPCS) {
+	    msl_max_inflight_rpcs) {
 		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
 	}
