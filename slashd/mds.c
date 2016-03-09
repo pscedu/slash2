@@ -300,6 +300,9 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * are marked RES_ISCLUSTER().  resm_res always points back to
 	 * the member's native resource and not to a logical resource
 	 * like a CNOS.
+	 *
+	 * XXX: If the IOS already has the block mapped, given out a
+	 * lease should be Okay because it does NOT increse disk usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
