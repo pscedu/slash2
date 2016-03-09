@@ -85,7 +85,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
 	const struct slictlmsg_replwkst *srws = m;
 
-	psc_fmt_ratio(rbuf, srws->srws_data_cur, srws->srws_data_tot);
+	pfl_fmt_ratio(rbuf, srws->srws_data_cur, srws->srws_data_tot);
 	printf("%016"SLPRIxFID" %6d %28s %4d ",
 	    srws->srws_fg.fg_fid, srws->srws_bmapno,
 	    srws->srws_peer_addr, srws->srws_refcnt);
@@ -93,8 +93,8 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		printf("%7d %7d", srws->srws_data_cur,
 		    srws->srws_data_tot);
 	else {
-		psc_fmt_human(totbuf, srws->srws_data_tot);
-		psc_fmt_human(curbuf, srws->srws_data_cur);
+		pfl_fmt_human(totbuf, srws->srws_data_tot);
+		pfl_fmt_human(curbuf, srws->srws_data_cur);
 		printf("%7s %7s", curbuf, totbuf);
 	}
 	printf(" %6s\n", rbuf);

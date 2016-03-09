@@ -748,7 +748,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		printf("  %-57s", current_mrs.mrs_iosv[iosidx]);
 		uncolor();
 
-		psc_fmt_ratio(rbuf, bact, bact + both);
+		pfl_fmt_ratio(rbuf, bact, bact + both);
 		printf(" %6d %6d %6s", bact, bact + both, rbuf);
 
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
