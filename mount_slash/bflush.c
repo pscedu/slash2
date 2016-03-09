@@ -780,7 +780,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 		return (-EAGAIN);
 	}
 
-	while (rpci->rpci_infl_rpcs >= RESM_MAX_OUTSTANDING_RPCS) {
+	while (rpci->rpci_infl_rpcs >= msl_max_inflight_rpcs) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
@@ -903,7 +903,7 @@ bmap_flush(void)
 		}
 		BMAP_ULOCK(b);
 
-		if (psc_dynarray_len(&bmaps) >= RESM_MAX_OUTSTANDING_RPCS)
+		if (psc_dynarray_len(&bmaps) >= msl_max_inflight_rpcs)
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_bmapflushq);
