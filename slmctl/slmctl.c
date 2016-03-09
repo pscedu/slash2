@@ -174,7 +174,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	setcolor(col);
 	if (b->sf_blocks)
-		psc_fmt_ratio(cbuf, b->sf_blocks - b->sf_bfree,
+		pfl_fmt_ratio(cbuf, b->sf_blocks - b->sf_bfree,
 		    b->sf_blocks - b->sf_bfree + b->sf_bavail);
 	else
 		strlcpy(cbuf, "-", sizeof(cbuf));

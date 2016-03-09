@@ -243,7 +243,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	int width;
 
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
-	psc_fmt_human(buf, scf->scf_size);
+	pfl_fmt_human(buf, scf->scf_size);
 	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
 	    "%6o %5u %5u %7s "
 	    "%3d %7s "
