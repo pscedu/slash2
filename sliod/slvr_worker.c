@@ -402,8 +402,9 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
-void sli_sync_ahead(void)
+int sli_sync_ahead(void)
 {
+	int skip = 0;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
 
@@ -411,13 +412,19 @@ void sli_sync_ahead(void)
 	LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_dirty) {
 
 		f = fii_2_fcmh(fii);
-		if (!FCMH_TRYLOCK(f))
+		if (!FCMH_TRYLOCK(f)) {
+			skip++;
 			continue;
+		}
+		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
+		FCMH_ULOCK(f);
 
+		fsync(fcmh_2_fd(f));
 		psclog_warnx("sync ahead: fg="SLPRI_FG, 
 		    SLPRI_FG_ARGS(&f->fcmh_fg));
 
-		FCMH_ULOCK(f);
+		FCMH_LOCK(f);
+		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
 	}
 	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
 
@@ -425,9 +432,11 @@ void sli_sync_ahead(void)
 void
 slisyncthr_main(struct psc_thread *thr)
 {
+	int skip;
 	while (pscthr_run(thr)) {
-		sli_sync_ahead();
-		sleep(20);
+		skip = sli_sync_ahead();
+		if (!skip)
+			sleep(20);
 	}
 }
 
