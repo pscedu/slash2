@@ -419,10 +419,13 @@ sli_sync_ahead(void)
 	LIST_CACHE_LOCK(&sli_fcmh_dirty);
 	LIST_CACHE_FOREACH(fii, &sli_fcmh_dirty) {
 		f = fii_2_fcmh(fii);
+#if 0
 		if (!FCMH_TRYLOCK(f)) {
 			skip++;
 			continue;
 		}
+#endif
+		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_IOD_SYNCFILE) {
 			FCMH_ULOCK(f);
 			continue;
@@ -430,6 +433,7 @@ sli_sync_ahead(void)
 		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
 		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
 		FCMH_ULOCK(f);
+		psc_dynarray_add(&a, f);
 	}
 	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
 
