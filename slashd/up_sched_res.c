@@ -476,7 +476,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	f = upd_2_fcmh(upd);
 
 	if (!slm_ptrunc_enabled) {
-		DEBUG_FCMH(PLL_MAX, f, "ptrunc averted");
+		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
 		return (0);
 	}
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, off = %d, id = 0x%x",
@@ -600,7 +600,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	f = b->bcm_fcmh;
 	if (!slm_preclaim_enabled) {
-		DEBUG_FCMH(PLL_MAX, f, "preclaim averted");
+		DEBUG_FCMH(PLL_DIAG, f, "preclaim averted");
 		return (0);
 	}
 
@@ -735,7 +735,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
 
-	DEBUG_BMAPOD(PLL_MAX, b, "processing");
+	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
 	/*
 	 * Scan residency states (through file's inode table) of bmap
