@@ -403,17 +403,33 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
+	struct timespec ts0, ts1, delta;
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmap *b;
 	uint32_t i;
 
-	struct timespec ts0, ts1, delta;
-
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
+
+#ifdef HAVE_SYNC_FILE_RANGE
+	psc_dynarray_ensurelen();
+	for (i = 0; i < mq->nbmaps; i++) {
+		sbd = &mq->sbd[i];
+		if (sli_fcmh_peek(&sbd->sbd_fg, &f))
+			continue;
+		FCMH_LOCK(f);
+		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+			FCMH_ULOCK(f);
+			sync_file_range(fcmh_2_fd(f), sbd->sbd_bmapno *
+			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE,
+			    SYNC_FILE_RANGE_WRITE);
+		}
+		fcmh_op_done(f);
+	}
+#endif
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
@@ -433,13 +449,25 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 */
 		FCMH_LOCK(f);
 		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
+			int error;
+
 			FCMH_ULOCK(f);
 
 			PFL_GETTIMESPEC(&ts0);
 
 			fsync_time = CURRENT_SECONDS;
+#ifdef HAVE_SYNC_FILE_RANGE
+			rc = sync_file_range(fcmh_2_fd(f),
+			    sbd->sbd_bmapno * SLASH_BMAP_SIZE,
+			    SLASH_BMAP_SIZE,
+			    SYNC_FILE_RANGE_WAIT_AFTER);
+#else
 			rc = fsync(fcmh_2_fd(f));
+#endif
 			fsync_time = CURRENT_SECONDS - fsync_time;
+
+			if (rc == -1)
+				error = errno;
 
 			PFL_GETTIMESPEC(&ts1);
 			timespecsub(&ts1, &ts0, &delta);
@@ -455,7 +483,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				OPSTAT_INCR("fsync-fail");
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
-				    rc, fcmh_2_fd(f), errno);
+				    rc, fcmh_2_fd(f), error);
 			}
 			OPSTAT_INCR("fsync");
 		} else
