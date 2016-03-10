@@ -90,6 +90,10 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 	return (0);
 }
 
+/*
+ * Manually expire all bmaps attached to a file.  The RPC flusher will
+ * soon notice and flush any pending data.
+ */
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
@@ -195,6 +199,9 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	return (retry);
 }
 
+/*
+ * Pin (mark read-only) all pages attached to a bmap write coalescer.
+ */
 void
 bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 {
@@ -213,6 +220,9 @@ bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 	}
 }
 
+/*
+ * Unpin (release) all pages attached to a bmap write coalescer.
+ */
 void
 bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 {
@@ -244,6 +254,9 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
 
+/*
+ * Callback run after a WRITE is recieved by an IOS.
+ */
 __static int
 msl_ric_bflush_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
