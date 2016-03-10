@@ -382,6 +382,4 @@ extern int			 msl_predio_issue_minpages;
 extern int			 msl_predio_issue_maxpages;
 extern uint64_t			 msl_pagecache_maxsize;
 
-extern int			 bmap_max_cache;
-
 #endif /* _MOUNT_SLASH_H_ */

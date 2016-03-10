@@ -30,11 +30,6 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
-/* number of bmaps to allow before reaper kicks into gear */
-#define BMAP_CACHE_MAX		1024
-
-extern int bmap_max_cache;
-
 /*
  * Private data associated with a bmap used by a SLASH2 client.
  */
@@ -66,9 +61,6 @@ struct bmap_cli_info {
 #define BMAP_CLI_EXTREQSECS	20
 #define BMAP_CLI_TIMEO_INC	1
 
-#define BMAP_CLI_DIOWAIT	2
-#define BMAP_CLI_DIOWAIT_MAX	120
-
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
 {
@@ -96,6 +88,8 @@ void	 msbreleasethr_main(struct psc_thread *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
+
+extern int slc_bmap_max_cache;
 
 static __inline struct bmap *
 bci_2_bmap(struct bmap_cli_info *bci)

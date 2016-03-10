@@ -90,6 +90,10 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 	return (0);
 }
 
+/*
+ * Manually expire all bmaps attached to a file.  The RPC flusher will
+ * soon notice and flush any pending data.
+ */
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
@@ -195,6 +199,9 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 	return (retry);
 }
 
+/*
+ * Pin (mark read-only) all pages attached to a bmap write coalescer.
+ */
 void
 bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 {
@@ -213,6 +220,9 @@ bwc_pin_pages(struct bmpc_write_coalescer *bwc)
 	}
 }
 
+/*
+ * Unpin (release) all pages attached to a bmap write coalescer.
+ */
 void
 bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 {
@@ -244,6 +254,9 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
 
+/*
+ * Callback run after a WRITE is recieved by an IOS.
+ */
 __static int
 msl_ric_bflush_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -299,6 +312,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	m = libsl_ios2resm(bmap_2_ios(b));
 	rpci = res2rpci(m->resm_res);
 
+	msl_resm_throttle_wait(m);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -336,11 +351,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	    m->resm_res_id, SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset,
 	    mq->size, bmap_2_ios(b), rpci->rpci_infl_rpcs);
 
-	/* Do we need this inc/dec combo for biorq reference? */
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs++;
-	RPCI_ULOCK(rpci);
-
 	bwc_pin_pages(bwc);
 
 	rq->rq_interpret_reply = msl_ric_bflush_cb;
@@ -350,17 +360,17 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		bwc_unpin_pages(bwc);
-
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
 		goto out;
 	}
 
 	return (0);
 
  out:
+	RPCI_LOCK(rpci);
+	rpci->rpci_infl_rpcs--;
+	RPCI_WAKE(rpci);
+	RPCI_ULOCK(rpci);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -788,6 +798,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 		RPCI_WAIT(rpci);
 		RPCI_LOCK(rpci);
 	}
+	rpci->rpci_infl_rpcs++;
 	RPCI_ULOCK(rpci);
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
@@ -873,7 +884,6 @@ bmap_flush(void)
 	    bmaps = DYNARRAY_INIT;
 	struct bmpc_write_coalescer *bwc;
 	struct bmap_pagecache *bmpc;
-	struct sl_resm *m = NULL;
 	struct bmpc_ioreq *r;
 	struct bmap *b, *tmpb;
 	int i, j, didwork = 0;
@@ -924,7 +934,6 @@ bmap_flush(void)
 			goto next;
 		}
 
-		m = libsl_ios2resm(bmap_2_ios(b));
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
@@ -938,7 +947,6 @@ bmap_flush(void)
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
-			msl_resm_throttle_wait(m);
 			bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);

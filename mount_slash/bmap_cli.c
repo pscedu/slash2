@@ -40,6 +40,12 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+/* number of bmaps to allow before reaper kicks into gear */
+#define BMAP_CACHE_MAX		1024
+
+#define BMAP_DIOWAIT_USEC	100
+#define BMAP_DIOWAIT_MAX_TRIES	20	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
+
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
 	MSL_BMODECHG_CBARG_COMPL,
@@ -48,7 +54,7 @@ enum {
 
 void msl_bmap_reap_init(struct bmap *);
 
-int bmap_max_cache = BMAP_CACHE_MAX;
+int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
 void
 msl_bmap_reap(void)
@@ -56,7 +62,7 @@ msl_bmap_reap(void)
 	/* XXX force expire and issue a wakeup */
 
 	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&msl_bmaptimeoutq) > bmap_max_cache)
+	if (lc_nitems(&msl_bmaptimeoutq) > slc_bmap_max_cache)
 		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
@@ -185,6 +191,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
+	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
@@ -277,15 +284,21 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		OPSTAT_INCR("bmap-modeset-diowait");
 
 		/* Retry for bmap to be DIO ready. */
-		DEBUG_BMAP(PLL_NOTICE, b,
+		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (nretries > BMAP_CLI_DIOWAIT_MAX)
+		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
-		sleep(BMAP_CLI_DIOWAIT);
+		usleep(diowait_usec);
+		/* XXX detect overflow */
+		diowait_usec += diowait_usec;
 		goto retry;
 	}
+
+	if (rc)
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
+		    rc);
 
 	return (rc);
 
@@ -682,6 +695,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
+	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
@@ -761,13 +775,15 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		OPSTAT_INCR("bmap-retrieve-diowait");
 
 		/* Retry for bmap to be DIO ready. */
-		DEBUG_BMAP(PLL_NOTICE, b,
+		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (nretries > BMAP_CLI_DIOWAIT_MAX)
+		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
-		sleep(BMAP_CLI_DIOWAIT);
+		usleep(diowait_usec);
+		/* XXX detect overflow */
+		diowait_usec += diowait_usec;
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
@@ -984,7 +1000,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * # of bmaps on timeoutq exceeds 25% of max
 			 * allowed.
 			 */
-			if (nitems > bmap_max_cache / 4)
+			if (nitems > slc_bmap_max_cache / 4)
 				goto evict;
 
 			if (timespeccmp(&bci->bci_etime, &nto, <)) {
