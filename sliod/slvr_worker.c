@@ -407,7 +407,7 @@ slislvrthr_proc(struct slvr *s)
 void
 sli_sync_ahead(void)
 {
-	int i, skip = 0;
+	int i, didwork = 0, skip = 0;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii;
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -435,6 +435,7 @@ sli_sync_ahead(void)
 
 	DYNARRAY_FOREACH(f, i, &a) {
 
+		didwork = 1;
 		fsync(fcmh_2_fd(f));
 		OPSTAT_INCR("sync-ahead");
 
@@ -452,6 +453,9 @@ sli_sync_ahead(void)
 	}
 
 	if (skip) {
+		if (!didwork)
+			sleep(5);
+		didwork = 0;
 		psc_dynarray_reset(&a);
 		OPSTAT_INCR("sync-ahead-skip");
 		goto restart;
