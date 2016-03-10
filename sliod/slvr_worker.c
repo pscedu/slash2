@@ -402,11 +402,19 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
-int sli_sync_ahead(void)
+#define	SLI_SYNC_AHEAD_BATCH	10
+
+void
+sli_sync_ahead(void)
 {
-	int skip = 0;
+	int i, skip = 0;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
+	struct psc_dynarray a = DYNARRAY_INIT;
+
+	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
+
+ restart:
 
 	LIST_CACHE_LOCK(&sli_fcmh_dirty);
 	LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_dirty) {
@@ -416,31 +424,46 @@ int sli_sync_ahead(void)
 			skip++;
 			continue;
 		}
+		if (f->fcmh_flags & FCMH_IOD_SYNCFILE) {
+			FCMH_ULOCK(f);
+			continue;
+		}
+		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
+	}
+	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
+
+	DYNARRAY_FOREACH(f, i, &a) {
 		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
 		FCMH_ULOCK(f);
 
 		fsync(fcmh_2_fd(f));
+		OPSTAT_INCR("sync-ahead");
 		psclog_warnx("sync ahead: fg="SLPRI_FG, 
 		    SLPRI_FG_ARGS(&f->fcmh_fg));
 
 		FCMH_LOCK(f);
 		if (fii->fii_nwrite < sli_max_writes / 2) {
+			OPSTAT_INCR("sync-ahead-remove");
 			lc_remove(&sli_fcmh_dirty, fii);
 			f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
 		}
+		f->fcmh_flags &= ~FCMH_IOD_SYNCFILE;
 		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
 	}
-	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
-	return (skip);
+
+	if (skip) {
+		psc_dynarray_reset(&a);
+		OPSTAT_INCR("sync-ahead-skip");
+		goto restart;
+	}
+	psc_dynarray_free(&a);
 }
 void
 slisyncthr_main(struct psc_thread *thr)
 {
-	int skip;
 	while (pscthr_run(thr)) {
-		skip = sli_sync_ahead();
-		if (!skip)
-			sleep(30);
+		lc_peekheadwait(&sli_fcmh_dirty);
+		sli_sync_ahead();
 	}
 }
 

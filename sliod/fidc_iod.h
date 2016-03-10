@@ -40,6 +40,7 @@ struct fcmh_iod_info {
 /* sliod-specific fcmh_flags */
 #define FCMH_IOD_BACKFILE	(_FCMH_FLGSHFT << 0)    /* backing file exists */
 #define FCMH_IOD_DIRTYFILE	(_FCMH_FLGSHFT << 1)    /* backing file is dirty */
+#define FCMH_IOD_SYNCFILE	(_FCMH_FLGSHFT << 2)    /* flusing backing file */
 
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 

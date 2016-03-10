@@ -222,6 +222,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fii->fii_nwrite += nslvrs;
 		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE) &&
 		    fii->fii_nwrite >= sli_max_writes) {
+			OPSTAT_INCR("sync-ahead-add");
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
