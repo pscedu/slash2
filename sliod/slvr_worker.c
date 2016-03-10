@@ -422,6 +422,7 @@ sli_sync_ahead(void)
 			FCMH_ULOCK(f);
 			continue;
 		}
+		fii->fii_nwrite = 0;
 		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
 		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
 		FCMH_ULOCK(f);
