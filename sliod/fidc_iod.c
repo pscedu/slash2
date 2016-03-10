@@ -295,6 +295,10 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 		f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 	}
+	if (f->fcmh_flags & FCMH_IOD_DIRTYFILE) {
+		lc_remove(&sli_fcmh_dirty, f);
+		f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
+	}
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

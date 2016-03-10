@@ -214,10 +214,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
 	if (rw == SL_WRITE) {
-		/* simple tracking of dirty slivers, ignoring duplicates */
+		/* simplistic tracking of dirty slivers, ignoring duplicates */
 		fii = fcmh_2_fii(f);
 		fii->fii_ndirty += nslvrs;
 		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE)) {
+			lc_add(&sli_fcmh_dirty, f);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
 	}
