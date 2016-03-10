@@ -447,6 +447,7 @@ sli_sync_ahead(void)
 		    SLPRI_FG_ARGS(&f->fcmh_fg));
 
 		FCMH_LOCK(f);
+		fii = fcmh_2_fii(f);
 		if (fii->fii_nwrite < sli_max_writes / 2) {
 			OPSTAT_INCR("sync-ahead-remove");
 			lc_remove(&sli_fcmh_dirty, fii);
