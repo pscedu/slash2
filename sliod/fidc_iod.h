@@ -34,7 +34,7 @@ extern struct psc_listcache	sli_fcmh_dirty;
 
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
-	int			fii_ndirty;	/* # of dirty slivers */
+	int			fii_nwrite;	/* # of sliver writes */
 	struct psclist_head	fii_lentry;	/* fcmh with dirty slivers */
 };
 
