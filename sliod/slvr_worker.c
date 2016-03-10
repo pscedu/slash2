@@ -424,10 +424,14 @@ int sli_sync_ahead(void)
 		    SLPRI_FG_ARGS(&f->fcmh_fg));
 
 		FCMH_LOCK(f);
+		if (fii->fii_nwrite < sli_max_writes / 2) {
+			lc_remove(&sli_fcmh_dirty, fii);
+			f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
+		}
 		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
 	}
 	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
-
+	return (skip);
 }
 void
 slisyncthr_main(struct psc_thread *thr)
@@ -436,7 +440,7 @@ slisyncthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		skip = sli_sync_ahead();
 		if (!skip)
-			sleep(20);
+			sleep(30);
 	}
 }
 
