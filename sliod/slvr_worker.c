@@ -401,6 +401,14 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
+void
+slisyncthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+		sleep(1000);
+	}
+}
+
 /*
  * Guts of the sliver bmap CRC update RPC generator thread.  RPCs are
  * constructed from slivers on the queue after the minimal expiration is
@@ -494,6 +502,10 @@ slvr_worker_init(void)
 	for (i = 0; i < NSLVRCRC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, NULL, 0,
 		    "slislvrthr%d", i);
+
+	for (i = 0; i < NSLVRSYNC_THRS; i++)
+		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, NULL, 0,
+		    "slisyncthr%d", i);
 
 	pscthr_init(SLITHRT_CRUD, slicrudthr_main, NULL, 0,
 	    "slicrudthr");

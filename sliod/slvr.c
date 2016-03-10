@@ -66,6 +66,8 @@ struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be r
 struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have their
 						 * CRCs shipped to the MDS. */
 
+struct psc_listcache	 sli_fcmh_dirty;
+
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 /*
@@ -1115,6 +1117,9 @@ slvr_cache_init(void)
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
+
+	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry, 
+	    "fcmhdirty");
 
 	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
