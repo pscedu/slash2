@@ -226,6 +226,7 @@ struct resprof_cli_info {
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
 	int				 rpci_infl_rpcs;
+	int				 rpci_max_infl_rpcs;
 };
 
 #define RPCIF_AVOID			(1 << 0)	/* IOS self-advertised degradation */
