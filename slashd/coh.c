@@ -81,13 +81,8 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
-	if (rc)
+	if (rc && rc != -ENOENT)
 		goto out;
-
-	/*
-	 * XXX if the client has given up the lease then we shouldn't
-	 * consider that an error and should proceed.
-	 */
 
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_DIO;
