@@ -409,7 +409,7 @@ sli_sync_ahead(void)
 {
 	int i, skip = 0;
 	struct fidc_membh *f;
-	struct fcmh_iod_info *fii, *tmp;
+	struct fcmh_iod_info *fii;
 	struct psc_dynarray a = DYNARRAY_INIT;
 
 	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
@@ -417,8 +417,7 @@ sli_sync_ahead(void)
  restart:
 
 	LIST_CACHE_LOCK(&sli_fcmh_dirty);
-	LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_dirty) {
-
+	LIST_CACHE_FOREACH(fii, &sli_fcmh_dirty) {
 		f = fii_2_fcmh(fii);
 		if (!FCMH_TRYLOCK(f)) {
 			skip++;
@@ -429,15 +428,16 @@ sli_sync_ahead(void)
 			continue;
 		}
 		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
+		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
+		FCMH_ULOCK(f);
 	}
 	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
 
 	DYNARRAY_FOREACH(f, i, &a) {
-		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
-		FCMH_ULOCK(f);
 
 		fsync(fcmh_2_fd(f));
 		OPSTAT_INCR("sync-ahead");
+
 		psclog_warnx("sync ahead: fg="SLPRI_FG, 
 		    SLPRI_FG_ARGS(&f->fcmh_fg));
 
