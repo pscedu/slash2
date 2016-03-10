@@ -1795,11 +1795,11 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
  out:
-	if (fp)
-		fcmh_op_done(fp);
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 	namecache_update(&dcu, sstb.sst_fid, rc);
+	if (fp)
+		fcmh_op_done(fp);
 }
 
 void
