@@ -33,7 +33,7 @@ struct fidc_membh;
 
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
-	int			fii_dirty;	/* # of dirty slivers */
+	int			fii_ndirty;	/* # of dirty slivers */
 	struct psclist_head	fii_lentry;	/* fcmh with dirty slivers */
 };
 

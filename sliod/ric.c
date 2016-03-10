@@ -104,6 +104,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct bmap *bmap;
 	uint64_t seqno;
 	ssize_t rv;
+	struct fcmh_iod_info *fii;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -211,6 +212,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* Update the utimegen if necessary. */
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
+
+	/* simple tracking of dirty slivers, ignoring duplicates */
+	fii = fcmh_2_fii(f);
+	fii->fii_ndirty += nslvrs;
 	FCMH_ULOCK(f);
 
 	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
