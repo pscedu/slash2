@@ -800,7 +800,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	}
 	rpci->rpci_infl_rpcs++;
 	if (rpci->rpci_infl_rpcs > rpci->rpci_max_infl_rpcs)
-		rpci->rpci_max_infl_rpcs = rpci->rpci_max_infl_rpcs;
+		rpci->rpci_max_infl_rpcs = rpci->rpci_infl_rpcs;
 	RPCI_ULOCK(rpci);
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
