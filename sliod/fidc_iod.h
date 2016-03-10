@@ -30,7 +30,6 @@
 #include "sltypes.h"
 
 struct fidc_membh;
-extern struct psc_listcache	sli_fcmh_dirty;
 
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */

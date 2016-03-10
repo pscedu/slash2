@@ -43,6 +43,7 @@
 #include "rpc_iod.h"
 #include "sliod.h"
 #include "slvr.h"
+#include "fidc_iod.h"
 
 struct psc_poolmaster		 bmap_crcupd_poolmaster;
 struct psc_poolmgr		*bmap_crcupd_pool;
@@ -401,11 +402,32 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
 
+void sli_sync_ahead(void)
+{
+	struct fidc_membh *f;
+	struct fcmh_iod_info *fii, *tmp;
+
+	LIST_CACHE_LOCK(&sli_fcmh_dirty);
+	LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_dirty) {
+
+		f = fii_2_fcmh(fii);
+		if (!FCMH_TRYLOCK(f))
+			continue;
+
+		psclog_warnx("sync ahead: fg="SLPRI_FG, 
+		    SLPRI_FG_ARGS(&f->fcmh_fg));
+
+		FCMH_ULOCK(f);
+	}
+	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
+
+}
 void
 slisyncthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		sleep(1000);
+		sli_sync_ahead();
+		sleep(20);
 	}
 }
 

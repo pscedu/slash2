@@ -36,6 +36,8 @@
 struct bmapc_memb;
 struct fidc_membh;
 
+extern struct psc_listcache	sli_fcmh_dirty;
+
 /* sliod thread types */
 enum {
 	SLITHRT_AIO = _PFL_NTHRT,	/* asynchronous I/O handlers */
