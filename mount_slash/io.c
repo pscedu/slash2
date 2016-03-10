@@ -995,7 +995,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct iovec *iovs;
 	struct sl_resm *m;
 	struct bmap *b;
-	uint64_t *v8;
+	uint64_t *v8, throttled = 0;
 
 	psc_assert(r->biorq_bmap);
 
@@ -1025,7 +1025,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_resm_throttle_wait(m);
 	rpci = res2rpci(m->resm_res);
 
   retry:
@@ -1038,6 +1037,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0, off = 0; i < n; i++, off += len) {
 		len = MIN(LNET_MTU, size - off);
 
+		msl_resm_throttle_wait(m);
+		throttled = 1;
 		if (op == SRMT_WRITE)
 			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq,
 			    mp);
@@ -1071,14 +1072,17 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
+
+			RPCI_LOCK(rpci);
+			rpci->rpci_infl_rpcs--;
+			RPCI_WAKE(rpci);
+			RPCI_ULOCK(rpci);
+
 			msl_biorq_release(r);
 			OPSTAT_INCR("msl.dio-add-req-fail");
 			PFL_GOTOERR(out, rc);
-		} else {
-			RPCI_LOCK(rpci);
-			rpci->rpci_infl_rpcs++;
-			RPCI_ULOCK(rpci);
 		}
+		throttled = 0;
 		rq = NULL;
 	}
 
@@ -1127,6 +1131,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
  out:
+	if (throttled) {
+		rpci = res2rpci(m->resm_res);
+		RPCI_LOCK(rpci);
+		rpci->rpci_infl_rpcs--;
+		RPCI_WAKE(rpci);
+		RPCI_ULOCK(rpci);
+	}
 	if (rq)
 		pscrpc_req_finished(rq);
 
@@ -1207,7 +1218,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	struct iovec *iovs;
 	struct sl_resm *m;
 	uint32_t off = 0;
-	int rc = 0, i;
+	int rc = 0, throttled = 0, i;
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1261,6 +1272,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	} else
 		msl_resm_throttle_wait(m);
 
+	throttled = 1;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1290,21 +1302,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_interpret_reply = msl_read_cb;
 
-	rpci = res2rpci(m->resm_res);
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs++;
-	RPCI_ULOCK(rpci);
 
 	biorq_incref(r);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		msl_biorq_release(r);
-
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
 
 		OPSTAT_INCR("msl.read-add-req-fail");
 		PFL_GOTOERR(out, rc);
@@ -1314,6 +1317,15 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	return (0);
 
  out:
+
+	if (throttled) {
+		rpci = res2rpci(m->resm_res);
+		RPCI_LOCK(rpci);
+		rpci->rpci_infl_rpcs--;
+		RPCI_WAKE(rpci);
+		RPCI_ULOCK(rpci);
+	}
+
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed rc=%d", rc);
 		pscrpc_req_finished(rq);
