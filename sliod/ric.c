@@ -198,6 +198,15 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	/*
+	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB,
+	 * therefore we would never exceed two slivers.
+	 */
+	nslvrs = 1;
+	slvrno = mq->offset / SLASH_SLVR_SIZE;
+	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
+		nslvrs++;
+
 	FCMH_LOCK(f);
 	/* Update the utimegen if necessary. */
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
@@ -215,14 +224,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
-	/*
-	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB,
-	 * therefore we would never exceed two slivers.
-	 */
-	nslvrs = 1;
-	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
-		nslvrs++;
 
 	/* Paranoid: clear more than necessary. */
 	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
