@@ -898,9 +898,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_statfs_pref_ios_only);
-	psc_ctlparam_register_var("sys.max_inflight_rpcs",
+	psc_ctlparam_register_var("sys.ios_max_inflight_rpcs",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &msl_max_inflight_rpcs);
+	    &msl_ios_max_inflight_rpcs);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
