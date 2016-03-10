@@ -257,6 +257,10 @@ int
 sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	int rc = 0;
+	struct fcmh_iod_info *fii;
+
+	fii = fcmh_2_fii(f);
+	INIT_PSC_LISTENTRY(&fii->fii_lentry);
 
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
