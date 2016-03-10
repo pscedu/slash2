@@ -213,9 +213,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
-	/* simple tracking of dirty slivers, ignoring duplicates */
-	fii = fcmh_2_fii(f);
-	fii->fii_ndirty += nslvrs;
+	if (rw == SL_WRITE) {
+		/* simple tracking of dirty slivers, ignoring duplicates */
+		fii = fcmh_2_fii(f);
+		fii->fii_ndirty += nslvrs;
+		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE)) {
+			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
+		}
+	}
 	FCMH_ULOCK(f);
 
 	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
