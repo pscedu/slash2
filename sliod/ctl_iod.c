@@ -638,8 +638,9 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
 
-	psc_ctlparam_register_var("sys.max_writes", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &sli_max_writes);
+	psc_ctlparam_register_var("sys.sync_max_writes",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &sli_sync_max_writes);
 
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }

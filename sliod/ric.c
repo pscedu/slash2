@@ -53,7 +53,7 @@
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
-int				 sli_max_writes = MAX_WRITE_PER_FILE;
+int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -221,7 +221,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fii = fcmh_2_fii(f);
 		fii->fii_nwrite += nslvrs;
 		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE) &&
-		    fii->fii_nwrite >= sli_max_writes) {
+		    fii->fii_nwrite >= sli_sync_max_writes) {
 			OPSTAT_INCR("sync-ahead-add");
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;

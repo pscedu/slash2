@@ -39,11 +39,11 @@
 
 #include "bmap_iod.h"
 #include "fid.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "sliod.h"
 #include "slvr.h"
-#include "fidc_iod.h"
 
 struct psc_poolmaster		 bmap_crcupd_poolmaster;
 struct psc_poolmgr		*bmap_crcupd_pool;
@@ -435,12 +435,11 @@ sli_sync_ahead(void)
 		fsync(fcmh_2_fd(f));
 		OPSTAT_INCR("sync-ahead");
 
-		psclog_diag("sync ahead: fg="SLPRI_FG, 
-		    SLPRI_FG_ARGS(&f->fcmh_fg));
+		DEBUG_FCMH(PLL_DIAG, f, "sync ahead");
 
 		FCMH_LOCK(f);
 		fii = fcmh_2_fii(f);
-		if (fii->fii_nwrite < sli_max_writes / 2) {
+		if (fii->fii_nwrite < sli_sync_max_writes / 2) {
 			OPSTAT_INCR("sync-ahead-remove");
 			lc_remove(&sli_fcmh_dirty, fii);
 			f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
