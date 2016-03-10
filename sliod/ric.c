@@ -415,7 +415,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
 #ifdef HAVE_SYNC_FILE_RANGE
-	psc_dynarray_ensurelen();
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		if (sli_fcmh_peek(&sbd->sbd_fg, &f))
