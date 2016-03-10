@@ -785,12 +785,12 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	 */
 	RPCI_LOCK(rpci);
 	if (!block && rpci->rpci_infl_rpcs >=
-	    msl_max_inflight_rpcs) {
+	    msl_ios_max_inflight_rpcs) {
 		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
 	}
 
-	while (rpci->rpci_infl_rpcs >= msl_max_inflight_rpcs) {
+	while (rpci->rpci_infl_rpcs >= msl_ios_max_inflight_rpcs) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
@@ -915,7 +915,7 @@ bmap_flush(void)
 		}
 		BMAP_ULOCK(b);
 
-		if (psc_dynarray_len(&bmaps) >= msl_max_inflight_rpcs)
+		if (psc_dynarray_len(&bmaps) >= msl_ios_max_inflight_rpcs)
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_bmapflushq);

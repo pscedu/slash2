@@ -372,15 +372,15 @@ extern struct psc_poolmgr	*msl_async_req_pool;
 extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
+extern int			 msl_acl;
 extern int			 msl_direct_io;
+extern int			 msl_ios_max_inflight_rpcs;
+extern int			 msl_max_nretries;
+extern int			 msl_predio_issue_maxpages;
+extern int			 msl_predio_issue_minpages;
+extern int			 msl_predio_window_size;
 extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
-extern int			 msl_max_inflight_rpcs;
-extern int			 msl_max_nretries;
-extern int			 msl_acl;
-extern int			 msl_predio_window_size;
-extern int			 msl_predio_issue_minpages;
-extern int			 msl_predio_issue_maxpages;
 extern uint64_t			 msl_pagecache_maxsize;
 
 #endif /* _MOUNT_SLASH_H_ */

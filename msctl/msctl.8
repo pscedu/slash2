@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd March 8, 2016
+.Dd March 10, 2016
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -464,6 +464,9 @@ lookups for network addresses.
 .\"		'sys.direct_io'
 .\"		     => "Whether to use the direct I/O facility provided " .
 .\"			"by kernel.",
+.\"		'sys.ios_max_inflight_rpcs'
+.\"		     => "Maximum number of I/Os RPCs to ever have " .
+.\"			"inflight with a single IOS.",
 .\"		'sys.version'
 .\"		     => "Software revision number.",
 .\"		'sys.root_squash'
@@ -621,6 +624,8 @@ See
 Maximum number of bmaps to allow to be loaded into memory before the reaper is invoked.
 .It Cm sys.direct_io
 Whether to use the direct I/O facility provided by kernel.
+.It Cm sys.ios_max_inflight_rpcs
+Maximum number of I/Os RPCs to ever have inflight with a single IOS.
 .It Cm sys.mds
 Preferred MDS resource name.
 .It Cm sys.mountpoint
