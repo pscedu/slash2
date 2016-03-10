@@ -289,6 +289,8 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
+	struct fcmh_iod_info *fii;
+
 	if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
 		if (close(fcmh_2_fd(f)) == -1) {
 			OPSTAT_INCR("close-fail");
@@ -300,7 +302,8 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 		f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 	}
 	if (f->fcmh_flags & FCMH_IOD_DIRTYFILE) {
-		lc_remove(&sli_fcmh_dirty, f);
+		fii = fcmh_2_fii(f);
+		lc_remove(&sli_fcmh_dirty, fii);
 		f->fcmh_flags &= ~FCMH_IOD_DIRTYFILE;
 	}
 }

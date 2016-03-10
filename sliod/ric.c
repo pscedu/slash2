@@ -218,7 +218,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fii = fcmh_2_fii(f);
 		fii->fii_ndirty += nslvrs;
 		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE)) {
-			lc_add(&sli_fcmh_dirty, f);
+			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
 	}
