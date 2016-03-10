@@ -407,17 +407,24 @@ slislvrthr_proc(struct slvr *s)
 void
 sli_sync_ahead(void)
 {
-	int i, didwork = 0;
+	int i, skip;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii;
 	struct psc_dynarray a = DYNARRAY_INIT;
 
 	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
 
+ restart:
+
+	skip = 0;
 	LIST_CACHE_LOCK(&sli_fcmh_dirty);
 	LIST_CACHE_FOREACH(fii, &sli_fcmh_dirty) {
 		f = fii_2_fcmh(fii);
-		FCMH_LOCK(f);
+
+		if (!FCMH_TRYLOCK(f)) {
+			skip++;
+			continue;
+		}
 		if (f->fcmh_flags & FCMH_IOD_SYNCFILE) {
 			FCMH_ULOCK(f);
 			continue;
@@ -432,7 +439,6 @@ sli_sync_ahead(void)
 
 	DYNARRAY_FOREACH(f, i, &a) {
 
-		didwork = 1;
 		fsync(fcmh_2_fd(f));
 		OPSTAT_INCR("sync-ahead");
 
@@ -448,10 +454,12 @@ sli_sync_ahead(void)
 		f->fcmh_flags &= ~FCMH_IOD_SYNCFILE;
 		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
 	}
-
-	psc_dynarray_free(&a);
-	if (!didwork)
+	if (skip) {
 		sleep(5);
+		psc_dynarray_reset(&a);
+		goto restart;
+	}
+	psc_dynarray_free(&a);
 }
 void
 slisyncthr_main(struct psc_thread *thr)
