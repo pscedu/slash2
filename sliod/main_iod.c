@@ -287,7 +287,7 @@ main(int argc, char *argv[])
 	sli_backingstore_iostats.wr = pfl_opstat_init("backingstore-wr");
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
-	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
+	    bir_lentry, PPMF_AUTO, 640, 640, 0, NULL, NULL, NULL,
 	    "bmaprls");
 	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
 
