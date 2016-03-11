@@ -389,7 +389,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
  out2:
-	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
+	DEBUG_FCMH(rc ? PLL_NOTICE : PLL_DIAG, f, 
+	    "bmapno=%u size=%u off=%u rw=%s "
 	    "rc=%d", bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", rc);
 
