@@ -495,6 +495,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc2)
 		PFL_GOTOERR(out, rc2);
 
+	b->bcm_flags |= BMAPF_LOADED;
 	msl_bmap_stash_lease(b, &mp->sbd, 0, "preload", 1);
 	msl_bmap_reap_init(b);
 
