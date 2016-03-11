@@ -323,7 +323,13 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto out;
 
+#if 0
+	/*
+	 * Instead of timeout ourselves, the IOS will return 
+	 * -PFLERR_KEYEXPIRED and we should retry.
+	 */
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
+#endif
 
 	(void)pfl_fault_here_rc("slash2/request_timeout",
 	    &rq->rq_timeout, -1);
