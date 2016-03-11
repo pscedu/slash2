@@ -671,7 +671,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	}
 
 	f = mfh->mfh_fcmh;
-	DEBUG_FCMH(q->mfsrq_err ? PLL_INFO : PLL_DIAG, f, 
+	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f, 
 	    "reply: off=%"PRId64" size=%zu rw=%s "
 	    "rc=%d", q->mfsrq_off, q->mfsrq_len,
 	    q->mfsrq_flags & MFSRQ_READ ?
