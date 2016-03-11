@@ -2150,6 +2150,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (msl_fd_should_retry(mfh, pfr, rc)) {
 			mfsrq_clrerr(q);
 			retry = 1;
+			OPSTAT_INCR("msl.io-retry");
 			goto restart;
 		}
 		if (abs(rc) == SLERR_ION_OFFLINE)
