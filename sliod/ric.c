@@ -502,7 +502,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		} else
 			FCMH_ULOCK(f);
 
-		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
+		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE, 
+			BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
 		if (rc) {
 			psclog_errorx("failed to load bmap %u",
 			    sbd->sbd_bmapno);
