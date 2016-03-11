@@ -48,7 +48,7 @@
 #include "slvr.h"
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
-#define MAX_WRITE_PER_FILE	1024		/* slivers */
+#define MAX_WRITE_PER_FILE	2048		/* slivers */
 
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
@@ -217,7 +217,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
 	if (rw == SL_WRITE) {
-		/* simplistic tracking of dirty slivers, ignoring duplicates */
+		/* 
+		 * Simplistic tracking of dirty slivers, ignoring duplicates.
+		 * We rely on clients to absort them.
+		 */
 		fii = fcmh_2_fii(f);
 		fii->fii_nwrite += nslvrs;
 		if (!(f->fcmh_flags & FCMH_IOD_DIRTYFILE) &&
