@@ -266,7 +266,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		OPSTAT_INCR("release");
+		OPSTAT_INCR("bmap-release");
 
 		brr->nbmaps = nrls;
 		/*
