@@ -248,8 +248,11 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto loaded;
 
 	if (flags & BMAPGETF_NORETRIEVE) {
-		b->bcm_flags |= BMAPF_LOADED;
-		goto loaded;
+		if (b->bcm_flags & BMAPF_LOADED)
+			OPSTAT_INCR("bmap-already-loaded");
+		else
+			OPSTAT_INCR("bmap-notyet-loaded");
+		goto out;
 	}
 
 	b->bcm_flags |= BMAPF_LOADING;
