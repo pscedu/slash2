@@ -482,9 +482,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
 
 			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
-				if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
+				if (fsync_time > 6 * NOTIFY_FSYNC_TIMEOUT)
 					OPSTAT_INCR("fsync-slooow");
-				else if (fsync_time > 2 * NOTIFY_FSYNC_TIMEOUT)
+				else if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
 					OPSTAT_INCR("fsync-sloow");
 				else
 					OPSTAT_INCR("fsync-slow");
