@@ -626,7 +626,7 @@ main(int argc, char *argv[])
 		    " GROUP BY uid");
 	}
 
-	slrpc_initcli();
+	slrpc_initcli(128);
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);

@@ -3890,7 +3890,7 @@ msl_init(void)
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
 	/* Start up service threads. */
-	slrpc_initcli();
+	slrpc_initcli(64);
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();

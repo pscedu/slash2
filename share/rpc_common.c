@@ -1312,7 +1312,7 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 }
 
 void
-slrpc_initcli(void)
+slrpc_initcli(int size)
 {
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,

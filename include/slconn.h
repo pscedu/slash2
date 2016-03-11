@@ -402,7 +402,7 @@ struct psc_thread
 void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 	    int, int (*)(void *), void *);
 
-void	 slrpc_initcli(void);
+void	 slrpc_initcli(int size);
 void	 slrpc_destroy(void);
 
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,
