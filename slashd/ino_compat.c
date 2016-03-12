@@ -58,7 +58,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 	for (i = 0; ; i++) {
 		fh->fh = readh;
 		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
-		if (sic)
+		if (sic && !rc)
 			b->bcm_flags |= BMAPF_LOADED;
 		fh->fh = th;
 
