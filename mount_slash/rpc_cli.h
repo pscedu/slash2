@@ -66,7 +66,7 @@ enum {
 #define SRCI_REPSZ			512
 #define SRCI_SVCNAME			"msrci"
 
-#define RESM_MAX_OUTSTANDING_RPCS	960
+#define RESM_MAX_OUTSTANDING_RPCS	480
 
 /*
  * Initialize a new RPC request for a pscfs clientctx.
