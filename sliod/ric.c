@@ -217,7 +217,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
 	if (rw == SL_WRITE) {
-		/* 
+		/*
 		 * Simplistic tracking of dirty slivers, ignoring duplicates.
 		 * We rely on clients to absort them.
 		 */
@@ -389,7 +389,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
  out2:
-	DEBUG_FCMH(rc ? PLL_NOTICE : PLL_DIAG, f, 
+	DEBUG_FCMH(rc ? PLL_NOTICE : PLL_DIAG, f,
 	    "bmapno=%u size=%u off=%u rw=%s "
 	    "rc=%d", bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", rc);
@@ -505,8 +505,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		} else
 			FCMH_ULOCK(f);
 
-		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE, 
-			BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
+		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE,
+		    BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
 		if (rc) {
 			psclog_errorx("failed to load bmap %u",
 			    sbd->sbd_bmapno);
