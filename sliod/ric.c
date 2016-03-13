@@ -234,6 +234,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
+	/* Paranoid: clear more than necessary. */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
+		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
+
 	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
@@ -244,14 +251,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
-
-
-	/* Paranoid: clear more than necessary. */
-	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
-		slvr[i] = NULL;
-		iovs[i].iov_len = 0;
-		iovs[i].iov_base = 0;
-	}
 
 	/*
 	 * This loop assumes that nslvrs is always no larger than
