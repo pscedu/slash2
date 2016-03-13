@@ -230,7 +230,8 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("rlsbmap-fail");
-			psclog(rc == ENOENT ? PLL_DIAG : PLL_ERROR,
+			psclog(rc == ENOENT || rc == ESTALE ? 
+			    PLL_DIAG : PLL_ERROR,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			continue;
