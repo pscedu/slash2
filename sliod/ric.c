@@ -529,7 +529,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		new = 1;
 		bii = bmap_2_bii(b);
 		PLL_FOREACH(tmpsbd, &bii->bii_rls) {
-			if (!memcmp(tmpsbd, sbd, sizeof(*sbd))) {
+			if (!memcmp(&tmpsbd->bir_sbd, sbd, sizeof(*sbd))) {
 				new = 0;
 				break;
 			}

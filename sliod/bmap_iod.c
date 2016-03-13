@@ -214,19 +214,20 @@ slibmaprlsthr_work(void)
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmap *b;
-	uint32_t i, nbmaps;
+	int32_t i;
 	struct srt_bmapdesc *sbd;
-	struct bmap_iod_rls *brls;
+	struct bmap_iod_rls *brls, *tmpbrls;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	int rc, new, fsync_time = 0;
 	struct timespec ts0, ts1, delta;
 
-	nbmaps = 0;
+	i = 0;
 	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
 	while ((brls = pll_get(&sli_bii_rls))) {
-		if (nbmaps >= MAX_BMAP_RELEASE)
-			break;
 		psc_dynarray_add(&a, brls);
+		i++;
+		if (i == MAX_BMAP_RELEASE)
+			break;
 	}
 	DYNARRAY_FOREACH(brls, i, &a) {
 		sbd = &brls->bir_sbd;
@@ -302,31 +303,26 @@ slibmaprlsthr_work(void)
 
 		new = 1;
 		bii = bmap_2_bii(b);
-		PLL_FOREACH(tmpsbd, &bii->bii_rls) {
-			if (!memcmp(tmpsbd, sbd, sizeof(*sbd))) {
+		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
+			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
 				new = 0;
 				break;
 			}
 		}
 		if (new) {
-			BMAP_ULOCK(b);
-			newsbd = psc_pool_get(bmap_rls_pool);
-			BMAP_LOCK(b);
-
 			/*
 			 * Reaper thread has marked this bmap for
 			 * release so do a no-op.
 			 */
 			if (b->bcm_flags & BMAPF_RELEASING) {
-				psc_pool_return(bmap_rls_pool, newsbd);
+				psc_pool_return(bmap_rls_pool, brls);
 			} else {
-				memcpy(newsbd, sbd, sizeof(*sbd));
 
 				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
 				    "seq=%"PRId64" key=%"PRId64,
-				    newsbd, sbd->sbd_seq, sbd->sbd_key);
+				    brls, sbd->sbd_seq, sbd->sbd_key);
 
-				pll_add(&bii->bii_rls, newsbd);
+				pll_add(&bii->bii_rls, brls);
 			}
 		}
 
