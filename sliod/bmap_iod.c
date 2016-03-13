@@ -301,6 +301,7 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 		bii = bmap_2_bii(b);
 		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
 			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
+				OPSTAT_INCR("bmap-duplicate");
 				new = 0;
 				break;
 			}
