@@ -206,8 +206,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 }
 
 
-#if 0
-
 void
 slibmaprlsthr_work(struct psc_dynarray *a)
 {
@@ -286,7 +284,7 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 				    "fsync failure rc=%d fd=%d errno=%d",
 				    rc, fcmh_2_fd(f), error);
 			}
-			OPSTAT_INCR("fsync");
+			OPSTAT_INCR("release-fsync");
 		} else
 			FCMH_ULOCK(f);
 
@@ -329,8 +327,6 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 	}
 }
 
-#endif
-
 void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
@@ -349,10 +345,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-#ifdef BACKGROUND_RELEASE_BMAP
 		slibmaprlsthr_work(&a);
 		psc_dynarray_reset(&a);
-#endif
 
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
