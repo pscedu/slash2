@@ -55,6 +55,8 @@ uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 
+extern struct psc_lockedlist	 sli_bii_rls;
+
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)
@@ -426,6 +428,16 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
+
+#if 0
+	for (i = 0; i < mq->nbmaps; i++) {
+		sbd = &mq->sbd[i];
+		newsbd = psc_pool_get(bmap_rls_pool);
+		memcpy(newsbd, sbd, sizeof(*sbd));
+		pll_add(&sli_bii_rls, newsbd);
+	}
+	return (0);
+#endif
 
 #ifdef HAVE_SYNC_FILE_RANGE
 	for (i = 0; i < mq->nbmaps; i++) {

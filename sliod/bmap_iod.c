@@ -41,6 +41,8 @@ static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
 struct psc_listcache	 sli_bmap_releaseq;
 
+struct psc_lockedlist	 sli_bii_rls;
+
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
 
@@ -307,6 +309,8 @@ slibmaprlsthr_spawn(void)
 
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
+
+	pll_init(&sli_bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 
 	for (i = 0; i < NBMAPRLS_THRS; i++) {
 		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
