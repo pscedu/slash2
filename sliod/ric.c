@@ -415,7 +415,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
 	int rc, new, fsync_time = 0;
 	struct srt_bmapdesc *sbd;
-	struct bmap_iod_rls *newsbd, *tmpsbd;
+	struct bmap_iod_rls *newbrls, *tmpbrls;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct timespec ts0, ts1, delta;
@@ -431,9 +431,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 #if 0
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
-		newsbd = psc_pool_get(bmap_rls_pool);
-		memcpy(newsbd, sbd, sizeof(*sbd));
-		pll_add(&sli_bii_rls, newsbd);
+		newbrls = psc_pool_get(bmap_rls_pool);
+		memcpy(newbrls, sbd, sizeof(*sbd));
+		pll_add(&sli_bii_rls, newbrls);
 	}
 	return (0);
 #endif
@@ -528,15 +528,15 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		new = 1;
 		bii = bmap_2_bii(b);
-		PLL_FOREACH(tmpsbd, &bii->bii_rls) {
-			if (!memcmp(&tmpsbd->bir_sbd, sbd, sizeof(*sbd))) {
+		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
+			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
 				new = 0;
 				break;
 			}
 		}
 		if (new) {
 			BMAP_ULOCK(b);
-			newsbd = psc_pool_get(bmap_rls_pool);
+			newbrls = psc_pool_get(bmap_rls_pool);
 			BMAP_LOCK(b);
 
 			/*
@@ -544,15 +544,15 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			 * release so do a no-op.
 			 */
 			if (b->bcm_flags & BMAPF_RELEASING) {
-				psc_pool_return(bmap_rls_pool, newsbd);
+				psc_pool_return(bmap_rls_pool, newbrls);
 			} else {
-				memcpy(newsbd, sbd, sizeof(*sbd));
+				memcpy(newbrls, sbd, sizeof(*sbd));
 
 				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
 				    "seq=%"PRId64" key=%"PRId64,
-				    newsbd, sbd->sbd_seq, sbd->sbd_key);
+				    newbrls, sbd->sbd_seq, sbd->sbd_key);
 
-				pll_add(&bii->bii_rls, newsbd);
+				pll_add(&bii->bii_rls, newbrls);
 			}
 		}
 
