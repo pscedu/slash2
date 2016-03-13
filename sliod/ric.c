@@ -412,7 +412,8 @@ __static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
 	int rc, new, fsync_time = 0;
-	struct srt_bmapdesc *sbd, *newsbd, *p;
+	struct srt_bmapdesc *sbd;
+	struct bmap_iod_rls *newsbd, *tmpsbd;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct timespec ts0, ts1, delta;
@@ -516,8 +517,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		new = 1;
 		bii = bmap_2_bii(b);
-		PLL_FOREACH(p, &bii->bii_rls) {
-			if (!memcmp(p, sbd, sizeof(*p))) {
+		PLL_FOREACH(tmpsbd, &bii->bii_rls) {
+			if (!memcmp(tmpsbd, sbd, sizeof(*sbd))) {
 				new = 0;
 				break;
 			}
