@@ -54,8 +54,10 @@ bcr_update_inodeinfo(struct bcrcupd *bcr)
 
 	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
 
-	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen)
+	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen) {
+		OPSTAT_INCR("brcupdate-stale");
 		return (ESTALE);
+	}
 
 	if ((f->fcmh_flags & FCMH_IOD_BACKFILE) == 0)
 		return (EBADF);
