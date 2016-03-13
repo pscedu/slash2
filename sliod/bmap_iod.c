@@ -303,11 +303,15 @@ slibmaprlsthr_main(struct psc_thread *thr)
 void
 slibmaprlsthr_spawn(void)
 {
+	int i;
+
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
 
-	pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
-	    "slibmaprlsthr");
+	for (i = 0; i < NBMAPRLS_THRS; i++) {
+		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
+		    "slibmaprlsthr%d", i);
+	}
 }
 
 void

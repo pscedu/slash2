@@ -65,6 +65,8 @@ enum {
 
 #define NSLVRSYNC_THRS		2	/* perhaps default to ncores + configurable? */
 
+#define NBMAPRLS_THRS		4	/* perhaps default to ncores + configurable? */
+
 enum {
 	SLI_FAULT_AIO_FAIL,
 	SLI_FAULT_CRCUP_FAIL,
