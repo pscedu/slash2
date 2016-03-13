@@ -209,7 +209,7 @@ bcr_ready_remove(struct bcrcupd *bcr)
 #if 0
 
 void
-slibmaprlsthr_work(void)
+slibmaprlsthr_work(struct psc_dynarray *a)
 {
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
@@ -217,19 +217,17 @@ slibmaprlsthr_work(void)
 	int32_t i;
 	struct srt_bmapdesc *sbd;
 	struct bmap_iod_rls *brls, *tmpbrls;
-	struct psc_dynarray a = DYNARRAY_INIT;
 	int rc, new, fsync_time = 0;
 	struct timespec ts0, ts1, delta;
 
 	i = 0;
-	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
 	while ((brls = pll_get(&sli_bii_rls))) {
-		psc_dynarray_add(&a, brls);
+		psc_dynarray_add(a, brls);
 		i++;
 		if (i == MAX_BMAP_RELEASE)
 			break;
 	}
-	DYNARRAY_FOREACH(brls, i, &a) {
+	DYNARRAY_FOREACH(brls, i, a) {
 		sbd = &brls->bir_sbd;
 		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
@@ -350,6 +348,11 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
 	while (pscthr_run(thr)) {
+
+#if 0
+		slibmaprlsthr_work(&a);
+		psc_dynarray_reset(&a);
+#endif
 
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);

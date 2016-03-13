@@ -436,7 +436,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		pll_add(&sli_bii_rls, newbrls);
 	}
 	return (0);
-#endif
+#else
 
 #ifdef HAVE_SYNC_FILE_RANGE
 	for (i = 0; i < mq->nbmaps; i++) {
@@ -561,6 +561,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	}
  out:
 	return (0);
+
+#endif
+
 }
 
 int
