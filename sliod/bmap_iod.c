@@ -393,7 +393,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&a);
 
 		if (!nrls) {
-			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
+			if (!pll_nitems(&sli_bii_rls))
+				sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 			continue;
 		}
 
