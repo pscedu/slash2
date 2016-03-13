@@ -428,11 +428,12 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
+
 #if 0
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		newbrls = psc_pool_get(bmap_rls_pool);
-		memcpy(newbrls, sbd, sizeof(*sbd));
+		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
 		pll_add(&sli_bii_rls, newbrls);
 	}
 	return (0);
@@ -559,11 +560,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		bmap_op_done(b);
 		fcmh_op_done(f);
 	}
- out:
-	return (0);
-
 #endif
 
+ out:
+	return (0);
 }
 
 int

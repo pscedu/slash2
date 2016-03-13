@@ -349,7 +349,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-#if 0
+#ifdef BACKGROUND_RELEASE_BMAP
 		slibmaprlsthr_work(&a);
 		psc_dynarray_reset(&a);
 #endif
