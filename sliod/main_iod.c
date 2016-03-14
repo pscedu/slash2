@@ -267,7 +267,7 @@ main(int argc, char *argv[])
 	if (stat(slcfg_local->cfg_fsroot, &stb) == -1)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
-	bmap_cache_init(sizeof(struct bmap_iod_info), 256);
+	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);
 	fidc_init(sizeof(struct fcmh_iod_info));
 	bim_init();
 	sl_nbrqset = pscrpc_prep_set();
