@@ -3862,7 +3862,7 @@ msl_init(void)
 	libsl_init(4096);//2 * (SRCI_NBUFS + SRCM_NBUFS));
 	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
-	bmap_cache_init(sizeof(struct bmap_cli_info), 64);
+	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT);
 	dircache_mgr_init();
 
 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
