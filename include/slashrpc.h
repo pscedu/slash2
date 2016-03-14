@@ -567,7 +567,7 @@ struct srm_bmap_iod_get {
 	 int32_t		_pad;
 } __packed;
 
-#define MAX_BMAP_RELEASE	4
+#define MAX_BMAP_RELEASE	5
 struct srm_bmap_release_req {
 	struct srt_bmapdesc	sbd[MAX_BMAP_RELEASE];
 	uint32_t		nbmaps;
