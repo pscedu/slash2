@@ -342,8 +342,8 @@ int
 sli_rmi_brelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	int rc;
+	struct slashrpc_cservice *csvc = args->pointer_arg[SLI_CBARG_CSVC];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
 	    rc);
@@ -451,7 +451,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		memcpy(mq, &brr, sizeof(*mq));
 
 		rq->rq_interpret_reply = sli_rmi_brelease_cb;
-		rq->rq_async_args.pointer_arg[0] = csvc;
+		rq->rq_async_args.pointer_arg[SLI_CBARG_CSVC] = csvc;
 
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
