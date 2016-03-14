@@ -99,6 +99,7 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 		csvc->csvc_mtime.tv_sec -= CSVC_PING_INTV;
 		// XXX could do a wakeup here to send update immediately
 		CSVC_ULOCK(csvc);
+		sl_csvc_decref(csvc);
 	}
 }
 
