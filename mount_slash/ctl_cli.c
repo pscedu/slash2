@@ -809,11 +809,19 @@ mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 {
 	struct resprof_cli_info *rpci;
 	char nbuf[16];
+	long val;
+	char *endp = NULL;
 
-	if (set)
-		return (psc_ctlsenderr(fd, mh,
-		    "max_infl_rpcs: field is read-only"));
 	rpci = res2rpci(r);
+	if (set) {
+		val = strtol(pcp->pcp_value, &endp, 10);
+		if (endp == pcp->pcp_value || *endp != '\0')
+		    return (psc_ctlsenderr(fd, mh,
+			"max_infl_rpcs: invalid value"));
+		rpci->rpci_max_infl_rpcs = (int)val;
+		return (0);
+
+	}
 	snprintf(nbuf, sizeof(nbuf), "%d", rpci->rpci_max_infl_rpcs);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
 	    levels, nlevels, nbuf));
