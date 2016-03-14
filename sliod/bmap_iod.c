@@ -332,6 +332,14 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		} else
 			psc_pool_return(bmap_rls_pool, brls);
 
+		/*
+		 * Sync to backing file system here to guarantee
+		 * that buffers are flushed to disk before the
+		 * telling the MDS to release its odtable entry
+		 * for this bmap.
+		 */
+		sli_bmap_sync(b);
+
 		bmap_op_done(b);
 		fcmh_op_done(f);
 	}
@@ -411,13 +419,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		DYNARRAY_FOREACH(b, i, &a) {
-			/*
-			 * Sync to backing file system here to guarantee
-			 * that buffers are flushed to disk before the
-			 * telling the MDS to release its odtable entry
-			 * for this bmap.
-			 */
-			sli_bmap_sync(b);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
 
