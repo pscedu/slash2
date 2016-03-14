@@ -509,19 +509,17 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	if (mq->len < 0 || mq->len > LNET_MTU) {
 		mp->rc = -EINVAL;
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-	} else
-		iov.iov_base = PSCALLOC(mq->len);
+	}
 
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, lc)
 		if (mq->bid == bq->bq_bid) {
 			if (!mp->rc) {
-				bq->bq_repbuf = iov.iov_base;
+				iov.iov_base = bq->bq_repbuf;
 				iov.iov_len = bq->bq_replen = mq->len;
 				mp->rc = slrpc_bulkserver(rq,
-				    BULK_GET_SINK, bq->bq_rcv_ptl,
-				    &iov, 1);
-				iov.iov_base = NULL;
+				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
+				    1);
 			}
 
 			slrpc_batch_sched_finish(bq, mq->rc ? mq->rc :
@@ -532,7 +530,6 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_ULOCK(lc);
 	if (bq == NULL)
 		mp->rc = -ENOENT;
-	PSCFREE(iov.iov_base);
 	return (mp->rc);
 }
 
@@ -562,10 +559,11 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 
+	struct slrpc_batch_req *bq;
 	struct pscrpc_request *rq;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
-	struct slrpc_batch_req *bq;
+	void *qbuf, *pbuf;
 	int error = 0;
 
 	LIST_CACHE_LOCK(res_batches);
@@ -593,7 +591,12 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	mq->bid = psc_atomic64_inc_getnew(&bid);
 
 	bq = psc_pool_get(slrpc_batch_req_pool);
+	qbuf = bq->bq_reqbuf;
+	pbuf = bq->bq_repbuf;
 	memset(bq, 0, sizeof(*bq));
+	bq->bq_reqbuf = qbuf;
+	bq->bq_repbuf = pbuf;
+
 	psc_dynarray_init(&bq->bq_scratch);
 	INIT_SPINLOCK(&bq->bq_lock);
 	INIT_PSC_LISTENTRY(&bq->bq_lentry_global);
@@ -605,7 +608,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	bq->bq_bid = mq->bid;
 	bq->bq_res_batches = res_batches;
 	bq->bq_handler = handler;
-	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
 	bq->bq_refcnt = 1;
 
 	PFL_GETTIMEVAL(&bq->bq_expire);
