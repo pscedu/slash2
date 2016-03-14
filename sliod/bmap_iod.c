@@ -205,18 +205,75 @@ bcr_ready_remove(struct bcrcupd *bcr)
 	psc_pool_return(bmap_crcupd_pool, bcr);
 }
 
+/*
+ * XXX  We probably need a way to make sure that all data have been
+ * actually written from cache to persistent storage before
+ * synchronizing.
+ */
+void
+sli_bmap_sync(struct bmap *b)
+{
+	int rc, error, do_sync = 0;
+	struct timespec ts0, ts1, delta;
+	struct fidc_membh *f;
+
+	f = b->bcm_fcmh;
+
+	FCMH_LOCK(f);
+	if (f->fcmh_flags & FCMH_IOD_BACKFILE)
+		do_sync = 1;
+	FCMH_ULOCK(f);
+
+	if (!do_sync)
+		return;
+
+	PFL_GETTIMESPEC(&ts0);
+
+#ifdef HAVE_SYNC_FILE_RANGE
+	rc = sync_file_range(fcmh_2_fd(f), b->bcm_bmapno *
+	    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE, SYNC_FILE_RANGE_WRITE |
+	    SYNC_FILE_RANGE_WAIT_AFTER);
+	OPSTAT_INCR("sync-file-range");
+#else
+	rc = fsync(fcmh_2_fd(f));
+	OPSTAT_INCR("fsync");
+#endif
+	if (rc == -1)
+		error = errno;
+
+	PFL_GETTIMESPEC(&ts1);
+	timespecsub(&ts1, &ts0, &delta);
+	OPSTAT_ADD("rlsbmap-sync-usecs",
+	    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
+
+	if (delta.tv_sec > NOTIFY_FSYNC_TIMEOUT) {
+		if (delta.tv_sec > 6 * NOTIFY_FSYNC_TIMEOUT)
+			OPSTAT_INCR("sync-slooow");
+		else if (delta.tv_sec > 3 * NOTIFY_FSYNC_TIMEOUT)
+			OPSTAT_INCR("sync-sloow");
+		else
+			OPSTAT_INCR("sync-slow");
+		DEBUG_FCMH(PLL_NOTICE, f,
+		    "long sync %ld", delta.tv_sec);
+	}
+	if (rc) {
+		OPSTAT_INCR("sync-fail");
+		DEBUG_FCMH(PLL_ERROR, f,
+		    "sync failure rc=%d fd=%d errno=%d",
+		    rc, fcmh_2_fd(f), error);
+	}
+}
 
 void
-slibmaprlsthr_work(struct psc_dynarray *a)
+slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
+	int rc, new;
+	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
+	struct srt_bmapdesc *sbd;
 	struct fidc_membh *f;
 	struct bmap *b;
 	int32_t i;
-	struct srt_bmapdesc *sbd;
-	struct bmap_iod_rls *brls, *tmpbrls;
-	int rc, new, fsync_time = 0;
-	struct timespec ts0, ts1, delta;
 
 	i = 0;
 	while ((brls = pll_get(&sli_bii_rls))) {
@@ -230,65 +287,13 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("rlsbmap-fail");
-			psclog(rc == ENOENT || rc == ESTALE ? 
+			psclog(rc == ENOENT || rc == ESTALE ?
 			    PLL_DIAG : PLL_ERROR,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			psc_pool_return(bmap_rls_pool, brls);
 			continue;
 		}
-
-		/*
-		 * fsync here to guarantee that buffers are flushed to
-		 * disk before the MDS releases its odtable entry for
-		 * this bmap.
-		 */
-		FCMH_LOCK(f);
-		if (f->fcmh_flags & FCMH_IOD_BACKFILE) {
-			int error;
-
-			FCMH_ULOCK(f);
-
-			PFL_GETTIMESPEC(&ts0);
-
-			fsync_time = CURRENT_SECONDS;
-#ifdef HAVE_SYNC_FILE_RANGE
-			rc = sync_file_range(fcmh_2_fd(f),
-			    sbd->sbd_bmapno * SLASH_BMAP_SIZE,
-			    SLASH_BMAP_SIZE,
-			    SYNC_FILE_RANGE_WAIT_AFTER);
-#else
-			rc = fsync(fcmh_2_fd(f));
-#endif
-			fsync_time = CURRENT_SECONDS - fsync_time;
-
-			if (rc == -1)
-				error = errno;
-
-			PFL_GETTIMESPEC(&ts1);
-			timespecsub(&ts1, &ts0, &delta);
-			OPSTAT_ADD("rlsbmap-fsync-usecs",
-			    delta.tv_sec * 1000000 + delta.tv_nsec / 1000);
-
-			if (fsync_time > NOTIFY_FSYNC_TIMEOUT) {
-				if (fsync_time > 6 * NOTIFY_FSYNC_TIMEOUT)
-					OPSTAT_INCR("fsync-slooow");
-				else if (fsync_time > 3 * NOTIFY_FSYNC_TIMEOUT)
-					OPSTAT_INCR("fsync-sloow");
-				else
-					OPSTAT_INCR("fsync-slow");
-				DEBUG_FCMH(PLL_NOTICE, f,
-				    "long fsync %d", fsync_time);
-			}
-			if (rc) {
-				OPSTAT_INCR("fsync-fail");
-				DEBUG_FCMH(PLL_ERROR, f,
-				    "fsync failure rc=%d fd=%d errno=%d",
-				    rc, fcmh_2_fd(f), error);
-			}
-			OPSTAT_INCR("release-fsync");
-		} else
-			FCMH_ULOCK(f);
 
 		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE,
 		    BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
@@ -330,31 +335,45 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 		bmap_op_done(b);
 		fcmh_op_done(f);
 	}
+	psc_dynarray_reset(a);
+}
+
+int
+sli_rmi_brelease_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
+	    rc);
+
+	sl_csvc_decref(csvc);
+	return (0);
 }
 
 void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
-	struct srm_bmap_release_req *brr, *mq;
+	struct srm_bmap_release_req brr, *mq;
 	struct srm_bmap_release_rep *mp;
 	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *bii, *tmp;
+	struct slashrpc_cservice *csvc;
 	struct bmap_iod_rls *brls;
 	struct bmap *b;
 	int nrls, rc, i;
 
 	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
-	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
 	while (pscthr_run(thr)) {
 
-		slibmaprlsthr_work(&a);
-		psc_dynarray_reset(&a);
+		slibmaprlsthr_process_releases(&a);
 
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
+		lc_peekheadwait(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 
 			b = bii_2_bmap(bii);
@@ -371,7 +390,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			DEBUG_BMAP(PLL_DIAG, b,
 			    "returning %d bmap leases", i);
 			while ((brls = pll_get(&bii->bii_rls))) {
-				memcpy(&brr->sbd[nrls++],
+				memcpy(&brr.sbd[nrls++],
 				    &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
@@ -391,23 +410,28 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
-		DYNARRAY_FOREACH(b, i, &a)
+		DYNARRAY_FOREACH(b, i, &a) {
+			/*
+			 * Sync to backing file system here to guarantee
+			 * that buffers are flushed to disk before the
+			 * telling the MDS to release its odtable entry
+			 * for this bmap.
+			 */
+			sli_bmap_sync(b);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+		}
 
 		psc_dynarray_reset(&a);
 
-		if (!nrls) {
-			if (!pll_nitems(&sli_bii_rls))
-				sleep(SLIOD_BMAP_RLS_WAIT_SECS);
+		if (!nrls)
 			continue;
-		}
 
 		OPSTAT_INCR("bmap-release");
 
-		brr->nbmaps = nrls;
+		brr.nbmaps = nrls;
 		/*
 		 * The system can tolerate the loss of these messages so
-		 * errors here should not be considered fatal.
+		 * errors here should not be fatal.
 		 */
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
@@ -424,14 +448,17 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		memcpy(mq, brr, sizeof(*mq));
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc)
-			psclog_errorx("RELEASEBMAP req failed rc=%d",
-			    rc);
+		memcpy(mq, &brr, sizeof(*mq));
 
-		pscrpc_req_finished(rq);
-		sl_csvc_decref(csvc);
+		rq->rq_interpret_reply = sli_rmi_brelease_cb;
+		rq->rq_async_args.pointer_arg[0] = csvc;
+
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc) {
+			psclog_errorx("RELEASEBMAP failed rc=%d", rc);
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
+		}
 	}
 	psc_dynarray_free(&a);
 }
