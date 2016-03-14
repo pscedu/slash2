@@ -234,6 +234,7 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 			    PLL_DIAG : PLL_ERROR,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
+			psc_pool_return(bmap_rls_pool, brls);
 			continue;
 		}
 
@@ -295,6 +296,7 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 			psclog_errorx("failed to load bmap %u",
 			    sbd->sbd_bmapno);
 			fcmh_op_done(f);
+			psc_pool_return(bmap_rls_pool, brls);
 			continue;
 		}
 
@@ -322,7 +324,8 @@ slibmaprlsthr_work(struct psc_dynarray *a)
 
 				pll_add(&bii->bii_rls, brls);
 			}
-		}
+		} else
+			psc_pool_return(bmap_rls_pool, brls);
 
 		bmap_op_done(b);
 		fcmh_op_done(f);
