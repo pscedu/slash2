@@ -208,15 +208,6 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	return (rc);
 }
 
-int
-pflrpc_portable_rc(int rc)
-{
-	switch (rc) {
-	case -ETIMEDOUT: return (-PFLERR_TIMEDOUT);
-	}
-	return (rc);
-}
-
 void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
