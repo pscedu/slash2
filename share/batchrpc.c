@@ -335,6 +335,20 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 }
 
 /*
+ * Increase the reference count of a batch RPC reply.
+ */
+void
+slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
+{
+	int waslocked;
+
+	waslocked = SLRPC_BATCH_REP_RLOCK(bp);
+	bp->bp_refcnt++;
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
+	SLRPC_BATCH_REP_URLOCK(bp, waslocked);
+}
+
+/*
  * Drop a reference to a batch RPC reply.  The first time the reference
  * counter reaches zero means the reply can be transmitted back to peer.
  * After that, one additional reference is made and finally dropped when
