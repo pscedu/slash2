@@ -790,7 +790,11 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	struct timespec ts0, ts1, tsd;
 	struct resprof_cli_info *rpci;
 	int account = 0, max_inflight_rpcs;
-
+	
+	/*
+	 * XXX: With global mount, we should not use msl_rmc_resm. 
+	 * Instead, we should check resource type.
+	 */
 	if (m != msl_rmc_resm) {
 		max_inflight_rpcs = msl_ios_max_inflight_rpcs;
 	} else {
