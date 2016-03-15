@@ -461,6 +461,7 @@ sli_sync_ahead(void)
 	}
 	psc_dynarray_free(&a);
 }
+
 void
 slisyncthr_main(struct psc_thread *thr)
 {
