@@ -163,6 +163,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 			BMAP_LOCK(b);
 		}
 	}
+	msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (compl) {
 		BMAP_ULOCK(b);
@@ -252,7 +253,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
 		    &compl;
 	}
-
+	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
@@ -260,6 +261,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		if (flags & BMAPGETF_NONBLOCK)
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		else
