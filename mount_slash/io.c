@@ -835,7 +835,6 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct bmap_pagecache_entry *e;
-	struct resprof_cli_info *rpci;
 	struct srm_io_req *mq;
 	struct bmap *b;
 	int i;
@@ -877,11 +876,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 	msl_biorq_release(r);
 
-	rpci = res2rpci(m->resm_res);
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
+	msl_resm_throttle_wake(m);
 
 	/*
 	 * Free the dynarray which was allocated in
@@ -922,7 +917,6 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 {
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
-	struct resprof_cli_info *rpci;
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	int op;
@@ -956,11 +950,7 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 
 	//msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
 
-	rpci = res2rpci(m->resm_res);
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
+	msl_resm_throttle_wake(m);
 
 	return (rc);
 }
