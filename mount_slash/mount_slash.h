@@ -150,6 +150,7 @@ struct msl_fhent {
 	int				 mfh_refcnt;
 	pid_t				 mfh_pid;
 	pid_t				 mfh_sid;
+	uid_t				 mfh_accessing_euid;
 
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
@@ -330,6 +331,8 @@ void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
+struct pscfs_creds *
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 

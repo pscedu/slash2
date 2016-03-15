@@ -366,6 +366,7 @@ _msl_biorq_release(const struct pfl_callerinfo *pci,
 struct msl_fhent *
 msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 {
+	struct pscfs_creds pcr;
 	struct msl_fhent *mfh;
 
 	mfh = psc_pool_get(msl_mfh_pool);
@@ -374,6 +375,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_fcmh = f;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	mfh->mfh_sid = getsid(mfh->mfh_pid);
+	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 
@@ -671,7 +673,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	}
 
 	f = mfh->mfh_fcmh;
-	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f, 
+	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f,
 	    "reply: off=%"PRId64" size=%zu rw=%s "
 	    "rc=%d", q->mfsrq_off, q->mfsrq_len,
 	    q->mfsrq_flags & MFSRQ_READ ?
