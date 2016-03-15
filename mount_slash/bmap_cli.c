@@ -929,7 +929,6 @@ msl_bmap_release(struct sl_resm *resm)
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
 	int rc, throttled = 0;
-	struct resprof_cli_info *rpci;
 
 	rmci = resm2rmci(resm);
 
@@ -944,10 +943,8 @@ msl_bmap_release(struct sl_resm *resm)
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
-	if (resm != msl_rmc_resm) {
-		throttled = 1;
-		msl_resm_throttle_wait(resm);
-	}
+	msl_resm_throttle_wait(resm);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -962,13 +959,8 @@ msl_bmap_release(struct sl_resm *resm)
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;
 	if (rc) {
-		if (throttled) {
-			rpci = res2rpci(resm->resm_res);
-			RPCI_LOCK(rpci);
-			rpci->rpci_infl_rpcs--;
-			RPCI_WAKE(rpci);
-			RPCI_ULOCK(rpci);
-		}
+		if (throttled)
+			msl_resm_throttle_wake(resm);
 		/*
 		 * At this point the bmaps have already been purged from
 		 * our cache.  If the MDS RLS request fails then the MDS
