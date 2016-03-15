@@ -2368,7 +2368,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srm_rename_rep *mp = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
-	int sticky, rc;
+	int sticky, rc, throttled = 0;
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2475,7 +2475,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2504,6 +2507,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -2555,6 +2559,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
 	    "npinum="SLPRI_FID" oldname='%s' newname='%s' rc=%d",
 	    opinum, npinum, oldname, newname, rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (child)
 		fcmh_op_done(child);
