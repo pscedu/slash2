@@ -269,11 +269,6 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 	struct bmpc_ioreq *r;
 	int i, rc;
 
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
-
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
@@ -291,6 +286,8 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE,
 	    bwc->bwc_size);
+
+	msl_resm_throttle_wake(m);
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
@@ -372,10 +369,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (0);
 
  out:
-	RPCI_LOCK(rpci);
-	rpci->rpci_infl_rpcs--;
-	RPCI_WAKE(rpci);
-	RPCI_ULOCK(rpci);
+	msl_resm_throttle_wake(m);
 
 	if (rq)
 		pscrpc_req_finished(rq);
