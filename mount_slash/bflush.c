@@ -807,7 +807,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 		return (-EAGAIN);
 	}
 
-	while (rpci->rpci_infl_rpcs >= msl_ios_max_inflight_rpcs) {
+	while (rpci->rpci_infl_rpcs >= max_inflight_rpcs) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
