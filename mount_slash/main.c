@@ -1551,6 +1551,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
 
+	msl_resm_throttle_wake(msl_rmc_resm);
+
 	PSCFREE(dentbuf);
 
 	return (0);
@@ -3656,7 +3658,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	struct pscfs_creds pcr;
 	size_t retsz = 0;
 	void *buf = NULL;
-	int rc, throttled = 0;
+	int rc;
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3670,7 +3672,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 		buf = PSCALLOC(size);
 
 	slc_getfscreds(pfr, &pcr);
-
 
 	msl_resm_throttle_wait(msl_rmc_resm);
 	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
