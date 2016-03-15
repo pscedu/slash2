@@ -795,15 +795,20 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 {
 	struct timespec ts0, ts1, tsd;
 	struct resprof_cli_info *rpci;
-	int account = 0;
+	int account = 0, max_inflight_rpcs;
+
+	if (m != msl_rmc_resm) {
+		max_inflight_rpcs = msl_ios_max_inflight_rpcs;
+	} else {
+		max_inflight_rpcs = msl_mds_max_inflight_rpcs;
+	}
 
 	rpci = res2rpci(m->resm_res);
 	/*
 	 * XXX use resm multiwait?
 	 */
 	RPCI_LOCK(rpci);
-	if (!block && rpci->rpci_infl_rpcs >=
-	    msl_ios_max_inflight_rpcs) {
+	if (!block && rpci->rpci_infl_rpcs >= max_inflight_rpcs) {
 		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
 	}
