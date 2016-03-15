@@ -406,7 +406,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	struct pscrpc_request *rq = NULL;
 	struct srm_reassignbmap_req *mq;
 	struct srm_reassignbmap_rep *mp;
-	int rc, throttled = 0;
+	int rc;
 
 	BMAP_LOCK(b);
 
@@ -455,21 +455,18 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	mq->nreassigns = bci->bci_nreassigns;
 	mq->pios = msl_pref_ios;
 
-	throttled = 1;
 	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		throttled = 0;
+	if (rc)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease reassign req (rc=%d)", rc);
 
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
@@ -505,7 +502,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct srm_leasebmapext_rep *mp;
 	struct srt_bmapdesc *sbd;
 	struct timespec ts;
-	int secs, rc, throttled = 0;
+	int secs, rc;
 
 	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_TOFREE) {
@@ -565,22 +562,18 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	mq->sbd = *sbd;
 
-	throttled = 1;
 	msl_resm_throttle_wait(msl_rmc_resm);
-
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (!rc)
-		throttled = 0;
+	if (rc)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	BMAP_LOCK(b);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc) {
 		if (rq)
 			pscrpc_req_finished(rq);
@@ -894,7 +887,6 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct sl_resm *resm = args->pointer_arg[MSL_CBARG_RESM];
-	struct resprof_cli_info *rpci;
 	struct srm_bmap_release_req *mq;
 	uint32_t i;
 	int rc;
@@ -910,13 +902,7 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
 		    mq->sbd[i].sbd_seq, rc);
 
-	if (resm != msl_rmc_resm) {
-		rpci = res2rpci(resm->resm_res);
-		RPCI_LOCK(rpci);
-		rpci->rpci_infl_rpcs--;
-		RPCI_WAKE(rpci);
-		RPCI_ULOCK(rpci);
-	}
+	msl_resm_throttle_wake(resm);
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -930,7 +916,7 @@ msl_bmap_release(struct sl_resm *resm)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
-	int rc, throttled = 0;
+	int rc;
 
 	rmci = resm2rmci(resm);
 
@@ -945,24 +931,24 @@ msl_bmap_release(struct sl_resm *resm)
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
-	msl_resm_throttle_wait(resm);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
 
+	msl_resm_throttle_wait(resm);
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
 	rq->rq_interpret_reply = msl_rmc_bmaprelease_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = resm;
 	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc)
+		msl_resm_throttle_wake(resm);
 
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;
 	if (rc) {
-		if (throttled)
-			msl_resm_throttle_wake(resm);
 		/*
 		 * At this point the bmaps have already been purged from
 		 * our cache.  If the MDS RLS request fails then the MDS
