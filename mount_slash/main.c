@@ -162,7 +162,9 @@ int				 msl_direct_io = 1;
 int				 msl_root_squash;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
-int				 msl_ios_max_inflight_rpcs = RESM_MAX_OUTSTANDING_RPCS;
+
+int	msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
+int 	msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
 
@@ -871,7 +873,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_mkdir_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
-	int rc;
+	int rc, throttled = 0;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -901,6 +903,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		mode |= S_ISGID;
 
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -920,6 +923,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -948,6 +952,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 	if (c)
 		fcmh_op_done(c);
 	if (p)

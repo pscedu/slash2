@@ -317,7 +317,8 @@ int	 msl_try_get_replica_res(struct bmap *, int, int,
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	msl_resm_throttle_wait(struct sl_resm *);
+void	msl_resm_throttle_wake(struct sl_resm *);
+
 #define msl_resm_throttle_wait(m)	_msl_resm_throttle((m), 1)
 #define msl_resm_throttle_nowait(m)	_msl_resm_throttle((m), 0)
 
@@ -376,6 +377,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 extern int			 msl_acl;
 extern int			 msl_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
+extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
 extern int			 msl_predio_issue_maxpages;
 extern int			 msl_predio_issue_minpages;
