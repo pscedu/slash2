@@ -45,22 +45,29 @@ my @cli;	# suite CLI nodes
 
 sub usage {
 	die <<EOF
-usage: $0 [-BCmRv] [-D descr] [-u user] [suite-name]
+usage: $0 [-BCmPRv] [-c commspec] [-D descr] [-u user] [suite-name [test ...]]
 
 options:
   -B		whether to use any configured SSH bounce host
   -C		do not run teardown/cleanup
+  -c commspec	run against the specified commit/revision
   -D descr	optional description to include in report
   -m		send e-mail report
+  -P		do not incorporate local patches in the run
   -R		record results to database
   -u user	override user for SSH connection establishment
   -v		verbose (debugging) output
 
+If any are specified, all such `test' arguments are interpretted as
+/bin/sh patterns to match a subset of the individual tests.
+
+`commspec' is the form `repo:commid,...' e.g.
+`slash2:abc123,pfl:def456'.
+
 EOF
 }
 
-getopts("BCD:mRu:v", \%opts) or usage();
-usage() if @ARGV > 1;
+getopts("BCc:D:mPRu:v", \%opts) or usage();
 
 my $ssh_user = "";
 $ssh_user = " -l $opts{u} " if $opts{u};
@@ -68,7 +75,8 @@ $ssh_user = " -l $opts{u} " if $opts{u};
 my $ts_dir = dirname($0);
 my $ts_name = "suite0";
 my $ts_user = `id -un`;
-$ts_name = $ARGV[0] if @ARGV > 0;
+$ts_name = shift @ARGV if @ARGV > 0;
+my $which_tests = @ARGV ? join(' ', @ARGV) : '*';
 
 sub min {
 	$_[0] < $_[1] ? $_[0] : $_[1];
@@ -134,6 +142,11 @@ EOF
 EOF
 	}
 
+	my @env_vars;
+	while (my ($k, $v) = each %$n) {
+		push @env_vars, "$k='$v' " if $k =~ /^[A-Z]/;;
+	}
+
 	return <<EOF;
 	set -e
 	set -u
@@ -196,35 +209,52 @@ EOF
 	}
 	export -f min_sysctl
 
-	decompress_gz()
+	tsuite_wget()
 	{
-		if hasprog pigz; then
-			pigz -dc \$1
-		else
-			gunzip -c \$1
-		fi
-	}
-	export -f decompress_gz
+		local size=\$1
+		local md5=\$2
+		local sha256=\$3
+		local url=\$4
+		local fn=\$(basename \$url)
 
-	decompress_bz2()
-	{
-		if hasprog pbunzip2; then
-			pbunzip2 -c \$1
+		exclude_time_start
+		if [ -e "$n->{TMPDIR}/\$fn" ]; then
+			cp "$n->{TMPDIR}/\$fn" .
 		else
-			bunzip2 -c \$1
+			wget -nv \$url
+			cp \$fn "$n->{TMPDIR}/"
 		fi
-	}
-	export -f decompress_bz2
+		exclude_time_end
 
-	decompress_xz()
-	{
-		if hasprog pixz; then
-			pixz -d -t < \$1
-		else
-			xz -dc \$1
-		fi
+		(
+			echo \$md5 \$fn | md5sum -c
+			echo \$sha256 \$fn | sha256sum -c
+		) || (rm -f "$n->{TMPDIR}/\$fn" && false)
 	}
-	export -f decompress_xz
+	export -f tsuite_wget
+
+	tsuite_decompress()
+	{
+		case \${1##*.} in
+		bz2)	if hasprog pbunzip2; then
+				pbunzip2 -c \$1
+			else
+				bunzip2 -c \$1
+			fi ;;
+		gz)	if hasprog pigz; then
+				pigz -dc \$1
+			else
+				gunzip -c \$1
+			fi ;;
+		xz)	if hasprog pixz; then
+				pixz -d -t < \$1
+			else
+				xz -dc \$1
+			fi ;;
+		*)	die "unknown suffix: \$1";
+		esac
+	}
+	export -f tsuite_decompress
 
 	mkdir_recurse()
 	{
@@ -252,6 +282,8 @@ EOF
 	data_dir=$n->{data_dir}
 
 	@{[ $opts{v} ? "set -x" : "" ]}
+
+	export @env_vars
 
 	@cmd
 EOF
@@ -439,7 +471,8 @@ $ts_fn =~ /\Q$TSUITE_REL_FN\E$/ or
 my $src_dir = $`;
 
 chdir($src_dir) or die "chdir $src_dir";
-my $diff = join '', `make scm-diff`;
+my $diff = "";
+$diff = join '', `make scm-diff` unless $opts{P};
 
 my $ts_cfg = slurp "$ts_base/cfg";
 
@@ -513,7 +546,7 @@ foreach my $n (@mds) {
 }
 
 my $step_timeout = 60 * 7;		# single op interval timeout
-my $total_timeout = 60 * 60 * 8;	# entire client run duration
+my $total_timeout = 60 * 60 * 16;	# entire client run duration
 
 my $zfs_fuse = "zfs-fuse.sh";
 my $zpool = "zpool.sh";
@@ -584,7 +617,17 @@ my $fsuuid = "0x$gcfg{fsuuid}";
 
 my @pids;
 
-my %hosts;
+my %setup_src;
+
+debug_msg "obtaining source code";
+
+my @comm_checkout;
+foreach my $commspec (split /,/, $opts{c} || "") {
+	my ($dir, $comm) = split /:/, $commspec
+	    or fatal "invalid format: -c $opts{c}";
+	$dir = "." if $dir eq "pfl";
+	push @comm_checkout, "(cd $dir && git checkout $comm)";
+}
 
 # Checkout the source and build it
 foreach my $n (@mds, @ios, @cli) {
@@ -607,8 +650,12 @@ foreach my $n (@mds, @ios, @cli) {
 
 	my @cmds;
 
-	push @cmds, q[setup_src] unless exists $hosts{$n->{host}};
-	$hosts{$n->{host}} = 1;
+	if (exists $setup_src{$n->{host}}) {
+		push @cmds, q[(wait_until_src)];
+	} else {
+		push @cmds, q[setup_src];
+		$setup_src{$n->{host}} = 1;
+	}
 
 	if ($n->{type} eq "client") {
 		$n->{wok_ctlsock} = "$n->{base_dir}/wok.ctlsock";
@@ -649,6 +696,8 @@ EOF
 			git clone $repo_url .
 			./bootstrap.sh
 
+			@comm_checkout
+
 			cat <<'___MKCFG_EOF' > mk/local.mk
 @{$gcfg{mkcfg}}
 ___MKCFG_EOF
@@ -670,11 +719,20 @@ ___MKCFG_EOF
 			cat <<'___AUTHBUF_EOF' > $authbuf_fn
 $authbuf
 ___AUTHBUF_EOF
-			sudo chown root $authbuf_fn
-			sudo chmod 400 $authbuf_fn
+			$sudo chown root $authbuf_fn
+			$sudo chmod 400 $authbuf_fn
+			touch .src.done
 		}
 
-		@cmds
+		wait_until_src()
+		{
+			set +x
+			until [ -e $n->{src_dir}/.src.done ]; do
+				sleep 1
+			done
+		}
+
+		@{[join "\n", @cmds]}
 		mkdir -p @mkdir
 EOF
 }
@@ -727,17 +785,29 @@ sub daemon_setup {
 	return <<EOF;
 	run_daemon()
 	{
+		local OPTIND c
+
+		once=0
+		while getopts "O" c; do
+			case \$c in
+			O) once=1;;
+			*) die "unknown option: \$c";;
+			esac
+		done
+		shift \$((OPTIND - 1))
+
+		$sudo sysctl vm.overcommit_memory=1
 		ulimit -c unlimited
-		export PSC_LOG_FILE=$n->{base_dir}/$n->{type}.log
-		touch \$PSC_LOG_FILE
-		sudo sh -c 'echo %e.core > /proc/sys/kernel/core_pattern'
+		$sudo sh -c 'echo %e.core > /proc/sys/kernel/core_pattern'
 		local prog=\$1
+		: \${PSC_LOG_FILE:=$n->{base_dir}/$n->{type}.log}
 		while :; do
 			set +e
-			$sudo pkill \$1 && sleep 3
-			$sudo "\$@"
+			$sudo pkill -9 \$1 && sleep 3
+			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE "\$@"
 			local status=\$?
 			set -e
+			[ \$status -eq 137 ] && break
 			[ \$status -eq 0 ] && break
 			local corefile=\$prog.core
 			if [ -e "\$corefile" ]; then
@@ -752,6 +822,7 @@ sub daemon_setup {
 				} >\$cmdfile
 				sudo gdb -batch -c \$corefile -x \$cmdfile \$(which \$prog) 2>&1 | $n->{src_dir}/tools/filter-pstack
 			fi
+			[ \$once -eq 1 ] && break
 			sleep 2
 		done
 	}
@@ -826,8 +897,17 @@ foreach my $n (@cli) {
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		run_daemon mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $args" $n->{mp}
+		run_daemon -O mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $args" $n->{mp}
 EOF
+}
+
+if (exists $gcfg{testenv}) {
+	if (ref $gcfg{testenv} eq "ARRAY") {
+	} else {
+		$gcfg{testenv} = [ $gcfg{testenv} ];
+	}
+} else {
+	$gcfg{testenv} = [ ];
 }
 
 sub test_setup {
@@ -836,6 +916,8 @@ sub test_setup {
 	return <<EOF;
 	export TMPDIR=$n->{mp}/tmp
 	export RANDOM_DATA=$TSUITE_RANDOM
+	@{[map { "export $_\n" } @{ $gcfg{testenv} }]}
+
 	cd $n->{test_src_dir}
 	sudo mkdir -p "$n->{mp}/tmp" || :
 	sudo chmod 1777 "$n->{mp}/tmp"
@@ -872,6 +954,16 @@ sub test_setup {
 
 	run_timed_test()
 	{
+		local OPTIND
+
+		local dont_exclude=0
+		while getopts "X" c; do
+			case \$c in
+			X) dont_exclude=1;;
+			esac
+		done
+		shift \$((OPTIND - 1))
+
 		local test=\$1
 		local id=\$2
 
@@ -880,6 +972,7 @@ sub test_setup {
 		local time1=\$(date +%s.%N)
 		local time0_ms=\$(convert_ms \$time0)
 		local time1_ms=\$(convert_ms \$time1)
+		[ \$dont_exclude -eq 1 ] && _EXCLUDE_TIME_MS=0
 		echo %TSUITE_RESULT% \$test:\$id \$((time1_ms - time0_ms - _EXCLUDE_TIME_MS))
 	}
 
@@ -937,27 +1030,36 @@ foreach my $n (@cli) {
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 
-		while :; do
-			mds=\$($n->{ctlcmd} -Hp sys.mds | awk '{print \$2}' | sed 's/\\(.*\\)@\\(.*\\)/\\2.\\1/')
-			[ -n "\$mds" ] && break
-			sleep 1
-		done
+		wait_for_mds()
+		{
+			set +x
 
-		df $n->{mp}
+			while :; do
+				mds=\$($n->{ctlcmd} -Hp sys.mds | awk '{print \$2}' | sed 's/\\(.*\\)@\\(.*\\)/\\2.\\1/')
+				[ -n "\$mds" ] && break
+				sleep 1
+			done
 
-		until $n->{ctlcmd} -p sys.resources.\$mds.connected | grep 1; do
-			sleep 1
-		done
+			df $n->{mp}
+
+			until $n->{ctlcmd} -p sys.resources.\$mds.connected | grep 1; do
+				sleep 1
+			done
+		}
+
+		(wait_for_mds)
 
 		@{[test_setup($n)]}
 
-		for test in *; do
+		for test in $which_tests; do
 			run_timed_test $n->{test_src_dir}/\$test $n->{id} $nclients
 		done
 EOF
 }
 
 waitjobs \@pids, $total_timeout;
+
+goto SKIP_FAIL if $which_tests ne "*";
 
 # Set 2: run all tests in parallel without faults for performance
 # regressions and exercise.
@@ -975,7 +1077,7 @@ foreach my $n (@cli) {
 			wait
 		}
 
-		run_timed_test run_all_tests $n->{id} $nclients
+		run_timed_test -X run_all_tests $n->{id} $nclients
 EOF
 }
 
@@ -1051,6 +1153,8 @@ EOF
 	waitjobs \@killpid, $step_timeout;
 
 } while (waitjobs \@pids, $total_timeout, WF_NONBLOCK);
+
+SKIP_FAIL:
 
 debug_msg "completed test suite successfully";
 
@@ -1129,7 +1233,7 @@ EOF
 
 $SIG{INT} = 'IGNORE';
 cleanup();
-$SIG{INT} = 'DEFAULT';
+#$SIG{INT} = 'DEFAULT';
 
 close WR;
 

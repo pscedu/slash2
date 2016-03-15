@@ -4,13 +4,14 @@
 # @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
 
-# @client omnitopia:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
-# @client polybius:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
-# client zebes:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
-# client lavos:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# @testenv http_proxy=http://cache:3128
+# @client omnitopia:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
+# @client polybius:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
+# client zebes:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
+# client lavos:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
 
-# client yuzu:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
-# client kiwi:TMPDIR=/local/tmp:LNET_NETWORKS=sdp4(ib0):args=pagecache_maxsize=2g
+# client yuzu:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
+# client kiwi:TMPDIR=/local/tmp:args=pagecache_maxsize=2g
 
 set port=7001;
 set net=sdp4;
