@@ -829,6 +829,8 @@ mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
+	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
+	{ "max_infl_rpcs",	mslctl_resfieldi_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
