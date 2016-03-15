@@ -774,7 +774,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct srm_link_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
-	int rc = 0;
+	int rc = 0, throttled = 0;
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -817,7 +817,10 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -830,6 +833,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -853,6 +857,9 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	psclogs_diag(SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
 	    c_inum, p_inum, newname, rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (c)
 		fcmh_op_done(c);
