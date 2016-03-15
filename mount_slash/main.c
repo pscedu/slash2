@@ -1559,6 +1559,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	(void)pfl_fault_here_rc("slash2/readdir", &rc, EHOSTDOWN);
 	if (rc)
@@ -1610,6 +1611,7 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	dircache_free_page(d, p);
 	DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
+	msl_resm_throttle_wake(msl_rmc_resm);
 	return (rc);
 }
 
