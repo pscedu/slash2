@@ -489,7 +489,9 @@ main(int argc, char *argv[])
 	if (slcfg_local->cfg_arc_max)
 		arc_set_maxsize(slcfg_local->cfg_arc_max);
 
-	mdsio_init();
+	rc = mdsio_init();
+	if (rc)
+		psc_fatal("failed to initialize ZFS, rc= %d", rc);
 	import_zpool(zpname, zpcachefn);
 
 	psc_hashtbl_init(&slm_roots, PHTF_STR, struct mio_rootnames,
