@@ -778,6 +778,18 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	return (bwc);
 }
 
+void
+msl_resm_throttle_wake(struct sl_resm *m)
+{
+	struct resprof_cli_info *rpci;
+
+	rpci = res2rpci(m->resm_res);
+	RPCI_LOCK(rpci);
+	rpci->rpci_infl_rpcs--;
+	RPCI_WAKE(rpci);
+	RPCI_ULOCK(rpci);
+}
+
 int
 _msl_resm_throttle(struct sl_resm *m, int block)
 {

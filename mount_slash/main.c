@@ -351,6 +351,7 @@ void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
+	int throttled = 0;
 	int rc = 0, rc2, rflags = 0;
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
@@ -391,8 +392,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK | X_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	throttled = 1;
 
  retry:
+
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -414,6 +418,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -519,6 +524,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (c)
 		fcmh_op_done(c);
