@@ -55,6 +55,10 @@ struct psc_poolmgr	*sl_csvc_pool;
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slashrpc_cservice, csvc_lentry);
 
+/*
+ * Create a new generic RPC request.  Common processing in all SLASH2
+ * communication happens herein.
+ */
 int
 slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
@@ -67,6 +71,10 @@ slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
 	    *(void **)mqp));
 }
 
+/*
+ * Wait for a reply on a synchronous RPC issued as an RPC client.
+ * Common processing to all SLASH2 communication happens herein.
+ */
 int
 slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq, int plen, void *mpp, int flags)
@@ -110,6 +118,10 @@ slrpc_allocgenrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	    plens, rcoff));
 }
 
+/*
+ * Execute any hooks in the server before sending a reply back to an RPC
+ * client.
+ */
 void
 slrpc_rep_out(struct pscrpc_request *rq)
 {
@@ -1094,6 +1106,10 @@ slconnthr_main(struct psc_thread *thr)
 	}
 }
 
+/*
+ * Spawn a connection thread.  The thread maintains an established
+ * connection to any peers for which it is configured.
+ */
 struct psc_thread *
 slconnthr_spawn(int thrtype, const char *thrnamepre,
     int (*pingupc)(void *), void *pingupcarg)
@@ -1113,6 +1129,10 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
 	return (thr);
 }
 
+/*
+ * Add a peer to the list of peers to which a connection thread
+ * maintains an established connection.
+ */
 void
 slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
     int flags, int (*useablef)(void *), void *useablearg)
@@ -1304,6 +1324,9 @@ slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
 	return (rc);
 }
 
+/*
+ * Perform RPC bulk operation as an RPC client.
+ */
 int
 slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
     struct iovec *iov, int n)
@@ -1311,6 +1334,9 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 	return (rsx_bulkclient(rq, type, chan, iov, n));
 }
 
+/*
+ * Set up internal SLASH2 RPC layer structures.
+ */
 void
 slrpc_initcli(int size)
 {
@@ -1320,6 +1346,9 @@ slrpc_initcli(int size)
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
 }
 
+/*
+ * Tear down SLASH2 RPC layer.
+ */
 void
 slrpc_destroy(void)
 {
