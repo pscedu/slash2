@@ -2664,7 +2664,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	struct stat stb;
-	int rc;
+	int rc, throttled = 0;
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2688,7 +2688,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2713,6 +2716,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -2740,6 +2744,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (c)
 		fcmh_op_done(c);
