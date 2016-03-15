@@ -3366,7 +3366,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
-	int rc;
+	int rc, throttled = 0;
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3415,7 +3415,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size)
 		buf = PSCALLOC(size);
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3434,8 +3437,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
+	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3455,6 +3460,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		fcmh_op_done(f);
 
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	pscrpc_req_finished(rq);
 	if (csvc)
@@ -3477,7 +3485,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
-	int rc;
+	int rc, throttled = 0;
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3499,7 +3507,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	throttled = 1;
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3516,8 +3526,10 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
+	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc) {
@@ -3538,6 +3550,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
 
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
+
 	if (f)
 		fcmh_op_done(f);
 	pscrpc_req_finished(rq);
@@ -3557,6 +3572,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
+	int throttled = 0;
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3584,7 +3600,10 @@ slc_getxattr(struct pscfs_req *pfr,
 	if (locked)
 		FCMH_ULOCK(f);
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
@@ -3602,8 +3621,10 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
+	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3616,6 +3637,9 @@ slc_getxattr(struct pscfs_req *pfr,
 		*retsz = mp->valuelen;
 
  out:
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
+
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -3632,7 +3656,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	struct pscfs_creds pcr;
 	size_t retsz = 0;
 	void *buf = NULL;
-	int rc;
+	int rc, throttled = 0;
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3647,7 +3671,10 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 
 	slc_getfscreds(pfr, &pcr);
 
+
+	msl_resm_throttle_wait(msl_rmc_resm);
 	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
+	msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	if (f)
