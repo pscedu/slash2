@@ -6,28 +6,26 @@ dep wget
 
 V=2.84
 
-exclude_time_start
-wget -nv http://download.transmissionbt.com/files/transmission-$V.tar.xz
-exclude_time_end
+tsuite_wget 3077836 411aec1c418c14f6765710d89743ae42 \
+    a9fc1936b4ee414acc732ada04e84339d6755cd0d097bcbd11ba2cfc540db9eb \
+    http://download.transmissionbt.com/files/transmission-$V.tar.xz
 
-decompress_xz transmission-$V.tar.xz | tar fx -
+tsuite_decompress transmission-$V.tar.xz | tar fx -
 
 cd transmission-$V
 ./configure enable-cli
 make
 
+exit 0
+
 min_sysctl net.core.rmem_max=4194304
 min_sysctl net.core.wmem_max=1048576
-
-exit 0
 
 torrent_fn=random_data.torrent
 
 if [ $1 -eq 0 ]; then
 	# Hosting client: launch tracker.
 	(
-		exclude_time_start
-		exclude_time_end
 		cd udpt
 		make
 	)
