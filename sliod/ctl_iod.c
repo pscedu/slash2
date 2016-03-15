@@ -632,9 +632,9 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &sli_bminseq.bim_minseq);
 	psc_ctlparam_register_var("sys.reclaim_batchno",
-	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_batchno);
+	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_batchno);
 	psc_ctlparam_register_var("sys.reclaim_xid",
-	    PFLCTL_PARAMT_UINT64, 0, &current_reclaim_xid);
+	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_xid);
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
 

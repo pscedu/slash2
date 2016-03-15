@@ -29,7 +29,7 @@
 #include "pfl/service.h"
 #include "pfl/str.h"
 
-#include "ctlsvr_cli.h"
+#include "ctl_cli.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"

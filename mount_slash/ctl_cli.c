@@ -41,7 +41,6 @@
 #include "ctl.h"
 #include "ctl_cli.h"
 #include "ctlsvr.h"
-#include "ctlsvr_cli.h"
 #include "fidc_cli.h"
 #include "mount_slash.h"
 #include "pathnames.h"

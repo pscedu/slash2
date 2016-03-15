@@ -27,8 +27,15 @@
 #ifndef _SL_CTL_CLI_H_
 #define _SL_CTL_CLI_H_
 
+#include "pfl/list.h"
+#include "pfl/lock.h"
+#include "pfl/lockedlist.h"
+#include "pfl/waitq.h"
+
 #include "fid.h"
 #include "slconfig.h"
+
+struct psc_ctlmsghdr;
 
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
@@ -117,6 +124,22 @@ struct msctlmsg_bmpce {
 #define MSCMT_GETBMPCE		(NPCMT + 12)
 
 #define SLASH_FSID		0x51a54
+
+struct msctl_replstq {
+	struct psc_listentry		 mrsq_lentry;
+	struct psc_waitq		 mrsq_waitq;
+	int				 mrsq_id;
+	int				 mrsq_fd;
+	int				 mrsq_rc;
+	const struct psc_ctlmsghdr	*mrsq_mh;
+	psc_spinlock_t			 mrsq_lock;
+	slfid_t				 mrsq_fid;
+	int				 mrsq_refcnt;
+};
+
+void mrsq_release(struct msctl_replstq *, int);
+
+extern struct psc_lockedlist	msctl_replsts;
 
 extern struct psc_thread	*msl_ctlthr0;
 

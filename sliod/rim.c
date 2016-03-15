@@ -48,8 +48,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-uint64_t	current_reclaim_xid;
-uint64_t	current_reclaim_batchno;
+uint64_t	sli_current_reclaim_xid;
+uint64_t	sli_current_reclaim_batchno;
 
 /*
  * Handle SRMT_BATCH_RQ request from the MDS.
@@ -161,12 +161,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	xid = mq->xid;
 	batchno = mq->batchno;
-	if (xid > current_reclaim_xid)
-		current_reclaim_xid = xid;
-	if (batchno > current_reclaim_batchno) {
+	if (xid > sli_current_reclaim_xid)
+		sli_current_reclaim_xid = xid;
+	if (batchno > sli_current_reclaim_batchno) {
 		psclog_info("reclaim batchno advances from %"PRId64" to "
-		    "%"PRId64, current_reclaim_batchno, batchno);
-		current_reclaim_batchno = batchno;
+		    "%"PRId64, sli_current_reclaim_batchno, batchno);
+		sli_current_reclaim_batchno = batchno;
 	}
 
 	PFL_GETTIMEVAL(&t0);

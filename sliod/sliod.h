@@ -115,7 +115,7 @@ extern struct psc_listcache	 sli_fcmh_dirty;
 extern int			 sli_sync_max_writes;
 extern struct psc_thread	*sliconnthr;
 
-extern uint64_t			 current_reclaim_xid;
-extern uint64_t			 current_reclaim_batchno;
+extern uint64_t			 sli_current_reclaim_xid;
+extern uint64_t			 sli_current_reclaim_batchno;
 
 #endif /* _SLIOD_H_ */
