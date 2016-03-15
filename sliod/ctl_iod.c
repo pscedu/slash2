@@ -628,6 +628,8 @@ slictlthr_main(const char *fn)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
+	    0, (char *)sl_datadir);
 
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &sli_bminseq.bim_minseq);
