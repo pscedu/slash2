@@ -343,6 +343,7 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
+	msl_resm_throttle_wake(msl_rmc_resm);
 	sl_csvc_decref(csvc);
 
 	return (rc);
@@ -373,6 +374,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	msl_resm_throttle_wake(msl_rmc_resm);
 
 	sl_csvc_decref(csvc);
 
@@ -402,7 +404,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	struct pscrpc_request *rq = NULL;
 	struct srm_reassignbmap_req *mq;
 	struct srm_reassignbmap_rep *mp;
-	int rc;
+	int rc, throttled = 0;
 
 	BMAP_LOCK(b);
 
@@ -451,14 +453,21 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	mq->nreassigns = bci->bci_nreassigns;
 	mq->pios = msl_pref_ios;
 
+	throttled = 1;
+	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (!rc)
+		throttled = 0;
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease reassign req (rc=%d)", rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
@@ -494,7 +503,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct srm_leasebmapext_rep *mp;
 	struct srt_bmapdesc *sbd;
 	struct timespec ts;
-	int secs, rc;
+	int secs, rc, throttled = 0;
 
 	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_TOFREE) {
@@ -554,15 +563,22 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	mq->sbd = *sbd;
 
+	throttled = 1;
+	msl_resm_throttle_wait(msl_rmc_resm);
+
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (!rc)
+		throttled = 0;
 
  out:
 	BMAP_LOCK(b);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc) {
 		if (rq)
 			pscrpc_req_finished(rq);
