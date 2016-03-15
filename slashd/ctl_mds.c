@@ -489,6 +489,8 @@ slmctlthr_main(const char *fn)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
+	    0, (char *)sl_datadir);
 
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
