@@ -688,6 +688,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	f->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(f);
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	do {
 		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
 		    rc);
@@ -699,6 +700,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	} while (rc && slc_rmc_retry(pfr, &rc));
+	msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (rc == 0)
 		rc = -mp->rc;
