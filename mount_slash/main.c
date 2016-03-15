@@ -979,6 +979,8 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 
  retry:
+
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -988,8 +990,10 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
+	}
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -1019,6 +1023,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
+	msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc == 0 && fp) {
 		*fp = f;
 		FCMH_ULOCK(f);
