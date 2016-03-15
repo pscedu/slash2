@@ -688,6 +688,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	f->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(f);
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	do {
 		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
 		    rc);
@@ -699,6 +700,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	} while (rc && slc_rmc_retry(pfr, &rc));
+	msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (rc == 0)
 		rc = -mp->rc;
@@ -977,6 +979,8 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 
  retry:
+
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -986,8 +990,10 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
+	}
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -1017,6 +1023,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
+	msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc == 0 && fp) {
 		*fp = f;
 		FCMH_ULOCK(f);
@@ -1953,6 +1960,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
@@ -1994,6 +2002,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
  out:
+	msl_resm_throttle_wake(msl_rmc_resm);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -2359,7 +2368,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srm_rename_rep *mp = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
-	int sticky, rc;
+	int sticky, rc, throttled = 0;
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2466,7 +2475,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
+	throttled = 1;
+
  retry:
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2495,6 +2507,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -2546,6 +2559,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
 	    "npinum="SLPRI_FID" oldname='%s' newname='%s' rc=%d",
 	    opinum, npinum, oldname, newname, rc);
+
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (child)
 		fcmh_op_done(child);
