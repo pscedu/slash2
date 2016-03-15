@@ -436,6 +436,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 
 	BMAP_ULOCK(b);
 
+	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
 	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 	if (rc)
 		goto out;
