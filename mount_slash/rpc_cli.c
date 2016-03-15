@@ -36,6 +36,10 @@
 #include "slconn.h"
 #include "slerr.h"
 
+/*
+ * This is the default MDS. Do not use it directly in order
+ * to support global mount.
+ */
 struct sl_resm			*msl_rmc_resm;
 struct pscrpc_svc_handle	*msl_rci_svh;
 struct pscrpc_svc_handle	*msl_rcm_svh;

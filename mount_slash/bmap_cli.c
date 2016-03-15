@@ -930,8 +930,6 @@ msl_bmap_release(struct sl_resm *resm)
 	}
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
-
-
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
