@@ -787,7 +787,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
-		rc = EAGAIN;
+		rc = -EAGAIN;
 
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
