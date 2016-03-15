@@ -93,10 +93,12 @@ struct slrpc_batch_rep {
 #define SLRPC_BATCH_REQ_LOCK(bq)	spinlock(&(bq)->bq_lock)
 #define SLRPC_BATCH_REQ_ULOCK(bq)	freelock(&(bq)->bq_lock)
 #define SLRPC_BATCH_REQ_RLOCK(bq)	reqlock(&(bq)->bq_lock)
+#define SLRPC_BATCH_REQ_URLOCK(bq, lk)	ureqlock(&(bq)->bq_lock, (lk))
 
 #define SLRPC_BATCH_REP_LOCK(bp)	spinlock(&(bp)->bp_lock)
 #define SLRPC_BATCH_REP_ULOCK(bp)	freelock(&(bp)->bp_lock)
 #define SLRPC_BATCH_REP_RLOCK(bp)	reqlock(&(bp)->bp_lock)
+#define SLRPC_BATCH_REP_URLOCK(bp, lk)	ureqlock(&(bp)->bp_lock, (lk))
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
