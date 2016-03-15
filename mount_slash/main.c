@@ -1189,7 +1189,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
-	int rc;
+	int rc, throttled = 0;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1230,8 +1230,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	throttled = 1;
  retry:
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	if (isfile)
 		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
@@ -1247,6 +1249,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
+		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc)
@@ -1276,6 +1279,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
 
+	if (throttled)
+		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (isfile)
 		pscfs_reply_unlink(pfr, rc);
