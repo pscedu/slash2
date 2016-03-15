@@ -170,6 +170,7 @@ slm_odt_resize(struct pfl_odt *t)
 	 * of new items
 	 */
 	h = t->odt_hdr;
+	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
 	    0, t->odt_mfh, NULL, NULL);
 	psc_assert(!rc && nb == sizeof(*h));
