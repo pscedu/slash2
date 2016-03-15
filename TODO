@@ -871,8 +871,12 @@ s2re
   hangs
 - writeahead now creates +1 bmap beyond EOF when using
   `msctl repl-status`
-- application errno's still don't registered via psclog() which calls
-  pfl_strerror()
+- when paging into upsch, hold items in cache instead of continually
+  paging in single units so reduce SQL?
+- does ptrunc adjust st_blocks-related fields correctly?
+- MARKFREE is staying on clients in /pylon2 MDS and not clearing
+- slvr_remove_all() is still causing problems because a sliver cannot clear
+- convert IOS RECLAIM processing to the batch RPC API
 
 - tune metaslab_df_free_pct zfs/slashd
 
