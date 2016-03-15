@@ -4,21 +4,22 @@
 
 dep wget
 
-V=4.3
+V=4.4.4
 
-exclude_time_start
-wget -nv https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
-exclude_time_end
+tsuite_wget 87307804 73d1835cfb6dd348d87c8c2413190c21 \
+    4d39d79f5889ea60365269387ce21520ba767c15837a136c12c3f5ca2b48812c \
+    https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$V.tar.xz
 
-decompress_xz linux-$V.tar.xz | tar fx -
+tsuite_decompress linux-$V.tar.xz | tar fx -
 
 dir=$(pwd)
 (
 	cd $LOCAL_TMP
-	decompress_xz $dir/linux-$V.tar.xz | tar fx -
+	tsuite_decompress $dir/linux-$V.tar.xz | tar fx -
 )
 diff -qr $LOCAL_TMP/linux-$V linux-$V
 
 cd linux-$V
 make oldconfig </dev/null
 make bzImage
+make modules
