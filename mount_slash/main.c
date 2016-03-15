@@ -1953,6 +1953,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
+	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
@@ -1994,6 +1995,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
  out:
+	msl_resm_throttle_wake(msl_rmc_resm);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
