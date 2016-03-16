@@ -401,7 +401,12 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			b = bii_2_bmap(bii);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-
+			if (b->bcm_flags & BMAPF_RELEASING) {
+				DEBUG_BMAP(PLL_DIAG, b,
+				    "skip due to releasing");
+				BMAP_ULOCK(b);
+				continue;
+			}
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
