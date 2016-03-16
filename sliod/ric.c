@@ -402,13 +402,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	return (rc);
 }
 
-/*
- * XXX  We probably need a way to make sure that all data have been
- * written before fsync().
- *
- * XXX  Consider move this into a background thread to reduce the 
- * time to serve the RPC.
- */
 __static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
