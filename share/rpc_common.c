@@ -89,7 +89,8 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
 		if (rc == 0 && slrpc_ops.slrpc_rep_in)
 			slrpc_ops.slrpc_rep_in(csvc, rq);
-	}
+	} else if (slrpc_ops.slrpc_req_out_failed)
+		slrpc_ops.slrpc_req_out_failed(csvc, rq);
 	return (rc);
 }
 

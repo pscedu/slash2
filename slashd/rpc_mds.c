@@ -646,6 +646,7 @@ struct slrpc_ops slrpc_ops = {
 	slm_rpc_newreq,
 	slm_rpc_req_in,
 	slm_rpc_req_out,
+	NULL,
 	slm_rpc_allocrep,
 	slm_rpc_rep_in,
 	NULL
