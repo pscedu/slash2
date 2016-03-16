@@ -214,7 +214,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
 	(void)reqlock(&w->srw_lock);
 
-	rc = pflrpc_portable_rc(rc);
+	rc = pflrpc_portable_errno(rc);
 
 	/*
 	 * This keeps the very first error and causes our thread to drop
