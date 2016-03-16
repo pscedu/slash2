@@ -318,20 +318,11 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 			}
 		}
 		if (new) {
-			/*
-			 * Reaper thread has marked this bmap for
-			 * release so do a no-op.
-			 */
-			if (b->bcm_flags & BMAPF_RELEASING) {
-				psc_pool_return(bmap_rls_pool, brls);
-			} else {
+			DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
+			    "seq=%"PRId64" key=%"PRId64,
+			    brls, sbd->sbd_seq, sbd->sbd_key);
 
-				DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
-				    "seq=%"PRId64" key=%"PRId64,
-				    brls, sbd->sbd_seq, sbd->sbd_key);
-
-				pll_add(&bii->bii_rls, brls);
-			}
+			pll_add(&bii->bii_rls, brls);
 		} else
 			psc_pool_return(bmap_rls_pool, brls);
 
