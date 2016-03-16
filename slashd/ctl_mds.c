@@ -509,6 +509,9 @@ slmctlthr_main(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_batchno);
 	psc_ctlparam_register_var("sys.reclaim_cursor",
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
+	psc_ctlparam_register_var("sys.rpc_timeout",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
 	psc_ctlparam_register_var("sys.bmaxseqno", PFLCTL_PARAMT_UINT64,
 	    0, &slm_bmap_leases.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,

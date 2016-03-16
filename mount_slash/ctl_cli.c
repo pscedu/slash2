@@ -922,6 +922,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
+
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_statfs_pref_ios_only);
