@@ -270,13 +270,12 @@ sli_bmap_sync(struct bmap *b)
 void
 slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
-	int rc, new;
+	int i, rc, new;
 	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int32_t i;
 
 	i = 0;
 	while ((brls = pll_get(&sli_bii_rls))) {
@@ -389,7 +388,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
