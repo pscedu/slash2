@@ -898,8 +898,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
 	/* XXX: add max_fs_iosz */
-	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR,
-	    0, (char *)sl_datadir);
+	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
+	    (char *)sl_datadir);
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
