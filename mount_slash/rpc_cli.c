@@ -261,36 +261,30 @@ void
 slc_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		struct sl_resm *m;
+	struct sl_resm *m;
 
-		m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-		msl_resm_throttle_wait(m);
-	}
+	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
+	msl_resm_throttle_wait(m);
 }
 
 void
 slc_rpc_req_out_failed(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		struct sl_resm *m;
+	struct sl_resm *m;
 
-		m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-		msl_resm_throttle_wake(m);
-	}
+	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
+	msl_resm_throttle_wake(m);
 }
 
 void
 slc_rpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		struct sl_resm *m;
+	struct sl_resm *m;
 
-		m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-		msl_resm_throttle_wake(m);
-	}
+	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
+	msl_resm_throttle_wake(m);
 }
 
 struct sl_expcli_ops sl_expcli_ops;
