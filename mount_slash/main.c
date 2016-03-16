@@ -4017,11 +4017,11 @@ msl_opt_lookup(const char *opt)
 				break;
 			case LOOKUP_TYPE_INT:
 				l = strtol(val, &endp, 10);
-				if (sz < 0 || l > INT_MAX ||
+				if (l < 0 || l > INT_MAX ||
 				    endp == val || *endp)
-					errx(1, "%s: invalid format:
-					    %s", io->name, val);
-				*(int *)io->ptr = sz;
+					errx(1, "%s: invalid format: "
+					    "%s", io->name, val);
+				*(int *)io->ptr = l;
 				break;
 			default:
 				psc_fatalx("invalid type");
