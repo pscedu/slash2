@@ -254,7 +254,7 @@ sli_bmap_sync(struct bmap *b)
 		else
 			OPSTAT_INCR("sync-slow");
 		DEBUG_FCMH(PLL_NOTICE, f,
-		    "long sync %ld", delta.tv_sec);
+		    "long sync %"PSCPRI_TIMET, delta.tv_sec);
 	}
 	if (rc) {
 		OPSTAT_INCR("sync-fail");
@@ -376,7 +376,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
-
 		slibmaprlsthr_process_releases(&a);
 
 		nrls = 0;
