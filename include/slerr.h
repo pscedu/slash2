@@ -68,12 +68,9 @@
 /* 32 - reuse me */
 /* 33 - reuse me */
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
-/* 35 - reuse me */
-/* 36 - reuse me */
 
-#undef strerror
-#define strerror(rc)			sl_strerror(rc)
+void sl_errno_init(void);
 
-const char *sl_strerror(int);
+#define sl_strerror(rc)	strerror(rc)
 
 #endif /* _SLERR_H_ */

@@ -63,11 +63,11 @@ char *sl_errstrs[] = {
 	 NULL
 };
 
-const char *
-sl_strerror(int error)
+void
+sl_errno_init(void)
 {
-	if (error >= _SLERR_START &&
-	    error < _SLERR_START + nitems(sl_errstrs))
-		return (sl_errstrs[error - _SLERR_START]);
-	return (pfl_strerror(error));
+	int i;
+
+	for (i = 0; i < nitems(sl_errstrs); i++)
+		pfl_register_errno(_SLERR_START + i, sl_errstrs[i]);
 }
