@@ -163,7 +163,6 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 			BMAP_LOCK(b);
 		}
 	}
-	msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (compl) {
 		BMAP_ULOCK(b);
@@ -253,7 +252,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
 		    &compl;
 	}
-	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
@@ -261,7 +259,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		msl_resm_throttle_wake(msl_rmc_resm);
 		if (flags & BMAPGETF_NONBLOCK)
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		else
@@ -345,7 +342,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
-	msl_resm_throttle_wake(msl_rmc_resm);
 	sl_csvc_decref(csvc);
 
 	return (rc);
@@ -376,7 +372,6 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-	msl_resm_throttle_wake(msl_rmc_resm);
 
 	sl_csvc_decref(csvc);
 
@@ -455,13 +450,10 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	mq->nreassigns = bci->bci_nreassigns;
 	mq->pios = msl_pref_ios;
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
@@ -562,13 +554,10 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	mq->sbd = *sbd;
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	BMAP_LOCK(b);
@@ -886,7 +875,6 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct sl_resm *resm = args->pointer_arg[MSL_CBARG_RESM];
 	struct srm_bmap_release_req *mq;
 	uint32_t i;
 	int rc;
@@ -901,8 +889,6 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
 		    mq->sbd[i].sbd_seq, rc);
-
-	msl_resm_throttle_wake(resm);
 
 	sl_csvc_decref(csvc);
 	return (rc);
@@ -934,15 +920,11 @@ msl_bmap_release(struct sl_resm *resm)
 	if (rc)
 		goto out;
 
-	msl_resm_throttle_wait(resm);
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
 	rq->rq_interpret_reply = msl_rmc_bmaprelease_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = resm;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc)
-		msl_resm_throttle_wake(resm);
 
  out:
 	rmci->rmci_bmaprls.nbmaps = 0;

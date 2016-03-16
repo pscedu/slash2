@@ -162,13 +162,12 @@ int				 msl_direct_io = 1;
 int				 msl_root_squash;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
+struct resprof_cli_info		 msl_statfs_aggr_rpci;
 
-int	msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
-int 	msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
+int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
+int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
-
-struct resprof_cli_info		 msl_statfs_aggr_rpci;
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -353,7 +352,6 @@ void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
-	int throttled = 0;
 	int rc = 0, rc2, rflags = 0;
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
@@ -394,11 +392,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK | X_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	throttled = 1;
 
  retry:
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -420,7 +416,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -526,9 +521,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
-
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (c)
 		fcmh_op_done(c);
@@ -688,7 +680,6 @@ msl_stat(struct fidc_membh *f, void *arg)
 	f->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(f);
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	do {
 		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
 		    rc);
@@ -700,7 +691,6 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	} while (rc && slc_rmc_retry(pfr, &rc));
-	msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (rc == 0)
 		rc = -mp->rc;
@@ -774,7 +764,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct srm_link_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
-	int rc = 0, throttled = 0;
+	int rc = 0;
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -817,10 +807,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	throttled = 1;
-
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -833,7 +820,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -858,9 +844,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
 	    c_inum, p_inum, newname, rc);
 
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
-
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -882,7 +865,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_mkdir_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
-	int rc, throttled = 0;
+	int rc;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -911,9 +894,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
 
-	throttled = 1;
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -933,7 +914,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -962,8 +942,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -987,8 +965,6 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	int rc;
 
  retry:
-
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -998,10 +974,8 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc)) {
-		msl_resm_throttle_wake(msl_rmc_resm);
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	}
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -1031,7 +1005,6 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
-	msl_resm_throttle_wake(msl_rmc_resm);
 	if (rc == 0 && fp) {
 		*fp = f;
 		FCMH_ULOCK(f);
@@ -1204,7 +1177,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
-	int rc, throttled = 0;
+	int rc;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1245,10 +1218,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	throttled = 1;
  retry:
-
-	msl_resm_throttle_wait(msl_rmc_resm);
 	if (isfile)
 		MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	else
@@ -1264,7 +1234,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc)
@@ -1293,9 +1262,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
-
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (isfile)
 		pscfs_reply_unlink(pfr, rc);
@@ -1552,8 +1518,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
 
-	msl_resm_throttle_wake(msl_rmc_resm);
-
 	PSCFREE(dentbuf);
 
 	return (0);
@@ -1581,7 +1545,6 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	(void)pfl_fault_here_rc("slash2/readdir", &rc, EHOSTDOWN);
 	if (rc)
@@ -1633,7 +1596,6 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	dircache_free_page(d, p);
 	DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
-	msl_resm_throttle_wake(msl_rmc_resm);
 	return (rc);
 }
 
@@ -1970,7 +1932,6 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		return (rc);
@@ -2012,7 +1973,6 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
  out:
-	msl_resm_throttle_wake(msl_rmc_resm);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -2368,7 +2328,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srm_rename_rep *mp = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
-	int sticky, rc, throttled = 0;
+	int sticky, rc;
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2475,10 +2435,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
-	throttled = 1;
-
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2507,7 +2464,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -2559,9 +2515,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
 	    "npinum="SLPRI_FID" oldname='%s' newname='%s' rc=%d",
 	    opinum, npinum, oldname, newname, rc);
-
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (child)
 		fcmh_op_done(child);
@@ -2664,7 +2617,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	struct stat stb;
-	int rc, throttled = 0;
+	int rc;
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2688,10 +2641,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	throttled = 1;
-
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2716,7 +2666,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		msl_resm_throttle_wake(msl_rmc_resm);
 		goto retry;
 	}
 	if (rc == 0)
@@ -2744,9 +2693,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
-
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
 	if (c)
 		fcmh_op_done(c);
@@ -2909,8 +2855,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	/*
-	 * XXX: While the Linux kernel should synchronize a read with a truncate,
-	 * we probably should synchronize with any read-ahead launched ourselves.
+	 * XXX: While the Linux kernel should synchronize a read with a
+	 * truncate, we probably should synchronize with any read-ahead
+	 * launched ourselves.
 	 */
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		struct bmap *b;
@@ -3359,7 +3306,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
-	int rc, throttled = 0;
+	int rc;
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3408,10 +3355,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size)
 		buf = PSCALLOC(size);
 
-	throttled = 1;
-
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3430,10 +3374,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	if (rc && slc_rmc_retry(pfr, &rc)) {
-		msl_resm_throttle_wake(msl_rmc_resm);
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3453,9 +3395,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		fcmh_op_done(f);
 
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
-
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
 
 	pscrpc_req_finished(rq);
 	if (csvc)
@@ -3478,7 +3417,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
-	int rc, throttled = 0;
+	int rc;
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3500,9 +3439,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	throttled = 1;
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3519,10 +3456,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc)) {
-		msl_resm_throttle_wake(msl_rmc_resm);
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc) {
@@ -3543,9 +3478,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
 
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
-
 	if (f)
 		fcmh_op_done(f);
 	pscrpc_req_finished(rq);
@@ -3565,7 +3497,6 @@ slc_getxattr(struct pscfs_req *pfr,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
-	int throttled = 0;
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3593,10 +3524,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	if (locked)
 		FCMH_ULOCK(f);
 
-	throttled = 1;
-
  retry:
-	msl_resm_throttle_wait(msl_rmc_resm);
 	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc = -rc);
@@ -3614,10 +3542,8 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
-	if (rc && slc_rmc_retry(pfr, &rc)) {
-		msl_resm_throttle_wake(msl_rmc_resm);
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	}
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3630,9 +3556,6 @@ slc_getxattr(struct pscfs_req *pfr,
 		*retsz = mp->valuelen;
 
  out:
-	if (throttled)
-		msl_resm_throttle_wake(msl_rmc_resm);
-
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -3664,9 +3587,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 
 	slc_getfscreds(pfr, &pcr);
 
-	msl_resm_throttle_wait(msl_rmc_resm);
 	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
-	msl_resm_throttle_wake(msl_rmc_resm);
 
  out:
 	if (f)
@@ -3960,7 +3881,7 @@ msl_init(void)
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
 	/* Start up service threads. */
-	slrpc_initcli(64);
+	slrpc_initcli();
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();

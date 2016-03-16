@@ -789,16 +789,12 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 {
 	struct timespec ts0, ts1, tsd;
 	struct resprof_cli_info *rpci;
-	int account = 0, max_inflight_rpcs;
-	
-	/*
-	 * XXX: With global mount, we should not use msl_rmc_resm. 
-	 * Instead, we should check resource type.
-	 */
-	if (m != msl_rmc_resm) {
-		max_inflight_rpcs = msl_ios_max_inflight_rpcs;
+	int account = 0, max;
+
+	if (m->resm_type == SLREST_MDS) {
+		max = msl_mds_max_inflight_rpcs;
 	} else {
-		max_inflight_rpcs = msl_mds_max_inflight_rpcs;
+		max = msl_ios_max_inflight_rpcs;
 	}
 
 	rpci = res2rpci(m->resm_res);
@@ -806,12 +802,12 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	 * XXX use resm multiwait?
 	 */
 	RPCI_LOCK(rpci);
-	if (!block && rpci->rpci_infl_rpcs >= max_inflight_rpcs) {
+	if (!block && rpci->rpci_infl_rpcs >= max) {
 		RPCI_ULOCK(rpci);
 		return (-EAGAIN);
 	}
 
-	while (rpci->rpci_infl_rpcs >= max_inflight_rpcs) {
+	while (rpci->rpci_infl_rpcs >= max) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
@@ -826,7 +822,7 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	if (account) {
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
-		OPSTAT_ADD("msl.flush-wait-usecs",
+		OPSTAT_ADD("msl.throttle-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
 	return (0);
