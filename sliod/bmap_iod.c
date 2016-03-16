@@ -392,6 +392,12 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				skip = 1;
 				continue;
 			}
+			if (b->bcm_flags &BMAPF_TOFREE) {
+				DEBUG_BMAP(PLL_DIAG, b,
+				    "skip due to freeing");
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
@@ -412,9 +418,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 					break;
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
-				b->bcm_flags |= BMAPF_RELEASING;
-				/* XXX locking violation */
-				lc_remove(&sli_bmap_releaseq, bii);
+				b->bcm_flags |= BMAPF_TOFREE;
 				psc_dynarray_add(&a, b);
 			}
 			BMAP_ULOCK(b);
@@ -425,6 +429,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		DYNARRAY_FOREACH(b, i, &a) {
+			bii = bmap_2_bii(b);
+			lc_remove(&sli_bmap_releaseq, bii);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
 
