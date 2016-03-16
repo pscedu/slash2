@@ -319,8 +319,7 @@ struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
 void	msl_resm_throttle_wake(struct sl_resm *);
-
-#define msl_resm_throttle_wait(m)	_msl_resm_throttle((m), 1)
+void	msl_resm_throttle_wait(struct sl_resm *);
 
 int	 _msl_resm_throttle(struct sl_resm *, int);
 

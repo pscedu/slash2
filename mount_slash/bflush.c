@@ -778,8 +778,8 @@ msl_resm_throttle_wake(struct sl_resm *m)
 	RPCI_ULOCK(rpci);
 }
 
-int
-_msl_resm_throttle(struct sl_resm *m, int block)
+void
+msl_resm_throttle_wait(struct sl_resm *m)
 {
 	struct timespec ts0, ts1, tsd;
 	struct resprof_cli_info *rpci;
@@ -796,11 +796,6 @@ _msl_resm_throttle(struct sl_resm *m, int block)
 	 * XXX use resm multiwait?
 	 */
 	RPCI_LOCK(rpci);
-	if (!block && rpci->rpci_infl_rpcs >= max) {
-		RPCI_ULOCK(rpci);
-		return (-EAGAIN);
-	}
-
 	while (rpci->rpci_infl_rpcs >= max) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
