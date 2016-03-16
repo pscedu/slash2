@@ -44,6 +44,76 @@ struct sl_resm			*msl_rmc_resm;
 struct pscrpc_svc_handle	*msl_rci_svh;
 struct pscrpc_svc_handle	*msl_rcm_svh;
 
+void
+msl_resm_throttle_wake(struct sl_resm *m)
+{
+	struct resprof_cli_info *rpci;
+
+	rpci = res2rpci(m->resm_res);
+	RPCI_LOCK(rpci);
+	rpci->rpci_infl_rpcs--;
+	RPCI_WAKE(rpci);
+	RPCI_ULOCK(rpci);
+}
+
+int
+msl_resm_throttle_yield(struct sl_resm *m)
+{
+	int max, rc = 0;
+	struct resprof_cli_info *rpci;
+
+	if (m->resm_type == SLREST_MDS) {
+		max = msl_mds_max_inflight_rpcs;
+	} else {
+		max = msl_ios_max_inflight_rpcs;
+	}
+
+	rpci = res2rpci(m->resm_res);
+        RPCI_LOCK(rpci);
+        if (rpci->rpci_infl_rpcs >= max)
+                rc = -EAGAIN;
+	RPCI_ULOCK(rpci);
+	return rc;
+}
+
+void
+msl_resm_throttle_wait(struct sl_resm *m)
+{
+	struct timespec ts0, ts1, tsd;
+	struct resprof_cli_info *rpci;
+	int account = 0, max;
+
+	if (m->resm_type == SLREST_MDS) {
+		max = msl_mds_max_inflight_rpcs;
+	} else {
+		max = msl_ios_max_inflight_rpcs;
+	}
+
+	rpci = res2rpci(m->resm_res);
+	/*
+	 * XXX use resm multiwait?
+	 */
+	RPCI_LOCK(rpci);
+	while (rpci->rpci_infl_rpcs >= max) {
+		if (!account) {
+			PFL_GETTIMESPEC(&ts0);
+			account = 1;
+		}
+		RPCI_WAIT(rpci);
+		RPCI_LOCK(rpci);
+	}
+	rpci->rpci_infl_rpcs++;
+	if (rpci->rpci_infl_rpcs > rpci->rpci_max_infl_rpcs)
+		rpci->rpci_max_infl_rpcs = rpci->rpci_infl_rpcs;
+	RPCI_ULOCK(rpci);
+	if (account) {
+		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &tsd);
+		OPSTAT_ADD("msl.throttle-wait-usecs",
+		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
+	}
+}
+
 __static void
 slc_rci_init(void)
 {
