@@ -43,6 +43,8 @@ my @mds;	# suite MDS nodes
 my @ios;	# suite IOS nodes
 my @cli;	# suite CLI nodes
 
+my $pfl_sudo = "command sudo env PSC_DUMPSTACK=1";
+
 sub usage {
 	die <<EOF
 usage: $0 [-BCmPRv] [-c commspec] [-D descr] [-u user] [suite-name [test ...]]
@@ -112,13 +114,13 @@ sub init_env {
 		push @cmd, <<EOF;
 			msctl()
 			{
-				sudo $n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
+				$pfl_sudo $n->{src_dir}/slash2/msctl/msctl -S $n->{ctlsock} \$@
 			}
 			export -f msctl
 
 			wokctl()
 			{
-				sudo $n->{src_dir}/wokfs/wokctl/wokctl -S $n->{wok_ctlsock} \$@
+				$pfl_sudo $n->{src_dir}/wokfs/wokctl/wokctl -S $n->{wok_ctlsock} \$@
 			}
 			export -f wokctl
 EOF
@@ -127,7 +129,7 @@ EOF
 		push @cmd, <<EOF;
 			slmctl()
 			{
-				sudo $n->{src_dir}/slash2/slmctl/slmctl -S $n->{ctlsock} \$@
+				$pfl_sudo $n->{src_dir}/slash2/slmctl/slmctl -S $n->{ctlsock} \$@
 			}
 			export -f slmctl
 EOF
@@ -136,7 +138,7 @@ EOF
 		push @cmd, <<EOF;
 			slictl()
 			{
-				sudo $n->{src_dir}/slash2/slictl/slictl -S $n->{ctlsock} \$@
+				$pfl_sudo $n->{src_dir}/slash2/slictl/slictl -S $n->{ctlsock} \$@
 			}
 			export -f slictl
 EOF
@@ -266,9 +268,6 @@ EOF
 	}
 	export -f mkdir_recurse
 
-	export MAKEFLAGS=-j\$(nproc)
-	export SCONSFLAGS=-j\$(nproc)
-
 	addpath /sbin
 	addpath $n->{src_dir}/slash2/slashd
 	addpath $n->{src_dir}/slash2/sliod
@@ -279,11 +278,13 @@ EOF
 	addpath $n->{src_dir}/wokfs/mount_wokfs
 	addpath $n->{src_dir}/wokfs/wokctl
 
-	data_dir=$n->{data_dir}
-
 	@{[ $opts{v} ? "set -x" : "" ]}
 
-	export @env_vars
+	data_dir=$n->{data_dir}
+
+	export MAKEFLAGS=-j\$(nproc)
+	export SCONSFLAGS=-j\$(nproc)
+	export PSC_DUMPSTACK=1 @env_vars
 
 	@cmd
 EOF
@@ -572,10 +573,10 @@ foreach my $n (@mds, @ios) {
 	if (exists $n->{fmtcmd}) {
 		if (ref $n->{fmtcmd} eq "ARRAY") {
 			for my $cmd (@{ $n->{fmtcmd} }) {
-				$cmd =~ s/^/\n$sudo /;
+				$cmd =~ s/^/\n$pfl_sudo /;
 			}
 		} else {
-			$n->{fmtcmd} = [ "$sudo " . $n->{fmtcmd} ];
+			$n->{fmtcmd} = [ "$pfl_sudo " . $n->{fmtcmd} ];
 		}
 	} else {
 		$n->{fmtcmd} = [ ];
@@ -663,7 +664,7 @@ foreach my $n (@mds, @ios, @cli) {
 		$n->{mp} = "$n->{base_dir}/mp";
 		push @mkdir, $n->{mp};
 
-		push @cmds, qq[$sudo dd if=/dev/urandom of=$TSUITE_RANDOM bs=1048576 count=1024];
+		push @cmds, qq[find $TSUITE_RANDOM -size +1073741823c | grep $TSUITE_RANDOM || $sudo dd if=/dev/urandom of=$TSUITE_RANDOM bs=1048576 count=1024];
 	}
 
 	my $authbuf_fn = "$n->{data_dir}/authbuf.key";
@@ -745,9 +746,9 @@ foreach my $n (@mds) {
 
 	my @cmds;
 	if (exists $n->{journal}) {
-		push @cmds, "$sudo slmkjrnl -f -b $n->{journal} -u $fsuuid";
+		push @cmds, "$pfl_sudo slmkjrnl -f -b $n->{journal} -u $fsuuid";
 	} else {
-		push @cmds, "$sudo slmkjrnl -f -D $n->{data_dir} -u $fsuuid";
+		push @cmds, "$pfl_sudo slmkjrnl -f -D $n->{data_dir} -u $fsuuid";
 	}
 
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -765,7 +766,7 @@ foreach my $n (@mds) {
 		$sudo $zpool destroy $n->{zpool_name} || true
 		$sudo $zpool create -f $n->{zpool_name} $n->{zpool_args}
 		$sudo $zfs set atime=off $n->{zpool_name}
-		$sudo slmkfs -I $n->{site_id}:$n->{id} -u $fsuuid /$n->{zpool_name}
+		$pfl_sudo slmkfs -I $n->{site_id}:$n->{id} -u $fsuuid /$n->{zpool_name}
 		sync
 		# XXX race condition here
 		sleep 3
@@ -865,7 +866,7 @@ foreach my $n (@ios) {
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
 		@{[init_env($n)]}
 		@{$n->{fmtcmd}}
-		$sudo slmkfs -i -u $fsuuid -I $n->{site_id}:$n->{id} $n->{fsroot}
+		$pfl_sudo slmkfs -i -u $fsuuid -I $n->{site_id}:$n->{id} $n->{fsroot}
 EOF
 }
 
