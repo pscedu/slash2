@@ -234,6 +234,8 @@ libsl_init(int nmsgs)
 	struct sl_resource *r;
 	struct sl_site *s;
 
+	sl_errno_init();
+
 	rc = snprintf(pbuf, sizeof(pbuf), "%d",
 	    globalConfig.gconf_port);
 	if (rc >= (int)sizeof(pbuf)) {

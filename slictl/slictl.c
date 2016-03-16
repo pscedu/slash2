@@ -39,6 +39,7 @@
 #include "sliod/slvr.h"
 
 #include "ctl.h"
+#include "slerr.h"
 #include "ctlcli.h"
 #include "pathnames.h"
 
@@ -277,6 +278,8 @@ int
 main(int argc, char *argv[])
 {
 	pfl_init();
+	sl_errno_init();
+
 	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	exit(0);

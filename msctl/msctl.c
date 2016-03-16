@@ -1039,6 +1039,7 @@ int
 main(int argc, char *argv[])
 {
 	pfl_init();
+	sl_errno_init();
 
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 97, NULL, "fnfidpairs");
