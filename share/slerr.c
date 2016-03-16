@@ -68,6 +68,6 @@ sl_errno_init(void)
 {
 	int i;
 
-	for (i = 0; i < nitems(sl_errstrs); i++)
+	for (i = 0; sl_errstrs[i]; i++)
 		pfl_register_errno(_SLERR_START + i, sl_errstrs[i]);
 }
