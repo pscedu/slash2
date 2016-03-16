@@ -472,6 +472,7 @@ main(int argc, char *argv[])
 	long long ll;
 
 	pfl_init();
+	sl_errno_init();
 	sl_subsys_register();
 
 	fn[0] = '\0';

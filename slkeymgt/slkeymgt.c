@@ -30,6 +30,7 @@
 
 #include "authbuf.h"
 #include "pathnames.h"
+#include "slerr.h"
 
 int		 create;
 const char	*sl_datadir = SL_PATH_DATA_DIR;
@@ -49,6 +50,7 @@ main(int argc, char *argv[])
 	int c;
 
 	pfl_init();
+	sl_errno_init();
 	while ((c = getopt(argc, argv, "cD:")) != -1)
 		switch (c) {
 		case 'c':

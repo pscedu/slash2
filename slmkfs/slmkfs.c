@@ -48,6 +48,7 @@
 #include "mkfn.h"
 #include "pathnames.h"
 #include "slconfig.h"
+#include "slerr.h"
 
 void wipefs(const char *);
 
@@ -229,6 +230,7 @@ main(int argc, char *argv[])
 	int c;
 
 	pfl_init();
+	sl_errno_init();
 	while ((c = getopt(argc, argv, "iI:R:u:W")) != -1)
 		switch (c) {
 		case 'I':
