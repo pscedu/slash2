@@ -626,9 +626,8 @@ slictlthr_main(const char *fn)
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 
-	psc_ctlparam_register_var("sys.rpc_timeout",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &pfl_rpc_timeout);
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
 
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
