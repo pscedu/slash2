@@ -320,6 +320,7 @@ struct msl_fhent *
 
 void	msl_resm_throttle_wake(struct sl_resm *);
 void	msl_resm_throttle_wait(struct sl_resm *);
+int	msl_resm_throttle_yield(struct sl_resm *);
 
 int	 _msl_resm_throttle(struct sl_resm *, int);
 

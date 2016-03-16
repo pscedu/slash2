@@ -778,6 +778,26 @@ msl_resm_throttle_wake(struct sl_resm *m)
 	RPCI_ULOCK(rpci);
 }
 
+int
+msl_resm_throttle_yield(struct sl_resm *m)
+{
+	int max, rc = 0;
+	struct resprof_cli_info *rpci;
+
+	if (m->resm_type == SLREST_MDS) {
+		max = msl_mds_max_inflight_rpcs;
+	} else {
+		max = msl_ios_max_inflight_rpcs;
+	}
+
+	rpci = res2rpci(m->resm_res);
+        RPCI_LOCK(rpci);
+        if (rpci->rpci_infl_rpcs >= max)
+                rc = -EAGAIN;
+	RPCI_ULOCK(rpci);
+	return rc;
+}
+
 void
 msl_resm_throttle_wait(struct sl_resm *m)
 {
@@ -814,7 +834,6 @@ msl_resm_throttle_wait(struct sl_resm *m)
 		OPSTAT_ADD("msl.throttle-wait-usecs",
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 	}
-	return (0);
 }
 
 /*

@@ -1230,6 +1230,11 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	if (r->biorq_flags & BIORQ_READAHEAD)
+		rc = msl_resm_throttle_yield(m);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
