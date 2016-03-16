@@ -268,6 +268,7 @@ void
 slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
 	int rc, new;
+	struct psc_dynarray add_reapq = DYNARRAY_INIT;
 	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
@@ -327,6 +328,13 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 				    "seq=%"PRId64" key=%"PRId64,
 				    brls, sbd->sbd_seq, sbd->sbd_key);
 
+				if (pll_empty(&bii->bii_rls)) {
+					bmap_op_start_type(b,
+					    BMAP_OPCNT_REAPER);
+					psc_dynarray_add(&add_reapq,
+					    bii);
+				}
+
 				pll_add(&bii->bii_rls, brls);
 			}
 		} else
@@ -344,6 +352,13 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		fcmh_op_done(f);
 	}
 	psc_dynarray_reset(a);
+
+	LIST_CACHE_LOCK(&sli_bmap_releaseq);
+	DYNARRAY_FOREACH(bii, i, &add_reapq)
+		lc_addtail(&sli_bmap_releaseq, bii);
+	LIST_CACHE_ULOCK(&sli_bmap_releaseq);
+
+	psc_dynarray_free(&add_reapq);
 }
 
 int
@@ -406,8 +421,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
 				b->bcm_flags |= BMAPF_RELEASING;
-				/* XXX locking violation */
-				lc_remove(&sli_bmap_releaseq, bii);
 				psc_dynarray_add(&a, b);
 			}
 			BMAP_ULOCK(b);
@@ -417,9 +430,15 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
+		LIST_CACHE_LOCK(&sli_bmap_releaseq);
 		DYNARRAY_FOREACH(b, i, &a) {
+			BMAP_LOCK(b);
+			bii = bmap_2_bii(b);
+			if (!pll_nitems(&bii->bii_rls))
+				lc_remove(&sli_bmap_releaseq, bii);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
+		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		psc_dynarray_reset(&a);
 
@@ -473,10 +492,9 @@ slibmaprlsthr_spawn(void)
 
 	pll_init(&sli_bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 
-	for (i = 0; i < NBMAPRLS_THRS; i++) {
-		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL, 0,
-		    "slibmaprlsthr%d", i);
-	}
+	for (i = 0; i < NBMAPRLS_THRS; i++)
+		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL,
+		    0, "slibmaprlsthr%d", i);
 }
 
 void
@@ -491,13 +509,6 @@ iod_bmap_init(struct bmap *b)
 	SPLAY_INIT(&bii->bii_slvrs);
 
 	pll_init(&bii->bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
-
-	/*
-	 * XXX At some point we'll want to let bmaps hang around in the
-	 * cache to prevent extra reads and CRC table fetches.
-	 */
-	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-	lc_addtail(&sli_bmap_releaseq, bii);
 }
 
 void
