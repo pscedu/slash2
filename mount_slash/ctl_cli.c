@@ -785,7 +785,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
+mslctl_resfield_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -802,7 +802,7 @@ mslctl_resfieldi_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
+mslctl_resfield_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -828,16 +828,16 @@ mslctl_resfieldi_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
-	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
-	{ "max_infl_rpcs",	mslctl_resfieldi_max_infl_rpcs },
+	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
+	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
-	{ "infl_rpcs",		mslctl_resfieldi_infl_rpcs },
-	{ "max_infl_rpcs",	mslctl_resfieldi_max_infl_rpcs },
+	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
+	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
 	{ NULL, NULL }
 };
