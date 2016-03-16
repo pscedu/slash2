@@ -3964,6 +3964,7 @@ enum {
 	LOOKUP_TYPE_BOOL,
 	LOOKUP_TYPE_STR,
 	LOOKUP_TYPE_UINT64,
+	LOOKUP_TYPE_INT,
 };
 
 int
@@ -3979,13 +3980,17 @@ msl_opt_lookup(const char *opt)
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
+		{ "predio_issue_maxpages",
+					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
 	};
 	const char *val;
 	size_t optlen;
+	char *endp;
 	ssize_t sz;
+	long l;
 
 	val = strchr(opt, '=');
 	if (val) {
@@ -4010,6 +4015,16 @@ msl_opt_lookup(const char *opt)
 					    strerror(-sz), val);
 				*(uint64_t *)io->ptr = sz;
 				break;
+			case LOOKUP_TYPE_INT:
+				l = strtol(val, &endp, 10);
+				if (sz < 0 || l > INT_MAX ||
+				    endp == val || *endp)
+					errx(1, "%s: invalid format:
+					    %s", io->name, val);
+				*(int *)io->ptr = sz;
+				break;
+			default:
+				psc_fatalx("invalid type");
 			}
 			return (1);
 		}
