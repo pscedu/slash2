@@ -1338,7 +1338,7 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
  * Set up internal SLASH2 RPC layer structures.
  */
 void
-slrpc_initcli(int size)
+slrpc_initcli(void)
 {
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,

@@ -302,7 +302,7 @@ main(int argc, char *argv[])
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(SLITHRT_WORKER, 4, "sliwkthr%d");
 
-	slrpc_initcli(256);
+	slrpc_initcli();
 
 	sl_drop_privs(1);
 
