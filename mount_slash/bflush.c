@@ -287,8 +287,6 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE,
 	    bwc->bwc_size);
 
-	msl_resm_throttle_wake(m);
-
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
 
@@ -308,8 +306,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	m = libsl_ios2resm(bmap_2_ios(b));
 	rpci = res2rpci(m->resm_res);
-
-	msl_resm_throttle_wait(m);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
@@ -369,8 +365,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (0);
 
  out:
-	msl_resm_throttle_wake(m);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
