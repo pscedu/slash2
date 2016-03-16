@@ -258,21 +258,20 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	fd = fcmh_2_fd(f);
 	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	mp->rc = ftruncate(fd, size);
-	if (!mp->rc)
-		OPSTAT_INCR("ftruncate-success");
-	else {
-		psclogs_errorx(SLISS_INFO, "Truncate: fg="SLPRI_FG","
-		    "rc = %d\n", SLPRI_FG_ARGS(fgp), mp->rc);
+	if (ftruncate(fd, size) == -1) {
+		mp->rc = pflrpc_portable_errno(-errno);
+		DEBUG_FCMH(PLL_ERROR, f, "truncate failed; rc=%d",
+		    mp->rc);
 		OPSTAT_INCR("ftruncate-failure");
-	}
+	} else
+		OPSTAT_INCR("ftruncate");
 
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
 	fcmh_op_done(f);
 #if 0
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY, &mq->fg,
-	    mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY,
+	    &mq->fg, mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
 #endif
 	return (0);
 }
