@@ -194,7 +194,10 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
-	/* Perform app-specific substructure initialization. */
+	/* 
+	 * Perform app-specific substructure initialization, which is
+	 * msl_bmap_init(), iod_bmap_init(), or mds_bmap_init().
+	 */
 	sl_bmap_ops.bmo_init_privatef(b);
 
 	/* Add to the fcmh's bmap cache */
