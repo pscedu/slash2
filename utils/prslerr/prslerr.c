@@ -25,10 +25,9 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 
 #include "slerr.h"
-
-extern char *slash_errstrs[];
 
 __dead void
 usage(void)
@@ -42,6 +41,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
+	sl_errno_init();
+
 	if (getopt(argc, argv, "") != -1)
 		usage();
 	argc -= optind;
