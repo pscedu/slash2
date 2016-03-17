@@ -177,22 +177,26 @@ sli_rmi_brelease_cb(struct pscrpc_request *rq,
 void
 sli_rmi_issue_bmap_release(struct srm_bmap_release_req *brr)
 {
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_request *rq;
+	int rc;
+
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc) {
-		psclog_errorx("failed to get MDS import rc=%d",
-		    rc);
-		continue;
+		psclog_errorx("failed to get MDS import; rc=%d", rc);
+		return;
 	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc) {
-		psclog_errorx("failed to generate new req "
-		    "rc=%d", rc);
+		psclog_errorx("failed to generate new req; rc=%d", rc);
 		sl_csvc_decref(csvc);
-		continue;
+		return;
 	}
 
-	memcpy(mq, &brr, sizeof(*mq));
+	*mq = *brr;
 
 	rq->rq_interpret_reply = sli_rmi_brelease_cb;
 	rq->rq_async_args.pointer_arg[SLI_CBARG_CSVC] = csvc;
