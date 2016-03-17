@@ -333,7 +333,6 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
-	struct psc_dynarray to_free = DYNARRAY_INIT;
 	struct psc_dynarray to_sync = DYNARRAY_INIT;
 	struct srm_bmap_release_req brr;
 	struct bmap_iod_info *bii, *tmp;
@@ -341,11 +340,10 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct bmap *b;
 	int nrls, i;
 
-	psc_dynarray_ensurelen(&to_free, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&to_sync, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
-		slibmaprlsthr_process_releases(&to_free);
+		slibmaprlsthr_process_releases(&to_sync);
 
 		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
@@ -380,9 +378,10 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			}
 			if (!pll_nitems(&bii->bii_rls)) {
 				b->bcm_flags |= BMAPF_TOFREE;
-				psc_dynarray_add(&to_free, b);
-			}
-			BMAP_ULOCK(b);
+				lc_remove(&sli_bmap_releaseq, bii);
+				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+			} else
+				BMAP_ULOCK(b);
 
 			if (nrls >= MAX_BMAP_RELEASE)
 				break;
@@ -400,15 +399,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&to_sync);
 
-		DYNARRAY_FOREACH(b, i, &to_free) {
-			BMAP_LOCK(b);
-			bii = bmap_2_bii(b);
-			lc_remove(&sli_bmap_releaseq, bii);
-			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-		}
-
-		psc_dynarray_reset(&to_free);
-
 		if (!nrls)
 			continue;
 
@@ -422,7 +412,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		 */
 		sli_rmi_issue_bmap_release(&brr);
 	}
-	psc_dynarray_free(&to_free);
 	psc_dynarray_free(&to_sync);
 }
 
