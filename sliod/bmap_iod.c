@@ -378,15 +378,16 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			i = pll_nitems(&bii->bii_rls);
-			DEBUG_BMAP(PLL_DIAG, b,
-			    "returning %d bmap leases", i);
 			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr.sbd[nrls++],
 				    &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
+
 				psc_dynarray_add_ifdne(&to_sync, b);
+				bmap_op_start_type(b,
+				    BMAP_OPCNT_RELEASER);
+
 				if (nrls >= MAX_BMAP_RELEASE)
 					break;
 			}
@@ -401,7 +402,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
-		DYNARRAY_FOREACH(b, i, &to_sync)
+		DYNARRAY_FOREACH(b, i, &to_sync) {
 			/*
 			 * Sync to backing file system here to guarantee
 			 * that buffers are flushed to disk before the
@@ -409,6 +410,9 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			 * for this bmap.
 			 */
 			sli_bmap_sync(b);
+			bmap_op_done_type(b,
+			    BMAP_OPCNT_RELEASER);
+		}
 		psc_dynarray_reset(&to_sync);
 
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
@@ -426,7 +430,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		if (!nrls)
 			continue;
 
-		OPSTAT_INCR("bmap-release");
+		DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases",
+		    nrls);
 
 		brr.nbmaps = nrls;
 		/*
