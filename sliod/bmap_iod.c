@@ -100,7 +100,7 @@ bim_updateseq(uint64_t seq)
 	 * retry again.
 	 */
 	invalid = 1;
-	psclog_warnx("Seqno %"PRId64" is invalid "
+	psclog_warnx("seqno %"PRId64" is invalid "
 	    "(bim_minseq=%"PRId64")",
 	    seq, sli_bminseq.bim_minseq);
 	OPSTAT_INCR("seqno-invalid");
@@ -268,7 +268,6 @@ void
 slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
 	int i, rc, new;
-	struct psc_dynarray add_reapq = DYNARRAY_INIT;
 	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
@@ -322,8 +321,7 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 			if (pll_empty(&bii->bii_rls)) {
 				bmap_op_start_type(b,
 				    BMAP_OPCNT_REAPER);
-				psc_dynarray_add(&add_reapq,
-				    bii);
+				lc_addtail(&sli_bmap_releaseq, bii);
 			}
 
 			pll_add(&bii->bii_rls, brls);
@@ -334,13 +332,6 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		fcmh_op_done(f);
 	}
 	psc_dynarray_reset(a);
-
-	LIST_CACHE_LOCK(&sli_bmap_releaseq);
-	DYNARRAY_FOREACH(bii, i, &add_reapq)
-	    lc_addtail(&sli_bmap_releaseq, bii);
-	LIST_CACHE_ULOCK(&sli_bmap_releaseq);
-
-	psc_dynarray_free(&add_reapq);
 }
 
 void
@@ -379,15 +370,16 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			if (pll_nitems(&bii->bii_rls)) {
+				psc_dynarray_add(&to_sync, b);
+				bmap_op_start_type(b,
+				    BMAP_OPCNT_RELEASER);
+			}
 			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr.sbd[nrls++],
 				    &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
-
-				psc_dynarray_add_ifdne(&to_sync, b);
-				bmap_op_start_type(b,
-				    BMAP_OPCNT_RELEASER);
 
 				if (nrls >= MAX_BMAP_RELEASE)
 					break;
