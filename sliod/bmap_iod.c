@@ -355,6 +355,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	int nrls, i;
 
 	psc_dynarray_ensurelen(&to_free, MAX_BMAP_RELEASE);
+	psc_dynarray_ensurelen(&to_sync, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
 		slibmaprlsthr_process_releases(&to_free);
