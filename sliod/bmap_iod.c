@@ -317,8 +317,7 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		    brls, sbd->sbd_seq, sbd->sbd_key);
 
 		if (pll_empty(&bii->bii_rls)) {
-			bmap_op_start_type(b,
-			    BMAP_OPCNT_REAPER);
+			bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 			lc_addtail(&sli_bmap_releaseq, bii);
 		}
 
