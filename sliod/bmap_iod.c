@@ -364,9 +364,11 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			if (pll_nitems(&bii->bii_rls))
+			if (pll_nitems(&bii->bii_rls)) {
 				psc_dynarray_add(&to_sync, b);
-
+				bmap_op_start_type(b,
+				    BMAP_OPCNT_REAPER);
+			}
 			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr.sbd[nrls++],
 				    &brls->bir_sbd,
@@ -396,6 +398,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			 * for this bmap.
 			 */
 			sli_bmap_sync(b);
+			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+
 		}
 		psc_dynarray_reset(&to_sync);
 
