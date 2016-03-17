@@ -143,9 +143,6 @@ extern struct psc_poolmgr	*bmap_crcupd_pool;
 
 extern struct psc_listcache	 bcr_ready;
 
-extern psc_spinlock_t		 sli_release_bmap_lock;
-extern struct psc_waitq		 sli_release_bmap_waitq;
-
 static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)
 {
