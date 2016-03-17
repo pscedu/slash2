@@ -267,7 +267,7 @@ sli_bmap_sync(struct bmap *b)
 void
 slibmaprlsthr_process_releases(struct psc_dynarray *a)
 {
-	int i, rc, new;
+	int i, rc;
 	struct bmap_iod_rls *brls, *tmpbrls;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
@@ -304,30 +304,27 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 			continue;
 		}
 
-		new = 1;
 		bii = bmap_2_bii(b);
 		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
 			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
 				OPSTAT_INCR("bmap-duplicate");
-				new = 0;
-				break;
+				psc_pool_return(bmap_rls_pool, brls);
+				goto next;
 			}
 		}
-		if (new) {
-			DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
-			    "seq=%"PRId64" key=%"PRId64,
-			    brls, sbd->sbd_seq, sbd->sbd_key);
+		DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
+		    "seq=%"PRId64" key=%"PRId64,
+		    brls, sbd->sbd_seq, sbd->sbd_key);
 
-			if (pll_empty(&bii->bii_rls)) {
-				bmap_op_start_type(b,
-				    BMAP_OPCNT_REAPER);
-				lc_addtail(&sli_bmap_releaseq, bii);
-			}
+		if (pll_empty(&bii->bii_rls)) {
+			bmap_op_start_type(b,
+			    BMAP_OPCNT_REAPER);
+			lc_addtail(&sli_bmap_releaseq, bii);
+		}
 
-			pll_add(&bii->bii_rls, brls);
-		} else
-			psc_pool_return(bmap_rls_pool, brls);
+		pll_add(&bii->bii_rls, brls);
 
+ next:
 		bmap_op_done(b);
 		fcmh_op_done(f);
 	}
