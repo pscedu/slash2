@@ -339,20 +339,6 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 	psc_dynarray_reset(a);
 }
 
-int
-sli_rmi_brelease_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	int rc;
-	struct slashrpc_cservice *csvc = args->pointer_arg[SLI_CBARG_CSVC];
-
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
-	    rc);
-
-	sl_csvc_decref(csvc);
-	return (0);
-}
-
 void
 slibmaprlsthr_main(struct psc_thread *thr)
 {
@@ -444,32 +430,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		 * The system can tolerate the loss of these messages so
 		 * errors here should not be fatal.
 		 */
-		rc = sli_rmi_getcsvc(&csvc);
-		if (rc) {
-			psclog_errorx("failed to get MDS import rc=%d",
-			    rc);
-			continue;
-		}
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
-		if (rc) {
-			psclog_errorx("failed to generate new req "
-			    "rc=%d", rc);
-			sl_csvc_decref(csvc);
-			continue;
-		}
-
-		memcpy(mq, &brr, sizeof(*mq));
-
-		rq->rq_interpret_reply = sli_rmi_brelease_cb;
-		rq->rq_async_args.pointer_arg[SLI_CBARG_CSVC] = csvc;
-
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc) {
-			psclog_errorx("RELEASEBMAP failed rc=%d", rc);
-			pscrpc_req_finished(rq);
-			sl_csvc_decref(csvc);
-		}
+		sli_rmi_issue_bmap_release(&brr);
 	}
 	psc_dynarray_free(&a);
 }

@@ -41,6 +41,9 @@
 #include "slerr.h"
 #include "sliod.h"
 
+/* async RPC pointers */
+#define SLI_CBARG_CSVC                  0
+
 struct sl_resm *rmi_resm;
 
 int
@@ -155,4 +158,49 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
+}
+
+int
+sli_rmi_brelease_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	int rc;
+	struct slashrpc_cservice *csvc = args->pointer_arg[SLI_CBARG_CSVC];
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
+	    rc);
+
+	sl_csvc_decref(csvc);
+	return (0);
+}
+
+void
+sli_rmi_issue_bmap_release(struct srm_bmap_release_req *brr)
+{
+	rc = sli_rmi_getcsvc(&csvc);
+	if (rc) {
+		psclog_errorx("failed to get MDS import rc=%d",
+		    rc);
+		continue;
+	}
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
+	if (rc) {
+		psclog_errorx("failed to generate new req "
+		    "rc=%d", rc);
+		sl_csvc_decref(csvc);
+		continue;
+	}
+
+	memcpy(mq, &brr, sizeof(*mq));
+
+	rq->rq_interpret_reply = sli_rmi_brelease_cb;
+	rq->rq_async_args.pointer_arg[SLI_CBARG_CSVC] = csvc;
+
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc) {
+		psclog_errorx("RELEASEBMAP failed rc=%d", rc);
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
+	}
 }

@@ -29,9 +29,6 @@
 #include "slconfig.h"
 #include "slconn.h"
 
-/* async RPC pointers */
-#define SLI_CBARG_CSVC                  0
-
 struct sli_repl_workrq;
 
 #define SLI_RIM_NTHREADS	8
