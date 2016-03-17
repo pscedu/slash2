@@ -415,15 +415,12 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&to_sync);
 
-		LIST_CACHE_LOCK(&sli_bmap_releaseq);
 		DYNARRAY_FOREACH(b, i, &to_free) {
 			BMAP_LOCK(b);
 			bii = bmap_2_bii(b);
-			if (!pll_nitems(&bii->bii_rls))
-				lc_remove(&sli_bmap_releaseq, bii);
+			lc_remove(&sli_bmap_releaseq, bii);
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
-		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
 		psc_dynarray_reset(&to_free);
 

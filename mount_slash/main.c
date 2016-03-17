@@ -3935,7 +3935,7 @@ msl_init(void)
 	pscfs_attr_timeout = 8.;
 
 	time(&now);
-	psclogs_info(SLCSS_INFO, "SLASH2 client revision %d "
+	psclogs_warn(SLCSS_INFO, "SLASH2 client revision %d "
 	    "started at %s", sl_stk_version, ctime(&now));
 
 	return (0);
