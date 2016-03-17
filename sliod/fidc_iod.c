@@ -207,6 +207,13 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 		slvr_remove_all(f);
 
 		/*
+		 * It's possible the pruning of all slivers and bmaps
+		 * ended up fcmh_op_done() our fcmh so ensure it is
+		 * locked upon finishing.
+		 */
+		FCMH_RLOCK(f);
+
+		/*
 		 * Need to reopen the backing file and possibly remove
 		 * the old one.
 		 */
