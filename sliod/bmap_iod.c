@@ -285,7 +285,7 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		sbd = &brls->bir_sbd;
 		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
 		if (rc) {
-			OPSTAT_INCR("rlsbmap-fail");
+			OPSTAT_INCR("bmap-release-fail");
 			psclog(rc == ENOENT || rc == ESTALE ?
 			    PLL_DIAG : PLL_ERROR,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
@@ -306,8 +306,9 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 
 		bii = bmap_2_bii(b);
 		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
-			if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
-				OPSTAT_INCR("bmap-duplicate");
+			if (!memcmp(&tmpbrls->bir_sbd, sbd,
+			    sizeof(*sbd))) {
+				OPSTAT_INCR("bmap-release-duplicate");
 				psc_pool_return(bmap_rls_pool, brls);
 				goto next;
 			}
@@ -317,7 +318,9 @@ slibmaprlsthr_process_releases(struct psc_dynarray *a)
 		    brls, sbd->sbd_seq, sbd->sbd_key);
 
 		if (pll_empty(&bii->bii_rls)) {
-			bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+			bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
+			psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
+			b->bcm_flags |= BMAPF_RELEASEQ;
 			lc_addtail(&sli_bmap_releaseq, bii);
 		}
 
@@ -352,12 +355,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			b = bii_2_bmap(bii);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			if (b->bcm_flags & BMAPF_TOFREE) {
-				DEBUG_BMAP(PLL_DIAG, b,
-				    "skip due to freeing");
-				BMAP_ULOCK(b);
-				continue;
-			}
+			psc_assert(b->bcm_flags & BMAPF_RELEASEQ);
+			psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
@@ -367,23 +366,24 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (pll_nitems(&bii->bii_rls)) {
 				psc_dynarray_add(&to_sync, b);
 				bmap_op_start_type(b,
-				    BMAP_OPCNT_REAPER);
+				    BMAP_OPCNT_RELEASER);
 			}
 			while ((brls = pll_get(&bii->bii_rls))) {
-				memcpy(&brr.sbd[nrls++],
-				    &brls->bir_sbd,
+				memcpy(&brr.sbd[nrls++], &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
 
 				if (nrls >= MAX_BMAP_RELEASE)
 					break;
 			}
-			if (!pll_nitems(&bii->bii_rls)) {
-				b->bcm_flags |= BMAPF_TOFREE;
-				lc_remove(&sli_bmap_releaseq, bii);
-				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-			} else
+			if (pll_nitems(&bii->bii_rls))
 				BMAP_ULOCK(b);
+			else {
+				b->bcm_flags |= BMAPF_RELEASEQ;
+				lc_remove(&sli_bmap_releaseq, bii);
+				bmap_op_done_type(b,
+				    BMAP_OPCNT_RELEASER);
+			}
 
 			if (nrls >= MAX_BMAP_RELEASE)
 				break;
@@ -398,8 +398,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			 * for this bmap.
 			 */
 			sli_bmap_sync(b);
-			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-
+			bmap_op_done_type(b, BMAP_OPCNT_RELEASER);
 		}
 		psc_dynarray_reset(&to_sync);
 

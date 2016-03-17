@@ -364,6 +364,7 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
 	BMAP_OPCNT_REAPER,		/* all: client bmap timeout */
 	BMAP_OPCNT_REASSIGN,		/* CLI: lease reassignment async RPC */
+	BMAP_OPCNT_RELEASER,		/* IOD: bmap lease relinquisher */
 	BMAP_OPCNT_REPLWK,		/* IOD: repl work */
 	BMAP_OPCNT_SLVR,		/* all: IOD sliver */
 	BMAP_OPCNT_TRUNCWAIT,		/* CLI: waiting for ptrunc to resolve */
