@@ -36,6 +36,7 @@
 #include "pfl/service.h"
 #include "pfl/lock.h"
 
+#include "batchrpc.h"
 #include "fid.h"
 #include "fidc_mds.h"
 #include "journal_mds.h"
@@ -263,7 +264,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		    SLCONNT_MDS);
 		break;
 	case SRMT_BATCH_RP:
-		rc = sl_handle_batchrp(rq);
+		rc = slrpc_batch_handle_reply(rq);
 		break;
 	case SRMT_NAMESPACE_UPDATE:
 		rc = slm_rmm_handle_namespace_update(rq);

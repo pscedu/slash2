@@ -26,6 +26,7 @@
 #include "pfl/multiwait.h"
 #include "pfl/rpc.h"
 
+#include "batchrpc.h"
 #include "journal_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -57,8 +58,8 @@ slcfg_init_res(struct sl_resource *r)
 			si->si_flags |= SIF_DISABLE_LEASE;
 	}
 	if (RES_ISFS(r) || r->res_type == SLREST_MDS)
-		lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq,
-		    br_lentry, "bchrq-%s", r->res_name);
+		lc_reginit(&rpmi->rpmi_batchrqs, struct slrpc_batch_req,
+		    bq_lentry_res, "bchrq-%s", r->res_name);
 }
 
 void

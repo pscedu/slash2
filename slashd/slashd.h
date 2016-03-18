@@ -217,8 +217,8 @@ struct bw_dir {
 };
 
 /*
- * This structure is attached to the sl_resource for IOS peers.  It tracks the
- * progress of garbage collection on each IOS.
+ * This structure is attached to the sl_resource for IOS peers.  It
+ * tracks the progress of garbage collection on each IOS.
  */
 struct rpmi_ios {
 	struct timespec		  si_lastcomm;		/* PING timeout to trigger conn reset */
@@ -252,7 +252,7 @@ struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
 	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
-	struct psc_listcache	  rpmi_batchrpcs;
+	struct psc_listcache	  rpmi_batchrqs;
 
 	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
 	void			 *rpmi_info;
@@ -331,6 +331,11 @@ struct slm_wkdata_rmdir_ino {
 struct slm_batchscratch_repl {
 	int64_t			 bsr_amt;
 	int			 bsr_off;
+	struct sl_resource	*bsr_res;
+};
+
+struct slm_batchscratch_preclaim {
+	struct sl_resource	*bsp_res;
 };
 
 struct mio_rootnames {

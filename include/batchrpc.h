@@ -16,12 +16,13 @@
 #include <stdint.h>
 
 #include "pfl/dynarray.h"
-#include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/rpc.h"
 
 #include "slconfig.h"
 #include "slconn.h"
+
+struct psc_listcache;
 
 struct slrpc_batch_rep;
 
@@ -102,21 +103,27 @@ struct slrpc_batch_rep {
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrq@%p bid=%"PRIu64" refs=%d reqbuf=%p "		\
-	    "flags=%#x qlen=%zd rc=%d "fmt,				\
-	    (bq), (bq)->bq_bid, (bq)->bq_refcnt, (bq)->bq_reqbuf,	\
-	    (bq)->bq_flags, (bq)->bq_reqlen, (bq)->bq_error, ##__VA_ARGS__)
+	    "batchrpcrq@%p bid=%"PRIu64" refs=%d flags=%#x reqbuf=%p "	\
+	    "qlen=%d repbuf=%p plen=%d rc=%d "fmt,			\
+	    (bq), (bq)->bq_bid, (bq)->bq_refcnt, (bq)->bq_flags,	\
+	    (bq)->bq_reqbuf, (bq)->bq_reqlen, (bq)->bq_repbuf,		\
+	    (bq)->bq_replen, (bq)->bq_error, ##__VA_ARGS__)
 
 #define PFLOG_BATCH_REP(level, bp, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrp@%p bid=%"PRIu64" refs=%d reqbuf=%p "		\
-	    "flags=%#x qlen=%zd rc=%d "fmt,				\
-	    (bp), (bp)->bp_bid, (bp)->bp_refcnt, (bp)->bp_reqbuf,	\
-	    (bp)->bp_flags, (bp)->bp_reqlen, (bp)->bp_error, ##__VA_ARGS__)
+	    "batchrpcrp@%p bid=%"PRIu64" refs=%d flags=%#x reqbuf=%p "	\
+	    "qlen=%d repbuf=%p plen=%d rc=%d "fmt,			\
+	    (bp), (bp)->bp_bid, (bp)->bp_refcnt, (bp)->bp_flags,	\
+	    (bp)->bp_reqbuf, (bp)->bp_reqlen, (bp)->bp_repbuf,		\
+	    (bp)->bp_replen, (bp)->bp_error, ##__VA_ARGS__)
 
 int	slrpc_batch_req_add(struct psc_listcache *,
 	    struct slashrpc_cservice *, uint32_t, int, int, void *,
 	    size_t, void *, struct slrpc_batch_rep_handler *, int);
+
+void	slrpc_batches_init(int, const char *);
+void	slrpc_batches_destroy(void);
+void	slrpc_batches_drop(struct psc_listcache *);
 
 void	slrpc_batch_rep_incref(struct slrpc_batch_rep *);
 void	slrpc_batch_rep_decref(struct slrpc_batch_rep *, int);

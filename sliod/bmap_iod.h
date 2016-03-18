@@ -38,6 +38,9 @@
 struct bmap_iod_info;
 struct slvr;
 
+extern psc_spinlock_t            sli_release_bmap_lock;
+extern struct psc_waitq          sli_release_bmap_waitq;
+
 struct bcrcupd {
 	struct timespec		 bcr_age;
 	struct bmap_iod_info	*bcr_bii;

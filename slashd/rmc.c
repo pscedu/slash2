@@ -1709,8 +1709,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	if (csvc == NULL)
 		return (0);
 
-	rsw = psc_pool_get();
-	PSCALLOC(sizeof(*rsw));
+	rsw = psc_pool_get(slm_repl_status_pool);
+	memset(rsw, 0, sizeof(*rsw));
 	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;

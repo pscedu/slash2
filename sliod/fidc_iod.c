@@ -124,22 +124,6 @@ sli_open_backing_file(struct fidc_membh *f)
 }
 
 int
-sli_fcmh_getattr(struct fidc_membh *f)
-{
-	struct stat stb;
-
-	if (fstat(fcmh_2_fd(f), &stb) == -1)
-		return (-errno);
-
-	FCMH_LOCK(f);
-	sl_externalize_stat(&stb, &f->fcmh_sstb);
-	// XXX get ptruncgen and gen
-	f->fcmh_flags |= FCMH_HAVE_ATTRS;
-	FCMH_ULOCK(f);
-	return (0);
-}
-
-int
 sli_rmi_lookup_fid(struct slashrpc_cservice *csvc,
     const struct sl_fidgen *pfg, const char *cpn,
     struct sl_fidgen *cfg, int *isdir)
@@ -265,7 +249,8 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 int
 sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
-	int rc = 0;
+	int rc;
+	struct stat stb;
 	struct fcmh_iod_info *fii;
 
 	fii = fcmh_2_fii(f);
@@ -285,10 +270,16 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	/* try to get a file descriptor for this backing obj */
 	rc = sli_open_backing_file(f);
 	if (rc == 0) {
-		rc = sli_fcmh_getattr(f);
-		if (rc)
+		if (fstat(fcmh_2_fd(f), &stb) == -1) {
+			rc = -errno;
 			DEBUG_FCMH(PLL_WARN, f, "error during "
 			    "getattr backing file rc=%d", rc);
+			close(fcmh_2_fd(f));
+		} else {
+			sl_externalize_stat(&stb, &f->fcmh_sstb);
+			// XXX get ptruncgen and gen
+			f->fcmh_flags |= FCMH_HAVE_ATTRS;
+		}
 	}
 	if (!rc)
 		f->fcmh_flags |= FCMH_IOD_BACKFILE;

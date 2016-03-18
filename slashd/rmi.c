@@ -37,6 +37,7 @@
 #include "pfl/lock.h"
 
 #include "authbuf.h"
+#include "batchrpc.h"
 #include "bmap_mds.h"
 #include "fid.h"
 #include "fidc_mds.h"
@@ -215,21 +216,19 @@ int
 slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 {
 	int iosidx, tract[NBREPLST];
-	struct srm_bmap_ptrunc_req *mq;
-	struct srm_bmap_ptrunc_rep *mp;
+	struct srt_ptrunc_req *q = NULL;
+	struct srt_ptrunc_rep *p = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 	sl_bmapno_t bno;
 
-	SL_RSX_ALLOCREP(rq, mq, mp);
+	p->rc = slm_fcmh_peek(&q->fg, &f);
+	if (p->rc)
+		PFL_GOTOERR(out, p->rc);
 
-	mp->rc = slm_fcmh_peek(&mq->fg, &f);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
+	p->rc = bmap_get(f, q->bmapno, SL_WRITE, &b);
+	if (p->rc)
+		PFL_GOTOERR(out, p->rc);
 
 	BMAP_ULOCK(b);
 	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
