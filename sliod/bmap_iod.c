@@ -268,7 +268,7 @@ sli_bmap_sync(struct bmap *b)
 }
 
 void
-slibmaprlsthr_process_releases(struct psc_dynarray *a)
+sli_process_releases(struct psc_dynarray *a)
 {
 	int i, rc;
 	struct bmap_iod_rls *brls, *tmpbrls;
@@ -349,9 +349,10 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&to_sync, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
-		slibmaprlsthr_process_releases(&to_sync);
 
 		skip = nrls = 0;
+		sli_process_leases(&to_sync);
+
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
