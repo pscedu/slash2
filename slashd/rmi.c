@@ -216,8 +216,8 @@ int
 slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 {
 	int iosidx, tract[NBREPLST];
-	struct srt_ptrunc_req *q;
-	struct srt_ptrunc_rep *p;
+	struct srt_ptrunc_req *q = NULL;
+	struct srt_ptrunc_rep *p = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 	sl_bmapno_t bno;

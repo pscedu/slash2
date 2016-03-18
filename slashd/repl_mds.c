@@ -61,6 +61,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+struct psc_poolmgr *slm_repl_status_pool;
+
 struct sl_mds_iosinfo	 slm_null_iosinfo = {
 	.si_flags = SIF_PRECLAIM_NOTSUP
 };

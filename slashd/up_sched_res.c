@@ -117,7 +117,7 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
  * bmap to the new residency states.  If error, we revert all changes
  * and set things back to a virgin state for future processing.
  */
-int
+void
 slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 {
 	sl_bmapgen_t bgen;
@@ -542,10 +542,10 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 {
 	sl_replica_t repl;
 	int rc, idx, tract[NBREPLST];
-	struct resprof_mds_info *rpmi;
+	struct slm_batchscratch_preclaim *bsp = scratch;
+	struct srt_preclaim_rep *p = NULL;
 	struct srt_preclaim_req *q = req;
-	struct srt_preclaim_rep *p = rep;
-	struct slm_batchscratch_preclaim *bsp;
+	struct resprof_mds_info *rpmi;
 	struct fidc_membh *f;
 	struct bmap *b;
 
@@ -558,14 +558,18 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	}
 	repl.bs_id = bsp->bsp_res->res_id;
 
+	(void)rep;
+	if (!error)
+		error = p->rc;
+
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = error ?
 	    BREPLST_GARBAGE : BREPLST_INVALID;
 
-	rc = slm_fcmh_get(&pe->fg, &f);
+	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
-		continue;
-	rc = bmap_get(f, pe->bno, SL_WRITE, &b);
+		return;
+	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
 	BMAP_ULOCK(b);
@@ -575,6 +579,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 		mds_bmap_write_logrepls(b);
 	}
+
  out:
 	if (b)
 		bmap_op_done(b);
@@ -586,10 +591,10 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slashrpc_cservice *csvc;
-	struct srt_preclaim_reqent pe;
+	struct srt_preclaim_req q;
 	struct sl_mds_iosinfo *si;
-	struct sl_resm *m;
 	struct fidc_membh *f;
+	struct sl_resm *m;
 
 	f = b->bcm_fcmh;
 	if (!slm_preclaim_enabled) {
@@ -607,13 +612,13 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
-	pe.fg = b->bcm_fcmh->fcmh_fg;
-	pe.bno = b->bcm_bmapno;
-	BHGEN_GET(b, &pe.bgen);
+	q.fg = b->bcm_fcmh->fcmh_fg;
+	q.bno = b->bcm_bmapno;
+	BHGEN_GET(b, &q.bgen);
 
-	rc = slrpc_batch_req_add(r, csvc, SRMT_PRECLAIM,
-	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
-	    &slm_batch_rep_preclaim, 30);
+	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs, csvc,
+	    SRMT_PRECLAIM, SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q,
+	    sizeof(q), NULL, &slm_batch_rep_preclaim, 30);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
