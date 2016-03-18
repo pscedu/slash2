@@ -24,6 +24,7 @@ SRCS+=		slvr_worker.c
 SRCS+=		${SLASH_BASE}/share/adler32.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
+SRCS+=		${SLASH_BASE}/share/batchrpc.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/ctlsvr_common.c

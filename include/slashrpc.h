@@ -187,7 +187,9 @@ enum {
 	SRMT_PRECLAIM,				/* 48: partial file reclaim */
 	SRMT_BATCH_RQ,				/* 49: async batch request */
 	SRMT_BATCH_RP,				/* 50: async batch reply */
-	SRMT_CTL				/* 51: generic control */
+	SRMT_CTL,				/* 51: generic control */
+
+	NSRMT
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -199,7 +201,7 @@ enum {
 
 struct srm_generic_rep {
 	 int32_t		rc;		/* return code, 0 for success or slerrno */
-	 int32_t		u32_0;		/* overloadable field */
+	 int32_t		_pad;		/* overloadable field */
 } __packed;
 
 struct srm_batch_req {
@@ -588,7 +590,7 @@ struct srm_getbmapminseq_rep {
 	uint64_t		 seqno;
 } __packed;
 
-struct srm_bmap_ptrunc_req {
+struct srt_ptrunc_req {
 	struct sl_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
@@ -596,7 +598,10 @@ struct srm_bmap_ptrunc_req {
 	 int32_t		rc;
 } __packed;
 
-#define srm_bmap_ptrunc_rep	srm_generic_rep
+struct srt_ptrunc_rep {
+	int32_t			rc;
+	int32_t			_pad;
+} __packed;
 
 struct srm_bmap_wake_req {
 	struct sl_fidgen	fg;
@@ -608,14 +613,14 @@ struct srm_bmap_wake_req {
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
-struct srt_preclaim_reqent {
+struct srt_preclaim_req {
 	uint64_t		xid;
 	struct sl_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
 } __packed;
 
-struct srt_preclaim_repent {
+struct srt_preclaim_rep {
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
@@ -712,7 +717,7 @@ struct srt_replst_bhdr {
 
 #define srm_replst_slave_rep	srm_replst_slave_req
 
-struct srt_replwk_reqent {			/* batch arrangement request MDS -> IOS */
+struct srt_replwk_req {				/* batch arrangement request MDS -> IOS */
 	struct sl_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
@@ -721,7 +726,7 @@ struct srt_replwk_reqent {			/* batch arrangement request MDS -> IOS */
 	uint32_t		len;
 } __packed;
 
-struct srt_replwk_repent {			/* batch arrangement success/failure IOS -> MDS */
+struct srt_replwk_rep {				/* batch arrangement success/failure IOS -> MDS */
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;

@@ -474,9 +474,6 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	PLL_LOCK(&sli_replwkq_active);
 	PLL_FOREACH(w, &sli_replwkq_active) {
-		if (w->srw_op != SLI_REPLWKOP_REPL)
-			continue;
-
 		srws->srws_fg = w->srw_fg;
 		srws->srws_bmapno = w->srw_bmapno;
 		srws->srws_refcnt = psc_atomic32_read(&w->srw_refcnt);

@@ -20,6 +20,12 @@
  * %END_LICENSE%
  */
 
+/*
+ * Definitions for file data replication support.  Replication is
+ * arranged by the MDS and IOS are instructed to pull data from other to
+ * satisfy requests.
+ */
+
 #ifndef _REPL_IOD_H_
 #define _REPL_IOD_H_
 
@@ -35,16 +41,10 @@
 struct bmapc_memb;
 struct fidc_membh;
 struct sl_resm;
+struct slrpc_batch_rep;
 struct slvr;
 
 #define SLI_REPL_SLVR_SCHED	((void *)0x1)
-
-struct sli_batch_reply {
-	uint64_t		 id;
-	void			*buf;
-	int			 total;
-	psc_atomic32_t		 ndone;
-};
 
 struct sli_repl_workrq {
 	struct sl_fidgen	 srw_fg;
@@ -60,40 +60,32 @@ struct sli_repl_workrq {
 	int			 srw_nslvr_tot;
 	int			 srw_nslvr_cur;
 
-	struct sli_batch_reply	*srw_bchrp;
-	struct srt_replwk_repent*srw_pp;		/* batch reply buffer entry for
+	struct slrpc_batch_rep	*srw_bp;
+	struct srt_replwk_rep   *srw_rep;		/* batch reply buffer entry for
 							 * reporting return code for this work */
 
 	struct bmapc_memb	*srw_bcm;
-	struct fidc_membh	*srw_fcmh;
 	struct psclist_head	 srw_active_lentry;	/* entry in the active list */
 	struct psclist_head	 srw_pending_lentry;	/* entry in the pending list */
 
 	struct slvr		*srw_slvr[SLASH_SLVRS_PER_BMAP];
 };
 
-enum {
-	SLI_REPLWKOP_PTRUNC,
-	SLI_REPLWKOP_REPL
-};
-
-#define DEBUG_SRW(srw, level, msg)					\
-	psclog((level), "srw@%p refcnt=%d " msg,			\
-	    (srw), psc_atomic32_read(&(srw)->srw_refcnt))
+#define PFLOG_REPLWK(level, srw, fmt, ...)				\
+	psclog((level), "srw@%p refcnt=%d " fmt,			\
+	    (srw), psc_atomic32_read(&(srw)->srw_refcnt), ##__VA_ARGS__)
 
 struct sli_repl_workrq *
 	sli_repl_findwq(const struct sl_fidgen *, sl_bmapno_t);
 
-int	sli_repl_addwk(int, sl_ios_id_t, const struct sl_fidgen *,
-	    sl_bmapno_t, sl_bmapgen_t, int, struct sli_batch_reply *,
-	    struct srt_replwk_repent *);
+int	sli_repl_addwk(struct slrpc_batch_rep *, void *, void *);
 void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
 
 void	sli_bwqueued_adj(int32_t *, int);
 
-void	replwk_queue(struct sli_repl_workrq *);
+void	sli_replwk_queue(struct sli_repl_workrq *);
 
 extern struct psc_lockedlist	 sli_replwkq_active;
 extern struct psc_listcache	 sli_replwkq_pending;

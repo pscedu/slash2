@@ -99,6 +99,8 @@ sli_rpc_initsvc(void)
 	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME,
 	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
+
+	sli_rim_init();
 }
 
 void

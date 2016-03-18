@@ -1829,8 +1829,6 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	    struct slm_wkdata_wr_brepl);
 	wk->b = b;
 	bmap_op_start_type(b, BMAP_OPCNT_WORK);
-
-	/* pfl_wkthr_main() will call slm_wkcb_wr_brepl() */
 	pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
 }
 

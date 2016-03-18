@@ -205,14 +205,14 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 }
 
 /*
- * Handle a BMAP_PTRUNC reply from ION.  This means an ION has trashed
+ * Handle a PTRUNC reply from ION.  This means an ION has trashed
  * some partial truncation garbage.  Note: if a sliod resolved a ptrunc
  * CRC recalculation, this path is not taken; CRCWRT is issued as
  * notification instead.
  * @rq: request.
  */
 int
-slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
+slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 {
 	int iosidx, tract[NBREPLST];
 	struct srm_bmap_ptrunc_req *mq;
@@ -592,10 +592,6 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rc = slm_rmi_handle_bmap_getminseq(rq);
 		break;
 
-	case SRMT_BMAP_PTRUNC:
-		rc = slm_rmi_handle_bmap_ptrunc(rq);
-		break;
-
 	/* control messages */
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRMI_MAGIC, SRMI_VERSION,
@@ -634,7 +630,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 	/* miscellaneous messages */
 	case SRMT_BATCH_RP:
-		rc = sl_handle_batchrp(rq);
+		rc = slrpc_batch_handle_reply(rq);
 		break;
 
 	default:

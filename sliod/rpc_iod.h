@@ -91,10 +91,10 @@ int	sli_rmi_setmds(const char *);
 
 void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 
-int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
-
 int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int,
 	    struct sli_repl_workrq *);
+
+void	sli_rim_init(void);
 
 extern struct pscrpc_svc_handle sli_ric_svc;
 extern struct pscrpc_svc_handle sli_rii_svc;

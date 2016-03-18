@@ -50,7 +50,7 @@ struct bmap_mds_lease;
 
 /* MDS thread types. */
 enum {
-	SLMTHRT_BATCHRQ = _PFL_NTHRT,	/* batch RPC reaper */
+	SLMTHRT_BATCHRPC = _PFL_NTHRT,	/* batch RPC reaper */
 	SLMTHRT_FREAP,			/* file reaper */
 	SLMTHRT_BKDB,			/* upsch database backup */
 	SLMTHRT_BMAPTIMEO,		/* bmap timeout thread */
@@ -252,7 +252,7 @@ struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
 	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
-	struct psc_listcache	  rpmi_batchrqs;
+	struct psc_listcache	  rpmi_batchrpcs;
 
 	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
 	void			 *rpmi_info;
@@ -317,11 +317,6 @@ struct slm_wkdata_upsch_cb {
 	int			 rc;
 	int			 off;
 	int64_t			 amt;
-};
-
-struct slm_wkdata_batchrq_cb {
-	struct batchrq		*br;
-	int			 rc;
 };
 
 struct slm_wkdata_upschq {

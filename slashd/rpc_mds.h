@@ -78,44 +78,6 @@ struct slm_exp_cli {
 	uint32_t			  mexpc_stkvers;	/* must be second field */
 };
 
-struct batchrq {
-	uint64_t			  br_bid;		/* batch RPC ID */
-	struct psc_listentry		  br_lentry;
-	struct psc_listentry		  br_lentry_ml;
-	struct timeval			  br_expire;
-	struct sl_resource		 *br_res;
-
-	struct pscrpc_request		 *br_rq;
-	struct slashrpc_cservice	 *br_csvc;
-	int				  br_snd_ptl:16;	/* bulk RPC portal */
-	int				  br_rcv_ptl:16;	/* bulk RPC portal */
-	int				  br_flags;
-	int				  br_refcnt;
-	int				  br_rc;
-
-	void				 *br_buf;
-	size_t				  br_len;
-
-	void				 *br_reply;
-	size_t				  br_replen;
-
-	struct psc_dynarray		  br_scratch;
-	void				(*br_cbf)(struct batchrq *, int);
-};
-
-#define BATCHF_RQINFL			(1 << 0)	/* request RPC inflight */
-#define BATCHF_WAITREPLY		(1 << 1)	/* awaiting RPC reply */
-#define BATCHF_CLEANUP			(1 << 2)	/* scheduled for cleanup */
-
-#define PFLOG_BATCHRPC(level, br, fmt, ...)				\
-	psclogs((level), PSS_RPC,					\
-	    "batch@%p bid=%"PRIu64" refs=%d buf=%p "			\
-	    "flags=%#x len=%zd rc=%d "fmt,				\
-	    (br), (br)->br_bid, (br)->br_refcnt, (br)->br_buf,		\
-	    (br)->br_flags, (br)->br_len, (br)->br_rc, ##__VA_ARGS__)
-
-#define batchrq_2_lc(br)		(&res2rpmi((br)->br_res)->rpmi_batchrqs)
-
 void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handle_lookup(struct pscrpc_request *);
@@ -131,11 +93,6 @@ int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *,
 	    int, struct fidc_membh **);
 int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
-
-int	batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
-	    uint32_t, int, int, void *, size_t, void *,
-	    void (*)(struct batchrq *, int), int);
-int	sl_handle_batchrp(struct pscrpc_request *);
 
 void	slmbchrqthr_spawn(void);
 

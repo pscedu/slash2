@@ -113,7 +113,7 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
  * and set things back to a virgin state for future processing.
  */
 void
-slm_batch_repl_cb(struct batchrq *br, int ecode)
+slm_batch_repl_cb(struct slrpc_batch *br, int ecode)
 {
 	sl_bmapgen_t bgen;
 	int rc, idx, tract[NBREPLST], retifset[NBREPLST];
@@ -137,6 +137,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 	for (bq = br->br_buf, idx = 0;
 	    (char *)bq < (char *)PSC_AGP(br->br_buf, br->br_len);
 	    bq++, bp ? bp++ : 0, idx++) {
+
 		b = NULL;
 		f = NULL;
 		bsr = psc_dynarray_getpos(&br->br_scratch, idx);
@@ -333,7 +334,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
 
-	rc = batchrq_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
+	rc = slrpc_batch_req_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), bsr,
 	    slm_batch_repl_cb, 5);
 	if (rc) {
@@ -432,8 +433,9 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 		FCMH_ULOCK(f);
 	}
 
-	psclog(rc ? PLL_WARN: PLL_DIAG,
-	    "partial truncation resolution: off=%d, rc=%d", off, rc);
+	psclog(rc ? PLL_WARN : PLL_DIAG,
+	    "partial truncation resolution: ios_repl_off=%d, rc=%d",
+	    off, rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -462,6 +464,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_ptrunc_req *mq;
@@ -470,7 +473,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
@@ -479,7 +481,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
 		return (0);
 	}
-	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, off = %d, id = 0x%x",
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, ios_repl_off=%d id=%#x",
 	    off, dst_res->res_id);
 
 	dst_resm = res_getmemb(dst_res);
@@ -513,8 +515,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	rq->rq_timeout *= 2;
-
 	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
@@ -544,12 +544,13 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 }
 
 void
-slm_batch_preclaim_cb(struct batchrq *br, int rc)
+slm_batch_preclaim_cb(void *req, void *rep, void *scr, int rc)
 {
 	sl_replica_t repl;
 	int idx, tract[NBREPLST];
 	struct resprof_mds_info *rpmi;
-	struct srt_preclaim_reqent *pe;
+	struct srt_preclaim_req *q = req;
+	struct srt_preclaim_rep *p = rep;
 	struct fidc_membh *f;
 	struct bmap *b;
 
@@ -566,8 +567,7 @@ slm_batch_preclaim_cb(struct batchrq *br, int rc)
 	tract[BREPLST_GARBAGE_SCHED] = rc ?
 	    BREPLST_GARBAGE : BREPLST_INVALID;
 
-	for (pe = br->br_buf; (char *)pe <
-	    (char *)br->br_buf + br->br_len; pe++) {
+
 		rc = slm_fcmh_get(&pe->fg, &f);
 		if (rc)
 			continue;
@@ -618,8 +618,8 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	pe.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &pe.bgen);
 
-	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
-	    SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
+	rc = slrpc_batch_req_add(r, csvc, SRMT_PRECLAIM,
+	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
 	    slm_batch_preclaim_cb, 30);
 	if (rc)
 		PFL_GOTOERR(out, rc);

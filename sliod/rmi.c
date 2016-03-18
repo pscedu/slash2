@@ -32,6 +32,7 @@
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
 
+#include "batchrpc.h"
 #include "bmap_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
@@ -92,72 +93,6 @@ sli_rmi_setmds(const char *name)
 		sl_csvc_decref(csvc);
 	}
 	return (0);
-}
-
-int
-sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
-{
-	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_request *rq = NULL;
-	int rc;
-
-	if (w->srw_op == SLI_REPLWKOP_REPL) {
-		w->srw_pp->rc = w->srw_status;
-		if (psc_atomic32_inc_getnew(&w->srw_bchrp->ndone) <
-		    w->srw_bchrp->total)
-			return (0);
-	}
-
-	rc = sli_rmi_getcsvc(&csvc);
-	if (rc)
-		goto out;
-
-	if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
-		struct srm_bmap_ptrunc_req *mq;
-		struct srm_bmap_ptrunc_rep *mp;
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq,
-		    mp);
-		if (rc)
-			goto out;
-		mq->bmapno = w->srw_bmapno;
-		mq->bgen = w->srw_bgen;
-		mq->rc = w->srw_status;
-		mq->fg = w->srw_fg;
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	} else {
-		struct srm_batch_req *mq;
-		struct srm_batch_rep *mp;
-		struct iovec iov;
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RP, rq, mq, mp);
-		if (rc)
-			goto out;
-		mq->opc = SRMT_REPL_SCHEDWK;
-		mq->len = w->srw_bchrp->total * sizeof(*w->srw_pp);
-		mq->bid = w->srw_bchrp->id;
-
-		iov.iov_base = w->srw_bchrp->buf;
-		iov.iov_len = mq->len;
-		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
-		    &iov, 1);
-		if (rc == 0)
-			rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	}
-	if (w->srw_status)
-		/* e.g., PFLERR_NOTCONN = 503 */
-		psclog_errorx("sent error rc=%d", w->srw_status);
-
- out:
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-	return (rc);
 }
 
 int

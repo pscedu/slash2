@@ -95,7 +95,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	w->srw_slvr[slvridx] = NULL;
 	freelock(&w->srw_lock);
 
-	replwk_queue(w);
+	sli_replwk_queue(w);
 	sli_replwkrq_decref(w, rc);
 
 	return (rc);
@@ -360,7 +360,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->slvrno = slvrno;
 
 	psc_atomic32_inc(&w->srw_refcnt);
-	DEBUG_SRW(w, PLL_DEBUG, "incref");
+	PFLOG_REPLWK(PLL_DEBUG, w, "incref");
 
 	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
 
@@ -385,7 +385,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	if (rc)
 		goto out;
 
-	/* Setup state for callbacks */
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
@@ -405,7 +404,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		w->srw_slvr[slvridx] = NULL;
 		freelock(&w->srw_lock);
 
-		replwk_queue(w);
+		sli_replwk_queue(w);
 		sli_replwkrq_decref(w, rc);
 		OPSTAT_INCR("issue-replread-error");
 	} else {

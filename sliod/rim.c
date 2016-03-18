@@ -27,16 +27,17 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/lock.h"
 
 #include "authbuf.h"
+#include "batchrpc.h"
 #include "bmap.h"
 #include "bmap_iod.h"
 #include "fidc_iod.h"
@@ -51,90 +52,98 @@
 uint64_t	sli_current_reclaim_xid;
 uint64_t	sli_current_reclaim_batchno;
 
+struct slrpc_batch_req_handler
+		sli_rim_batch_req_handlers[NSRMT];
+
 /*
- * Handle SRMT_BATCH_RQ request from the MDS.
+ * Handle a piece of PRECLAIM (partial reclaim) work.  If our backend
+ * does not support fallocate(2) for punching a hole, we return ENOTSUP
+ * so the MDS leaves us alone.
  */
 int
-sli_rim_handle_batch(struct pscrpc_request *rq)
+sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
+    void *req, void *rep)
 {
-	struct srm_batch_req *mq;
-	struct srm_batch_rep *mp;
-	struct iovec iov;
-	void *buf;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-
-	if (mq->len < 1 || mq->len > LNET_MTU)
-		return (mp->rc = -EINVAL);
-
-	iov.iov_len = mq->len;
-	iov.iov_base = buf = PSCALLOC(mq->len);
-	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL, &iov,
-	    1);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	switch (mq->opc) {
-	case SRMT_REPL_SCHEDWK: {
-		struct sli_batch_reply *bchrp;
-		struct srt_replwk_reqent *pq;
-		struct srt_replwk_repent *pp;
-
-		OPSTAT_INCR("handle-repl-sched");
-
-		bchrp = PSCALLOC(sizeof(*bchrp));
-		bchrp->total = mq->len / sizeof(*pq);
-		bchrp->buf = pp = PSCALLOC(bchrp->total * sizeof(*pp));
-		bchrp->id = mq->bid;
-
-		for (pq = buf;
-		    (char *)pq < (char *)buf + mq->len;
-		    pq++, pp++)
-			sli_repl_addwk(SLI_REPLWKOP_REPL, pq->src_resid,
-			    &pq->fg, pq->bno, pq->bgen, pq->len, bchrp, pp);
-		break;
-	    }
+	struct srt_preclaim_req *q = req;
+	struct srt_preclaim_rep *p = rep;
+	struct fidc_membh *f;
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
-	case SRMT_PRECLAIM: {
-		struct srt_preclaim_reqent *pq;
+	p->rc = sli_fcmh_get(&q->fg, &f);
+	if (p->rc)
+		return (0);
 
-		OPSTAT_INCR("handle-preclaim");
+	/* XXX lock/clear sliver pages in memory? */
+	if (fallocate(fcmh_2_fd(f),
+	    HAVE_FALLOC_FL_PUNCH_HOLE, q->bno *
+	    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
+		p->rc = -errno;
 
-		for (pq = buf;
-		    (char *)pq < (char *)buf + mq->len;
-		    pq++) {
-			struct fidc_membh *f;
-
-			mp->rc = sli_fcmh_get(&pq->fg, &f);
-			if (mp->rc)
-				continue;
-
-			/* XXX clear out sliver pages in memory */
-
-			/* XXX lock */
-			if (fallocate(fcmh_2_fd(f),
-			    HAVE_FALLOC_FL_PUNCH_HOLE, pq->bno *
-			    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
-				mp->rc = -errno;
-
-			fcmh_op_done(f);
-		}
-		break;
-	    }
+	fcmh_op_done(f);
+	return (0);
+#else
+	(void)q;
+	(void)p;
+	(void)f;
+	return (-PFLERR_NOTSUP);
 #endif
-	default:
-		mp->rc = -PFLERR_NOTSUP;
-		break;
-	}
- out:
-	PSCFREE(buf);
-	return (mp->rc);
 }
 
 /*
- * Handle RECLAIM RPC from the MDS as a result of unlink or truncate to zero.
- * The MDS won't send us a new RPC until we reply, so we should be thread-safe.
+ * Handle a piece of PTRUNC (partial truncate) work.  When a client
+ * issues a truncate(2) call, all data beyond the specified position
+ * gets removed, and this operation eventually trickles down to the
+ * backend here.
+ *
+ * XXX	This also needs to truncate any data in the slvr cache.  We
+ *	could just convert to mmap data instead of read(2)/write(2)
+ *	buffers.
+ *
+ * XXX	If there is srw_offset, we must send back a CRC update for the
+ *	sliver that got chopped.
+ */
+int
+sli_rim_batch_handle_ptrunc(__unusedx struct slrpc_batch_rep *bp,
+    void *req, void *rep)
+{
+	struct srt_ptrunc_req *q = req;
+	struct srt_ptrunc_rep *p = rep;
+	struct fidc_membh *f;
+	off_t off;
+
+	if (q->offset < 0 || q->offset >= SLASH_BMAP_SIZE) {
+		p->rc = -EINVAL;
+		return (0);
+	}
+
+	p->rc = sli_fcmh_get(&q->fg, &f);
+	if (p->rc)
+		return (0);
+
+	off = SLASH_BMAP_SIZE * q->bmapno + q->offset;
+	/* XXX lock/clear sliver pages in memory? */
+	if (ftruncate(fcmh_2_fd(f), off) == -1) {
+		p->rc = errno;
+		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", p->rc);
+		OPSTAT_INCR("ptrunc-failure");
+	} else {
+		OPSTAT_INCR("ptrunc-success");
+	}
+
+	/*
+	 * XXX queue a CRC update to be transmitted back if this
+	 * truncation cut a sliver.
+	 */
+	slvr_crc_update(f, q->bmapno, q->offset);
+
+	fcmh_op_done(f);
+	return (0);
+}
+
+/*
+ * Handle RECLAIM RPC from the MDS as a result of unlink or truncate to
+ * zero.  The MDS won't send us a new RPC until we reply, so we should
+ * be thread-safe.
  */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
@@ -174,7 +183,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL, &iov, 1);
+	rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL, &iov,
+	    1);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -200,12 +210,13 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		sli_fg_makepath(&entryp->fg, fidfn);
 
 		/*
-		 * We do upfront garbage collection, so ENOENT should be fine.
-		 * Also simply creating a file without any I/O won't create a
-		 * backing file on the I/O server.
+		 * We do upfront garbage collection, so ENOENT should be
+		 * fine.  Also simply creating a file without any I/O
+		 * won't create a backing file on the I/O server.
 		 *
-		 * Anyway, we don't report an error back to MDS because it can
-		 * do nothing.  Reporting an error can stall MDS progress.
+		 * Anyway, we don't report an error back to MDS because
+		 * it can do nothing.  Reporting an error can stall MDS
+		 * progress.
 		 */
 		OPSTAT_INCR("reclaim-file");
 		if (unlink(fidfn) == -1 && errno != ENOENT) {
@@ -235,50 +246,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 }
 
 int
-sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
-{
-	struct srm_bmap_ptrunc_req *mq;
-	struct srm_bmap_ptrunc_rep *mp;
-	struct fidc_membh *f;
-	struct sl_fidgen *fgp;
-	off_t size;
-	int fd;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
-		mp->rc = -EINVAL;
-		return (0);
-	}
-
-	fgp = &mq->fg;
-
-	mp->rc = sli_fcmh_get(fgp, &f);
-	if (mp->rc)
-		return (mp->rc);
-
-	fd = fcmh_2_fd(f);
-	size = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	if (ftruncate(fd, size) == -1) {
-		mp->rc = pflrpc_portable_errno(-errno);
-		DEBUG_FCMH(PLL_ERROR, f, "truncate failed; rc=%d",
-		    mp->rc);
-		OPSTAT_INCR("ftruncate-failure");
-	} else
-		OPSTAT_INCR("ftruncate");
-
-	slvr_crc_update(f, mq->bmapno, mq->offset);
-
-	fcmh_op_done(f);
-#if 0
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY,
-	    &mq->fg, mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
-#endif
-	return (0);
-}
-
-int
 sli_rim_handler(struct pscrpc_request *rq)
 {
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *m;
 	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
@@ -287,11 +258,14 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
-	case SRMT_BMAP_PTRUNC:
-		rc = sli_rim_handle_bmap_ptrunc(rq);
-		break;
 	case SRMT_BATCH_RQ:
-		rc = sli_rim_handle_batch(rq);
+		m = libsl_nid2resm(rq->rq_export->exp_connection->
+		    c_peer.nid);
+		csvc = sli_getmcsvcx(m, rq->rq_export);
+		rc = slrpc_batch_handle_request(csvc, rq,
+		    sli_rim_batch_req_handlers);
+		if (rc)
+			sl_csvc_decref(csvc);
 		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);
@@ -309,4 +283,31 @@ sli_rim_handler(struct pscrpc_request *rq)
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
+}
+
+void
+sli_rim_init(void)
+{
+	struct slrpc_batch_req_handler *h;
+
+	h = &sli_rim_batch_req_handlers[SRMT_REPL_SCHEDWK];
+	h->bqh_cbf = sli_repl_addwk;
+	h->bqh_qlen = sizeof(struct srt_replwk_req);
+	h->bqh_plen = sizeof(struct srt_replwk_rep);
+	h->bqh_rcv_ptl = SRIM_BULK_PORTAL;
+	h->bqh_snd_ptl = SRMI_BULK_PORTAL;
+
+	h = &sli_rim_batch_req_handlers[SRMT_BMAP_PTRUNC];
+	h->bqh_cbf = sli_rim_batch_handle_ptrunc;
+	h->bqh_qlen = sizeof(struct srt_ptrunc_req);
+	h->bqh_plen = sizeof(struct srt_ptrunc_rep);
+	h->bqh_rcv_ptl = SRIM_BULK_PORTAL;
+	h->bqh_snd_ptl = SRMI_BULK_PORTAL;
+
+	h = &sli_rim_batch_req_handlers[SRMT_PRECLAIM];
+	h->bqh_cbf = sli_rim_batch_handle_preclaim;
+	h->bqh_qlen = sizeof(struct srt_preclaim_req);
+	h->bqh_plen = sizeof(struct srt_preclaim_rep);
+	h->bqh_rcv_ptl = SRIM_BULK_PORTAL;
+	h->bqh_snd_ptl = SRMI_BULK_PORTAL;
 }
