@@ -85,6 +85,8 @@ int			 slm_opstate;
 struct psc_poolmaster	 slm_bml_poolmaster;
 struct psc_poolmgr	*slm_bml_pool;
 
+struct psc_poolmaster	 slm_repl_status_poolmaster;
+
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
@@ -543,11 +545,18 @@ main(int argc, char *argv[])
 		    nodeSite->site_id);
 	}
 
-	if (zfs_mounts[current_vfsid].zm_uuid != globalConfig.gconf_fsuuid)
+	if (zfs_mounts[current_vfsid].zm_uuid !=
+	    globalConfig.gconf_fsuuid)
 		psc_fatalx("FSUUID do not match; "
 		    "ZFS=%"PRIx64" slcfg=%"PRIx64,
 		    zfs_mounts[current_vfsid].zm_uuid,
 		    globalConfig.gconf_fsuuid);
+
+	psc_poolmaster_init(&slm_repl_status_poolmaster,
+	    struct slm_replst_workreq, rsw_lentry, PPMF_AUTO, 64,
+	    64, 0, NULL, NULL, NULL, "replst");
+	slm_repl_status_pool = psc_poolmaster_getmgr(
+	    &slm_repl_status_poolmaster);
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
@@ -560,7 +569,8 @@ main(int argc, char *argv[])
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8, "slmnbrqthr");
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,
+	    "slmnbrqthr");
 
 	slm_opstate = SLM_OPSTATE_REPLAY;
 

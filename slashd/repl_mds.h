@@ -82,5 +82,6 @@ void	 mds_brepls_check(uint8_t *, int);
 
 extern struct psc_listcache	 slm_replst_workq;
 extern int			 slm_bwqueuesz;
+extern struct psc_poolmgr	*slm_repl_status_pool;
 
 #endif /* _SL_MDS_REPL_H_ */

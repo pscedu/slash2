@@ -32,6 +32,7 @@
 #include "pfl/tree.h"
 #include "pfl/workthr.h"
 
+#include "batchrpc.h"
 #include "bmap_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -264,12 +265,11 @@ sl_resm_hldrop(struct sl_resm *resm)
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
 		struct psc_listcache *l;
-		struct slrpc_batch *br;
 
 		upschq_resm(resm, UPDT_HLDROP);
 
-		l = &res2rpmi(resm->resm_res)->rpmi_batchrpcs;
-		slrpc_batch_drop(l);
+		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;
+		slrpc_batches_drop(l);
 	}
 }
 
