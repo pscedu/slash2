@@ -249,7 +249,7 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 int
 sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
-	int rc = 0;
+	int rc;
 	struct stat stb;
 	struct fcmh_iod_info *fii;
 
