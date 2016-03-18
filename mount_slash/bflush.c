@@ -102,6 +102,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 
 	FCMH_LOCK_ENSURE(f);
 
+	/* 03/18/2016: Hit SIGSEGV when called from do_setattr() */
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		DEBUG_BMAP(PLL_DIAG, b, "mark bmap free");
 
