@@ -417,7 +417,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (!pll_nitems(&sli_bii_rls)) {
 				psc_waitq_wait(&sli_release_bmap_waitq,
 					&sli_release_bmap_lock);
-				OPSTAT_INCR("lease-wakeup");
 			} else
 				freelock(&sli_release_bmap_lock);
 			continue;
