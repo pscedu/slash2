@@ -225,10 +225,13 @@ slm_rpc_req_in(struct pscrpc_request *rq)
 }
 
 void
-slm_rpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+slm_rpc_rep_in(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int error)
 {
 	struct pscrpc_msg *m = rq->rq_repmsg;
 
+	if (error)
+		return;
 	if (csvc->csvc_peertype == SLCONNT_IOD && m) {
 		int idx = 1;
 

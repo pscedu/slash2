@@ -304,8 +304,11 @@ sli_rpc_req_in(struct pscrpc_request *rq)
 }
 
 void
-sli_rpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+sli_rpc_rep_in(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int error)
 {
+	if (error)
+		return;
 	if (csvc->csvc_peertype == SLCONNT_MDS)
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);

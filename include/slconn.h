@@ -329,10 +329,10 @@ slrpc_cb_extract_name(const char *s, int *len)
 			    sizeof(*(mp)));				\
 			(error) = (mp) ? (mp)->rc : -PFLERR_BADMSG;	\
 		}							\
+		if (slrpc_ops.slrpc_rep_in)				\
+			slrpc_ops.slrpc_rep_in((csvc), (rq), (error));	\
 		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
-		if ((error) == 0 && slrpc_ops.slrpc_rep_in)		\
-			slrpc_ops.slrpc_rep_in((csvc), (rq));		\
 									\
 		if (error) {						\
 			static struct pfl_opstat *_opst_err;		\
@@ -381,7 +381,7 @@ struct slrpc_ops {
 	void	 (*slrpc_req_out)(struct slashrpc_cservice *, struct pscrpc_request *);
 	void	 (*slrpc_req_out_failed)(struct slashrpc_cservice *, struct pscrpc_request *);
 	int	 (*slrpc_allocrep)(struct pscrpc_request *, void *, int, void *, int, int);
-	void	 (*slrpc_rep_in)(struct slashrpc_cservice *, struct pscrpc_request *);
+	void	 (*slrpc_rep_in)(struct slashrpc_cservice *, struct pscrpc_request *, int);
 	void	 (*slrpc_rep_out)(struct pscrpc_request *);
 };
 
