@@ -49,6 +49,9 @@ struct psc_lockedlist	 sli_bii_rls;
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
 
+psc_spinlock_t           sli_release_bmap_lock = SPINLOCK_INIT;
+struct psc_waitq         sli_release_bmap_waitq = PSC_WAITQ_INIT;
+
 void
 bim_init(void)
 {
@@ -341,26 +344,28 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct bmap_iod_info *bii, *tmp;
 	struct bmap_iod_rls *brls;
 	struct bmap *b;
-	int nrls, i;
+	int nrls, i, skip;
 
 	psc_dynarray_ensurelen(&to_sync, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
 		slibmaprlsthr_process_releases(&to_sync);
 
-		nrls = 0;
+		skip = nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
-		lc_peekheadwait(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
-			if (!BMAP_TRYLOCK(b))
+			if (!BMAP_TRYLOCK(b)) {
+				skip = 1;
 				continue;
+			}
 			psc_assert(b->bcm_flags & BMAPF_RELEASEQ);
 			psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
 				BMAP_ULOCK(b);
+				skip = 1;
 				continue;
 			}
 			if (pll_nitems(&bii->bii_rls)) {
@@ -403,9 +408,21 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&to_sync);
 
-		if (!nrls)
+		if (!nrls) {
+			if (skip) {
+				pscthr_yield();
+				continue;
+			}
+			spinlock(&sli_release_bmap_lock);
+			if (!pll_nitems(&sli_bii_rls)) {
+				psc_waitq_wait(&sli_release_bmap_waitq,
+					&sli_release_bmap_lock);
+				OPSTAT_INCR("lease-wakeup");
+			} else
+				freelock(&sli_release_bmap_lock);
 			continue;
-
+		}
+			
 		DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases",
 		    nrls);
 
@@ -424,6 +441,7 @@ slibmaprlsthr_spawn(void)
 {
 	int i;
 
+	psc_waitq_init(&sli_release_bmap_waitq);
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
 
