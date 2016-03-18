@@ -697,7 +697,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  * @l: list of batches, attached from sl_resource.
  */
 void
-slrpc_batch_drop(struct psc_listcache *l)
+slrpc_batches_drop(struct psc_listcache *l)
 {
 	struct slrpc_batch_req *bq;
 
