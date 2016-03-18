@@ -379,7 +379,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (pll_nitems(&bii->bii_rls))
 				BMAP_ULOCK(b);
 			else {
-				b->bcm_flags |= BMAPF_RELEASEQ;
+				b->bcm_flags |= BMAPF_TOFREE;
+				b->bcm_flags &= ~BMAPF_RELEASEQ;
 				lc_remove(&sli_bmap_releaseq, bii);
 				bmap_op_done_type(b,
 				    BMAP_OPCNT_RELEASER);
