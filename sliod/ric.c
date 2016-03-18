@@ -416,13 +416,13 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	if (mq->nbmaps > MAX_BMAP_RELEASE || !mq->nbmaps)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	spinlock(&sli_release_bmap_lock);
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		newbrls = psc_pool_get(bmap_rls_pool);
 		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
 		pll_add(&sli_bii_rls, newbrls);
 	}
+	spinlock(&sli_release_bmap_lock);
 	psc_waitq_wakeall(&sli_release_bmap_waitq);
 	freelock(&sli_release_bmap_lock);
  out:
