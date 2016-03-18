@@ -131,11 +131,9 @@ sli_fcmh_getattr(struct fidc_membh *f)
 	if (fstat(fcmh_2_fd(f), &stb) == -1)
 		return (-errno);
 
-	FCMH_LOCK(f);
 	sl_externalize_stat(&stb, &f->fcmh_sstb);
 	// XXX get ptruncgen and gen
 	f->fcmh_flags |= FCMH_HAVE_ATTRS;
-	FCMH_ULOCK(f);
 	return (0);
 }
 
