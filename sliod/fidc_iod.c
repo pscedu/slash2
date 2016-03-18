@@ -274,6 +274,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			rc = -errno;
 			DEBUG_FCMH(PLL_WARN, f, "error during "
 			    "getattr backing file rc=%d", rc);
+			close(fcmh_2_fd(f));
 		} else {
 			sl_externalize_stat(&stb, &f->fcmh_sstb);
 			// XXX get ptruncgen and gen
