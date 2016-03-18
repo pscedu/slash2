@@ -355,6 +355,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
+
+			/* deadlock and busy file avoidance */ 
 			if (!BMAP_TRYLOCK(b)) {
 				skip = 1;
 				continue;
