@@ -267,8 +267,8 @@ sli_bmap_sync(struct bmap *b)
 	}
 }
 
-void
-sli_process_releases(struct psc_dynarray *a)
+static void
+sli_process_leases(struct psc_dynarray *a)
 {
 	int i, rc;
 	struct bmap_iod_rls *brls, *tmpbrls;
@@ -286,11 +286,10 @@ sli_process_releases(struct psc_dynarray *a)
 	}
 	DYNARRAY_FOREACH(brls, i, a) {
 		sbd = &brls->bir_sbd;
-		rc = sli_fcmh_peek(&sbd->sbd_fg, &f);
+		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("bmap-release-fail");
-			psclog(rc == ENOENT || rc == ESTALE ?
-			    PLL_DIAG : PLL_ERROR,
+			psclog(rc != ESTALE ? PLL_ERROR : PLL_DIAG,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			psc_pool_return(bmap_rls_pool, brls);
