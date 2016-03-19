@@ -153,6 +153,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	if (rv == -SLERR_AIOWAIT) {
 		aiocbr = sli_aio_replreply_setup(rq, s, &iov);
 		SLVR_LOCK(s);
+		/* XXX missing slvr_rio_done()? */
 		if (s->slvr_flags & SLVRF_FAULTING) {
 			s->slvr_aioreply = aiocbr;
 			OPSTAT_INCR("aio-insert");
@@ -173,7 +174,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		slvr_io_done(s, rv);
 
 	if (rv)
-		/* XXX missing slvr_rio_done()? */
 		PFL_GOTOERR(out, mp->rc = rv);
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
@@ -260,10 +260,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b));
 
-	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
-	psc_assert(!rc);
-	BMAP_ULOCK(b);
-
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
 	     slvridx++)
@@ -271,12 +267,17 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 			break;
 
 	if (slvridx == (int)nitems(w->srw_slvr)) {
+		OPSTAT_INCR("repl-no-slot");
 		// FATAL?
 		DEBUG_SLVR(PLL_ERROR, s,
 		    "failed to find slvr in wq=%p", w);
 		// XXX leak srw
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
+
+	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
+	psc_assert(!rc);
+	BMAP_ULOCK(b);
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
