@@ -126,10 +126,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	struct sl_resm *dst_resm, *src_resm;
 	struct srt_replwk_rep *p = rep;
 	struct srt_replwk_req *q = req;
-	struct fidc_membh *f;
-	struct bmap *b;
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
 
-	if (p && p->rc == 0)
+	if (!error && p && p->rc)
+		error = p->rc;
+
+	if (!error)
 		OPSTAT_INCR("repl-schedwk");
 	else
 		OPSTAT_INCR("repl-schedwk-fail");
@@ -139,16 +142,14 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	brepls_init(tract, -1);
 	brepls_init(retifset, 0);
 
-	b = NULL;
-	f = NULL;
 	src_resm = libsl_ios2resm(q->src_resid);
 
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
-		goto skip;
+		goto out;
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
-		goto skip;
+		goto out;
 	BMAP_ULOCK(b);
 
 	// XXX grab bmap write lock before checking bgen!!!
@@ -156,10 +157,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	// XXX check fgen
 
 	BHGEN_GET(b, &bgen);
-	if (p && p->rc == 0 && q->bgen != bgen)
-		p->rc = SLERR_GEN_OLD;
+	if (!error && q->bgen != bgen)
+		error = SLERR_GEN_OLD;
 
-	if (error == 0 && p && p->rc == 0) {
+	if (error == 0 && p && error == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -167,7 +168,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 	} else {
-		if (p == NULL || p->rc == SLERR_ION_OFFLINE) {
+		if (p == NULL || error == SLERR_ION_OFFLINE) {
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
 			    " SET	status = 'Q'"
@@ -190,10 +191,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
-		    "error=%d rc=%d",
+		    "error=%d",
 		    src_resm ? src_resm->resm_name : NULL,
 		    dst_resm ? dst_resm->resm_name : NULL,
-		    error, p ? p->rc : -999);
+		    error);
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset,
@@ -202,7 +203,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	slm_repl_bmap_rel(b);
 	b = NULL;
 
- skip:
+ out:
 	if (b)
 		bmap_op_done(b);
 	if (f)
@@ -267,6 +268,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	bsr = PSCALLOC(sizeof(*bsr));
 	bsr->bsr_off = off;
 	bsr->bsr_amt = amt;
+	bsr->bsr_res = dst_res;
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
@@ -329,7 +331,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
 
-
 	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
 	    csvc, SRMT_REPL_SCHEDWK, SRMI_BULK_PORTAL, SRIM_BULK_PORTAL,
 	    &q, sizeof(q), bsr, &slm_batch_rep_repl, 5);
@@ -347,7 +348,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		PFL_GOTOERR(out, rc);
 	}
 
-	OPSTAT2_ADD("replsched", amt);
+	OPSTAT2_ADD("repl-sched", amt);
 
 	/*
 	 * We use this release API because mds_repl_bmap_apply() grabbed
@@ -543,13 +544,17 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	sl_replica_t repl;
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
-	struct srt_preclaim_rep *p = NULL;
 	struct srt_preclaim_req *q = req;
-	struct resprof_mds_info *rpmi;
+	struct srt_preclaim_rep *p = rep;
 	struct fidc_membh *f;
 	struct bmap *b;
 
+	if (!error && p && p->rc)
+		error = p->rc;
+
 	if (error == -PFLERR_NOTSUP) {
+		struct resprof_mds_info *rpmi;
+
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
@@ -557,10 +562,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		RPMI_ULOCK(rpmi);
 	}
 	repl.bs_id = bsp->bsp_res->res_id;
-
-	(void)rep;
-	if (!error)
-		error = p->rc;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = error ?
@@ -590,6 +591,7 @@ int
 slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
+	struct slm_batchscratch_preclaim *bsp = NULL;
 	struct slashrpc_cservice *csvc;
 	struct srt_preclaim_req q;
 	struct sl_mds_iosinfo *si;
@@ -603,8 +605,10 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	}
 
 	si = res2iosinfo(r);
-	if (si->si_flags & SIF_PRECLAIM_NOTSUP)
+	if (si->si_flags & SIF_PRECLAIM_NOTSUP) {
+		OPSTAT_INCR("preclaim-notsup");
 		return (0);
+	}
 
 	m = res_getmemb(r);
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
@@ -616,13 +620,35 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	q.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &q.bgen);
 
+	bsp = PSCALLOC(sizeof(*bsp));
+	bsp->bsp_res = r;
+
+	dbdo(NULL, NULL,
+	    " UPDATE	upsch"
+	    " SET	status = 'S'"
+	    " WHERE	resid = ?"
+	    "   AND	fid = ?"
+	    "   AND	bno = ?",
+	    SQLITE_INTEGER, r->res_id,
+	    SQLITE_INTEGER64, bmap_2_fid(b),
+	    SQLITE_INTEGER, b->bcm_bmapno);
+
 	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs, csvc,
 	    SRMT_PRECLAIM, SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q,
-	    sizeof(q), NULL, &slm_batch_rep_preclaim, 30);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	    sizeof(q), bsp, &slm_batch_rep_preclaim, 30);
+	if (rc) {
+		dbdo(NULL, NULL,
+		    " UPDATE	upsch"
+		    " SET	status = 'Q'"
+		    " WHERE	resid = ?"
+		    "   AND	fid = ?"
+		    "   AND	bno = ?",
+		    SQLITE_INTEGER, r->res_id,
+		    SQLITE_INTEGER64, bmap_2_fid(b),
+		    SQLITE_INTEGER, b->bcm_bmapno);
 
-	csvc = NULL;
+		PFL_GOTOERR(out, rc);
+	}
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
@@ -634,12 +660,16 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	rc = mds_bmap_write_logrepls(b);
 
+	return (1);
+
  out:
 	if (rc && rc != -PFLERR_NOTCONN)
 		psclog_errorx("error rc=%d", rc);
+	PSCFREE(bsp);
+	//UPSCH_WAKE();
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc ? 0 : 1);
+	return (0);
 }
 
 void
