@@ -1728,6 +1728,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					fcmh_op_start_type(d,
 					    FCMH_OPCNT_READAHEAD);
 					raoff = p->dcp_nextoff;
+					psc_assert(raoff);
 				}
 
 				issue = 0;
