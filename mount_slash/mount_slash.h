@@ -353,7 +353,6 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_TIMEOADD	(1 << 2)
 
 extern const char		*msl_ctlsockfn;
-extern sl_ios_id_t		 msl_mds;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];

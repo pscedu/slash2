@@ -531,13 +531,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 void
 msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 {
-	struct sl_resource *r;
-
-	r = libsl_id2res(msl_mds);
-	if (r)
-		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
-	else
-		strlcpy(buf, "(null)", PCP_VALUE_MAX);
+	strlcpy(buf, msl_rmc_resm->resm_name, PCP_VALUE_MAX);
 }
 
 void
@@ -922,7 +916,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
-	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT, 
+	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
 
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
