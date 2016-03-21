@@ -121,7 +121,6 @@ struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 
 struct psc_listcache		 msl_attrtimeoutq;
 
-sl_ios_id_t			 msl_mds = IOS_ID_ANY;
 sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
@@ -3911,9 +3910,6 @@ msl_init(void)
 	name = getenv("MDS");
 	if (name == NULL)
 		psc_fatalx("environment variable MDS not specified");
-
-	r = libsl_str2res(name);
-	msl_mds = r->res_id;
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
