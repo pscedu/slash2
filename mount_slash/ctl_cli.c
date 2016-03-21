@@ -531,8 +531,6 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 void
 msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 {
-	struct sl_resource *r;
-
 	strlcpy(buf, msl_rmc_resm->resm_name, PCP_VALUE_MAX);
 }
 
