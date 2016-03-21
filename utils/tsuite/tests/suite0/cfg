@@ -1,7 +1,7 @@
 # @bounce_host pscuxa.psc.edu
 # @dsn dbi:SQLite:dbname=/local/tmp/s2tsuite.db
 
-# @mkcfg DEFINES+=-DPSCLOG_LEVEL=PLL_INFO
+# @mkcfg DEFINES+=-DPFLOG_FROM_LEVEL=PLL_INFO
 # mkcfg DEBUG=0
 
 # @testenv http_proxy=http://cache:3128
