@@ -393,7 +393,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry:
-
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
