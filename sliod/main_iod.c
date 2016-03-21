@@ -335,6 +335,9 @@ main(int argc, char *argv[])
 	pfl_fault_register("sliod/seqno_read_fail");
 	pfl_fault_register("sliod/seqno_write_fail");
 
+	pfl_fault_register("sliod/read_delay");
+	pfl_fault_register("sliod/write_delay");
+
 	slictlthr_main(sfn);
 	exit(0);
 }

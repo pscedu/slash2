@@ -399,6 +399,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		bmap_op_done(bmap);
 
 	fcmh_op_done(f);
+
+	if (rw == SL_READ)
+		pfl_fault_here("sliod/read_delay", &rc);
+	else
+		pfl_fault_here("sliod/write_delay", &rc);
 	return (rc);
 }
 
