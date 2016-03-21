@@ -630,6 +630,8 @@ foreach my $commspec (split /,/, $opts{c} || "") {
 	push @comm_checkout, "(cd $dir && git checkout $comm)";
 }
 
+my $src_done_fn = ".src.done." . time();
+
 # Checkout the source and build it
 foreach my $n (@mds, @ios, @cli) {
 	if (ref $n->{host} eq "ARRAY") {
@@ -688,8 +690,8 @@ EOF
 			# may have previously mounted here, so clear it.
 			$sudo umount -l -f $n->{base_dir}/mp || true
 
-			$sudo rm -rf $n->{base_dir}
 			$sudo rm -rf $n->{base_dir}/mp
+			$sudo rm -rf $n->{base_dir}
 			mkdir -p @mkdir
 
 			cd $n->{src_dir}
@@ -722,13 +724,13 @@ $authbuf
 ___AUTHBUF_EOF
 			$sudo chown root $authbuf_fn
 			$sudo chmod 400 $authbuf_fn
-			touch .src.done
+			touch $src_done_fn
 		}
 
 		wait_until_src()
 		{
 			set +x
-			until [ -e $n->{src_dir}/.src.done ]; do
+			until [ -e $n->{src_dir}/$src_done_fn ]; do
 				sleep 1
 			done
 		}
