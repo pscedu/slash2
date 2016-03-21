@@ -110,15 +110,11 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int error)
 	h = bq->bq_handler;
 	n = bq->bq_replen / h->bph_plen;
 	for (q = bq->bq_reqbuf, p = bq->bq_repbuf, i = 0; i < n;
-	    q += h->bph_qlen, p += h->bph_plen) {
+	    i++, q += h->bph_qlen, p += h->bph_plen) {
 		scratch = psc_dynarray_getpos(&bq->bq_scratch, i);
 		bq->bq_handler->bph_cbf(q, p, scratch, bq->bq_error);
 		PSCFREE(scratch);
 	}
-
-	PSCFREE(bq->bq_reqbuf);
-	PSCFREE(bq->bq_repbuf);
-	psc_dynarray_free(&bq->bq_scratch);
 
 	psc_pool_return(slrpc_batch_req_pool, bq);
 }
@@ -409,7 +405,7 @@ slrpc_batch_handle_req_workcb(void *arg)
 	h = bp->bp_handler;
 	n = bp->bp_replen / h->bqh_plen;
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
-	    q += h->bqh_qlen, p += h->bqh_plen) {
+	    i++, q += h->bqh_qlen, p += h->bqh_plen) {
 		error = h->bqh_cbf(bp, q, p);
 		if (error)
 			break;
@@ -611,7 +607,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	bq->bq_reqbuf = qbuf;
 	bq->bq_repbuf = pbuf;
 
-	psc_dynarray_init(&bq->bq_scratch);
+	psc_dynarray_reset(&bq->bq_scratch);
 	INIT_SPINLOCK(&bq->bq_lock);
 	INIT_PSC_LISTENTRY(&bq->bq_lentry_global);
 	INIT_PSC_LISTENTRY(&bq->bq_lentry_res);
@@ -707,6 +703,47 @@ slrpc_batches_drop(struct psc_listcache *l)
 	LIST_CACHE_ULOCK(l);
 }
 
+int
+slrpc_batch_req_ctor(__unusedx struct psc_poolmgr *m, void *item)
+{
+	struct slrpc_batch_req *bq = item;
+
+ 	INIT_LISTENTRY(&bq->bq_lentry_global);
+	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
+	bq->bq_repbuf = PSCALLOC(LNET_MTU);
+	return (0);
+}
+
+void
+slrpc_batch_req_dtor(void *item)
+{
+	struct slrpc_batch_req *bq = item;
+
+	PSCFREE(bq->bq_reqbuf);
+	PSCFREE(bq->bq_repbuf);
+	psc_dynarray_free(&bq->bq_scratch);
+}
+
+int
+slrpc_batch_rep_ctor(__unusedx struct psc_poolmgr *m, void *item)
+{
+	struct slrpc_batch_rep *bp = item;
+
+ 	INIT_LISTENTRY(&bp->bp_lentry);
+	bp->bp_reqbuf = PSCALLOC(LNET_MTU);
+	bp->bp_repbuf = PSCALLOC(LNET_MTU);
+	return (0);
+}
+
+void
+slrpc_batch_rep_dtor(void *item)
+{
+	struct slrpc_batch_rep *bp = item;
+
+	PSCFREE(bp->bp_reqbuf);
+	PSCFREE(bp->bp_repbuf);
+}
+
 /*
  * Initialize global variables for batch RPC API.
  *
@@ -718,12 +755,14 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 {
 	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
 	    struct slrpc_batch_req, bq_lentry_global, PPMF_AUTO, 8, 8,
-	    0, NULL, NULL, NULL, "batchrpcrq");
+	    0, slrpc_batch_req_ctor, slrpc_batch_req_dtor, NULL,
+	    "batchrpcrq");
 	slrpc_batch_req_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_req_poolmaster);
 	psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
 	    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 8, 8, 0,
-	    NULL, NULL, NULL, "batchrpcrp");
+	    slrpc_batch_rep_ctor, slrpc_batch_rep_dtor, NULL,
+	    "batchrpcrp");
 	slrpc_batch_rep_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_rep_poolmaster);
 
