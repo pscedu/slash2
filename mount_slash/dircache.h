@@ -95,7 +95,6 @@ struct dircache_page {
 #define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
 #define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
 
-/* See pfl/pthrutil.c */
 #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_REQWRLOCK(d)	pfl_rwlock_reqwrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_UREQLOCK(d, l)	pfl_rwlock_ureqlock(fcmh_2_dc_rwlock(d), (l))
@@ -164,9 +163,11 @@ struct dircache_expire {
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
 #define PFLOG_DIRCACHENT(lvl, e, fmt, ...)				\
-	psclog((lvl), "dce@%p pfd=%p pfid="SLPRI_FID" fid="SLPRI_FID" "	\
-	    "off=%"PRId64" type=%#o flags=%#x name='%.*s' " fmt,	\
-	    (e), (e)->dce_pfd, (e)->dce_pfid, (e)->dce_pfd->pfd_ino,	\
+	psclog((lvl), "dce@%p pfd=%p page=%p pfg="SLPRI_FG" "		\
+	    "fid="SLPRI_FID" off=%"PRId64" "				\
+	    "type=%#o flags=%#x name='%.*s' " fmt,			\
+	    (e), (e)->dce_pfd, (e)->dce_page,				\
+	    SLPRI_FG_ARGS(&(e)->dce_pfg), (e)->dce_pfd->pfd_ino,	\
 	    (e)->dce_pfd->pfd_off, (e)->dce_pfd->pfd_type,		\
 	    (e)->dce_flags, (e)->dce_pfd->pfd_namelen,			\
 	    (e)->dce_pfd->pfd_name, ## __VA_ARGS__)
@@ -178,7 +179,7 @@ struct dircache_expire {
  */
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
-	uint64_t		 dce_pfid;	/* parent dir FID, for hashtbl cmp */
+	struct sl_fidgen	 dce_pfg;	/* parent dir FID+GEN, for hashtbl cmp */
 	uint32_t		 dce_flags;	/* see DCEF_* flags below */
 	struct dircache_page	*dce_page;	/* back pointer to READDIR page */
 	struct pscfs_dirent	*dce_pfd;	/* actual dirent */
@@ -188,6 +189,10 @@ struct dircache_ent {
 
 /* dce_flags */
 #define DCEF_HOLD		(1 << 0)	/* being updated via RPC */
+#define DCEF_DESTROYED		(1 << 1)	/* garbage collected */
+#define DCEF_ACTIVE		(1 << 2)	/* in hash table */
+#define DCEF_FREEME		(1 << 3)	/* HOLD'er thread must free */
+#define DCEF_DETACHED		(1 << 4)	/* not on fcid_ents list */
 
 /*
  * This structure is almost identical to dircache_ent but slightly
@@ -195,7 +200,7 @@ struct dircache_ent {
  */
 struct dircache_ent_query {
 	uint64_t		 dcq_key;	/* hash table key */
-	uint64_t		 dcq_pfid;	/* parent dir FID */
+	struct sl_fidgen	 dcq_pfg;	/* parent dir FID+GEN */
 	uint32_t		 dcq_namelen;	/* strlen(dcq_name) */
 	const char		*dcq_name;	/* entry basename */
 };

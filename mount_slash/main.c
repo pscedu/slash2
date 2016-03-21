@@ -1032,7 +1032,7 @@ slc_wk_issue_readdir(void *p)
 
 #define msl_lookup_fidcache(pfr, pcrp, pinum, name, fgp, sstb, fp)	\
 	msl_lookup_fidcache_dcu((pfr), (pcrp), (pinum), (name), (fgp),	\
-	    (sstb), (fp), NULL)
+	    (sstb), (fp), NULL, NULL)
 
 /*
  * Query the fidcache for a file system entity name.
@@ -1047,9 +1047,10 @@ __static int
 msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp, struct dircache_ent_update *dcup)
+    struct fidc_membh **fp, struct fidc_membh **parentp,
+    struct dircache_ent_update *dcup)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
+	struct dircache_ent_update *orig_dcu = dcup, dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	int rc;
 
@@ -1058,6 +1059,8 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 
 	if (fp)
 		*fp = NULL;
+	if (parentp)
+		*parentp = NULL;
 
 	/*
 	 * The parent inode number is either the super root or the site
@@ -1148,6 +1151,11 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		FCMH_ULOCK(c);
 
  out:
+	if (parentp && p) {
+		*parentp = p;
+		p = NULL;
+		psc_assert(orig_dcu);
+	}
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
@@ -1771,7 +1779,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
-	struct fidc_membh *fp = NULL;
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
@@ -1787,7 +1795,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
-	    &fp, &dcu);
+	    &c, &p, &dcu);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
@@ -1798,8 +1806,10 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 	namecache_update(&dcu, sstb.sst_fid, rc);
-	if (fp)
-		fcmh_op_done(fp);
+	if (c)
+		fcmh_op_done(c);
+	if (p)
+		fcmh_op_done(p);
 }
 
 void

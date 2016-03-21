@@ -147,7 +147,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
-	if (fcmh_isdir(f))
+	if (fcmh_isdir(f) && !(f->fcmh_flags & FCMHF_INIT_DIRCACHE))
 		dircache_init(f);
 }
 
@@ -244,10 +244,12 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 slc_fcmh_dtor(struct fidc_membh *f)
 {
-	if (fcmh_isdir(f))
-		namecache_purge(f);
-	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
+	if (f->fcmh_flags & FCMHF_INIT_DIRCACHE) {
 		dircache_purge(f);
+		namecache_purge(f);
+	}
+
+	DEBUG_FCMH(PLL_DEBUG, f, "dtor");
 }
 
 void
@@ -265,7 +267,7 @@ dump_fcmh_flags(int flags)
 	int seq = 0;
 
 	_dump_fcmh_flags_common(&flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
+	PFL_PRFLAG(FCMHF_INIT_DIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_DSIZE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_MTIME, &flags, &seq);

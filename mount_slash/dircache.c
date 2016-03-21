@@ -68,12 +68,12 @@ dircache_init(struct fidc_membh *d)
 {
 	struct fcmh_cli_info *fci = fcmh_2_fci(d);
 
-	if ((d->fcmh_flags & FCMH_CLI_INITDIRCACHE) == 0) {
-		pll_init(&fci->fci_dc_pages, struct dircache_page,
-		    dcp_lentry, &d->fcmh_lock);
-		pfl_rwlock_init(&fci->fcid_dircache_rwlock);
-		d->fcmh_flags |= FCMH_CLI_INITDIRCACHE;
-	}
+	psc_assert(!(d->fcmh_flags & FCMHF_INIT_DIRCACHE));
+	d->fcmh_flags |= FCMHF_INIT_DIRCACHE;
+
+	pll_init(&fci->fci_dc_pages, struct dircache_page, dcp_lentry,
+	    &d->fcmh_lock);
+	pfl_rwlock_init(&fci->fcid_dircache_rwlock);
 }
 
 /*
@@ -112,7 +112,8 @@ dircache_ent_cmp(const void *a, const void *b)
 {
 	const struct dircache_ent *da = a, *db = b;
 
-	return (da->dce_pfid == db->dce_pfid &&
+	return (da->dce_pfg.fg_fid == db->dce_pfg.fg_fid &&
+	    da->dce_pfg.fg_gen == db->dce_pfg.fg_gen &&
 	    da->dce_pfd->pfd_namelen == db->dce_pfd->pfd_namelen &&
 	    strncmp(da->dce_pfd->pfd_name, db->dce_pfd->pfd_name,
 	    da->dce_pfd->pfd_namelen) == 0);
@@ -128,7 +129,8 @@ dircache_entq_cmp(const void *a, const void *b)
 	const struct dircache_ent_query *da = a;
 	const struct dircache_ent *db = b;
 
-	return (da->dcq_pfid == db->dce_pfid &&
+	return (da->dcq_pfg.fg_fid == db->dce_pfg.fg_fid &&
+	    da->dcq_pfg.fg_gen == db->dce_pfg.fg_gen &&
 	    da->dcq_namelen == db->dce_pfd->pfd_namelen &&
 	    strncmp(da->dcq_name, db->dce_pfd->pfd_name,
 	    da->dcq_namelen) == 0);
@@ -142,16 +144,16 @@ dircache_entq_cmp(const void *a, const void *b)
  * is not released so as to not screw with the page dcp_dents_off list
  * (although the page shouldn't be used).
  *
- * If the entry came from a individual population, it is removed and
- * memory released.
+ * If the entry came from an individual population (ent_pool instead of
+ * page_pool), it is removed and memory released.
  */
 void
-dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
+dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
 
-	OPSTAT_INCR("msl.dircache-ent-zap");
+	OPSTAT_INCR("msl.dircache-ent-destroy");
 
 	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "delete");
 
@@ -159,18 +161,23 @@ dircache_ent_zap(struct fidc_membh *d, struct dircache_ent *dce)
 	DIRCACHE_WRLOCK(d);
 	p = dce->dce_page;
 	dce->dce_pfd->pfd_ino = FID_ANY;
+	psc_assert(!(dce->dce_flags & DCEF_ACTIVE));
+	psc_assert(!(dce->dce_flags & DCEF_DESTROYED));
+	dce->dce_flags |= DCEF_DESTROYED;
+	dce->dce_flags &= ~DCEF_HOLD;
 	if (p) {
 		/* force expiration of the entire page */
 		PFL_GETPTIMESPEC(&p->dcp_local_tm);
 		p->dcp_local_tm.tv_sec -= DIRCACHEPG_HARD_TIMEO;
-	} else {
-		PSCFREE(dce->dce_pfd);
+	} else if (!(dce->dce_flags & DCEF_DETACHED)) {
 		psc_dynarray_removeitem(&fci->fcid_ents, dce);
 	}
 	DIRCACHE_ULOCK(d);
 
-	if (p == NULL)
+	if (p == NULL) {
+		PSCFREE(dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, dce);
+	}
 }
 
 /*
@@ -185,6 +192,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
+	struct psc_hashbkt *b;
 	int i;
 
 	DIRCACHE_WR_ENSURE(d);
@@ -208,11 +216,26 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 
 	if (p->dcp_dents_off) {
 		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off) {
-			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "free_page");
-			if (dce->dce_pfd->pfd_ino != FID_ANY)
-				psc_hashent_remove(
+			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "free_page "
+			    "fcmh=%p", d);
+			if (dce->dce_pfd->pfd_ino != FID_ANY) {
+				b = psc_hashent_getbucket(
 				    &msl_namecache_hashtbl, dce);
-			psc_pool_return(dircache_ent_pool, dce);
+				if (dce->dce_flags & DCEF_ACTIVE) {
+					psc_hashbkt_del_item(
+					    &msl_namecache_hashtbl, b,
+					    dce);
+					dce->dce_flags &= ~DCEF_ACTIVE;
+				}
+				if (dce->dce_flags & DCEF_HOLD) {
+					dce->dce_flags |= DCEF_FREEME;
+					dce = NULL;
+				}
+				psc_hashbkt_put(&msl_namecache_hashtbl,
+				    b);
+			}
+			if (dce)
+				psc_pool_return(dircache_ent_pool, dce);
 		}
 		psc_dynarray_free(p->dcp_dents_off);
 		PSCFREE(p->dcp_dents_off);
@@ -448,7 +471,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	off_t adj;
 	int i;
 
-	OPSTAT_INCR("msl.dircache-reg-ents");
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 
 	da_off = PSCALLOC(sizeof(*da_off));
@@ -471,8 +493,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		INIT_PSC_LISTENTRY(&dce->dce_lentry);
 		dce->dce_page = p;
 		dce->dce_pfd = dirent;
-		dce->dce_pfid = fcmh_2_fid(d);
-		dce->dce_key = dircache_ent_hash(dce->dce_pfid,
+		dce->dce_pfg = d->fcmh_fg;
+		dce->dce_key = dircache_ent_hash(dce->dce_pfg.fg_fid,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
 		psc_dynarray_add(da_off, dce);
 
@@ -499,9 +521,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 			*nents = i;
-			DYNARRAY_FOREACH_CONT(dce, i, da_off)
+			DYNARRAY_FOREACH_CONT(dce, i, da_off) {
+				PFLOG_DIRCACHENT(PLL_DEBUG, dce,
+				    "early free");
 				psc_pool_return(dircache_ent_pool, dce);
-			pfl_dynarray_truncate(da_off, *nents);
+			}
 
 			if (*nents == 0) {
 				/*
@@ -515,6 +539,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 				return (-ESTALE);
 			}
 
+			pfl_dynarray_truncate(da_off, *nents);
+
 			eof = 0;
 
 			OPSTAT_INCR("msl.readdir-stale");
@@ -524,6 +550,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 		if (dce2 && dce2->dce_flags & DCEF_HOLD) {
+			/*
+			 * Someone is already HOLD'ing this entry.  Drop
+			 * ours on the floor.
+			 */
 			dce2 = NULL;
 			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "skip");
 			dce->dce_pfd->pfd_ino = FID_ANY;
@@ -531,13 +561,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			if (dce2) {
 				psc_hashbkt_del_item(
 				    &msl_namecache_hashtbl, b, dce2);
+				dce2->dce_flags &= ~DCEF_ACTIVE;
 			}
 			psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
 			    dce);
+			dce->dce_flags |= DCEF_ACTIVE;
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		if (dce2)
-			dircache_ent_zap(d, dce2);
+			dircache_ent_destroy(d, dce2);
 	}
 
 	DIRCACHE_WRLOCK(d);
@@ -572,14 +604,33 @@ namecache_purge(struct fidc_membh *d)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
+	struct psc_hashbkt *b;
 	int i;
 
 	fci = fcmh_get_pri(d);
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
-		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "purge");
-		psc_hashent_remove(&msl_namecache_hashtbl, dce);
-		PSCFREE(dce->dce_pfd);
-		psc_pool_return(dircache_ent_pool, dce);
+		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "purge fcmh=%p", d);
+		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
+		if (dce->dce_flags & DCEF_ACTIVE) {
+			psc_hashbkt_del_item(&msl_namecache_hashtbl, b,
+			    dce);
+			dce->dce_flags &= ~DCEF_ACTIVE;
+		}
+		if (dce->dce_flags & DCEF_HOLD) {
+			dce->dce_flags |= DCEF_FREEME | DCEF_DETACHED;
+			dce = NULL;
+		}
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+		if (dce) {
+			dircache_ent_destroy(d, dce);
+
+			/*
+			 * psc_dynarray_removeitem() will swap items so
+			 * update the iteration index accordingly.
+			 */
+			i--;
+		}
 	}
 	psc_dynarray_free(&fci->fcid_ents);
 }
@@ -616,14 +667,15 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 
 	dcu->dcu_d = d;
 
-	q.dcq_pfid = fcmh_2_fid(d);
+	q.dcq_pfg = d->fcmh_fg;
 	q.dcq_name = name;
 	q.dcq_namelen = strlen(name);
-	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
+	q.dcq_key = dircache_ent_hash(q.dcq_pfg.fg_fid, name,
+	    q.dcq_namelen);
 	dcu->dcu_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
 	    &q.dcq_key);
  retry_hold:
-	dcu->dcu_dce = dce = psc_hashbkt_search_cmpf(
+	dce = psc_hashbkt_search_cmpf(
 	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
 	    dircache_ent_tryhold, &mine, &q.dcq_key);
 	if (dce && !mine) {
@@ -639,6 +691,7 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 	}
 	psc_hashbkt_unlock(b);
 	if (dce) {
+		dcu->dcu_dce = dce;
 		OPSTAT_INCR("msl.namecache-get-hit");
 		return (0);
 	}
@@ -675,8 +728,8 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 		new_dce = NULL;
 
 		dce->dce_key = q.dcq_key;
-		dce->dce_pfid = q.dcq_pfid;
-		dce->dce_flags = DCEF_HOLD;
+		dce->dce_pfg = q.dcq_pfg;
+		dce->dce_flags |= DCEF_HOLD | DCEF_ACTIVE;
 		dce->dce_pfd->pfd_ino = FID_ANY;
 		dce->dce_pfd->pfd_namelen = q.dcq_namelen;
 		strncpy(dce->dce_pfd->pfd_name, name, q.dcq_namelen);
@@ -717,12 +770,23 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 __static void
 _namecache_release_entry(struct dircache_ent_update *dcu, int locked)
 {
-	if (!locked)
+	struct dircache_ent *dce = dcu->dcu_dce;
+
+	if (locked)
+		LOCK_ENSURE(&dcu->dcu_bkt->phb_lock);
+	else
 		psc_hashbkt_lock(dcu->dcu_bkt);
-	psc_assert(dcu->dcu_dce->dce_flags & DCEF_HOLD);
-	dcu->dcu_dce->dce_flags &= ~DCEF_HOLD;
-	PFLOG_DIRCACHENT(PLL_DEBUG, dcu->dcu_dce, "release HOLD");
+	psc_assert(dce->dce_flags & DCEF_HOLD);
+	dce->dce_flags &= ~DCEF_HOLD;
+	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "release HOLD");
+	if (dce->dce_flags & DCEF_FREEME)
+		psc_assert(!(dce->dce_flags & DCEF_ACTIVE));
+	else
+		dce = NULL;
 	psc_hashbkt_put(&msl_namecache_hashtbl, dcu->dcu_bkt);
+
+	if (dce)
+		dircache_ent_destroy(dcu->dcu_d, dce);
 }
 
 /*
@@ -760,8 +824,10 @@ _namecache_update(const struct pfl_callerinfo *pci,
 	if (dcu->dcu_d == NULL)
 		return;
 	if (rc) {
-		namecache_delete(dcu, -1);
+		namecache_delete(dcu, rc);
 	} else {
+		psc_assert(fid != FID_ANY);
+
 		psc_hashbkt_lock(dcu->dcu_bkt);
 		dcu->dcu_dce->dce_pfd->pfd_ino = fid;
 		namecache_release_entry_locked(dcu);
@@ -771,23 +837,39 @@ _namecache_update(const struct pfl_callerinfo *pci,
 }
 
 /*
- * Remove an entry marked HOLD from the namecache.
+ * Remove an entry marked HOLD from the namecache.  If there was an
+ * error when trying to delete this entry remotely via RPC (denoted by
+ * @rc being nonzero), HOLD is released and no changes are made.
  */
 void
 namecache_delete(struct dircache_ent_update *dcu, int rc)
 {
+	struct dircache_ent *dce;
+	struct psc_hashbkt *b;
+
 	if (dcu->dcu_d == NULL)
 		return;
-	/* XXX: when rc = 13, dcu is empty, and we segfault */
-	if (rc && dcu->dcu_dce->dce_pfd->pfd_ino != FID_ANY)
+	dce = dcu->dcu_dce;
+
+	/*
+	 * It's possible this entry was newly created then HELD in
+	 * response to a "cache fill", and pfd_ino = FID_ANY since it
+	 * hasn't been populated yet.  In such a case, an error during
+	 * process should remove the entry here.
+	 */
+	if (rc && rc != -ENOENT && dce->dce_pfd->pfd_ino != FID_ANY)
 		namecache_release_entry(dcu);
 	else {
-		psc_hashbkt_lock(dcu->dcu_bkt);
-		psc_hashbkt_del_item(&msl_namecache_hashtbl,
-		    dcu->dcu_bkt, dcu->dcu_dce);
-		psc_hashbkt_put(&msl_namecache_hashtbl, dcu->dcu_bkt);
+		b = dcu->dcu_bkt;
+		psc_hashbkt_lock(b);
+		if (dce->dce_flags & DCEF_ACTIVE) {
+			psc_hashbkt_del_item(&msl_namecache_hashtbl, b,
+			    dce);
+			dce->dce_flags &= ~DCEF_ACTIVE;
+		}
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-		dircache_ent_zap(dcu->dcu_d, dcu->dcu_dce);
+		dircache_ent_destroy(dcu->dcu_d, dce);
 	}
 	dcu->dcu_d = NULL;
 }
