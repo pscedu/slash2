@@ -237,7 +237,7 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 		psc_fatalx("pscrpc_new_import");
 	imp->imp_cli_request_portal = csvc->csvc_rqptl;
 	imp->imp_cli_reply_portal = csvc->csvc_rpptl;
-	imp->imp_max_retries = 2;
+	imp->imp_max_retries = PSCRPC_MAX_RETRIES;
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;
 	imp->imp_hldropf = csvc->csvc_hldropf;
