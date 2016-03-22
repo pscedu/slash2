@@ -59,8 +59,8 @@ msl_resm_throttle_wake(struct sl_resm *m)
 int
 msl_resm_throttle_yield(struct sl_resm *m)
 {
-	int max, rc = 0;
 	struct resprof_cli_info *rpci;
+	int max, rc = 0;
 
 	if (m->resm_type == SLREST_MDS) {
 		max = msl_mds_max_inflight_rpcs;
@@ -69,9 +69,9 @@ msl_resm_throttle_yield(struct sl_resm *m)
 	}
 
 	rpci = res2rpci(m->resm_res);
-        RPCI_LOCK(rpci);
-        if (rpci->rpci_infl_rpcs >= max)
-                rc = -EAGAIN;
+	RPCI_LOCK(rpci);
+	if (rpci->rpci_infl_rpcs >= max)
+		rc = -EAGAIN;
 	RPCI_ULOCK(rpci);
 	return rc;
 }
