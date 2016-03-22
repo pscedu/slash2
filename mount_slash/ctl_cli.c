@@ -610,6 +610,7 @@ msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, msr));
 }
 
+/* See also ms_biorq_prdat() in msctl.c */
 int
 msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
