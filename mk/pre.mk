@@ -30,9 +30,15 @@ SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		${SLASH_BASE}/include
 SRC_PATH+=		${SLASH_BASE}/mount_slash
+SRC_PATH+=		${SLASH_BASE}/msctl
 SRC_PATH+=		${SLASH_BASE}/share
 SRC_PATH+=		${SLASH_BASE}/slashd
+SRC_PATH+=		${SLASH_BASE}/slictl
 SRC_PATH+=		${SLASH_BASE}/sliod
+SRC_PATH+=		${SLASH_BASE}/slkeymgt
+SRC_PATH+=		${SLASH_BASE}/slmctl
+SRC_PATH+=		${SLASH_BASE}/slmkfs
+SRC_PATH+=		${SLASH_BASE}/slmkjrnl
 
 SLASH_MODULES?=		cli ion mds
 SLASH_OPTIONS?=
