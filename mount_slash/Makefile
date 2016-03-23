@@ -4,7 +4,7 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 include ${SLASH_BASE}/mk/pre.mk
 
-SHLIB=		slash2.so
+SHLIB=		slash2client.so
 INST_LIBDIR=	${WOK_MOD_DIR}
 BIN=		mount_slash.sh
 MAN+=		slash2client.so.5

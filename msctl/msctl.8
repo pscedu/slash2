@@ -38,7 +38,7 @@ file system mount daemon runtime control
 The
 .Nm
 utility controls
-.Xr mount_slash 8
+.Xr slash2client.so 5
 behavior.
 .Pp
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
@@ -429,7 +429,7 @@ Suppress
 lookups for network addresses.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
-.\"	log_xr => "in\n.Xr mount_slash 8\n",
+.\"	log_xr => "in\n.Xr slash2client.so 5\n",
 .\"	params => {
 .\"		'pid' => "Daemon system process ID.",
 .\"		'sys.mountpoint'
@@ -1030,7 +1030,7 @@ Override the default control socket file path.
 .Bl -tag -width Pa
 .It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 default
-.Xr mount_slash 8
+.Xr slash2client.so 5
 control socket
 .El
 .Sh EXAMPLES
@@ -1041,5 +1041,5 @@ server:
 .Pp
 .Dl $ msctl -R repl-add:dst-io@SITE:* \&.
 .Sh SEE ALSO
-.Xr sladm 7 ,
-.Xr mount_slash 8
+.Xr slash2client.so 5 ,
+.Xr sladm 7

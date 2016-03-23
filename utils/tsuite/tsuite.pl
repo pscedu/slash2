@@ -900,7 +900,7 @@ foreach my $n (@cli) {
 		@{[init_env($n)]}
 		@{[daemon_setup($n)]}
 		$sudo modprobe fuse
-		run_daemon -O mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2.so $args" $n->{mp}
+		run_daemon -O mount_wokfs -U -L "insert 0 $n->{src_dir}/slash2/mount_slash/slash2client.so $args" $n->{mp}
 EOF
 }
 

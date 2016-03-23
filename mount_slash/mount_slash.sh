@@ -2,7 +2,7 @@
 # $Id$
 
 prog=mount_wokfs
-mod=slash2.so
+mod=slash2client.so
 ctl=msctl
 
 PATH=$(dirname $0):$PATH

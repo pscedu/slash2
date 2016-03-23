@@ -230,7 +230,7 @@ client-host# scp mds-host:/var/lib/slash/authbuf.key /var/lib/slash
 .Ed
 .Pp
 Now
-.Xr mount_slash 8
+.Xr slash2client.so 5
 may be used to mount a
 .Tn SLASH2
 file system under a directory node on the local system:
@@ -275,8 +275,8 @@ port must be used globally for all daemons.
 .El
 .Sh SEE ALSO
 .Xr odtable 1 ,
+.Xr slash2client.so 5 ,
 .Xr slcfg 5 ,
-.Xr mount_slash 8 ,
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr slictl 8 ,
