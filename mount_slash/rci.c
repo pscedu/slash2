@@ -177,7 +177,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			OPSTAT_INCR("msl.dio-cb-read");
 		else
 			OPSTAT_INCR("msl.dio-cb-write");
-
 	} else {
 		psc_fatalx("unknown callback");
 	}
@@ -190,6 +189,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 	psclog_diag("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
+	(void)r;
 
 	psc_pool_return(msl_async_req_pool, car);
 

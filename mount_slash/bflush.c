@@ -253,6 +253,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 	}
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
+	(void)wake;
 }
 
 /*
@@ -274,6 +275,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	psclog_diag("callback to write RPC bwc=%p ios=%d infl=%d rc=%d",
 	    bwc, m->resm_res_id, rpci->rpci_infl_rpcs, rc);
+	(void)rpci;
 
 	bwc_unpin_pages(bwc);
 
