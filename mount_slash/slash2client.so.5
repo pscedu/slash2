@@ -19,19 +19,16 @@
 .\" %END_LICENSE%
 .\" %PFL_MODULES lnet pflenv %
 .Dd February 29, 2016
-.Dt MOUNT_SLASH 8
+.Dt SLASH2CLIENT.SO 5
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm mount_slash
+.Nm slash2client.so
 .Nd mount a
 .Tn SLASH2
 file system
 .Sh SYNOPSIS
-.Nm mount_slash
-.Op Fl dUV
-.Op Fl o Ar mountopt
-.Ar mountpoint
+.Nm slash2client.so
 .Sh DESCRIPTION
 The
 .Nm
@@ -456,6 +453,7 @@ control socket
 .Sh SEE ALSO
 .Xr slcfg 5 ,
 .Xr sladm 7 ,
+.Xr mount_wokfs 8 ,
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr sliod 8 ,
