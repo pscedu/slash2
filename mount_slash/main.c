@@ -67,7 +67,6 @@
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
 #include "pfl/vbitmap.h"
-#include "pfl/workthr.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
