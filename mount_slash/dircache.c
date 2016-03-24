@@ -112,8 +112,7 @@ dircache_ent_cmp(const void *a, const void *b)
 {
 	const struct dircache_ent *da = a, *db = b;
 
-	return (da->dce_pfg.fg_fid == db->dce_pfg.fg_fid &&
-	    da->dce_pfg.fg_gen == db->dce_pfg.fg_gen &&
+	return (da->dce_pfid == db->dce_pfid &&
 	    da->dce_pfd->pfd_namelen == db->dce_pfd->pfd_namelen &&
 	    strncmp(da->dce_pfd->pfd_name, db->dce_pfd->pfd_name,
 	    da->dce_pfd->pfd_namelen) == 0);
@@ -129,8 +128,7 @@ dircache_entq_cmp(const void *a, const void *b)
 	const struct dircache_ent_query *da = a;
 	const struct dircache_ent *db = b;
 
-	return (da->dcq_pfg.fg_fid == db->dce_pfg.fg_fid &&
-	    da->dcq_pfg.fg_gen == db->dce_pfg.fg_gen &&
+	return (da->dcq_pfid == db->dce_pfid &&
 	    da->dcq_namelen == db->dce_pfd->pfd_namelen &&
 	    strncmp(da->dcq_name, db->dce_pfd->pfd_name,
 	    da->dcq_namelen) == 0);
@@ -324,11 +322,11 @@ dircache_purge(struct fidc_membh *d)
 	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
 
+	DIRCACHE_WR_ENSURE(d);
+
 	fci = fcmh_2_fci(d);
-	DIRCACHE_WRLOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		dircache_free_page(d, p);
-	DIRCACHE_ULOCK(d);
 }
 
 /*
@@ -493,8 +491,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		INIT_PSC_LISTENTRY(&dce->dce_lentry);
 		dce->dce_page = p;
 		dce->dce_pfd = dirent;
-		dce->dce_pfg = d->fcmh_fg;
-		dce->dce_key = dircache_ent_hash(dce->dce_pfg.fg_fid,
+		dce->dce_pfid = fcmh_2_fid(d);
+		dce->dce_key = dircache_ent_hash(dce->dce_pfid,
 		    dce->dce_pfd->pfd_name, dce->dce_pfd->pfd_namelen);
 		psc_dynarray_add(da_off, dce);
 
@@ -607,6 +605,8 @@ namecache_purge(struct fidc_membh *d)
 	struct psc_hashbkt *b;
 	int i;
 
+	DIRCACHE_WR_ENSURE(d);
+
 	fci = fcmh_get_pri(d);
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
 		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "purge fcmh=%p", d);
@@ -667,13 +667,13 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 
 	dcu->dcu_d = d;
 
-	q.dcq_pfg = d->fcmh_fg;
+	q.dcq_pfid = fcmh_2_fid(d);
 	q.dcq_name = name;
 	q.dcq_namelen = strlen(name);
-	q.dcq_key = dircache_ent_hash(q.dcq_pfg.fg_fid, name,
-	    q.dcq_namelen);
+	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
 	dcu->dcu_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
 	    &q.dcq_key);
+
  retry_hold:
 	dce = psc_hashbkt_search_cmpf(
 	    &msl_namecache_hashtbl, b, dircache_entq_cmp, &q,
@@ -728,7 +728,7 @@ _namecache_get_entry(const struct pfl_callerinfo *pci,
 		new_dce = NULL;
 
 		dce->dce_key = q.dcq_key;
-		dce->dce_pfg = q.dcq_pfg;
+		dce->dce_pfid = q.dcq_pfid;
 		dce->dce_flags |= DCEF_HOLD | DCEF_ACTIVE;
 		dce->dce_pfd->pfd_ino = FID_ANY;
 		dce->dce_pfd->pfd_namelen = q.dcq_namelen;
