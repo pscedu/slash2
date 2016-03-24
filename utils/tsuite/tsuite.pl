@@ -1023,6 +1023,8 @@ sub test_setup {
 		_EXCLUDE_TIME_MS+=\$((time1_ms - time0_ms))
 	}
 	export -f exclude_time_end
+
+	shopt -s extglob
 EOF
 }
 
