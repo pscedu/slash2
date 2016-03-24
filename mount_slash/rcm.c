@@ -208,7 +208,7 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 	struct fidc_membh *c = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = sl_fcmh_peek_fid(mq->fg.fg_fid, &c);
+	mp->rc = -sl_fcmh_peek_fid(mq->fg.fg_fid, &c);
 	if (mp->rc)
 		goto out;
 	if (c->fcmh_flags & FCMH_CLI_TRUNC) {
@@ -242,14 +242,14 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	psclog_diag("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->bno, mq->seq);
 
-	mp->rc = sl_fcmh_peek_fid(mq->fid, &f);
+	mp->rc = -sl_fcmh_peek_fid(mq->fid, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
 	    mq->bno, mq->seq);
 
-	mp->rc = bmap_lookup(f, mq->bno, &b);
+	mp->rc = -bmap_lookup(f, mq->bno, &b);
 	if (mp->rc)
 		goto out;
 

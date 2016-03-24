@@ -224,7 +224,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
+	mp->rc = -bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1228,7 +1228,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	if (!mds_bmap_exists(f, mq->bmapno))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
-	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

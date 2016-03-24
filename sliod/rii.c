@@ -127,11 +127,11 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	mp->rc = -sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		/*
 		 * XXX abort bulk here, otherwise all future RPCs will
@@ -233,11 +233,11 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	mp->rc = -sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
+	mp->rc = -bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		/*
 		 * XXX abort bulk here, otherwise all future RPCs will

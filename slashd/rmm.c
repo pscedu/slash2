@@ -162,7 +162,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	mds_reserve_slot(2);
 	switch (mq->op) {
 	    case SLM_FORWARD_MKDIR:
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
 		sstb.sst_mode = mq->mode;
@@ -173,10 +173,10 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    mdslog_namespace, slm_get_next_slashfid, 0);
 		break;
 	    case SLM_FORWARD_CREATE:
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p),
+		mp->rc = -mdsio_opencreate(vfsid, fcmh_2_mfid(p),
 		    &cr, O_CREAT | O_EXCL | O_RDWR, mq->mode,
 		    mq->req.name, NULL, &mp->attr, &mfh,
 		    mdslog_namespace, slm_get_next_slashfid, 0);
@@ -184,14 +184,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			mdsio_release(vfsid, &rootcreds, mfh);
 		break;
 	    case SLM_FORWARD_RMDIR:
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), NULL,
+		mp->rc = -mdsio_rmdir(vfsid, fcmh_2_mfid(p), NULL,
 		    mq->req.name, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_UNLINK:
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
 		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mfid(p), NULL,
@@ -199,15 +199,15 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    &mp->attr);
 		break;
 	    case SLM_FORWARD_RENAME:
-		mp->rc = slm_fcmh_get(&mq->fg, &op);
+		mp->rc = -slm_fcmh_get(&mq->fg, &op);
 		if (mp->rc)
 			break;
-		mp->rc = slm_fcmh_get(&mq->nfg, &np);
+		mp->rc = -slm_fcmh_get(&mq->nfg, &np);
 		if (mp->rc)
 			break;
 		from = mq->req.name;
 		to = mq->req.name + strlen(mq->req.name) + 1;
-		mp->rc = mdsio_rename(vfsid, fcmh_2_mfid(op), from,
+		mp->rc = -mdsio_rename(vfsid, fcmh_2_mfid(op), from,
 		    fcmh_2_mfid(np), to, &rootcreds,
 		    mdslog_namespace, &mp->attr);
 		break;
@@ -217,7 +217,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		 * layer dealing with (partial) truncates.  It is not a
 		 * pure namespace operation.
 		 */
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
 		mp->rc = -mdsio_setattr(vfsid, fcmh_2_mfid(p),
@@ -225,12 +225,12 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    fcmh_2_mfh(p), mdslog_namespace);
 		break;
 	    case SLM_FORWARD_SYMLINK:
-		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		mp->rc = -slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
 		name = mq->req.name;
 		linkname = mq->req.name + strlen(mq->req.name) + 1;
-		mp->rc = mdsio_symlink(vfsid, linkname,
+		mp->rc = -mdsio_symlink(vfsid, linkname,
 		    fcmh_2_mfid(p), name, &cr, &mp->attr, NULL,
 		    NULL, slm_get_next_slashfid, 0);
 		break;

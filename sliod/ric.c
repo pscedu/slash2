@@ -200,7 +200,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			break;
 	pfl_opstat_add(rw == SL_WRITE ? ist->rw.wr : ist->rw.rd, 1);
 
-	mp->rc = sli_fcmh_get(fgp, &f);
+	mp->rc = -sli_fcmh_get(fgp, &f);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -241,11 +241,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		iovs[i].iov_base = 0;
 	}
 
-	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
+	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
-		    bmapno);
-		PFL_GOTOERR(out1, rc);
+		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u; rc=%d",
+		    bmapno, rc);
+		PFL_GOTOERR(out1, mp->rc = -rc);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
