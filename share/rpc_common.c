@@ -214,8 +214,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_lasterrno = rc;
 	if (rc) {
-		csvc->csvc_lasterrno = rc;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
 		*stkversp = mp->stkvers;
@@ -962,12 +962,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out;
 		}
 
+		csvc->csvc_lasterrno = rc;
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 		if (rc) {
 			if (csvc->csvc_import)
 				csvc->csvc_import->imp_failed = 1;
-			csvc->csvc_lasterrno = rc;
 			/*
 			 * The csvc stays allocated but is marked as
 			 * unusable until the next connection
