@@ -1045,7 +1045,7 @@ main(int argc, char *argv[])
 	    ffp_hentry, 97, NULL, "fnfidpairs");
 
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
-	    nitems(opts));
+	    nitems(opts), sl_stk_version);
 	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
 		    "not completed");
