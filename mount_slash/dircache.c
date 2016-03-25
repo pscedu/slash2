@@ -631,7 +631,7 @@ namecache_purge(struct fidc_membh *d)
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 		if (dce) {
-			dircache_ent_destroy(d, dce);
+			dircache_ent_destroy_locked(d, dce);
 
 			/*
 			 * psc_dynarray_removeitem() will swap items so
