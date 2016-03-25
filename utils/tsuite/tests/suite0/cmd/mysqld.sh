@@ -18,4 +18,4 @@ cd mysql-test
 
 hasprog prlimit && sudo prlimit --pid $$ --nproc=5000 || :
 
-./mysql-test-run --big-test --skip-test=^federated$
+./mysql-test-run --big-test --skip-test=federated

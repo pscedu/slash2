@@ -13,7 +13,7 @@ tsuite_wget 3077836 411aec1c418c14f6765710d89743ae42 \
 tsuite_decompress transmission-$V.tar.xz | tar fx -
 
 cd transmission-$V
-./configure enable-cli
+./configure --enable-cli
 make
 
 exit 0
