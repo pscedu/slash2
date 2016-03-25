@@ -134,6 +134,11 @@ dircache_entq_cmp(const void *a, const void *b)
 	    da->dcq_namelen) == 0);
 }
 
+#define dircache_ent_destroy_locked(d, dce)				\
+	_dircache_ent_destroy((d), (dce), 1)
+#define dircache_ent_destroy(d, dce)					\
+	_dircache_ent_destroy((d), (dce), 0)
+
 /*
  * Release memory for a dircache_ent.
  *
@@ -146,7 +151,8 @@ dircache_entq_cmp(const void *a, const void *b)
  * page_pool), it is removed and memory released.
  */
 void
-dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
+_dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce,
+    int locked)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
@@ -156,7 +162,8 @@ dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
 	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "delete");
 
 	fci = fcmh_2_fci(d);
-	DIRCACHE_WRLOCK(d);
+	if (!locked)
+		DIRCACHE_WRLOCK(d);
 	p = dce->dce_page;
 	dce->dce_pfd->pfd_ino = FID_ANY;
 	psc_assert(!(dce->dce_flags & DCEF_ACTIVE));
@@ -170,7 +177,8 @@ dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
 	} else if (!(dce->dce_flags & DCEF_DETACHED)) {
 		psc_dynarray_removeitem(&fci->fcid_ents, dce);
 	}
-	DIRCACHE_ULOCK(d);
+	if (!locked)
+		DIRCACHE_ULOCK(d);
 
 	if (p == NULL) {
 		PSCFREE(dce->dce_pfd);
@@ -623,7 +631,7 @@ namecache_purge(struct fidc_membh *d)
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 		if (dce) {
-			dircache_ent_destroy(d, dce);
+			dircache_ent_destroy_locked(d, dce);
 
 			/*
 			 * psc_dynarray_removeitem() will swap items so
