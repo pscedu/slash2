@@ -271,7 +271,7 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 }
 
 int
-slc_rmc_getcsvc1(struct slrpc_cservice **csvcp, struct sl_resm *resm)
+slc_rmc_getcsvc1(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
 	int rc = 0;
 
