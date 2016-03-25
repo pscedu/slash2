@@ -1017,14 +1017,15 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-HInRvV] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HInRVv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    __progname);
 	exit(1);
 }
 
-void msctl_show_version(char *showspec)
+void
+msctl_show_version(void)
 {
-	fprintf(stderr, "msctl version is %d.\n", sl_stk_version);
+	fprintf(stderr, "%d\n", sl_stk_version);
 }
 
 struct psc_ctlopt opts[] = {
@@ -1037,8 +1038,8 @@ struct psc_ctlopt opts[] = {
 	{ 'r', PCOF_FUNC, parse_replst },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
 	{ 'U', PCOF_FUNC, parse_dequeue },
+	{ 'V', PCOF_FLAG, msctl_show_version },
 	{ 'v', PCOF_FLAG, &verbose },
-	{ 'V', PCOF_FLAG, msctl_show_version }
 };
 
 int
