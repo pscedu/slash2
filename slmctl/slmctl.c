@@ -297,9 +297,10 @@ usage(void)
 	exit(1);
 }
 
-void slmctl_show_version(char *showspec)
+void
+slmctl_show_version(void)
 {
-	fprintf(stderr, "slmctl version is %d.\n", sl_stk_version);
+	fprintf(stderr, "%d\n", sl_stk_version);
 }
 
 struct psc_ctlopt opts[] = {
@@ -308,7 +309,7 @@ struct psc_ctlopt opts[] = {
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
-	{ 'V', PCOF_FLAG, slmctl_show_version }
+	{ 'V', PCOF_FLAG, slmctl_show_version },
 };
 
 int
