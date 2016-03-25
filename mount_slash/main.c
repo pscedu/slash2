@@ -350,7 +350,7 @@ void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
-	int rc = 0, rc2, rflags = 0;
+	int rc = 0, rc2, hold, rflags = 0;
 	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -391,6 +391,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	hold = 0;
  retry1:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
@@ -409,12 +410,16 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
+	hold = 1;
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
+		if (hold) {
+			hold = 0;
+			namecache_fail(&dcu);
+		}
 		goto retry1;
 	}
 	if (rc == 0)
