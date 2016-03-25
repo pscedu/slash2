@@ -224,6 +224,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ENOTCONN:
 		break;
 	case ETIMEDOUT:
+		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
 		break;
 
