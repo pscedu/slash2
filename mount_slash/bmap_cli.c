@@ -236,7 +236,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
 	/* XXX respect NONBLOCK */
-	rc = slc_rmc_getcsvc1(fci->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -436,7 +436,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	BMAP_ULOCK(b);
 
 	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
-	rc = slc_rmc_getcsvc1(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		goto out;
 
@@ -545,7 +545,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	sbd = bmap_2_sbd(b);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
-	rc = slc_rmc_getcsvc1(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
@@ -720,7 +720,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
  retry:
 	// XXX respect NONBLOCK
-	rc = slc_rmc_getcsvc1(fci->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);

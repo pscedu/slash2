@@ -177,7 +177,7 @@ msl_fcmh_fetch_inode(struct fidc_membh *f)
 	int rc;
 
 	fci = fcmh_2_fci(f);
-	rc = slc_rmc_getcsvc1(fci->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GET_INODE, rq, mq, mp);

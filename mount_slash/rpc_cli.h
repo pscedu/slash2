@@ -121,7 +121,6 @@ enum {
 void	slc_rpc_initsvc(void);
 
 int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
-int	slc_rmc_getcsvc1(struct sl_resm *, struct slrpc_cservice **);
 int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 

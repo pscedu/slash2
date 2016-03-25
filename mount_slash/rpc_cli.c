@@ -270,17 +270,6 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 	return (resm->resm_csvc->csvc_lasterrno);
 }
 
-int
-slc_rmc_getcsvc1(struct sl_resm *resm, struct slrpc_cservice **csvcp)
-{
-	int rc = 0;
-
-	*csvcp = slc_getmcsvc(resm);
-	if (*csvcp == NULL)
-		rc = resm->resm_csvc->csvc_lasterrno;
-	return (rc);
-}
-
 void
 sl_resm_hldrop(struct sl_resm *resm)
 {
