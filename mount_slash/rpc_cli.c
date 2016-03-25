@@ -222,7 +222,9 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ENONET:
 #endif
 	case ENOTCONN:
+		break;
 	case ETIMEDOUT:
+		OPSTAT_INC("msl.timeout");
 		break;
 
 	/*
