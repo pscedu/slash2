@@ -265,26 +265,8 @@ int
 slc_rmc_getcsvc(struct pscfs_req *pfr,
     struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
-	int rc;
-
 	*csvcp = slc_getmcsvc(resm);
-	if (*csvcp)
-		return (0);
-
-	for (;;) {
-		rc = 0;
-		CSVC_LOCK(resm->resm_csvc);
-		*csvcp = slc_getmcsvc(resm);
-		if (*csvcp)
-			break;
-
-		rc = resm->resm_csvc->csvc_lasterrno;
-		if (!slc_rmc_retry(pfr, &rc))
-			break;
-		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
-	}
-	CSVC_ULOCK(resm->resm_csvc);
-	return (rc);
+	return (resm->resm_csvc->csvc_lasterrno);
 }
 
 int
