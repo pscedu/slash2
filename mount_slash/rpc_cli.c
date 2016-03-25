@@ -264,8 +264,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 }
 
 int
-slc_rmc_getcsvc(struct pscfs_req *pfr,
-    struct sl_resm *resm, struct slrpc_cservice **csvcp)
+slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
 	*csvcp = slc_getmcsvc(resm);
 	return (resm->resm_csvc->csvc_lasterrno);
