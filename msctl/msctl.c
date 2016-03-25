@@ -1022,6 +1022,11 @@ usage(void)
 	exit(1);
 }
 
+void msctl_show_version(char *showspec)
+{
+	fprintf(stderr, "msctl version is %d.\n", sl_stk_version);
+}
+
 struct psc_ctlopt opts[] = {
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
@@ -1032,7 +1037,8 @@ struct psc_ctlopt opts[] = {
 	{ 'r', PCOF_FUNC, parse_replst },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
 	{ 'U', PCOF_FUNC, parse_dequeue },
-	{ 'v', PCOF_FLAG, &verbose }
+	{ 'v', PCOF_FLAG, &verbose },
+	{ 'V', PCOF_FLAG, msctl_show_version }
 };
 
 int
