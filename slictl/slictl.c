@@ -266,7 +266,7 @@ usage(void)
 	exit(1);
 }
 
-void psc_show_version(char *showspec)
+void slictl_show_version(char *showspec)
 {
 	fprintf(stderr, "slictl version is %d.\n", sl_stk_version);
 }
@@ -277,7 +277,7 @@ struct psc_ctlopt opts[] = {
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
-	{ 'V', PCOF_FLAG, psc_show_version },
+	{ 'V', PCOF_FLAG, slictl_show_version },
 };
 
 int
@@ -287,6 +287,6 @@ main(int argc, char *argv[])
 	sl_errno_init();
 
 	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
-	    nitems(opts), sl_stk_version);
+	    nitems(opts));
 	exit(0);
 }

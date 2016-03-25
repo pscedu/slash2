@@ -318,6 +318,6 @@ main(int argc, char *argv[])
 	sl_errno_init();
 
 	psc_ctlcli_main(SL_PATH_SLMCTLSOCK, argc, argv, opts,
-	    nitems(opts), sl_stk_version);
+	    nitems(opts));
 	exit(0);
 }
