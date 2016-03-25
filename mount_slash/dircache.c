@@ -150,13 +150,14 @@ dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
+	int waslocked;
 
 	OPSTAT_INCR("msl.dircache-ent-destroy");
 
 	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "delete");
 
 	fci = fcmh_2_fci(d);
-	DIRCACHE_WRLOCK(d);
+	locked = DIRCACHE_REQWRLOCK(d);
 	p = dce->dce_page;
 	dce->dce_pfd->pfd_ino = FID_ANY;
 	psc_assert(!(dce->dce_flags & DCEF_ACTIVE));
@@ -170,7 +171,7 @@ dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce)
 	} else if (!(dce->dce_flags & DCEF_DETACHED)) {
 		psc_dynarray_removeitem(&fci->fcid_ents, dce);
 	}
-	DIRCACHE_ULOCK(d);
+	DIRCACHE_UREQLOCK(d, waslocked);
 
 	if (p == NULL) {
 		PSCFREE(dce->dce_pfd);
