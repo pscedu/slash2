@@ -33,6 +33,7 @@
 
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
@@ -707,6 +708,8 @@ main(int argc, char *argv[])
 	    __progname, sl_stk_version, ctime(&now));
 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
+
+	pfl_fault_register("slashd/incoming_rpc_delay");
 
 	slmctlthr_main(sfn);
 	exit(0);

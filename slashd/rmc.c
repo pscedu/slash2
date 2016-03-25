@@ -38,6 +38,7 @@
 
 #include "pfl/ctlsvr.h"
 #include "pfl/export.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/lock.h"
 #include "pfl/rpc.h"
@@ -1737,6 +1738,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+
+	pfl_fault_here("slashd/incoming_rpc_delay", NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
