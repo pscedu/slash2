@@ -391,10 +391,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->mode = !(mode & 0777) ? (0666 & ~pscfs_getumask(pfr)) :
 	    mode;
@@ -411,9 +411,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -680,13 +682,12 @@ msl_stat(struct fidc_membh *f, void *arg)
 	do {
 		MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETATTR, rq, mq, mp,
 		    rc);
-		if (rc)
-			break;
+		if (!rc) {
+			mq->fg = f->fcmh_fg;
+			mq->iosid = msl_pref_ios;
 
-		mq->fg = f->fcmh_fg;
-		mq->iosid = msl_pref_ios;
-
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
+			rc = SL_RSX_WAITREP(csvc, rq, mp);
+		}
 	} while (rc && slc_rmc_retry(pfr, &rc));
 
 	if (rc == 0)
@@ -806,15 +807,14 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (!rc) {
+		mq->pfg = p->fcmh_fg;
+		mq->fg = c->fcmh_fg;
+		strlcpy(mq->name, newname, sizeof(mq->name));
 
-	mq->pfg = p->fcmh_fg;
-	mq->fg = c->fcmh_fg;
-	strlcpy(mq->name, newname, sizeof(mq->name));
-
-	namecache_hold_entry(&dcu, p, newname);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+		namecache_hold_entry(&dcu, p, newname);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
@@ -891,10 +891,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (rc) 
+		goto retry2;
 
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
@@ -908,10 +908,12 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
+
+  retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -963,14 +965,13 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (!rc) {
+		mq->pfg.fg_fid = pfid;
+		mq->pfg.fg_gen = FGEN_ANY;
+		strlcpy(mq->name, name, sizeof(mq->name));
 
-	mq->pfg.fg_fid = pfid;
-	mq->pfg.fg_gen = FGEN_ANY;
-	strlcpy(mq->name, name, sizeof(mq->name));
-
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
@@ -1229,13 +1230,11 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	else
 		MSL_RMC_NEWREQ(pfr, p, csvc,  SRMT_RMDIR, rq, mq, mp, rc);
 
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	mq->pfid = pinum;
-	strlcpy(mq->name, name, sizeof(mq->name));
-
-	namecache_hold_entry(&dcu, p, name);
+	if (!rc) {
+		mq->pfid = pinum;
+		strlcpy(mq->name, name, sizeof(mq->name));
+		namecache_hold_entry(&dcu, p, name);
+	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
@@ -1336,10 +1335,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
@@ -1353,10 +1352,11 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
+ retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
@@ -1836,18 +1836,17 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
  retry:
 	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_READLINK, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	if (!rc) {
 
-	mq->fg = c->fcmh_fg;
+		mq->fg = c->fcmh_fg;
+		iov.iov_base = buf;
+		iov.iov_len = sizeof(buf) - 1;
+		rq->rq_bulk_abortable = 1;
+		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
-	iov.iov_base = buf;
-	iov.iov_len = sizeof(buf) - 1;
-	rq->rq_bulk_abortable = 1;
-	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
-
-	rc = SL_RSX_WAITREPF(csvc, rq, mp,
-	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+		rc = SL_RSX_WAITREPF(csvc, rq, mp,
+		    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+	}
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (!rc)
@@ -2443,10 +2442,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->opfg.fg_fid = opinum;
 	mq->npfg.fg_fid = npinum;
@@ -2468,11 +2467,13 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 
 	namecache_get_entries(&odcu, op, oldname, &ndcu, np, newname);
+
+  retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;

@@ -94,7 +94,7 @@ enum {
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-	} while ((rc) && slc_rmc_retry((pfr), &(rc)))
+	} while (0)
 
 /* obtain csvc to an IOS */
 #define slc_geticsvcxf(resm, fl, exp)					\
