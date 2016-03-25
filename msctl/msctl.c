@@ -1017,7 +1017,7 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HInRvV] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    __progname);
 	exit(1);
 }
