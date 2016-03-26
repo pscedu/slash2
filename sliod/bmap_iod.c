@@ -289,7 +289,7 @@ sli_process_leases(struct psc_dynarray *a)
 		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
 		if (rc) {
 			OPSTAT_INCR("bmap-release-fail");
-			psclog(rc != ESTALE ? PLL_ERROR : PLL_DIAG,
+			psclog(rc == ESTALE ? PLL_DIAG : PLL_ERROR,
 			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
 			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
 			psc_pool_return(bmap_rls_pool, brls);
@@ -356,7 +356,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
 
-			/* deadlock and busy bmap avoidance */ 
+			/* deadlock and busy bmap avoidance */
 			if (!BMAP_TRYLOCK(b)) {
 				skip = 1;
 				continue;
@@ -423,7 +423,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				freelock(&sli_release_bmap_lock);
 			continue;
 		}
-			
+
 		DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases",
 		    nrls);
 
