@@ -268,6 +268,8 @@ int
 slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
 	*csvcp = slc_getmcsvc(resm);
+	if (*csvcp)
+		return (0);
 	return (resm->resm_csvc->csvc_lasterrno);
 }
 
