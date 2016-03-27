@@ -834,7 +834,7 @@ EOF
 
 $SIG{INT} = sub {
 	debug_msg "handling interrupt";
-	cleanup() unless $opts{C};
+	cleanup();
 	exit 1;
 };
 
@@ -1177,6 +1177,8 @@ if ($emsg) {
 }
 
 sub cleanup {
+	return if $opts{C};
+
 	debug_msg "running cleanup";
 
 	my $n;
