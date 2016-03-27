@@ -291,10 +291,16 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] "
+	    "usage: %s [-HInV] [-p paramspec] [-S socket] [-s value] "
 	    "[cmd arg ...]\n",
 	    __progname);
 	exit(1);
+}
+
+void
+slmctl_show_version(void)
+{
+	fprintf(stderr, "%d\n", sl_stk_version);
 }
 
 struct psc_ctlopt opts[] = {
@@ -302,7 +308,8 @@ struct psc_ctlopt opts[] = {
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
-	{ 's', PCOF_FUNC, psc_ctlparse_show }
+	{ 's', PCOF_FUNC, psc_ctlparse_show },
+	{ 'V', PCOF_FLAG, slmctl_show_version },
 };
 
 int

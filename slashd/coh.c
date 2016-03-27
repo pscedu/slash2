@@ -80,6 +80,10 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
+	/*
+	 * We need to retry if the RPC timed out or when the lease
+	 * timeout, which ever comes first.
+	 */ 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
 	if (rc && rc != -ENOENT)
 		goto out;

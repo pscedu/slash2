@@ -238,7 +238,7 @@ main(int argc, char *argv[])
 			sfn = optarg;
 			break;
 		case 'V':
-			errx(0, "revision is %d", sl_stk_version);
+			errx(0, "version is %d", sl_stk_version);
 		default:
 			usage();
 		}
@@ -329,7 +329,7 @@ main(int argc, char *argv[])
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
 	time(&now);
-	psclogs_info(SLISS_INFO, "SLASH2 %s revision %d started at %s",
+	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
 	pfl_fault_register("sliod/seqno_read_fail");
