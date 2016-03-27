@@ -836,7 +836,7 @@ s2re
   dealing with a slow IOS; resulting lots of timeouts, EIO, etc.
 
 - move slash2 journal to an SSD on deployments
-- bump pagesize from 32k to something larger, perhaps 128k?
+- bump client pagesize from 32k to something larger, perhaps 128k?
 	- adapt pagesize for IO app is using?
 - pscrpc_export leaking?  check any slmctl -sp
 - try zfs_vdev_cache_size nonzero in SLASH2 MDS and IOS
@@ -851,22 +851,20 @@ s2re
 - du is broke on /crucible
 - awetzel: use something better than tar
 	- 0 length files
-- zhihui can still trigger the read-returns-all-zeroes racy I/O bug
-- PINNED crash
+- can still trigger the read-returns-all-zeroes racy I/O bug
 - psc_assert(msl_biorq_page_valid_accounting(r, i));
-- SIGBUS
+- still get SIGBUS in long running gdb sessions on fruits
 - instead of set pfr_interrupted=1, perhaps reply immediately then let
   the fsthr no-op?
 - 512-byte writes are only getting coalesced into 64k RPCs because of
   the definition of BMPC_COALESCE_MAX_IOV, although by my math it should
-  be 16k
-- namecache rc=13 crash
-- namecache/readdir race
+  be 16k..
 - ENOSPC loops
 - IOS is down and MDS crash loops trying to find op-reclaim.0
 - why are queued replicas always repl-status 'q' and never 's'?
+	- because we don't write changes to persistent storage, and its
+	  not held in memory, and the bmap is reset by mds_bmap_read
 - move mds_note_update() from RPC handling to mdsio
-- install pixz, DBI on advsys netboot
 - try disabling BIOS config option C-states on firehose6 to avoid perf
   hangs
 - writeahead now creates +1 bmap beyond EOF when using
