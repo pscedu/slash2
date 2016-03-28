@@ -222,7 +222,10 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ENONET:
 #endif
 	case ENOTCONN:
+		break;
 	case ETIMEDOUT:
+		/* XXX track on per IOS/MDS basis */
+		OPSTAT_INCR("msl.timeout");
 		break;
 
 	/*
@@ -262,40 +265,12 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 }
 
 int
-slc_rmc_getcsvc(struct pscfs_req *pfr,
-    struct sl_resm *resm, struct slrpc_cservice **csvcp)
+slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
 {
-	int rc;
-
 	*csvcp = slc_getmcsvc(resm);
 	if (*csvcp)
 		return (0);
-
-	for (;;) {
-		rc = 0;
-		CSVC_LOCK(resm->resm_csvc);
-		*csvcp = slc_getmcsvc(resm);
-		if (*csvcp)
-			break;
-
-		rc = resm->resm_csvc->csvc_lasterrno;
-		if (!slc_rmc_retry(pfr, &rc))
-			break;
-		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
-	}
-	CSVC_ULOCK(resm->resm_csvc);
-	return (rc);
-}
-
-int
-slc_rmc_getcsvc1(struct slrpc_cservice **csvcp, struct sl_resm *resm)
-{
-	int rc = 0;
-
-	*csvcp = slc_getmcsvc(resm);
-	if (*csvcp == NULL)
-		rc = resm->resm_csvc->csvc_lasterrno;
-	return (rc);
+	return (resm->resm_csvc->csvc_lasterrno);
 }
 
 void

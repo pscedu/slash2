@@ -29,7 +29,7 @@
 file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
-.Op Fl HInRv
+.Op Fl HInRVv
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -467,6 +467,9 @@ lookups for network addresses.
 .\"		'sys.ios_max_inflight_rpcs'
 .\"		     => "Maximum number of I/Os RPCs to ever have " .
 .\"			"inflight with a single IOS.",
+.\"		'sys.mds_max_inflight_rpcs'
+.\"		     => "Maximum number of RPCs to ever have " .
+.\"			"inflight with the MDS.",
 .\"		'sys.version'
 .\"		     => "Software revision number.",
 .\"		'sys.root_squash'
@@ -945,6 +948,8 @@ may also be specified to display a list of recognized values.
 .It Fl U Ar replrqspec Ns : Ns Ar fn
 Shorthand for
 .Cm repl-remove .
+.It Fl V
+Show version.
 .It Fl v
 Verbose mode:
 display additional information about each operation being performed.

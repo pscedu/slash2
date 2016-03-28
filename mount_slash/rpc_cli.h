@@ -73,7 +73,7 @@ enum {
  * Initialize a new RPC request for a pscfs clientctx.
  * Most arguments here are macro-value-result.
  */
-#define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
+#define MSL_RMC_NEWREQ(f, csvc, op, rq, mq, mp, rc)			\
 	do {								\
 		struct sl_resm *_resm;					\
 									\
@@ -86,7 +86,7 @@ enum {
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-		(rc) = slc_rmc_getcsvc((pfr), _resm, &(csvc));		\
+		(rc) = slc_rmc_getcsvc(_resm, &(csvc));			\
 		if (rc)							\
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp));	\
@@ -94,7 +94,7 @@ enum {
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-	} while ((rc) && slc_rmc_retry((pfr), &(rc)))
+	} while (0)
 
 /* obtain csvc to an IOS */
 #define slc_geticsvcxf(resm, fl, exp)					\
@@ -120,9 +120,7 @@ enum {
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getcsvc(struct pscfs_req *, struct sl_resm *,
-	    struct slrpc_cservice **);
-int	slc_rmc_getcsvc1(struct slrpc_cservice **, struct sl_resm *);
+int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
 int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 

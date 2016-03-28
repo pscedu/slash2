@@ -266,9 +266,10 @@ usage(void)
 	exit(1);
 }
 
-void slictl_show_version(char *showspec)
+void
+slictl_show_version(void)
 {
-	fprintf(stderr, "slictl version is %d.\n", sl_stk_version);
+	fprintf(stderr, "%d\n", sl_stk_version);
 }
 
 struct psc_ctlopt opts[] = {
