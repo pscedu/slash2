@@ -599,7 +599,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
-		    (vnew == BREPLST_GARBAGE &&
+		    (vold != BREPLST_GARBAGE_SCHED &&
+		     vnew == BREPLST_GARBAGE &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid, NULL);
 
@@ -610,7 +611,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		     vold == BREPLST_TRUNCPNDG ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
-		    (vnew == BREPLST_GARBAGE ||
+		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&
+		      vnew == BREPLST_GARBAGE) ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
 			PUSH_IOS(b, &del, resid, NULL);
@@ -620,11 +622,13 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		 * it.
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
+		    vold == BREPLST_GARBAGE_SCHED ||
 		    vold == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 
 		/* Work was scheduled. */
 		else if (vnew == BREPLST_REPL_SCHED ||
+		    vnew == BREPLST_GARBAGE_SCHED ||
 		    vnew == BREPLST_TRUNCPNDG_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
 
@@ -948,9 +952,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
 		/*
-		 * Before blindly doing the transition, we have
-		 * to check to ensure this operation would retain
-		 * at least one valid replica.
+		 * Before blindly doing the transition, we have to check
+		 * to ensure this operation would retain at least one
+		 * valid replica.
 		 */
 		replv.n = 0;
 		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
@@ -963,12 +967,12 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		    nios, slm_repl_delrq_cb, &flags);
 		if (flags & FLAG_DIRTY)
 			mds_bmap_write_logrepls(b);
+
  bmap_done:
 		slm_repl_bmap_rel(b);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
-
 	}
 
  out:

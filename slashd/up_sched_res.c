@@ -130,12 +130,12 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	struct bmap *b = NULL;
 
 	if (!error && p && p->rc)
-		error = p->rc;
+		error = -p->rc;
 
-	if (!error)
-		OPSTAT_INCR("repl-schedwk");
-	else
+	if (error)
 		OPSTAT_INCR("repl-schedwk-fail");
+	else
+		OPSTAT_INCR("repl-schedwk");
 
 	dst_resm = res_getmemb(bsr->bsr_res);
 
@@ -158,7 +158,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 	BHGEN_GET(b, &bgen);
 	if (!error && q->bgen != bgen)
-		error = SLERR_GEN_OLD;
+		error = -SLERR_GEN_OLD;
 
 	if (error == 0 && p && error == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
@@ -168,7 +168,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 	} else {
-		if (p == NULL || error == SLERR_ION_OFFLINE) {
+		if (p == NULL || error == -SLERR_ION_OFFLINE ||
+		    error == -ECONNRESET) {
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
 			    " SET	status = 'Q'"
@@ -181,6 +182,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 			tract[BREPLST_REPL_SCHED] =
 			    BREPLST_REPL_QUEUED;
 		} else {
+			/* Fatal error: cancel replication. */
 			tract[BREPLST_REPL_SCHED] =
 			    BREPLST_GARBAGE;
 		}
@@ -332,8 +334,9 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	    SQLITE_INTEGER, b->bcm_bmapno);
 
 	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
-	    csvc, SRMT_REPL_SCHEDWK, SRMI_BULK_PORTAL, SRIM_BULK_PORTAL,
-	    &q, sizeof(q), bsr, &slm_batch_rep_repl, 5);
+	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
+	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
+	    &slm_batch_rep_repl, 5);
 	if (rc) {
 		dbdo(NULL, NULL,
 		    " UPDATE	upsch"
@@ -447,7 +450,6 @@ slm_batch_ptrunc_cb(void *req, void *rep, void *scratch, int error)
 	(void)scratch;
 	(void)error;
 
-
 	slm_upsch_finish_ptrunc(NULL, NULL, 0, 0, 0);
 }
 
@@ -532,8 +534,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		return (0);
 
  out:
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(csvc, b, sched, rc, off);
 	return (rc);
 }
@@ -550,7 +551,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	struct bmap *b;
 
 	if (!error && p && p->rc)
-		error = p->rc;
+		error = -p->rc;
 
 	if (error == -PFLERR_NOTSUP) {
 		struct resprof_mds_info *rpmi;
@@ -633,9 +634,10 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
 
-	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs, csvc,
-	    SRMT_PRECLAIM, SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q,
-	    sizeof(q), bsp, &slm_batch_rep_preclaim, 30);
+	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs,
+	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
+	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
+	    &slm_batch_rep_preclaim, 30);
 	if (rc) {
 		dbdo(NULL, NULL,
 		    " UPDATE	upsch"
@@ -672,6 +674,11 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	return (0);
 }
 
+/*
+ * Process a HLDROP from LNet/PFLRPC, meaning that a connection to an
+ * IOS has been lost.  Since replication is idempotent, we take the easy
+ * route and just revert in progress work and will reissue later.
+ */
 void
 upd_proc_hldrop(struct slm_update_data *tupd)
 {
@@ -928,9 +935,12 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
-	if (slm_preclaim_enabled)
+	if (slm_preclaim_enabled) {
 		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+	}
 
 	BMAP_WAIT_BUSY(b);
 	BMAPOD_WRLOCK(bmi);
