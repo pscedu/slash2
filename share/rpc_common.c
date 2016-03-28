@@ -752,7 +752,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, struct psc_dynarray *peernids,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
-    enum slconn_type selftype, enum slconn_type peertype, struct pfl_multiwait *mw)
+    enum slconn_type peertype, struct pfl_multiwait *mw)
 {
 	void *hldropf, *hldroparg;
 	uint32_t *stkversp = NULL;
@@ -807,7 +807,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
 	csvc->csvc_flags = flags;
-	csvc->csvc_selftype = selftype;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
 	csvc->csvc_version = version;
@@ -1055,7 +1054,7 @@ slconnthr_main(struct psc_thread *thr)
 			    scp->scp_peernids,
 			    scp->scp_rqptl, scp->scp_rpptl,
 			    scp->scp_magic, scp->scp_version,
-			    scp->scp_selftype, scp->scp_peertype, NULL);
+			    scp->scp_peertype, NULL);
 			if (csvc == NULL)
 				/*
 				 * XXX: Allow manual activity to try to

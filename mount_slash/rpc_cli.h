@@ -100,13 +100,13 @@ enum {
 #define slc_geticsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
-	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_CLI, SLCONNT_IOD, msl_getmw())
+	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw())
 
 /* obtain csvc to an MDS */
 #define slc_getmcsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
-	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_CLI, SLCONNT_MDS, msl_getmw())
+	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_MDS, msl_getmw())
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))

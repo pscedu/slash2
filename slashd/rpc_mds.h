@@ -100,12 +100,12 @@ void	slmbchrqthr_spawn(void);
 #define slm_getmcsvc(resm, exp, fl, mw)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,	\
-	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, SLCONNT_MDS, (mw))
+	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, (mw))
 
 #define slm_geticsvc(resm, exp, fl, mw)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
-	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_MDS, SLCONNT_IOD, (mw))
+	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (mw))
 
 #define slm_getclcsvc(x)	_slm_getclcsvc(PFL_CALLERINFO(), (x))
 
@@ -129,7 +129,7 @@ _slm_getclcsvc(const struct pfl_callerinfo *pci,
 		return (NULL);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    SLCONNT_MDS, SLCONNT_CLI, NULL));
+	    SLCONNT_CLI, NULL));
 }
 #undef _pfl_callerinfo
 

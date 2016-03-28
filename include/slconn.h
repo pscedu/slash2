@@ -59,7 +59,6 @@ struct slconn_params {
 	int			  scp_flags;
 	struct psc_dynarray	 *scp_peernids;
 	enum slconn_type	  scp_peertype;
-	enum slconn_type	  scp_selftype;
 
 	uint32_t		  scp_rqptl;
 	uint32_t		  scp_rpptl;
@@ -108,7 +107,6 @@ struct slrpc_cservice {
 #define csvc_flags	csvc_params.scp_flags
 #define csvc_magic	csvc_params.scp_magic
 #define csvc_version	csvc_params.scp_version
-#define csvc_selftype	csvc_params.scp_selftype
 #define csvc_peertype	csvc_params.scp_peertype
 #define csvc_peernids	csvc_params.scp_peernids
 #define csvc_rqptl	csvc_params.scp_rqptl
@@ -150,9 +148,9 @@ struct sl_expcli_ops {
 #define CSVC_CALLERINFO			PFL_CALLERINFO()
 
 #define sl_csvc_get(csvcp, flg, exp, nids,				\
-	    pq, pp, mag, vers, selftype, peertype, mw)			\
+	    pq, pp, mag, vers, ctype, mw)				\
 	_sl_csvc_get(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nids),	\
-	    (pq), (pp), (mag), (vers), (selftype), (peertype), (mw))
+	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
 #define SLRPC_DISCONNF_HIGHLEVEL	(1 << 0)
 
@@ -391,7 +389,7 @@ struct slashrpc_cservice *
 	_sl_csvc_get(const struct pfl_callerinfo *,
 	    struct slrpc_cservice **, int, struct pscrpc_export *,
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
-	    uint32_t, enum slconn_type, enum slconn_type, struct pfl_multiwait *);
+	    uint32_t, enum slconn_type, struct pfl_multiwait *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
 	    struct slashrpc_cservice *);
