@@ -1336,6 +1336,14 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			goto retry;
 		}
 
+		/*
+		 * We are going to re-read the page, so clear its previous
+		 * errors.
+		 */
+		if (e->bmpce_rc) {
+			OPSTAT_INCR("msl.clear_rc");
+			e->bmpce_rc = 0;
+		}
 		e->bmpce_flags |= BMPCEF_FAULTING;
 		psc_dynarray_add(&pages, e);
 		DEBUG_BMPCE(PLL_DIAG, e, "npages=%d i=%d",
