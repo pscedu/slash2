@@ -2116,7 +2116,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		mfsrq_seterr(q, rc);
 	}
 
-	/* Step 5: finish up biorqs. */
+	/* Step 5: finish up biorqs (user copy in happens in this step) */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
