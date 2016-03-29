@@ -681,8 +681,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp,
-		    rc);
+		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp, rc);
 		if (!rc) {
 			mq->fg = f->fcmh_fg;
 			mq->iosid = msl_pref_ios;
@@ -691,6 +690,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 		}
 	} while (rc && slc_rmc_retry(pfr, &rc));
 
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 
