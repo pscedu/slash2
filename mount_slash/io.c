@@ -1020,8 +1020,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		len = MIN(LNET_MTU, size - off);
 
 		if (op == SRMT_WRITE)
-			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq,
-			    mp);
+			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 		else
 			rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 		if (rc)
