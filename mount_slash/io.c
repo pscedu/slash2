@@ -1418,6 +1418,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	struct timespec ts0, ts1, tsd;
 
+	/* read-before-write will kill performance */
 	if (r->biorq_flags & BIORQ_READ) {
 		perfect_ra = 1;
 		rc = msl_launch_read_rpcs(r);
