@@ -251,6 +251,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 			psclog_errorx("inox CRC fail (rc=%d) "
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
 			    rc, od_crc, crc);
+			OPSTAT_INCR("badcrc");
 			rc = -PFLERR_BADCRC;
 		}
 	}

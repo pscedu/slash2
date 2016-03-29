@@ -221,8 +221,10 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	if (nb == BMAP_OD_SZ) {
 		psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
-		if (od_crc != crc)
+		if (od_crc != crc) {
+			OPSTAT_INCR("badcrc");
 			rc = PFLERR_BADCRC;
+		}
 	}
 
  out1:
