@@ -125,6 +125,10 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
 			BMPCE_LOCK(e);
+			/*
+			 * It is possible that the EIO flag can be cleared
+			 * and the page is re-used now.
+			 */
 			if (e->bmpce_flags & BMPCEF_EIO) {
 				if (e->bmpce_flags & BMPCEF_READAHEAD) {
 					e->bmpce_flags &= ~BMPCEF_EIO;
