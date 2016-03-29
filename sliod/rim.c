@@ -24,7 +24,12 @@
  * Routines for handling RPC requests for ION from MDS.
  */
 
+#ifdef HAVE_FALLOC_FL_PUNCH_HOLE
+#  include <linux/falloc.h>
+#endif
+
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 
 #include "pfl/ctlsvr.h"
@@ -74,9 +79,9 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 		return (0);
 
 	/* XXX lock/clear sliver pages in memory? */
-	if (fallocate(fcmh_2_fd(f),
-	    HAVE_FALLOC_FL_PUNCH_HOLE, q->bno *
-	    SLASH_BMAP_SIZE, SLASH_BMAP_SIZE) == -1)
+	if (fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
+	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE,
+	    SLASH_BMAP_SIZE) == -1)
 		p->rc = -errno;
 
 	fcmh_op_done(f);

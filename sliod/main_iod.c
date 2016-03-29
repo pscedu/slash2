@@ -49,6 +49,7 @@
 #include "pfl/workthr.h"
 
 #include "authbuf.h"
+#include "batchrpc.h"
 #include "bmap_iod.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
@@ -328,15 +329,11 @@ main(int argc, char *argv[])
 	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
+	slrpc_batches_init(SLITHRT_BATCHRPC, "sli");
+
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
-
-	pfl_fault_register("sliod/seqno_read_fail");
-	pfl_fault_register("sliod/seqno_write_fail");
-
-	pfl_fault_register("sliod/read_delay");
-	pfl_fault_register("sliod/write_delay");
 
 	slictlthr_main(sfn);
 	exit(0);

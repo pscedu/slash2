@@ -905,6 +905,10 @@ msctlthr_spawn(void)
 	    NULL);
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
+
+	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
+
 	psc_ctlparam_register_var("sys.predio_window_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_window_size);
