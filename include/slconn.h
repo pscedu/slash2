@@ -89,7 +89,7 @@ struct slrpc_cservice {
 	 * peer, an export, is for receiving requests and sending replies.
 	 */
 	struct pscrpc_import	*csvc_import;
-	int			 csvc_lasterrno;
+	int			 csvc_lasterrno;	/* zeroed after a success */
 	int			 csvc_tryref;
 	int			 csvc_refcnt;
 
