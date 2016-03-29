@@ -1469,6 +1469,9 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			continue;
 		}
 
+		/*
+		 * XXX We can't read/write page in this state.
+		 */
 		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
 			msl_fsrq_aiowait_tryadd_locked(e, r);
 			aiowait = 1;
