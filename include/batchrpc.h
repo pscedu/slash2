@@ -1,5 +1,23 @@
 /* $Id$ */
-/* %GPL_LICENSE% */
+/*
+ * %GPL_START_LICENSE%
+ * ---------------------------------------------------------------------
+ * Copyright 2016, Google, Inc.
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License contained in the file
+ * `COPYING-GPL' at the top of this distribution or at
+ * https://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * ---------------------------------------------------------------------
+ * %END_LICENSE%
+ */
 
 /*
  * The batch RPC API provides a structure and set of routines for
@@ -47,6 +65,7 @@ struct slrpc_batch_req {
 	struct psc_listentry		  bq_lentry_global;	/* global list membership */
 	struct psc_listentry		  bq_lentry_res;	/* membership on bq_res_batches */
 	struct timeval			  bq_expire;		/* when to transmit */
+	struct psc_listcache		 *bq_workq;		/* work queue to process events */
 
 	struct pscrpc_request		 *bq_rq;
 	struct slashrpc_cservice	 *bq_csvc;
@@ -55,6 +74,7 @@ struct slrpc_batch_req {
 	int				  bq_flags;		/* see BATCHF_* below */
 	int				  bq_refcnt;
 	int				  bq_error;		/* return/processing error code */
+	uint32_t			  bq_opc;		/* underlying RPC operation code */
 
 	void				 *bq_reqbuf;		/* outgoing request bulk RPC */
 	void				 *bq_repbuf;		/* incoming reply bulk RPC */
@@ -77,6 +97,7 @@ struct slrpc_batch_rep {
 	int				  bp_refcnt;
 	int				  bp_flags;
 	int				  bp_error;
+	uint32_t			  bp_opc;		/* underlying RPC operation code */
 
 	void				 *bp_reqbuf;		/* incoming request bulk RPC */
 	void				 *bp_repbuf;		/* outgoing reply bulk RPC */
@@ -103,30 +124,35 @@ struct slrpc_batch_rep {
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrq@%p bid=%"PRIu64" refs=%d flags=%#x reqbuf=%p "	\
-	    "qlen=%d repbuf=%p plen=%d rc=%d "fmt,			\
+	    "batchrpcrq@%p bid=%"PRIu64" refs=%d flags=%#x opc=%d "	\
+	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
 	    (bq), (bq)->bq_bid, (bq)->bq_refcnt, (bq)->bq_flags,	\
-	    (bq)->bq_reqbuf, (bq)->bq_reqlen, (bq)->bq_repbuf,		\
-	    (bq)->bq_replen, (bq)->bq_error, ##__VA_ARGS__)
+	    (bq)->bq_opc, (bq)->bq_reqbuf, (bq)->bq_reqlen,		\
+	    (bq)->bq_repbuf, (bq)->bq_replen, (bq)->bq_error, ##__VA_ARGS__)
 
 #define PFLOG_BATCH_REP(level, bp, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrp@%p bid=%"PRIu64" refs=%d flags=%#x reqbuf=%p "	\
-	    "qlen=%d repbuf=%p plen=%d rc=%d "fmt,			\
+	    "batchrpcrp@%p bid=%"PRIu64" refs=%d flags=%#x opc=%d "	\
+	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
 	    (bp), (bp)->bp_bid, (bp)->bp_refcnt, (bp)->bp_flags,	\
-	    (bp)->bp_reqbuf, (bp)->bp_reqlen, (bp)->bp_repbuf,		\
-	    (bp)->bp_replen, (bp)->bp_error, ##__VA_ARGS__)
+	    (bp)->bp_opc, (bp)->bp_reqbuf, (bp)->bp_reqlen,		\
+	    (bp)->bp_repbuf, (bp)->bp_replen, (bp)->bp_error, ##__VA_ARGS__)
 
 int	slrpc_batch_req_add(struct psc_listcache *,
-	    struct slashrpc_cservice *, uint32_t, int, int, void *,
-	    size_t, void *, struct slrpc_batch_rep_handler *, int);
+	    struct psc_listcache *, struct slashrpc_cservice *,
+	    uint32_t, int, int, void *, size_t, void *,
+	    struct slrpc_batch_rep_handler *, int);
 
 void	slrpc_batches_init(int, const char *);
 void	slrpc_batches_destroy(void);
 void	slrpc_batches_drop(struct psc_listcache *);
 
+#define slrpc_batch_rep_decref(rep, error)				\
+	_slrpc_batch_rep_decref(PFL_CALLERINFO(), (rep), (error))
+
 void	slrpc_batch_rep_incref(struct slrpc_batch_rep *);
-void	slrpc_batch_rep_decref(struct slrpc_batch_rep *, int);
+void	_slrpc_batch_rep_decref(const struct pfl_callerinfo *,
+	    struct slrpc_batch_rep *, int);
 
 int	slrpc_batch_handle_reply(struct pscrpc_request *);
 int	slrpc_batch_handle_request(struct slashrpc_cservice *,

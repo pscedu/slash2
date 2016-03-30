@@ -383,6 +383,7 @@ extern int			 msl_max_nretries;
 extern int			 msl_predio_issue_maxpages;
 extern int			 msl_predio_issue_minpages;
 extern int			 msl_predio_window_size;
+extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;

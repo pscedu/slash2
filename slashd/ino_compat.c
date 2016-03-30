@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2011-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2011-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -208,7 +208,11 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	if (crc != od_crc) {
+		OPSTAT_INCR("badcrc");
 		*rc = PFLERR_BADCRC;
+		DEBUG_INOH(PLL_WARN, ih, "CRC failed "
+		    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
+		    od_crc, crc);
 		PFL_GOTOERR(out, *rc);
 	}
 
@@ -280,8 +284,10 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 		return (SLERR_SHORTIO);
 
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	if (crc != od_crc)
+	if (crc != od_crc) {
+		OPSTAT_INCR("badcrc");
 		return (PFLERR_BADCRC);
+	}
 	ih->inoh_ino.ino_version = INO_VERSION;
 	ih->inoh_ino.ino_bsz = ino.bsz;
 	ih->inoh_ino.ino_nrepls = ino.nrepls;
@@ -324,8 +330,10 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 		return (SLERR_SHORTIO);
 
 	psc_crc64_calc(&crc, &inox, sizeof(inox));
-	if (crc != od_crc)
+	if (crc != od_crc) {
+		OPSTAT_INCR("badcrc");
 		return (PFLERR_BADCRC);
+	}
 	for (i = 0; i < 60; i++)
 		ih->inoh_extras->inox_repls[i] = inox.repls[i];
 	return (0);
@@ -367,8 +375,10 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 		return (SLERR_SHORTIO);
 
 	psc_crc64_calc(&crc, &bod, sizeof(bod));
-	if (crc != od_crc)
+	if (crc != od_crc) {
+		OPSTAT_INCR("badcrc");
 		return (PFLERR_BADCRC);
+	}
 	for (i = 0; i < 128; i++)
 		bmi->bmi_crcstates[i] = bod.crcstates[i];
 	for (i = 0; i < 24; i++)

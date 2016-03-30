@@ -124,15 +124,19 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
+			BMPCE_LOCK(e);
+			/*
+			 * It is possible that the EIO flag can be cleared
+			 * and the page is re-used now.
+			 */
 			if (e->bmpce_flags & BMPCEF_EIO) {
 				if (e->bmpce_flags & BMPCEF_READAHEAD) {
-					BMPCE_LOCK(e);
 					e->bmpce_flags &= ~BMPCEF_EIO;
-					BMPCE_ULOCK(e);
 				} else {
 					DEBUG_BMPCE(PLL_WARN, e,
 					    "skipping an EIO page");
 					OPSTAT_INCR("msl.bmpce-eio");
+					BMPCE_ULOCK(e);
  retry:
 					psc_waitq_waitrelf_us(
 					    &b->bcm_fcmh->fcmh_waitq,
@@ -147,7 +151,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 					continue;
 				}
 			}
-			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCEF_TOFREE) {
 				BMPCE_ULOCK(e);
 				goto retry;

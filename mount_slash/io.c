@@ -1020,8 +1020,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		len = MIN(LNET_MTU, size - off);
 
 		if (op == SRMT_WRITE)
-			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq,
-			    mp);
+			rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 		else
 			rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 		if (rc)
@@ -1336,6 +1335,14 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			goto retry;
 		}
 
+		/*
+		 * We are going to re-read the page, so clear its previous
+		 * errors.
+		 */
+		if (e->bmpce_rc) {
+			OPSTAT_INCR("msl.clear_rc");
+			e->bmpce_rc = 0;
+		}
 		e->bmpce_flags |= BMPCEF_FAULTING;
 		psc_dynarray_add(&pages, e);
 		DEBUG_BMPCE(PLL_DIAG, e, "npages=%d i=%d",
@@ -1410,6 +1417,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	struct timespec ts0, ts1, tsd;
 
+	/* read-before-write will kill performance */
 	if (r->biorq_flags & BIORQ_READ) {
 		perfect_ra = 1;
 		rc = msl_launch_read_rpcs(r);
@@ -1461,6 +1469,9 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			continue;
 		}
 
+		/*
+		 * XXX We can't read/write page in this state.
+		 */
 		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
 			msl_fsrq_aiowait_tryadd_locked(e, r);
 			aiowait = 1;
@@ -2116,7 +2127,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		mfsrq_seterr(q, rc);
 	}
 
-	/* Step 5: finish up biorqs. */
+	/* Step 5: finish up biorqs (user copy in happens in this step) */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)

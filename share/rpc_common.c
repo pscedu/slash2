@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -237,7 +237,13 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 		psc_fatalx("pscrpc_new_import");
 	imp->imp_cli_request_portal = csvc->csvc_rqptl;
 	imp->imp_cli_reply_portal = csvc->csvc_rpptl;
+
+#ifdef _SLASH_CLIENT 
+	imp->imp_max_retries = 0;
+#else
 	imp->imp_max_retries = PSCRPC_MAX_RETRIES;
+#endif
+
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;
 	imp->imp_hldropf = csvc->csvc_hldropf;

@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -84,7 +84,7 @@ typedef struct {
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
  *
- * A 64-bit checksum follows this structure on disk.
+ * A 64-bit CRC checksum follows this structure on disk.
  */
 struct slm_ino_od {
 	uint16_t		 ino_version;
@@ -101,7 +101,7 @@ struct slm_ino_od {
 #define INOF_IOS_AFFINITY	(1 << 0)			/* Prefer existing IOS for new bmaps */
 
 /*
- * A 64-bit checksum follows this structure on disk.
+ * A 64-bit CRC checksum follows this structure on disk.
  */
 struct slm_inox_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */

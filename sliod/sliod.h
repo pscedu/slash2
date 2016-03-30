@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@ enum {
 	SLITHRT_AIO = _PFL_NTHRT,	/* asynchronous I/O handlers */
 	SLITHRT_BMAPRLS,		/* notify MDS of completed write bmaps */
 	SLITHRT_BREAP,			/* bmap reaper */
+	SLITHRT_BATCHRPC,		/* batch RPC sender */
 	SLITHRT_CONN,			/* connection monitor */
 	SLITHRT_CRUD,			/* CRC update sender */
 	SLITHRT_CTL,			/* control processor */
@@ -66,12 +67,6 @@ enum {
 #define NSLVRSYNC_THRS		2	/* perhaps default to ncores + configurable? */
 
 #define NBMAPRLS_THRS		4	/* perhaps default to ncores + configurable? */
-
-enum {
-	SLI_FAULT_AIO_FAIL,
-	SLI_FAULT_CRCUP_FAIL,
-	SLI_FAULT_FSIO_READ_FAIL
-};
 
 struct sliric_thread {
 	struct pscrpc_thread	 sirct_prt;

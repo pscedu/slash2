@@ -2,7 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
+ * Copyright 2015-2016, Google, Inc.
  * Copyright (c) 2011-2015, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
@@ -80,6 +80,9 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 /*
  * Handle a READ or WRITE completion to CLI from ION (only used for
  * async I/O).
+ *
+ * XXX: if a read or write never comes back, those pages are held
+ * hostage.  We need a way to drop those async requests on the floor.
  *
  * @rq: request.
  */

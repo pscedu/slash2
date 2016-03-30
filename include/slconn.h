@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -89,7 +89,7 @@ struct slrpc_cservice {
 	 * peer, an export, is for receiving requests and sending replies.
 	 */
 	struct pscrpc_import	*csvc_import;
-	int			 csvc_lasterrno;
+	int			 csvc_lasterrno;	/* zeroed after a success */
 	int			 csvc_tryref;
 	int			 csvc_refcnt;
 

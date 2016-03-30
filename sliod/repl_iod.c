@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2009-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -139,10 +139,10 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	if (sli_repl_findwq(&q->fg, q->bno))
 		PFL_GOTOERR(out, error = -PFLERR_ALREADY);
 
-	error = sli_fcmh_get(&q->fg, &f);
+	error = -sli_fcmh_get(&q->fg, &f);
 	if (error)
 		PFL_GOTOERR(out, error);
-	error = bmap_get(f, q->bno, SL_READ, &b);
+	error = -bmap_get(f, q->bno, SL_READ, &b);
 	if (error)
 		PFL_GOTOERR(out, error);
 
@@ -167,7 +167,6 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	/* mark slivers for replication */
 	sli_bwqueued_adj(&sli_bwqueued.sbq_ingress, q->len);
 
-	BMAP_LOCK(b);
 	for (i = len = 0;
 	    i < SLASH_SLVRS_PER_BMAP && len < w->srw_len;
 	    i++, len += SLASH_SLVR_SIZE) {
@@ -175,7 +174,6 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 		bii->bii_crcstates[i] |= BMAP_SLVR_WANTREPL;
 		w->srw_nslvr_tot++;
 	}
-	BMAP_ULOCK(b);
 
 	PFLOG_REPLWK(PLL_DEBUG, w, "created; #slivers=%d",
 	    w->srw_nslvr_tot);
@@ -341,7 +339,8 @@ slireplpndthr_main(struct psc_thread *thr)
 	last = NULL;
 	while (pscthr_run(thr)) {
 		w = lc_getwait(&sli_replwkq_pending);
-		sli_repl_try_work(w, &last);
+		if (w)
+			sli_repl_try_work(w, &last);
 	}
 }
 

@@ -158,6 +158,7 @@ struct psc_hashtbl		 msl_gidmap_int;
 int				 msl_acl;
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
+int				 msl_max_retries = 3;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
@@ -680,8 +681,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp,
-		    rc);
+		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp, rc);
 		if (!rc) {
 			mq->fg = f->fcmh_fg;
 			mq->iosid = msl_pref_ios;
@@ -690,6 +690,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 		}
 	} while (rc && slc_rmc_retry(pfr, &rc));
 
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 

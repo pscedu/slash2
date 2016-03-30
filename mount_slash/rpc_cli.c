@@ -2,8 +2,8 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2007-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2015-2016, Google, Inc.
+ * Copyright 2007-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -226,6 +226,8 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ETIMEDOUT:
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
+		if (pfr->pfr_retries > msl_max_retries)
+			return (0);
 		break;
 
 	/*
@@ -245,6 +247,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	 * going to retry.
 	 */
 	if (pfr) {
+		pfr->pfr_retries++;
 		if (pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
