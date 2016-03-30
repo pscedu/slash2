@@ -37,9 +37,8 @@ struct slrpc_cservice;
 #define MSL_CBARG_CSVC			1
 #define MSL_CBARG_BIORQ			3
 #define MSL_CBARG_BIORQS		4
-#define MSL_CBARG_BMPC			5
-#define MSL_CBARG_BMAP			6
-#define MSL_CBARG_RESM			7
+#define MSL_CBARG_BMAP			5
+#define MSL_CBARG_RESM			6
 
 enum {
 	MSL_BMLGET_CBARG_BMAP,
