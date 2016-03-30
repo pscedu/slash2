@@ -63,6 +63,7 @@ int				 verbose;
 int				 recursive;
 
 const char			*daemon_name = "mount_slash";
+int				 exit_status;
 
 struct msctlmsg_replst		 current_mrs;
 int				 current_mrs_eof;
@@ -891,9 +892,16 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	slfid_t fid;
 	int i;
 
+	exit_status = 1;
+
 	if (psc_ctl_lastmsgtype != mh->mh_type &&
 	    psc_ctl_lastmsgtype != -1)
 		fprintf(stderr, "\n");
+
+	/*
+	 * If the beginning of a message looks like a FID, try translate
+	 * it back to full pathname from our cache.
+	 */
 	p = pce->pce_errmsg;
 	if (*p++ != '0')
 		goto out;
@@ -1056,5 +1064,5 @@ main(int argc, char *argv[])
 	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
 		    "not completed");
-	exit(0);
+	exit(exit_status);
 }
