@@ -1439,6 +1439,12 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			perfect_ra = 0;
 		}
 
+		/*
+		 * XXX If this is a write, we should clear
+		 * the page to its pristine state because
+		 * a previous failure should not cause the
+		 * current write to fail.
+		 */
 		if (e->bmpce_flags & BMPCEF_EIO) {
 			rc = e->bmpce_rc;
 			BMPCE_ULOCK(e);
