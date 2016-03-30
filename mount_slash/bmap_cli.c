@@ -1119,10 +1119,9 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 				*pm = m;
 			return (0);
 		}
+		
 		rc = m->resm_csvc->csvc_lasterrno;
-		if (rc)
-			return (-abs(rc));
-		return (-ETIMEDOUT);
+		return (rc);
 	}
 
 	fci = fcmh_get_pri(b->bcm_fcmh);

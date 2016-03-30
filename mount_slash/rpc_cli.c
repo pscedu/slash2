@@ -226,6 +226,8 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	case ETIMEDOUT:
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
+		if (pfr->pfr_retries > msl_max_retries)
+			return (0);
 		break;
 
 	/*
@@ -245,6 +247,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 	 * going to retry.
 	 */
 	if (pfr) {
+		pfr->pfr_retries++;
 		if (pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
