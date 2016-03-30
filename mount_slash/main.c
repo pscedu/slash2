@@ -3932,6 +3932,7 @@ msl_init(void)
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
+	msioretrythr_spawn();
 
 	name = getenv("MDS");
 	if (name == NULL)

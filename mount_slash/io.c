@@ -2236,6 +2236,15 @@ msreadaheadthr_main(struct psc_thread *thr)
 }
 
 void
+msioretrythr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+
+
+	}
+}
+
+void
 msreadaheadthr_spawn(void)
 {
 	struct msreadahead_thread *mrat;
@@ -2255,6 +2264,23 @@ msreadaheadthr_spawn(void)
 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
 		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);
+		pfl_multiwait_init(&mrat->mrat_mw, "%s",
+		    thr->pscthr_name);
+		pscthr_setready(thr);
+	}
+}
+
+void
+msioretrythr_spawn(void)
+{
+	int i;
+	struct msreadahead_thread *mrat;
+	struct psc_thread *thr;
+
+	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
+		thr = pscthr_init(MSTHRT_IORETRY, msreadaheadthr_main,
+		    NULL, sizeof(*mrat), "msreadaheadthr%d", i);
+		mrat = msioretrythr(thr);
 		pfl_multiwait_init(&mrat->mrat_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
