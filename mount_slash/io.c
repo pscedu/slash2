@@ -835,6 +835,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
 	struct bmap_pagecache_entry *e;
 	struct srm_io_req *mq;
 	struct bmap *b;
@@ -884,6 +885,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	psc_dynarray_free(a);
 	PSCFREE(a);
 
+	PSCFREE(iovs);
 	sl_csvc_decref(csvc);
 
 	return (rc);
@@ -1261,6 +1263,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_IOVS] = iovs;
 	rq->rq_interpret_reply = msl_read_cb;
 
 	biorq_incref(r);
@@ -1273,7 +1276,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		PFL_GOTOERR(out, rc);
 	}
 
-	PSCFREE(iovs);
 	return (0);
 
  out:
