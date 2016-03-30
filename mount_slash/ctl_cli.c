@@ -857,7 +857,7 @@ struct psc_ctlop msctlops[] = {
 void
 msctlthr_main(struct psc_thread *thr)
 {
-	char *s, *newstr, *fn = msl_ctlsockfn;
+	char *s, *newstr, *fn = (void *)msl_ctlsockfn;
 	int rc;
 
 	for (;;) {
@@ -868,8 +868,8 @@ msctlthr_main(struct psc_thread *thr)
 		s = strstr(fn, "%n");
 		if (s == NULL)
 			break;
-		rc = pfl_asprintf(&newstr, "%.*s%s%s", fn,
-		    "mount_slash", s + 2);
+		rc = pfl_asprintf(&newstr, "%.*s%s%s", (int)(s - fn),
+		    fn, "mount_slash", s + 2);
 		if (rc == -1)
 			psc_fatal("expand %s", msl_ctlsockfn);
 		PSCFREE(fn);
@@ -902,8 +902,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
-	psc_ctlparam_register_var("sys.nbrqthr-wait",
-	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_compl.compl_wq.wq_nwaiters);
+	psc_ctlparam_register_var("sys.nbrqthr_wait", PFLCTL_PARAMT_INT,
+	    0, &sl_nbrqset->set_compl.pc_wq.wq_nwaiters);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
