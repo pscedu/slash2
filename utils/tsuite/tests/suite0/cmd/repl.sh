@@ -19,5 +19,9 @@ dd if=$RANDOM_DATA of=$fn bs=131072
 
 msctl repl-add:io0@SITE0,io1@@SITE0:* $fn
 
+msctl repl-status $fn
+
 repl_wait io0@SITE0 $fn
 repl_wait io1@SITE0 $fn
+
+msctl repl-status $fn
