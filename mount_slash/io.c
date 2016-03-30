@@ -2240,8 +2240,7 @@ void
 msioretrythr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-
-
+		sleep(100000);
 	}
 }
 
