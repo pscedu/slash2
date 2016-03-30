@@ -857,10 +857,28 @@ struct psc_ctlop msctlops[] = {
 void
 msctlthr_main(struct psc_thread *thr)
 {
+	char *s, *newstr, *fn = msl_ctlsockfn;
+	int rc;
+
+	for (;;) {
+		/*
+		 * Under wokfs, %n will expand to "mount_wokfs" and not
+		 * "mount_slash" so substitute it here.
+		 */
+		s = strstr(fn, "%n");
+		if (s == NULL)
+			break;
+		rc = pfl_asprintf(&newstr, "%.*s%s%s", fn,
+		    "mount_slash", s + 2);
+		if (rc == -1)
+			psc_fatal("expand %s", msl_ctlsockfn);
+		PSCFREE(fn);
+		fn = newstr;
+	}
+
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
-	psc_ctlthr_main(msl_ctlsockfn, msctlops, nitems(msctlops),
-	    MSTHRT_CTLAC);
+	psc_ctlthr_main(fn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
 }
 
 void
@@ -884,6 +902,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
+	psc_ctlparam_register_var("sys.nbrqthr-wait",
+	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_compl.compl_wq.wq_nwaiters);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
