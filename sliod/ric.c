@@ -92,6 +92,17 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 	return (rc);
 }
 
+/*
+ * Check if the local storage is near full and if we are writing
+ * into a hole in the given file.
+ */
+__static int
+sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno, 
+    __unusedx int nslvrs)
+{
+	return (0);
+}
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
@@ -219,6 +230,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
 	if (rw == SL_WRITE) {
+		if (sli_not_enough_space(f, slvrno, nslvrs)) {
+			mp->rc = -ENOSPC;
+			PFL_GOTOERR(out1, mp->rc = -rc);
+		}
 		/*
 		 * Simplistic tracking of dirty slivers, ignoring duplicates.
 		 * We rely on clients to absort them.
