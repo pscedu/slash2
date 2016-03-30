@@ -17,7 +17,7 @@ fn=t000
 
 dd if=$RANDOM_DATA of=$fn bs=131072
 
-msctl repl-add:io0@SITE0,io1@@SITE0:* $fn
+msctl repl-add:io0@SITE0,io1@SITE0:* $fn
 
 msctl repl-status $fn
 
