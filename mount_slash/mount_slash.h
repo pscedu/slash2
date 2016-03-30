@@ -125,6 +125,14 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
  */
 #define MAX_BMAPS_REQ			2
 
+/*
+ * Used to retry an I/O request in the background.
+ */
+struct slc_retry_req {
+	struct psc_listentry		 slc_lentry;
+	struct bmpc_ioreq		*src_ioreq;
+};
+
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
 	struct pscrpc_async_args	  car_argv;
