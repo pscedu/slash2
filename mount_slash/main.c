@@ -135,6 +135,9 @@ struct psc_poolmgr		*msl_async_req_pool;
 struct psc_poolmaster		 msl_biorq_poolmaster;
 struct psc_poolmgr		*msl_biorq_pool;
 
+struct psc_poolmaster		 msl_retry_req_poolmaster;
+struct psc_poolmgr		*msl_retry_req_pool;
+
 struct psc_poolmaster		 msl_mfh_poolmaster;
 struct psc_poolmgr		*msl_mfh_pool;
 
@@ -3869,6 +3872,11 @@ msl_init(void)
 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
+
+	psc_poolmaster_init(&msl_retry_req_poolmaster,
+	    struct slc_retry_req, slc_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "retryrq");
+	msl_retry_req_pool = psc_poolmaster_getmgr(&msl_retry_req_poolmaster);
 
 	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
