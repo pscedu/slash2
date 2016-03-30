@@ -60,6 +60,7 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */
+	MSTHRT_IORETRY,			/* I/O retry thread */
 	MSTHRT_OPSTIMER,		/* opstats updater */
 	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	MSTHRT_WORKER			/* generic worker */
@@ -102,16 +103,22 @@ struct msreadahead_thread {
 	struct pfl_multiwait		 mrat_mw;
 };
 
+struct msioretry_thread {
+	struct pfl_multiwait		 mrat_mw;
+};
+
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
 PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
+PSCTHR_MKCAST(msioretrythr, msioretry_thread, MSTHRT_IORETRY);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
+#define NUM_IO_RETRY_THREADS		4
 #define NUM_READAHEAD_THREADS		4
 
 #define MSL_FIDNS_RPATH			".slfidns"
@@ -129,8 +136,8 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
  * Used to retry an I/O request in the background.
  */
 struct slc_retry_req {
-	struct psc_listentry		 slc_lentry;
-	struct bmpc_ioreq		*src_ioreq;
+	struct psc_listentry		 srr_lentry;
+	struct bmpc_ioreq		*srr_ioreq;
 };
 
 struct slc_async_req {
@@ -334,6 +341,7 @@ int	 _msl_resm_throttle(struct sl_resm *, int);
 
 void	 msbmapthr_spawn(void);
 void	 msctlthr_spawn(void);
+void	 msioretrythr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
@@ -380,6 +388,7 @@ extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;
 extern struct psc_poolmgr	*msl_async_req_pool;
+extern struct psc_poolmgr	*msl_retry_req_pool;
 extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
