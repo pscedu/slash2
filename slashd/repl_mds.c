@@ -230,7 +230,7 @@ int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
     const sl_replica_t iosv[], int iosidx[], int nios, int flags)
 {
-	int k, last;
+	int k;
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
@@ -239,9 +239,8 @@ _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
 	/* check for dups */
-	last = -1;
-	for (k = 0; k < nios; k++, last = iosidx[k])
-		if (iosidx[k] == last)
+	for (k = 1; k < nios; k++) 
+		if (iosidx[k] == iosidx[k - 1])
 			return (EINVAL);
 	return (0);
 }
