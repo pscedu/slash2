@@ -129,8 +129,8 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
  * Used to retry an I/O request in the background.
  */
 struct slc_retry_req {
-	struct psc_listentry		 slc_lentry;
-	struct bmpc_ioreq		*src_ioreq;
+	struct psc_listentry		 srr_lentry;
+	struct bmpc_ioreq		*srr_ioreq;
 };
 
 struct slc_async_req {
@@ -380,6 +380,7 @@ extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;
 extern struct psc_poolmgr	*msl_async_req_pool;
+extern struct psc_poolmgr	*msl_retry_req_pool;
 extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 

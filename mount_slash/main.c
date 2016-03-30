@@ -171,6 +171,11 @@ int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
 
+/*
+ * I/O requests that have failed due to timeouts are placed here for retry.
+ */
+struct psc_lockedlist		 slc_retry_req_list;
+
 struct sl_resource *
 msl_get_pref_ios(void)
 {
@@ -3874,7 +3879,7 @@ msl_init(void)
 	    dircache_ent_cmp, "namecache");
 
 	psc_poolmaster_init(&msl_retry_req_poolmaster,
-	    struct slc_retry_req, slc_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct slc_retry_req, srr_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "retryrq");
 	msl_retry_req_pool = psc_poolmaster_getmgr(&msl_retry_req_poolmaster);
 
@@ -3897,6 +3902,8 @@ msl_init(void)
 	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
+
+	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry, NULL);
 
 	/* Start up service threads. */
 	slrpc_initcli();
