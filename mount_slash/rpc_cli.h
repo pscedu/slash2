@@ -32,7 +32,7 @@ struct pscrpc_request;
 
 struct slrpc_cservice;
 
-/* async RPC pointers */
+/* async RPC pointers, must be less than PSCRPC_MAX_ASYNC_ARGS */
 #define MSL_CBARG_BMPCE			0
 #define MSL_CBARG_CSVC			1
 #define MSL_CBARG_BIORQ			3
