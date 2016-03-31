@@ -265,8 +265,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	if (rw == SL_WRITE) {
 		if (sli_not_enough_space(f, slvrno, nslvrs)) {
-			mp->rc = -ENOSPC;
-			PFL_GOTOERR(out1, mp->rc = -rc);
+			FCMH_ULOCK(f);
+			rc = 0;
+			OPSTAT_INCR("out-of-space");
+			PFL_GOTOERR(out1, mp->rc = -ENOSPC);
 		}
 		/*
 		 * Simplistic tracking of dirty slivers, ignoring duplicates.
