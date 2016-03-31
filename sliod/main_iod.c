@@ -105,21 +105,20 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 slistatfsthr_main(struct psc_thread *thr)
 {
-	struct statvfs sfb;
 	char type[LINE_MAX];
 	int rc;
 
 	pfl_getfstype(slcfg_local->cfg_fsroot, type, sizeof(type));
 
 	while (pscthr_run(thr)) {
-		rc = statvfs(slcfg_local->cfg_fsroot, &sfb);
+		rc = statvfs(slcfg_local->cfg_fsroot, &stat_buf);
 		if (rc == -1)
 			psclog_error("statvfs %s",
 			    slcfg_local->cfg_fsroot);
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
-			sl_externalize_statfs(&sfb, &sli_ssfb);
+			sl_externalize_statfs(&stat_buf, &sli_ssfb);
 			strlcpy(sli_ssfb.sf_type, type,
 			    sizeof(sli_ssfb.sf_type));
 			freelock(&sli_ssfb_lock);

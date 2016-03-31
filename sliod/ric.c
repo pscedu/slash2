@@ -63,6 +63,7 @@ extern struct psc_lockedlist	 sli_bii_rls;
 
 struct timespec		 	 stat_age;
 struct timespec		 	 stat_timeo = { 30, 0 };
+struct statvfs 			 stat_buf;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
