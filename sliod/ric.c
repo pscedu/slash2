@@ -104,10 +104,11 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
  * into a hole in the given file.
  */
 __static int
-sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno, 
-    __unusedx int nslvrs)
+sli_not_enough_space(struct fidc_membh *f, uint32_t bmapno, 
+    uint32_t offset, uint32_t size)
 {
-	int percentage;
+	off_t ret, off;
+	int fd, percentage;
 	struct statvfs buf;
 	struct timespec crtime;
 
@@ -124,10 +125,21 @@ sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno,
 
  next:
 	percentage = buf.f_bfree * 100 / buf.f_blocks;
-	if (percentage < sli_min_space_reserve)
-		return (1);
+	if (percentage >= sli_min_space_reserve)
+		return (0);
 
-	return (0);
+	fd = fcmh_2_fd(f);
+	off = (off_t)bmapno * SLASH_BMAP_SIZE + offset;
+	ret = lseek(fd, offset, SEEK_HOLE);
+	/*
+ 	 * ret = -1 is possible if the system does not
+ 	 * support it (e.g., ZFS on FreeBSD 9.0) or 
+ 	 * the file size is zero.
+ 	 */
+	if (ret != -1 && off + size <= ret)
+		return (0);
+
+	return (1);
 }
 
 __static int
@@ -264,7 +276,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		if (sli_not_enough_space(f, slvrno, nslvrs)) {
+		if (sli_not_enough_space(f, bmapno, mq->offset, mq->size)) {
 			FCMH_ULOCK(f);
 			OPSTAT_INCR("out-of-space");
 			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
