@@ -114,4 +114,7 @@ extern struct psc_thread	*sliconnthr;
 extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
 
+extern struct timespec		 stat_age;
+extern struct timespec		 stat_timeo;
+
 #endif /* _SLIOD_H_ */

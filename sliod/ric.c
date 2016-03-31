@@ -61,6 +61,9 @@ int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
 extern struct psc_lockedlist	 sli_bii_rls;
 
+struct timespec		 	 stat_age;
+struct timespec		 	 stat_timeo = { 30, 0 };
+
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)
@@ -106,10 +109,20 @@ sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno,
 {
 	int percentage;
 	struct statvfs buf;
+	struct timespec crtime;
+
+	PFL_GETTIMESPEC(&crtime);
+
+	timespecsub(&crtime, &stat_timeo, &crtime);
+	if (timespeccmp(&crtime, &stat_age, <))
+		goto next;
 
 	if (statvfs(slcfg_local->cfg_fsroot, &buf) < 0)
 		return (1);
 
+	PFL_GETTIMESPEC(&stat_age);
+
+ next:
 	percentage = buf.f_bfree * 100 / buf.f_blocks;
 	if (percentage < sli_min_space_reserve)
 		return (1);
