@@ -642,9 +642,9 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
 
-	psc_ctlparam_register_var("sys.space_reserve",
+	psc_ctlparam_register_var("sys.min_space_reserve",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &sli_space_reserve);
+	    &sli_min_space_reserve);
 
 	psc_ctlparam_register_var("sys.sync_max_writes",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,

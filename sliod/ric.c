@@ -47,6 +47,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
+#include <sys/statvfs.h>
+
 #define MIN_SPACE_RESERVE	5		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
@@ -54,8 +56,8 @@
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
-int				 sli_space_reserve = MIN_SPACE_RESERVE;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
+int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
 extern struct psc_lockedlist	 sli_bii_rls;
 
@@ -102,6 +104,16 @@ __static int
 sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno, 
     __unusedx int nslvrs)
 {
+	int percentage;
+	struct statvfs buf;
+
+	if (statvfs(slcfg_local->cfg_fsroot, &buf) < 0)
+		return (1);
+
+	percentage = buf.f_bfree * 100 / buf.f_blocks;
+	if (percentage < sli_min_space_reserve)
+		return (1);
+
 	return (0);
 }
 
