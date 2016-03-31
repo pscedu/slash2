@@ -29,7 +29,7 @@ msctl repl-remove:io0@SITE0:* $fn
 echo $cksum | md5sum -c
 
 msctl repl-add:io0@SITE0:* $fn
+repl_wait io0@SITE0 $fn
 msctl repl-remove:io1@SITE0:* $fn
 
 echo $cksum | md5sum -c
-
