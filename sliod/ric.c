@@ -256,6 +256,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
+	/* Paranoid: clear more than necessary. */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
+		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
+
 	if (rw == SL_WRITE) {
 		if (sli_not_enough_space(f, slvrno, nslvrs)) {
 			mp->rc = -ENOSPC;
@@ -276,12 +283,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	/* Paranoid: clear more than necessary. */
-	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
-		slvr[i] = NULL;
-		iovs[i].iov_len = 0;
-		iovs[i].iov_base = 0;
-	}
 
 	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
