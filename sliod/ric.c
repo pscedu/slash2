@@ -118,7 +118,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	/*
  	 * ret = -1 is possible if the system does not
  	 * support it (e.g., ZFS on FreeBSD 9.0) or 
- 	 * the file size is zero.
+ 	 * the offset is beyond EOF.
  	 */
 	if (ret != -1 && off + size <= ret)
 		return (1);
