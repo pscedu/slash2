@@ -155,6 +155,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	percentage = sli_stat_buf.f_bfree * 100 / sli_stat_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve) {
 		error = -ENOSPC;
+		OPSTAT_INCR("repl-out-of-space");
 		PFL_GOTOERR(out, error);
 	}
 

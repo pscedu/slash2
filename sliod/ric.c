@@ -262,7 +262,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rw == SL_WRITE) {
 		if (!sli_has_enough_space(f, bmapno, mq->offset, mq->size)) {
 			FCMH_ULOCK(f);
-			OPSTAT_INCR("out-of-space");
+			OPSTAT_INCR("write-out-of-space");
 			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
 		}
 		/*
