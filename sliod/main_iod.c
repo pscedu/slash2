@@ -330,9 +330,6 @@ main(int argc, char *argv[])
 
 	slrpc_batches_init(SLITHRT_BATCHRPC, "sli");
 
-	PFL_GETTIMESPEC(&stat_age);
-	timespecsub(&stat_age, &stat_timeo, &stat_age);
-
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));

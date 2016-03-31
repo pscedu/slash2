@@ -61,8 +61,6 @@ int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
 extern struct psc_lockedlist	 sli_bii_rls;
 
-struct timespec		 	 stat_age;
-struct timespec		 	 stat_timeo = { 30, 0 };
 struct statvfs 			 stat_buf;
 
 int
@@ -110,22 +108,8 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 {
 	off_t ret, off;
 	int fd, percentage;
-	struct timespec crtime;
-	static struct statvfs buf;
 
-	PFL_GETTIMESPEC(&crtime);
-
-	timespecsub(&crtime, &stat_timeo, &crtime);
-	if (timespeccmp(&crtime, &stat_age, <))
-		goto next;
-
-	if (statvfs(slcfg_local->cfg_fsroot, &buf) < 0)
-		return (0);
-
-	PFL_GETTIMESPEC(&stat_age);
-
- next:
-	percentage = buf.f_bfree * 100 / buf.f_blocks;
+	percentage = stat_buf.f_bfree * 100 / stat_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve)
 		return (1);
 
