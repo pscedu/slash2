@@ -109,8 +109,8 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 {
 	off_t ret, off;
 	int fd, percentage;
-	struct statvfs buf;
 	struct timespec crtime;
+	static struct statvfs buf;
 
 	PFL_GETTIMESPEC(&crtime);
 
