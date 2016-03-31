@@ -152,7 +152,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
  	 * If the MDS asks us to replicate a sliver, I do not
  	 * have the space allocated, at least according to MDS.
  	 */
-	percentage = sli_stat_buf.f_bfree * 100 / sli_stat_buf.f_blocks;
+	percentage = sli_stat_buf.f_bavail * 100 / sli_stat_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve) {
 		error = -ENOSPC;
 		OPSTAT_INCR("repl-out-of-space");
