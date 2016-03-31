@@ -47,15 +47,22 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+#include <sys/statvfs.h>
+
+#define MIN_SPACE_RESERVE	5		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
+#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
+int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
 extern struct psc_lockedlist	 sli_bii_rls;
+
+struct timespec		 	 stat_age;
+struct timespec		 	 stat_timeo = { 30, 0 };
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -97,9 +104,41 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
  * into a hole in the given file.
  */
 __static int
-sli_not_enough_space(__unusedx struct fidc_membh *f, __unusedx int slvrno, 
-    __unusedx int nslvrs)
+sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno, 
+    uint32_t offset, uint32_t size)
 {
+	off_t ret, off;
+	int fd, percentage;
+	struct statvfs buf;
+	struct timespec crtime;
+
+	PFL_GETTIMESPEC(&crtime);
+
+	timespecsub(&crtime, &stat_timeo, &crtime);
+	if (timespeccmp(&crtime, &stat_age, <))
+		goto next;
+
+	if (statvfs(slcfg_local->cfg_fsroot, &buf) < 0)
+		return (0);
+
+	PFL_GETTIMESPEC(&stat_age);
+
+ next:
+	percentage = buf.f_bfree * 100 / buf.f_blocks;
+	if (percentage >= sli_min_space_reserve)
+		return (1);
+
+	fd = fcmh_2_fd(f);
+	off = (off_t)bmapno * SLASH_BMAP_SIZE + offset;
+	ret = lseek(fd, offset, SEEK_HOLE);
+	/*
+ 	 * ret = -1 is possible if the system does not
+ 	 * support it (e.g., ZFS on FreeBSD 9.0) or 
+ 	 * the file size is zero.
+ 	 */
+	if (ret != -1 && off + size <= ret)
+		return (1);
+
 	return (0);
 }
 
@@ -117,7 +156,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
-	struct bmap *bmap;
+	struct bmap *bmap = NULL;
 	uint64_t seqno;
 	ssize_t rv;
 	struct fcmh_iod_info *fii;
@@ -229,10 +268,18 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 
+	/* Paranoid: clear more than necessary. */
+	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
+		slvr[i] = NULL;
+		iovs[i].iov_len = 0;
+		iovs[i].iov_base = 0;
+	}
+
 	if (rw == SL_WRITE) {
-		if (sli_not_enough_space(f, slvrno, nslvrs)) {
-			mp->rc = -ENOSPC;
-			PFL_GOTOERR(out1, mp->rc = -rc);
+		if (!sli_has_enough_space(f, bmapno, mq->offset, mq->size)) {
+			FCMH_ULOCK(f);
+			OPSTAT_INCR("out-of-space");
+			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
 		}
 		/*
 		 * Simplistic tracking of dirty slivers, ignoring duplicates.
@@ -249,12 +296,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	/* Paranoid: clear more than necessary. */
-	for (i = 0; i < RIC_MAX_SLVRS_PER_IO; i++) {
-		slvr[i] = NULL;
-		iovs[i].iov_len = 0;
-		iovs[i].iov_base = 0;
-	}
 
 	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
