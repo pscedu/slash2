@@ -114,7 +114,7 @@ extern struct psc_thread	*sliconnthr;
 extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
 
-extern struct statvfs 		 stat_buf;
 extern struct psc_lockedlist	 sli_bii_rls;
+extern struct statvfs 		 sli_stat_buf;
 
 #endif /* _SLIOD_H_ */
