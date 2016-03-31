@@ -1444,7 +1444,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	mds_bmap_bml_release(bml);
 
  out:
-	if (rc)
+	if (rc && slm_opstate == SLM_OPSTATE_NORMAL)
 		/*
 		 * XXX On startup, this will stuck at dmu_tx_try_assign()
 		 * which calls cv_wait().
