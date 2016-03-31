@@ -50,6 +50,8 @@
 #include "sliod.h"
 #include "sltypes.h"
 
+#include <sys/statvfs.h>
+
 struct psc_poolmaster	 sli_replwkrq_poolmaster;
 struct psc_poolmgr	*sli_replwkrq_pool;
 
@@ -118,7 +120,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	struct bmap_iod_info *bii;
 	struct bmap *b = NULL;
 	size_t len;
-	int error, i;
+	int error, i, percentage;
 
 	if (q->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, error = -EINVAL);
@@ -145,6 +147,16 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	error = -bmap_get(f, q->bno, SL_READ, &b);
 	if (error)
 		PFL_GOTOERR(out, error);
+
+	/*
+ 	 * If the MDS asks us to replicate a sliver, I do not
+ 	 * have the space allocated, at least according to MDS.
+ 	 */
+	percentage = sli_stat_buf.f_bfree * 100 / sli_stat_buf.f_blocks;
+	if (percentage >= sli_min_space_reserve) {
+		error = -ENOSPC;
+		PFL_GOTOERR(out, error);
+	}
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
