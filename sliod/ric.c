@@ -144,7 +144,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
-	struct bmap *bmap;
+	struct bmap *bmap = NULL;
 	uint64_t seqno;
 	ssize_t rv;
 	struct fcmh_iod_info *fii;
