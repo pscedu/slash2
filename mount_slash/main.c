@@ -1930,6 +1930,7 @@ msl_flush(struct msl_fhent *mfh)
 		bmpc_biorqs_flush(b);
 		if (!rc)
 			rc = -bmap_2_bci(b)->bci_flush_rc;
+		bmap_2_bci(b)->bci_flush_rc = 0;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 	psc_dynarray_free(&a);
