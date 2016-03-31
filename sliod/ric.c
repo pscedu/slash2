@@ -47,12 +47,14 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+#define MIN_SPACE_RESERVE	5		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
+#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
 void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
+int				 sli_space_reserve = MIN_SPACE_RESERVE;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 
 extern struct psc_lockedlist	 sli_bii_rls;
