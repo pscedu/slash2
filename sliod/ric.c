@@ -59,8 +59,6 @@ uint32_t			 sli_benchmark_bufsiz;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
-extern struct psc_lockedlist	 sli_bii_rls;
-
 struct statvfs 			 stat_buf;
 
 int
