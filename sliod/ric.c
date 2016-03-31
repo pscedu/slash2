@@ -107,6 +107,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	off_t ret, off;
 	int fd, percentage;
 
+	/* lockless read is fine */
 	percentage = stat_buf.f_bfree * 100 / stat_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve)
 		return (1);
