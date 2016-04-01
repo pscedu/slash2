@@ -136,6 +136,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		return (rc);
+
+	/* 04/01/2016: Hit crash due to NULL import */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
