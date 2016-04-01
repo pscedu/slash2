@@ -28,6 +28,8 @@
  * we can get bursty.
  */
 
+#include <sys/statvfs.h>
+
 #include <stdio.h>
 
 #include "pfl/atomic.h"
@@ -49,8 +51,6 @@
 #include "slerr.h"
 #include "sliod.h"
 #include "sltypes.h"
-
-#include <sys/statvfs.h>
 
 struct psc_poolmaster	 sli_replwkrq_poolmaster;
 struct psc_poolmgr	*sli_replwkrq_pool;
