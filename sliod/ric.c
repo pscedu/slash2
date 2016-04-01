@@ -114,7 +114,11 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 
 	fd = fcmh_2_fd(f);
 	off = (off_t)bmapno * SLASH_BMAP_SIZE + offset;
+#ifdef SEEK_HOLE
 	ret = lseek(fd, offset, SEEK_HOLE);
+#else
+	ret = -1;
+#endif
 	/*
  	 * ret = -1 is possible if the system does not
  	 * support it (e.g., ZFS on FreeBSD 9.0) or 
