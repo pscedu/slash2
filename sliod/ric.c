@@ -115,7 +115,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 		return (1);
 
 	fd = fcmh_2_fd(f);
-	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_offset;
+	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
 #ifdef SEEK_HOLE
 	rc = lseek(fd, f_off, SEEK_HOLE);
 #else
