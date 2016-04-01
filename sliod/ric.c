@@ -24,8 +24,11 @@
  * Routines for handling RPC requests for ION from CLIENT.
  */
 
+#include <sys/statvfs.h>
+
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
@@ -47,8 +50,6 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#include <sys/statvfs.h>
-
 #define MIN_SPACE_RESERVE	5		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
@@ -59,7 +60,7 @@ uint32_t			 sli_benchmark_bufsiz;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
-struct statvfs 			 sli_stat_buf;
+struct statvfs			 sli_stat_buf;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -101,30 +102,31 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
  * into a hole in the given file.
  */
 __static int
-sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno, 
-    uint32_t offset, uint32_t size)
+sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
+    uint32_t b_off, uint32_t size)
 {
-	off_t ret, off;
+	off_t rc, f_off;
 	int fd, percentage;
 
 	/* lockless read is fine */
-	percentage = sli_stat_buf.f_bavail * 100 / sli_stat_buf.f_blocks;
+	percentage = sli_stat_buf.f_bavail * 100 /
+	    sli_stat_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve)
 		return (1);
 
 	fd = fcmh_2_fd(f);
-	off = (off_t)bmapno * SLASH_BMAP_SIZE + offset;
+	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_offset;
 #ifdef SEEK_HOLE
-	ret = lseek(fd, offset, SEEK_HOLE);
+	rc = lseek(fd, f_off, SEEK_HOLE);
 #else
-	ret = -1;
+	rc = -1;
 #endif
 	/*
- 	 * ret = -1 is possible if the system does not
- 	 * support it (e.g., ZFS on FreeBSD 9.0) or 
- 	 * the offset is beyond EOF.
- 	 */
-	if (ret != -1 && off + size <= ret)
+	 * rc = -1 is possible if the backend file system does not
+	 * support it (e.g. ZFS on FreeBSD 9.0) or the offset is beyond
+	 * EOF.
+	 */
+	if (rc != -1 && f_off + size <= rc)
 		return (1);
 
 	return (0);
@@ -264,14 +266,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		if (!sli_has_enough_space(f, bmapno, mq->offset, mq->size)) {
+		if (!sli_has_enough_space(f, bmapno, mq->offset,
+		    mq->size)) {
 			FCMH_ULOCK(f);
 			OPSTAT_INCR("write-out-of-space");
 			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
 		}
+
 		/*
-		 * Simplistic tracking of dirty slivers, ignoring duplicates.
-		 * We rely on clients to absort them.
+		 * Simplistic tracking of dirty slivers, ignoring
+		 * duplicates.  We rely on clients to absorb them.
 		 */
 		fii = fcmh_2_fii(f);
 		fii->fii_nwrite += nslvrs;
@@ -331,9 +335,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * mq->offset is the offset into the bmap, here we must
 		 * translate it into the offset of the sliver.
 		 *
-		 * The client should not send us any read request that goes
-		 * beyond the EOF. Otherwise, we are in trouble here because
-		 * reading beyond EOF should return 0 bytes.
+		 * The client should not send us any read request that
+		 * goes beyond the EOF.  Otherwise, we are in trouble
+		 * here because reading beyond EOF should return 0
+		 * bytes.
 		 */
 		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
