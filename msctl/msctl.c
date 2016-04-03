@@ -849,7 +849,7 @@ void
 ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %4s %7s %7s "
-	    "%12s %3s %3s %8s\n",
+	    "%11s %3s %3s %8s\n",
 	    "fid", "bno", "ref", "err", "offset", "start",
 	    "flags", "nwr", "aio", "lastacc");
 }
@@ -861,7 +861,7 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d %3d "
 	    "%4d %7x %7x "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %3d "
 	    "%8"PRIx64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
@@ -872,7 +872,6 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    mpce->mpce_flags & BMPCEF_EIO	? 'e' : '-',
 	    mpce->mpce_flags & BMPCEF_AIOWAIT	? 'w' : '-',
 	    mpce->mpce_flags & BMPCEF_DISCARD	? 'D' : '-',
-	    mpce->mpce_flags & BMPCEF_PINNED	? 'p' : '-',
 	    mpce->mpce_flags & BMPCEF_READAHEAD	? 'r' : '-',
 	    mpce->mpce_flags & BMPCEF_ACCESSED	? 'a' : '-',
 	    mpce->mpce_flags & BMPCEF_IDLE	? 'i' : '-',
