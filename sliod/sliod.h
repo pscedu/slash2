@@ -94,9 +94,12 @@ resm2rmii(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-void		slictlthr_main(const char *);
+void	slictlthr_main(const char *);
 
-int		bcr_update_inodeinfo(struct bcrcupd *);
+int	sli_has_enough_space(struct fidc_membh *, uint32_t, uint32_t,
+	    uint32_t);
+
+int	bcr_update_inodeinfo(struct bcrcupd *);
 
 extern struct pfl_iostats_grad	 sli_iorpc_iostats[];
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;
@@ -115,6 +118,6 @@ extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
 
 extern struct psc_lockedlist	 sli_bii_rls;
-extern struct statvfs 		 sli_stat_buf;
+extern struct statvfs		 sli_stat_buf;
 
 #endif /* _SLIOD_H_ */

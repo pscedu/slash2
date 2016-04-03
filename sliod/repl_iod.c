@@ -120,7 +120,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	struct bmap_iod_info *bii;
 	struct bmap *b = NULL;
 	size_t len;
-	int error, i, percentage;
+	int error, i;
 
 	if (q->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, error = -EINVAL);
@@ -149,14 +149,13 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 		PFL_GOTOERR(out, error);
 
 	/*
- 	 * If the MDS asks us to replicate a sliver, I do not
- 	 * have the space allocated, at least according to MDS.
- 	 */
-	percentage = sli_stat_buf.f_bavail * 100 / sli_stat_buf.f_blocks;
-	if (percentage >= sli_min_space_reserve) {
-		error = -ENOSPC;
+	 * If the MDS asks us to replicate a sliver, I do not
+	 * have the space allocated, at least according to MDS.
+	 */
+	if (!sli_has_enough_space(f, q->bno, q->bno * SLASH_BMAP_SIZE,
+	    q->len)) {
 		OPSTAT_INCR("repl-out-of-space");
-		PFL_GOTOERR(out, error);
+		PFL_GOTOERR(out, error = -ENOSPC);
 	}
 
 	w = psc_pool_get(sli_replwkrq_pool);
