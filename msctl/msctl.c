@@ -325,13 +325,14 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 	/* parse I/O systems */
 	ra.nios = 0;
 	for (ios = iosv; ios; ios = next) {
-		if ((next = strchr(ios, ',')) != NULL)
+		next = strchr(ios, ',');
+		if (next)
 			*next++ = '\0';
 		if (ra.nios >= (int)nitems(ra.iosv))
 			errx(1, "%s: too many replicas specified",
 			    replrqspec);
 		if (strchr(ios, '@') == NULL)
-			errx(1, "%s: no I/O system site specified", ios);
+			errx(1, "%s: no site specified", ios);
 		if (strlcpy(ra.iosv[ra.nios++], ios,
 		    sizeof(ra.iosv[0])) >= sizeof(ra.iosv[0]))
 			errx(1, "%s: I/O system name too long", ios);
