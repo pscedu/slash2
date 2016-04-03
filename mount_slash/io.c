@@ -1983,7 +1983,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * handling.
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
-	if (rw == SL_READ && (!size || off >= (off_t)fsz))
+	if (rw == SL_READ && off >= (off_t)fsz)
 		PFL_GOTOERR(out2, rc = 0);
 
 	msl_update_iocounters(slc_iosyscall_iostats, rw, size);
