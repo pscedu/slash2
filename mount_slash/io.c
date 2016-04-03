@@ -1542,9 +1542,12 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		psc_assert(tsize);
 
 		BMPCE_LOCK(e);
-		while (e->bmpce_pins) {
-			BMPCE_WAIT(e);
-			BMPCE_LOCK(e);
+		if (e->bmpce_pins) {
+			OPSTAT_INCR("msl.bmpce-copyin-wait");
+			do {
+				BMPCE_WAIT(e);
+				BMPCE_LOCK(e);
+			} while (e->bmpce_pins);
 		}
 
 		/*
