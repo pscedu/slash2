@@ -617,12 +617,14 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	mfh_decref(mfh);
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
+		struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
+		struct fcmh_cli_info *fci;
+		int nio = 0, rc = 0;
+
 		if (q->mfsrq_err) {
-			pscfs_reply_read(pfr, NULL, 0,
-			    abs(q->mfsrq_err));
+			rc = abs(q->mfsrq_err);
 		} else {
 			if (q->mfsrq_len == 0) {
-				pscfs_reply_read(pfr, NULL, 0, 0);
 			} else if (q->mfsrq_iovs) {
 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
@@ -634,28 +636,26 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 					    BMPCEF_ACCESSED);
 				}
 
-				pscfs_reply_read(pfr, q->mfsrq_iovs,
-				    q->mfsrq_niov, 0);
+				piov = q->mfsrq_iovs;
+				nio = q->mfsrq_niov;
 			} else {
-				struct iovec iov[MAX_BMAPS_REQ];
-				int nio = 0;
-
 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
-				for (i = 0; i < MAX_BMAPS_REQ; i++) {
+				for (i = 0; i < MAX_BMAPS_REQ; i++,
+				    nio++) {
 					r = q->mfsrq_biorq[i];
 					if (!r)
 						break;
 					iov[nio].iov_base = r->biorq_buf;
 					iov[nio].iov_len = r->biorq_len;
-					nio++;
 
 					biorq_bmpces_setflag(r,
 					    BMPCEF_ACCESSED);
 				}
-				pscfs_reply_read(pfr, iov, nio, 0);
+				piov = iov;
 			}
 		}
+		pscfs_reply_read(pfr, piov, nio, rc);
 	} else {
 		if (!q->mfsrq_err) {
 			msl_update_attributes(q);
