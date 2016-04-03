@@ -866,7 +866,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 			retry = psc_pool_get(msl_retry_req_pool);
 		}
 	}
-		
+
 #endif
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_read_rpc_done(e, rc);
@@ -1211,10 +1211,11 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 
 		BMPCE_LOCK(e);
 		/*
-		 * A read must wait until all pending writes are flushed. So
-		 * we should never see a pinned down page here.
+		 * A read must wait until all pending writes are
+		 * flushed.  So we should never see a pinned down page
+		 * here.
 		 */
-		psc_assert(!(e->bmpce_flags & BMPCEF_PINNED));
+		psc_assert(!e->bmpce_pins);
 
 		psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
 		psc_assert(!(e->bmpce_flags & BMPCEF_DATARDY));
@@ -1541,7 +1542,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		psc_assert(tsize);
 
 		BMPCE_LOCK(e);
-		while (e->bmpce_flags & BMPCEF_PINNED) {
+		while (e->bmpce_pins) {
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
 		}
