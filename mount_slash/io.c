@@ -1941,7 +1941,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * truncates.
 	 */
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
-	fsz = fcmh_getsize(f);
+	fsz = fcmh_2_fsz(f);
 
 	if (rw == SL_READ) {
 		/* Catch read ops which extend beyond EOF. */
