@@ -278,12 +278,13 @@ EOF
 	addpath $n->{src_dir}/wokfs/mount_wokfs
 	addpath $n->{src_dir}/wokfs/wokctl
 
+	nproc=\$(nproc)
 	@{[ $opts{v} ? "set -x" : "" ]}
 
 	data_dir=$n->{data_dir}
 
-	export MAKEFLAGS=-j\$(nproc)
-	export SCONSFLAGS=-j\$(nproc)
+	export MAKEFLAGS=-j\$nproc
+	export SCONSFLAGS=-j\$nproc
 	export PSC_DUMPSTACK=1 @env_vars
 
 	@cmd
@@ -917,7 +918,6 @@ sub test_setup {
 	my $n = shift;
 
 	return <<EOF;
-	export TMPDIR=$n->{mp}/tmp
 	export RANDOM_DATA=$TSUITE_RANDOM
 	@{[map { "export $_\n" } @{ $gcfg{testenv} }]}
 
@@ -931,20 +931,24 @@ sub test_setup {
 		local id=\$2
 		local max=\$3
 
-		# XXX need some local storage next to mp to do
-		# comparisons
-		export LOCAL_TMP=$n->{mp}/tmp/\$id/\${test##*/}
+		local testrpath=\$id/\${test##*/}
+		export LOCAL_TMP=\$TMPDIR/tsuite.\$RANDOM/\$testrpath
+		local testdir=$n->{mp}/tmp/\$id/\${test##*/}
 		export SRC=$n->{src_dir}
-		rm -rf \$LOCAL_TMP
+
+		rm -rf "\$LOCAL_TMP"
 		mkdir_recurse "\$LOCAL_TMP"
-		cd \$LOCAL_TMP
+
+		rm -rf "\$testdir"
+		mkdir_recurse "\$testdir"
+		cd "\$testdir"
 
 		local launcher=
 		if [ x"\$test" != x"\${test%.sh}" ]; then
 			launcher='bash -eu@{[ $opts{v} ? "x" : ""]}'
 		fi
 
-		\$launcher \$test \$id \$max && rm -rf \$LOCAL_TMP
+		TMPDIR=\$testdir \$launcher \$test \$id \$max && rm -rf \$testdir
 	}
 
 	convert_ms()
