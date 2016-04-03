@@ -879,7 +879,8 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 	uint32_t i;
 	int rc;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
+	    rc);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
@@ -1132,7 +1133,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 * Occasionally stir the order of replicas to distribute load.
 	 */
 	FCMH_LOCK(b->bcm_fcmh);
-	if (fci->fci_inode.nrepls > 1 && ++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
+	if (fci->fci_inode.nrepls > 1 && ++fci->fcif_mapstircnt >=
+	    MAPSTIR_THRESH) {
 		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
 		    sizeof(fci->fcif_idxmap[0]), slc_reptbl_cmp, fci);
 		fci->fcif_mapstircnt = 0;
