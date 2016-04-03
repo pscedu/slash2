@@ -1122,7 +1122,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		}
 
 		rc = m->resm_csvc->csvc_lasterrno;
-		psc_assert(rc > 0);
+		psc_assert(rc < 0);
 		return (rc);
 	}
 
