@@ -176,7 +176,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			    "add reference");
 			BMPCE_ULOCK(e);
 
-			OPSTAT_INCR("msl.bmpce-hit");
+			OPSTAT_INCR("msl.bmpce-cache-hit");
 			break;
 		}
 
@@ -193,6 +193,8 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
+			OPSTAT_INCR("msl.bmpce-cache-miss");
+
 			e = e2;
 			e2 = NULL;
 			e->bmpce_off = off;
@@ -430,10 +432,10 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
 		/*
-		 * A biorq can only be added at the end of the
-		 * list. So when we encounter an already expired
-		 * biorq we can stop since we've already processed
-		 * it and all biorqs before it.
+		 * A biorq can only be added at the end of the list.  So
+		 * when we encounter an already expired biorq we can
+		 * stop since we've already processed it and all biorqs
+		 * before it.
 		 */
 		if (r->biorq_flags & BIORQ_EXPIRE) {
 			BIORQ_ULOCK(r);
@@ -475,8 +477,8 @@ bmpc_biorqs_destroy_locked(struct bmap *b, int rc)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;
-	struct bmpc_ioreq *r;
 	struct bmap_cli_info *bci;
+	struct bmpc_ioreq *r;
 	int i;
 
 	BMAP_LOCK_ENSURE(b);
