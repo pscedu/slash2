@@ -317,7 +317,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 #if 0
 	/*
-	 * Instead of timeout ourselves, the IOS will return 
+	 * Instead of timeout ourselves, the IOS will return
 	 * -PFLERR_KEYEXPIRED and we should retry.
 	 */
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
@@ -641,8 +641,8 @@ bmap_flushable(struct bmap *b)
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
-		if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
-		    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec < BMAP_CLI_EXTREQSECS) ||
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 			OPSTAT_INCR("msl.flush-skip-expire");
 			flush = 0;
