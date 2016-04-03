@@ -788,6 +788,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&msl_bmapflushq);
 			break;
 		}
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -798,10 +800,8 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			PFL_GETTIMESPEC(&ts);
-			if ((bmap_2_bci(b)->bci_etime.tv_sec < ts.tv_sec) ||
-			    (bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec <
-				BMAP_CLI_EXTREQSECS))
+			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts,
+			    <))
 				psc_dynarray_add(&bmaps, b);
 			BMAP_ULOCK(b);
 		}
