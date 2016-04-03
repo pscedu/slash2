@@ -21,10 +21,14 @@ for i in $(seq $niters); do
 	for size in $sizes; do
 		# $RANDOM gives you a 'random' value between [0,32767]
 		# so we scale that out between [1k,128k]
-		bs=$((127*1024 * RANDOM/32767 + 1024))
-		fn=t.$i.$size
-		sft -w -s $size -b $bs $LOCAL_TMP/$fn
-		dd if=$LOCAL_TMP/$fn of=$fn bs=$bs
-		diff -q $LOCAL_TMP/$fn $fn
+		blocksize=$((127*1024 * RANDOM/32767 + 1024))
+		basefn=t.$i.$size
+		localfn=$LOCAL_TMP/$basefn
+		sl2fn=$basefn
+		touch $localfn
+		sft -w -s $size -b $blocksize $localfn
+		dd if=$localfn of=$sl2fn bs=$blocksize
+		diff -q $localfn $sl2fn
+		rm $localfn $sl2fn
 	done
 done
