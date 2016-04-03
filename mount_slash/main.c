@@ -3890,8 +3890,8 @@ msl_init(void)
 	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
 	psc_poolmaster_init(&msl_biorq_poolmaster,
-	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
-	    NULL, NULL, "biorq");
+	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 512, 512, 0,
+	    NULL, NULL, NULL, "biorq");
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
 	psc_poolmaster_init(&msl_mfh_poolmaster,
