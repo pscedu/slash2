@@ -326,16 +326,14 @@ ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
-void	 msl_update_iocounters(struct pfl_iostats_grad *, enum rw, int);
-
 int	 msl_try_get_replica_res(struct bmap *, int, int,
 	    struct sl_resm **, struct slashrpc_cservice **);
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	msl_resm_throttle_wake(struct sl_resm *);
-void	msl_resm_throttle_wait(struct sl_resm *);
-int	msl_resm_throttle_yield(struct sl_resm *);
+void	 msl_resm_throttle_wake(struct sl_resm *);
+void	 msl_resm_throttle_wait(struct sl_resm *);
+int	 msl_resm_throttle_yield(struct sl_resm *);
 
 int	 _msl_resm_throttle(struct sl_resm *, int);
 
@@ -378,8 +376,10 @@ extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
 extern struct psc_hashtbl	 msl_gidmap_int;
 
-extern struct pfl_iostats_grad	 slc_iosyscall_iostats[];
-extern struct pfl_iostats_grad	 slc_iorpc_iostats[];
+extern struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
+extern struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
+extern struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
+extern struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 
 extern struct psc_listcache	 msl_attrtimeoutq;
 extern struct psc_listcache	 msl_bmapflushq;

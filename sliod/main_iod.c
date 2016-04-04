@@ -77,11 +77,23 @@ struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct timespec		 sli_ssfb_send;
 
-struct pfl_iostats_grad	 sli_iorpc_iostats[8];
+struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
+struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
 struct pfl_iostats_rw	 sli_backingstore_iostats;
 struct psc_thread	*sliconnthr;
 
 uint32_t		 sl_sys_upnonce;
+
+int64_t sli_io_grad_sizes[] = {
+		0,
+	     1024,
+	 4 * 1024,
+	16 * 1024,
+	64 * 1024,
+       128 * 1024,
+       512 * 1024,
+      1024 * 1024,
+};
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -264,9 +276,10 @@ main(int argc, char *argv[])
 	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
 	/*
- 	 * Make sure our root is workable and initialize our statvfs buffer.
- 	 */
-	if (statvfs(slcfg_local->cfg_fsroot, &sli_stat_buf) < 0) 
+	 * Make sure our root is workable and initialize our statvfs
+	 * buffer.
+	 */
+	if (statvfs(slcfg_local->cfg_fsroot, &sli_stat_buf) < 0)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);
@@ -275,15 +288,12 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_prep_set();
 	slvr_cache_init();
 
-	sli_iorpc_iostats[0].size =        1024;
-	sli_iorpc_iostats[1].size =    4 * 1024;
-	sli_iorpc_iostats[2].size =   16 * 1024;
-	sli_iorpc_iostats[3].size =   64 * 1024;
-	sli_iorpc_iostats[4].size =  128 * 1024;
-	sli_iorpc_iostats[5].size =  512 * 1024;
-	sli_iorpc_iostats[6].size = 1024 * 1024;
-	sli_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(sli_iorpc_iostats, OPSTF_BASE10, "iorpc");
+	pfl_opstats_grad_init(&sli_iorpc_iostats_rd, OPSTF_BASE10,
+	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
+	    "iorpc-rd:%s");
+	pfl_opstats_grad_init(&sli_iorpc_iostats_wr, OPSTF_BASE10,
+	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
+	    "iorpc-wr:%s");
 
 	sli_backingstore_iostats.rd = pfl_opstat_init("backingstore-rd");
 	sli_backingstore_iostats.wr = pfl_opstat_init("backingstore-wr");

@@ -172,9 +172,21 @@ int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 int				 msl_newent_inherit_groups = 1;
 
 /*
- * I/O requests that have failed due to timeouts are placed here for retry.
+ * I/O requests that have failed due to timeouts are placed here for
+ * retry.
  */
 struct psc_lockedlist		 slc_retry_req_list;
+
+int64_t slc_io_grad_sizes[] = {
+		0,
+	     1024,
+	 4 * 1024,
+	16 * 1024,
+	64 * 1024,
+       128 * 1024,
+       512 * 1024,
+      1024 * 1024,
+};
 
 struct sl_resource *
 msl_get_pref_ios(void)
@@ -3216,8 +3228,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
-	pfl_iostats_grad_destroy(slc_iosyscall_iostats);
-	pfl_iostats_grad_destroy(slc_iorpc_iostats);
+	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);
+	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_wr);
+	pfl_opstats_grad_destroy(&slc_iorpc_iostats_rd);
+	pfl_opstats_grad_destroy(&slc_iorpc_iostats_wr);
 
 	bmap_pagecache_destroy();
 	bmap_cache_destroy();
@@ -3904,7 +3918,8 @@ msl_init(void)
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
-	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry, NULL);
+	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry,
+	    NULL);
 
 	/* Start up service threads. */
 	slrpc_initcli();
@@ -3916,18 +3931,18 @@ msl_init(void)
 
 	msctlthr_spawn();
 
-	slc_iosyscall_iostats[0].size = slc_iorpc_iostats[0].size =        1024;
-	slc_iosyscall_iostats[1].size = slc_iorpc_iostats[1].size =    4 * 1024;
-	slc_iosyscall_iostats[2].size = slc_iorpc_iostats[2].size =   16 * 1024;
-	slc_iosyscall_iostats[3].size = slc_iorpc_iostats[3].size =   64 * 1024;
-	slc_iosyscall_iostats[4].size = slc_iorpc_iostats[4].size =  128 * 1024;
-	slc_iosyscall_iostats[5].size = slc_iorpc_iostats[5].size =  512 * 1024;
-	slc_iosyscall_iostats[6].size = slc_iorpc_iostats[6].size = 1024 * 1024;
-	slc_iosyscall_iostats[7].size = slc_iorpc_iostats[7].size = 0;
-	pfl_iostats_grad_init(slc_iosyscall_iostats, OPSTF_BASE10,
-	    "msl.iosz");
-	pfl_iostats_grad_init(slc_iorpc_iostats, OPSTF_BASE10,
-	    "msl.iorpc");
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_rd, OPSTF_BASE10,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iosz-rd:%s");
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_wr, OPSTF_BASE10,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iosz-wr:%s");
+	pfl_opstats_grad_init(&slc_iorpc_iostats_rd, OPSTF_BASE10,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iorpc-rd:%s");
+	pfl_opstats_grad_init(&slc_iorpc_iostats_wr, OPSTF_BASE10,
+	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
+	    "msl.iorpc-wr:%s");
 
 	msbmapthr_spawn();
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");

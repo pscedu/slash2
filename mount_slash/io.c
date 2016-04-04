@@ -83,20 +83,14 @@ int			 msl_predio_window_size = 4 * 1024 * 1024;
 int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
 int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
-struct pfl_iostats_grad	 slc_iosyscall_iostats[8];
-struct pfl_iostats_grad	 slc_iorpc_iostats[8];
+struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
+struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
+struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
+struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 
 struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
 struct psc_listcache	 msl_readaheadq;
-
-void
-msl_update_iocounters(struct pfl_iostats_grad *ist, enum rw rw, int len)
-{
-	for (; ist->size && len >= ist->size; ist++)
-		;
-	pfl_opstat_incr(rw == SL_READ ? ist->rw.rd : ist->rw.wr);
-}
 
 #define msl_biorq_page_valid_accounting(r, idx)				\
 	_msl_biorq_page_valid((r), (idx), 1)
@@ -883,8 +877,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 			mfsrq_seterr(r->biorq_fsrqi, rc);
 	} else {
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-		msl_update_iocounters(slc_iorpc_iostats, SL_READ,
-		    mq->size);
+		pfl_opstats_grad_incr(&slc_iorpc_iostats_rd, mq->size);
 		if (r->biorq_flags & BIORQ_READAHEAD)
 			OPSTAT2_ADD("msl.readahead-issue", mq->size);
 	}
@@ -947,6 +940,10 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 		DEBUG_BIORQ(PLL_DIAG, r,
 		    "dio complete (op=%d) off=%u sz=%u rc=%d",
 		    op, mq->offset, mq->size, rc);
+
+		pfl_opstats_grad_incr(mq->op == SRMIOP_WR ?
+		    &slc_iorpc_iostats_wr : &slc_iorpc_iostats_rd,
+		    mq->size);
 	}
 
 	q = r->biorq_fsrqi;
@@ -1986,7 +1983,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (rw == SL_READ && off >= (off_t)fsz)
 		PFL_GOTOERR(out2, rc = 0);
 
-	msl_update_iocounters(slc_iosyscall_iostats, rw, size);
+	pfl_opstats_grad_incr(rw == SL_READ ?
+	    &slc_iosyscall_iostats_rd : &slc_iosyscall_iostats_wr,
+	    size);
 
  restart:
 	rc = 0;

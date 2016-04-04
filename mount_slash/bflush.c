@@ -283,8 +283,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	msl_update_iocounters(slc_iorpc_iostats, SL_WRITE,
-	    bwc->bwc_size);
+	pfl_opstats_grad_incr(&slc_iorpc_iostats_wr, bwc->bwc_size);
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);

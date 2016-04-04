@@ -141,15 +141,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
-	struct pfl_iostats_grad *ist;
+	struct fcmh_iod_info *fii;
+	struct bmap *bmap = NULL;
 	struct sl_fidgen *fgp;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
-	struct bmap *bmap = NULL;
 	uint64_t seqno;
 	ssize_t rv;
-	struct fcmh_iod_info *fii;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -234,11 +233,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	/* XXX move this until after success and do accounting for errors */
-	for (ist = sli_iorpc_iostats; ist->size; ist++)
-		if (mq->size < ist->size)
-			break;
-	pfl_opstat_add(rw == SL_WRITE ? ist->rw.wr : ist->rw.rd, 1);
+	/*
+	 * XXX move this until after success and do accounting for
+	 * errors.
+	 */
+	pfl_opstats_grad_incr(rw == SL_WRITE ? 
+	    &sli_iorpc_iostats_wr : &sli_iorpc_iostats_rd, mq->size);
 
 	mp->rc = -sli_fcmh_get(fgp, &f);
 	if (mp->rc)
