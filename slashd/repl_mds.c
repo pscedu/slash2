@@ -239,7 +239,7 @@ _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
 	/* check for dups */
-	for (k = 1; k < nios; k++) 
+	for (k = 1; k < nios; k++)
 		if (iosidx[k] == iosidx[k - 1])
 			return (EINVAL);
 	return (0);
@@ -555,7 +555,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		char		*stat[SL_MAX_REPLICAS];
 		unsigned	 nios;
 	} add, del, chg;
-	int locked, off, vold, vnew, sprio, uprio;
+	int locked, off, vold, vnew, sprio, uprio, rc;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
@@ -636,8 +636,15 @@ slm_repl_upd_write(struct bmap *b, int rel)
 			PUSH_IOS(b, &chg, resid, NULL);
 	}
 
-	for (n = 0; n < add.nios; n++)
-		slm_upsch_insert(b, add.iosv[n].bs_id, sprio, uprio);
+	for (n = 0; n < add.nios; n++) {
+		rc = slm_upsch_insert(b, add.iosv[n].bs_id, sprio,
+		    uprio);
+		if (rc)
+			DEBUG_BMAPOD(PLL_WARN, b,
+			    "unable to insert into upsch database; "
+			    "ios=%#x rc=%d",
+			    add.iosv[n].bs_id, rc);
+	}
 
 	for (n = 0; n < del.nios; n++)
 		dbdo(NULL, NULL,
@@ -1034,6 +1041,9 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		ADJ_BW(&is->si_bw_aggr, amt);
 		ADJ_BW(&id->si_bw_ingress, amt);
 		ADJ_BW(&id->si_bw_aggr, amt);
+
+		psclog_max("adj src %s dst %s %d", src->resm_name,
+		    dst->resm_name, amt);
 
 		if (moreavail &&
 		    HAS_BW(&is->si_bw_egress, 1) &&
