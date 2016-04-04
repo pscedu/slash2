@@ -123,14 +123,15 @@ slistatfsthr_main(struct psc_thread *thr)
 	pfl_getfstype(slcfg_local->cfg_fsroot, type, sizeof(type));
 
 	while (pscthr_run(thr)) {
-		rc = statvfs(slcfg_local->cfg_fsroot, &sli_stat_buf);
+		rc = statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf);
 		if (rc == -1)
 			psclog_error("statvfs %s",
 			    slcfg_local->cfg_fsroot);
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
-			sl_externalize_statfs(&sli_stat_buf, &sli_ssfb);
+			sl_externalize_statfs(&sli_statvfs_buf,
+			    &sli_ssfb);
 			strlcpy(sli_ssfb.sf_type, type,
 			    sizeof(sli_ssfb.sf_type));
 			freelock(&sli_ssfb_lock);
@@ -279,7 +280,7 @@ main(int argc, char *argv[])
 	 * Make sure our root is workable and initialize our statvfs
 	 * buffer.
 	 */
-	if (statvfs(slcfg_local->cfg_fsroot, &sli_stat_buf) < 0)
+	if (statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf) == -1)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);

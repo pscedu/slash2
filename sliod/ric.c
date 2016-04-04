@@ -60,7 +60,7 @@ uint32_t			 sli_benchmark_bufsiz;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
-struct statvfs			 sli_stat_buf;
+struct statvfs			 sli_statvfs_buf;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -109,8 +109,8 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	int fd, percentage;
 
 	/* lockless read is fine */
-	percentage = sli_stat_buf.f_bavail * 100 /
-	    sli_stat_buf.f_blocks;
+	percentage = sli_statvfs_buf.f_bavail * 100 /
+	    sli_statvfs_buf.f_blocks;
 	if (percentage >= sli_min_space_reserve)
 		return (1);
 
@@ -237,7 +237,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * XXX move this until after success and do accounting for
 	 * errors.
 	 */
-	pfl_opstats_grad_incr(rw == SL_WRITE ? 
+	pfl_opstats_grad_incr(rw == SL_WRITE ?
 	    &sli_iorpc_iostats_wr : &sli_iorpc_iostats_rd, mq->size);
 
 	mp->rc = -sli_fcmh_get(fgp, &f);

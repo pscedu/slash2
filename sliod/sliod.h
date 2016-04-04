@@ -119,6 +119,6 @@ extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
 
 extern struct psc_lockedlist	 sli_bii_rls;
-extern struct statvfs		 sli_stat_buf;
+extern struct statvfs		 sli_statvfs_buf;
 
 #endif /* _SLIOD_H_ */
