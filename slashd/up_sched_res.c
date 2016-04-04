@@ -1156,16 +1156,17 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	return (0);
 }
 
-void
+int
 slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
     int usr_prio)
 {
 	struct sl_resource *r;
+	int rc;
 
 	r = libsl_id2res(resid);
 	if (r == NULL)
-		return;
-	dbdo(NULL, NULL,
+		return (ESRCH);
+	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
 	    "	fid,"						/* 2 */
@@ -1196,6 +1197,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	return (rc);
 }
 
 void
