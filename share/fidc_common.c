@@ -378,15 +378,22 @@ fidc_destroy(void)
 }
 
 ssize_t
-fcmh_getsize(struct fidc_membh *h)
+fcmh_getsize(struct fidc_membh *f)
 {
 	ssize_t size;
-	int locked;
 
-	locked = reqlock(&h->fcmh_lock);
-	size = fcmh_2_fsz(h);
-	ureqlock(&h->fcmh_lock, locked);
+	FCMH_LOCK(f);
+	size = fcmh_2_fsz(f);
+	FCMH_ULOCK(f);
 	return (size);
+}
+
+off_t
+fcmh_getsize_locked(struct fidc_membh *f)
+{
+	FCMH_LOCK_ENSURE(f);
+
+	return (fcmh_2_fsz(f));
 }
 
 void
