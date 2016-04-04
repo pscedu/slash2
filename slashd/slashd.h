@@ -380,7 +380,7 @@ void	 psc_scan_filesystems(void);
 void	 mds_note_update(int);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
-void	 _dbdo(const struct pfl_callerinfo *,
+int	 _dbdo(const struct pfl_callerinfo *,
 	    int (*)(struct slm_sth *, void *), void *, const char *,
 	    ...);
 
