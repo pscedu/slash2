@@ -290,10 +290,10 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_prep_set();
 	slvr_cache_init();
 
-	pfl_opstats_grad_init(&sli_iorpc_iostats_rd, OPSTF_BASE10,
+	pfl_opstats_grad_init(&sli_iorpc_iostats_rd, 0,
 	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
 	    "iorpc-rd:%s");
-	pfl_opstats_grad_init(&sli_iorpc_iostats_wr, OPSTF_BASE10,
+	pfl_opstats_grad_init(&sli_iorpc_iostats_wr, 0,
 	    sli_io_grad_sizes, nitems(sli_io_grad_sizes),
 	    "iorpc-wr:%s");
 
