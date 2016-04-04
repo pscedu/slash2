@@ -770,6 +770,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (*csvcp) {
 		csvc = *csvcp;
+		/* 04/04/2016: Hit crash wth peer type SLCONNT_CLI */
 		locked = CSVC_RLOCK(csvc);
 		goto restart;
 	}
