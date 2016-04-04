@@ -123,14 +123,14 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	int error, i;
 
 	if (q->fg.fg_fid == FID_ANY)
-		PFL_GOTOERR(out, error = -EINVAL);
+		PFL_GOTOERR(out, error = EINVAL);
 	if (q->len < 1 || q->len > SLASH_BMAP_SIZE)
-		PFL_GOTOERR(out, error = -EINVAL);
+		PFL_GOTOERR(out, error = EINVAL);
 
 	if (q->src_resid != IOS_ID_ANY) {
 		res = libsl_id2res(q->src_resid);
 		if (res == NULL)
-			PFL_GOTOERR(out, error = -SLERR_ION_UNKNOWN);
+			PFL_GOTOERR(out, error = SLERR_ION_UNKNOWN);
 	}
 
 	/*
@@ -139,12 +139,12 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	 * work.
 	 */
 	if (sli_repl_findwq(&q->fg, q->bno))
-		PFL_GOTOERR(out, error = -PFLERR_ALREADY);
+		PFL_GOTOERR(out, error = PFLERR_ALREADY);
 
-	error = -sli_fcmh_get(&q->fg, &f);
+	error = sli_fcmh_get(&q->fg, &f);
 	if (error)
 		PFL_GOTOERR(out, error);
-	error = -bmap_get(f, q->bno, SL_READ, &b);
+	error = bmap_get(f, q->bno, SL_READ, &b);
 	if (error)
 		PFL_GOTOERR(out, error);
 
@@ -155,7 +155,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	if (!sli_has_enough_space(f, q->bno, q->bno * SLASH_BMAP_SIZE,
 	    q->len)) {
 		OPSTAT_INCR("repl-out-of-space");
-		PFL_GOTOERR(out, error = -ENOSPC);
+		PFL_GOTOERR(out, error = ENOSPC);
 	}
 
 	w = psc_pool_get(sli_replwkrq_pool);
@@ -200,7 +200,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-	return (error);
+	return (0);
 }
 
 void
