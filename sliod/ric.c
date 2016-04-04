@@ -60,8 +60,6 @@ uint32_t			 sli_benchmark_bufsiz;
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
 
-struct statvfs			 sli_statvfs_buf;
-
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)

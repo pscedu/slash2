@@ -76,6 +76,7 @@ psc_spinlock_t		 sli_bwqueued_lock = SPINLOCK_INIT;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct timespec		 sli_ssfb_send;
+struct statvfs		 sli_statvfs_buf;
 
 struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
 struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
