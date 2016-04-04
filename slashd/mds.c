@@ -2455,7 +2455,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 	sqlite3_reset(sth->sth_sth);
-	return (rc == SQLITE_DONE : 0 : rc);
+	return (rc == SQLITE_DONE ? 0 : rc);
 }
 
 void
