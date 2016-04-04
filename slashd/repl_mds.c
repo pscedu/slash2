@@ -1042,8 +1042,8 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		ADJ_BW(&id->si_bw_ingress, amt);
 		ADJ_BW(&id->si_bw_aggr, amt);
 
-		psclog_max("adj src %s dst %s %d", src->resm_name,
-		    dst->resm_name, amt);
+		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%d",
+		    src->resm_name, dst->resm_name, amt);
 
 		if (moreavail &&
 		    HAS_BW(&is->si_bw_egress, 1) &&
