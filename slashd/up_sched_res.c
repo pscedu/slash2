@@ -130,7 +130,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	struct bmap *b = NULL;
 
 	if (!error && p && p->rc)
-		error = -p->rc;
+		error = p->rc;
 
 	if (error)
 		OPSTAT_INCR("repl-schedwk-fail");
@@ -160,7 +160,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	if (!error && q->bgen != bgen)
 		error = -SLERR_GEN_OLD;
 
-	if (error == 0 && p && error == 0) {
+	if (error == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -168,7 +168,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 	} else {
-		if (p == NULL || error == -SLERR_ION_OFFLINE ||
+		if (p == NULL ||
+		    error == -PFLERR_ALREADY ||
+		    error == -SLERR_ION_OFFLINE ||
 		    error == -ECONNRESET) {
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
