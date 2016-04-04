@@ -99,7 +99,7 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
  * Check if the local storage is near full and if we are writing
  * into a hole in the given file.
  */
-__static int
+int
 sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
     uint32_t b_off, uint32_t size)
 {
@@ -472,11 +472,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		sbd = &mq->sbd[i];
 		newbrls = psc_pool_get(bmap_rls_pool);
 		memcpy(&newbrls->bir_sbd, sbd, sizeof(*sbd));
-		pll_add(&sli_bii_rls, newbrls);
+		lc_add(&sli_bmaplease_releaseq, newbrls);
 	}
-	spinlock(&sli_release_bmap_lock);
-	psc_waitq_wakeall(&sli_release_bmap_waitq);
-	freelock(&sli_release_bmap_lock);
  out:
 	return (0);
 }

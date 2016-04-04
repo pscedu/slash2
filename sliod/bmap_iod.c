@@ -42,15 +42,11 @@
 struct bmap_iod_minseq	 sli_bminseq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
-struct psc_listcache	 sli_bmap_releaseq;
-
-struct psc_lockedlist	 sli_bii_rls;
+struct psc_listcache	 sli_bmap_releaseq;		/* bmaps to release */
+struct psc_listcache	 sli_bmaplease_releaseq;	/* bmap leases to release */
 
 struct psc_poolmaster    bmap_rls_poolmaster;
 struct psc_poolmgr	*bmap_rls_pool;
-
-psc_spinlock_t           sli_release_bmap_lock = SPINLOCK_INIT;
-struct psc_waitq         sli_release_bmap_waitq = PSC_WAITQ_INIT;
 
 void
 bim_init(void)
@@ -268,71 +264,72 @@ sli_bmap_sync(struct bmap *b)
 }
 
 static void
-sli_process_leases(struct psc_dynarray *a)
+sli_bml_process_release(struct bmap_iod_rls *brls)
 {
-	int i, rc;
-	struct bmap_iod_rls *brls, *tmpbrls;
+	struct bmap_iod_rls *tmpbrls;
+	struct fidc_membh *f = NULL;
 	struct bmap_iod_info *bii;
 	struct srt_bmapdesc *sbd;
-	struct fidc_membh *f;
-	struct bmap *b;
+	struct bmap *b = NULL;
+	int rc;
 
-	i = 0;
-	while ((brls = pll_get(&sli_bii_rls))) {
-		psc_dynarray_add(a, brls);
-		i++;
-		if (i == MAX_BMAP_RELEASE)
-			break;
+	sbd = &brls->bir_sbd;
+	rc = sli_fcmh_get(&sbd->sbd_fg, &f);
+	if (rc) {
+		OPSTAT_INCR("bmap-release-fail");
+		psclog(rc == ESTALE ? PLL_DIAG : PLL_ERROR,
+		    "load fcmh failed; fid="SLPRI_FG" rc=%d",
+		    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
+		goto out;
 	}
-	DYNARRAY_FOREACH(brls, i, a) {
-		sbd = &brls->bir_sbd;
-		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
-		if (rc) {
-			OPSTAT_INCR("bmap-release-fail");
-			psclog(rc == ESTALE ? PLL_DIAG : PLL_ERROR,
-			    "load fcmh failed; fid="SLPRI_FG" rc=%d",
-			    SLPRI_FG_ARGS(&sbd->sbd_fg), rc);
-			psc_pool_return(bmap_rls_pool, brls);
-			continue;
+
+	rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE, BMAPGETF_CREATE |
+	    BMAPGETF_NORETRIEVE, &b);
+	if (rc) {
+		psclog_errorx("failed to load bmap %u",
+		    sbd->sbd_bmapno);
+		goto out;
+	}
+
+	bii = bmap_2_bii(b);
+	PLL_FOREACH(tmpbrls, &bii->bii_rls) {
+		if (!memcmp(&tmpbrls->bir_sbd, sbd, sizeof(*sbd))) {
+			OPSTAT_INCR("bmap-release-duplicate");
+			goto out;
 		}
+	}
+	DEBUG_BMAP(PLL_DIAG, b, "brls=%p seq=%"PRId64" key=%"PRId64,
+	    brls, sbd->sbd_seq, sbd->sbd_key);
 
-		rc = bmap_getf(f, sbd->sbd_bmapno, SL_WRITE,
-		    BMAPGETF_CREATE | BMAPGETF_NORETRIEVE, &b);
-		if (rc) {
-			psclog_errorx("failed to load bmap %u",
-			    sbd->sbd_bmapno);
-			fcmh_op_done(f);
-			psc_pool_return(bmap_rls_pool, brls);
-			continue;
-		}
+	if (pll_empty(&bii->bii_rls)) {
+		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
+		psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
+		b->bcm_flags |= BMAPF_RELEASEQ;
+		lc_addtail(&sli_bmap_releaseq, bii);
+	}
 
-		bii = bmap_2_bii(b);
-		PLL_FOREACH(tmpbrls, &bii->bii_rls) {
-			if (!memcmp(&tmpbrls->bir_sbd, sbd,
-			    sizeof(*sbd))) {
-				OPSTAT_INCR("bmap-release-duplicate");
-				psc_pool_return(bmap_rls_pool, brls);
-				goto next;
-			}
-		}
-		DEBUG_BMAP(PLL_DIAG, b, "brls=%p "
-		    "seq=%"PRId64" key=%"PRId64,
-		    brls, sbd->sbd_seq, sbd->sbd_key);
+	pll_add(&bii->bii_rls, brls);
+	brls = NULL;
 
-		if (pll_empty(&bii->bii_rls)) {
-			bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
-			psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
-			b->bcm_flags |= BMAPF_RELEASEQ;
-			lc_addtail(&sli_bmap_releaseq, bii);
-		}
-
-		pll_add(&bii->bii_rls, brls);
-
- next:
+ out:
+	if (b)
 		bmap_op_done(b);
+	if (f)
 		fcmh_op_done(f);
+	if (brls)
+		psc_pool_return(bmap_rls_pool, brls);
+}
+
+void
+slibmapleaseprocthr_main(struct psc_thread *thr)
+{
+	struct bmap_iod_rls *r;
+
+	while (pscthr_run(thr)) {
+		r = lc_getwait(&sli_bmaplease_releaseq);
+		if (r)
+			sli_bml_process_release(r);
 	}
-	psc_dynarray_reset(a);
 }
 
 void
@@ -343,31 +340,27 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct bmap_iod_info *bii, *tmp;
 	struct bmap_iod_rls *brls;
 	struct bmap *b;
-	int nrls, i, skip;
+	int nrls, i;
 
 	psc_dynarray_ensurelen(&to_sync, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
-
-		skip = nrls = 0;
-		sli_process_leases(&to_sync);
-
+		nrls = 0;
 		LIST_CACHE_LOCK(&sli_bmap_releaseq);
+		lc_peekheadwait(&sli_bmap_releaseq);
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
 
 			/* deadlock and busy bmap avoidance */
-			if (!BMAP_TRYLOCK(b)) {
-				skip = 1;
+			if (!BMAP_TRYLOCK(b))
 				continue;
-			}
+
 			psc_assert(b->bcm_flags & BMAPF_RELEASEQ);
 			psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b,
 				    "skip due to refcnt");
 				BMAP_ULOCK(b);
-				skip = 1;
 				continue;
 			}
 			if (pll_nitems(&bii->bii_rls)) {
@@ -410,19 +403,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&to_sync);
 
-		if (!nrls) {
-			if (skip) {
-				pscthr_yield();
-				continue;
-			}
-			spinlock(&sli_release_bmap_lock);
-			if (!pll_nitems(&sli_bii_rls)) {
-				psc_waitq_wait(&sli_release_bmap_waitq,
-					&sli_release_bmap_lock);
-			} else
-				freelock(&sli_release_bmap_lock);
+		if (!nrls)
 			continue;
-		}
 
 		DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases",
 		    nrls);
@@ -442,15 +424,17 @@ slibmaprlsthr_spawn(void)
 {
 	int i;
 
-	psc_waitq_init(&sli_release_bmap_waitq);
 	lc_reginit(&sli_bmap_releaseq, struct bmap_iod_info, bii_lentry,
 	    "breleaseq");
-
-	pll_init(&sli_bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
+	lc_reginit(&sli_bmaplease_releaseq, struct bmap_iod_rls,
+	    bir_lentry, "bmlreleaseq");
 
 	for (i = 0; i < NBMAPRLS_THRS; i++)
 		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL,
 		    0, "slibmaprlsthr%d", i);
+
+	pscthr_init(SLITHRT_BMAPLEASE_PROC, slibmapleaseprocthr_main,
+	    NULL, 0, "slibmapleaseprocthr");
 }
 
 void
