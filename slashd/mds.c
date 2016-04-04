@@ -2274,7 +2274,7 @@ slmbkdbthr_main(struct psc_thread *thr)
  * @fmt: printf(3)-like format string to properly escape any
  * interpolated values in the SQL query.
  */
-void
+int
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *cbarg,
     const char *fmt, ...)
@@ -2455,6 +2455,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 	sqlite3_reset(sth->sth_sth);
+	return (rc == SQLITE_DONE ? 0 : rc);
 }
 
 void

@@ -3931,16 +3931,16 @@ msl_init(void)
 
 	msctlthr_spawn();
 
-	pfl_opstats_grad_init(&slc_iosyscall_iostats_rd, OPSTF_BASE10,
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_rd, 0,
 	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
 	    "msl.iosz-rd:%s");
-	pfl_opstats_grad_init(&slc_iosyscall_iostats_wr, OPSTF_BASE10,
+	pfl_opstats_grad_init(&slc_iosyscall_iostats_wr, 0,
 	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
 	    "msl.iosz-wr:%s");
-	pfl_opstats_grad_init(&slc_iorpc_iostats_rd, OPSTF_BASE10,
+	pfl_opstats_grad_init(&slc_iorpc_iostats_rd, 0,
 	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
 	    "msl.iorpc-rd:%s");
-	pfl_opstats_grad_init(&slc_iorpc_iostats_wr, OPSTF_BASE10,
+	pfl_opstats_grad_init(&slc_iorpc_iostats_wr, 0,
 	    slc_io_grad_sizes, nitems(slc_io_grad_sizes),
 	    "msl.iorpc-wr:%s");
 

@@ -82,7 +82,7 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	if (fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
 	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE,
 	    SLASH_BMAP_SIZE) == -1)
-		p->rc = -errno;
+		p->rc = errno;
 
 	fcmh_op_done(f);
 	return (0);
@@ -117,7 +117,7 @@ sli_rim_batch_handle_ptrunc(__unusedx struct slrpc_batch_rep *bp,
 	off_t off;
 
 	if (q->offset < 0 || q->offset >= SLASH_BMAP_SIZE) {
-		p->rc = -EINVAL;
+		p->rc = EINVAL;
 		return (0);
 	}
 

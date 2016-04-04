@@ -181,12 +181,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 			    SQLITE_INTEGER, bsr->bsr_res->res_id,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno);
-			tract[BREPLST_REPL_SCHED] =
-			    BREPLST_REPL_QUEUED;
+			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 		} else {
 			/* Fatal error: cancel replication. */
-			tract[BREPLST_REPL_SCHED] =
-			    BREPLST_GARBAGE;
+			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 		}
 
 		tract[BREPLST_REPL_QUEUED] = -1;
@@ -201,8 +199,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		    error);
 	}
 
-	if (mds_repl_bmap_apply(b, tract, retifset,
-	    bsr->bsr_off))
+	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
 		mds_bmap_write_logrepls(b);
 	slm_repl_bmap_rel(b);
 	b = NULL;
@@ -213,8 +210,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	if (f)
 		fcmh_op_done(f);
 
-	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt,
-	    NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
 //	upschq_resm(src_resm, UPDT_PAGEIN);
 }
@@ -265,6 +261,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		pfl_multiwait_setcondwakeable(&slm_upsch_mw,
 		    &dst_resm->resm_csvc->csvc_mwc, 1);
 
+		OPSTAT_INCR("repl-throttle");
+		
 		/* XXX push batch out immediately */
 		return (0);
 	}
@@ -1160,16 +1158,17 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	return (0);
 }
 
-void
+int
 slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
     int usr_prio)
 {
 	struct sl_resource *r;
+	int rc;
 
 	r = libsl_id2res(resid);
 	if (r == NULL)
-		return;
-	dbdo(NULL, NULL,
+		return (ESRCH);
+	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
 	    "	fid,"						/* 2 */
@@ -1200,6 +1199,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	return (rc);
 }
 
 void

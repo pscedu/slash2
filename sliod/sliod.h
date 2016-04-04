@@ -39,7 +39,8 @@ struct fidc_membh;
 /* sliod thread types */
 enum {
 	SLITHRT_AIO = _PFL_NTHRT,	/* asynchronous I/O handlers */
-	SLITHRT_BMAPRLS,		/* notify MDS of completed write bmaps */
+	SLITHRT_BMAPRLS,		/* notifier to MDS of completed write bmaps */
+	SLITHRT_BMAPLEASE_PROC,		/* bmap lease relinquish processor */
 	SLITHRT_BREAP,			/* bmap reaper */
 	SLITHRT_BATCHRPC,		/* batch RPC sender */
 	SLITHRT_CONN,			/* connection monitor */
@@ -118,7 +119,7 @@ extern struct psc_thread	*sliconnthr;
 extern uint64_t			 sli_current_reclaim_xid;
 extern uint64_t			 sli_current_reclaim_batchno;
 
-extern struct psc_lockedlist	 sli_bii_rls;
+extern struct psc_listcache	 sli_bmaplease_releaseq;
 extern struct statvfs		 sli_statvfs_buf;
 
 #endif /* _SLIOD_H_ */
