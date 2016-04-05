@@ -158,7 +158,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 	BHGEN_GET(b, &bgen);
 	if (!error && q->bgen != bgen)
-		error = -SLERR_GEN_OLD;
+		error = SLERR_GEN_OLD;
 
 	if (error == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
@@ -169,9 +169,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		OPSTAT2_ADD("replcompl", bsr->bsr_amt);
 	} else {
 		if (p == NULL ||
-		    error == -PFLERR_ALREADY ||
-		    error == -SLERR_ION_OFFLINE ||
-		    error == -ECONNRESET) {
+		    error == PFLERR_ALREADY ||
+		    error == SLERR_ION_OFFLINE ||
+		    error == ECONNRESET) {
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
 			    " SET	status = 'Q'"
