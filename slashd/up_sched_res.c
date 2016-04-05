@@ -138,10 +138,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		OPSTAT_INCR("repl-schedwk");
 
 	dst_resm = res_getmemb(bsr->bsr_res);
-
-	brepls_init(tract, -1);
-	brepls_init(retifset, 0);
-
 	src_resm = libsl_ios2resm(q->src_resid);
 
 	rc = slm_fcmh_get(&q->fg, &f);
@@ -160,6 +156,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	if (!error && q->bgen != bgen)
 		error = SLERR_GEN_OLD;
 
+	brepls_init(tract, -1);
+	brepls_init(retifset, 0);
+
 	if (error == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
@@ -172,24 +171,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		    error == PFLERR_ALREADY ||
 		    error == SLERR_ION_OFFLINE ||
 		    error == ECONNRESET) {
-			dbdo(NULL, NULL,
-			    " UPDATE	upsch"
-			    " SET	status = 'Q'"
-			    " WHERE	resid = ?"
-			    "   AND	fid = ?"
-			    "   AND	bno = ?",
-			    SQLITE_INTEGER, bsr->bsr_res->res_id,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno);
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 		} else {
 			/* Fatal error: cancel replication. */
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 		}
 
-		tract[BREPLST_REPL_QUEUED] = -1;
 		retifset[BREPLST_REPL_SCHED] = 1;
-		retifset[BREPLST_REPL_QUEUED] = 0;
 
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
@@ -262,7 +250,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		    &dst_resm->resm_csvc->csvc_mwc, 1);
 
 		OPSTAT_INCR("repl-throttle");
-		
+
 		/* XXX push batch out immediately */
 		return (0);
 	}
@@ -318,48 +306,17 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(out, rc = -ENODEV);
 
-	/*
-	 * The residency table is not written back to persistent
-	 * storage, so the upschdb must be updated manually to prevent
-	 * immediate re-scheduling of this work.
-	 */
-	dbdo(NULL, NULL,
-	    " UPDATE	upsch"
-	    " SET	status = 'S'"
-	    " WHERE	resid = ?"
-	    "   AND	fid = ?"
-	    "   AND	bno = ?",
-	    SQLITE_INTEGER, dst_res->res_id,
-	    SQLITE_INTEGER64, bmap_2_fid(b),
-	    SQLITE_INTEGER, b->bcm_bmapno);
-
 	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
 	    &slm_batch_rep_repl, 5);
-	if (rc) {
-		dbdo(NULL, NULL,
-		    " UPDATE	upsch"
-		    " SET	status = 'Q'"
-		    " WHERE	resid = ?"
-		    "   AND	fid = ?"
-		    "   AND	bno = ?",
-		    SQLITE_INTEGER, dst_res->res_id,
-		    SQLITE_INTEGER64, bmap_2_fid(b),
-		    SQLITE_INTEGER, b->bcm_bmapno);
-
+	if (rc)
 		PFL_GOTOERR(out, rc);
-	}
 
 	OPSTAT2_ADD("repl-sched", amt);
 
-	/*
-	 * We use this release API because mds_repl_bmap_apply() grabbed
-	 * the necessary write locks that we must relinquish because we
-	 * do not write changes to disk.
-	 */
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-	slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+	rc = mds_bmap_write_logrepls(b);
+	psc_assert(rc == 0);
 
 	/*
 	 * We succesfully scheduled some work; if there is more
@@ -624,51 +581,29 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	bsp = PSCALLOC(sizeof(*bsp));
 	bsp->bsp_res = r;
 
-	dbdo(NULL, NULL,
-	    " UPDATE	upsch"
-	    " SET	status = 'S'"
-	    " WHERE	resid = ?"
-	    "   AND	fid = ?"
-	    "   AND	bno = ?",
-	    SQLITE_INTEGER, r->res_id,
-	    SQLITE_INTEGER64, bmap_2_fid(b),
-	    SQLITE_INTEGER, b->bcm_bmapno);
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+	brepls_init_idx(retifset);
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (rc != BREPLST_GARBAGE) {
+		DEBUG_BMAPOD(PLL_DEBUG, b, "consistency error; expected "
+		    "state=GARBAGE at off %d", off);
+		PFL_GOTOERR(out, rc = EINVAL);
+	}
 
 	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs,
 	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
 	    &slm_batch_rep_preclaim, 30);
-	if (rc) {
-		dbdo(NULL, NULL,
-		    " UPDATE	upsch"
-		    " SET	status = 'Q'"
-		    " WHERE	resid = ?"
-		    "   AND	fid = ?"
-		    "   AND	bno = ?",
-		    SQLITE_INTEGER, r->res_id,
-		    SQLITE_INTEGER64, bmap_2_fid(b),
-		    SQLITE_INTEGER, b->bcm_bmapno);
-
+	if (rc)
 		PFL_GOTOERR(out, rc);
-	}
-
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
-	brepls_init_idx(retifset);
-	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-
-	if (rc != BREPLST_GARBAGE)
-		psclog_errorx("consistency error");
-
 	rc = mds_bmap_write_logrepls(b);
+	psc_assert(rc == 0);
 
 	return (1);
 
  out:
-	if (rc && rc != -PFLERR_NOTCONN)
-		psclog_errorx("error rc=%d", rc);
 	PSCFREE(bsp);
-	//UPSCH_WAKE();
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (0);
@@ -734,6 +669,9 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	RPMI_ULOCK(rpmi);
 }
 
+/*
+ * Process a bmap for upsch work.
+ */
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
@@ -911,6 +849,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	mds_note_update(-1);
 }
 
+/*
+ * Page in one unit of work.  This examines a single bmap for any work
+ * that needs done, such as replication, garbage reclamation, etc.
+ */
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
@@ -1005,6 +947,11 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 	return (0);
 }
 
+/*
+ * Page in some work for the update scheduler to do.  This consults the
+ * upsch database, potentially restricting to a single resource for work
+ * to schedule.
+ */
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
@@ -1113,13 +1060,17 @@ upd_proc(struct slm_update_data *upd)
 	}
 }
 
+/*
+ * Called at startup to reset all in-progress changes back to starting
+ * (e.g. SCHED -> QUEUED).
+ */
 int
 slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct fidc_membh *f = NULL;
-	struct sl_fidgen fg;
 	struct bmap *b = NULL;
+	struct sl_fidgen fg;
 	sl_bmapno_t bno;
 
 	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
