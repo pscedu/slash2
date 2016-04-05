@@ -776,6 +776,7 @@ foreach my $n (@mds) {
 		$sudo umount /$n->{zpool_name}
 		$sudo pkill zfs-fuse
 		sleep 8
+		$sudo rm -f /dev/shm/upsch.*
 
 		@cmds
 EOF
@@ -1258,8 +1259,8 @@ lock @all_output;
 
 my $output = join '', @all_output;
 
-my $pfl_commid = $output =~ /^%PFL_COMMID% (\S+?)/m;
-my $sl2_commid = $output =~ /^%SL2_COMMID% (\S+?)/m;
+my ($pfl_commid) = $output =~ /^%PFL_COMMID% (\S+?)/m;
+my ($sl2_commid) = $output =~ /^%SL2_COMMID% (\S+?)/m;
 
 sub parse_results {
 	my ($output) = @_;
