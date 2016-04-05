@@ -1010,17 +1010,13 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
-	static struct psc_dynarray a;
+	static struct psc_dynarray a = PSC_DYNARRAY_INIT;
 	struct slvr *s, *dummy;
-	int i, n;
-
-	psc_dynarray_init(&a);
+	int i;
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
 	LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_lruslvrs) {
-		DEBUG_SLVR(PLL_DIAG, s,
-		    "considering for reap, nwaiters=%d",
-		    psc_atomic32_read(&m->ppm_nwaiters));
+		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
 		/*
 		 * We are reaping so it is fine to back off on some
@@ -1043,6 +1039,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		psc_dynarray_add(&a, s);
 		s->slvr_flags |= SLVRF_FREEING;
+		DEBUG_SLVR(PLL_DIAG, s, "reaping");
 		SLVR_ULOCK(s);
 
 		if (psc_dynarray_len(&a) >=
@@ -1051,12 +1048,11 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
 
-	n = psc_dynarray_len(&a);
 	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
-	psc_dynarray_free(&a);
+	psc_dynarray_reset(&a);
 
-	return (n);
+	return (0);
 }
 
 void
@@ -1115,7 +1111,7 @@ slvr_cache_init(void)
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
-	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry, 
+	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry,
 	    "fcmhdirty");
 
 	if (slcfg_local->cfg_async_io) {
