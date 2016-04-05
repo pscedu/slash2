@@ -26,8 +26,8 @@
  * layer for managing transportation over the network.
  */
 
-#ifndef _SL_BUFFER_H_
-#define _SL_BUFFER_H_
+#ifndef _SLI_SLAB_H_
+#define _SLI_SLAB_H_
 
 #include "pfl/cdefs.h"
 #include "pfl/list.h"
@@ -36,15 +36,15 @@
 /*
  * Used for both read caching and write aggregation.
  */
-struct sl_buffer {
+struct slab {
 	void			*slb_base;		/* point to the data buffer */
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
 #define SLAB_CACHE_MIN		((size_t)64 * 1024 * 1024)	/* 64MiB */
 
-void sl_buffer_cache_init(void);
+void slab_cache_init(void);
 
-extern struct psc_poolmgr	*sl_bufs_pool;
+extern struct psc_poolmgr	*slab_pool;
 
-#endif /* _SL_BUFFER_H_ */
+#endif /* _SLI_SLAB_H_ */

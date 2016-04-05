@@ -755,7 +755,7 @@ slvr_remove(struct slvr *s)
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 	if (s->slvr_slab)
-		psc_pool_return(sl_bufs_pool, s->slvr_slab);
+		psc_pool_return(slab_pool, s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -929,7 +929,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
     struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
-	struct sl_buffer *tmp2 = NULL;
+	struct slab *tmp2 = NULL;
 	int alloc = 0;
 
 	ts.slvr_num = num;
@@ -964,7 +964,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = psc_pool_get(sl_bufs_pool);
+			tmp2 = psc_pool_get(slab_pool);
 			BII_LOCK(bii);
 			goto retry;
 		}
@@ -992,30 +992,29 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		 * private to the bmap's biod_slvrtree.
 		 */
 		s->slvr_flags |= SLVRF_LRU;
-		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&sli_lruslvrs, s);
 
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
-		psc_pool_return(sl_bufs_pool, tmp2);
+		psc_pool_return(slab_pool, tmp2);
 	}
 	return (s);
 }
 
 /*
- * The reclaim function for sl_bufs_pool.  Note that our caller
+ * The reclaim function for slab_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	static struct psc_dynarray a = DYNARRAY_INIT;
-	struct slvr *s, *dummy;
+	struct slvr *s;
 	int i;
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
-	LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_lruslvrs) {
+	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
 		/*
@@ -1039,7 +1038,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		psc_dynarray_add(&a, s);
 		s->slvr_flags |= SLVRF_FREEING;
-		DEBUG_SLVR(PLL_DIAG, s, "reaping");
 		SLVR_ULOCK(s);
 
 		if (psc_dynarray_len(&a) >=
@@ -1132,7 +1130,7 @@ slvr_cache_init(void)
 		    "sliaiothr");
 	}
 
-	sl_buffer_cache_init();
+	slab_cache_init();
 	slvr_worker_init();
 }
 

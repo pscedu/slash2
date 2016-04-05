@@ -41,13 +41,13 @@
 #include "sliod.h"
 #include "slvr.h"
 
-struct psc_poolmaster	 sl_bufs_poolmaster;
-struct psc_poolmgr	*sl_bufs_pool;
+struct psc_poolmaster	 slab_poolmaster;
+struct psc_poolmgr	*slab_pool;
 
 int
-sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
+slab_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
-	struct sl_buffer *slb = pri;
+	struct slab *slb = pri;
 
 	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
@@ -56,9 +56,9 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 }
 
 void
-sl_buffer_destroy(void *pri)
+slab_destroy(void *pri)
 {
-	struct sl_buffer *slb = pri;
+	struct slab *slb = pri;
 
 	PSCFREE(slb->slb_base);
 }
@@ -67,13 +67,13 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_pool_reap(sl_bufs_pool, 0);
+		psc_pool_reap(slab_pool, 0);
 		sleep(10);
 	}
 }
 
 void
-sl_buffer_cache_init(void)
+slab_cache_init(void)
 {
 	size_t nbuf;
 
@@ -84,11 +84,11 @@ sl_buffer_cache_init(void)
 		    "minimum allowed is %zu", SLAB_CACHE_MIN);
 
 	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
-	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
+	psc_poolmaster_init(&slab_poolmaster, struct slab,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
+	    slab_init, slab_destroy, slvr_buffer_reap, "slab",
 	    NULL);
-	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);
+	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 
 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, NULL, 0,
 	    "slibreapthr");
