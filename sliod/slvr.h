@@ -219,7 +219,6 @@ extern struct psc_poolmgr	*sli_readaheadrq_pool;
 extern struct psc_listcache	 sli_lruslvrs;
 extern struct psc_listcache	 sli_crcqslvrs;
 extern struct psc_listcache	 sli_readaheadq;
-extern struct psc_waitq		 sli_slvr_waitq;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

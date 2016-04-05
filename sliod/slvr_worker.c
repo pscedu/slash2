@@ -51,7 +51,6 @@ psc_atomic32_t			 sli_ninfl_bcrcupd;
 
 struct psc_listcache		 bcr_ready;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
-struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 
 int
 sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,

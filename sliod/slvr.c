@@ -1056,9 +1056,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		slvr_remove(s);
 	psc_dynarray_free(&a);
 
-	if (!n || n < psc_atomic32_read(&m->ppm_nwaiters))
-		psc_waitq_wakeone(&sli_slvr_waitq);
-
 	return (n);
 }
 
