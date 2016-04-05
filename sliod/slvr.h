@@ -205,8 +205,6 @@ struct sli_aiocb_reply *
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
-int	slvr_buffer_reap(struct psc_poolmgr *);
-
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;
 	sl_bmapno_t		rarq_bno;

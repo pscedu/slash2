@@ -86,7 +86,7 @@ slab_cache_init(void)
 	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 	psc_poolmaster_init(&slab_poolmaster, struct slab,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    slab_init, slab_destroy, slvr_buffer_reap, "slab",
+	    slab_init, slab_destroy, slab_cache_reap, "slab",
 	    NULL);
 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 

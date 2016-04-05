@@ -1007,7 +1007,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
-slvr_buffer_reap(struct psc_poolmgr *m)
+slab_cache_reap(struct psc_poolmgr *m)
 {
 	static struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
