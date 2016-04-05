@@ -162,7 +162,8 @@ struct sli_aiocb_reply {
 	uint32_t		  aiocbr_off;
 };
 
-#define SLI_AIOCBSF_NONE	(0 << 0)
+/* aiocbr_flags */
+#define SLI_AIOCBSF_NONE	(0)
 #define SLI_AIOCBSF_REPL	(1 << 0)
 #define SLI_AIOCBSF_DIO		(1 << 1)
 
@@ -205,6 +206,8 @@ struct sli_aiocb_reply *
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
+void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
+
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;
 	sl_bmapno_t		rarq_bno;
@@ -227,7 +230,5 @@ slvr_cmp(const void *x, const void *y)
 }
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
-
-void slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
 #endif /* _SLIOD_SLVR_H_ */

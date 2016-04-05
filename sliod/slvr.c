@@ -951,10 +951,12 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			 * from being freed before we release the lock.
 			 */
 			BII_ULOCK(bii);
-			pscthr_yield();
+			usleep(1);
 			BII_LOCK(bii);
 			goto retry;
 		}
+
+		OPSTAT_INCR("slvr-cache-hit");
 
 		s->slvr_refcnt++;
 
@@ -971,7 +973,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 
 		alloc = 0;
 
-		OPSTAT_INCR("slvr-get");
+		OPSTAT_INCR("slvr-cache-miss");
 
 		s = tmp1;
 		memset(s, 0, sizeof(*s));
