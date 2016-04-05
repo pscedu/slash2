@@ -4,15 +4,19 @@
 
 repl_wait()
 {
+	(
+	set +x
+
 	ios=$1
 	fn=$2
 	cnt=0
 
 	while msctl -H repl-status $fn | \
 	    grep -A1 $ios | tail -1 | grep -q q; do
-		[ $(( cnt++ )) -eq 300 ] && msctl repl-status $fn
+		[ $(( cnt++ % 60 )) -eq 0 ] && msctl repl-status $fn
 		sleep 1
 	done
+	)
 }
 
 fn=t000
