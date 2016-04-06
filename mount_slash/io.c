@@ -2280,6 +2280,7 @@ msioretrythr_spawn(void)
 	int i;
 	struct msioretry_thread *mrat;
 	struct psc_thread *thr;
+return;
 
 	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
