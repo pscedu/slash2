@@ -617,8 +617,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
-		psclog_warnx("unable to contact IOS %#x (%s) for lease",
-		    iosid, r ? r->res_name : NULL);
+		psclog_warnx("unable to contact IOS %#x (pref_ios=%s) "
+		    "for lease", iosid, r ? r->res_name : NULL);
 
 		return (-SLERR_ION_OFFLINE);
 	}
@@ -2375,12 +2375,12 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
-	log = psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG;
+	log = psc_log_shouldlog(pci, PLL_DEBUG);
 	if (log) {
 		strlcpy(dbuf, fmt, sizeof(dbuf));
 		dbuf_off = strlen(fmt);
-		PFL_GETTIMEVAL(&tv0);
 	}
+	PFL_GETTIMEVAL(&tv0);
 	for (j = 0; j < n; j++) {
 		type = va_arg(ap, int);
 		switch (type) {
@@ -2442,14 +2442,13 @@ _dbdo(const struct pfl_callerinfo *pci,
 	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
 	    rc == SQLITE_LOCKED);
 
-	if (log) {
-		PFL_GETTIMEVAL(&tv);
-		timersub(&tv, &tv0, &tvd);
-		OPSTAT_ADD("sql-wait-usecs",
-		    tvd.tv_sec * 1000000 + tvd.tv_usec);
+	PFL_GETTIMEVAL(&tv);
+	timersub(&tv, &tv0, &tvd);
+	OPSTAT_ADD("sql-wait-usecs",
+	    tvd.tv_sec * 1000000 + tvd.tv_usec);
+	if (log)
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
 		    tvd.tv_usec / 1000000.0, dbuf);
-	}
 
 	if (rc != SQLITE_DONE)
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,

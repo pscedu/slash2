@@ -597,6 +597,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
+		    vold != BREPLST_GARBAGE &&
+		    vold != BREPLST_GARBAGE_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vold != BREPLST_GARBAGE_SCHED &&
 		     vnew == BREPLST_GARBAGE &&
