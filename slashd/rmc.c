@@ -1435,6 +1435,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
+	struct srt_stat	attr;
+	uint32_t xattrsize;
 	int vfsid;
 
 	chfg.fg_fid = FID_ANY;
@@ -1462,6 +1464,11 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	}
 
 	mp->rc = -slm_fcmh_get(&fg, &p);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = -mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
+	    &rootcreds, &attr, &xattrsize);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
