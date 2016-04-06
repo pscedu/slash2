@@ -10,11 +10,21 @@ repl_wait()
 	ios=$1
 	fn=$2
 	cnt=0
+	last=
+	timeout=500
 
-	while msctl -H repl-status $fn | \
-	    grep -A1 $ios | tail -1 | grep -q q; do
-		[ $(( cnt++ % 60 )) -eq 0 ] && msctl repl-status $fn
+	while :; do
+		new=$(msctl -H repl-status $fn)$'\n'
+		if [ x"$last" = x"$new" ]; then
+			[ $(( cnt++ )) -eq $timeout ] && \
+			    die "no change in $timeout seconds; something is broken"
+		else
+			diff -u <(echo -n "$last") <(echo -n "$new") || :
+			cnt=0
+		fi
+		echo $new | grep -A1 $ios | tail -1 | grep -q '[qs]' || break
 		sleep 1
+		last=$new
 	done
 	)
 }
@@ -24,6 +34,8 @@ fn=t000
 dd if=$RANDOM_DATA of=$fn bs=131072
 
 cksum=$(md5sum $fn)
+
+sleep 4
 
 msctl repl-add:io0@SITE0,io1@SITE0:* $fn
 
