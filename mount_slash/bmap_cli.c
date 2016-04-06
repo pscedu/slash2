@@ -44,7 +44,8 @@
 #define BMAP_CACHE_MAX		1024
 
 #define BMAP_DIOWAIT_USEC	100
-#define BMAP_DIOWAIT_MAX_TRIES	20	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
+#define BMAP_DIOWAIT_MAX_USEC	60*1000000
+#define BMAP_DIOWAIT_MAX_TRIES	32	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
@@ -290,8 +291,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
 		usleep(diowait_usec);
-		/* XXX detect overflow */
 		diowait_usec += diowait_usec;
+		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
+			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
 		goto retry;
 	}
 
@@ -783,8 +785,9 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 			return (-ETIMEDOUT);
 		usleep(diowait_usec);
-		/* XXX detect overflow */
 		diowait_usec += diowait_usec;
+		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
+			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
