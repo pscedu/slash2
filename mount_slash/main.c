@@ -929,9 +929,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -1255,8 +1255,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		mq->pfid = pinum;
 		strlcpy(mq->name, name, sizeof(mq->name));
 		namecache_hold_entry(&dcu, p, name);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
@@ -1373,8 +1373,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
- retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
+
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -2490,8 +2492,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	namecache_get_entries(&odcu, op, oldname, &ndcu, np, newname);
 
-  retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+  retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
