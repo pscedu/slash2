@@ -41,6 +41,7 @@
 
 struct bmap_iod_minseq	 sli_bminseq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
+const struct timespec	 sli_bmap_release_idle = { 0, 1000 * 1000L};
 
 struct psc_listcache	 sli_bmap_releaseq;		/* bmaps to release */
 struct psc_listcache	 sli_bmaplease_releaseq;	/* bmap leases to release */
@@ -339,6 +340,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct srm_bmap_release_req brr;
 	struct bmap_iod_info *bii, *tmp;
 	struct bmap_iod_rls *brls;
+	struct timespec ts;
 	struct bmap *b;
 	int nrls, i;
 
@@ -351,18 +353,22 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(bii, tmp, &sli_bmap_releaseq) {
 			b = bii_2_bmap(bii);
 
+			DEBUG_BMAP(PLL_DEBUG, b,
+			    "considering for release");
+
 			/* deadlock and busy bmap avoidance */
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
 			psc_assert(b->bcm_flags & BMAPF_RELEASEQ);
 			psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
-			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				DEBUG_BMAP(PLL_DIAG, b,
-				    "skip due to refcnt");
-				BMAP_ULOCK(b);
-				continue;
-			}
+
+			/*
+			 * XXX this logic can be rewritten to avoid
+			 * grabbing the pll lock so much.  Specifically,
+			 * assert that there are items on bii_rls, and 
+			 * we already know if bii_rls will be empty.
+			 */
 			if (pll_nitems(&bii->bii_rls)) {
 				psc_dynarray_add(&to_sync, b);
 				bmap_op_start_type(b,
@@ -379,7 +385,6 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (pll_nitems(&bii->bii_rls))
 				BMAP_ULOCK(b);
 			else {
-				b->bcm_flags |= BMAPF_TOFREE;
 				b->bcm_flags &= ~BMAPF_RELEASEQ;
 				lc_remove(&sli_bmap_releaseq, bii);
 				bmap_op_done_type(b,
@@ -388,6 +393,11 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 			if (nrls >= MAX_BMAP_RELEASE)
 				break;
+		}
+		if (!psc_dynarray_len(&to_sync)) {
+			PFL_GETTIMESPEC(&ts);
+			timespecadd(&ts, &sli_bmap_release_idle, &ts);
+			lc_peekheadtimed(&sli_bmap_releaseq, &ts);
 		}
 		LIST_CACHE_ULOCK(&sli_bmap_releaseq);
 
@@ -401,10 +411,11 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			sli_bmap_sync(b);
 			bmap_op_done_type(b, BMAP_OPCNT_RELEASER);
 		}
-		psc_dynarray_reset(&to_sync);
 
 		if (!nrls)
 			continue;
+
+		psc_dynarray_reset(&to_sync);
 
 		DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases",
 		    nrls);
