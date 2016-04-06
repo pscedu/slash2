@@ -150,12 +150,13 @@ dircache_entq_cmp(const void *a, const void *b)
  * If the entry came from an individual population (ent_pool instead of
  * page_pool), it is removed and memory released.
  */
-void
+int
 _dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce,
     int locked)
 {
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p;
+	int rc = 0;
 
 	OPSTAT_INCR("msl.dircache-ent-destroy");
 
@@ -176,6 +177,7 @@ _dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce,
 		p->dcp_local_tm.tv_sec -= DIRCACHEPG_HARD_TIMEO;
 	} else if (!(dce->dce_flags & DCEF_DETACHED)) {
 		psc_dynarray_removeitem(&fci->fcid_ents, dce);
+		rc = 1;
 	}
 	if (!locked)
 		DIRCACHE_ULOCK(d);
@@ -184,6 +186,7 @@ _dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce,
 		PSCFREE(dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
+	return (rc);
 }
 
 /*
@@ -624,15 +627,14 @@ namecache_purge(struct fidc_membh *d)
 			    dce);
 			dce->dce_flags &= ~DCEF_ACTIVE;
 		}
+		dce->dce_flags |= DCEF_DETACHED;
 		if (dce->dce_flags & DCEF_HOLD) {
-			dce->dce_flags |= DCEF_FREEME | DCEF_DETACHED;
+			dce->dce_flags |= DCEF_FREEME;
 			dce = NULL;
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-		if (dce) {
-			dircache_ent_destroy_locked(d, dce);
-
+		if (dce && dircache_ent_destroy_locked(d, dce)) {
 			/*
 			 * psc_dynarray_removeitem() will swap items so
 			 * update the iteration index accordingly.
