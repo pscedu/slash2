@@ -14,6 +14,8 @@ tsuite_decompress linux-$V.tar.xz | tar fx -
 
 dir=$(pwd)
 (
+	# XXX the local file system is subject to timing variation we do
+	# not want to include in the test; better to use tmpfs.
 	cd $LOCAL_TMP
 	tsuite_decompress $dir/linux-$V.tar.xz | tar fx -
 )
