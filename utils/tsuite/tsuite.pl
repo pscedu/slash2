@@ -157,12 +157,14 @@ EOF
 	{
 		local host=\$1
 		local line=\$2
+		local timestamp=\$3
+
 		local n=\$((SHLVL - 2))
-		printf "%\${n}s[%s:%5d:%3d] " "" \$host \$\$ \$line
+		printf "%\${n}s[%s:%d:%d %d] " "" \$host \$\$ \$timestamp \$line
 	}
 	export -f _make_ps4
 
-	PS4='\$(_make_ps4 "\\h" \$LINENO)'
+	PS4='\$(_make_ps4 "\\h" \$LINENO "\\D{%s}")'
 	export PS4
 
 	die()
@@ -170,6 +172,7 @@ EOF
 		echo \$@ >&2
 		exit 1
 	}
+	export -f die
 
 	hasprog()
 	{
@@ -474,7 +477,7 @@ my $src_dir = $`;
 
 chdir($src_dir) or die "chdir $src_dir";
 my $diff = "";
-$diff = join '', `make scm-diff` unless $opts{P};
+$diff = join '', `make scm-diff | grep -v ^index` unless $opts{P};
 
 my $ts_cfg = slurp "$ts_base/cfg";
 
@@ -1029,9 +1032,19 @@ sub test_setup {
 	}
 	export -f exclude_time_end
 
+#	sleep()
+#	{
+#		exclude_time_start()
+#		command sleep \$@
+#		exclude_time_end()
+#	}
+
 	shopt -s extglob
 EOF
 }
+
+# Give IOS a moment to connect.
+sleep(4);
 
 # Set 1: run the client application tests, serially, measuring stats on
 # each so we can present historical performance analysis.
