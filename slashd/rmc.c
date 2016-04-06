@@ -1492,11 +1492,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		mdsio_fcmh_refreshattr(c, &mp->cattr);
 
+		mp->valid = 1;
 		if (!c->fcmh_sstb.sst_nlink) {
 			mp->valid = 0;
 			mp->cattr.sst_fg = oldfg;
-		} else
-			mp->valid = 1;
+			slm_coh_delete_file(c);
+		}	
 	}
 
 	if (p)
