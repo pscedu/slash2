@@ -842,11 +842,10 @@ msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	off = e->bmpce_off;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
-	
 	if (rc)
 		 PFL_GOTOERR(out, rc);
-	rq->rq_bulk_abortable = 1;
 
+	rq->rq_bulk_abortable = 1;
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 		npages);
 	if (rc)
