@@ -1129,15 +1129,17 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	psc_assert(off == size);
 
 	rc = pscrpc_set_wait(nbs);
+	q = r->biorq_fsrqi;
+	psc_assert(q);
+
 #if 0
-	if (rc && r->biorq_fsrqi && slc_rmc_retry(pfr, rc)) {
+	if (rc && slc_rmc_retry(pfr, rc)) {
 		msl_biorq_release(r);
 		goto retry;
 	}
 #endif
 
 	if (rc == -SLERR_AIOWAIT) {
-		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		BIORQ_LOCK(r);
 		while (r->biorq_ref > 1) {
@@ -1167,13 +1169,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		else
 			OPSTAT2_ADD("msl.dio-rpc-rd", size);
 
-		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
 
-	q = r->biorq_fsrqi;
 	mfsrq_seterr(q, rc);
 	msl_biorq_release(r);
 
