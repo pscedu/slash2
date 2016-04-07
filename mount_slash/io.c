@@ -1135,14 +1135,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	pfl_fault_here_rc("slash2/dio_wait", &rc, EIO);
 
-#if 0
-	if (rc && slc_rmc_retry(pfr, rc)) {
-		pscrpc_set_destroy(nbs);
-		msl_biorq_release(r);
-		sl_csvc_decref(csvc);
-		goto retry;
-	}
-#endif
 
 	if (rc == -SLERR_AIOWAIT) {
 		MFH_LOCK(q->mfsrq_mfh);
@@ -1180,10 +1172,20 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
 
-	mfsrq_seterr(q, rc);
 	msl_biorq_release(r);
 
  out:
+
+#if 0
+	if (rc && slc_rmc_retry(pfr, rc)) {
+		pscrpc_set_destroy(nbs);
+		sl_csvc_decref(csvc);
+		goto retry;
+	}
+#endif
+
+	mfsrq_seterr(q, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 
