@@ -814,6 +814,17 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 	msl_bmpce_complete_biorq(e, rc);
 }
 
+int
+msl_read_retry(struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
+	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
+
+
+
+}
 /*
  * RPC callback used only for read or RBW operations.  The primary
  * purpose is to set the bmpce's to DATARDY so that other threads
@@ -850,18 +861,17 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
-#if 0
-
 	if (r->biorq_fsrqi) {
 		struct pscfs_req *pfr;
 		struct slc_retry_req *retry;
 		pfr = mfsrq_2_pfr(r->biorq_fsrqi);
 		if (rc && slc_rmc_retry(pfr, &rc)) {
-			retry = psc_pool_get(msl_retry_req_pool);
+			ret = msl_read_retry(args);
+			if (!ret)
+				return (0);
 		}
 	}
 
-#endif
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_read_rpc_done(e, rc);
 

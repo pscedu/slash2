@@ -221,8 +221,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	/*
+ 	 * Limit key checking for write for now until the client
+ 	 * side can extend read lease in the background as well.
+ 	 */
 	seqno = bim_getcurseq();
-	if (mq->sbd.sbd_seq < seqno) {
+	if (rw == SL_WRITE && mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
