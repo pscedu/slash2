@@ -1313,6 +1313,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		PFL_GOTOERR(out, rc);
 
 	mq->offset = off;
+	/*
+ 	 * XXX what about the start of the first page and the end of the
+ 	 * last page???
+ 	 */
 	mq->size = npages * BMPC_BUFSZ;
 	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
 
