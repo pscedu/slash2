@@ -530,6 +530,14 @@ struct srm_bmap_dio_req {
 
 #define srm_bmap_dio_rep	srm_generic_rep
 
+struct srm_delete_req {
+	struct sl_fidgen	fg;
+	uint32_t		flag;		/* unused for now */
+	 int32_t		_pad;
+} __packed;
+
+#define srm_delete_rep		srm_generic_rep
+
 struct srt_bmap_crcwire {
 	uint64_t		crc;		/* CRC of the corresponding sliver */
 	uint32_t		slot;		/* sliver number in the owning bmap */

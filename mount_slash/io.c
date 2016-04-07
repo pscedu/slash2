@@ -612,7 +612,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
 		struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
-		struct fcmh_cli_info *fci;
 		int nio = 0, rc = 0;
 
 		if (q->mfsrq_err) {
