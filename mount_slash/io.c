@@ -1000,10 +1000,8 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 		    mq->size);
 	}
 
-	q = r->biorq_fsrqi;
-	mfsrq_seterr(q, rc);
-	msl_biorq_release(r);
 
+	q = r->biorq_fsrqi;
 	if (r->biorq_flags & BIORQ_AIOWAKE) {
 		MFH_LOCK(q->mfsrq_mfh);
 		psc_waitq_wakeall(&msl_fhent_aio_waitq);
@@ -1131,6 +1129,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	psc_assert(off == size);
 
 	rc = pscrpc_set_wait(nbs);
+#if 0
+	if (rc && r->biorq_fsrqi && slc_rmc_retry(pfr, rc)) {
+		msl_biorq_release(r);
+		goto retry;
+	}
+#endif
 
 	if (rc == -SLERR_AIOWAIT) {
 		q = r->biorq_fsrqi;
@@ -1153,6 +1157,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		 * Async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
 		 */
+		msl_biorq_release(r);
 		goto retry;
 	}
 
@@ -1167,6 +1172,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
+
+	q = r->biorq_fsrqi;
+	mfsrq_seterr(q, rc);
+	msl_biorq_release(r);
 
  out:
 	if (rq)
