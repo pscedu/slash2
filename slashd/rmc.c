@@ -1438,7 +1438,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_rep *mp;
 	struct srt_stat	attr;
 	uint32_t xattrsize;
-	int vfsid;
+	int rc, vfsid;
 
 	chfg.fg_fid = FID_ANY;
 
@@ -1490,10 +1490,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
  out:
 	if (mp->rc == 0) {
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
-		mdsio_fcmh_refreshattr(c, &mp->cattr);
+		rc = mdsio_fcmh_refreshattr(c, &mp->cattr);
 
 		mp->valid = 1;
-		if (!c->fcmh_sstb.sst_nlink) {
+		if (rc || !c->fcmh_sstb.sst_nlink) {
 			mp->valid = 0;
 			mp->cattr.sst_fg = oldfg;
 			slm_coh_delete_file(c);
