@@ -1066,6 +1066,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		OPSTAT_INCR("msl.dio-read");
 	}
 
+  retry:
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
 	 * residencies and use them if available.
@@ -1073,7 +1074,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &m, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-  retry:
+
 	nbs = pscrpc_prep_set();
 
 	/*
@@ -1136,7 +1137,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 #if 0
 	if (rc && slc_rmc_retry(pfr, rc)) {
+		pscrpc_set_destroy(nbs);
 		msl_biorq_release(r);
+		sl_csvc_decref(csvc);
 		goto retry;
 	}
 #endif
@@ -1162,6 +1165,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		 * notification from him when it is ready.
 		 */
 		msl_biorq_release(r);
+		sl_csvc_decref(csvc);
 		goto retry;
 	}
 
