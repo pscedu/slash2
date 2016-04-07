@@ -209,6 +209,15 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	rc = slm_rcm_issue_getreplst(rsw, f);
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
+			/*
+			 * Client write-ahead can create empty bmaps
+			 * after EOF.  These shouldn't be shown; dumpfid
+			 * can be used to examine the entire file for
+			 * system debugging.
+			 */
+			if (n >= fcmh_nvalidbmaps(f))
+				    break;
+
 			rc = bmap_getf(f, n, SL_WRITE, BMAPGETF_CREATE |
 			    BMAPGETF_NOAUTOINST, &b);
 			if (rc == SLERR_BMAP_INVALID)
