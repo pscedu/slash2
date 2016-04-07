@@ -817,7 +817,8 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 }
 
 int
-msl_read_retry(struct pscrpc_async_args *args)
+msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
+    struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -830,7 +831,12 @@ msl_read_retry(struct pscrpc_async_args *args)
 	struct bmap_pagecache_entry *e;
 	int npages, rc = 0;
 	uint32_t off;
-	
+	struct pscfs_req *pfr;
+
+	pfr = mfsrq_2_pfr(fsrqi);
+	if (!slc_rmc_retry(pfr, &rc0))
+		return (0);
+
 	e = psc_dynarray_getpos(a, 0);
 	npages = psc_dynarray_len(a);
 	off = e->bmpce_off;
@@ -907,15 +913,9 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
 #if 0
-	if (r->biorq_fsrqi) {
-		struct pscfs_req *pfr;
-
-		pfr = mfsrq_2_pfr(r->biorq_fsrqi);
-		if (rc && slc_rmc_retry(pfr, &rc)) {
-			if (!msl_read_retry(args))
-				return (0);
-		}
-	}
+	if (rc && r->biorq_fsrqi && 
+	    msl_read_should_retry(r->biorq_fsrqi, rc, args))
+		return (0);
 #endif
 
 	DYNARRAY_FOREACH(e, i, a)
