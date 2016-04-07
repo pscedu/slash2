@@ -428,6 +428,7 @@ void
 bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 {
 	struct bmpc_ioreq *r;
+	int wake = 0;
 
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 		BIORQ_LOCK(r);
@@ -444,8 +445,10 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 		r->biorq_flags |= BIORQ_EXPIRE;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
+		wake = 1;
 	}
-	bmap_flushq_wake(BMAPFLSH_EXPIRE);
+	if (wake)
+		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /*
