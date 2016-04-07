@@ -1132,6 +1132,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	q = r->biorq_fsrqi;
 	psc_assert(q);
 
+	pfl_fault_here_rc("slash2/dio_wait", &rc, EIO);
+
 #if 0
 	if (rc && slc_rmc_retry(pfr, rc)) {
 		msl_biorq_release(r);
