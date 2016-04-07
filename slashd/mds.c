@@ -1676,7 +1676,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
-	if (b->bcm_flags & BMAPF_DIO)
+	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {

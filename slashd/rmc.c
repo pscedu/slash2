@@ -67,6 +67,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			slm_force_dio;
 int			slm_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -1491,6 +1492,11 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc == 0) {
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		rc = mdsio_fcmh_refreshattr(c, &mp->cattr);
+
+		if (rc) {
+			OPSTAT_INCR("unlink-error");
+			psc_assert(rc == ENOENT);
+		}
 
 		mp->valid = 1;
 		if (rc || !c->fcmh_sstb.sst_nlink) {

@@ -496,6 +496,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 
+	psc_ctlparam_register_var("sys.force_dio",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_force_dio);
+
 	psc_ctlparam_register_var("sys.global",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_global_mount);
 	psc_ctlparam_register_var("sys.ptrunc",
