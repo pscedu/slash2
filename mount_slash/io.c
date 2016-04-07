@@ -92,6 +92,8 @@ struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
 struct psc_listcache	 msl_readaheadq;
 
+int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
 #define msl_biorq_page_valid_accounting(r, idx)				\
 	_msl_biorq_page_valid((r), (idx), 1)
 
@@ -821,10 +823,53 @@ msl_read_retry(struct pscrpc_async_args *args)
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
+	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
+	struct pscrpc_request *rq = NULL;
+	struct srm_io_req *mq;
+	struct srm_io_rep *mp;
+	struct bmap_pagecache_entry *e;
+	int npages, rc = 0;
+	uint32_t off;
+	
+	e = psc_dynarray_getpos(a, 0);
+	npages = psc_dynarray_len(a);
+	off = e->bmpce_off;
 
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+	
+	if (rc)
+		 PFL_GOTOERR(out, rc);
+	rq->rq_bulk_abortable = 1;
 
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+		npages);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
+	mq->offset = off;
+	mq->size = npages * BMPC_BUFSZ;
+	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
+
+	mq->op = SRMIOP_RD;
+	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_IOVS] = iovs;
+	rq->rq_interpret_reply = msl_read_cb;
+
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc)
+		 PFL_GOTOERR(out, rc);
+
+	return (0);
+
+ out:
+	pscrpc_req_finished(rq);
+	return (rc);
 }
+
 /*
  * RPC callback used only for read or RBW operations.  The primary
  * purpose is to set the bmpce's to DATARDY so that other threads
@@ -861,16 +906,17 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
+#if 0
 	if (r->biorq_fsrqi) {
 		struct pscfs_req *pfr;
-		struct slc_retry_req *retry;
+
 		pfr = mfsrq_2_pfr(r->biorq_fsrqi);
 		if (rc && slc_rmc_retry(pfr, &rc)) {
-			ret = msl_read_retry(args);
-			if (!ret)
+			if (!msl_read_retry(args))
 				return (0);
 		}
 	}
+#endif
 
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_read_rpc_done(e, rc);
