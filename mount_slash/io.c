@@ -1045,6 +1045,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct sl_resm *m;
 	struct bmap *b;
 	uint64_t *v8;
+	int refs;
 
 	psc_assert(r->biorq_bmap);
 
@@ -1067,6 +1068,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
   retry:
+
+	refs = 0;
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
 	 * residencies and use them if available.
@@ -1112,10 +1115,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
+		refs++;
 		biorq_incref(r);
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
+			refs--;
 			msl_biorq_release(r);
 			OPSTAT_INCR("msl.dio-add-req-fail");
 			PFL_GOTOERR(out, rc);
@@ -1156,6 +1161,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		 * Async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
 		 */
+		for (i = 0; i < refs; i++)
+			msl_biorq_release(r);
 		msl_biorq_release(r);
 		sl_csvc_decref(csvc);
 		goto retry;
@@ -1171,8 +1178,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
-
-	msl_biorq_release(r);
+	/*
+	 * Drop the reference we have take for the RPCs.
+	 */
+	for (i = 0; i < refs; i++)
+		msl_biorq_release(r);
 
  out:
 
