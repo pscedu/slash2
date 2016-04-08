@@ -796,19 +796,20 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
-
-	return (rc);
+	rq = NULL;
 
  out:
+
 	pscrpc_req_finished(rq);
-	rq = NULL;
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
-		goto retry;
+	if (!(flags & BMAPGETF_NONBLOCK)) {
+		if (rc && pfr && slc_rmc_retry(pfr, &rc))
+			goto retry;
+	}
 
 	return (rc);
 }
