@@ -780,6 +780,23 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+mslctl_resfield_timeouts(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct resprof_cli_info *rpci;
+	char nbuf[16];
+
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "timeouts: field is read-only"));
+	rpci = res2rpci(r);
+	snprintf(nbuf, sizeof(nbuf), "%d", rpci->rpci_timeouts);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
+int
 mslctl_resfield_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
@@ -823,6 +840,7 @@ mslctl_resfield_max_infl_rpcs(int fd, struct psc_ctlmsghdr *mh,
 
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
+	{ "timeouts",		mslctl_resfield_timeouts },
 	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
 	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
@@ -831,6 +849,7 @@ const struct slctl_res_field slctl_resmds_fields[] = {
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "connected",		mslctl_resfield_connected },
+	{ "timeouts",		mslctl_resfield_timeouts },
 	{ "infl_rpcs",		mslctl_resfield_infl_rpcs },
 	{ "max_infl_rpcs",	mslctl_resfield_max_infl_rpcs },
 	{ "mtime",		mslctl_resfield_mtime },
