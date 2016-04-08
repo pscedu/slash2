@@ -306,6 +306,9 @@ sli_bml_process_release(struct bmap_iod_rls *brls)
 		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
 		psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
 		b->bcm_flags |= BMAPF_RELEASEQ;
+		/* 
+		 * XXX rename sli_bmaplease_releaseq versus sli_bmap_releaseq.
+		 */
 		lc_addtail(&sli_bmap_releaseq, bii);
 	}
 
