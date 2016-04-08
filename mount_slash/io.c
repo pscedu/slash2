@@ -2207,15 +2207,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		else {
 			rc = msl_pages_fetch(r);
 		}
-		if (rc) {
-			mfsrq_seterr(q, rc);
+		if (rc)
 			break;
-		}
 	}
 
  out2:
 
 	/* Step 4: finish up biorqs (user copy in happens in this step) */
+	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
