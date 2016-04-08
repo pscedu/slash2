@@ -2207,38 +2207,17 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
-		else
+		else {
 			rc = msl_pages_fetch(r);
+			mfsrq_seterr(q, rc);
+		}
 		if (rc)
 			break;
 	}
 
  out2:
-	/* Step 4: retry if at least one biorq failed. */
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f,
-		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%s rc=%d",
-		    q, start + i, tsize, tlen, off,
-		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
-		if (msl_fd_should_retry(mfh, pfr, rc)) {
-			mfsrq_clrerr(q);
-			retry = 1;
-			OPSTAT_INCR("msl.io-retry");
-			goto restart;
-		}
-		if (abs(rc) == SLERR_ION_OFFLINE)
-			rc = -ETIMEDOUT;
-
-		/*
-		 * Make sure we don't copy pages from biorq in case of
-		 * an error.
-		 */
-		mfsrq_seterr(q, rc);
-	}
-
-	/* Step 5: finish up biorqs (user copy in happens in this step) */
+	/* Step 4: finish up biorqs (user copy in happens in this step) */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
