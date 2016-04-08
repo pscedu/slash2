@@ -161,7 +161,7 @@ struct psc_hashtbl		 msl_gidmap_int;
 int				 msl_acl;
 int				 msl_direct_io = 1;
 int				 msl_root_squash;
-int				 msl_max_retries = 3;
+int				 msl_max_retries = 5;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
