@@ -239,15 +239,21 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
-	psc_atomic32_inc(&rmmi->rmmi_refcnt);
 
 	psc_assert(bml->bml_bmi->bmi_assign);
-	bml->bml_bmi->bmi_wr_ion = rmmi;
+
+	if (bml->bml_bmi->bmi_wr_ion) {
+		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+	} else {
+		psc_atomic32_inc(&rmmi->rmmi_refcnt);
+		bml->bml_bmi->bmi_wr_ion = rmmi;
+	}
 
 	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
 		rc = 1;
 
-	bml->bml_bmi->bmi_seq = bml->bml_seq;
+	if (bml->bml_seq > bml->bml_bmi->bmi_seq)
+		bml->bml_bmi->bmi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
@@ -918,8 +924,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
-		/* 'rc != 0' means that we're waiting on an async cb
-		 *    completion.
+		/*
+		 * 'rc' means that we're waiting on an async cb
+		 * completion.
 		 */
 		goto out;
 
@@ -981,7 +988,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		if (bml->bml_flags & BML_RECOVER) {
 			psc_assert(bmi->bmi_writers == 1);
 			psc_assert(!bmi->bmi_readers);
-			psc_assert(!bmi->bmi_wr_ion);
 			psc_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
