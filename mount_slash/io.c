@@ -1140,7 +1140,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	pfl_fault_here_rc("slash2/dio_wait", &rc, EIO);
 
-
 	if (rc == -SLERR_AIOWAIT) {
 		MFH_LOCK(q->mfsrq_mfh);
 		BIORQ_LOCK(r);
@@ -1154,7 +1153,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
-		pscrpc_set_destroy(nbs);
 		OPSTAT_INCR("msl.biorq-restart");
 
 		/*
@@ -1163,7 +1161,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		 */
 		for (i = 0; i < refs; i++)
 			msl_biorq_release(r);
-		msl_biorq_release(r);
+		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
 	}
@@ -1178,13 +1176,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
+ out:
 	/*
 	 * Drop the reference we have take for the RPCs.
 	 */
 	for (i = 0; i < refs; i++)
 		msl_biorq_release(r);
-
- out:
 
 #if 0
 	if (rc && slc_rmc_retry(pfr, rc)) {
