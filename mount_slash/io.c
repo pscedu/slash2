@@ -2074,7 +2074,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	    &slc_iosyscall_iostats_rd : &slc_iosyscall_iostats_wr,
 	    size);
 
- restart:
 	rc = 0;
 	tsize = size;
 
