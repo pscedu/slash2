@@ -279,6 +279,7 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 			retry = 0;
 			*rc = EINTR;
 		}
+		OPSTAT_INCR("msl.retry");
 	}
 	return (retry);
 }
