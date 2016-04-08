@@ -944,6 +944,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.rpc_timeout", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
 
+	pfl_rpc_max_retry = 0;
 	psc_ctlparam_register_var("sys.rpc_max_retry", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_max_retry);
 
