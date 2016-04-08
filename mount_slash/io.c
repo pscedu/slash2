@@ -911,11 +911,13 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
-#if 0
+if (!pfl_rpc_max_retry) {
+
 	if (rc && r->biorq_fsrqi && 
 	    msl_read_should_retry(r->biorq_fsrqi, rc, args))
 		return (0);
-#endif
+
+}
 
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_read_rpc_done(e, rc);
@@ -1185,13 +1187,14 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	for (i = 0; i < refs; i++)
 		msl_biorq_release(r);
 
-#if 0
+if (!pfl_rpc_max_retry) {
+
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
 	}
-#endif
+}
 
 	mfsrq_seterr(q, rc);
 
