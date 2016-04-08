@@ -537,7 +537,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
-	psclogs_diag(SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
@@ -627,7 +627,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
  out:
 	if (c) {
-		DEBUG_FCMH(PLL_DIAG, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
+		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c, 
+		    "new mfh=%p dir=%s rc=%d oflags=%#o",
 		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 		fcmh_op_done(c);
 	}
@@ -858,7 +859,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    pscfs_attr_timeout, rc);
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 
-	psclogs_diag(SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
 	    c_inum, p_inum, newname, rc);
 
@@ -929,9 +930,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -958,7 +959,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pscfs_attr_timeout, rc);
 	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
-	psclogs_diag(SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
 
@@ -1255,8 +1256,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		mq->pfid = pinum;
 		strlcpy(mq->name, name, sizeof(mq->name));
 		namecache_hold_entry(&dcu, p, name);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
@@ -1373,8 +1374,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	namecache_hold_entry(&dcu, p, name);
- retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
+
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -2490,8 +2493,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	namecache_get_entries(&odcu, op, oldname, &ndcu, np, newname);
 
-  retry2:
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+  retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);

@@ -248,6 +248,11 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 			psc_waitq_wakeone(&slc_bflush_waitq);
 	}
 
+	if (reason == BMAPFLSH_EXPIRE)
+		psc_waitq_wakeall(&msl_bmapflushq.plc_wq_empty);
+	else
+		psc_waitq_wakeone(&msl_bmapflushq.plc_wq_empty);
+
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 	(void)wake;
 }

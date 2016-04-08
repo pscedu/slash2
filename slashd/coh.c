@@ -48,6 +48,15 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_BML	1
 
+/*
+ * Notify clients that a file/directory has been removed.
+ */
+void
+slm_coh_delete_file(struct fidc_membh *c)
+{
+	return (0);
+}
+
 void
 slm_coh_bml_release(struct bmap_mds_lease *bml)
 {

@@ -66,7 +66,6 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 	psc_assert(rc == 0);
 	rc = mdsio_getattr(vfsid, fcmh_2_mfid(f),
 	    fcmh_2_mfh(f), &rootcreds, &f->fcmh_sstb);
-	psc_assert(rc == 0);
 	if (out_sstb)
 		*out_sstb = f->fcmh_sstb;
 	FCMH_URLOCK(f, locked);

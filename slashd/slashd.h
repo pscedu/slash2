@@ -375,6 +375,7 @@ void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 int	 mdscoh_req(struct bmap_mds_lease *);
+void	 slm_coh_delete_file(struct fidc_membh *);
 
 void	 psc_scan_filesystems(void);
 void	 mds_note_update(int);
@@ -397,6 +398,7 @@ extern int			 slm_opstate;
 
 extern struct pfl_odt_ops	 slm_odtops;
 
+extern int			 slm_force_dio;
 extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;
