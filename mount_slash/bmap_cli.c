@@ -109,6 +109,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		if (b->bcm_flags & BMAPF_WR)
 			psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
+		/* overwrite previous error */
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
 
@@ -796,8 +797,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
-	rq = NULL;
-
  out:
 
 	pscrpc_req_finished(rq);
