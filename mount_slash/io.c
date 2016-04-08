@@ -1045,6 +1045,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct sl_resm *m;
 	struct bmap *b;
 	uint64_t *v8;
+	struct pscfs_req *pfr;
 	int refs;
 
 	psc_assert(r->biorq_bmap);
@@ -1137,6 +1138,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	rc = pscrpc_set_wait(nbs);
 	q = r->biorq_fsrqi;
 	psc_assert(q);
+	pfr = mfsrq_2_pfr(q);
 
 	pfl_fault_here_rc("slash2/dio_wait", &rc, EIO);
 
@@ -1184,7 +1186,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		msl_biorq_release(r);
 
 #if 0
-	if (rc && slc_rmc_retry(pfr, rc)) {
+	if (rc && slc_rmc_retry(pfr, &rc)) {
 		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
