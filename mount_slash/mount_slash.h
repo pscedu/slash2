@@ -241,6 +241,7 @@ struct resprof_cli_info {
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
+	int				 rpci_timeouts;
 	int				 rpci_infl_rpcs;
 	int				 rpci_max_infl_rpcs;
 };
@@ -331,7 +332,7 @@ int	 msl_try_get_replica_res(struct bmap *, int, int,
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	 msl_resm_throttle_wake(struct sl_resm *);
+void	 msl_resm_throttle_wake(struct sl_resm *, int);
 void	 msl_resm_throttle_wait(struct sl_resm *);
 int	 msl_resm_throttle_yield(struct sl_resm *);
 

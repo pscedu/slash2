@@ -45,12 +45,14 @@ struct pscrpc_svc_handle	*msl_rci_svh;
 struct pscrpc_svc_handle	*msl_rcm_svh;
 
 void
-msl_resm_throttle_wake(struct sl_resm *m)
+msl_resm_throttle_wake(struct sl_resm *m, int rc)
 {
 	struct resprof_cli_info *rpci;
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
+	if (abs(rc) == ETIMEDOUT)
+		rpci->rpci_timeouts++;
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
@@ -339,7 +341,7 @@ slc_rpc_req_out_failed(__unusedx struct slashrpc_cservice *csvc,
 	struct sl_resm *m;
 
 	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-	msl_resm_throttle_wake(m);
+	msl_resm_throttle_wake(m, rq->rq_status);
 }
 
 void
@@ -349,7 +351,7 @@ slc_rpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
 	struct sl_resm *m;
 
 	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-	msl_resm_throttle_wake(m);
+	msl_resm_throttle_wake(m, rq->rq_status);
 }
 
 struct sl_expcli_ops sl_expcli_ops;
