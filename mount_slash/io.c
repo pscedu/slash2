@@ -1196,8 +1196,6 @@ if (!pfl_rpc_max_retry) {
 	}
 }
 
-	mfsrq_seterr(q, rc);
-
 	if (rq)
 		pscrpc_req_finished(rq);
 
@@ -2208,10 +2206,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = msl_pages_dio_getput(r);
 		else {
 			rc = msl_pages_fetch(r);
-			mfsrq_seterr(q, rc);
 		}
-		if (rc)
+		if (rc) {
+			mfsrq_seterr(q, rc);
 			break;
+		}
 	}
 
  out2:
