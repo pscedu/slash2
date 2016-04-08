@@ -302,8 +302,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
 		    rc);
 
-	return (rc);
-
  out:
 	pscrpc_req_finished(rq);
 	rq = NULL;
@@ -312,8 +310,10 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
-		goto retry;
+	if (!(flags & BMAPGETF_NONBLOCK)) {
+		if (rc && pfr && slc_rmc_retry(pfr, &rc))
+			goto retry;
+	}
 
 	return (rc);
 }
