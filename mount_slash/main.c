@@ -3486,10 +3486,10 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
@@ -3503,8 +3503,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc) {
