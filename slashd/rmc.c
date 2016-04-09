@@ -1495,9 +1495,9 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		rc = mdsio_fcmh_refreshattr(c, &mp->cattr);
 
-		if (rc) {
-			OPSTAT_INCR("unlink-error");
-			psc_assert(rc == ENOENT);
+		if (rc && rc != ENOENT) {
+			OPSTAT_INCR("unlink-bad-error");
+			psclog_warnx("unexpected error code %d", rc);
 		}
 
 		mp->valid = 1;
