@@ -1196,8 +1196,7 @@ if (!pfl_rpc_max_retry) {
 	}
 }
 
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 
 	if (nbs)
 		pscrpc_set_destroy(nbs);
