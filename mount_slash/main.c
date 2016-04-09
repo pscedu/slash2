@@ -3658,18 +3658,20 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (rc == 0)
 		rc = -mp->rc;
 
