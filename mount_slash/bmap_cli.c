@@ -193,6 +193,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
+	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -204,7 +205,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct psc_compl compl;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
-	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -249,7 +249,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
 
-	if ((flags & BMAPGETF_NONBLOCK) == 0) {
+	if (blocking) {
 		psc_compl_init(&compl);
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
 		    &compl;
@@ -310,10 +310,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-	if (!(flags & BMAPGETF_NONBLOCK)) {
-		if (rc && pfr && slc_rmc_retry(pfr, &rc))
-			goto retry;
-	}
+	if (blocking && rc && slc_rpc_retry(pfr, &rc))
+		goto retry;
 
 	return (rc);
 }
@@ -697,6 +695,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
+	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -708,7 +707,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	struct psc_compl compl;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
-	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -720,7 +718,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-	// XXX respect NONBLOCK
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -740,7 +737,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	    b->bcm_bmapno);
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
-	if ((flags & BMAPGETF_NONBLOCK) == 0) {
+	if (blocking) {
 		psc_compl_init(&compl);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_COMPL] =
 		    &compl;
@@ -803,10 +800,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		csvc = NULL;
 	}
 
-	if (!(flags & BMAPGETF_NONBLOCK)) {
-		if (rc && pfr && slc_rmc_retry(pfr, &rc))
-			goto retry;
-	}
+	if (blocking && rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 
 	return (rc);
 }
