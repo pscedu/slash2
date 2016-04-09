@@ -3572,10 +3572,10 @@ slc_getxattr(struct pscfs_req *pfr,
 	if (locked)
 		FCMH_ULOCK(f);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc = -rc);
+		goto retry2;
 
 	mq->fg = f->fcmh_fg;
 	mq->size = size;
@@ -3590,8 +3590,9 @@ slc_getxattr(struct pscfs_req *pfr,
 	}
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
