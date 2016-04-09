@@ -1964,9 +1964,10 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
-		return (rc);
+		goto retry2;
 
 	if (sstb)
 		mq->attr = *sstb;
@@ -1986,6 +1987,11 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	    to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry1;
+
 	if (rc == 0)
 		rc = -mp->rc;
 
