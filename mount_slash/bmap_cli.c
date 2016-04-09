@@ -800,7 +800,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		csvc = NULL;
 	}
 
-	if (blocking && rc && slc_rmc_retry(pfr, &rc))
+	if (blocking && rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
 	return (rc);
