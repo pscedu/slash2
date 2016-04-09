@@ -2608,17 +2608,19 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
 	RPCI_ULOCK(rpci);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
+
 	mq->fid = inum;
 	mq->iosid = iosid;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
