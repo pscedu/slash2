@@ -467,8 +467,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 		bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
@@ -567,8 +566,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 	if (rc) {
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 
@@ -943,8 +941,7 @@ msl_bmap_release(struct sl_resm *resm)
 		psclog_errorx("failed res=%s (rc=%d)", resm->resm_name,
 		    rc);
 
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
