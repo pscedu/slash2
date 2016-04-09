@@ -798,8 +798,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
  out:
-
 	pscrpc_req_finished(rq);
+	rq = NULL;
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
