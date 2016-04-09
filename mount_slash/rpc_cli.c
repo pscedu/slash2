@@ -201,10 +201,7 @@ slc_rmc_setmds(const char *name)
 
 /*
  * Determine if process doesn't want to wait or if maximum allowed
- * timeout has been reached for MDS communication.
- * 
- *
- * From now-gone msl_fd_should_retry():
+ * timeout has been reached for RPC communication.
  *
  * Determine if an I/O operation should be retried after successive
  * RPC/communication failures.
@@ -215,12 +212,10 @@ slc_rmc_setmds(const char *name)
  *	- user process/environment/file descriptor policy
  *	- user process interrupt
  *
- * XXX this should likely be merged with slc_rmc_retry_pfr().
- * XXX mfh_retries access and modification is racy here, e.g. if the
- *	process has multiple threads or forks.
+ * XXX consult mfh for per-file handle settings?
  */
 int
-slc_rmc_retry(struct pscfs_req *pfr, int *rc)
+slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
 	int retry;
 

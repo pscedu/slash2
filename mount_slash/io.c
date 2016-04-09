@@ -834,7 +834,7 @@ msl_read_should_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	struct pscfs_req *pfr;
 
 	pfr = mfsrq_2_pfr(fsrqi);
-	if (!slc_rmc_retry(pfr, &rc0))
+	if (!slc_rpc_retry(pfr, &rc0))
 		return (0);
 
 	e = psc_dynarray_getpos(a, 0);
@@ -1189,7 +1189,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && slc_rmc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;

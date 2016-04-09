@@ -67,7 +67,7 @@ enum {
 #define SRCI_SVCNAME			"msrci"
 
 #define RESM_MAX_IOS_OUTSTANDING_RPCS	480
-#define RESM_MAX_MDS_OUTSTANDING_RPCS	2048	
+#define RESM_MAX_MDS_OUTSTANDING_RPCS	2048
 
 /*
  * Initialize a new RPC request for a pscfs clientctx.
@@ -119,9 +119,9 @@ enum {
 #define slc_getmcsvc_nb(resm)		slc_getmcsvcxf((resm), CSVCF_NONBLOCK, NULL)
 
 void	slc_rpc_initsvc(void);
+int	slc_rpc_retry(struct pscfs_req *, int *);
 
 int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
-int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 
 int	slc_rci_handler(struct pscrpc_request *);
