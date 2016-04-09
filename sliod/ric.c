@@ -499,6 +499,8 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 	}
 
+	pfl_fault_here("sliod/incoming_rpc_delay", NULL);
+
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRIC_MAGIC, SRIC_VERSION,

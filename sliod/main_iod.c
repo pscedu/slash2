@@ -348,6 +348,8 @@ main(int argc, char *argv[])
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
+	pfl_fault_register("sliod/incoming_rpc_delay");
+
 	slictlthr_main(sfn);
 	exit(0);
 }
