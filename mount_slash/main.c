@@ -3401,10 +3401,10 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size)
 		buf = PSCALLOC(size);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->fg.fg_fid = inum;
 	mq->fg.fg_gen = FGEN_ANY;
@@ -3420,8 +3420,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+		goto retry1;
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
