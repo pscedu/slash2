@@ -2684,10 +2684,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
- retry:
+ retry1:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		goto retry2;
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
@@ -2702,14 +2702,15 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
-	    1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+ retry2:
 	if (rc && slc_rmc_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
-		goto retry;
+		goto retry1;
 	}
 	if (rc == 0)
 		rc = -mp->rc;
