@@ -50,7 +50,7 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define MIN_SPACE_RESERVE	2		/* percentage */
+#define MIN_SPACE_RESERVE_PCT	2		/* percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
@@ -58,7 +58,7 @@ void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
-int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
+int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -109,7 +109,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	/* lockless read is fine */
 	percentage = sli_statvfs_buf.f_bavail * 100 /
 	    sli_statvfs_buf.f_blocks;
-	if (percentage >= sli_min_space_reserve)
+	if (percentage >= sli_min_space_reserve_pct)
 		return (1);
 
 	fd = fcmh_2_fd(f);
