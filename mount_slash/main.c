@@ -438,6 +438,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		namecache_fail(&dcu);
 		goto retry1;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -841,6 +842,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		namecache_fail(&dcu);
 		goto retry;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -937,6 +939,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		namecache_fail(&dcu);
 		goto retry1;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -996,7 +999,8 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	}
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
-	rc = -rc;
+
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -1263,10 +1267,11 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		namecache_fail(&dcu);
 		goto retry;
 	}
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	if (!rc) {
 		slc_fcmh_setattr(p, &mp->pattr);
@@ -1383,6 +1388,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		namecache_fail(&dcu);
 		goto retry1;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -1874,6 +1880,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	}
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
+	rc = abs(rc);
 	if (!rc)
 		rc = -mp->rc;
 	if (rc)
@@ -1993,6 +2000,7 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
 
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 
@@ -2508,6 +2516,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		namecache_fail(&ndcu);
 		goto retry1;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -2622,6 +2631,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
  retry2:
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -2713,6 +2723,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		namecache_fail(&dcu);
 		goto retry1;
 	}
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
@@ -3424,6 +3435,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
  retry2:
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
+	rc = abs(rc);
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3507,6 +3519,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
  retry2:
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
+	rc = abs(rc);
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc) {
@@ -3594,6 +3607,7 @@ slc_getxattr(struct pscfs_req *pfr,
  retry2:
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
+	rc = abs(rc);
 	if (!rc)
 		rc = -mp->rc;
 	if (!rc && size) {
@@ -3685,9 +3699,9 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
  retry2:
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry1;
+	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
-
  out:
 	if (f)
 		fcmh_op_done(f);
