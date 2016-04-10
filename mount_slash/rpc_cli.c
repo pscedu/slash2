@@ -217,7 +217,7 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
-	int retry;
+	int retry = 0;
 
 	switch (abs(*rc)) {
 	case PFLERR_TIMEDOUT:
@@ -240,7 +240,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
 		if (pfr && pfr->pfr_retries > msl_max_retries)
-			return (0);
+			goto out;
 		break;
 
 	/*
@@ -250,7 +250,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 		*rc = ENOTSUP;
 		/* FALLTHROUGH */
 	default:
-		return (0);
+		goto out;
 	}
 
 	retry = 1;
@@ -278,6 +278,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 		}
 		OPSTAT_INCR("msl.retry");
 	}
+ out:
 	return (retry);
 }
 
