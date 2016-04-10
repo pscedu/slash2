@@ -50,7 +50,7 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define MIN_SPACE_RESERVE_GB	4		/* min space in GiB */
+#define MIN_SPACE_RESERVE_GB	8		/* min space in GiB - check first */
 #define MIN_SPACE_RESERVE_PCT	2		/* min space percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
