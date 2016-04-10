@@ -996,6 +996,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	}
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
+	rc = -rc;
 	if (rc == 0)
 		rc = -mp->rc;
 	if (rc)
