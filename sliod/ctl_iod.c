@@ -642,9 +642,9 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
 	    0, &sli_selftest_rc);
 
-	psc_ctlparam_register_var("sys.min_space_reserve",
+	psc_ctlparam_register_var("sys.min_space_reserve_gb",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &sli_min_space_reserve);
+	    &sli_min_space_reserve_gb);
 	psc_ctlparam_register_var("sys.min_space_reserve_pct",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &sli_min_space_reserve_pct);
