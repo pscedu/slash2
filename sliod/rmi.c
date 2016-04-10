@@ -85,6 +85,10 @@ sli_rmi_setmds(const char *name)
 	} else
 		rmi_resm = libsl_nid2resm(nid);
 
+	/*
+ 	 * XXX This blocks until MDS is started. We should alow sliod
+ 	 * to start no matter what.
+ 	 */
 	if (sli_rmi_getcsvc(&csvc))
 		psclog_errorx("error connecting to MDS");
 	else {
