@@ -709,9 +709,6 @@ main(int argc, char *argv[])
 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
 
-	pfl_fault_register("slashd/get_bmap_delay");
-	pfl_fault_register("slashd/incoming_rpc_delay");
-
 	slmctlthr_main(sfn);
 	exit(0);
 }
