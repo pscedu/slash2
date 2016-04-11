@@ -1998,7 +1998,7 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
-	int nr, i, j, rc, retry = 0, npages;
+	int nr, i, j, rc, npages;
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
@@ -2171,8 +2171,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (retry || !msl_predio_issue_maxpages ||
-	    b->bcm_flags & BMAPF_DIO)
+	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
 	/* Note that i can only be 0 or 1 after the above loop. */
