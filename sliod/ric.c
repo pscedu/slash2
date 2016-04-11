@@ -108,7 +108,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	off_t rc, f_off;
 	int fd, percentage;
 
-	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize 
+	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
 	    >= (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
 		return (1);
 
@@ -228,9 +228,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 
 	/*
- 	 * Limit key checking for write for now until the client
- 	 * side can extend read lease in the background as well.
- 	 */
+	 * Limit key checking for write for now until the client
+	 * side can extend read lease in the background as well.
+	 */
 	seqno = bim_getcurseq();
 	if (rw == SL_WRITE && mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
@@ -458,9 +458,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fcmh_op_done(f);
 
 	if (rw == SL_READ)
-		pfl_fault_here("sliod/read_delay", &rc);
+		pfl_fault_here("sliod/read_rpc", &rc);
 	else
-		pfl_fault_here("sliod/write_delay", &rc);
+		pfl_fault_here("sliod/write_rpc", &rc);
 	return (rc);
 }
 
@@ -505,7 +505,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 	}
 
-	pfl_fault_here("sliod/incoming_rpc_delay", NULL);
+	pfl_fault_here("sliod/ric_handle", NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:

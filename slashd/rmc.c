@@ -355,7 +355,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	pfl_fault_here("slashd/get_bmap_delay", NULL);
+	pfl_fault_here("slashd/getbmap_rpc", NULL);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -1757,7 +1757,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	pfl_fault_here("slashd/incoming_rpc_delay", NULL);
+	pfl_fault_here("slashd/rmc_handle", NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
