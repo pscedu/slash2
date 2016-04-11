@@ -1207,6 +1207,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 if (!pfl_rpc_max_retry) {
 
 	if (rc && slc_rpc_retry(pfr, &rc)) {
+		OPSTAT_INCR("msl.dio-retried");
 		pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
