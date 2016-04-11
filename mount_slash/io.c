@@ -881,6 +881,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	if (rc)
 		 PFL_GOTOERR(out, rc);
 
+	OPSTAT_INCR("msl.read-retried");
 	return (1);
 
  out:
