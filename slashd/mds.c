@@ -1530,7 +1530,12 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 
 	bmi = bmap_2_bmi(bmap);
 
-	if (!bmi->bmi_wr_ion ||
+	/*
+	 * If this bmap is associated with a lease, then it must be
+	 * owned by the IOS.  Note that the bmap might be just read
+	 * from the disk.
+	 */
+	if (bmi->bmi_wr_ion &&
 	    iosid != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
 		/* We recv'd a request from an unexpected NID. */
 		psclog_errorx("CRCUP for/from invalid NID; "
