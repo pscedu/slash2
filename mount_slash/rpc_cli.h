@@ -157,6 +157,7 @@ msl_getmw(void)
 	case MSTHRT_READAHEAD:
 		return (&msreadaheadthr(thr)->mrat_mw);
 	case MSTHRT_CTL:
+	case MSTHRT_NBRQ:
 	case MSTHRT_WORKER:
 	case PFL_THRT_CTL:
 		return (NULL);
