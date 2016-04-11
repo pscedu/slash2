@@ -837,8 +837,11 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 
  restart:
 
-	if (!slc_rpc_retry(pfr, &rc0))
+	if (!slc_rpc_retry(pfr, &rc0)) {
+		if (csvc)
+			sl_csvc_decref(csvc);
 		return (0);
+	}
 
 	rc = msl_bmap_to_csvc(r->biorq_bmap,
 	    r->biorq_bmap->bcm_flags & BMAPF_WR, &m, &csvc);
