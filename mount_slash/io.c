@@ -820,11 +820,11 @@ int
 msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct sl_resm *m = NULL;
+	struct slashrpc_cservice *csvc = NULL;
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
-	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -834,16 +834,26 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	struct pscfs_req *pfr;
 
 	pfr = mfsrq_2_pfr(fsrqi);
+
+ restart:
+
 	if (!slc_rpc_retry(pfr, &rc0))
 		return (0);
+
+	rc = msl_bmap_to_csvc(r->biorq_bmap,
+	    r->biorq_bmap->bcm_flags & BMAPF_WR, &m, &csvc);
+	if (rc) {
+		rc0 = rc;
+		goto restart;
+	}
+	
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+	if (rc)
+		 PFL_GOTOERR(out, rc);
 
 	e = psc_dynarray_getpos(a, 0);
 	npages = psc_dynarray_len(a);
 	off = e->bmpce_off;
-
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
-	if (rc)
-		 PFL_GOTOERR(out, rc);
 
 	rq->rq_bulk_abortable = 1;
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
@@ -871,6 +881,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	return (1);
 
  out:
+	sl_csvc_decref(csvc);
 	pscrpc_req_finished(rq);
 	return (0);
 }
@@ -914,8 +925,10 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 if (!pfl_rpc_max_retry) {
 
 	if (rc && r->biorq_fsrqi &&
-	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args))
+	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args)) {
+		sl_csvc_decref(csvc);
 		return (0);
+	}
 
 }
 
