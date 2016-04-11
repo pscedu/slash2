@@ -501,6 +501,7 @@ iod_bmap_retrieve(struct bmap *b, __unusedx int flags)
 	if (rc)
 		goto out;
 
+	/* handled by slm_rmi_handle_bmap_getcrcs() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b,
