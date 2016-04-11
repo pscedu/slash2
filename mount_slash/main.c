@@ -1791,6 +1791,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (0) {
  out:
+		rc = abs(rc);
 		psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
 		    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
 		    fcmh_2_fid(d), size, off, rc);
