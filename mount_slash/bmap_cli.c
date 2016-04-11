@@ -96,18 +96,20 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	BMAP_LOCK_ENSURE(b);
 
 	if (rc) {
+		/*
+		 * If the MDS replies with SLERR_ION_OFFLINE then don't
+		 * bother with further retry attempts.
+		 */
+		if (rc == -SLERR_ION_OFFLINE) {
+			rc = EHOSTDOWN;
+			bmap_2_bci(b)->bci_nreassigns = 0;
+		}
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
 
 		DEBUG_BMAP(PLL_ERROR, b, "stash lease failed action=%s "
 		    "blocking=%d rc=%d", action, blocking, rc);
-		/*
-		 * If the MDS replies with SLERR_ION_OFFLINE then don't
-		 * bother with further retry attempts.
-		 */
-		if (rc == -SLERR_ION_OFFLINE)
-			bmap_2_bci(b)->bci_nreassigns = 0;
 	} else {
 		psc_assert(sbd->sbd_seq);
 		psc_assert(sbd->sbd_fg.fg_fid);
