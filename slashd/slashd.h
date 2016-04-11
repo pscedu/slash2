@@ -408,6 +408,6 @@ extern struct psc_hashtbl	 slm_roots;
 /*
  * List of fault point that will be auto-registered on startup.
  */
-#define	READDIR_RPC_FAULT	 "slashd/readdir_rpc"
+#define	RMC_HANDLE_FAULT	 "slashd/rmc_handle"
 
 #endif /* _SLASHD_H_ */
