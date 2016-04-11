@@ -709,7 +709,7 @@ main(int argc, char *argv[])
 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
 
-	pfl_fault_register("slashd/readdir_rpc");
+	pfl_fault_register(READDIR_RPC_FAULT);
 
 	slmctlthr_main(sfn);
 	exit(0);
