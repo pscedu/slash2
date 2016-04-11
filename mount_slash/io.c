@@ -820,11 +820,11 @@ int
 msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
     struct pscrpc_async_args *args)
 {
-	struct sl_resm *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
+	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -843,8 +843,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 		return (0);
 	}
 
-	rc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAPF_WR, &m, &csvc);
+	csvc = slc_geticsvc(m);
 	if (rc) {
 		rc0 = rc;
 		goto restart;
