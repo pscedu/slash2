@@ -913,7 +913,7 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && r->biorq_fsrqi && 
+	if (rc && r->biorq_fsrqi &&
 	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args))
 		return (0);
 
@@ -1339,9 +1339,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 
 	mq->offset = off;
 	/*
- 	 * XXX what about the start of the first page and the end of the
- 	 * last page???
- 	 */
+	 * XXX what about the start of the first page and the end of the
+	 * last page???
+	 */
 	mq->size = npages * BMPC_BUFSZ;
 	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
 
@@ -2211,7 +2211,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
  out2:
-
 	/* Step 4: finish up biorqs (user copy in happens in this step) */
 	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
@@ -2220,7 +2219,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			msl_biorq_release(r);
 	}
 
-	/* Step 6: drop our reference to the fsrq. */
+	/* Step 5: drop our reference to the fsrq. */
 	msl_complete_fsrq(q, 0, NULL);
 	return (0);
 }
