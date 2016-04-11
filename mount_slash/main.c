@@ -3959,8 +3959,8 @@ msl_init(void)
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 8,
-	    "msnbrqthr%d");
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 
+	    NUM_NBRQ_THREADS, "msnbrqthr%d");
 
 	msctlthr_spawn();
 

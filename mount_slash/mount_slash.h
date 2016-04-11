@@ -116,6 +116,7 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msioretrythr, msioretry_thread, MSTHRT_IORETRY);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
+#define NUM_NBRQ_THREADS		16
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
 #define NUM_IO_RETRY_THREADS		4
