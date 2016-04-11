@@ -838,6 +838,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (blocking && rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
+	rc = abs(rc);
 	return (rc);
 }
 
