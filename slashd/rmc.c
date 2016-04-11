@@ -843,6 +843,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mq->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
+	pfl_fault_here("slashd/readdir_rpc", NULL);
+
 #if 0
 	/* If we are too busy, drop readahead work. */
 	if (mq->ra && we_are_busy)
