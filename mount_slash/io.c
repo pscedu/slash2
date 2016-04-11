@@ -2356,16 +2356,16 @@ msreadaheadthr_spawn(void)
 void
 msioretrythr_spawn(void)
 {
-	int i;
-	struct msioretry_thread *mrat;
+	struct msioretry_thread *mirt;
 	struct psc_thread *thr;
+	int i;
 return;
 
 	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    NULL, sizeof(*mrat), "msioretrythr%d", i);
-		mrat = msioretrythr(thr);
-		pfl_multiwait_init(&mrat->mrat_mw, "%s",
+		    NULL, sizeof(*mirt), "msioretrythr%d", i);
+		mirt = msioretrythr(thr);
+		pfl_multiwait_init(&mirt->mirt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}

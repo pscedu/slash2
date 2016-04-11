@@ -104,7 +104,7 @@ struct msreadahead_thread {
 };
 
 struct msioretry_thread {
-	struct pfl_multiwait		 mrat_mw;
+	struct pfl_multiwait		 mirt_mw;
 };
 
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
