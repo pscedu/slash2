@@ -217,7 +217,7 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
-	int retry = 0;
+	int retry = 0, count = 0;
 
 	switch (abs(*rc)) {
 	case PFLERR_TIMEDOUT:
@@ -260,7 +260,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	 * going to retry.
 	 */
 	if (pfr) {
-		pfr->pfr_retries++;
+		count = pfr->pfr_retries++;
 		if (pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
@@ -271,7 +271,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	}
 
 	if (retry) {
-		usleep(10);
+		sleep(count ? count * 1 : 10);
 		if (pfr && pfr->pfr_interrupted) {
 			retry = 0;
 			*rc = EINTR;
