@@ -505,7 +505,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 	}
 
-	pfl_fault_here("sliod/ric_handle", NULL);
+	pfl_fault_here(RIC_HANDLE_FAULT, NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:

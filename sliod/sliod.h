@@ -123,4 +123,9 @@ extern uint64_t			 sli_current_reclaim_batchno;
 extern struct psc_listcache	 sli_bmaplease_releaseq;
 extern struct statvfs		 sli_statvfs_buf;
 
+/*
+ * List of fault point that will be auto-registered on startup.
+ */
+#define RIC_HANDLE_FAULT        "sliod/ric_handle"
+
 #endif /* _SLIOD_H_ */
