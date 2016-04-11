@@ -1434,7 +1434,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 		/*
 		 * We are going to re-read the page, so clear its previous
-		 * errors.
+		 * errors.  We could do the same thing for write, but we
+		 * must test it with fault injection instead of just putting
+		 * the code in and hope it work.
 		 */
 		if (e->bmpce_rc) {
 			OPSTAT_INCR("msl.clear_rc");
