@@ -188,17 +188,18 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	if (rc == 0) {
-		rc = mdsio_opencreate(current_vfsid,
-			mf, 
-			&rootcreds, O_RDWR, 0, NULL, NULL, 
-			NULL, &t->odt_mfh, NULL, NULL, 0);
+		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds,
+		    O_RDWR, 0, NULL, NULL, NULL, &t->odt_mfh, NULL,
+		    NULL, 0);
 		if (rc)
-			psc_fatalx("failed to open odtable %s, rc=%d", fn, rc);
+			psc_fatalx("failed to open odtable %s, rc=%d",
+			    fn, rc);
 
-		rc = mdsio_read(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
-			0, t->odt_mfh);
+		rc = mdsio_read(current_vfsid, &rootcreds, h,
+		    sizeof(*h), &nb, 0, t->odt_mfh);
 		if (rc || nb != sizeof(*h))
-			psc_fatalx("failed to read odtable %s, rc=%d", fn, rc);
+			psc_fatalx("failed to read odtable %s, rc=%d",
+			    fn, rc);
 		return;
 	}
 	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
@@ -220,33 +221,35 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	size_t nb;
 	int rc;
 
-	rc = mdsio_opencreatef(current_vfsid, 
-		mds_metadir_inum[current_vfsid], 
-		&rootcreds, O_RDWR|O_CREAT, 
-		MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, 
-		NULL, &t->odt_mfh, NULL, NULL, 0);
+	rc = mdsio_opencreatef(current_vfsid,
+	    mds_metadir_inum[current_vfsid], &rootcreds, O_RDWR|O_CREAT,
+	    MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL, &t->odt_mfh,
+	    NULL, NULL, 0);
 	if (rc)
-		psc_fatalx("failed to create odtable %s, rc=%d", fn, rc);
+		psc_fatalx("failed to create odtable %s, rc=%d", fn,
+		    rc);
 
 	h = t->odt_hdr;
 	h->odth_nitems = ODT_ITEM_COUNT;
 	h->odth_itemsz = ODT_ITEM_SIZE;
 
 	h->odth_options = ODTBL_OPT_CRC;
-	h->odth_slotsz = ODT_ITEM_SIZE + 0 + sizeof(struct pfl_odt_slotftr);
+	h->odth_slotsz = ODT_ITEM_SIZE + sizeof(struct pfl_odt_slotftr);
 	h->odth_start = ODT_ITEM_START;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
-	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb, 
-		0, t->odt_mfh, NULL, NULL);
+	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
+	    0, t->odt_mfh, NULL, NULL);
 	if (rc || nb != sizeof(*h))
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
-	for (r.odtr_item = 0; r.odtr_item < h->odth_nitems; r.odtr_item++) {
+	for (r.odtr_item = 0; r.odtr_item < h->odth_nitems;
+	    r.odtr_item++) {
 		f.odtf_flags = 0;
 		f.odtf_slotno = r.odtr_item;
 		psc_crc64_init(&f.odtf_crc);
-		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
+		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) -
+		    sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
 		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
 	}
