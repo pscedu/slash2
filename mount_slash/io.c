@@ -2074,10 +2074,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (nr > MAX_BMAPS_REQ)
 		return (-EINVAL);
 
-	// XXX locked?  we should be using a counter on the mfsrq, not
-	// the entire mfh
-	mfh->mfh_retries = 0;
-
 	/*
 	 * Initialize some state in the request to help with aio
 	 * handling.

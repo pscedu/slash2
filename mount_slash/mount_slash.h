@@ -168,7 +168,6 @@ struct msl_fhent {
 	pid_t				 mfh_sid;
 	uid_t				 mfh_accessing_euid;
 
-	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
