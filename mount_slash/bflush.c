@@ -377,6 +377,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * XXX These magic numbers should be made into tunables.
 	 *
 	 * Note that PSCRPC_OBD_TIMEOUT = 60.
+	 *
+	 * XXX: This logic ignores the fact that a large request
+	 * will always be selected.
 	 */
 	if (r->biorq_retries < 32)
 		delta = 20;
