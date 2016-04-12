@@ -184,9 +184,8 @@ struct msl_fhent {
 	char				 mfh_uprog[128];
 };
 
-#define MFHF_CLOSING			(1 << 0)	/* close(2) has been issued */
-#define MFHF_TRACKING_RA		(1 << 1)	/* tracking for readahead */
-#define MFHF_TRACKING_WA		(1 << 2)	/* tracking for writeahead */
+#define MFHF_TRACKING_RA		(1 << 0)	/* tracking for readahead */
+#define MFHF_TRACKING_WA		(1 << 1)	/* tracking for writeahead */
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)

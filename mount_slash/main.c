@@ -2322,12 +2322,10 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	fci = fcmh_2_fci(f);
 
 	MFH_LOCK(mfh);
-	mfh->mfh_flags |= MFHF_CLOSING;
-
 	/*
 	 * Force expire to provoke immediate flush.
 	 * We probably do not need this because we
-	 * already did this at flush time
+	 * already did this at flush time.
 	 */ 
 	FCMH_LOCK(f);
 	PFL_GETTIMESPEC(&fci->fci_etime);
