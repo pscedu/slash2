@@ -1518,7 +1518,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * BMAP_OP #2
 	 * XXX are we sure after restart bmap will be loaded?
 	 */
-	rc = bmap_get(f, c->bno, SL_WRITE, &bmap);
+	rc = -bmap_get(f, c->bno, SL_WRITE, &bmap);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "bmap lookup failed; "
 		    "bno=%u rc=%d", c->bno, rc);
