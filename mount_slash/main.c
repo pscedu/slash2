@@ -2328,10 +2328,13 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	 * already did this at flush time.
 	 */ 
 	FCMH_LOCK(f);
-	PFL_GETTIMESPEC(&fci->fci_etime);
-	fci->fci_etime.tv_sec--;
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
+		OPSTAT_INCR("msl.release_dirty_attrs");
+		PFL_GETTIMESPEC(&fci->fci_etime);
+		fci->fci_etime.tv_sec--;
+		psc_waitq_wakeone(&msl_flush_attrq);
+	}
 	FCMH_ULOCK(f);
-	psc_waitq_wakeone(&msl_flush_attrq);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
