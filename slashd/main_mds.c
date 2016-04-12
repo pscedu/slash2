@@ -673,7 +673,7 @@ main(int argc, char *argv[])
 	pfl_workq_waitempty();
 
 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
-	    "dbworkq");
+	    "db-lopri-workq");
 	LIST_CACHE_LOCK(&slm_db_lopri_workq);
 	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main, NULL,
 	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
@@ -683,7 +683,7 @@ main(int argc, char *argv[])
 	    &slm_db_lopri_workq.plc_lock);
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
-	    "dbworkq");
+	    "db-hipri-workq");
 	LIST_CACHE_LOCK(&slm_db_hipri_workq);
 	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main, NULL,
 	    sizeof(struct slmdbwk_thread), "slmdbhiwkthr");
@@ -709,7 +709,7 @@ main(int argc, char *argv[])
 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
 	    arc_get_maxsize());
 
-	pfl_fault_register("slashd/incoming_rpc_delay");
+	pfl_fault_register(RMC_HANDLE_FAULT);
 
 	slmctlthr_main(sfn);
 	exit(0);

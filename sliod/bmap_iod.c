@@ -306,6 +306,9 @@ sli_bml_process_release(struct bmap_iod_rls *brls)
 		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
 		psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
 		b->bcm_flags |= BMAPF_RELEASEQ;
+		/* 
+		 * XXX rename sli_bmaplease_releaseq versus sli_bmap_releaseq.
+		 */
 		lc_addtail(&sli_bmap_releaseq, bii);
 	}
 
@@ -498,6 +501,7 @@ iod_bmap_retrieve(struct bmap *b, __unusedx int flags)
 	if (rc)
 		goto out;
 
+	/* handled by slm_rmi_handle_bmap_getcrcs() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b,

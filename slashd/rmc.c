@@ -67,6 +67,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			slm_force_dio;
 int			slm_global_mount;
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -353,6 +354,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
+
+	pfl_fault_here("slashd/getbmap_rpc", NULL);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -839,6 +842,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	if (mq->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
+
+	pfl_fault_here("slashd/readdir_rpc", NULL);
 
 #if 0
 	/* If we are too busy, drop readahead work. */
@@ -1438,7 +1443,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_rep *mp;
 	struct srt_stat	attr;
 	uint32_t xattrsize;
-	int vfsid;
+	int rc, vfsid;
 
 	chfg.fg_fid = FID_ANY;
 
@@ -1490,10 +1495,15 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
  out:
 	if (mp->rc == 0) {
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
-		mdsio_fcmh_refreshattr(c, &mp->cattr);
+		rc = mdsio_fcmh_refreshattr(c, &mp->cattr);
+
+		if (rc && rc != ENOENT) {
+			OPSTAT_INCR("unlink-bad-error");
+			psclog_warnx("unexpected error code %d", rc);
+		}
 
 		mp->valid = 1;
-		if (!c->fcmh_sstb.sst_nlink) {
+		if (rc || !c->fcmh_sstb.sst_nlink) {
 			mp->valid = 0;
 			mp->cattr.sst_fg = oldfg;
 			slm_coh_delete_file(c);
@@ -1749,7 +1759,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	pfl_fault_here("slashd/incoming_rpc_delay", NULL);
+	pfl_fault_here(RMC_HANDLE_FAULT, NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */

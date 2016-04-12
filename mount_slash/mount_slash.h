@@ -104,7 +104,7 @@ struct msreadahead_thread {
 };
 
 struct msioretry_thread {
-	struct pfl_multiwait		 mrat_mw;
+	struct pfl_multiwait		 mirt_mw;
 };
 
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
@@ -116,6 +116,7 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 PSCTHR_MKCAST(msioretrythr, msioretry_thread, MSTHRT_IORETRY);
 PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 
+#define NUM_NBRQ_THREADS		16
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
 #define NUM_IO_RETRY_THREADS		4
@@ -167,7 +168,6 @@ struct msl_fhent {
 	pid_t				 mfh_sid;
 	uid_t				 mfh_accessing_euid;
 
-	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
@@ -183,9 +183,8 @@ struct msl_fhent {
 	char				 mfh_uprog[128];
 };
 
-#define MFHF_CLOSING			(1 << 0)	/* close(2) has been issued */
-#define MFHF_TRACKING_RA		(1 << 1)	/* tracking for readahead */
-#define MFHF_TRACKING_WA		(1 << 2)	/* tracking for writeahead */
+#define MFHF_TRACKING_RA		(1 << 0)	/* tracking for readahead */
+#define MFHF_TRACKING_WA		(1 << 1)	/* tracking for writeahead */
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
@@ -241,6 +240,7 @@ struct resprof_cli_info {
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
+	int				 rpci_timeouts;
 	int				 rpci_infl_rpcs;
 	int				 rpci_max_infl_rpcs;
 };
@@ -331,7 +331,7 @@ int	 msl_try_get_replica_res(struct bmap *, int, int,
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
-void	 msl_resm_throttle_wake(struct sl_resm *);
+void	 msl_resm_throttle_wake(struct sl_resm *, int);
 void	 msl_resm_throttle_wait(struct sl_resm *);
 int	 msl_resm_throttle_yield(struct sl_resm *);
 

@@ -165,16 +165,18 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
 
-		OPSTAT2_ADD("replcompl", bsr->bsr_amt);
+		OPSTAT2_ADD("repl-compl", bsr->bsr_amt);
 	} else {
 		if (p == NULL ||
 		    error == PFLERR_ALREADY ||
 		    error == SLERR_ION_OFFLINE ||
 		    error == ECONNRESET) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			OPSTAT_INCR("repl-fail-soft");
 		} else {
 			/* Fatal error: cancel replication. */
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
+			OPSTAT_INCR("repl-fail-hard");
 		}
 
 		retifset[BREPLST_REPL_SCHED] = 1;

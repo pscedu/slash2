@@ -398,10 +398,16 @@ extern int			 slm_opstate;
 
 extern struct pfl_odt_ops	 slm_odtops;
 
+extern int			 slm_force_dio;
 extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;
 
 extern struct psc_hashtbl	 slm_roots;
+
+/*
+ * List of fault point that will be auto-registered on startup.
+ */
+#define	RMC_HANDLE_FAULT	 "slashd/rmc_handle"
 
 #endif /* _SLASHD_H_ */

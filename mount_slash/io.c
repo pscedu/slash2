@@ -92,6 +92,8 @@ struct psc_poolmaster	 slc_readaheadrq_poolmaster;
 struct psc_poolmgr	*slc_readaheadrq_pool;
 struct psc_listcache	 msl_readaheadq;
 
+int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
 #define msl_biorq_page_valid_accounting(r, idx)				\
 	_msl_biorq_page_valid((r), (idx), 1)
 
@@ -814,6 +816,79 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 	msl_bmpce_complete_biorq(e, rc);
 }
 
+int
+msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = NULL;
+	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
+	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
+	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
+	struct pscrpc_request *rq = NULL;
+	struct srm_io_req *mq;
+	struct srm_io_rep *mp;
+	struct bmap_pagecache_entry *e;
+	int npages, rc = 0;
+	uint32_t off;
+	struct pscfs_req *pfr;
+
+	pfr = mfsrq_2_pfr(fsrqi);
+
+ restart:
+
+	if (!slc_rpc_retry(pfr, &rc0)) {
+		if (csvc)
+			sl_csvc_decref(csvc);
+		return (0);
+	}
+
+	csvc = slc_geticsvc(m);
+	if (rc) {
+		rc0 = rc;
+		goto restart;
+	}
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+	if (rc)
+		 PFL_GOTOERR(out, rc);
+
+	e = psc_dynarray_getpos(a, 0);
+	npages = psc_dynarray_len(a);
+	off = e->bmpce_off;
+
+	rq->rq_bulk_abortable = 1;
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+		npages);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	mq->offset = off;
+	mq->size = npages * BMPC_BUFSZ;
+	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
+
+	mq->op = SRMIOP_RD;
+	mq->sbd = *bmap_2_sbd(r->biorq_bmap);
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_IOVS] = iovs;
+	rq->rq_interpret_reply = msl_read_cb;
+
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc)
+		 PFL_GOTOERR(out, rc);
+
+	OPSTAT_INCR("msl.read-retried");
+	return (1);
+
+ out:
+	pscrpc_req_finished(rq);
+	sl_csvc_decref(csvc);
+	return (0);
+}
+
 /*
  * RPC callback used only for read or RBW operations.  The primary
  * purpose is to set the bmpce's to DATARDY so that other threads
@@ -850,18 +925,16 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 	    "sbd_seq=%"PRId64, rc, bmap_2_sbd(b)->sbd_seq);
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
-#if 0
+if (!pfl_rpc_max_retry) {
 
-	if (r->biorq_fsrqi) {
-		struct pscfs_req *pfr;
-		struct slc_retry_req *retry;
-		pfr = mfsrq_2_pfr(r->biorq_fsrqi);
-		if (rc && slc_rmc_retry(pfr, &rc)) {
-			retry = psc_pool_get(msl_retry_req_pool);
-		}
+	if (rc && r->biorq_fsrqi &&
+	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args)) {
+		sl_csvc_decref(csvc);
+		return (0);
 	}
 
-#endif
+}
+
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_read_rpc_done(e, rc);
 
@@ -945,10 +1018,8 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 		    mq->size);
 	}
 
-	q = r->biorq_fsrqi;
-	mfsrq_seterr(q, rc);
-	msl_biorq_release(r);
 
+	q = r->biorq_fsrqi;
 	if (r->biorq_flags & BIORQ_AIOWAKE) {
 		MFH_LOCK(q->mfsrq_mfh);
 		psc_waitq_wakeall(&msl_fhent_aio_waitq);
@@ -988,10 +1059,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct pscfs_req *pfr;
 	struct iovec *iovs;
 	struct sl_resm *m;
 	struct bmap *b;
 	uint64_t *v8;
+	int refs;
 
 	psc_assert(r->biorq_bmap);
 
@@ -1013,6 +1086,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		OPSTAT_INCR("msl.dio-read");
 	}
 
+  retry:
+	refs = 0;
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
 	 * residencies and use them if available.
@@ -1020,7 +1095,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &m, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-  retry:
+
 	nbs = pscrpc_prep_set();
 
 	/*
@@ -1048,8 +1123,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rc = slrpc_bulkclient(rq, op == SRMT_WRITE ?
 		    BULK_GET_SOURCE : BULK_PUT_SINK, SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
-		if (rc)
+		if (rc) {
+			pscrpc_req_finished(rq);
+			rq = NULL;
 			PFL_GOTOERR(out, rc);
+		}
 
 		mq->offset = r->biorq_off + off;
 		mq->size = len;
@@ -1058,12 +1136,16 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
+		refs++;
 		biorq_incref(r);
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
+			refs--;
 			msl_biorq_release(r);
 			OPSTAT_INCR("msl.dio-add-req-fail");
+			pscrpc_req_finished(rq);
+			rq = NULL;
 			PFL_GOTOERR(out, rc);
 		}
 		rq = NULL;
@@ -1076,9 +1158,13 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	psc_assert(off == size);
 
 	rc = pscrpc_set_wait(nbs);
+	q = r->biorq_fsrqi;
+	psc_assert(q);
+	pfr = mfsrq_2_pfr(q);
+
+	pfl_fault_here_rc("slash2/dio_wait", &rc, EIO);
 
 	if (rc == -SLERR_AIOWAIT) {
-		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		BIORQ_LOCK(r);
 		while (r->biorq_ref > 1) {
@@ -1091,13 +1177,16 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 		MFH_ULOCK(q->mfsrq_mfh);
-		pscrpc_set_destroy(nbs);
 		OPSTAT_INCR("msl.biorq-restart");
 
 		/*
 		 * Async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
 		 */
+		for (i = 0; i < refs; i++)
+			msl_biorq_release(r);
+		pscrpc_set_destroy(nbs);
+		sl_csvc_decref(csvc);
 		goto retry;
 	}
 
@@ -1107,15 +1196,24 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		else
 			OPSTAT2_ADD("msl.dio-rpc-rd", size);
 
-		q = r->biorq_fsrqi;
 		MFH_LOCK(q->mfsrq_mfh);
 		q->mfsrq_flags |= MFSRQ_COPIED;
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
-
  out:
-	if (rq)
-		pscrpc_req_finished(rq);
+	/* Drop the reference we took for the RPCs. */
+	for (i = 0; i < refs; i++)
+		msl_biorq_release(r);
+
+if (!pfl_rpc_max_retry) {
+
+	if (rc && slc_rpc_retry(pfr, &rc)) {
+		OPSTAT_INCR("msl.dio-retried");
+		pscrpc_set_destroy(nbs);
+		sl_csvc_decref(csvc);
+		goto retry;
+	}
+}
 
 	if (nbs)
 		pscrpc_set_destroy(nbs);
@@ -1257,6 +1355,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		PFL_GOTOERR(out, rc);
 
 	mq->offset = off;
+	/*
+	 * XXX what about the start of the first page and the end of the
+	 * last page???
+	 */
 	mq->size = npages * BMPC_BUFSZ;
 	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
 
@@ -1349,7 +1451,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 		/*
 		 * We are going to re-read the page, so clear its previous
-		 * errors.
+		 * errors.  We could do the same thing for write, but we
+		 * must test it with fault injection instead of just putting
+		 * the code in and hope it work.
 		 */
 		if (e->bmpce_rc) {
 			OPSTAT_INCR("msl.clear_rc");
@@ -1913,7 +2017,7 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
-	int nr, i, j, rc, retry = 0, npages;
+	int nr, i, j, rc, npages;
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
@@ -1970,10 +2074,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (nr > MAX_BMAPS_REQ)
 		return (-EINVAL);
 
-	// XXX locked?  we should be using a counter on the mfsrq, not
-	// the entire mfh
-	mfh->mfh_retries = 0;
-
 	/*
 	 * Initialize some state in the request to help with aio
 	 * handling.
@@ -1986,7 +2086,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	    &slc_iosyscall_iostats_rd : &slc_iosyscall_iostats_wr,
 	    size);
 
- restart:
 	rc = 0;
 	tsize = size;
 
@@ -2087,8 +2186,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (retry || !msl_predio_issue_maxpages ||
-	    b->bcm_flags & BMAPF_DIO)
+	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
 	/* Note that i can only be 0 or 1 after the above loop. */
@@ -2126,38 +2224,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
  out2:
-	/* Step 4: retry if at least one biorq failed. */
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f,
-		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%s rc=%d",
-		    q, start + i, tsize, tlen, off,
-		    roff, (rw == SL_READ) ? "read" : "write", rc);
-
-		if (msl_fd_should_retry(mfh, pfr, rc)) {
-			mfsrq_clrerr(q);
-			retry = 1;
-			OPSTAT_INCR("msl.io-retry");
-			goto restart;
-		}
-		if (abs(rc) == SLERR_ION_OFFLINE)
-			rc = -ETIMEDOUT;
-
-		/*
-		 * Make sure we don't copy pages from biorq in case of
-		 * an error.
-		 */
-		mfsrq_seterr(q, rc);
-	}
-
-	/* Step 5: finish up biorqs (user copy in happens in this step) */
+	/* Step 4: finish up biorqs (user copy in happens in this step) */
+	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 		if (r)
 			msl_biorq_release(r);
 	}
 
-	/* Step 6: drop our reference to the fsrq. */
+	/* Step 5: drop our reference to the fsrq. */
 	msl_complete_fsrq(q, 0, NULL);
 	return (0);
 }
@@ -2276,16 +2351,16 @@ msreadaheadthr_spawn(void)
 void
 msioretrythr_spawn(void)
 {
-	int i;
-	struct msioretry_thread *mrat;
+	struct msioretry_thread *mirt;
 	struct psc_thread *thr;
+	int i;
 return;
 
 	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    NULL, sizeof(*mrat), "msioretrythr%d", i);
-		mrat = msioretrythr(thr);
-		pfl_multiwait_init(&mrat->mrat_mw, "%s",
+		    NULL, sizeof(*mirt), "msioretrythr%d", i);
+		mirt = msioretrythr(thr);
+		pfl_multiwait_init(&mirt->mirt_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}

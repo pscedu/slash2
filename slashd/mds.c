@@ -239,15 +239,21 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
-	psc_atomic32_inc(&rmmi->rmmi_refcnt);
 
 	psc_assert(bml->bml_bmi->bmi_assign);
-	bml->bml_bmi->bmi_wr_ion = rmmi;
+
+	if (bml->bml_bmi->bmi_wr_ion) {
+		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+	} else {
+		psc_atomic32_inc(&rmmi->rmmi_refcnt);
+		bml->bml_bmi->bmi_wr_ion = rmmi;
+	}
 
 	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
 		rc = 1;
 
-	bml->bml_bmi->bmi_seq = bml->bml_seq;
+	if (bml->bml_seq > bml->bml_bmi->bmi_seq)
+		bml->bml_bmi->bmi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
@@ -918,8 +924,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
-		/* 'rc != 0' means that we're waiting on an async cb
-		 *    completion.
+		/*
+		 * 'rc' means that we're waiting on an async cb
+		 * completion.
 		 */
 		goto out;
 
@@ -981,7 +988,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		if (bml->bml_flags & BML_RECOVER) {
 			psc_assert(bmi->bmi_writers == 1);
 			psc_assert(!bmi->bmi_readers);
-			psc_assert(!bmi->bmi_wr_ion);
 			psc_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
@@ -1512,11 +1518,10 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * BMAP_OP #2
 	 * XXX are we sure after restart bmap will be loaded?
 	 */
-	rc = bmap_lookup(f, c->bno, &bmap);
+	rc = -bmap_get(f, c->bno, SL_WRITE, &bmap);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "bmap lookup failed; "
 		    "bno=%u rc=%d", c->bno, rc);
-		rc = -EBADF;
 		goto out;
 	}
 
@@ -1525,7 +1530,12 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 
 	bmi = bmap_2_bmi(bmap);
 
-	if (!bmi->bmi_wr_ion ||
+	/*
+	 * If this bmap is associated with a lease, then it must be
+	 * owned by the IOS.  Note that the bmap might be just read
+	 * from the disk.
+	 */
+	if (bmi->bmi_wr_ion &&
 	    iosid != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
 		/* We recv'd a request from an unexpected NID. */
 		psclog_errorx("CRCUP for/from invalid NID; "
@@ -1676,7 +1686,7 @@ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
-	if (b->bcm_flags & BMAPF_DIO)
+	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {

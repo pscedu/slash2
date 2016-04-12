@@ -44,7 +44,6 @@
 #define BMAP_CACHE_MAX		1024
 
 #define BMAP_DIOWAIT_USEC	100
-#define BMAP_DIOWAIT_MAX_USEC	60*1000000
 #define BMAP_DIOWAIT_MAX_TRIES	32	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
 
 enum {
@@ -56,6 +55,8 @@ enum {
 void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
+
+const struct timespec slc_bmap_diowait_max = { 60 * 1000 * 1000, 0 };
 
 void
 msl_bmap_reap(void)
@@ -95,6 +96,14 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	BMAP_LOCK_ENSURE(b);
 
 	if (rc) {
+		/*
+		 * If the MDS replies with SLERR_ION_OFFLINE then don't
+		 * bother with further retry attempts.
+		 */
+		if (rc == -SLERR_ION_OFFLINE) {
+			rc = EHOSTDOWN;
+			bmap_2_bci(b)->bci_nreassigns = 0;
+		}
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		bci->bci_error = rc;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
@@ -109,6 +118,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		if (b->bcm_flags & BMAPF_WR)
 			psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
+		/* overwrite previous error */
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
 
@@ -192,7 +202,8 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
-	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
+	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
+	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_USEC * 1000 };
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
@@ -203,7 +214,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct psc_compl compl;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
-	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -248,7 +258,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
 
-	if ((flags & BMAPGETF_NONBLOCK) == 0) {
+	if (blocking) {
 		psc_compl_init(&compl);
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
 		    &compl;
@@ -289,19 +299,34 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 		nretries++;
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
-			return (-ETIMEDOUT);
-		usleep(diowait_usec);
-		diowait_usec += diowait_usec;
-		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
-			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
+			return (ETIMEDOUT);
+
+		if (nretries) {
+			timespecadd(&diowait_duration,
+			    &diowait_duration, &diowait_duration);
+			if (timespeccmp(&diowait_duration,
+			    &slc_bmap_diowait_max, >))
+				diowait_duration = slc_bmap_diowait_max;
+		}
+
+		if (pfr) {
+			rc = pflfs_req_sleep_rel(pfr,
+			    &diowait_duration);
+			if (rc)
+				PFL_GOTOERR(out, rc);
+		} else
+			/*
+			 * XXX should this case exist: a blocking
+			 * MODESET with no PFLFS request?
+			 */
+			nanosleep(&diowait_duration, NULL);
+
 		goto retry;
 	}
 
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
 		    rc);
-
-	return (rc);
 
  out:
 	pscrpc_req_finished(rq);
@@ -311,7 +336,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
+	if (blocking && rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
 	return (rc);
@@ -331,14 +356,6 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	msl_bmap_stash_lease(b, &mp->sbd, rc, "reassign", 1);
-	if (rc) {
-		/*
-		 * If the MDS replies with SLERR_ION_OFFLINE then don't
-		 * bother with further retry attempts.
-		 */
-		if (rc == -SLERR_ION_OFFLINE)
-			bmap_2_bci(b)->bci_nreassigns = 0;
-	}
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 
@@ -466,8 +483,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 		bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
@@ -566,8 +582,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 	if (rc) {
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 
@@ -698,7 +713,8 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
-	useconds_t diowait_usec = BMAP_DIOWAIT_USEC;
+	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
+	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_USEC * 1000 };
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
@@ -709,7 +725,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	struct psc_compl compl;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
-	int rc, nretries = 0;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -721,7 +736,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-	// XXX respect NONBLOCK
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -741,7 +755,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	    b->bcm_bmapno);
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
-	if ((flags & BMAPGETF_NONBLOCK) == 0) {
+	if (blocking) {
 		psc_compl_init(&compl);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_COMPL] =
 		    &compl;
@@ -783,22 +797,36 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 		nretries++;
 		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
-			return (-ETIMEDOUT);
-		usleep(diowait_usec);
-		diowait_usec += diowait_usec;
-		if (diowait_usec > BMAP_DIOWAIT_MAX_USEC)
-			diowait_usec = BMAP_DIOWAIT_MAX_USEC;
+			return (ETIMEDOUT);
+
+		if (nretries) {
+			timespecadd(&diowait_duration,
+			    &diowait_duration, &diowait_duration);
+			if (timespeccmp(&diowait_duration,
+			    &slc_bmap_diowait_max, >))
+				diowait_duration = slc_bmap_diowait_max;
+		}
+
+		if (pfr) {
+			rc = pflfs_req_sleep_rel(pfr,
+			    &diowait_duration);
+			if (rc)
+				PFL_GOTOERR(out, rc);
+		} else
+			/*
+			 * XXX should this case exist: a blocking
+			 * GETBMP with no PFLFS request?
+			 */
+			nanosleep(&diowait_duration, NULL);
+
 		goto retry;
 	}
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
-		rc = -EAGAIN;
+		rc = EAGAIN;
 
 	if (rc)
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
-
-	return (rc);
-
  out:
 	pscrpc_req_finished(rq);
 	rq = NULL;
@@ -807,9 +835,10 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		csvc = NULL;
 	}
 
-	if (rc && pfr && slc_rmc_retry(pfr, &rc))
+	if (blocking && rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
+	rc = abs(rc);
 	return (rc);
 }
 
@@ -943,8 +972,7 @@ msl_bmap_release(struct sl_resm *resm)
 		psclog_errorx("failed res=%s (rc=%d)", resm->resm_name,
 		    rc);
 
-		if (rq)
-			pscrpc_req_finished(rq);
+		pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}

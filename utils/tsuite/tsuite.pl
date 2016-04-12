@@ -595,11 +595,11 @@ my @cli_pids;
 
 my $success = 0;
 
-local $SIG{CHLD} = sub { };
+$SIG{CHLD} = sub { };
 
 eval {
 
-local $SIG{ALRM} = sub { fatal "timeout exceeded" };
+$SIG{ALRM} = sub { fatal "timeout exceeded" };
 
 # Generate authbuf key
 my $authbuf_minkeysize =
@@ -1272,8 +1272,8 @@ lock @all_output;
 
 my $output = join '', @all_output;
 
-my ($pfl_commid) = $output =~ /^%PFL_COMMID% (\S+?)/m;
-my ($sl2_commid) = $output =~ /^%SL2_COMMID% (\S+?)/m;
+my ($pfl_commid) = $output =~ /^%PFL_COMMID% (\S+)/m;
+my ($sl2_commid) = $output =~ /^%SL2_COMMID% (\S+)/m;
 
 sub parse_results {
 	my ($output) = @_;

@@ -29,7 +29,7 @@ for my $hdr (@ARGV) {
 	push @err, $hdat =~ /\b((?:PF|S)LERR_\w+)/g;
 }
 
-my $ndat = join '', map { qq{\tprintf("%4d [$_]: %s\\n", $_, sl_strerror($_));\n} } @err;
+my $ndat = join '', map { qq{\tprintf("%4d [$_]: %s\\n", $_, strerror($_));\n} } @err;
 
 my $data = slurp $src;
 $data =~ s!(?<=/\* start custom errnos \*/\n).*(?=\t/\* end custom errnos \*/)!$ndat!s;

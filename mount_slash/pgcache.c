@@ -140,7 +140,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
  retry:
 					psc_waitq_waitrelf_us(
 					    &b->bcm_fcmh->fcmh_waitq,
-					    PFL_WAITQWF_RWLOCK,
+					    PFL_LOCKPRIMT_RWLOCK,
 					    &bci->bci_rwlock, 100);
 					if (wrlock)
 						pfl_rwlock_wrlock(

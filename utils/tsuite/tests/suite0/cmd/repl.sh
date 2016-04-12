@@ -35,8 +35,6 @@ dd if=$RANDOM_DATA of=$fn bs=131072
 
 cksum=$(md5sum $fn)
 
-sleep 4
-
 msctl repl-add:io0@SITE0,io1@SITE0:* $fn
 
 repl_wait io0@SITE0 $fn

@@ -238,11 +238,7 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 	imp->imp_cli_request_portal = csvc->csvc_rqptl;
 	imp->imp_cli_reply_portal = csvc->csvc_rpptl;
 
-#ifdef _SLASH_CLIENT 
-	imp->imp_max_retries = PSCRPC_MAX_RETRIES;
-#else
-	imp->imp_max_retries = PSCRPC_MAX_RETRIES;
-#endif
+	imp->imp_max_retries = pfl_rpc_max_retry;
 
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;

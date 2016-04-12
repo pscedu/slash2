@@ -45,12 +45,14 @@ struct pscrpc_svc_handle	*msl_rci_svh;
 struct pscrpc_svc_handle	*msl_rcm_svh;
 
 void
-msl_resm_throttle_wake(struct sl_resm *m)
+msl_resm_throttle_wake(struct sl_resm *m, int rc)
 {
 	struct resprof_cli_info *rpci;
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
+	if (abs(rc) == ETIMEDOUT)
+		rpci->rpci_timeouts++;
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
@@ -199,12 +201,24 @@ slc_rmc_setmds(const char *name)
 
 /*
  * Determine if process doesn't want to wait or if maximum allowed
- * timeout has been reached for MDS communication.
+ * timeout has been reached for RPC communication.
+ *
+ * Determine if an I/O operation should be retried after successive
+ * RPC/communication failures.
+ *
+ * We want to check:
+ *	- administration/control/configuration policy (e.g. "5
+ *	  retries").
+ *	- user process/environment/file descriptor policy
+ *	- user process interrupt
+ *
+ * XXX consult mfh for per-file handle settings?
  */
 int
-slc_rmc_retry(struct pscfs_req *pfr, int *rc)
+slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
-	int retry;
+	struct timespec ts;
+	int count = 0;
 
 	switch (abs(*rc)) {
 	case PFLERR_TIMEDOUT:
@@ -227,44 +241,46 @@ slc_rmc_retry(struct pscfs_req *pfr, int *rc)
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
 		if (pfr && pfr->pfr_retries > msl_max_retries)
-			return (0);
+			PFL_GOTOERR(out, *rc = ETIMEDOUT);
 		break;
 
 	/*
 	 * Translate error codes from the SLASH2 level to the OS level.
 	 */
 	case PFLERR_NOTSUP:
-		*rc = ENOTSUP;
+		PFL_GOTOERR(out, *rc = ENOTSUP);
 		/* FALLTHROUGH */
 	default:
-		return (0);
+		PFL_GOTOERR(out, *rc);
 	}
-
-	retry = 1;
 
 	/*
-	 * We only need to set returned rc if we are not
-	 * going to retry.
+	 * We only need to set rc if we are not going to retry.
 	 */
-	if (pfr) {
-		pfr->pfr_retries++;
-		if (pfr->pfr_interrupted) {
-			retry = 0;
-			*rc = EINTR;
-		}
-	} else {
-		retry = 0;
-		*rc = ETIMEDOUT;
-	}
+	if (!pfr)
+		PFL_GOTOERR(out, *rc = ETIMEDOUT);
 
-	if (retry) {
-		usleep(10);
-		if (pfr && pfr->pfr_interrupted) {
-			retry = 0;
-			*rc = EINTR;
-		}
-	}
-	return (retry);
+	*rc = 0;
+	count = pfr->pfr_retries++;
+
+	if (pfr) {
+		ts.tv_sec = count ? count * 1 : 10;
+		ts.tv_nsec = 0;
+
+		/*
+		 * XXX we can do better here: in the case of offline
+		 * peers, we can multiwait on the csvc to be immediately
+		 * awoken when the connection is established.
+		 */
+		*rc = pflfs_req_sleep_rel(pfr, &ts);
+	} else
+		sleep(count ? count * 1 : 10);
+
+ out:
+	if (*rc)
+		return (0);
+	OPSTAT_INCR("msl.retry");
+	return (1);
 }
 
 int
@@ -322,7 +338,7 @@ slc_rpc_req_out_failed(__unusedx struct slashrpc_cservice *csvc,
 	struct sl_resm *m;
 
 	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-	msl_resm_throttle_wake(m);
+	msl_resm_throttle_wake(m, rq->rq_status);
 }
 
 void
@@ -332,7 +348,7 @@ slc_rpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
 	struct sl_resm *m;
 
 	m = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
-	msl_resm_throttle_wake(m);
+	msl_resm_throttle_wake(m, rq->rq_status);
 }
 
 struct sl_expcli_ops sl_expcli_ops;

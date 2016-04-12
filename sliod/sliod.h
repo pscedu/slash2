@@ -113,7 +113,8 @@ extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct timespec		 sli_ssfb_send;
 extern struct psc_listcache	 sli_fcmh_dirty;
 extern int			 sli_sync_max_writes;
-extern int			 sli_min_space_reserve;
+extern int			 sli_min_space_reserve_gb;
+extern int			 sli_min_space_reserve_pct;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 sli_current_reclaim_xid;
@@ -121,5 +122,10 @@ extern uint64_t			 sli_current_reclaim_batchno;
 
 extern struct psc_listcache	 sli_bmaplease_releaseq;
 extern struct statvfs		 sli_statvfs_buf;
+
+/*
+ * List of fault point that will be auto-registered on startup.
+ */
+#define RIC_HANDLE_FAULT        "sliod/ric_handle"
 
 #endif /* _SLIOD_H_ */

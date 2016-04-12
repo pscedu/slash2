@@ -50,7 +50,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define MIN_SPACE_RESERVE	5		/* percentage */
+#define MIN_SPACE_RESERVE_GB	16		/* min space in GiB - check first */
+#define MIN_SPACE_RESERVE_PCT	2		/* min space percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
@@ -58,7 +59,8 @@ void				*sli_benchmark_buf;
 uint32_t			 sli_benchmark_bufsiz;
 
 int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
-int				 sli_min_space_reserve = MIN_SPACE_RESERVE;
+int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
+int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -106,10 +108,14 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	off_t rc, f_off;
 	int fd, percentage;
 
-	/* lockless read is fine */
+	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
+	    >= (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
+		return (1);
+
 	percentage = sli_statvfs_buf.f_bavail * 100 /
 	    sli_statvfs_buf.f_blocks;
-	if (percentage >= sli_min_space_reserve)
+
+	if (percentage >= sli_min_space_reserve_pct)
 		return (1);
 
 	fd = fcmh_2_fd(f);
@@ -221,8 +227,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc)
 		return (mp->rc);
 
+	/*
+	 * Limit key checking for write for now until the client
+	 * side can extend read lease in the background as well.
+	 */
 	seqno = bim_getcurseq();
-	if (mq->sbd.sbd_seq < seqno) {
+	if (rw == SL_WRITE && mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
@@ -448,9 +458,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fcmh_op_done(f);
 
 	if (rw == SL_READ)
-		pfl_fault_here("sliod/read_delay", &rc);
+		pfl_fault_here("sliod/read_rpc", &rc);
 	else
-		pfl_fault_here("sliod/write_delay", &rc);
+		pfl_fault_here("sliod/write_rpc", &rc);
 	return (rc);
 }
 
@@ -494,6 +504,8 @@ sli_ric_handler(struct pscrpc_request *rq)
 			goto out;
 		}
 	}
+
+	pfl_fault_here(RIC_HANDLE_FAULT, NULL);
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
