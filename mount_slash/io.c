@@ -848,7 +848,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 		rc0 = rc;
 		goto restart;
 	}
-	
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		 PFL_GOTOERR(out, rc);
@@ -1059,11 +1059,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct pscfs_req *pfr;
 	struct iovec *iovs;
 	struct sl_resm *m;
 	struct bmap *b;
 	uint64_t *v8;
-	struct pscfs_req *pfr;
 	int refs;
 
 	psc_assert(r->biorq_bmap);
@@ -1087,7 +1087,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	}
 
   retry:
-
 	refs = 0;
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
@@ -1124,8 +1123,11 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rc = slrpc_bulkclient(rq, op == SRMT_WRITE ?
 		    BULK_GET_SOURCE : BULK_PUT_SINK, SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
-		if (rc)
+		if (rc) {
+			pscrpc_req_finished(rq);
+			rq = NULL;
 			PFL_GOTOERR(out, rc);
+		}
 
 		mq->offset = r->biorq_off + off;
 		mq->size = len;
@@ -1142,6 +1144,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			refs--;
 			msl_biorq_release(r);
 			OPSTAT_INCR("msl.dio-add-req-fail");
+			pscrpc_req_finished(rq);
+			rq = NULL;
 			PFL_GOTOERR(out, rc);
 		}
 		rq = NULL;
@@ -1197,9 +1201,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
  out:
-	/*
-	 * Drop the reference we have take for the RPCs.
-	 */
+	/* Drop the reference we took for the RPCs. */
 	for (i = 0; i < refs; i++)
 		msl_biorq_release(r);
 
@@ -1212,8 +1214,6 @@ if (!pfl_rpc_max_retry) {
 		goto retry;
 	}
 }
-
-	pscrpc_req_finished(rq);
 
 	if (nbs)
 		pscrpc_set_destroy(nbs);
@@ -2221,9 +2221,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
-		else {
+		else
 			rc = msl_pages_fetch(r);
-		}
 		if (rc)
 			break;
 	}
