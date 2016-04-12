@@ -405,4 +405,7 @@ extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
 
+extern int64_t			 slc_pending_writes; 
+extern psc_spinlock_t		 slc_pending_writes_lock;
+
 #endif /* _MOUNT_SLASH_H_ */

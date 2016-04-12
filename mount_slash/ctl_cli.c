@@ -535,6 +535,14 @@ msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 }
 
 void
+msctlparam_pending_writes_get(char buf[PCP_VALUE_MAX])
+{
+	spinlock(&slc_pending_writes_lock);
+	snprintf(buf, PCP_VALUE_MAX, "%ld", slc_pending_writes);
+	freelock(&slc_pending_writes_lock);
+}
+
+void
 msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 {
 	struct sl_resource *r;
@@ -938,6 +946,9 @@ msctlthr_spawn(void)
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_max_nretries);
+
+	psc_ctlparam_register_simple("sys.pending_writes",
+	    msctlparam_pending_writes_get, NULL);
 	psc_ctlparam_register_simple("sys.pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
