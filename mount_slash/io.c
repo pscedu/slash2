@@ -837,15 +837,12 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 
  restart:
 
-	if (!slc_rpc_retry(pfr, &rc0)) {
-		if (csvc)
-			sl_csvc_decref(csvc);
+	if (!slc_rpc_retry(pfr, &rc0))
 		return (0);
-	}
 
 	csvc = slc_geticsvc(m);
-	if (rc) {
-		rc0 = rc;
+	if (!csvc) {
+		rc0 = csvc->csvc_lasterrno;
 		goto restart;
 	}
 
@@ -927,10 +924,11 @@ msl_read_cleanup(struct pscrpc_request *rq, int rc,
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && r->biorq_fsrqi &&
-	    msl_read_attempt_retry(r->biorq_fsrqi, rc, args)) {
+	if (rc && r->biorq_fsrqi) {
 		sl_csvc_decref(csvc);
-		return (0);
+		csvc = NULL;
+		if (msl_read_attempt_retry(r->biorq_fsrqi, rc, args))
+			return (0);
 	}
 
 }
@@ -964,7 +962,9 @@ if (!pfl_rpc_max_retry) {
 	PSCFREE(a);
 
 	PSCFREE(iovs);
-	sl_csvc_decref(csvc);
+
+	if (csvc)
+		sl_csvc_decref(csvc);
 
 	return (rc);
 }
