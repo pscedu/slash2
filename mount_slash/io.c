@@ -868,7 +868,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	psc_assert(mq->offset + mq->size <= SLASH_BMAP_SIZE);
 
 	mq->op = SRMIOP_RD;
-	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
+	mq->sbd = *bmap_2_sbd(r->biorq_bmap);
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
@@ -884,8 +884,8 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	return (1);
 
  out:
-	sl_csvc_decref(csvc);
 	pscrpc_req_finished(rq);
+	sl_csvc_decref(csvc);
 	return (0);
 }
 
