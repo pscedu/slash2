@@ -2326,7 +2326,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	 * Force expire to provoke immediate flush.
 	 * We probably do not need this because we
 	 * already did this at flush time.
-	 */ 
+	 */
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.release_dirty_attrs");
@@ -3266,6 +3266,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	bmap_cache_destroy();
 
 	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
+	pfl_poolmaster_destroy(&msl_retry_req_poolmaster);
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
@@ -3963,7 +3964,7 @@ msl_init(void)
 	slc_rpc_initsvc();
 
 	sl_nbrqset = pscrpc_prep_set();
-	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, 
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ,
 	    NUM_NBRQ_THREADS, "msnbrqthr%d");
 
 	msctlthr_spawn();
