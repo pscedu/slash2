@@ -1212,9 +1212,13 @@ slmjcursorthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		spinlock(&slm_cursor_lock);
-		slm_cursor_update_inprog = 0;
-		psc_waitq_wait(&slm_cursor_waitq, &slm_cursor_lock);
+		if (!slm_cursor_update_needed) {
+			slm_cursor_update_inprog = 0;
+			psc_waitq_wait(&slm_cursor_waitq, &slm_cursor_lock);
+			spinlock(&slm_cursor_lock);
+		}
 		slm_cursor_update_inprog = 1;
+		freelock(&slm_cursor_lock);
 
 		/* Use SLASH2_CURSOR_UPDATE to write cursor file */
 		rc = mdsio_write_cursor(current_vfsid, &mds_cursor,
