@@ -15,7 +15,7 @@ include ${SLASHMK}
 
 typedump.c: ${OBJDIR}/typedump.h
 
-${OBJDIR}/typedump.h: ${SLASH_BASE}/*/*.h
+${OBJDIR}/typedump.h: ${OBJDIR} ${SLASH_BASE}/*/*.h
 	${GENTYPES} -g '\b(MSCMT_\w+)\s' -g '\b(SLASH2?_\w+)\s+(?!["\s])' $(strip	\
 	    ) -g '^#define\s+(\w+)\b(?=[ \t()0-9<]+\s*(?:/\*.*?\*/|)$$)' $(strip	\
 	    ) -h '../../*/*.h' > $@
