@@ -1748,8 +1748,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
-	mds_note_update(1);
-
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
@@ -1867,11 +1865,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		psclog_errorx("unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
-		mds_note_update(-1);
 		return (pscrpc_error(rq));
 	}
  out:
-	mds_note_update(-1);
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, -abs(rc), 0);
 	return (rc);

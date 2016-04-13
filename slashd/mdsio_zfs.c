@@ -173,3 +173,14 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_setxattr,
 	zfsslash2_replay_removexattr
 };
+
+void
+slm_zfs_cursor_wake(void)
+{
+	spinlock(&slm_cursor_lock);
+	if (!slm_cursor_update_inprog)
+		psc_waitq_wakeall(&slm_cursor_waitq);
+	freelock(&slm_cursor_lock);
+}
+
+void (*zfsslash2_cursor_wake)(void) = slm_zfs_cursor_wake;

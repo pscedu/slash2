@@ -231,16 +231,6 @@ read_vfsid(int vfsid, char *fn, uint64_t *field)
 	return (rc);
 }
 
-void
-slm_mdfs_suspend(void)
-{
-}
-
-void
-slm_mdfs_resume(void)
-{
-}
-
 /*
  * XXX Allow an empty file system to register and fill in contents
  * later.  Or use slmctl to register a new file system when it is ready.
@@ -500,12 +490,6 @@ main(int argc, char *argv[])
 	psc_hashtbl_init(&slm_roots, PHTF_STR, struct mio_rootnames,
 	    rn_name, rn_hentry, 97, NULL, "rootnames");
 
-	/* using hook can cause layer violation */
-	zfsslash2_register_hook(slm_mdfs_register);
-
-	zfsslash2_register_resume_hook(slm_mdfs_resume);
-	zfsslash2_register_suspend_hook(slm_mdfs_suspend);
-
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
 
@@ -515,7 +499,7 @@ main(int argc, char *argv[])
 	pfl_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++)
-		slm_mdfs_filesystem(vfsid);
+		slm_mdfs_register(vfsid);
 
 	if (!zfs_nmounts)
 		errx(1, "No ZFS file system exists!");

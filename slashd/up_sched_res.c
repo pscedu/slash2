@@ -704,8 +704,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_WAIT_BUSY(b);
 	BMAP_ULOCK(b);
 
-	mds_note_update(1);
-
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
@@ -848,7 +846,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	FCMH_UNBUSY(f);
 
  out:
-	mds_note_update(-1);
+ 	;
 }
 
 /*
@@ -1091,7 +1089,6 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
-	// XXX mds_note_update(1)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;

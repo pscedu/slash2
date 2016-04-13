@@ -519,7 +519,6 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	int rc = 0, type;
 	uint64_t fid;
 
-	mds_note_update(1);
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	switch (type) {
 	    case MDS_LOG_BMAP_REPLS:
@@ -560,7 +559,6 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    default:
 		psc_fatalx("invalid log entry type %d", pje->pje_type);
 	}
-	mds_note_update(-1);
 	psclog_info("replayed journal optype=%d xid=%#"PRIx64" "
 	    "txg=%#"PRIx64" rc=%d",
 	    type, pje->pje_xid, pje->pje_txg, rc);
