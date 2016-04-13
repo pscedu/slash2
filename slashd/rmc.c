@@ -865,7 +865,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	 * subdirs.
 	 */
 	if (mq->fg.fg_fid == SLFID_ROOT)
-		psc_scan_filesystems();
+		slm_mdfs_scan();
 
 	if (mq->fg.fg_fid == SLFID_ROOT && slm_global_mount) {
 		slm_rmc_handle_readdir_global_mount(mp, iov);

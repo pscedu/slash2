@@ -232,21 +232,21 @@ read_vfsid(int vfsid, char *fn, uint64_t *field)
 }
 
 void
-psc_suspend_filesystem(void)
+slm_mdfs_suspend(void)
 {
 }
 
 void
-psc_resume_filesystem(void)
+slm_mdfs_resume(void)
 {
 }
 
 /*
- * XXX Allow an empty file system to register and fill in contents later.
- *     Or use slmctl to register a new file system when it is ready.
+ * XXX Allow an empty file system to register and fill in contents
+ * later.  Or use slmctl to register a new file system when it is ready.
  */
 void
-psc_register_filesystem(int vfsid)
+slm_mdfs_register(int vfsid)
 {
 	int i, rc, found1, found2, root_vfsid;
 	uint64_t resid, uuid;
@@ -375,7 +375,7 @@ psc_register_filesystem(int vfsid)
  * Scan for newly added file systems in the pool.
  */
 void
-psc_scan_filesystems(void)
+slm_mdfs_scan(void)
 {
 	static psc_spinlock_t scan_lock = SPINLOCK_INIT;
 	int i;
@@ -383,7 +383,7 @@ psc_scan_filesystems(void)
 	spinlock(&scan_lock);
 	for (i = 0; i < zfs_nmounts; i++)
 		if (!(zfs_mounts[i].zm_flags & ZFS_SLASH2_READY))
-			psc_register_filesystem(i);
+			slm_mdfs_register(i);
 	freelock(&scan_lock);
 }
 
@@ -501,10 +501,10 @@ main(int argc, char *argv[])
 	    rn_name, rn_hentry, 97, NULL, "rootnames");
 
 	/* using hook can cause layer violation */
-	zfsslash2_register_hook(psc_register_filesystem);
+	zfsslash2_register_hook(slm_mdfs_register);
 
-	zfsslash2_register_resume_hook(psc_resume_filesystem);
-	zfsslash2_register_suspend_hook(psc_suspend_filesystem);
+	zfsslash2_register_resume_hook(slm_mdfs_resume);
+	zfsslash2_register_suspend_hook(slm_mdfs_suspend);
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
@@ -515,7 +515,7 @@ main(int argc, char *argv[])
 	pfl_meter_destroy(&res2mdsinfo(sl_resprof)->sp_batchmeter);
 
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++)
-		psc_register_filesystem(vfsid);
+		slm_mdfs_filesystem(vfsid);
 
 	if (!zfs_nmounts)
 		errx(1, "No ZFS file system exists!");

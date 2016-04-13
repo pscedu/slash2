@@ -377,7 +377,7 @@ int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 int	 mdscoh_req(struct bmap_mds_lease *);
 void	 slm_coh_delete_file(struct fidc_membh *);
 
-void	 psc_scan_filesystems(void);
+void	 slm_mdfs_scan(void);
 void	 mds_note_update(int);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
