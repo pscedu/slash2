@@ -85,13 +85,12 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 		slrpc_ops.slrpc_req_out(csvc, rq);
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pfl_rsx_waitrep(rq, plen, mpp);
-	if (rc == 0) {
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
-		if (slrpc_ops.slrpc_rep_in)
-			slrpc_ops.slrpc_rep_in(csvc, rq, rc);
-	} else if (slrpc_ops.slrpc_req_out_failed)
-		slrpc_ops.slrpc_req_out_failed(csvc, rq);
-	return (rc);
+	if (rc) {
+		if (slrpc_ops.slrpc_req_out_failed)
+			slrpc_ops.slrpc_req_out_failed(csvc, rq);
+		return (rc);
+	}
+	return (slrpc_rep_in(csvc, rq, flags, rc));
 }
 
 int
@@ -129,6 +128,28 @@ slrpc_rep_out(struct pscrpc_request *rq)
 	if (slrpc_ops.slrpc_rep_out)
 		slrpc_ops.slrpc_rep_out(rq);
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+}
+
+/*
+ * Generic RPC reply received processing, as well as execution of any
+ * callbacks registered.
+ */
+int
+slrpc_rep_in(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int flags, int error)
+{
+	/*
+	 * XXX this horrible hack.  if one side thinks there's
+	 * no connection, how can the other side not?
+	 */
+	if (error == -PFLERR_NOTCONN && csvc)
+		sl_csvc_disconnect(csvc);
+
+	if (!error)
+		error = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
+	if (slrpc_ops.slrpc_rep_in)
+		slrpc_ops.slrpc_rep_in(csvc, rq, error);
+	return (error);
 }
 
 void
@@ -1357,4 +1378,12 @@ void
 slrpc_destroy(void)
 {
 	pfl_poolmaster_destroy(&sl_csvc_poolmaster);
+}
+
+const char *
+slrpc_getname_for_opcode(int opc)
+{
+	if (opc < 1 || opc >= NSRMT)
+		return (NULL);
+	return (slrpc_names[opc]);
 }
