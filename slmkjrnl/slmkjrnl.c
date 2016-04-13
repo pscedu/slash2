@@ -100,7 +100,7 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		max_nents -= stb.st_blksize / SLJ_MDS_ENTSIZE + 16;
 
 		/* efficiency */
-		max_nents = (max_ents / rs) * rs;
+		max_nents = (max_nents / rs) * rs;
 		if (nents)
 			nents = MIN(nents, max_nents);
 		else
