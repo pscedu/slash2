@@ -2024,9 +2024,8 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
-	int nr, i, j, rc, npages;
+	int nr, i, rc, npages;
 	size_t start, end, tlen, tsize;
-	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
 	struct timespec ts0, ts1, tsd;
 	struct bmpc_ioreq *r = NULL;
@@ -2140,7 +2139,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		r = q->mfsrq_biorq[i];
 
-		psc_assert(!r);
 		BMAP_ULOCK(b);
 
 		/*
