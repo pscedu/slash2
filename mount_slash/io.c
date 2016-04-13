@@ -2139,40 +2139,25 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 * than 1 bmap.
 		 */
 		r = q->mfsrq_biorq[i];
-		if (r) {
-			r->biorq_retries++;
-			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
-				BMPCE_LOCK(e);
-				if (e->bmpce_flags & BMPCEF_EIO) {
-					e->bmpce_rc = 0;
-					e->bmpce_flags &= ~BMPCEF_EIO;
-					DEBUG_BMPCE(PLL_DIAG, e,
-					    "clear BMPCEF_EIO");
-				}
-				BMPCE_ULOCK(e);
-			}
-			bmap_op_done_type(r->biorq_bmap,
-			    BMAP_OPCNT_BIORQ);
-			r->biorq_bmap = b;
-		} else {
-			BMAP_ULOCK(b);
 
-			/*
-			 * roff - (i * SLASH_BMAP_SIZE) should be zero
-			 * if i == 1.
-			 */
-			r = msl_biorq_build(q, b, buf,
-			    roff - (i * SLASH_BMAP_SIZE), tlen,
-			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		psc_assert(!r);
+		BMAP_ULOCK(b);
 
-			q->mfsrq_biorq[i] = r;
+		/*
+		 * roff - (i * SLASH_BMAP_SIZE) should be zero
+		 * if i == 1.
+		 */
+		r = msl_biorq_build(q, b, buf,
+		    roff - (i * SLASH_BMAP_SIZE), tlen,
+		    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 
-			MFH_LOCK(mfh);
-			q->mfsrq_ref++;
-			MFH_ULOCK(mfh);
+		q->mfsrq_biorq[i] = r;
 
-			DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
-		}
+		MFH_LOCK(mfh);
+		q->mfsrq_ref++;
+		MFH_ULOCK(mfh);
+
+		DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
 
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
