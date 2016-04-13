@@ -279,7 +279,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (b->bcm_flags & BMAPF_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
+	mq->sbd = *bmap_2_sbd(b);
 
 	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
