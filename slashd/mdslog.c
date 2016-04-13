@@ -1200,10 +1200,9 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 
 /*
  * Update the cursor file in the ZFS that records the current
- * transaction group number and other system log status.  If
- * there is no activity in system other than this write to
- * update the cursor, our customized ZFS will extend the lifetime
- * of the transaction group.
+ * transaction group number and other system log status.  If there is no
+ * activity in system other than this write to update the cursor, our
+ * customized ZFS will extend the lifetime of the transaction group.
  */
 void
 slmjcursorthr_main(struct psc_thread *thr)
@@ -1214,7 +1213,8 @@ slmjcursorthr_main(struct psc_thread *thr)
 		spinlock(&slm_cursor_lock);
 		if (!slm_cursor_update_needed) {
 			slm_cursor_update_inprog = 0;
-			psc_waitq_wait(&slm_cursor_waitq, &slm_cursor_lock);
+			psc_waitq_wait(&slm_cursor_waitq,
+			    &slm_cursor_lock);
 			spinlock(&slm_cursor_lock);
 		}
 		slm_cursor_update_inprog = 1;
