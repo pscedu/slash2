@@ -845,7 +845,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 
 	csvc = slc_geticsvc(m);
 	if (!csvc) {
-		rc0 = -ETIMEDOUT;
+		rc0 = m->resm_csvc->csvc_lasterrno;
 		goto restart;
 	}
 
