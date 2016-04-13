@@ -115,6 +115,7 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
 int				 slm_cursor_update_inprog;
+int				 slm_cursor_update_needed;
 
 uint64_t			 slm_reclaim_proc_batchno;
 

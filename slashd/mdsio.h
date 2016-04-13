@@ -209,5 +209,6 @@ extern mdsio_fid_t		mds_tmpdir_inum[];
 extern struct psc_waitq		slm_cursor_waitq;
 extern struct psc_spinlock	slm_cursor_lock;
 extern int			slm_cursor_update_inprog;
+extern int			slm_cursor_update_needed;
 
 #endif /* _SLASHD_MDSIO_H_ */
