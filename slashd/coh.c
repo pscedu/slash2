@@ -52,9 +52,8 @@
  * Notify clients that a file/directory has been removed.
  */
 void
-slm_coh_delete_file(struct fidc_membh *c)
+slm_coh_delete_file(__unusedx struct fidc_membh *c)
 {
-	return (0);
 }
 
 void
