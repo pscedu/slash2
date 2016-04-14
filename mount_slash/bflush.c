@@ -103,7 +103,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 	int redo = 0;
 	struct bmap_cli_info *bci;
 	struct bmap *b;
-	
+
  retry:
 
 	FCMH_LOCK_ENSURE(f);
@@ -136,8 +136,8 @@ bmap_free_all_locked(struct fidc_membh *f)
 		BMAP_ULOCK(b);
 	}
 	/*
- 	 * Need to race with the bmap timeout code path.
- 	 */
+	 * Need to race with the bmap timeout code path.
+	 */
 	if (redo) {
 		redo = 0;
 		FCMH_ULOCK(f);
@@ -276,8 +276,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
 #endif
 
-	(void)pfl_fault_here_rc("slash2/request_timeout",
-	    &rq->rq_timeout, -1);
+	(void)pfl_fault_here_rc(&rq->rq_timeout, -1,
+	    "slash2/request_timeout");
 
 	if (rq->rq_timeout < 0) {
 		rc = -EAGAIN;
