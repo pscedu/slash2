@@ -219,11 +219,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psclog_diag("bmapdesc check okay");
 
 	if (rw == SL_READ)
-		(void)pfl_fault_here_rc("sliod/seqno_read_fail",
-		    &mp->rc, -PFLERR_KEYEXPIRED);
+		(void)pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
+		    "sliod/seqno_read_fail");
 	else
-		(void)pfl_fault_here_rc("sliod/seqno_write_fail",
-		    &mp->rc, -PFLERR_KEYEXPIRED);
+		(void)pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
+		    "sliod/seqno_write_fail");
 	if (mp->rc)
 		return (mp->rc);
 
@@ -458,9 +458,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fcmh_op_done(f);
 
 	if (rw == SL_READ)
-		pfl_fault_here("sliod/read_rpc", &rc);
+		pfl_fault_here(&rc, "sliod/read_rpc");
 	else
-		pfl_fault_here("sliod/write_rpc", &rc);
+		pfl_fault_here(&rc, "sliod/write_rpc");
 	return (rc);
 }
 
@@ -505,7 +505,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		}
 	}
 
-	pfl_fault_here(RIC_HANDLE_FAULT, NULL);
+	pfl_fault_here(NULL, RIC_HANDLE_FAULT);
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:

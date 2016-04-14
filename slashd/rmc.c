@@ -355,7 +355,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	pfl_fault_here("slashd/getbmap_rpc", NULL);
+	pfl_fault_here(NULL, "slashd/getbmap_rpc");
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -843,7 +843,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mq->fg.fg_fid == FID_ANY)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	pfl_fault_here("slashd/readdir_rpc", NULL);
+	pfl_fault_here(NULL, "slashd/readdir_rpc");
 
 #if 0
 	/* If we are too busy, drop readahead work. */
@@ -1757,7 +1757,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
-	pfl_fault_here(RMC_HANDLE_FAULT, NULL);
+	pfl_fault_here(NULL, RMC_HANDLE_FAULT);
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
