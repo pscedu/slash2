@@ -1178,11 +1178,18 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		FCMH_ULOCK(c);
 
  out:
+	/* Caller wants parent; don't drop. */
 	if (parentp && p) {
 		*parentp = p;
 		p = NULL;
 		psc_assert(orig_dcu);
 	}
+
+	/*
+	 * Use 'dcu' here instead of 'dcup' because we only want to
+	 * release HOLD if we grabbed it; whereas a caller will want to
+	 * release it if they grabbed HOLD.
+	 */
 	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
@@ -3301,29 +3308,13 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	int rc = 0;
 
 	f = mfh->mfh_fcmh;
 
-	/* XXX EBADF if fd is not open for writing */
-	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("msl.fsrq-write-isdir");
-		PFL_GOTOERR(out, rc = EISDIR);
-	}
+	DEBUG_FCMH(PLL_DIAG, f, "write start: pfr=%p sz=%zu "
+	    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
 
-	rc = msl_write(pfr, mfh, (void *)buf, size, off);
-
- out:
-	/*
-	 * msl_write() will arrange to have the pscfs_reply_write()
-	 * executed when the RPC callback runs to avoid tying up
-	 * threads, especially when doing aio to ARCHIVAL_FS.
-	 */
-	if (rc)
-		pscfs_reply_write(pfr, size, rc);
-
-	DEBUG_FCMH(rc ? PLL_NOTICE: PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
+	msl_write(pfr, mfh, (void *)buf, size, off);
 }
 
 void
@@ -3331,31 +3322,13 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	int rc = 0;
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "read (start): rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, rc, size, off);
+	DEBUG_FCMH(PLL_DIAG, f, "read start: pfr=%p sz=%zu "
+	    "off=%"PSCPRIdOFFT, pfr, size, off);
 
-	if (fcmh_isdir(f)) {
-		OPSTAT_INCR("msl.fsrq-read-isdir");
-		PFL_GOTOERR(out, rc = EISDIR);
-	}
-
-	rc = msl_read(pfr, mfh, NULL, size, off);
-
- out:
-	/*
-	 * msl_read() will arrange to have the pscfs_reply_read()
-	 * executed when the RPC callback runs to avoid tying up
-	 * threads, especially when doing aio to ARCHIVAL_FS.
-	 */
-	if (rc)
-		pscfs_reply_read(pfr, NULL, 0, rc);
-
-	DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, f, "read (end): rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, rc, size, off);
+	msl_read(pfr, mfh, NULL, size, off);
 }
 
 void
