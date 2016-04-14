@@ -263,7 +263,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 			    "remove from msl_bmapflushq");
 		}
 		spinlock(&slc_pending_writes_lock);
-		slc_pending_writes--; 
+		slc_pending_writes--;
 		freelock(&slc_pending_writes_lock);
 	}
 
@@ -578,6 +578,48 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 	}
 }
 
+/*
+ * Send a reply back to the userland file system interface for a READ
+ * I/O operation.
+ */
+void
+slc_fsreply_read(struct fidc_membh *f, struct pscfs_req *pfr,
+    struct iovec *iov, int nio, int rc)
+{
+	size_t len;
+	int i;
+
+	for (len = 0, i = 0; i < nio; i++)
+		len += iov[i].iov_len;
+
+	/*
+	 * Errors encountered during reads are considered rare so
+	 * propagate them at a higher log level.
+	 */
+	DEBUG_FCMH(rc ? PLL_WARN : PLL_DIAG, f,
+	    "reply read: pfr=%p size=%zu rc=%d", pfr, len, rc);
+
+	pscfs_reply_read(pfr, iov, nio, rc);
+}
+
+/*
+ * Send a reply back to the userland file system interface for a WRITE
+ * I/O operation.
+ */
+void
+slc_fsreply_write(struct fidc_membh *f, struct pscfs_req *pfr,
+    size_t len, int rc)
+{
+	/*
+	 * Errors encountered during writes are considered rare so
+	 * propagate them at a higher log level.
+	 */
+	DEBUG_FCMH(rc ? PLL_WARN : PLL_DIAG, f,
+	    "reply write: pfr=%p size=%zu rc=%d", pfr, len, rc);
+
+	pscfs_reply_write(pfr, len, rc);
+}
+
 void
 msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
     struct bmpc_ioreq *r0)
@@ -591,6 +633,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 
 	pfr = mfsrq_2_pfr(q);
 	mfh = q->mfsrq_mfh;
+	f = mfh->mfh_fcmh;
 
 	MFH_LOCK(mfh);
 	if (!q->mfsrq_err) {
@@ -653,7 +696,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 				piov = iov;
 			}
 		}
-		pscfs_reply_read(pfr, piov, nio, rc);
+		slc_fsreply_read(f, pfr, piov, nio, rc);
 	} else {
 		if (!q->mfsrq_err) {
 			msl_update_attributes(q);
@@ -667,15 +710,9 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 				    BMPCEF_ACCESSED);
 			}
 		}
-		pscfs_reply_write(pfr, q->mfsrq_len, abs(q->mfsrq_err));
+		slc_fsreply_write(f, pfr, q->mfsrq_len,
+		    abs(q->mfsrq_err));
 	}
-
-	f = mfh->mfh_fcmh;
-	DEBUG_FCMH(q->mfsrq_err ? PLL_NOTICE : PLL_DIAG, f,
-	    "reply: off=%"PRId64" size=%zu rw=%s "
-	    "rc=%d", q->mfsrq_off, q->mfsrq_len,
-	    q->mfsrq_flags & MFSRQ_READ ?
-	    "read" : "write", q->mfsrq_err);
 
 	PSCFREE(oiov);
 
@@ -1276,7 +1313,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BMAP_ULOCK(b);
 
 	spinlock(&slc_pending_writes_lock);
-	slc_pending_writes++; 
+	slc_pending_writes++;
 	freelock(&slc_pending_writes_lock);
 }
 
@@ -2020,7 +2057,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
  * @off: file logical offset similar to pwrite().
  * @rw: the operation type (SL_READ or SL_WRITE).
  */
-ssize_t
+void
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
@@ -2038,9 +2075,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "request: off=%"PRId64", size=%zu, "
-	    "buf=%p, rw=%s", off, size, buf, (rw == SL_READ) ?
-	    "read" : "write");
+	/* XXX EBADF if fd is not open for writing */
+
+	if (fcmh_isdir(f)) {
+		if (rw == SL_READ)
+			OPSTAT_INCR("msl.fsrq-read-isdir");
+		else
+			OPSTAT_INCR("msl.fsrq-write-isdir");
+		PFL_GOTOERR(out3, rc = EISDIR);
+	}
 
 	FCMH_LOCK(f);
 	/*
@@ -2061,13 +2104,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	FCMH_ULOCK(f);
 
-	if (size == 0) {
-		if (rw == SL_READ)
-			pscfs_reply_read(pfr, NULL, 0, 0);
-		else
-			pscfs_reply_write(pfr, 0, 0);
-		return (0);
-	}
+	if (size == 0)
+		PFL_GOTOERR(out3, rc = 0);
 
 	/*
 	 * Get the start and end block regions from the input
@@ -2078,7 +2116,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
 	nr = end - start + 1;
 	if (nr > MAX_BMAPS_REQ)
-		return (-EINVAL);
+		PFL_GOTOERR(out3, rc = EINVAL);
 
 	/*
 	 * Initialize some state in the request to help with aio
@@ -2109,9 +2147,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * its page cache.  This first loop retrieves all the pages.
 	 */
 	for (i = 0; i < nr; i++) {
-		DEBUG_FCMH(PLL_DIAG, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
-		    (rw == SL_READ) ? "read" : "write");
+		DEBUG_FCMH(PLL_DIAG, f, "nr=%d sz=%zu tlen=%zu "
+		    "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%s", i,
+		    tsize, tlen, off, roff,
+		    rw == SL_READ ? "read" : "write");
 
 		psc_assert(tsize);
 
@@ -2214,7 +2253,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
  out2:
-	/* Step 4: finish up biorqs (user copy in happens in this step) */
+	/*
+	 * Step 4: finish up biorqs.  Copy to satisfy READ back to user
+	 * occurs in this step.
+	 */
 	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
@@ -2222,9 +2264,18 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			msl_biorq_release(r);
 	}
 
-	/* Step 5: drop our reference to the fsrq. */
+	/*
+	 * Step 5: drop our reference to the fsrq.  The last drop will
+	 * reply to the userland file system interface.
+	 */
 	msl_complete_fsrq(q, 0, NULL);
-	return (0);
+	return;
+
+ out3:
+	if (rw == SL_READ)
+		slc_fsreply_read(f, pfr, NULL, 0, rc);
+	else
+		slc_fsreply_write(f, pfr, 0, rc);
 }
 
 void
