@@ -169,12 +169,15 @@ struct sl_expcli_ops {
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
 			_csvc = _resm->resm_csvc;			\
+			/* ensure a csvc is allocated in exp_private */	\
 			if (_csvc) {					\
 				CSVC_LOCK(_csvc);			\
 				if (sl_csvc_useable(_csvc))		\
 					CSVC_ULOCK(_csvc);		\
-				else					\
+				else {					\
+					CSVC_ULOCK(_csvc);		\
 					_csvc = NULL;			\
+				}					\
 			}						\
 			if (_csvc == NULL) {				\
 				_csvc = getcsvc;			\
