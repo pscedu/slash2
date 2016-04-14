@@ -46,16 +46,18 @@ sl_drop_privs(__unusedx int allow_root_uid)
 {
 	struct passwd *pw;
 
+	/*
+	 * TODO: enable this code once proper privilege separation is
+	 * implemented.
+	 */
+return;
+
 	sl_getuserpwent(&pw);
-	if (pw == NULL) {
-//		if (allow_root_uid)
-//			psclog_error("unable to setuid %s", SLASH_UID);
-//		else
-//			psc_fatal("unable to setuid %s", SLASH_UID);
-	} else {
-		if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1)
-			psc_fatal("unable to setgid %d", pw->pw_gid);
-		if (setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
-			psc_fatal("unable to setuid %d", pw->pw_uid);
-	}
+	if (pw == NULL)
+		psc_fatal("unable to setuid %s", SLASH_UID);
+
+	if (setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1)
+		psc_fatal("unable to setgid %d", pw->pw_gid);
+	if (setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
+		psc_fatal("unable to setuid %d", pw->pw_uid);
 }

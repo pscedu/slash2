@@ -291,8 +291,6 @@ main(int argc, char *argv[])
 		    "format `SITE_ID:RESOURCE_ID' e.g. 0x1:0x1001");
 
 	sl_getuserpwent(&pw);
-	if (pw == NULL)
-		psclog_warn("getpwnam %s", SLASH_UID);
 
 	if (wipe)
 		wipefs(argv[0]);
