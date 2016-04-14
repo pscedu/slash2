@@ -1092,8 +1092,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
 	int i, op, n, rc;
 	size_t len, off, size;
-	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_request_set *nbs = NULL;
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_request_set *nbs;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
 	struct msl_fsrqinfo *q;
@@ -1129,6 +1129,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
   retry:
 	refs = 0;
 	nbs = NULL;
+	csvc = NULL;
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
 	 * residencies and use them if available.
@@ -1252,7 +1253,8 @@ if (!pfl_rpc_max_retry) {
 		OPSTAT_INCR("msl.dio-retried");
 		if (nbs)
 			pscrpc_set_destroy(nbs);
-		sl_csvc_decref(csvc);
+		if (csvc)
+			sl_csvc_decref(csvc);
 		goto retry;
 	}
 }
