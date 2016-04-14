@@ -1128,6 +1128,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
   retry:
 	refs = 0;
+	nbs = NULL;
 	/*
 	 * XXX for read lease, we could inspect throttle limits of other
 	 * residencies and use them if available.
@@ -1249,7 +1250,8 @@ if (!pfl_rpc_max_retry) {
 
 	if (rc && slc_rpc_retry(pfr, &rc)) {
 		OPSTAT_INCR("msl.dio-retried");
-		pscrpc_set_destroy(nbs);
+		if (nbs)
+			pscrpc_set_destroy(nbs);
 		sl_csvc_decref(csvc);
 		goto retry;
 	}
