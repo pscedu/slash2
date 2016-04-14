@@ -95,8 +95,10 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT);
-	if (!rc)
+	if (!rc) {
+		/* 04/13/2016: Hit this during log replay */
 		DEBUG_BMAP(PLL_FATAL, b, "bmap has no valid replicas");
+	}
 }
 
 struct bmap_nonce_cbarg {

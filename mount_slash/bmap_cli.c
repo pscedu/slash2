@@ -121,6 +121,8 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		/* overwrite previous error */
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
+		if (msl_force_dio)
+			b->bcm_flags |= BMAPF_DIO;
 
 		/*
 		 * Record the start time.
@@ -179,7 +181,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		BMAP_ULOCK(b);
 
 		/* synchronous */
-		psc_compl_ready(compl, 1);
+		psc_compl_ready(compl, rc);
 	} else {
 		/* asynchronous */
 		b->bcm_flags &= ~BMAPF_MODECHNG;
@@ -279,13 +281,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	if (flags & BMAPGETF_NONBLOCK)
 		return (0);
 
-	psc_compl_wait(&compl);
+	/* XXX this should multiwait on pfr_interrupted */
+	rc = psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
-
-	BMAP_LOCK(b);
-	/* XXX this is not race safe */
-	rc = bmap_2_bci(b)->bci_error;
-	BMAP_ULOCK(b);
 
 	rq = NULL;
 	csvc = NULL;
@@ -685,7 +683,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		BMAP_ULOCK(b);
 
 		/* synchronous */
-		psc_compl_ready(compl, 1);
+		psc_compl_ready(compl, rc);
 	} else {
 		BMAP_LOCK_ENSURE(b);
 
@@ -777,13 +775,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (flags & BMAPGETF_NONBLOCK)
 		return (0);
 
-	psc_compl_wait(&compl);
+	rc = psc_compl_wait(&compl);
 	psc_compl_destroy(&compl);
-
-	BMAP_LOCK(b);
-	/* XXX this is not race safe */
-	rc = bmap_2_bci(b)->bci_error;
-	BMAP_ULOCK(b);
 
 	rq = NULL;
 	csvc = NULL;
@@ -1214,6 +1207,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			 * online since any will suffice.
 			 */
 //			psc_assert(!hasvalid && !hasdataflag);
+			pfl_multiwait_leavecritsect(mw);
 			continue;
 		}
 
@@ -1226,7 +1220,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
 		// recheck
 	}
-	pfl_multiwait_leavecritsect(mw);
 	return (-ETIMEDOUT);
 }
 

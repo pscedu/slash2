@@ -20,6 +20,13 @@
  * %END_LICENSE%
  */
 
+/*
+ * Interface for performing high-level operations on the metadata
+ * backend file system (MDFS).
+ *
+ * XXX rename this file/interface to mdfs.
+ */
+
 #ifndef _SLASHD_MDSIO_H_
 #define _SLASHD_MDSIO_H_
 
@@ -27,16 +34,16 @@
 
 #include <stdint.h>
 
+#include "pfl/lock.h"
+
 #include "fid.h"
 #include "sltypes.h"
 
 struct statvfs;
 struct iovec;
 
-struct bmapc_memb;
 struct fidc_membh;
 struct slash_creds;
-struct slash_inode_handle;
 struct srt_stat;
 
 typedef uint64_t mio_fid_t;
@@ -198,5 +205,10 @@ extern struct mdsio_ops		mdsio_ops;
 extern mdsio_fid_t		mds_metadir_inum[];
 extern mdsio_fid_t		mds_fidnsdir_inum[];
 extern mdsio_fid_t		mds_tmpdir_inum[];
+
+extern struct psc_waitq		slm_cursor_waitq;
+extern struct psc_spinlock	slm_cursor_lock;
+extern int			slm_cursor_update_inprog;
+extern int			slm_cursor_update_needed;
 
 #endif /* _SLASHD_MDSIO_H_ */

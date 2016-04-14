@@ -61,10 +61,10 @@ uint32_t
 sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
     uint32_t rs, uint64_t uuid, int block_dev)
 {
+	uint32_t i, slot, max_nents;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal pj;
 	struct stat stb;
-	uint32_t i, slot, tmpnents;
 	unsigned char *jbuf;
 	size_t numblocks;
 	ssize_t nb;
@@ -87,24 +87,24 @@ sl_journal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		nents = SLJ_MDS_JNENTS;
 
 	if (block_dev) {
-		if (ioctl(fd, BLKGETSIZE, &numblocks))
-			errx(1, "ioctl fails on: %s", fn);
+		if (ioctl(fd, BLKGETSIZE, &numblocks) == -1)
+			err(1, "BLKGETSIZE: %s", fn);
 
 		/* show progress, it is going to be a while */
 		verbose = 1;
 
 		/* deal with large disks */
-		tmpnents = MIN(numblocks, SLJ_MDS_MAX_JNENTS);
+		max_nents = MIN(numblocks, SLJ_MDS_MAX_JNENTS);
 
 		/* leave room on both ends */
-		tmpnents = tmpnents - stb.st_blksize/SLJ_MDS_ENTSIZE - 16;
+		max_nents -= stb.st_blksize / SLJ_MDS_ENTSIZE + 16;
 
 		/* efficiency */
-		tmpnents = (tmpnents / rs) * rs;
-		if (!nents)
-			nents = tmpnents;
+		max_nents = (max_nents / rs) * rs;
+		if (nents)
+			nents = MIN(nents, max_nents);
 		else
-			nents = (nents > tmpnents) ? tmpnents : nents;
+			nents = max_nents;
 	}
 
 	if (nents % rs)

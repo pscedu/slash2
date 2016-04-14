@@ -36,6 +36,7 @@
 #include "pfl/atomic.h"
 #include "pfl/err.h"
 #include "pfl/export.h"
+#include "pfl/fault.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
 #include "pfl/opstats.h"
@@ -77,9 +78,8 @@ struct slconn_thread {
 	struct pfl_multiwaitcond  sct_mwc;
 };
 
-/**
- * @slrpc_cservice - Structure for client to connect to a remote
- *	server.
+/*
+ * Structure for client to connect to a remote server.
  */
 struct slrpc_cservice {
 	struct slconn_params	 csvc_params;
@@ -157,8 +157,11 @@ struct sl_expcli_ops {
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
 #define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
 
+#define slrpc_getname(rq)						\
+	slrpc_getname_for_opcode(pflrpc_req_get_opcode(rq))
+
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
-	_PFL_RVSTART {							\
+	({								\
 		struct slashrpc_cservice *_csvc = NULL;			\
 		struct sl_resm *_resm;					\
 		int _rc = 0;						\
@@ -167,12 +170,15 @@ struct sl_expcli_ops {
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
 			_csvc = _resm->resm_csvc;			\
+			/* ensure a csvc is allocated in exp_private */	\
 			if (_csvc) {					\
 				CSVC_LOCK(_csvc);			\
 				if (sl_csvc_useable(_csvc))		\
 					CSVC_ULOCK(_csvc);		\
-				else					\
+				else {					\
+					CSVC_ULOCK(_csvc);		\
 					_csvc = NULL;			\
+				}					\
 			}						\
 			if (_csvc == NULL) {				\
 				_csvc = getcsvc;			\
@@ -187,7 +193,7 @@ struct sl_expcli_ops {
 		} else							\
 			_rc = SLERR_RES_UNKNOWN;			\
 		(_rc);							\
-	} _PFL_RVEND
+	})
 
 #define CSVC_LOCK(csvc)			_psc_mutex_lock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
 #define CSVC_ULOCK(csvc)		_psc_mutex_unlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
@@ -219,45 +225,69 @@ struct sl_expcli_ops {
 
 #define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
 
+#ifndef SL_FAULT_PREFIX
+#  define SL_FAULT_PREFIX ""
+#endif
+
 #define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
-	_PFL_RVSTART {							\
+	({								\
 		static struct pfl_opstat *_opst;			\
-		int _rc;						\
+		int _rc = 0;						\
 									\
-		_rc = (slrpc_ops.slrpc_newreq ?				\
+		(void)pfl_fault_here_rc(&_rc, -EHOSTDOWN,		\
+		    "%srpc.issue.%s", SL_FAULT_PREFIX,			\
+		    slrpc_getname_for_opcode(op));			\
+		_rc = _rc ? _rc : (slrpc_ops.slrpc_newreq ?		\
 		    slrpc_ops.slrpc_newreq : slrpc_newgenreq)((csvc),	\
 		    (op), &(rq), sizeof(*(mq)), sizeof(*(mp)), &(mq));	\
 		if (_rc == 0) {						\
-			if (_opst == NULL) {				\
-				const char *_str;			\
-				int _len;				\
-									\
-				_str = strchr(#op, '_') + 1;		\
-				_len = strcspn(_str, ")");		\
+			if (_opst == NULL)				\
 				_opst = pfl_opstat_initf(OPSTF_BASE10,	\
-				    "rpc.issue.%.*s", _len, _str);	\
-			}						\
+				    "rpc.issue.%s.sent",		\
+				    slrpc_getname_for_opcode(op));	\
 			pfl_opstat_incr(_opst);				\
 		}							\
 		_rc;							\
-	} _PFL_RVEND
+	})
+
+#define _SLRPC_REP_IN(csvc, rq, flags, error, mp)			\
+	({								\
+		(error) = slrpc_rep_in((csvc), (rq), (flags),		\
+		    (error));						\
+									\
+		if ((error) || (mp)->rc) {				\
+			static struct pfl_opstat *_opst_err;		\
+									\
+			if (_opst_err == NULL)				\
+				_opst_err = pfl_opstat_initf(		\
+				    OPSTF_BASE10, "rpc.issue.%s.err",	\
+				    slrpc_getname(rq));			\
+			pfl_opstat_incr(_opst_err);			\
+		} else {						\
+			static struct pfl_opstat *_opst_ok;		\
+									\
+			if (_opst_ok == NULL)				\
+				_opst_ok = pfl_opstat_initf(		\
+				    OPSTF_BASE10, "rpc.issue.%s.ok",	\
+				    slrpc_getname(rq));			\
+			pfl_opstat_incr(_opst_ok);			\
+		}							\
+									\
+		(error);						\
+	})
 
 #define SL_RSX_WAITREPF(csvc, rq, mp, flags)				\
-	_PFL_RVSTART {							\
-		int _rc;						\
+	({								\
+		int _error;						\
 									\
-		_rc = slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp),	\
-		    (flags));						\
-		/*							\
-		 * XXX this horrible hack.  if one side thinks there's	\
-		 * no connection, how can the other side not?		\
-		 */							\
-		if (_rc == 0 && (mp)->rc == PFLERR_NOTCONN)		\
-			sl_csvc_disconnect(csvc);			\
-		_rc;							\
-	} _PFL_RVEND
+		_error = slrpc_waitrep((csvc), (rq), sizeof(*(mp)),	\
+		    &(mp), (flags));					\
+		_SLRPC_REP_IN((csvc), (rq), (flags), _error, (mp));	\
+		_error;							\
+	})
 
-#define SL_RSX_WAITREP(csvc, rq, mp)	SL_RSX_WAITREPF((csvc), (rq), (mp), 0)
+#define SL_RSX_WAITREP(csvc, rq, mp)					\
+	SL_RSX_WAITREPF((csvc), (rq), (mp), 0)
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
@@ -296,21 +326,6 @@ struct sl_expcli_ops {
 #define SL_NBRQSET_ADD(csvc, rq)					\
 	SL_NBRQSETX_ADD(sl_nbrqset, (csvc), (rq))
 
-static __inline const char *
-slrpc_cb_extract_name(const char *s, int *len)
-{
-	const char *t, *cb = NULL, *rpc = NULL;
-
-	for (t = s; *t; t++)
-		if (*t == '_') {
-			rpc = cb;
-			cb = t;
-		}
-	psc_assert(rpc);
-	*len = cb - rpc - 1;
-	return (rpc + 1);
-}
-
 #define SL_GET_RQ_STATUSF(csvc, rq, mp, flags, error)			\
 	do {								\
 		(mp) = NULL;						\
@@ -321,48 +336,12 @@ slrpc_cb_extract_name(const char *s, int *len)
 			(error) = (rq)->rq_status;			\
 		if ((error) == 0 && (rq)->rq_err)			\
 			(error) = SLERR_RPCIO;				\
-		if ((error) == 0)					\
-			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY,	\
-			    (flags));					\
 		if ((error) == 0) {					\
 			(mp) = pscrpc_msg_buf((rq)->rq_repmsg, 0,	\
 			    sizeof(*(mp)));				\
 			(error) = (mp) ? (mp)->rc : -PFLERR_BADMSG;	\
 		}							\
-		if (slrpc_ops.slrpc_rep_in)				\
-			slrpc_ops.slrpc_rep_in((csvc), (rq), (error));	\
-		if ((error) == -PFLERR_NOTCONN && (csvc))		\
-			sl_csvc_disconnect(csvc);			\
-									\
-		if (error) {						\
-			static struct pfl_opstat *_opst_err;		\
-									\
-			if (_opst_err == NULL) {			\
-				const char *_cbname;			\
-				int _len;				\
-									\
-				_cbname = slrpc_cb_extract_name(	\
-				    __func__, &_len);			\
-				_opst_err = pfl_opstat_initf(		\
-				    OPSTF_BASE10, "rpc.cb.%.*s.err",	\
-				    _len, _cbname);			\
-			}						\
-			pfl_opstat_incr(_opst_err);			\
-		} else {						\
-			static struct pfl_opstat *_opst_ok;		\
-									\
-			if (_opst_ok == NULL) {				\
-				const char *_cbname;			\
-				int _len;				\
-									\
-				_cbname = slrpc_cb_extract_name(	\
-				    __func__, &_len);			\
-				_opst_ok = pfl_opstat_initf(		\
-				    OPSTF_BASE10, "rpc.cb.%.*s.ok",	\
-				    _len, _cbname);			\
-			}						\
-			pfl_opstat_incr(_opst_ok);			\
-		}							\
+		_SLRPC_REP_IN((csvc), (rq), (flags), (error), (mp));	\
 	} while (0)
 
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
@@ -426,6 +405,11 @@ int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
 	    int, int);
 
 void	 slrpc_rep_out(struct pscrpc_request *);
+int	 slrpc_rep_in(struct slashrpc_cservice *,
+	    struct pscrpc_request *, int, int);
+
+const char *
+	 slrpc_getname_for_opcode(int);
 
 int	 slrpc_bulkclient(struct pscrpc_request *, int, int, struct iovec *, int);
 int	 slrpc_bulkserver(struct pscrpc_request *, int, int, struct iovec *, int);

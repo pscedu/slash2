@@ -192,6 +192,8 @@ enum {
 	NSRMT
 };
 
+extern const char *slrpc_names[];
+
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
 
 /*

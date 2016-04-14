@@ -138,7 +138,7 @@ struct bmap {
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
 #define SL_MAX_IOSREASSIGN	16
-#define SL_MAX_BMAPFLSH_RETRIES	2048
+#define SL_MAX_BMAPFLSH_RETRIES	8192
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)

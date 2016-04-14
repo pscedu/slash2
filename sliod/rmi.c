@@ -50,23 +50,19 @@ struct sl_resm *rmi_resm;
 int
 sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 {
-	int rc;
-
-	*csvcp = sli_getmcsvc(rmi_resm);
-	if (*csvcp)
-		return (0);
-
 	for (;;) {
-		rc = 0;
-		CSVC_LOCK(rmi_resm->resm_csvc);
 		*csvcp = sli_getmcsvc(rmi_resm);
 		if (*csvcp)
 			break;
-		sl_csvc_waitrel_s(rmi_resm->resm_csvc,
-		    CSVC_RECONNECT_INTV);
+
+		CSVC_LOCK(rmi_resm->resm_csvc);
+		if (sl_csvc_useable(rmi_resm->resm_csvc))
+			CSVC_ULOCK(rmi_resm->resm_csvc);
+		else
+			sl_csvc_waitrel_s(rmi_resm->resm_csvc,
+			    CSVC_RECONNECT_INTV);
 	}
-	CSVC_ULOCK(rmi_resm->resm_csvc);
-	return (rc);
+	return (0);
 }
 
 int
@@ -86,9 +82,9 @@ sli_rmi_setmds(const char *name)
 		rmi_resm = libsl_nid2resm(nid);
 
 	/*
- 	 * XXX This blocks until MDS is started. We should alow sliod
- 	 * to start no matter what.
- 	 */
+	 * XXX This blocks until MDS is started.  We should allow sliod
+	 * to start no matter what.
+	 */
 	if (sli_rmi_getcsvc(&csvc))
 		psclog_errorx("error connecting to MDS");
 	else {

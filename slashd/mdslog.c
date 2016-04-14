@@ -114,9 +114,8 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
 struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
-
-static int			 cursor_update_inprog;
-static int			 cursor_update_needed;
+int				 slm_cursor_update_inprog;
+int				 slm_cursor_update_needed;
 
 uint64_t			 slm_reclaim_proc_batchno;
 
@@ -126,7 +125,6 @@ mds_open_file(char *fn, int flags, void **handle)
 	mdsio_fid_t mf;
 	int rc;
 
-	mds_note_update(1);
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	if (rc == ENOENT && (flags & O_CREAT)) {
@@ -138,7 +136,6 @@ mds_open_file(char *fn, int flags, void **handle)
 		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds,
 		    flags, 0, NULL, NULL, NULL, handle, NULL, NULL, 0);
 	}
-	mds_note_update(-1);
 	return (rc);
 }
 
@@ -147,9 +144,7 @@ mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
 
-	mds_note_update(1);
 	rc = mdsio_read(current_vfsid, &rootcreds, buf, size, nb, off, h);
-	mds_note_update(-1);
 	return (rc);
 }
 
@@ -158,10 +153,8 @@ mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
 
-	mds_note_update(1);
 	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off,
 	    h, NULL, NULL);
-	mds_note_update(-1);
 	return (rc);
 }
 
@@ -170,9 +163,7 @@ mds_release_file(void *handle)
 {
 	int rc;
 
-	mds_note_update(1);
 	rc = mdsio_release(current_vfsid, &rootcreds, handle);
-	mds_note_update(-1);
 	return rc;
 }
 
@@ -266,11 +257,9 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 	else
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
 
-	mds_note_update(1);
 	rc = mdsio_unlink(current_vfsid,
 	    mds_metadir_inum[current_vfsid], NULL, logfn, &rootcreds,
 	    NULL, NULL);
-	mds_note_update(-1);
 
 	if (rc && rc != ENOENT)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
@@ -365,10 +354,8 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 	    &reclaim_prg.log_handle);
 	psc_assert(rc == 0);
 
-	mds_note_update(1);
 	rc = mdsio_getattr(current_vfsid, 0, reclaim_prg.log_handle,
 	    &rootcreds, &sstb);
-	mds_note_update(-1);
 
 	psc_assert(rc == 0);
 
@@ -1213,10 +1200,9 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 
 /*
  * Update the cursor file in the ZFS that records the current
- * transaction group number and other system log status.  If 
- * there is no activity in system other than this write to 
- * update the cursor, our customized ZFS will extend the lifetime 
- * of the transaction group.
+ * transaction group number and other system log status.  If there is no
+ * activity in system other than this write to update the cursor, our
+ * customized ZFS will extend the lifetime of the transaction group.
  */
 void
 slmjcursorthr_main(struct psc_thread *thr)
@@ -1225,40 +1211,32 @@ slmjcursorthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		spinlock(&slm_cursor_lock);
-		if (!cursor_update_needed) {
-			cursor_update_inprog = 0;
+		if (!slm_cursor_update_needed) {
+			slm_cursor_update_inprog = 0;
 			psc_waitq_wait(&slm_cursor_waitq,
 			    &slm_cursor_lock);
-		} else {
-			cursor_update_inprog = 1;
-			freelock(&slm_cursor_lock);
+			spinlock(&slm_cursor_lock);
 		}
+		slm_cursor_update_inprog = 1;
+		freelock(&slm_cursor_lock);
 
 		/* Use SLASH2_CURSOR_UPDATE to write cursor file */
 		rc = mdsio_write_cursor(current_vfsid, &mds_cursor,
 		    sizeof(mds_cursor), mds_cursor_handle,
 		    mds_update_cursor);
 		if (rc)
-			psclog_warnx("failed to update cursor, rc=%d", rc);
+			psclog_warnx("failed to update cursor, rc=%d",
+			    rc);
 		else
-			psclog_diag("cursor updated: txg=%"PRId64", xid=%"PRId64
-			    ", fid="SLPRI_FID", seqno=(%"PRIx64", %"PRIx64")",
+			psclog_diag("cursor updated: txg=%"PRId64" "
+			    "xid=%"PRId64" fid="SLPRI_FID" "
+			    "seqno=(lo=%"PRIx64" hi=%"PRIx64")",
 			    mds_cursor.pjc_commit_txg,
 			    mds_cursor.pjc_distill_xid,
 			    mds_cursor.pjc_fid,
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
 	}
-}
-
-void
-mds_note_update(int val)
-{
-	spinlock(&slm_cursor_lock);
-	cursor_update_needed += val;
-	if (!cursor_update_inprog && cursor_update_needed)
-		psc_waitq_wakeall(&slm_cursor_waitq);
-	freelock(&slm_cursor_lock);
 }
 
 void

@@ -23,6 +23,7 @@ SRCS+=		rci.c
 SRCS+=		rcm.c
 SRCS+=		rpc_cli.c
 SRCS+=		usermap.c
+SRCS+=		${OBJDIR}/rpc_names.c
 SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
@@ -41,6 +42,6 @@ SRCS+=		${SLASH_BASE}/share/yconf.y
 
 MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl pfl-hdrs
 
-DEFINES+=	-D_SLASH_CLIENT
+DEFINES+=	-D_SLASH_CLIENT -DSL_FAULT_PREFIX='"slash2/"'
 
 include ${SLASHMK}

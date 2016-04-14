@@ -70,6 +70,9 @@ struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
+int64_t				 slc_pending_writes;
+psc_spinlock_t			 slc_pending_writes_lock = SPINLOCK_INIT;
+
 psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
@@ -97,8 +100,11 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
+	int redo = 0;
 	struct bmap_cli_info *bci;
 	struct bmap *b;
+
+ retry:
 
 	FCMH_LOCK_ENSURE(f);
 
@@ -121,10 +127,23 @@ bmap_free_all_locked(struct fidc_membh *f)
 		 * both MDS and client.  And the MDS cannot find a
 		 * replica for a bmap in the metafile.
 		 */
-		BMAP_LOCK(b);
+		if (!BMAP_TRYLOCK(b)) {
+			redo = 1;
+			break;
+		}
 		bci = bmap_2_bci(b);
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		BMAP_ULOCK(b);
+	}
+	/*
+	 * Need to race with the bmap timeout code path.
+	 */
+	if (redo) {
+		redo = 0;
+		FCMH_ULOCK(f);
+		usleep(10);
+		FCMH_LOCK(f);
+		goto retry;
 	}
 	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
@@ -257,8 +276,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
 #endif
 
-	(void)pfl_fault_here_rc("slash2/request_timeout",
-	    &rq->rq_timeout, -1);
+	(void)pfl_fault_here_rc(&rq->rq_timeout, -1,
+	    "slash2/request_timeout");
 
 	if (rq->rq_timeout < 0) {
 		rc = -EAGAIN;
@@ -276,7 +295,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (b->bcm_flags & BMAPF_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
+	mq->sbd = *bmap_2_sbd(b);
 
 	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
@@ -374,6 +393,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * XXX These magic numbers should be made into tunables.
 	 *
 	 * Note that PSCRPC_OBD_TIMEOUT = 60.
+	 *
+	 * XXX: This logic ignores the fact that a large request
+	 * will always be selected.
 	 */
 	if (r->biorq_retries < 32)
 		delta = 20;

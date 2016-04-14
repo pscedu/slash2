@@ -85,13 +85,12 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 		slrpc_ops.slrpc_req_out(csvc, rq);
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pfl_rsx_waitrep(rq, plen, mpp);
-	if (rc == 0) {
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
-		if (slrpc_ops.slrpc_rep_in)
-			slrpc_ops.slrpc_rep_in(csvc, rq, rc);
-	} else if (slrpc_ops.slrpc_req_out_failed)
-		slrpc_ops.slrpc_req_out_failed(csvc, rq);
-	return (rc);
+	if (rc) {
+		if (slrpc_ops.slrpc_req_out_failed)
+			slrpc_ops.slrpc_req_out_failed(csvc, rq);
+		return (rc);
+	}
+	return (slrpc_rep_in(csvc, rq, flags, rc));
 }
 
 int
@@ -129,6 +128,28 @@ slrpc_rep_out(struct pscrpc_request *rq)
 	if (slrpc_ops.slrpc_rep_out)
 		slrpc_ops.slrpc_rep_out(rq);
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+}
+
+/*
+ * Generic RPC reply received processing, as well as execution of any
+ * callbacks registered.
+ */
+int
+slrpc_rep_in(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int flags, int error)
+{
+	/*
+	 * XXX this horrible hack.  if one side thinks there's
+	 * no connection, how can the other side not?
+	 */
+	if (error == -PFLERR_NOTCONN && csvc)
+		sl_csvc_disconnect(csvc);
+
+	if (!error)
+		error = authbuf_check(rq, PSCRPC_MSG_REPLY, flags);
+	if (slrpc_ops.slrpc_rep_in)
+		slrpc_ops.slrpc_rep_in(csvc, rq, error);
+	return (error);
 }
 
 void
@@ -758,7 +779,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 {
 	void *hldropf, *hldroparg;
 	uint32_t *stkversp = NULL;
-	int rc = 0, addlist = 0, locked = 0;
+	int rc = 0, addlist = 0, need_ref = 1;
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
@@ -766,16 +787,16 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (*csvcp) {
 		csvc = *csvcp;
-		/* 04/04/2016: Hit crash wth peer type SLCONNT_CLI */
-		locked = CSVC_RLOCK(csvc);
+		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
+		CSVC_LOCK(csvc);
 		goto restart;
 	}
 
-	locked = CONF_RLOCK();
+	CONF_LOCK();
 	if (*csvcp) {
-		CONF_URLOCK(locked);
 		csvc = *csvcp;
-		locked = CSVC_RLOCK(csvc);
+		CSVC_LOCK(csvc);
+		CONF_ULOCK();
 		goto restart;
 	}
 
@@ -851,11 +872,15 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		addlist = 1;
 
 	*csvcp = csvc;
-	CONF_URLOCK(locked);
-
-	locked = CSVC_RLOCK(csvc);
+	CSVC_LOCK(csvc);
+	CONF_ULOCK();
 
  restart:
+	if (need_ref) {
+		sl_csvc_incref(csvc);
+		need_ref = 0;
+	}
+
 	if (sl_csvc_useable(csvc))
 		goto out;
 
@@ -947,9 +972,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 						rc = 0;
 						goto proc_conn;
 					}
+
 					/*
-					 * Keep the current error code without
-					 * overwriting a previous EWOULDBLOCK.
+					 * Keep the current error code
+					 * without overwriting a
+					 * previous EWOULDBLOCK.
 					 */
 					if (rc != EWOULDBLOCK)
 						rc = trc;
@@ -994,26 +1021,30 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
  out:
 	if (csvc)
-		sl_csvc_incref(csvc);
-	else if ((flags & CSVCF_NONBLOCK) && mw) {
-		struct psc_thread *thr;
+		CSVC_ULOCK(csvc);
+	else {
+		if ((flags & CSVCF_NONBLOCK) && mw) {
+			struct psc_thread *thr;
 
-		thr = pscthr_get();
-		PSCTHR_LOCK(thr);
-		if (pfl_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
-			pfl_multiwait_setcondwakeable(mw,
-			    &(*csvcp)->csvc_mwc, 1);
-		else
-			pfl_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
-		PSCTHR_ULOCK(thr);
+			thr = pscthr_get();
+			PSCTHR_LOCK(thr);
+			if (pfl_multiwait_hascond(mw,
+			    &(*csvcp)->csvc_mwc))
+				pfl_multiwait_setcondwakeable(mw,
+				    &(*csvcp)->csvc_mwc, 1);
+			else
+				pfl_multiwait_addcond(mw,
+				    &(*csvcp)->csvc_mwc);
+			PSCTHR_ULOCK(thr);
+		}
+		sl_csvc_decref(*csvcp);
 	}
-	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
 }
 
 /*
- * Logic for peer resource connection monitor. It is used to send pings to
- * a peer and watch for pings from a peer.
+ * Logic for peer resource connection monitor.  It is used to ensure a
+ * connection to a peer is up by occasionally sending PINGs.
  *
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
@@ -1039,7 +1070,8 @@ slconnthr_main(struct psc_thread *thr)
 		if (sct->sct_pingupc) {
 			timespecsub(&ts1, &ts0, &diff);
 			if (timespeccmp(&diff, &intv, >=)) {
-				pingrc = sct->sct_pingupc(sct->sct_pingupcarg);
+				pingrc = sct->sct_pingupc(
+				    sct->sct_pingupcarg);
 				if (pingrc)
 					psclog_diag("sct_pingupc "
 					    "failed (rc=%d)", pingrc);
@@ -1066,11 +1098,13 @@ slconnthr_main(struct psc_thread *thr)
 				goto next;
 
 			/*
-			 * Only used by MDS to watch for its I/O servers.
-			 * So scp_useablef is always mds_sliod_alive().
+			 * Only used by MDS to watch for its I/O
+			 * servers.  So scp_useablef is always
+			 * mds_sliod_alive().
 			 *
-			 * Note that the above sl_csvc_get() only returns
-			 * csvc when the connection is already established.
+			 * Note that the above sl_csvc_get() only
+			 * returns csvc when the connection is already
+			 * established.
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
@@ -1357,4 +1391,12 @@ void
 slrpc_destroy(void)
 {
 	pfl_poolmaster_destroy(&sl_csvc_poolmaster);
+}
+
+const char *
+slrpc_getname_for_opcode(int opc)
+{
+	if (opc < 1 || opc >= NSRMT)
+		return (NULL);
+	return (slrpc_names[opc]);
 }

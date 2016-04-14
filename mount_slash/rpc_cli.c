@@ -264,7 +264,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	count = pfr->pfr_retries++;
 
 	if (pfr) {
-		ts.tv_sec = count ? count * 1 : 10;
+		ts.tv_sec = count ? count * 3 : 10;
 		ts.tv_nsec = 0;
 
 		/*

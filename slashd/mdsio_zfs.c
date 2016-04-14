@@ -173,3 +173,34 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_setxattr,
 	zfsslash2_replay_removexattr
 };
+
+/*
+ * A modification operation to the MDFS has begun.  This means the
+ * cursor thread must be woken to start a transaction group.
+ */
+void
+slm_zfs_cursor_start(void)
+{
+	spinlock(&slm_cursor_lock);
+	if (!slm_cursor_update_needed++ && !slm_cursor_update_inprog)
+		psc_waitq_wakeall(&slm_cursor_waitq);
+	freelock(&slm_cursor_lock);
+}
+
+/*
+ * A modification operation to the MDFS has ended.  If other operations
+ * are ongoing, we need to re-wake the cursor thread to ensure a
+ * transaction group is active as it is not guaranteed to be awake.
+ */
+void
+slm_zfs_cursor_end(void)
+{
+	spinlock(&slm_cursor_lock);
+	psc_assert(slm_cursor_update_needed > 0);
+	if (--slm_cursor_update_needed && !slm_cursor_update_inprog)
+		psc_waitq_wakeall(&slm_cursor_waitq);
+	freelock(&slm_cursor_lock);
+}
+
+void (*zfsslash2_cursor_start)(void) = slm_zfs_cursor_start;
+void (*zfsslash2_cursor_end)(void) = slm_zfs_cursor_end;

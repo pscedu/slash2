@@ -19,6 +19,12 @@
 # ---------------------------------------------------------------------
 # %END_LICENSE%
 
+# TODO
+# - track total CPU time
+# - track total RAM use
+# - track total net IOPS
+# - check hash table stats
+
 use Cwd qw(realpath);
 use DBI;
 use Data::Dumper;
@@ -400,7 +406,7 @@ sub push_vectorize {
 
 # High level (application-level) utility routines.
 
-# Parse configuration for MDS and IOS resources
+# Parse configuration for MDS and IOS resources.
 sub parse_conf {
 	my $ts_cfg = shift;
 
@@ -746,7 +752,7 @@ EOF
 
 waitjobs \@pids, $step_timeout;
 
-# Create the MDS file systems
+# Create the MDS file system(s).
 foreach my $n (@mds) {
 	debug_msg "initializing slashd environment: $n->{res_name} : $n->{host}";
 
@@ -812,7 +818,7 @@ sub daemon_setup {
 		while :; do
 			set +e
 			$sudo pkill -9 \$1 && sleep 3
-			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE "\$@"
+			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE LD_DYNAMIC_WEAK=1 "\$@"
 			local status=\$?
 			set -e
 			[ \$status -eq 137 ] && break
@@ -843,7 +849,7 @@ $SIG{INT} = sub {
 	exit 1;
 };
 
-# Launch MDS servers
+# Launch MDS servers.
 foreach my $n (@mds) {
 	debug_msg "launching slashd: $n->{res_name} : $n->{host}";
 
@@ -867,7 +873,7 @@ EOF
 
 waitjobs \@pids, $step_timeout;
 
-# Create the IOS file systems
+# Create the IOS file systems.
 foreach my $n (@ios) {
 	debug_msg "initializing sliod environment: $n->{res_name} : $n->{host}";
 	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
@@ -879,7 +885,7 @@ EOF
 
 waitjobs \@pids, $step_timeout;
 
-# Launch the IOS servers
+# Launch the IOS servers.
 foreach my $n (@ios) {
 	debug_msg "launching sliod: $n->{res_name} : $n->{host}";
 
@@ -890,7 +896,7 @@ foreach my $n (@ios) {
 EOF
 }
 
-# Launch the client mountpoints
+# Launch the client mountpoints.
 foreach my $n (@cli) {
 	debug_msg "launching mount_wokfs: $n->{host}";
 
@@ -1044,7 +1050,7 @@ EOF
 }
 
 # Give IOS a moment to connect.
-sleep(4);
+sleep(8);
 
 # Set 1: run the client application tests, serially, measuring stats on
 # each so we can present historical performance analysis.
@@ -1105,6 +1111,14 @@ EOF
 }
 
 waitjobs \@pids, $total_timeout;
+
+# foreach my $n (@mds, @ios) {
+#	debug_msg "ensuring no errors: $n->{host}";
+#	push @pids, runcmd "$ssh $n->{host} bash", <<EOF;
+#		@{[init_env($n)]}
+#		slictl errors
+# EOF
+# }
 
 # Set 3: now run the entire suite again, injecting faults at random
 # places to test failure tolerance.

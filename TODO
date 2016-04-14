@@ -864,7 +864,6 @@ s2re
 - why are queued replicas always repl-status 'q' and never 's'?
 	- because we don't write changes to persistent storage, and its
 	  not held in memory, and the bmap is reset by mds_bmap_read
-- move mds_note_update() from RPC handling to mdsio
 - try disabling BIOS config option C-states on firehose6 to avoid perf
   hangs
 - writeahead now creates +1 bmap beyond EOF when using

@@ -569,10 +569,10 @@ slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
-	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slm_geticsvcx(_resm, rq->rq_export));
-	if (rq->rq_status)
-		return (pscrpc_error(rq));
+	rc = SL_EXP_REGISTER_RESM(rq->rq_export, slm_geticsvcx(_resm,
+	    rq->rq_export));
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	switch (rq->rq_reqmsg->opc) {
 
@@ -635,9 +635,11 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	default:
 		psclog_errorx("unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
-		rq->rq_status = -PFLERR_NOSYS;
-		return (pscrpc_error(rq));
+		rc = -PFLERR_NOSYS;
+		break;
 	}
+
+ out:
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);

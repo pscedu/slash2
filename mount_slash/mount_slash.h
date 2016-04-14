@@ -314,7 +314,7 @@ void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
 
-ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
+void	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_stat(struct fidc_membh *, void *);
 
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -393,6 +393,7 @@ extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
+extern int			 msl_force_dio;
 extern int			 msl_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
@@ -404,5 +405,8 @@ extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
+
+extern int64_t			 slc_pending_writes; 
+extern psc_spinlock_t		 slc_pending_writes_lock;
 
 #endif /* _MOUNT_SLASH_H_ */
