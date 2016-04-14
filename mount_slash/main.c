@@ -1372,7 +1372,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
-	MSL_RMC_NEWREQ( p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
@@ -2080,8 +2080,6 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	OPSTAT_INCR("msl.flush-attr");
-
 	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
 
 	FCMH_LOCK(f);
@@ -2725,7 +2723,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
+	    1);
 
 	namecache_hold_entry(&dcu, p, name);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2813,9 +2812,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 {
 	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	int flush_mtime = 0, flush_size = 0;
-	struct slashrpc_cservice *csvc = NULL;
 	struct msl_dc_inv_entry_data mdie;
-	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct fcmh_cli_info *fci;
@@ -3080,6 +3077,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	if (c) {
+		if (FCMH_HAS_BUSY(c))
+			FCMH_UNBUSY(c);
+
 		/*
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
@@ -3099,19 +3099,14 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * this operation completes?
 		 */
 		if (mdie.mdie_pri)
-			dircache_walk(c, msl_dircache_inval_entry, &mdie);
+			dircache_walk(c, msl_dircache_inval_entry,
+			    &mdie);
 
-		if (FCMH_HAS_BUSY(c))
-			FCMH_UNBUSY(c);
 		fcmh_op_done(c);
 	}
 
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
-
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 void
