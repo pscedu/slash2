@@ -84,6 +84,14 @@ sub start_page {
 				text-align: right;
 				font-family: monospace;
 			}
+			.faster {
+				background-color: #859900;
+				color: #fdf6e3;
+			}
+			.slower {
+				background-color: #dc322f;
+				color: #fdf6e3;
+			}
 			.output {
 				font-family: monospace;
 				max-width: 900px;
@@ -365,14 +373,27 @@ EOD
 			<tr>
 				<th>Test</th>
 				<th>Task</th>
-				<th style='width: 100%'>Comparison</th>
+				<th style='width: 100%'>Historical Comparison</th>
+				<th>Hist Avg</th>
 				<th>Duration</th>
+				<th>Delta</th>
+				<th>%</th>
 			</tr>
 EOH
 
 	$sth = $dbh->prepare(<<SQL)
-		SELECT	*
-		FROM	s2ts_result
+		SELECT	*,
+			(
+				SELECT	AVG(r2.duration_ms)
+				FROM	s2ts_result r2,
+					s2ts_run run
+				WHERE	r2.task_id = res.task_id
+				  AND	r2.test_name = res.test_name
+				  AND	r2.run_id = run.id
+				  AND	run.success
+				  AND	r2.run_id != res.run_id
+			) AS havg_ms
+		FROM	s2ts_result res
 		WHERE	run_id = ?
 		ORDER BY
 			test_name ASC
@@ -396,11 +417,25 @@ EOH
 EOH
 		}
 
+		my $delta = sprintf "%.03f", ($r->{duration_ms} - $r->{havg_ms}) / 1000;
+		my $pct = sprintf "%.02f", $delta / $r->{havg_ms} * 100;
+		my $cl = "faster";
+		unless ($delta =~ /^-/) {
+			$delta = "+$delta";
+			$pct = "+$pct";
+			$cl = "slower";
+		}
+
 		print <<EOH;
 </td>
 				<td class='n'>@{[
+				  sprintf "%.03f", $r->{havg_ms} / 1000
+				]}</td>
+				<td class='n'>@{[
 				  sprintf "%.03f", $r->{duration_ms} / 1000
 				]}s</td>
+				<td class='n $cl'>${delta}s</td>
+				<td class='n $cl'>$pct%</td>
 			</tr>
 EOH
 	}
@@ -440,7 +475,7 @@ EOH
 		SELECT	id,
 			suite_name,
 			descr,
-			DATETIME(launch_date, 'localtime'),
+			DATETIME(launch_date, 'localtime') AS launch_date,
 			user,
 			success,
 			sl2_commid,
