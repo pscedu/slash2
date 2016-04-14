@@ -100,8 +100,11 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
+	int redo = 0;
 	struct bmap_cli_info *bci;
 	struct bmap *b;
+	
+ retry:
 
 	FCMH_LOCK_ENSURE(f);
 
@@ -124,10 +127,23 @@ bmap_free_all_locked(struct fidc_membh *f)
 		 * both MDS and client.  And the MDS cannot find a
 		 * replica for a bmap in the metafile.
 		 */
-		BMAP_LOCK(b);
+		if (!BMAP_TRYLOCK(b)) {
+			redo = 1;
+			break;
+		}
 		bci = bmap_2_bci(b);
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		BMAP_ULOCK(b);
+	}
+	/*
+ 	 * Need to race with the bmap timeout code path.
+ 	 */
+	if (redo) {
+		redo = 0;
+		FCMH_ULOCK(f);
+		usleep(10);
+		FCMH_LOCK(f);
+		goto retry;
 	}
 	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
