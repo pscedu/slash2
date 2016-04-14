@@ -1050,7 +1050,7 @@ slc_wk_issue_readdir(void *p)
 {
 	struct slc_wkdata_readdir *wk = p;
 
-	msl_readdir_issue(NULL, wk->d, wk->off, wk->size, 0);
+	msl_readdir_issue(wk->d, wk->off, wk->size, 0);
 	FCMH_LOCK(wk->d);
 	wk->pg->dcp_refcnt--;
 	fcmh_op_done_type(wk->d, FCMH_OPCNT_WORKER);
@@ -1571,8 +1571,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
  * Send out an asynchronous READDIR RPC.
  */
 int
-msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
-    off_t off, size_t size, int block)
+msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
+    int block)
 {
 	void *dentbuf = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -1789,7 +1789,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 * had an error.  Issue a READDIR then wait for a reply.
 		 */
 		hit = 0;
-		rc = msl_readdir_issue(pfr, d, off, size, 1);
+		rc = msl_readdir_issue(d, off, size, 1);
 		if (rc && !slc_rpc_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
@@ -1807,7 +1807,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	}
 
 	if (raoff) {
-		msl_readdir_issue(NULL, d, raoff, size, 0);
+		msl_readdir_issue(d, raoff, size, 0);
 		fcmh_op_done_type(d, FCMH_OPCNT_READAHEAD);
 	}
 }
