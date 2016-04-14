@@ -42,6 +42,6 @@ SRCS+=		${SLASH_BASE}/share/yconf.y
 
 MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl pfl-hdrs
 
-DEFINES+=	-D_SLASH_CLIENT
+DEFINES+=	-D_SLASH_CLIENT -DSL_FAULT_PREFIX='"slash2/"'
 
 include ${SLASHMK}
