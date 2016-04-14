@@ -1507,7 +1507,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 			mp->valid = 0;
 			mp->cattr.sst_fg = oldfg;
 			slm_coh_delete_file(c);
-		}	
+		}
 	}
 
 	if (p)
@@ -1864,12 +1864,13 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	default:
 		psclog_errorx("unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
-		rq->rq_status = -PFLERR_NOSYS;
-		return (pscrpc_error(rq));
+		rc = -PFLERR_NOSYS;
+		break;
 	}
+
  out:
 	slrpc_rep_out(rq);
-	pscrpc_target_send_reply_msg(rq, -abs(rc), 0);
+	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
 
