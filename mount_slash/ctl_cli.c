@@ -956,6 +956,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
 
+	psc_ctlparam_register_var("sys.force_dio",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
+
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
 

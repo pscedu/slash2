@@ -121,6 +121,8 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		/* overwrite previous error */
 		bci->bci_error = 0;
 		b->bcm_flags &= ~BMAPF_LEASEFAILED;
+		if (msl_force_dio)
+			b->bcm_flags |= BMAPF_DIO;
 
 		/*
 		 * Record the start time.

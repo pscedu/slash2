@@ -393,6 +393,7 @@ extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
+extern int			 msl_force_dio;
 extern int			 msl_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
