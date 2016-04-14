@@ -36,6 +36,7 @@
 #include "pfl/atomic.h"
 #include "pfl/err.h"
 #include "pfl/export.h"
+#include "pfl/fault.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
 #include "pfl/opstats.h"
@@ -224,12 +225,19 @@ struct sl_expcli_ops {
 
 #define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
 
+#ifndef SL_FAULT_PREFIX
+#  define SL_FAULT_PREFIX ""
+#endif
+
 #define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
 	({								\
 		static struct pfl_opstat *_opst;			\
-		int _rc;						\
+		int _rc = 0;						\
 									\
-		_rc = (slrpc_ops.slrpc_newreq ?				\
+		(void)pfl_fault_here_rc(&_rc, -EHOSTDOWN,		\
+		    "%srpc.issue.%s", SL_FAULT_PREFIX,			\
+		    slrpc_getname_for_opcode(op));			\
+		_rc = _rc ? _rc : (slrpc_ops.slrpc_newreq ?		\
 		    slrpc_ops.slrpc_newreq : slrpc_newgenreq)((csvc),	\
 		    (op), &(rq), sizeof(*(mq)), sizeof(*(mp)), &(mq));	\
 		if (_rc == 0) {						\
