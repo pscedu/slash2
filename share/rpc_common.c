@@ -323,7 +323,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		CSVC_ULOCK(csvc);
 		return (rc);
 	}
-	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
 	mq->stkvers = sl_stk_version;
@@ -409,7 +408,6 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
 		return (rc);
 	mq->rc = st_rc;
 	mq->upnonce = sl_sys_upnonce;
-	rq->rq_timeoutable = 1;
 	rq->rq_interpret_reply = slrpc_ping_cb;
 	rq->rq_async_args.pointer_arg[0] = csvc;
 
