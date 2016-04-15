@@ -196,6 +196,7 @@ slc_rmc_setmds(const char *name)
 	} else
 		msl_rmc_resm = libsl_nid2resm(nid);
 
+	slc_getmcsvc_nb(msl_rmc_resm);
 	return (0);
 }
 
