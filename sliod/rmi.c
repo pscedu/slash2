@@ -65,7 +65,7 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 	return (0);
 }
 
-int
+void
 sli_rmi_setmds(const char *name)
 {
 	struct slashrpc_cservice *csvc;
@@ -76,7 +76,7 @@ sli_rmi_setmds(const char *name)
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
 		if (res == NULL)
-			return (SLERR_RES_UNKNOWN);
+			psc_fatalx("invalid MDS name %s", name);
 		rmi_resm = psc_dynarray_getpos(&res->res_members, 0);
 	} else
 		rmi_resm = libsl_nid2resm(nid);
@@ -86,13 +86,12 @@ sli_rmi_setmds(const char *name)
 	 * to start no matter what.
 	 */
 	if (sli_rmi_getcsvc(&csvc))
-		psclog_errorx("error connecting to MDS %s", name);
+		psc_fatalx("error connecting to MDS %s", name);
 	else {
 		slconnthr_watch(sliconnthr, csvc, CSVCF_PING, NULL,
 		    NULL);
 		sl_csvc_decref(csvc);
 	}
-	return (0);
 }
 
 int
