@@ -66,14 +66,12 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 	struct sl_fidgen fg;
-	static int times = 0;
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
 	} *cp = jent;
 	uint32_t n;
 
-	times++;
 	fg.fg_fid = cp->fid;
 	fg.fg_gen = FGEN_ANY;
 	rc = slm_fcmh_get(&fg, &f);
@@ -90,46 +88,6 @@ mds_replay_bmap(void *jent, int op)
 	DEBUG_BMAPOD(PLL_DIAG, b, "before bmap replay op=%d", op);
 
 	switch (op) {
-	case B_REPLAY_OP_REPLS:
-		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
-
-		bmap_op_start_type(b, BMAP_OPCNT_WORK);
-
-		/* a no-op will gather the locks for us */
-		brepls_init(tract, -1);
-		mds_repl_bmap_walk_all(b, tract, NULL, 0);
-
-		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
-		    sizeof(bmi->bmi_orepls));
-		bmap_2_replpol(b) = sjbr->sjbr_replpol;
-		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
-		    SL_REPLICA_NBYTES);
-
-		/* revert inflight to reissue */
-		brepls_init(tract, -1);
-		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-		mds_repl_bmap_walk_all(b, tract, NULL, 0);
-
-		b->bcm_flags |= BMAPF_REPLMODWR;
-		// bmi_sys_prio =
-		// bmi_usr_prio =
-		slm_repl_upd_write(b, 1);
-
-		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
-		    n++, off += SL_BITS_PER_REPLICA)
-			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
-			    off)) {
-			case BREPLST_REPL_QUEUED:
-			case BREPLST_GARBAGE:
-				resid = fcmh_2_repl(f, n);
-
-				// XXX sys/usr prio
-				slm_upsch_insert(b, resid, 0, 0);
-				break;
-			}
-
-		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
 		struct srt_stat sstb;
@@ -175,6 +133,46 @@ mds_replay_bmap(void *jent, int op)
 		}
 		break;
 	    }
+	case B_REPLAY_OP_REPLS:
+		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
+
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+
+		/* a no-op will gather the locks for us */
+		brepls_init(tract, -1);
+		mds_repl_bmap_walk_all(b, tract, NULL, 0);
+
+		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
+		    sizeof(bmi->bmi_orepls));
+		bmap_2_replpol(b) = sjbr->sjbr_replpol;
+		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
+		    SL_REPLICA_NBYTES);
+
+		/* revert inflight to reissue */
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+		mds_repl_bmap_walk_all(b, tract, NULL, 0);
+
+		b->bcm_flags |= BMAPF_REPLMODWR;
+		// bmi_sys_prio =
+		// bmi_usr_prio =
+		slm_repl_upd_write(b, 1);
+
+		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
+		    n++, off += SL_BITS_PER_REPLICA)
+			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
+			    off)) {
+			case BREPLST_REPL_QUEUED:
+			case BREPLST_GARBAGE:
+				resid = fcmh_2_repl(f, n);
+
+				// XXX sys/usr prio
+				slm_upsch_insert(b, resid, 0, 0);
+				break;
+			}
+
+		break;
 	}
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
