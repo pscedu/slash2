@@ -87,7 +87,7 @@ int	sli_rii_handler(struct pscrpc_request *);
 void	sli_rci_ctl_health_send(struct slashrpc_cservice *);
 
 int	sli_rmi_getcsvc(struct slashrpc_cservice **);
-int	sli_rmi_setmds(const char *);
+void	sli_rmi_setmds(const char *);
 
 void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 
