@@ -335,6 +335,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	CSVC_ULOCK(csvc);
 
 	if (flags & CSVCF_NONBLOCK) {
+		rq->rq_silent_timeout = 1;
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[CBARG_STKVER] = stkversp;
