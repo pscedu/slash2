@@ -66,12 +66,14 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 	struct sl_fidgen fg;
+	static int times = 0;
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
 	} *cp = jent;
 	uint32_t n;
 
+	times++;
 	fg.fg_fid = cp->fid;
 	fg.fg_gen = FGEN_ANY;
 	rc = slm_fcmh_get(&fg, &f);
