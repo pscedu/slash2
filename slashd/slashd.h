@@ -350,7 +350,6 @@ enum {
 	SLM_OPSTATE_INIT = 0,
 	SLM_OPSTATE_REPLAY,
 	SLM_OPSTATE_NORMAL
-//	SLM_OPSTATE_EXITING
 };
 
 int	 mds_handle_rls_bmap(struct pscrpc_request *, int);
