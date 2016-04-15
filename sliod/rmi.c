@@ -68,7 +68,6 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 void
 sli_rmi_setmds(const char *name)
 {
-	struct slashrpc_cservice *csvc;
 	struct sl_resource *res;
 	lnet_nid_t nid;
 
@@ -81,17 +80,9 @@ sli_rmi_setmds(const char *name)
 	} else
 		rmi_resm = libsl_nid2resm(nid);
 
-	/*
-	 * XXX This blocks until MDS is started.  We should allow sliod
-	 * to start no matter what.
-	 */
-	if (sli_rmi_getcsvc(&csvc))
-		psc_fatalx("error connecting to MDS %s", name);
-	else {
-		slconnthr_watch(sliconnthr, csvc, CSVCF_PING, NULL,
-		    NULL);
-		sl_csvc_decref(csvc);
-	}
+	sli_getmcsvc_nb(rmi_resm);
+	slconnthr_watch(sliconnthr, rmi_resm->resm_csvc, 
+	    CSVCF_PING, NULL, NULL);
 }
 
 int
