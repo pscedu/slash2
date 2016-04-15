@@ -86,7 +86,7 @@ sli_rmi_setmds(const char *name)
 	 * to start no matter what.
 	 */
 	if (sli_rmi_getcsvc(&csvc))
-		psclog_errorx("error connecting to MDS");
+		psclog_errorx("error connecting to MDS %s", name);
 	else {
 		slconnthr_watch(sliconnthr, csvc, CSVCF_PING, NULL,
 		    NULL);
