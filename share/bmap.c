@@ -396,9 +396,4 @@ _dump_bmap_common(struct bmap *b)
 	DEBUG_BMAP(PLL_MAX, b, "");
 }
 
-__weak void
-dump_bmap(struct bmap *b)
-{
-	_dump_bmap_common(b);
-}
 #endif

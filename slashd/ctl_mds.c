@@ -469,6 +469,9 @@ struct psc_ctlop slmctlops[] = {
 void
 slmctlthr_main(const char *fn)
 {
+	pfl_journal_register_ctlops(slmctlops);
+	pflrpc_register_ctlops(slmctlops);
+
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
