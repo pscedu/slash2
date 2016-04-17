@@ -534,14 +534,4 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_DELETED, flags, seq);
 }
 
-__weak void
-dump_fcmh_flags(int flags)
-{
-	int seq = 0;
-
-	_dump_fcmh_flags_common(&flags, &seq);
-	if (flags)
-		printf(" unknown: %x", flags);
-	printf("\n");
-}
 #endif
