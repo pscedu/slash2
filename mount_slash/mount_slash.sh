@@ -49,7 +49,6 @@ export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
 export PSC_LOG_LEVEL_info=info
 export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
 export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
-export LD_DYNAMIC_WEAK=1
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
