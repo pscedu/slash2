@@ -82,7 +82,6 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
-extern struct slrpc_batch_rep_handler slm_batch_rep_ptrunc;
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
 
@@ -401,15 +400,17 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 	bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
 }
 
-void
-slm_batch_ptrunc_cb(void *req, void *rep, void *scratch, int error)
+int
+slm_upsch_tryptrunc_cb(struct pscrpc_request *rq, 
+    struct pscrpc_async_args *av) 
 {
-	(void)req;
-	(void)rep;
-	(void)scratch;
-	(void)error;
+	int rc, off = av->space[IN_OFF];
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct bmap *b = av->pointer_arg[IP_BMAP];
 
-	slm_upsch_finish_ptrunc(NULL, NULL, 0, 0, 0);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc); 
+	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
+	return (0); 
 }
 
 /*
@@ -486,7 +487,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
 
-	//rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
+	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc == 0)
@@ -1378,12 +1379,6 @@ void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_hldrop,
 	upd_proc_pagein,
 	upd_proc_pagein_unit
-};
-
-struct slrpc_batch_rep_handler slm_batch_rep_ptrunc = {
-	slm_batch_ptrunc_cb,
-	sizeof(struct srt_ptrunc_req),
-	sizeof(struct srt_ptrunc_rep),
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {

@@ -598,6 +598,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  *	processing the reply; will be freed by this API on reply.
  * @handler: callback to run when a reply is received.
  * @expire: number of seconds to wait before sending this batch RPC out.
+ *
+ * Note that only RPCs of the same opcode can be batched together.
  */
 int
 slrpc_batch_req_add(struct psc_listcache *res_batches,
