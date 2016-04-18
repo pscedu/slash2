@@ -2050,10 +2050,10 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 	}
 }
 
-__static void
+__static int 
 slm_ptrunc_apply(struct fidc_membh *f)
 {
-	int rc;
+	int rc = 0;
 	int queued = 0, tract[NBREPLST], retifset[NBREPLST];
 	struct ios_list ios_list;
 	struct bmap *b;
@@ -2074,40 +2074,43 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		goto out1;
 
 	/* When do we drop this reference? */
-	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
-		/*
-		 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
-		 */
-		brepls_init(tract, -1);
-		tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+	rc = bmap_get(f, i, SL_WRITE, &b);
+	if (rc)
+		goto out2;
+	/*
+	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
-		DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
-		BMAP_ULOCK(b);
-		mds_repl_bmap_walkcb(b, tract, NULL, 0,
-		    ptrunc_tally_ios, &ios_list);
-		fmi->fmi_ptrunc_nios = ios_list.nios;
-		if (fmi->fmi_ptrunc_nios) {
-			rc = mds_bmap_write_logrepls(b);
-			if (rc) {
-				FCMH_UNBUSY(f);
-				bmap_op_done(b);
-				goto out2;
-			}
-			queued++;
-			/*
-			 * Queue work immediately instead
-			 * of waiting for it to be causally
-			 * paged to reduce latency to the
-			 * client.
-			 */
-			OPSTAT_INCR("ptrunc-enqueue");
-			upd = bmap_2_upd(b);
-			DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
-			upsch_enqueue(upd);
-		} else
+	DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
+	BMAP_ULOCK(b);
+	mds_repl_bmap_walkcb(b, tract, NULL, 0,
+	    ptrunc_tally_ios, &ios_list);
+	fmi->fmi_ptrunc_nios = ios_list.nios;
+	if (fmi->fmi_ptrunc_nios) {
+		rc = mds_bmap_write_logrepls(b);
+		if (rc) {
 			FCMH_UNBUSY(f);
-		bmap_op_done(b);
-	}
+			bmap_op_done(b);
+			goto out2;
+		}
+		queued++;
+		/*
+		 * Queue work immediately instead
+		 * of waiting for it to be causally
+		 * paged to reduce latency to the
+		 * client.
+		 */
+		OPSTAT_INCR("ptrunc-enqueue");
+		upd = bmap_2_upd(b);
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
+		upsch_enqueue(upd);
+	} else
+		FCMH_UNBUSY(f);
+
+	bmap_op_done(b);
+
 	i++;
 
  out1:
@@ -2140,6 +2143,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		FCMH_ULOCK(f);
 	}
 	OPSTAT_INCR("ptrunc-apply");
+	return (rc);
 }
 
 int
@@ -2234,7 +2238,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc aborted, rc = %d", rc);
 		FCMH_ULOCK(f);
 	} else
-		slm_ptrunc_apply(f);
+		rc = slm_ptrunc_apply(f);
 
 	return (rc);
 }
