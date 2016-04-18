@@ -198,6 +198,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
     struct fidc_membh *d, struct dircache_page *p, int block)
 {
 	struct fcmh_cli_info *fci;
+	struct pscfs_dirent *pfd;
 	struct dircache_ent *dce;
 	struct psc_hashbkt *b;
 	int i;
@@ -225,9 +226,11 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off) {
 			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "free_page "
 			    "fcmh=%p", d);
-			if (dce->dce_pfd->pfd_ino != FID_ANY) {
+			pfd = dce->dce_pfd;
+			if (pfd->pfd_ino != FID_ANY) {
 				b = psc_hashent_getbucket(
 				    &msl_namecache_hashtbl, dce);
+				dce->dce_pfd = NULL;
 				if (dce->dce_flags & DCEF_ACTIVE) {
 					psc_hashbkt_del_item(
 					    &msl_namecache_hashtbl, b,
@@ -824,15 +827,25 @@ void
 _namecache_update(const struct pfl_callerinfo *pci,
     struct dircache_ent_update *dcu, uint64_t fid, int rc)
 {
+	struct dircache_ent *dce;
+
 	if (dcu->dcu_d == NULL)
 		return;
-	if (rc) {
+	dce = dcu->dcu_dce;
+
+	/*
+	 * dircache_free_page() released the ent from under us; complete
+	 * the job.
+	 */
+	if (dce->dce_pfd == NULL)
+		psc_pool_return(dircache_ent_pool, dce);
+	else if (rc)
 		namecache_delete(dcu, rc);
-	} else {
+	else {
 		psc_assert(fid != FID_ANY);
 
 		psc_hashbkt_lock(dcu->dcu_bkt);
-		dcu->dcu_dce->dce_pfd->pfd_ino = fid;
+		dce->dce_pfd->pfd_ino = fid;
 		namecache_release_entry_locked(dcu);
 		OPSTAT_INCR("msl.namecache-update");
 	}
@@ -855,12 +868,19 @@ namecache_delete(struct dircache_ent_update *dcu, int rc)
 	dce = dcu->dcu_dce;
 
 	/*
+	 * dircache_free_page() released the ent from under us; complete
+	 * the job.
+	 */
+	if (dce->dce_pfd == NULL)
+		psc_pool_return(dircache_ent_pool, dce);
+
+	/*
 	 * It's possible this entry was newly created then HELD in
 	 * response to a "cache fill", and pfd_ino = FID_ANY since it
 	 * hasn't been populated yet.  In such a case, an error during
 	 * process should remove the entry here.
 	 */
-	if (rc && rc != -ENOENT && dce->dce_pfd->pfd_ino != FID_ANY)
+	else if (rc && rc != -ENOENT && dce->dce_pfd->pfd_ino != FID_ANY)
 		namecache_release_entry(dcu);
 	else {
 		b = dcu->dcu_bkt;
