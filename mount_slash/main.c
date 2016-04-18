@@ -1969,28 +1969,30 @@ msl_flush(struct msl_fhent *mfh)
 	return (rc);
 }
 
+/*
+ * Send a SETATTR RPC to the MDS.  @sstb is filled out according to the
+ * new values any attributes should take on.  Upon reply, the fcmh is
+ * updated according to how the MDS refreshes it, naturally handling
+ * success and failure.
+ */
 int
-msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
-    const struct srt_stat *sstb, const struct sl_fidgen *fgp,
-    const struct stat *stb)
+msl_setattr(struct fidc_membh *f, int32_t to_set,
+    const struct srt_stat *sstb, int setattrflags)
 {
-	int rc, flags = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
+	int rc;
 
- retry1:
+	FCMH_BUSY_ENSURE(f);
+
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
-		goto retry2;
+		PFL_GOTOERR(out, rc);
 
-	if (sstb)
-		mq->attr = *sstb;
-	else {
-		sl_externalize_stat(stb, &mq->attr);
-		mq->attr.sst_fg = *fgp;
-	}
+	mq->attr = *sstb;
+	mq->attr.sst_fg = f->fcmh_fg;
 	mq->to_set = to_set;
 
 	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
@@ -2003,10 +2005,8 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 	    to_set);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
- retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
-		goto retry1;
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	rc = abs(rc);
 	if (rc == 0)
@@ -2018,12 +2018,9 @@ msl_setattr(struct pscfs_req *pfr, struct fidc_membh *f, int32_t to_set,
 		rc = 0;
 
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
-	    "attr flush; set=%x rc=%d", to_set, rc);
+	    "attr flush; set=%#x rc=%d", to_set, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
-		flags |= FCMH_SETATTRF_CLOBBER;
 
 	slc_fcmh_setattrf(f, &mp->attr, flags);
 
@@ -2051,8 +2048,6 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	waslocked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
 
-	attr.sst_fg = f->fcmh_fg;
-
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
 	 * which we have modified the attributes.
@@ -2079,7 +2074,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	rc = msl_setattr(pfr, f, to_set, &attr, NULL, NULL);
+	rc = msl_setattr(pfr, f, to_set, &attr, 0);
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
@@ -2809,13 +2804,14 @@ void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
+	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
 	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
-	int flush_mtime = 0, flush_size = 0;
 	struct msl_dc_inv_entry_data mdie;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
+	struct srt_stat sstb;
 	struct timespec ts;
 
 	memset(&mdie, 0, sizeof(mdie));
@@ -3030,8 +3026,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	FCMH_ULOCK(c);
 
+	sl_externalize_stat(stb, &sstb);
+	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
+		setattrflags |= FCMH_SETATTRF_CLOBBER;
+
  retry:
-	rc = msl_setattr(pfr, c, to_set, NULL, &c->fcmh_fg, stb);
+	rc = msl_setattr(c, to_set, &sstb, setattrflags);
 	if (rc && slc_rpc_retry(pfr, &rc))
 		goto retry;
 
