@@ -3047,13 +3047,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (flush_mtime || flush_size) {
-			if (!rc && !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-				fci = fcmh_2_fci(c);
-				psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
-				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-				lc_remove(&msl_attrtimeoutq, fci);
-				fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-			}
 			if (rc) {
 				if (flush_mtime)
 					c->fcmh_flags |=
@@ -3061,6 +3054,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				if (flush_size)
 					c->fcmh_flags |=
 					    FCMH_CLI_DIRTY_DSIZE;
+			} else if (!(c->fcmh_flags &
+			    FCMH_CLI_DIRTY_ATTRS)) {
+				fci = fcmh_2_fci(c);
+				psc_assert(c->fcmh_flags &
+				    FCMH_CLI_DIRTY_QUEUE);
+				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+				lc_remove(&msl_attrtimeoutq, fci);
+				fcmh_op_done_type(c,
+				    FCMH_OPCNT_DIRTY_QUEUE);
 			}
 		}
 
