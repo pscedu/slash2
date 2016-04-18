@@ -2022,7 +2022,7 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattrf(f, &mp->attr, flags);
+	slc_fcmh_setattrf(f, &mp->attr, setattrflags);
 
  out:
 	pscrpc_req_finished(rq);
