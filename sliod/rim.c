@@ -108,28 +108,28 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
  *	sliver that got chopped.
  */
 int
-sli_rim_batch_handle_ptrunc(__unusedx struct slrpc_batch_rep *bp,
-    void *req, void *rep)
+sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	struct srt_ptrunc_req *q = req;
-	struct srt_ptrunc_rep *p = rep;
+	struct srt_ptrunc_req *mq;
+	struct srt_ptrunc_rep *mp;
 	struct fidc_membh *f;
 	off_t off;
 
-	if (q->offset < 0 || q->offset >= SLASH_BMAP_SIZE) {
-		p->rc = EINVAL;
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
+		mp->rc = EINVAL;
 		return (0);
 	}
 
-	p->rc = sli_fcmh_get(&q->fg, &f);
-	if (p->rc)
+	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
 		return (0);
 
-	off = SLASH_BMAP_SIZE * q->bmapno + q->offset;
+	off = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
 	/* XXX lock/clear sliver pages in memory? */
 	if (ftruncate(fcmh_2_fd(f), off) == -1) {
-		p->rc = errno;
-		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", p->rc);
+		mp->rc = errno;
+		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", mp->rc);
 		OPSTAT_INCR("ptrunc-failure");
 	} else {
 		OPSTAT_INCR("ptrunc-success");
@@ -139,7 +139,7 @@ sli_rim_batch_handle_ptrunc(__unusedx struct slrpc_batch_rep *bp,
 	 * XXX queue a CRC update to be transmitted back if this
 	 * truncation cut a sliver.
 	 */
-	slvr_crc_update(f, q->bmapno, q->offset);
+	slvr_crc_update(f, mq->bmapno, mq->offset);
 
 	fcmh_op_done(f);
 	return (0);
@@ -263,6 +263,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_BMAP_PTRUNC:
+		rc = sli_rim_handle_bmap_ptrunc(rq);
+		break;
 	case SRMT_BATCH_RQ:
 		m = libsl_nid2resm(rq->rq_export->exp_connection->
 		    c_peer.nid);
@@ -299,13 +302,6 @@ sli_rim_init(void)
 	h->bqh_cbf = sli_repl_addwk;
 	h->bqh_qlen = sizeof(struct srt_replwk_req);
 	h->bqh_plen = sizeof(struct srt_replwk_rep);
-	h->bqh_rcv_ptl = SRIM_BULK_PORTAL;
-	h->bqh_snd_ptl = SRMI_BULK_PORTAL;
-
-	h = &sli_rim_batch_req_handlers[SRMT_BMAP_PTRUNC];
-	h->bqh_cbf = sli_rim_batch_handle_ptrunc;
-	h->bqh_qlen = sizeof(struct srt_ptrunc_req);
-	h->bqh_plen = sizeof(struct srt_ptrunc_rep);
 	h->bqh_rcv_ptl = SRIM_BULK_PORTAL;
 	h->bqh_snd_ptl = SRMI_BULK_PORTAL;
 
