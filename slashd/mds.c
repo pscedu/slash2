@@ -2063,12 +2063,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	fmi = fcmh_2_fmi(f);
 
-	/*
-	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc() later.
-	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
-
 	/* get the number of replies we expect */
 	ios_list.nios = 0;
 	for (i = 0; i < SL_MAX_REPLICAS; i++)
@@ -2081,6 +2075,12 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	/* When do we drop this reference? */
 	if (bmap_get(f, i, SL_WRITE, &b) == 0) {
+		/*
+		 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
+		 */
+		brepls_init(tract, -1);
+		tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+
 		DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
 		BMAP_ULOCK(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
