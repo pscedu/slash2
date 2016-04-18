@@ -2805,7 +2805,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
 	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
-	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
+	int i, busied = 0, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	struct msl_dc_inv_entry_data mdie;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
@@ -2836,6 +2836,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set == 0)
 		goto out;
 
+	busied = 1;
 	FCMH_WAIT_BUSY(c);
 
 	slc_getfscreds(pfr, &pcr);
@@ -3078,7 +3079,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	if (c) {
-		if (FCMH_HAS_BUSY(c))
+		if (busied)
 			FCMH_UNBUSY(c);
 
 		/*
