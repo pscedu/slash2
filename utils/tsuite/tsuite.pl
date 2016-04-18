@@ -818,7 +818,7 @@ sub daemon_setup {
 		while :; do
 			set +e
 			$sudo pkill -9 \$1 && sleep 3
-			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE LD_DYNAMIC_WEAK=1 "\$@"
+			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE "\$@"
 			local status=\$?
 			set -e
 			[ \$status -eq 137 ] && break
