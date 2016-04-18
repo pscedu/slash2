@@ -2074,7 +2074,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_ULOCK(f);
 
-	rc = msl_setattr(pfr, f, to_set, &attr, 0);
+	rc = msl_setattr(f, to_set, &attr, 0);
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
