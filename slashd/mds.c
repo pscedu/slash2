@@ -2053,7 +2053,7 @@ ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 __static int 
 slm_ptrunc_apply(struct fidc_membh *f)
 {
-	int rc = 0;
+	int rc = 0, ret;
 	int queued = 0, tract[NBREPLST], retifset[NBREPLST];
 	struct ios_list ios_list;
 	struct bmap *b;
@@ -2130,9 +2130,9 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
-		rc = mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
-		if (rc)
+		if (ret)
 			mds_bmap_write_logrepls(b);
 		bmap_op_done(b);
 	}
