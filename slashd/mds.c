@@ -2085,8 +2085,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
 	BMAP_ULOCK(b);
-	mds_repl_bmap_walkcb(b, tract, NULL, 0,
-	    ptrunc_tally_ios, &ios_list);
+	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
 	if (fmi->fmi_ptrunc_nios) {
 		rc = mds_bmap_write_logrepls(b);

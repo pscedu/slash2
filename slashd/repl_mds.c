@@ -323,6 +323,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 			psc_assert((b->bcm_flags &
 			    BMAPF_REPLMODWR) == 0);
 			BMAP_ULOCK(b);
+			/* grab write lock on bmi */
 			BMAPOD_MODIFY_START(b);
 			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 			    sizeof(bmi->bmi_orepls));
