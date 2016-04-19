@@ -361,10 +361,10 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 
 	/* apply any translations */
 	if (tract && tract[val] != -1) {
-		DEBUG_BMAPOD(PLL_MAX, b, "before modification");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(bmi->bmi_repls, off,
 		    tract[val]);
-		DEBUG_BMAPOD(PLL_MAX, b, "after modification");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "after modification");
 	}
 
  out:
