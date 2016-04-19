@@ -438,9 +438,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
 		return (0);
 	}
-	DEBUG_FCMH(PLL_MAX, f, "ptrunc request, ios_repl_off=%d id=%#x",
-	    off, dst_res->res_id);
-
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
@@ -486,6 +483,9 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
 	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
+
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc req=%p, off=%d, id=%#x",
+	    rq, off, dst_res->res_id);
 
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
