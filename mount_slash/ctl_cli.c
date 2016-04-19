@@ -914,6 +914,7 @@ msctlthr_spawn(void)
 	struct psc_thread *thr;
 
 	pflrpc_register_ctlops(msctlops);
+	pflfs_register_ctlops(msctlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
