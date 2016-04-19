@@ -2107,7 +2107,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 */
 		OPSTAT_INCR("ptrunc-enqueue");
 		upd = bmap_2_upd(b);
-		DEBUG_FCMH(PLL_MAX, f, "ptrunc queued");
+		DEBUG_FCMH(PLL_MAX, f, "ptrunc queued, upd = %p", upd);
 		upsch_enqueue(upd);
 	} else
 		FCMH_UNBUSY(f);
