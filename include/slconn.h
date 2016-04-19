@@ -234,7 +234,7 @@ struct sl_expcli_ops {
 		static struct pfl_opstat *_opst;			\
 		int _rc = 0;						\
 									\
-		(void)pfl_fault_here_rc(&_rc, -EHOSTDOWN,		\
+		pfl_fault_here_rc(&_rc, -EHOSTDOWN,			\
 		    "%srpc.issue.%s", SL_FAULT_PREFIX,			\
 		    slrpc_getname_for_opcode(op));			\
 		_rc = _rc ? _rc : (slrpc_ops.slrpc_newreq ?		\

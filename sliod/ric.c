@@ -219,10 +219,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psclog_diag("bmapdesc check okay");
 
 	if (rw == SL_READ)
-		(void)pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
+		pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
 		    "sliod/seqno_read_fail");
 	else
-		(void)pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
+		pfl_fault_here_rc(&mp->rc, -PFLERR_KEYEXPIRED,
 		    "sliod/seqno_write_fail");
 	if (mp->rc)
 		return (mp->rc);
