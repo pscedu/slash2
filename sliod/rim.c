@@ -263,8 +263,15 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_CONNECT:
+		rc = slrpc_handle_connect(rq, SRIM_MAGIC, SRIM_VERSION,
+		    SLCONNT_MDS);
+		break;
 	case SRMT_BMAP_PTRUNC:
 		rc = sli_rim_handle_bmap_ptrunc(rq);
+		break;
+	case SRMT_RECLAIM:
+		rc = sli_rim_handle_reclaim(rq);
 		break;
 	case SRMT_BATCH_RQ:
 		m = libsl_nid2resm(rq->rq_export->exp_connection->
@@ -274,13 +281,6 @@ sli_rim_handler(struct pscrpc_request *rq)
 		    sli_rim_batch_req_handlers);
 		if (rc)
 			sl_csvc_decref(csvc);
-		break;
-	case SRMT_RECLAIM:
-		rc = sli_rim_handle_reclaim(rq);
-		break;
-	case SRMT_CONNECT:
-		rc = slrpc_handle_connect(rq, SRIM_MAGIC, SRIM_VERSION,
-		    SLCONNT_MDS);
 		break;
 	default:
 		psclog_errorx("unexpected opcode %d",
