@@ -693,10 +693,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 
-	DEBUG_FCMH(PLL_DIAG, f, "upd = %p", upd);
+	DEBUG_FCMH(PLL_MAX, f, "upd = %p", upd);
 	/* skip, there is more important work to do */
 	if (b->bcm_flags & BMAPF_REPLMODWR) {
-		DEBUG_FCMH(PLL_DIAG, f, "skip: upd = %p", upd);
+		DEBUG_FCMH(PLL_MAX, f, "skip: upd = %p", upd);
 		return;
 	}
 
