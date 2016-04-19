@@ -1150,8 +1150,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
-		slm_setattr_core(f, &mq->attr, to_set | tadj);
-		mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
+		mp->rc = slm_setattr_core(f, &mq->attr, to_set | tadj);
+		if (!mp->rc)
+			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 	}
 
  out:

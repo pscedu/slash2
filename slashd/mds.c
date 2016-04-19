@@ -2138,7 +2138,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	}
 
  out2:
-	if (!queued) {
+	if (!queued && !rc) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
@@ -2233,6 +2233,9 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	    fcmh_2_mfh(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
+	if (!rc) 
+		rc = slm_ptrunc_apply(f);
+
 	if (rc) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
@@ -2240,8 +2243,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		f->fcmh_sstb.sst_size = size;
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc aborted, rc = %d", rc);
 		FCMH_ULOCK(f);
-	} else
-		rc = slm_ptrunc_apply(f);
+	}
 
 	return (rc);
 }
