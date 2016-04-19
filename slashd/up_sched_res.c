@@ -401,16 +401,16 @@ slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
 }
 
 int
-slm_upsch_tryptrunc_cb(struct pscrpc_request *rq, 
-    struct pscrpc_async_args *av) 
+slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
 {
 	int rc, off = av->space[IN_OFF];
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc); 
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc);
 	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
-	return (0); 
+	return (0);
 }
 
 /*
@@ -693,10 +693,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 
-	DEBUG_FCMH(PLL_MAX, f, "upd = %p", upd);
+	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 	/* skip, there is more important work to do */
 	if (b->bcm_flags & BMAPF_REPLMODWR) {
-		DEBUG_FCMH(PLL_MAX, f, "skip: upd = %p", upd);
+		DEBUG_FCMH(PLL_DEBUG, f, "skip: upd=%p", upd);
 		return;
 	}
 
@@ -850,7 +850,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	FCMH_UNBUSY(f);
 
  out:
- 	;
+	;
 }
 
 /*
