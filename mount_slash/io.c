@@ -262,9 +262,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 			DEBUG_BMAP(PLL_DIAG, b,
 			    "remove from msl_bmapflushq");
 		}
-		spinlock(&slc_pending_writes_lock);
-		slc_pending_writes--;
-		freelock(&slc_pending_writes_lock);
 	}
 
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
@@ -1315,10 +1312,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty=%d",
 	    r, pll_empty(&bmpc->bmpc_pndg_biorqs));
 	BMAP_ULOCK(b);
-
-	spinlock(&slc_pending_writes_lock);
-	slc_pending_writes++;
-	freelock(&slc_pending_writes_lock);
 }
 
 /*

@@ -70,9 +70,6 @@ struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
-int64_t				 slc_pending_writes;
-psc_spinlock_t			 slc_pending_writes_lock = SPINLOCK_INIT;
-
 psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
