@@ -496,9 +496,9 @@ msl_bmap_lease_tryreassign(struct bmap *b)
  * result in the creation and assignment of a new lease sequence number
  * from the MDS.
  *
- * @blockable:  means the caller will not block if a renew RPC is
+ * @blocking:  means the caller will not block if a renew RPC is
  *	outstanding.  Currently, only fsthreads which try lease
- *	extension prior to initiating I/O are 'blockable'.  This is so
+ *	extension prior to initiating I/O are 'blocking'.  This is so
  *	the system doesn't take more work on bmaps whose leases are
  *	about to expire.
  * Notes: should the lease extension fail, all dirty write buffers must
@@ -506,7 +506,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
  *	holders of open file descriptors.
  */
 int
-msl_bmap_lease_tryext(struct bmap *b, int blockable)
+msl_bmap_lease_tryext(struct bmap *b, int blocking)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -514,11 +514,22 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct srm_leasebmapext_rep *mp;
 	struct srt_bmapdesc *sbd;
 	struct timespec ts;
+	struct pscfs_req *pfr = NULL;
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
 	int secs, rc;
+
+	thr = pscthr_get();
+	if (thr->pscthr_type == PFL_THRT_FS) {
+		pft = thr->pscthr_private;
+		pfr = pft->pft_pfr;
+	}
+
+ retry:
 
 	BMAP_LOCK_ENSURE(b);
 	if (b->bcm_flags & BMAPF_TOFREE) {
-		psc_assert(!blockable);
+		psc_assert(!blocking);
 		BMAP_ULOCK(b);
 		return (0); // 1?
 	}
@@ -531,7 +542,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	/* already waiting for LEASEEXT reply */
 	if (b->bcm_flags & BMAPF_LEASEEXTREQ) {
-		if (!blockable) {
+		if (!blocking) {
 			BMAP_ULOCK(b);
 			return (0);
 		}
@@ -548,7 +559,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 	if (secs >= BMAP_CLI_EXTREQSECS &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
-		if (blockable)
+		if (blocking)
 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
 		BMAP_ULOCK(b);
 		return (0);
@@ -604,7 +615,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		if (csvc)
 			sl_csvc_decref(csvc);
 
-	} else if (blockable) {
+	} else if (blocking) {
 		/*
 		 * We should never cache data without a lease.
 		 */
@@ -614,6 +625,12 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		BMAP_ULOCK(b);
 	} else
 		BMAP_ULOCK(b);
+
+	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
+		BMAP_LOCK(b);
+		bmap_2_bci(b)->bci_error = 0;
+		goto retry;
+	}
 
 	return (rc);
 }
