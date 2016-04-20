@@ -381,7 +381,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * complicated to get right.
 	 */
 	PFL_GETTIMESPEC(&r->biorq_expire);
-	r->biorq_expire.tv_sec += 5;
+	r->biorq_expire.tv_sec += SL_MAX_BMAPFLSH_DELAY;
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);

@@ -138,6 +138,11 @@ struct bmap {
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
 #define SL_MAX_IOSREASSIGN	16
+
+/*
+ * This will retry for > 20 hours.
+ */
+#define SL_MAX_BMAPFLSH_DELAY	10
 #define SL_MAX_BMAPFLSH_RETRIES	8192
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
