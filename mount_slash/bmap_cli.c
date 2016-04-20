@@ -102,7 +102,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		 */
 		if (rc == -SLERR_ION_OFFLINE) {
 			rc = EHOSTDOWN;
-			bmap_2_bci(b)->bci_nreassigns = 0;
+			bci->bci_nreassigns = 0;
 		}
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		bci->bci_error = rc;
@@ -580,16 +580,26 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 	if (rc) {
-		pscrpc_req_finished(rq);
-		if (csvc)
-			sl_csvc_decref(csvc);
-
-		bmap_2_bci(b)->bci_error = rc;
+		struct bmap_cli_info *bci = bmap_2_bci(b);
+		/*
+		 * Match what is done in msl_rmc_bmltryext_cb().
+		 */
+		if (rc == -SLERR_ION_OFFLINE) {
+			rc = EHOSTDOWN;
+			bci->bci_nreassigns = 0;
+		}
+		PFL_GETTIMESPEC(&bci->bci_etime);
+		bci->bci_error = rc;
 		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 		b->bcm_flags |= BMAPF_LEASEFAILED;
 
 		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+
+		pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
+
 	} else if (blockable) {
 		/*
 		 * We should never cache data without a lease.
