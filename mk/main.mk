@@ -25,7 +25,8 @@ $(call ADD_FILE_CFLAGS,${SLASH_BASE}/share/adler32.c,${COPT})
 
 ${OBJDIR}/version.o: $(filter-out ${SLASH_BASE}/share/version.c},${SRCS})
 
-${OBJDIR}/rpc_names.c: ${OBJDIR} ${SLASH_BASE}/include/slashrpc.h
+${OBJDIR}/rpc_names.c: ${SLASH_BASE}/include/slashrpc.h
+	make ${OBJDIR}
 	{								\
 		echo '#include <stdlib.h>';				\
 		echo;							\
