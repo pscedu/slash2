@@ -43,8 +43,13 @@
 /* number of bmaps to allow before reaper kicks into gear */
 #define BMAP_CACHE_MAX		1024
 
-#define BMAP_DIOWAIT_USEC	100
-#define BMAP_DIOWAIT_MAX_TRIES	32	/* BMAP_DIOWAIT_USEC * 2**N / 1e6 */
+/*
+ * Total wait time is 2+4+8+16+32+60*(32-5) = 1682 seconds.
+ */
+#define BMAP_DIOWAIT_SEC	2
+#define BMAP_DIOWAIT_MAX_TRIES	32
+
+const struct timespec slc_bmap_diowait_max = { 60, 0 };
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
@@ -56,7 +61,6 @@ void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
-const struct timespec slc_bmap_diowait_max = { 60 * 1000 * 1000, 0 };
 
 void
 msl_bmap_reap(void)
@@ -205,7 +209,7 @@ __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
-	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_USEC * 1000 };
+	struct timespec diowait_duration = { BMAP_DIOWAIT_SEC, 0 };
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
@@ -722,7 +726,7 @@ int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
-	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_USEC * 1000 };
+	struct timespec diowait_duration = { BMAP_DIOWAIT_SEC, 0 };
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
