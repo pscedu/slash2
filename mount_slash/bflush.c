@@ -330,7 +330,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
 	struct bmap_cli_info *bci;
-	int delta;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched rc=%d", rc);
 
@@ -382,26 +381,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * complicated to get right.
 	 */
 	PFL_GETTIMESPEC(&r->biorq_expire);
-
-	/*
-	 * Retry last more than 11 hours, but don't make it too long
-	 * between retries.
-	 *
-	 * XXX These magic numbers should be made into tunables.
-	 *
-	 * Note that PSCRPC_OBD_TIMEOUT = 60.
-	 *
-	 * XXX: This logic ignores the fact that a large request
-	 * will always be selected.
-	 */
-	if (r->biorq_retries < 32)
-		delta = 20;
-	else if (r->biorq_retries < 64)
-		delta = (r->biorq_retries - 32) * 20 + 20;
-	else
-		delta = 32 * 20;
-
-	r->biorq_expire.tv_sec += delta;
+	r->biorq_expire.tv_sec += 60;
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);
