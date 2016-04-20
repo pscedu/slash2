@@ -265,26 +265,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto out;
 
-#if 0
-	/*
-	 * Instead of timeout ourselves, the IOS will return
-	 * -PFLERR_KEYEXPIRED and we should retry.
-	 */
-	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
-#endif
-
-	pfl_fault_here_rc(&rq->rq_timeout, -1,
-	    "slash2/flush_rpc_timeout");
-
-	if (rq->rq_timeout < 0) {
-		rc = -EAGAIN;
-		DEBUG_REQ(PLL_ERROR, rq,
-		    "negative timeout: off=%u sz=%u op=%u",
-		    mq->offset, mq->size, mq->op);
-		OPSTAT_INCR("msl.flush-rpc-expire");
-		goto out;
-	}
-
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
@@ -306,12 +286,10 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc) {
-		bwc_unpin_pages(bwc);
-		goto out;
-	}
+	if (!rc)
+		return (0);
 
-	return (0);
+	bwc_unpin_pages(bwc);
 
  out:
 	if (rq)
@@ -341,8 +319,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (rc == -ENOSPC || r->biorq_retries >=
-	    SL_MAX_BMAPFLSH_RETRIES) {
+	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
 
 		bci = bmap_2_bci(r->biorq_bmap);
