@@ -18,7 +18,7 @@
 .\" ---------------------------------------------------------------------
 .\" %END_LICENSE%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd March 23, 2016
+.Dd April 19, 2016
 .Dt MSCTL 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -631,6 +631,8 @@ Whether to use the direct I/O facility provided by kernel.
 Maximum number of I/Os RPCs to ever have inflight with a single IOS.
 .It Cm sys.mds
 Preferred MDS resource name.
+.It Cm sys.mds_max_inflight_rpcs
+Maximum number of RPCs to ever have inflight with the MDS.
 .It Cm sys.mountpoint
 File hierarchy node where
 .Tn SLASH2
@@ -939,6 +941,8 @@ for details on specifying
 If
 .Ar subspec
 is left unspecified, all threads will be accessed.
+.It Cm workrqs
+Work requests.
 .El
 .Pp
 The special value
