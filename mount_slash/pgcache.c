@@ -442,6 +442,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 			BIORQ_ULOCK(r);
 			break;
 		}
+		r->biorq_retries = 0;
 		r->biorq_flags |= BIORQ_EXPIRE;
 		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
