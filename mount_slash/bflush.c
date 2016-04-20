@@ -73,11 +73,11 @@ int				 slc_bflush_tmout_flags;
 psc_atomic32_t			 slc_write_coalesce_max;
 
 __static int
-bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
+bmap_flush_biorq_expired(const struct bmpc_ioreq *a, int force)
 {
 	struct timespec ts;
 
-	if (a->biorq_flags & BIORQ_EXPIRE)
+	if (force && (a->biorq_flags & BIORQ_EXPIRE))
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
@@ -381,7 +381,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * complicated to get right.
 	 */
 	PFL_GETTIMESPEC(&r->biorq_expire);
-	r->biorq_expire.tv_sec += 60;
+	r->biorq_expire.tv_sec += 5;
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);
@@ -613,12 +613,15 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	    idx++, last = curr) {
 		curr = psc_dynarray_getpos(biorqs, idx + *indexp);
 
+		if (curr->biorq_retries && !bmap_flush_biorq_expired(curr, 0))
+			break;
+
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
 		 */
 		if (!expired)
-			expired = bmap_flush_biorq_expired(curr);
+			expired = bmap_flush_biorq_expired(curr, 1);
 
 		DEBUG_BIORQ(PLL_DIAG, curr, "biorq #%d (expired=%d)",
 		    idx, expired);
