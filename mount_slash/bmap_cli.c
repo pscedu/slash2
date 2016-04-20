@@ -101,6 +101,11 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	if (rc) {
 		/*
+ 		 * We should not do this for blocking case. It will open
+ 		 * a window to destroy the bmap. It should not be done
+ 		 * if we are async.
+ 		 */
+		/*
 		 * If the MDS replies with SLERR_ION_OFFLINE then don't
 		 * bother with further retry attempts.
 		 */
