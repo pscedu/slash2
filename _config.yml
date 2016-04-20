@@ -1,22 +1,21 @@
 # Permalinks
 #
-# Use of `relative_permalinks` ensures post links from the index work properly.
-permalink:           pretty
-relative_permalinks: true
+permalink:	pretty
 
 # Setup
-title:               SLASH2
-tagline:             'blog'
-description:         'Posts'
-url:                 http://slash2.psc.edu/
-baseurl:             'https://pscedu.github.io/slash2/'
-paginate:            5
+title:		SLASH2
+tagline:	'blog'
+description:	'Posts'
+url:		http://slash2.psc.edu/
+baseurl:	'https://pscedu.github.io/slash2/'
+paginate:	5
+encoding:	UTF-8
 
 # About/contact
 author:
-  name:              Pittsburgh Supercomputing Center
-  url:               http://www.psc.edu/
-  email:             remarks@psc.edu
+  name:		Pittsburgh Supercomputing Center
+  url:		http://www.psc.edu/
+  email:	remarks@psc.edu
 
 # Custom vars
-version:             1.0.0
+version:	1.0.0
