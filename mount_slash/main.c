@@ -631,7 +631,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (c) 
 		fcmh_op_done(c);
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
-	    "new mfh=%p dir=%s rc=%d oflags=%#o rflags=%#o",
+	    "OPEN: new mfh=%p dir=%s rc=%d oflags=%#o rflags=%#o",
 	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags, *rflags);
 	return (rc);
 }
