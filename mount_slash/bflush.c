@@ -321,7 +321,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
 	    ((r->biorq_flags & BIORQ_EXPIRE) && 
-	     (r->biorq_retries >= msl_max_retries * 5))) {
+	     (r->biorq_retries >= msl_max_retries * 32))) {
 
 		bci = bmap_2_bci(r->biorq_bmap);
 		if (rc && !bci->bci_flush_rc)
