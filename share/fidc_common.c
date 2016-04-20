@@ -254,6 +254,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 				FCMH_ULOCK(f);
 			*fp = f;
 		}
+		OPSTAT_INCR("fidcache.hit");
 		return (rc);
 	}
 
@@ -277,6 +278,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 		return (ENOENT);
 	}
+
+	OPSTAT_INCR("fidcache.miss");
 
 	/*
 	 * OK, we've got a new fcmh.  No need to lock it since it's not
