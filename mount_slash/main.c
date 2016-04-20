@@ -628,19 +628,18 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
-	if (c) {
-		DEBUG_FCMH(rc ? PLL_INFO : PLL_DIAG, c,
-		    "new mfh=%p dir=%s rc=%d oflags=%#o",
-		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
+	if (c) 
 		fcmh_op_done(c);
-	}
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
+	    "new mfh=%p dir=%s rc=%d oflags=%#o rflags=%#o",
+	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags, *rflags);
 	return (rc);
 }
 
 void
 mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = NULL;
 	int rflags, rc;
 
 	rflags = 0;
@@ -651,7 +650,7 @@ mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 void
 mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = NULL;
 	int rflags, rc;
 
 	rflags = 0;
