@@ -839,13 +839,11 @@ s2re
 - bump client pagesize from 32k to something larger, perhaps 128k?
 	- adapt pagesize for IO app is using?
 - pscrpc_export leaking?  check any slmctl -sp
-- try zfs_vdev_cache_size nonzero in SLASH2 MDS and IOS
 - add back blanket (ERANGE) assert to FUSE
 - should usocklnd bind the local port to ACCEPT_PORT instead of the
   LNET_ACCEPTOR_MAX_RESERVED_PORT range?
-- users lacking write permission yet are in member in group of file
-  should be able to replicate
-- make ctl -s rpcsvc more useful (pool fields)
+- rqbd holds its own pool of pscrpc_request; switch to using PFL pool
+  API proper
 - NODIO support in MDS
 - EDQUOT hit by awetzel@psc.edu
 - du is broke on /crucible
@@ -861,21 +859,19 @@ s2re
   be 16k..
 - ENOSPC loops
 - IOS is down and MDS crash loops trying to find op-reclaim.0
-- why are queued replicas always repl-status 'q' and never 's'?
-	- because we don't write changes to persistent storage, and its
-	  not held in memory, and the bmap is reset by mds_bmap_read
 - try disabling BIOS config option C-states on firehose6 to avoid perf
   hangs
-- writeahead now creates +1 bmap beyond EOF when using
-  `msctl repl-status`
 - when paging into upsch, hold items in cache instead of continually
   paging in single units so reduce SQL?
 - does ptrunc adjust st_blocks-related fields correctly?
 - MARKFREE is staying on clients in /pylon2 MDS and not clearing
-- slvr_remove_all() is still causing problems because a sliver cannot clear
+- slvr_remove_all() is still causing problems because a sliver cannot
+ clear
 - convert IOS RECLAIM processing to the batch RPC API
 
+zfs tuning
 - tune metaslab_df_free_pct zfs/slashd
+- try zfs_vdev_cache_size nonzero in SLASH2 MDS and IOS
 
 - 01/11/2016: We still have connection issue: MDS can't contact IOS because
   it is down.  When I restart IOS (lime), it took ages to connect. Perhaps
