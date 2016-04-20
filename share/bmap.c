@@ -139,7 +139,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	if (b) {
 		if (!BMAP_TRYLOCK(b)) {
 			pfl_rwlock_unlock(&f->fcmh_rwlock);
-			usleep(30);
+			usleep(10);
 			goto restart;
 		}
 
@@ -165,6 +165,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 		if (bnew)
 			psc_pool_return(bmap_pool, bnew);
 		*new_bmap = 0;
+		OPSTAT_INCR("bmapcache.hit");
 		return (b);
 	}
 	if (bnew == NULL) {
@@ -177,6 +178,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 		goto restart;
 	}
 	b = bnew;
+
+	OPSTAT_INCR("bmapcache.miss");
 
 	*new_bmap = 1;
 	memset(b, 0, bmap_pool->ppm_master->pms_entsize);
