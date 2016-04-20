@@ -591,8 +591,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	    idx++, last = curr) {
 		curr = psc_dynarray_getpos(biorqs, idx + *indexp);
 
-		if (curr->biorq_retries && !bmap_flush_biorq_expired(curr, 0))
+		if (curr->biorq_retries && !bmap_flush_biorq_expired(curr, 0)) {
+			OPSTAT_INCR("msl.bmap-flush-wait-retry");
 			break;
+		}
 
 		/*
 		 * If any member is expired then we'll push everything
