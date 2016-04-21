@@ -386,6 +386,11 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		PFL_GOTOERR(out, rc);
 
 	b = r->biorq_bmap;
+	BMAP_LOCK(b);
+	rc = msl_bmap_lease_tryext(b, 1);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
 	BMAP_LOCK(b);
