@@ -206,7 +206,9 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Set READ or WRITE as access mode on an open file bmap.
+ * Set READ or WRITE as access mode on an open file bmap. Called by 
+ * bmo_mode_chngf().
+ *
  * @b: bmap.
  * @rw: access mode to set the bmap to.
  */
@@ -386,7 +388,9 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-	msl_bmap_stash_lease(b, &mp->sbd, rc, "extend");
+
+	if (!rc)
+		msl_bmap_stash_lease(b, &mp->sbd, rc, "extend");
 	/*
 	 * Unflushed data in this bmap is now invalid.
 	 *
@@ -552,11 +556,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 			return (0);
 		}
 		DEBUG_BMAP(PLL_DIAG, b, "blocking on lease renewal");
-		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_LEASEEXTREQ);
-		rc = bmap_2_bci(b)->bci_error;
-		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		return (rc);
 	}
 
 	/* if we aren't in the expiry window, bail */
@@ -590,52 +590,48 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 
 	mq->sbd = *sbd;
 
-	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
-	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (!blocking) {
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc) {
+			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+			bmap_wake_locked(b);
+			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
+		}
+		return (0);
+	}
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
-	BMAP_LOCK(b);
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
-	if (rc) {
-		struct bmap_cli_info *bci = bmap_2_bci(b);
-		/*
-		 * Match what is done in msl_rmc_bmltryext_cb().
-		 */
-		if (rc == -SLERR_ION_OFFLINE) {
-			rc = EHOSTDOWN;
-			bci->bci_nreassigns = 0;
-		}
-		PFL_GETTIMESPEC(&bci->bci_etime);
-		bci->bci_error = rc;
-		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-		b->bcm_flags |= BMAPF_LEASEFAILED;
 
-		bmap_wake_locked(b);
-		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-
-		pscrpc_req_finished(rq);
-		if (csvc)
-			sl_csvc_decref(csvc);
-
-	} else if (blocking) {
-		/*
-		 * We should never cache data without a lease.
-		 */
-		OPSTAT_INCR("msl.bmap-lease-ext-wait");
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_LEASEEXTREQ);
-		rc = bmap_2_bci(b)->bci_error;
-		BMAP_ULOCK(b);
-	} else
-		BMAP_ULOCK(b);
-
-	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_retry(pfr, &rc)) {
 		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 		bmap_2_bci(b)->bci_error = 0;
+		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+		BMAP_LOCK(b);
+		if (csvc) {
+			sl_csvc_decref(csvc);
+			csvc = NULL;
+		}
 		goto retry;
 	}
+
+
+	BMAP_LOCK(b);
+	if (!rc)
+		 msl_bmap_stash_lease(b, &mp->sbd, rc, "extend");
+	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+		"lease extension req (rc=%d) (secs=%d)", rc, secs);
+	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	if (csvc)
+		sl_csvc_decref(csvc);
 
 	return (rc);
 }
@@ -728,7 +724,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 
 /*
  * Perform a blocking 'LEASEBMAP' operation to retrieve one or more
- * bmaps from the MDS.
+ * bmaps from the MDS. Called via bmo_retrievef().
  *
  * @b: the bmap ID to retrieve.
  * @rw: read or write access
@@ -760,6 +756,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
+
+	bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -783,7 +781,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
-		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			sl_csvc_decref(csvc);
@@ -824,6 +821,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 			 */
 			nanosleep(&diowait_duration, NULL);
 
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		goto retry;
 	}
 
@@ -846,11 +844,11 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		goto retry;
 	}
 
 	if (!rc) {
-
 		FCMH_LOCK(f);
 		msl_fcmh_stash_inode(f, &mp->ino);
 		FCMH_ULOCK(f);
@@ -860,12 +858,13 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b);
 
-		b->bcm_flags &= ~BMAPF_LOADING;
 		b->bcm_flags |= BMAPF_LOADED;
-		BMAP_ULOCK(b);
-	} else
+	} else {
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
+		BMAP_LOCK(b);
+	}
 
+	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	pscrpc_req_finished(rq);
 	rc = abs(rc);
 	return (rc);
