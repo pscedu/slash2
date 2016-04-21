@@ -779,10 +779,10 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	    b->bcm_bmapno);
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
-	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
-	rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_rmc_bmlget_cb;
 	if (flags & BMAPGETF_NONBLOCK) {
+		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
