@@ -93,65 +93,43 @@ msl_bmap_init(struct bmap *b)
  */
 void
 msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
-    int rc, const char *action)
+    const char *action)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	BMAP_LOCK_ENSURE(b);
 
-	if (rc) {
-		/*
- 		 * We should not do this for blocking case. It will open
- 		 * a window to destroy the bmap. It should not be done
- 		 * if we are async.
- 		 */
-		/*
-		 * If the MDS replies with SLERR_ION_OFFLINE then don't
-		 * bother with further retry attempts.
-		 */
-		if (rc == -SLERR_ION_OFFLINE) {
-			rc = EHOSTDOWN;
-			bci->bci_nreassigns = 0;
-		}
-		PFL_GETTIMESPEC(&bci->bci_etime);
-		bci->bci_error = rc;
-		b->bcm_flags |= BMAPF_LEASEFAILED;
+	psc_assert(sbd->sbd_seq);
+	psc_assert(sbd->sbd_fg.fg_fid);
+	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
-		DEBUG_BMAP(PLL_ERROR, b, "stash lease failed action=%s "
-		    "rc=%d", action, rc);
-	} else {
-		psc_assert(sbd->sbd_seq);
-		psc_assert(sbd->sbd_fg.fg_fid);
-		psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+	if (b->bcm_flags & BMAPF_WR)
+		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
-		if (b->bcm_flags & BMAPF_WR)
-			psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+	/* overwrite previous error */
+	bci->bci_error = 0;
+	b->bcm_flags &= ~BMAPF_LEASEFAILED;
+	if (msl_force_dio)
+		b->bcm_flags |= BMAPF_DIO;
 
-		/* overwrite previous error */
-		bci->bci_error = 0;
-		b->bcm_flags &= ~BMAPF_LEASEFAILED;
-		if (msl_force_dio)
-			b->bcm_flags |= BMAPF_DIO;
+	/*
+	 * Record the start time.
+	 *
+	 * XXX the directio status of the bmap needs to be
+	 *     returned by the MDS so we can set the proper
+	 * expiration time.
+	 */
+	PFL_GETTIMESPEC(&bci->bci_etime);
+	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
+	    &bci->bci_etime);
 
-		/*
-		 * Record the start time.
-		 *
-		 * XXX the directio status of the bmap needs to be
-		 *     returned by the MDS so we can set the proper
-		 * expiration time.
-		 */
-		PFL_GETTIMESPEC(&bci->bci_etime);
-		timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
-		    &bci->bci_etime);
+	*bmap_2_sbd(b) = *sbd;
 
-		*bmap_2_sbd(b) = *sbd;
-
-		DEBUG_BMAP(PLL_DIAG, b, "stash lease; action=%s "
-		    "nseq=%"PRId64" ios=%#x "
-		    "etime="PSCPRI_TIMESPEC,
-		    action, sbd->sbd_seq, sbd->sbd_ios,
-		    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
-	}
+	DEBUG_BMAP(PLL_DIAG, b, "stash lease; action=%s "
+	    "nseq=%"PRId64" ios=%#x "
+	    "etime="PSCPRI_TIMESPEC,
+	    action, sbd->sbd_seq, sbd->sbd_ios,
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 }
 
 int
@@ -168,7 +146,7 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 
 	BMAP_LOCK(b);
 	if (!rc) {
-		msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange");
+		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
@@ -323,7 +301,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	if (!rc) {
 		struct sl_resource *r;
 		BMAP_LOCK(b);
-		msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange");
+		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
@@ -365,7 +343,8 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-	msl_bmap_stash_lease(b, &mp->sbd, rc, "reassign");
+	if (!rc)
+		msl_bmap_stash_lease(b, &mp->sbd, "reassign");
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 
@@ -391,7 +370,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	if (!rc)
-		msl_bmap_stash_lease(b, &mp->sbd, rc, "extend");
+		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	/*
 	 * Unflushed data in this bmap is now invalid.
 	 *
@@ -627,7 +606,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 
 	BMAP_LOCK(b);
 	if (!rc)
-		 msl_bmap_stash_lease(b, &mp->sbd, rc, "extend");
+		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 		"lease extension req (rc=%d) (secs=%d)", rc, secs);
@@ -708,7 +687,7 @@ msl_rmc_bmlget_cb(struct pscrpc_request *rq,
 		FCMH_ULOCK(f);
 
 		BMAP_LOCK(b);
-		msl_bmap_stash_lease(b, &mp->sbd, rc, "get");
+		msl_bmap_stash_lease(b, &mp->sbd, "get");
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b);
 
@@ -857,7 +836,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		FCMH_ULOCK(f);
 
 		BMAP_LOCK(b);
-		msl_bmap_stash_lease(b, &mp->sbd, rc, "get");
+		msl_bmap_stash_lease(b, &mp->sbd, "get");
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b);
 
