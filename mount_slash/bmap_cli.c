@@ -335,7 +335,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		BMAP_ULOCK(b);
 	}
 
-	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		goto retry;
@@ -643,7 +643,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			goto retry; 
 	}
 
-	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		if (csvc) {
