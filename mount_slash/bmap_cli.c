@@ -236,7 +236,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
-	return (rc);
+	return (0);
 }
 
 /*
@@ -395,7 +395,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 
-	return (rc);
+	return (0);
 }
 
 /*
@@ -550,7 +550,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_MODECHNG;
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
-	return (rc);
+	return (0);
 }
 
 /*
