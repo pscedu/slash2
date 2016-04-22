@@ -333,38 +333,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 
 __static int
-msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
-	struct srm_leasebmapext_rep *mp;
-	int rc;
-
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
-
-	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-
-	if (!rc)
-		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-	/*
-	 * Unflushed data in this bmap is now invalid.
-	 *
-	 * XXX Move the bmap out of the fid cache so that others
-	 * don't stumble across it while its active I/O's are
-	 * failed.
-	 */
-
-	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-
-	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-	sl_csvc_decref(csvc);
-
-	return (rc);
-}
-
-__static int
 msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
@@ -465,6 +433,38 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
+}
+
+__static int
+msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct srm_leasebmapext_rep *mp;
+	int rc;
+
+	BMAP_LOCK(b);
+	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
+
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+
+	if (!rc)
+		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	/*
+	 * Unflushed data in this bmap is now invalid.
+	 *
+	 * XXX Move the bmap out of the fid cache so that others
+	 * don't stumble across it while its active I/O's are
+	 * failed.
+	 */
+
+	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+
+	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	sl_csvc_decref(csvc);
+
+	return (rc);
 }
 
 /*
