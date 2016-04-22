@@ -298,6 +298,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			sl_csvc_decref(csvc);
+			b->bcm_flags &= ~BMAPF_LOADING;
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		}
 		return (0);
@@ -620,6 +621,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		if (rc) {
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
+			b->bcm_flags &= ~BMAPF_MODECHNG;
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		}
 		return (0);
