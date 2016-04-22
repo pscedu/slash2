@@ -206,6 +206,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		b->bcm_flags &= ~BMAPF_LOADING;
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
+		/* ignore all errors for background operation */
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_LOADING;
 	}
@@ -378,6 +379,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
+	/* ignore all errors for background operation */
 	if (!rc)
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	/*
@@ -537,6 +539,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	BMAP_LOCK(b);
+	/* ignore all errors for background operation */
 	if (!rc) {
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
