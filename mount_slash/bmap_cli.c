@@ -194,7 +194,7 @@ msl_bmap_diowait(struct pscfs_req *pfr,
 		pflfs_req_sleep_rel(pfr, diowait_duration);
 	} else
 		/*
-		 * The background flusher need to grab lease too.
+		 * The background flusher needs to grab lease too.
 		 */
 		nanosleep(diowait_duration, NULL);
 	return (1);
@@ -224,15 +224,13 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 		msl_bmap_reap_init(b);
 
-		/* asynchronous */
-		b->bcm_flags &= ~BMAPF_LOADING;
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
 		/* ignore all errors for background operation */
 		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAPF_LOADING;
 	}
 
+	b->bcm_flags &= ~BMAPF_LOADING;
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 	return (0);
@@ -390,7 +388,6 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	 */
 
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 
@@ -703,9 +700,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		msl_bmap_stash_lease(b, &mp->sbd, "reassign");
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
-
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
-
 	sl_csvc_decref(csvc);
 
 	return (rc);
