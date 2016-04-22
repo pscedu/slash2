@@ -179,12 +179,12 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 }
 
-void
-msl_bmap_lease_diowait(struct pscfs_req *pfr, 
+__static int
+msl_bmap_diowait(struct pscfs_req *pfr, 
     struct timespec *diowait_duration, int nretries)
 {
 	if (nretries > BMAP_DIOWAIT_MAX_TRIES)
-		return;
+		return (0);
 
 	timespecadd(diowait_duration, diowait_duration, diowait_duration);
 	if (timespeccmp(diowait_duration, &slc_bmap_diowait_max, >))
@@ -198,6 +198,7 @@ msl_bmap_lease_diowait(struct pscfs_req *pfr,
 		 * GETBMP with no PFLFS request?
 		 */
 		nanosleep(diowait_duration, NULL);
+	return (1);
 }
 
 __static int
@@ -306,6 +307,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	} 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
+ out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-retrieve-diowait");
 
@@ -314,11 +316,10 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		msl_bmap_lease_diowait(pfr, &diowait_duration, nretries);
-		goto retry;
+		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
+			goto retry; 
 	}
 
- out:
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
@@ -638,9 +639,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		msl_bmap_lease_diowait(pfr, &diowait_duration, nretries);
-
-		goto retry;
+		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
+			goto retry; 
 	}
 
 	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
