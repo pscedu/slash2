@@ -432,8 +432,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		pfr = pft->pft_pfr;
 	}
 
- retry:
-
 	BMAP_LOCK_ENSURE(b);
 
 	/* already waiting for LEASEEXT reply */
@@ -467,6 +465,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	sbd = bmap_2_sbd(b);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
+ retry:
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		goto out;
@@ -497,9 +496,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
  out:
 
 	if (rc && slc_rpc_retry(pfr, &rc)) {
-		BMAP_LOCK(b);
-		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-		BMAP_LOCK(b);
 		if (csvc) {
 			sl_csvc_decref(csvc);
 			csvc = NULL;
