@@ -315,8 +315,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 		nretries++;
 		msl_bmap_lease_diowait(pfr, &diowait_duration, nretries);
-
-		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		goto retry;
 	}
 
