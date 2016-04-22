@@ -252,8 +252,7 @@ struct sl_expcli_ops {
 
 #define _SLRPC_REP_IN(csvc, rq, flags, error, mp)			\
 	({								\
-		(error) = slrpc_rep_in((csvc), (rq), (flags),		\
-		    (error));						\
+		(error) = slrpc_rep_in((csvc), (rq), (flags), (error));	\
 									\
 		if ((error) || (mp)->rc) {				\
 			static struct pfl_opstat *_opst_err;		\
@@ -283,7 +282,6 @@ struct sl_expcli_ops {
 		_error = slrpc_waitrep((csvc), (rq), sizeof(*(mp)),	\
 		    &(mp), (flags));					\
 		_SLRPC_REP_IN((csvc), (rq), (flags), _error, (mp));	\
-		_error;							\
 	})
 
 #define SL_RSX_WAITREP(csvc, rq, mp)					\

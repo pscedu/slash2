@@ -90,7 +90,7 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 			slrpc_ops.slrpc_req_out_failed(csvc, rq);
 		return (rc);
 	}
-	return (slrpc_rep_in(csvc, rq, flags, rc));
+	return (0);
 }
 
 int
