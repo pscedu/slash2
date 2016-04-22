@@ -168,6 +168,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	PFL_GETTIMESPEC(&bci->bci_etime);
 	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
 	    &bci->bci_etime);
+	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
 
 	*bmap_2_sbd(b) = *sbd;
 
@@ -454,12 +455,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		BMAP_ULOCK(b);
 		return (0);
 	}
-
-	if (b->bcm_flags & BMAPF_LEASEEXPIRED)
-		b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
-
 	b->bcm_flags |= BMAPF_LEASEEXTREQ;
-
 	BMAP_ULOCK(b);
 
 	sbd = bmap_2_sbd(b);
