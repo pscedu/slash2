@@ -357,6 +357,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		BMAP_LOCK(b);
 	}
 
+	b->bcm_flags &= ~BMAPF_LOADING;
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 	pscrpc_req_finished(rq);
