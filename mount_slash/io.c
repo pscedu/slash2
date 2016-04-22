@@ -2156,7 +2156,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (rc)
 			PFL_GOTOERR(out2, rc);
 
-		rc = msl_bmap_lease_tryext(b, 1);
+		rc = msl_bmap_lease_extend(b, 1);
 		if (rc) {
 			bmap_op_done(b);
 			PFL_GOTOERR(out2, rc);

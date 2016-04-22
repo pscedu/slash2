@@ -182,7 +182,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 }
 
 __static int
-msl_rmc_bmlget_cb(struct pscrpc_request *rq,
+msl_bmap_retrieve_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMLGET_CBARG_CSVC];
@@ -276,7 +276,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
+		rq->rq_interpret_reply = msl_bmap_retrieve_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			sl_csvc_decref(csvc);
@@ -368,7 +368,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 
 __static int
-msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
+msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -414,7 +414,7 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
  *	holders of open file descriptors.
  */
 int
-msl_bmap_lease_tryext(struct bmap *b, int blocking)
+msl_bmap_lease_extend(struct bmap *b, int blocking)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -492,7 +492,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
+		rq->rq_interpret_reply = msl_bmap_lease_extend_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			BMAP_LOCK(b);
@@ -540,7 +540,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 }
 
 int
-msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
+msl_bmap_modeset_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMODECHG_CBARG_CSVC];
@@ -649,7 +649,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
+		rq->rq_interpret_reply = msl_bmap_modeset_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			pscrpc_req_finished(rq);
@@ -740,7 +740,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 
 __static int
-msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
+msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -765,7 +765,7 @@ msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
 }
 
 void
-msl_bmap_lease_tryreassign(struct bmap *b)
+msl_bmap_lease_reassign(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info  *bci  = bmap_2_bci(b);
@@ -824,7 +824,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_rmc_bmlreassign_cb;
+	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 
  out:

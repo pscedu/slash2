@@ -77,8 +77,8 @@ bmap_2_bci(struct bmap *b)
 #define bmpc_2_bmap(bmpc)	(((struct bmap *)bmpc) - 1)
 
 void	 msl_bmap_cache_rls(struct bmap *);
-int	 msl_bmap_lease_tryext(struct bmap *, int);
-void	 msl_bmap_lease_tryreassign(struct bmap *);
+int	 msl_bmap_lease_extend(struct bmap *, int);
+void	 msl_bmap_lease_reassign(struct bmap *);
 
 void	 bmap_biorq_expire(struct bmap *);
 

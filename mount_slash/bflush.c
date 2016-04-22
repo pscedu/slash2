@@ -367,7 +367,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * If we were able to connect to an IOS, but the RPC fails
 	 * somehow, try to use a different IOS if possible.
 	 */
-	msl_bmap_lease_tryreassign(r->biorq_bmap);
+	msl_bmap_lease_reassign(r->biorq_bmap);
 }
 
 __static void
@@ -387,7 +387,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	b = r->biorq_bmap;
 	BMAP_LOCK(b);
-	rc = msl_bmap_lease_tryext(b, 1);
+	rc = msl_bmap_lease_extend(b, 1);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -744,7 +744,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			 * although with a different patch.
 			 */
 			BMAP_LOCK(b);
-			msl_bmap_lease_tryext(b, 0);
+			msl_bmap_lease_extend(b, 0);
 		}
 		psc_dynarray_reset(&bmaps);
 	}
