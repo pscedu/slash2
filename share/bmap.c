@@ -281,6 +281,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		b->bcm_flags |= BMAPF_LOADED;
 		bmap_wake_locked(b);
 	}
+	if (rc)
+		goto out;
 
  loaded:
 	/*
@@ -303,7 +305,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 * bmo_mode_chngf is currently CLI only and is
 	 * msl_bmap_modeset().
 	 */
-	if (rc == 0 && bmaprw && !(bmaprw & b->bcm_flags) &&
+	if (bmaprw && !(bmaprw & b->bcm_flags) &&
 	    sl_bmap_ops.bmo_mode_chngf) {
 
 		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
