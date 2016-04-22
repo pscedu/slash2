@@ -38,7 +38,6 @@ struct bmap_cli_info {
 	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
 	struct timespec		 bci_etime;		/* current expire time */
 	struct pfl_rwlock	 bci_rwlock;		/* page tree rwlock */
-	int			 bci_error;		/* lease request error */
 	int			 bci_flush_rc;		/* flush error */
 	int			 bci_nreassigns;	/* number of reassigns */
 	sl_ios_id_t		 bci_prev_sliods[SL_MAX_IOSREASSIGN];

@@ -155,8 +155,6 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	if (b->bcm_flags & BMAPF_WR)
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
-	/* overwrite previous error */
-	bci->bci_error = 0;
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -499,7 +497,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	if (rc && slc_rpc_retry(pfr, &rc)) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-		bmap_2_bci(b)->bci_error = 0;
 		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 		BMAP_LOCK(b);
 		if (csvc) {
