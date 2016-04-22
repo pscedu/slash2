@@ -64,7 +64,7 @@ struct psc_listcache		 msl_bmaptimeoutq;
 
 int				 msl_max_nretries = 256;
 
-#define MIN_COALESCE_RPC_SZ	LNET_MTU
+#define MIN_COALESCE_RPC_SZ	 LNET_MTU
 
 struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
@@ -780,8 +780,7 @@ bmap_flush(void)
 			continue;
 		}
 
-		if (bmap_flushable(b) ||
-		   (b->bcm_flags & BMAPF_TOFREE)) {
+		if (bmap_flushable(b)) {
 			b->bcm_flags |= BMAPF_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
@@ -797,20 +796,8 @@ bmap_flush(void)
 		b = psc_dynarray_getpos(&bmaps, i);
 		bmpc = bmap_2_bmpc(b);
 
-		/*
-		 * Try to catch recently expired bmaps before they are
-		 * processed by the write back flush mechanism.
-		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAPF_TOFREE) {
-			b->bcm_flags &= ~BMAPF_SCHED;
-			bmpc_biorqs_destroy_locked(b,
-			    bmap_2_bci(b)->bci_error);
-			goto next;
-		}
-
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
-
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
@@ -826,7 +813,6 @@ bmap_flush(void)
 		}
 		psc_dynarray_reset(&reqs);
 
- next:
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);

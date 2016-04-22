@@ -288,7 +288,6 @@ void	 bmap_pagecache_destroy(void);
 void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
 void	 bmpc_biorqs_flush(struct bmap *);
-void	 bmpc_biorqs_destroy_locked(struct bmap *, int);
 
 void	bmpc_expire_biorqs(struct bmap_pagecache *);
 
