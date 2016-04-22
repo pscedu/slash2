@@ -297,9 +297,11 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		rq->rq_interpret_reply = msl_bmap_retrieve_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
-			sl_csvc_decref(csvc);
+			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_LOADING;
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
 		}
 		return (0);
 	} 
@@ -619,10 +621,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rq->rq_interpret_reply = msl_bmap_modeset_cb;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
-			pscrpc_req_finished(rq);
-			sl_csvc_decref(csvc);
+			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_MODECHNG;
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
 		}
 		return (0);
 	}
