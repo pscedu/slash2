@@ -331,30 +331,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	return (rc);
 }
 
-__static int
-msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
-	struct srm_reassignbmap_rep *mp;
-	int rc;
-
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
-
-	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-	if (!rc)
-		msl_bmap_stash_lease(b, &mp->sbd, "reassign");
-
-	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
-
-	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
-
-	sl_csvc_decref(csvc);
-
-	return (rc);
-}
 
 __static int
 msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
@@ -383,6 +359,31 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	sl_csvc_decref(csvc);
+
+	return (rc);
+}
+
+__static int
+msl_rmc_bmlreassign_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct srm_reassignbmap_rep *mp;
+	int rc;
+
+	BMAP_LOCK(b);
+	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
+
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	if (!rc)
+		msl_bmap_stash_lease(b, &mp->sbd, "reassign");
+
+	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
+
+	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+
 	sl_csvc_decref(csvc);
 
 	return (rc);
