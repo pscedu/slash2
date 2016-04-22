@@ -53,6 +53,7 @@ msl_resm_throttle_wake(struct sl_resm *m, int rc)
 	RPCI_LOCK(rpci);
 	if (abs(rc) == ETIMEDOUT)
 		rpci->rpci_timeouts++;
+	psc_assert(rpci->rpci_infl_rpcs > 0);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
