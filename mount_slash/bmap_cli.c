@@ -89,6 +89,55 @@ msl_bmap_init(struct bmap *b)
 }
 
 /*
+ * Compare entries in a file's replica table for ordering purposes:
+ * - replicas on any member of our preferred IOS(es).
+ * - replicas on non-archival resources.
+ * - replicas on non-degraded resources.
+ * - anything else.
+ */
+int
+#ifdef HAVE_QSORT_R_THUNK
+slc_reptbl_cmp(void *arg, const void *a, const void *b)
+#else
+slc_reptbl_cmp(const void *a, const void *b, void *arg)
+#endif
+{
+	const int *ta = a, *tb = b;
+	const struct fcmh_cli_info *fci = arg;
+	struct sl_resource *xr, *yr;
+	int rc, xv, yv;
+
+	xr = libsl_id2res(fci->fci_inode.reptbl[*ta].bs_id);
+	yr = libsl_id2res(fci->fci_inode.reptbl[*tb].bs_id);
+
+	/* check general validity */
+	xv = xr == NULL ? 1 : -1;
+	yv = yr == NULL ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc || (xr == NULL && yr == NULL))
+		return (rc);
+
+	/* check if preferred I/O system */
+	xv = xr->res_flags & RESF_PREFIOS ? 1 : -1;
+	yv = yr->res_flags & RESF_PREFIOS ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	/* try non-archival and non-degraded IOS */
+	xv = xr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	yv = yr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	/* try degraded IOS */
+	xv = res2rpci(xr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
+	yv = res2rpci(yr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
+	return (CMP(xv, yv));
+}
+
+/*
  * Save a bmap lease received from the MDS.
  */
 void
@@ -607,54 +656,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 	return (rc);
 }
 
-/*
- * Compare entries in a file's replica table for ordering purposes:
- * - replicas on any member of our preferred IOS(es).
- * - replicas on non-archival resources.
- * - replicas on non-degraded resources.
- * - anything else.
- */
-int
-#ifdef HAVE_QSORT_R_THUNK
-slc_reptbl_cmp(void *arg, const void *a, const void *b)
-#else
-slc_reptbl_cmp(const void *a, const void *b, void *arg)
-#endif
-{
-	const int *ta = a, *tb = b;
-	const struct fcmh_cli_info *fci = arg;
-	struct sl_resource *xr, *yr;
-	int rc, xv, yv;
-
-	xr = libsl_id2res(fci->fci_inode.reptbl[*ta].bs_id);
-	yr = libsl_id2res(fci->fci_inode.reptbl[*tb].bs_id);
-
-	/* check general validity */
-	xv = xr == NULL ? 1 : -1;
-	yv = yr == NULL ? 1 : -1;
-	rc = CMP(xv, yv);
-	if (rc || (xr == NULL && yr == NULL))
-		return (rc);
-
-	/* check if preferred I/O system */
-	xv = xr->res_flags & RESF_PREFIOS ? 1 : -1;
-	yv = yr->res_flags & RESF_PREFIOS ? 1 : -1;
-	rc = CMP(xv, yv);
-	if (rc)
-		return (rc);
-
-	/* try non-archival and non-degraded IOS */
-	xv = xr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
-	yv = yr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
-	rc = CMP(xv, yv);
-	if (rc)
-		return (rc);
-
-	/* try degraded IOS */
-	xv = res2rpci(xr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
-	yv = res2rpci(yr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
-	return (CMP(xv, yv));
-}
 
 __static int
 msl_rmc_bmlget_cb(struct pscrpc_request *rq,
