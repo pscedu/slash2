@@ -402,7 +402,6 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-
 	sl_csvc_decref(csvc);
 
 	return (rc);
@@ -619,6 +618,8 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 			sl_csvc_decref(csvc);
 			csvc = NULL;
 		}
+		pscrpc_req_finished(rq);
+		rq = NULL;
 		goto retry;
 	}
 
@@ -633,6 +634,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 	if (csvc)
 		sl_csvc_decref(csvc);
 
+	pscrpc_req_finished(rq);
 	return (rc);
 }
 
