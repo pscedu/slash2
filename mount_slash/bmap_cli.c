@@ -435,11 +435,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
  retry:
 
 	BMAP_LOCK_ENSURE(b);
-	if (b->bcm_flags & BMAPF_TOFREE) {
-		psc_assert(!blocking);
-		BMAP_ULOCK(b);
-		return (0); // 1?
-	}
 
 	/* already waiting for LEASEEXT reply */
 	if (b->bcm_flags & BMAPF_LEASEEXTREQ) {
