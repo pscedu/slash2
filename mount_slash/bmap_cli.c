@@ -272,7 +272,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	    b->bcm_bmapno);
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
-	if (flags & BMAPGETF_NONBLOCK) {
+	if (!blocking) {
 		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
@@ -621,7 +621,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		 * Write enabled bmaps are allowed to read with no
 		 * further action being taken.
 		 */
-		if (flags & BMAPGETF_NONBLOCK) {
+		if (!blocking) {
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_MODECHNG;
 			BMAP_ULOCK(b);
@@ -633,7 +633,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
-	/* XXX respect NONBLOCK */
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
