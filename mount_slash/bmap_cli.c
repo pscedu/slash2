@@ -600,8 +600,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	fci = fcmh_2_fci(f);
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
-
- retry:
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
 
 	if (b->bcm_flags & BMAPF_WR) {
@@ -618,9 +616,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 
 	/* Add write mode to this bmap. */
-
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
+ retry:
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
