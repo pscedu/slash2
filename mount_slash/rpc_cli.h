@@ -43,7 +43,6 @@ struct slrpc_cservice;
 
 enum {
 	MSL_BMLGET_CBARG_BMAP,
-	MSL_BMLGET_CBARG_COMPL,
 	MSL_BMLGET_CBARG_CSVC
 };
 
