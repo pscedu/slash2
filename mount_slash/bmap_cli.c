@@ -179,6 +179,27 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 }
 
+void
+msl_bmap_lease_diowait(struct pscfs_req *pfr, 
+    struct timespec *diowait_duration, int nretries)
+{
+	if (nretries > BMAP_DIOWAIT_MAX_TRIES)
+		return;
+
+	timespecadd(diowait_duration, diowait_duration, diowait_duration);
+	if (timespeccmp(diowait_duration, &slc_bmap_diowait_max, >))
+		*diowait_duration = slc_bmap_diowait_max;
+
+	if (pfr) {
+		pflfs_req_sleep_rel(pfr, diowait_duration);
+	} else
+		/*
+		 * XXX should this case exist: a blocking
+		 * GETBMP with no PFLFS request?
+		 */
+		nanosleep(diowait_duration, NULL);
+}
+
 __static int
 msl_bmap_retrieve_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -293,28 +314,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
-			return (ETIMEDOUT);
-
-		if (nretries) {
-			timespecadd(&diowait_duration,
-			    &diowait_duration, &diowait_duration);
-			if (timespeccmp(&diowait_duration,
-			    &slc_bmap_diowait_max, >))
-				diowait_duration = slc_bmap_diowait_max;
-		}
-
-		if (pfr) {
-			rc = pflfs_req_sleep_rel(pfr,
-			    &diowait_duration);
-			if (rc)
-				PFL_GOTOERR(out, rc);
-		} else
-			/*
-			 * XXX should this case exist: a blocking
-			 * GETBMP with no PFLFS request?
-			 */
-			nanosleep(&diowait_duration, NULL);
+		msl_bmap_lease_diowait(pfr, &diowait_duration, nretries);
 
 		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		goto retry;
@@ -640,28 +640,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (nretries > BMAP_DIOWAIT_MAX_TRIES)
-			return (ETIMEDOUT);
-
-		if (nretries) {
-			timespecadd(&diowait_duration,
-			    &diowait_duration, &diowait_duration);
-			if (timespeccmp(&diowait_duration,
-			    &slc_bmap_diowait_max, >))
-				diowait_duration = slc_bmap_diowait_max;
-		}
-
-		if (pfr) {
-			rc = pflfs_req_sleep_rel(pfr,
-			    &diowait_duration);
-			if (rc)
-				PFL_GOTOERR(out, rc);
-		} else
-			/*
-			 * XXX should this case exist: a blocking
-			 * MODESET with no PFLFS request?
-			 */
-			nanosleep(&diowait_duration, NULL);
+		msl_bmap_lease_diowait(pfr, &diowait_duration, nretries);
 
 		goto retry;
 	}
