@@ -209,7 +209,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
  retry:
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
 
-	bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
@@ -240,6 +239,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	mq->prefios[0] = msl_pref_ios;
 
 	if (!blocking) {
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
@@ -323,7 +323,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 
 	b->bcm_flags &= ~BMAPF_MODECHNG;
-	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+	bmap_wake_locked(b);
+	BMAP_ULOCK(b);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -553,7 +554,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 		b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
 
 	b->bcm_flags |= BMAPF_LEASEEXTREQ;
-	bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 
 	BMAP_ULOCK(b);
 
@@ -570,6 +570,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 	mq->sbd = *sbd;
 
 	if (!blocking) {
+		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_rmc_bmltryext_cb;
@@ -610,7 +611,8 @@ msl_bmap_lease_tryext(struct bmap *b, int blocking)
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 		"lease extension req (rc=%d) (secs=%d)", rc, secs);
-	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	bmap_wake_locked(b);
+	BMAP_ULOCK(b);
 	if (csvc)
 		sl_csvc_decref(csvc);
 
@@ -739,7 +741,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
  retry:
 
-	bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -760,6 +761,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	DEBUG_BMAP(PLL_DIAG, b, "retrieving bmap");
 
 	if (flags & BMAPGETF_NONBLOCK) {
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_BMLGET_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_rmc_bmlget_cb;
@@ -826,7 +828,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
-		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		goto retry;
 	}
 
@@ -846,7 +847,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		BMAP_LOCK(b);
 	}
 
-	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+	bmap_wake_locked(b);
+	BMAP_ULOCK(b);
 	pscrpc_req_finished(rq);
 	rc = abs(rc);
 	return (rc);
