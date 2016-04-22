@@ -159,7 +159,6 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMODECHG_CBARG_CSVC];
-	struct psc_compl *compl = args->pointer_arg[MSL_BMODECHG_CBARG_COMPL];
 	struct bmap *b = args->pointer_arg[MSL_BMODECHG_CBARG_BMAP];
 	struct srm_bmap_chwrmode_rep *mp;
 	struct sl_resource *r;
@@ -168,8 +167,8 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	BMAP_LOCK(b);
-	msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange");
 	if (!rc) {
+		msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
@@ -186,21 +185,12 @@ msl_rmc_bmodechg_cb(struct pscrpc_request *rq,
 		}
 	}
 
-	if (compl) {
-		BMAP_ULOCK(b);
+	b->bcm_flags &= ~BMAPF_MODECHNG;
 
-		/* synchronous */
-		psc_compl_ready(compl, rc);
-	} else {
-		/* asynchronous */
-		b->bcm_flags &= ~BMAPF_MODECHNG;
-
-		/*
-		 * Will do bmap_wake_locked() for anyone waiting for us.
-		 */
-		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
-	}
-
+	/*
+	 * Will do bmap_wake_locked() for anyone waiting for us.
+	 */
+	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 	return (rc);
 }
@@ -224,7 +214,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct pscfs_req *pfr = NULL;
 	struct fcmh_cli_info *fci;
 	struct psc_thread *thr;
-	struct psc_compl compl;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
 
@@ -242,6 +231,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
  retry:
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
 
+	bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
@@ -271,34 +261,21 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
 
-	if (blocking) {
-		psc_compl_init(&compl);
-		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_COMPL] =
-		    &compl;
-	}
-	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
-	rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
-	rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
-	if (flags & BMAPGETF_NONBLOCK)
-		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
-	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc) {
-		if (flags & BMAPGETF_NONBLOCK)
+	if (!blocking) {
+		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_BMODECHG_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_rmc_bmodechg_cb;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc) {
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
-		else
-			psc_compl_destroy(&compl);
-		PFL_GOTOERR(out, rc);
-	}
-	if (flags & BMAPGETF_NONBLOCK)
+		}
 		return (0);
+	}
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
-	/* XXX this should multiwait on pfr_interrupted */
-	rc = psc_compl_wait(&compl);
-	psc_compl_destroy(&compl);
-
-	rq = NULL;
-	csvc = NULL;
-
+ out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
@@ -333,21 +310,45 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		goto retry;
 	}
 
-	if (rc)
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
-		    rc);
-
- out:
-	pscrpc_req_finished(rq);
-	rq = NULL;
-	if (csvc) {
-		sl_csvc_decref(csvc);
-		csvc = NULL;
+	if (blocking && rc && slc_rpc_retry(pfr, &rc)) {
+		pscrpc_req_finished(rq);
+		rq = NULL;
+		if (csvc) {
+			sl_csvc_decref(csvc);
+			csvc = NULL;
+		}
+		goto retry;
 	}
 
-	if (blocking && rc && slc_rpc_retry(pfr, &rc))
-		goto retry;
+	if (!rc) {
+		struct sl_resource *r;
+		BMAP_LOCK(b);
+		msl_bmap_stash_lease(b, &mp->sbd, rc, "modechange");
+		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
+		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
+		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
+		if (r->res_type == SLREST_ARCHIVAL_FS) {
+			/*
+			 * Prepare for archival write by ensuring that
+			 * all subsequent IO's are direct.
+			 */
+			b->bcm_flags |= BMAPF_DIO;
 
+			BMAP_ULOCK(b);
+			msl_bmap_cache_rls(b);
+			BMAP_LOCK(b);
+		}
+	} else {
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
+		    rc);
+		BMAP_LOCK(b);
+	}
+
+	b->bcm_flags &= ~BMAPF_MODECHNG;
+	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
