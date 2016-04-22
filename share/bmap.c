@@ -281,10 +281,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		b->bcm_flags |= BMAPF_LOADED;
 		bmap_wake_locked(b);
 	}
-	if (rc)
-		goto out;
 
  loaded:
+
+	if (rc || !bmaprw)
+		goto out;
+
 	/*
 	 * Others wishing to access this bmap in the same mode must wait
 	 * until MODECHNG ops have completed.  If the desired mode is
@@ -305,8 +307,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 * bmo_mode_chngf is currently CLI only and is
 	 * msl_bmap_modeset().
 	 */
-	if (bmaprw && !(bmaprw & b->bcm_flags) &&
-	    sl_bmap_ops.bmo_mode_chngf) {
+	if (!(bmaprw & b->bcm_flags) && sl_bmap_ops.bmo_mode_chngf) {
 
 		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
 		b->bcm_flags |= BMAPF_MODECHNG;
