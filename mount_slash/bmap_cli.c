@@ -388,20 +388,6 @@ msl_rmc_bmltryext_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
-int
-msl_bmap_lease_secs_remaining(struct bmap *b)
-{
-	struct timespec ts;
-	int secs;
-
-	BMAP_LOCK(b);
-	PFL_GETTIMESPEC(&ts);
-	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
-	BMAP_ULOCK(b);
-
-	return (secs);
-}
-
 void
 msl_bmap_lease_tryreassign(struct bmap *b)
 {
