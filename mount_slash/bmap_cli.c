@@ -194,8 +194,7 @@ msl_bmap_diowait(struct pscfs_req *pfr,
 		pflfs_req_sleep_rel(pfr, diowait_duration);
 	} else
 		/*
-		 * XXX should this case exist: a blocking
-		 * GETBMP with no PFLFS request?
+		 * The background flusher need to grab lease too.
 		 */
 		nanosleep(diowait_duration, NULL);
 	return (1);
