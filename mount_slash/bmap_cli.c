@@ -480,7 +480,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		if (rc) {
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-			bmap_wake_locked(b);
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
@@ -550,10 +549,6 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	}
 
 	b->bcm_flags &= ~BMAPF_MODECHNG;
-
-	/*
-	 * Will do bmap_wake_locked() for anyone waiting for us.
-	 */
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 	return (rc);
