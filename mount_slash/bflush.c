@@ -716,7 +716,6 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			DEBUG_BMAP(PLL_DEBUG, b, "begin");
 			if ((b->bcm_flags & BMAPF_TOFREE) ||
-			    (b->bcm_flags & BMAPF_LEASEFAILED) ||
 			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -782,8 +781,7 @@ bmap_flush(void)
 		}
 
 		if (bmap_flushable(b) ||
-		   (b->bcm_flags & BMAPF_TOFREE) ||
-		   (b->bcm_flags & BMAPF_LEASEFAILED)) {
+		   (b->bcm_flags & BMAPF_TOFREE)) {
 			b->bcm_flags |= BMAPF_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
@@ -804,7 +802,7 @@ bmap_flush(void)
 		 * processed by the write back flush mechanism.
 		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_LEASEFAILED)) {
+		if (b->bcm_flags & BMAPF_TOFREE) {
 			b->bcm_flags &= ~BMAPF_SCHED;
 			bmpc_biorqs_destroy_locked(b,
 			    bmap_2_bci(b)->bci_error);

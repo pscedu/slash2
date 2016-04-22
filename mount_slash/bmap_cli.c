@@ -157,7 +157,6 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	/* overwrite previous error */
 	bci->bci_error = 0;
-	b->bcm_flags &= ~BMAPF_LEASEFAILED;
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -440,12 +439,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		psc_assert(!blocking);
 		BMAP_ULOCK(b);
 		return (0); // 1?
-	}
-
-	if (b->bcm_flags & BMAPF_LEASEFAILED) {
-		rc = bmap_2_bci(b)->bci_error;
-		BMAP_ULOCK(b);
-		return (rc);
 	}
 
 	/* already waiting for LEASEEXT reply */
@@ -1283,7 +1276,6 @@ dump_bmap_flags(uint32_t flags)
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAPF_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAPF_REASSIGNREQ, &flags, &seq);
-	PFL_PRFLAG(BMAPF_LEASEFAILED, &flags, &seq);
 	PFL_PRFLAG(BMAPF_LEASEEXPIRED, &flags, &seq);
 	PFL_PRFLAG(BMAPF_SCHED, &flags, &seq);
 	PFL_PRFLAG(BMAPF_BENCH, &flags, &seq);
