@@ -392,7 +392,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 
-	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 
 	return (rc);
@@ -477,7 +477,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	mq->sbd = *sbd;
 
 	if (!blocking) {
-		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+		bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_bmap_lease_extend_cb;
@@ -486,7 +486,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 			bmap_wake_locked(b);
-			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
@@ -499,7 +499,6 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	if (rc && slc_rpc_retry(pfr, &rc)) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
-		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 		BMAP_LOCK(b);
 		if (csvc) {
 			sl_csvc_decref(csvc);
@@ -742,7 +741,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 
-	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 
 	sl_csvc_decref(csvc);
 
@@ -788,7 +787,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	    "(nreassigns=%d)", bci->bci_sbd.sbd_ios,
 	    bci->bci_nreassigns);
 
-	bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
+	bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 
 	BMAP_ULOCK(b);
 
@@ -819,7 +818,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	if (rc) {
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REASSIGNREQ;
-		bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 
 		pscrpc_req_finished(rq);
 		if (csvc)
