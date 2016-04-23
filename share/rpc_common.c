@@ -85,12 +85,7 @@ slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
 		slrpc_ops.slrpc_req_out(csvc, rq);
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pfl_rsx_waitrep(rq, plen, mpp);
-	if (rc) {
-		if (slrpc_ops.slrpc_req_out_failed)
-			slrpc_ops.slrpc_req_out_failed(csvc, rq);
-		return (rc);
-	}
-	return (0);
+	return (rc);
 }
 
 int
