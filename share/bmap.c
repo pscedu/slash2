@@ -284,6 +284,11 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
  loaded:
 
+	/*
+ 	 * Early bail out should be safe.  There is only one place the client
+ 	 * will do a bmap lookup.  And it that code path, we just add DIO flag
+ 	 * to the bmap.  See msrcm_handle_bmapdio().
+ 	 */
 	if (rc || !bmaprw)
 		goto out;
 
