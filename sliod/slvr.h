@@ -173,6 +173,10 @@ struct sli_iocb {
 	struct aiocb		  iocb_aiocb;
 	void			(*iocb_cbf)(struct sli_iocb *);
 	int			  iocb_rc;
+	/* 
+	 * hold fcmh busy until all I/Os are done.
+	 */ 
+	struct fidc_membh	 *iocb_fcmh;
 };
 
 #define slvr_lookup(n, bii)						\
