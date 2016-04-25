@@ -1616,6 +1616,12 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
+	/*
+ 	 * XXX Use SL_RSX_WAITREP() API in the blocking case so that the 
+ 	 * callback only has to deal with read-ahead, making it easy to 
+ 	 * know when to retry.  In addition, ignore all errors for 
+ 	 * non-blocking case.
+ 	 */
 	rq->rq_interpret_reply = msl_readdir_cb;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
