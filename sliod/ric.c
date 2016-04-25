@@ -234,8 +234,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	seqno = bim_getcurseq();
 	if (rw == SL_WRITE && mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
-		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
-		    rw, mq->sbd.sbd_seq, seqno);
+		psclog_warnx("%s: seq %"PRId64" < bim_getcurseq(%"PRId64")",
+		    rw == SL_WRITE ? "write" : "read", 
+		    mq->sbd.sbd_seq, seqno);
 		mp->rc = -PFLERR_KEYEXPIRED;
 		OPSTAT_INCR("key-expire");
 		return (mp->rc);
