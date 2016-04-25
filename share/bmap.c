@@ -131,7 +131,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	lb.bcm_bmapno = n;
 
  restart:
-	if (doalloc && bnew)
+	if (bnew)
 		pfl_rwlock_wrlock(&f->fcmh_rwlock);
 	else
 		pfl_rwlock_rdlock(&f->fcmh_rwlock);
