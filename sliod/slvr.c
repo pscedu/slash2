@@ -342,7 +342,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 }
 
 __static struct sli_iocb *
-sli_aio_iocb_new(struct slvr *s, struct fidc_membh *f)
+sli_aio_iocb_new(struct slvr *s)
 {
 	struct sli_iocb *iocb;
 
@@ -357,7 +357,6 @@ sli_aio_iocb_new(struct slvr *s, struct fidc_membh *f)
 	 * and non-AIO cases.
 	 */
 	iocb->iocb_slvr = s;
-	iocb->iocb_fcmh = f;
 	iocb->iocb_cbf = slvr_fsaio_done;
 
 	return (iocb);
@@ -442,13 +441,13 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
 }
 
 int
-sli_aio_register(struct slvr *s, struct fidc_membh *f)
+sli_aio_register(struct slvr *s)
 {
 	struct sli_iocb *iocb;
 	struct aiocb *aio;
 	int error;
 
-	iocb = sli_aio_iocb_new(s, f);
+	iocb = sli_aio_iocb_new(s);
 
 	SLVR_LOCK(s);
 	s->slvr_flags |= SLVRF_FAULTING;
@@ -507,7 +506,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		OPSTAT_INCR("fsio-read");
 
 		if (slcfg_local->cfg_async_io)
-			return (sli_aio_register(s, f));
+			return (sli_aio_register(s));
 
 		/*
 		 * Do full sliver read, ignoring specific off and len.
