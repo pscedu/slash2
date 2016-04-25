@@ -179,8 +179,10 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 	/*
 	 * If our generation number is still unknown try to set it here.
 	 */
-	if (fcmh_2_gen(f) == FGEN_ANY && fgen != FGEN_ANY)
+	if (fcmh_2_gen(f) == FGEN_ANY && fgen != FGEN_ANY) {
+		OPSTAT_INCR("generation-fix");
 		fcmh_2_gen(f) = fgen;
+	}
 
 	if (fgen > fcmh_2_gen(f)) {
 		struct sl_fidgen oldfg;
@@ -241,7 +243,7 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 			f->fcmh_flags &= ~FCMH_CTOR_FAILED;
 			f->fcmh_flags |= FCMH_IOD_BACKFILE;
 		}
-
+		OPSTAT_INCR("generation-same");
 	}
 	return (rc);
 }
