@@ -44,9 +44,9 @@
 #define BMAP_CACHE_MAX		1024
 
 /*
- * Total wait time is 2+4+8+16+32+60*(32-5) = 1682 seconds.
+ * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
  */
-#define BMAP_DIOWAIT_SEC	2
+#define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
 #define BMAP_DIOWAIT_MAX_TRIES	32
 
 const struct timespec slc_bmap_diowait_max = { 60, 0 };
@@ -247,7 +247,7 @@ int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
-	struct timespec diowait_duration = { BMAP_DIOWAIT_SEC, 0 };
+	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -561,7 +561,7 @@ __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
-	struct timespec diowait_duration = { BMAP_DIOWAIT_SEC, 0 };
+	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
