@@ -61,7 +61,6 @@ void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
-
 void
 msl_bmap_reap(void)
 {
@@ -180,7 +179,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 }
 
 __static int
-msl_bmap_diowait(struct pscfs_req *pfr, 
+msl_bmap_diowait(struct pscfs_req *pfr,
     struct timespec *diowait_duration, int nretries)
 {
 	if (nretries > BMAP_DIOWAIT_MAX_TRIES)
@@ -249,6 +248,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { BMAP_DIOWAIT_SEC, 0 };
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
@@ -258,7 +258,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -270,7 +269,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -304,7 +302,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 			sl_csvc_decref(csvc);
 		}
 		return (0);
-	} 
+	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
@@ -317,7 +315,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 		nretries++;
 		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
-			goto retry; 
+			goto retry;
 	}
 
 	if (csvc) {
@@ -353,7 +351,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
+		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
+		    rc);
 		BMAP_LOCK(b);
 	}
 
@@ -364,7 +363,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	rc = abs(rc);
 	return (rc);
 }
-
 
 __static int
 msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
@@ -383,6 +381,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	/* ignore all errors for background operation */
 	if (!rc)
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+
 	/*
 	 * Unflushed data in this bmap is now invalid.
 	 *
@@ -419,11 +418,11 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmapext_req *mq;
 	struct srm_leasebmapext_rep *mp;
-	struct srt_bmapdesc *sbd;
-	struct timespec ts;
 	struct pscfs_req *pfr = NULL;
+	struct srt_bmapdesc *sbd;
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
+	struct timespec ts;
 	int secs, rc;
 
 	thr = pscthr_get();
@@ -488,30 +487,28 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
-
 	if (rc && slc_rpc_retry(pfr, &rc)) {
+		pscrpc_req_finished(rq);
+		rq = NULL;
 		if (csvc) {
 			sl_csvc_decref(csvc);
 			csvc = NULL;
 		}
-		pscrpc_req_finished(rq);
-		rq = NULL;
 		goto retry;
 	}
-
 
 	BMAP_LOCK(b);
 	if (!rc)
 		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-		"lease extension req (rc=%d) (secs=%d)", rc, secs);
+	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
-	if (csvc)
-		sl_csvc_decref(csvc);
 
 	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -554,7 +551,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Set READ or WRITE as access mode on an open file bmap. Called by 
+ * Set READ or WRITE as access mode on an open file bmap. Called by
  * bmo_mode_chngf().
  *
  * @b: bmap.
@@ -642,7 +639,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 		nretries++;
 		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
-			goto retry; 
+			goto retry;
 	}
 
 	if (rc && slc_rpc_retry(pfr, &rc)) {
@@ -657,6 +654,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 	if (!rc) {
 		struct sl_resource *r;
+
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
@@ -687,7 +685,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		sl_csvc_decref(csvc);
 	return (rc);
 }
-
 
 __static int
 msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
@@ -789,7 +786,6 @@ msl_bmap_lease_reassign(struct bmap *b)
 			sl_csvc_decref(csvc);
 	}
 }
-
 
 /*
  * Called from rcm.c (SRMT_BMAPDIO).
