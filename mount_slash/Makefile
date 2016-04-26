@@ -40,6 +40,7 @@ SRCS+=		${SLASH_BASE}/share/version.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 
 MODULES+=	pthread gcrypt pscfs-hdrs rpc ctl pfl-hdrs
+DEPLIST+=	${PFL_BASE}:libpfl.a
 
 DEFINES+=	-D_SLASH_CLIENT -DSL_FAULT_PREFIX='"slash2/"'
 
