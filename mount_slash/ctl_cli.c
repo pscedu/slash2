@@ -876,7 +876,8 @@ struct psc_ctlop msctlops[] = {
 void
 msctlthr_main(struct psc_thread *thr)
 {
-	char *s, *newstr, *fn = (void *)msl_ctlsockfn;
+	char expandbuf[PATH_MAX];
+	char *s, *fn = (void *)msl_ctlsockfn;
 	int rc;
 
 	for (;;) {
@@ -887,12 +888,11 @@ msctlthr_main(struct psc_thread *thr)
 		s = strstr(fn, "%n");
 		if (s == NULL)
 			break;
-		rc = pfl_asprintf(&newstr, "%.*s%s%s", (int)(s - fn),
-		    fn, "mount_slash", s + 2);
+		rc = snprintf(expandbuf, sizeof(expandbuf), "%.*s%s%s",
+		    (int)(s - fn), fn, "mount_slash", s + 2);
 		if (rc == -1)
 			psc_fatal("expand %s", msl_ctlsockfn);
-		PSCFREE(fn);
-		fn = newstr;
+		fn = expandbuf;
 	}
 
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
