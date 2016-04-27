@@ -76,8 +76,8 @@ slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
  * Common processing to all SLASH2 communication happens herein.
  */
 int
-slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq, int plen, void *mpp, int flags)
+slrpc_waitrep(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int plen, void *mpp)
 {
 	int rc;
 

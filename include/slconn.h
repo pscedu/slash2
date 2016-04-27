@@ -280,7 +280,7 @@ struct sl_expcli_ops {
 		int _error;						\
 									\
 		_error = slrpc_waitrep((csvc), (rq), sizeof(*(mp)),	\
-		    &(mp), (flags));					\
+		    &(mp));						\
 		_SLRPC_REP_IN((csvc), (rq), (flags), _error, (mp));	\
 	})
 
@@ -395,7 +395,7 @@ int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
 	    struct pscrpc_request **, int, int, void *);
 
 int	 slrpc_waitrep(struct slashrpc_cservice *,
-	    struct pscrpc_request *, int, void *, int);
+	    struct pscrpc_request *, int, void *);
 
 int	 slrpc_allocrepn(struct pscrpc_request *, void *, int, void *,
 	    int, const int *, int);
