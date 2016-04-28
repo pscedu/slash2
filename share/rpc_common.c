@@ -55,6 +55,8 @@ struct psc_poolmgr	*sl_csvc_pool;
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slashrpc_cservice, csvc_lentry);
 
+psc_spinlock_t		 sl_conn_lock = SPINLOCK_INIT;
+
 /*
  * Create a new generic RPC request.  Common processing in all SLASH2
  * communication happens herein.
@@ -1018,10 +1020,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		CSVC_ULOCK(csvc);
 	else {
 		if ((flags & CSVCF_NONBLOCK) && mw) {
-			struct psc_thread *thr;
-
-			thr = pscthr_get();
-			PSCTHR_LOCK(thr);
+			spinlock(&sl_conn_lock);
 			if (pfl_multiwait_hascond(mw,
 			    &(*csvcp)->csvc_mwc))
 				pfl_multiwait_setcondwakeable(mw,
@@ -1029,7 +1028,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			else
 				pfl_multiwait_addcond(mw,
 				    &(*csvcp)->csvc_mwc);
-			PSCTHR_ULOCK(thr);
+			freelock(&sl_conn_lock);
 		}
 		sl_csvc_decref(*csvcp);
 	}
@@ -1075,9 +1074,9 @@ slconnthr_main(struct psc_thread *thr)
 
 		pfl_multiwait_entercritsect(&sct->sct_mw);
 
-		PSCTHR_LOCK(thr);
+		spinlock(&sl_conn_lock);
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
-			PSCTHR_ULOCK(thr);
+			freelock(&sl_conn_lock);
 			csvc = sl_csvc_get(scp->scp_csvcp,
 			    scp->scp_flags | CSVCF_NONBLOCK, NULL,
 			    scp->scp_peernids,
@@ -1124,16 +1123,17 @@ slconnthr_main(struct psc_thread *thr)
 			if (scp->scp_flags & CSVCF_WANTFREE) {
 				sl_csvc_decref(csvc);
 
-				PSCTHR_LOCK(thr);
+				spinlock(&sl_conn_lock);
 				psc_dynarray_remove(&sct->sct_monres,
 				    scp);
+				freelock(&sl_conn_lock);
 
 				PSCFREE(scp);
 			}
  next:
-			(void)PSCTHR_RLOCK(thr);
+			spinlock(&sl_conn_lock);
 		}
-		PSCTHR_ULOCK(thr);
+		freelock(&sl_conn_lock);
 		pfl_multiwait_secs(&sct->sct_mw, &dummy, 1);
 	}
 }
@@ -1176,9 +1176,9 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	sct = thr->pscthr_private;
 	scp = &csvc->csvc_params;
 
-	PSCTHR_LOCK(thr);
+	spinlock(&sl_conn_lock);
 	rc = psc_dynarray_exists(&sct->sct_monres, scp);
-	PSCTHR_ULOCK(thr);
+	freelock(&sl_conn_lock);
 	if (rc)
 		return;
 
@@ -1188,11 +1188,11 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
 
-	PSCTHR_LOCK(thr);
+	spinlock(&sl_conn_lock);
 	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
 		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
 	psc_dynarray_add(&sct->sct_monres, scp);
-	PSCTHR_ULOCK(thr);
+	freelock(&sl_conn_lock);
 }
 
 /*
