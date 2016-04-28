@@ -154,7 +154,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (p)
 		*p = '\0';
 	fprintf(fp, "This pool was created %s on %s\n", strtm,
-	    pflsys_get_hostname());
+	    psc_hostname);
 	fclose(fp);
 
 	if (ion)
