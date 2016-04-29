@@ -3764,7 +3764,7 @@ msattrflushthr_spawn(void)
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_ATTR_FLUSH,
-		    msattrflushthr_main, NULL, sizeof(*maft),
+		    msattrflushthr_main, sizeof(*maft),
 		    "msattrflushthr%d", i);
 		maft = msattrflushthr(thr);
 		pfl_multiwait_init(&maft->maft_mw, "%s",

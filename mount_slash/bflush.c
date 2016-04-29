@@ -902,7 +902,7 @@ msbmapthr_spawn(void)
 	    bci_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_FLUSH, msflushthr_main, NULL,
+		thr = pscthr_init(MSTHRT_FLUSH, msflushthr_main,
 		    sizeof(struct msflush_thread), "msflushthr%d", i);
 		mflt = msflushthr(thr);
 		pfl_multiwait_init(&mflt->mflt_mw, "%s",
@@ -910,13 +910,13 @@ msbmapthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, NULL,
+	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
 	    sizeof(struct msbwatch_thread), "msbwatchthr");
 	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main, NULL,
+	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main,
 	    sizeof(struct msbrelease_thread), "msbreleasethr");
 	pfl_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
 	    thr->pscthr_name);

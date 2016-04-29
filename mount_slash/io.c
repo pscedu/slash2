@@ -2395,7 +2395,7 @@ return;
 
 	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    NULL, sizeof(*mirt), "msioretrythr%d", i);
+		    sizeof(*mirt), "msioretrythr%d", i);
 		mirt = msioretrythr(thr);
 		pfl_multiwait_init(&mirt->mirt_mw, "%s",
 		    thr->pscthr_name);

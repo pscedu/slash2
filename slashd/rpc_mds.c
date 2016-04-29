@@ -97,7 +97,7 @@ slm_rpc_initsvc(void)
 	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 
-	thr = pscthr_init(SLMTHRT_RCM, slmrcmthr_main, NULL,
+	thr = pscthr_init(SLMTHRT_RCM, slmrcmthr_main,
 	    sizeof(*srcm), "slmrcmthr");
 	srcm = thr->pscthr_private;
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);

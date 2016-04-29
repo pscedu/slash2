@@ -986,7 +986,7 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_mds_max_inflight_rpcs);
 
-	thr = pscthr_init(MSTHRT_CTL, msctlthr_main, NULL,
+	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
 	pscthr_setready(thr);
 }

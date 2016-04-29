@@ -2244,7 +2244,7 @@ mds_journal_init(uint64_t fsuuid)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, slmjnsthr_main, NULL, 0,
+	pscthr_init(SLMTHRT_JNAMESPACE, slmjnsthr_main, 0,
 	    "slmjnsthr");
 #endif
 }

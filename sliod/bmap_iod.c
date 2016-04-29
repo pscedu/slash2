@@ -448,7 +448,7 @@ slibmaprlsthr_spawn(void)
 		    0, "slibmaprlsthr%d", i);
 
 	pscthr_init(SLITHRT_BMAPLEASE_PROC, slibmapleaseprocthr_main,
-	    NULL, 0, "slibmapleaseprocthr");
+	    0, "slibmapleaseprocthr");
 }
 
 void
