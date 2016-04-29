@@ -974,6 +974,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.rpc_max_retry", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_max_retry);
 
+	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_statfs_pref_ios_only);
