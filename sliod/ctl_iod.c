@@ -651,6 +651,8 @@ slictlthr_main(const char *fn)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &sli_min_space_reserve_pct);
 
+	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+
 	psc_ctlparam_register_var("sys.sync_max_writes",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &sli_sync_max_writes);
