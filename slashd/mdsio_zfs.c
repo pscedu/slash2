@@ -111,7 +111,7 @@ zfsslash2_init(void)
 	fuse_session = fuse_lowlevel_new(&args.pfa_av, &pscfs_fuse_ops,
 	    sizeof(pscfs_fuse_ops), NULL);
 
-	pscthr_init(SLMTHRT_ZFS_KSTAT, slmzfskstatmthr_main, NULL, 0,
+	pscthr_init(SLMTHRT_ZFS_KSTAT, slmzfskstatmthr_main, 0,
 	    "slmzfskstatmthr");
 
 	fuse_mount_options = "";
