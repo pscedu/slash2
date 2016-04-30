@@ -1149,7 +1149,7 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
 	struct slconn_thread *sct;
 	struct psc_thread *thr;
 
-	thr = pscthr_init(thrtype, slconnthr_main, NULL, sizeof(*sct),
+	thr = pscthr_init(thrtype, slconnthr_main, sizeof(*sct),
 	    "%sconnthr", thrnamepre);
 	sct = thr->pscthr_private;
 	sct->sct_pingupc = pingupc;
