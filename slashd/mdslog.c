@@ -1951,8 +1951,7 @@ mds_journal_init(uint64_t fsuuid)
 	 * Also, without this thread, we can't write anything into ZFS.
 	 * We can't even read from ZFS because a read changes atime.
 	 */
-	pscthr_init(SLMTHRT_CURSOR, slmjcursorthr_main, NULL, 0,
-	    "slmjcursorthr");
+	pscthr_init(SLMTHRT_CURSOR, slmjcursorthr_main, 0, "slmjcursorthr");
 
 	psc_waitq_init(&nsupd_prg.waitq);
 	psc_waitq_init(&reclaim_prg.waitq);
@@ -2234,8 +2233,7 @@ mds_journal_init(uint64_t fsuuid)
 	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);
 
 	/* Always start a thread to send reclaim updates. */
-	pscthr_init(SLMTHRT_JRECLAIM, slmjreclaimthr_main, NULL, 0,
-	    "slmjreclaimthr");
+	pscthr_init(SLMTHRT_JRECLAIM, slmjreclaimthr_main, 0, "slmjreclaimthr");
 	if (!npeers)
 		return;
 
@@ -2244,8 +2242,7 @@ mds_journal_init(uint64_t fsuuid)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, slmjnsthr_main, 0,
-	    "slmjnsthr");
+	pscthr_init(SLMTHRT_JNAMESPACE, slmjnsthr_main, 0, "slmjnsthr");
 #endif
 }
 
