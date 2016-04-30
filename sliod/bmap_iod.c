@@ -444,7 +444,7 @@ slibmaprlsthr_spawn(void)
 	    bir_lentry, "bmlreleaseq");
 
 	for (i = 0; i < NBMAPRLS_THRS; i++)
-		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main, NULL,
+		pscthr_init(SLITHRT_BMAPRLS, slibmaprlsthr_main,
 		    0, "slibmaprlsthr%d", i);
 
 	pscthr_init(SLITHRT_BMAPLEASE_PROC, slibmapleaseprocthr_main,
