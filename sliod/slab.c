@@ -90,6 +90,5 @@ slab_cache_init(void)
 	    NULL);
 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 
-	pscthr_init(SLITHRT_BREAP, slibreapthr_main, NULL, 0,
-	    "slibreapthr");
+	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
 }

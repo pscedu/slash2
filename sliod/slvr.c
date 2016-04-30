@@ -1136,8 +1136,7 @@ slvr_cache_init(void)
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,
 		    "iocbpndg");
 
-		pscthr_init(SLITHRT_AIO, sliaiothr_main, NULL, 0,
-		    "sliaiothr");
+		pscthr_init(SLITHRT_AIO, sliaiothr_main, 0, "sliaiothr");
 	}
 
 	slab_cache_init();
