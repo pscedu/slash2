@@ -274,6 +274,6 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 void
 slmbmaptimeothr_spawn(void)
 {
-	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, NULL, 0,
+	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, 0,
 	    "slmbmaptimeothr");
 }
