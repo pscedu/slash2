@@ -543,6 +543,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 				 * the page so just treat it like a
 				 * wholesale error and toss the entire
 				 * page out.
+				 *
+				 * 04/30/2016: I saw this error duing 
+				 * testing, which is wrong.
 				 */
 				psc_dynarray_free(da_off);
 				PSCFREE(da_off);
