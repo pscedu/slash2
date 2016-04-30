@@ -560,11 +560,11 @@ slvr_worker_init(void)
 	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
 
 	for (i = 0; i < NSLVRCRC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, NULL, 0,
+		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, 0,
 		    "slislvrthr%d", i);
 
 	for (i = 0; i < NSLVRSYNC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, NULL, 0,
+		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
 
 	pscthr_init(SLITHRT_CRUD, slicrudthr_main, NULL, 0,
