@@ -367,6 +367,5 @@ sli_repl_init(void)
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_pending_lentry, "replwkpnd");
 
-	pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, NULL, 0,
-	    "slireplpndthr");
+	pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, "slireplpndthr");
 }
