@@ -493,8 +493,7 @@ sl_freapthr_main(struct psc_thread *thr)
 void
 sl_freapthr_spawn(int thrtype, const char *name)
 {
-	sl_freapthr = pscthr_init(thrtype, sl_freapthr_main, NULL, 0,
-	    name);
+	sl_freapthr = pscthr_init(thrtype, sl_freapthr_main, 0, name);
 }
 
 #if PFL_DEBUG > 0
