@@ -448,7 +448,7 @@ main(int argc, char *argv[])
 	if (argc != 1 && argc != 0)
 		usage();
 
-	pscthr_init(SLMTHRT_CTL, NULL, NULL,
+	pscthr_init(SLMTHRT_CTL, NULL, 
 	    sizeof(struct psc_ctlthr) +
 	    sizeof(struct slmctl_thread), "slmctlthr0");
 
@@ -676,8 +676,7 @@ main(int argc, char *argv[])
 	psc_waitq_wait(&slm_db_hipri_workq.plc_wq_want,
 	    &slm_db_hipri_workq.plc_lock);
 
-	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, NULL, 0,
-	    "slmbkdbthr");
+	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
 	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
