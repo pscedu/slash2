@@ -567,6 +567,6 @@ slvr_worker_init(void)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
 
-	pscthr_init(SLITHRT_CRUD, slicrudthr_main, NULL, 0,
+	pscthr_init(SLITHRT_CRUD, slicrudthr_main, 0,
 	    "slicrudthr");
 }
