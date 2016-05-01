@@ -79,30 +79,33 @@ bwc_release(struct bmpc_write_coalescer *bwc)
 /*
  * Initialize a bmap page cache entry.
  */
-int
-bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
+struct bmap_pagecache_entry *
+bmpce_alloc(int shallow)
 {
-	struct bmap_pagecache_entry *e = p;
-	void *base;
+	struct bmap_pagecache_entry *e;
 
-	base = e->bmpce_base;
+	if (shallow) {
+		e = psc_pool_shallowget(bmpce_pool);
+		if (!e)
+			return NULL;
+	} else
+		e = psc_pool_get(bmpce_pool);
+
 	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-	e->bmpce_base = base;
-	if (!e->bmpce_base)
-		e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
-	return (0);
+	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
+	return (e);
 }
-
+ 
 void
-bmpce_destroy(void *p)
+_bmpce_free(struct bmap_pagecache_entry *e)
 {
-	struct bmap_pagecache_entry *e = p;
-
+	e->bmpce_flags = BMPCEF_FREED;
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
+	psc_pool_return(bmpce_pool, e);
 }
 
 int
@@ -184,11 +187,11 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			pfl_rwlock_unlock(&bci->bci_rwlock);
 
 			if (flags & BMPCEF_READAHEAD) {
-				e2 = psc_pool_shallowget(bmpce_pool);
+				e2 = bmpce_alloc(1);
 				if (e2 == NULL)
 					return (EAGAIN);
 			} else
-				e2 = psc_pool_get(bmpce_pool);
+				e2 = bmpce_alloc(0);
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
@@ -216,7 +219,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		psc_pool_return(bmpce_pool, e2);
+		_bmpce_free(e2);
 	}
 
 	if (remove_idle) {
@@ -262,9 +265,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
-	bmpce_init(bmpce_pool, e);
-	e->bmpce_flags = BMPCEF_FREED;
-	psc_pool_return(bmpce_pool, e);
+	_bmpce_free(e);
 }
 
 void
@@ -553,7 +554,7 @@ bmpc_global_init(void)
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
+	    512, msl_bmpces_max, NULL, NULL, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
