@@ -486,6 +486,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
+	psc_ctlparam_register_simple("sys.next_fid",
+	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
+
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
@@ -495,9 +498,6 @@ slmctlthr_main(const char *fn)
 	    slctlparam_version_get, NULL);
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
-
-	psc_ctlparam_register_simple("sys.next_fid",
-	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_force_dio);
