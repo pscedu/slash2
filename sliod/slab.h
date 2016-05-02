@@ -41,7 +41,7 @@ struct slab {
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
-#define SLAB_CACHE_MIN		((size_t)64 * 1024 * 1024)	/* 64MiB */
+#define SLAB_CACHE_MIN		((size_t)128 * SLASH_SLVR_SIZE)	/* 128MiB */
 
 void	slab_cache_init(void);
 int	slab_cache_reap(struct psc_poolmgr *);
