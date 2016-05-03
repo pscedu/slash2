@@ -2386,24 +2386,6 @@ msreadaheadthr_spawn(void)
 }
 
 void
-msioretrythr_spawn(void)
-{
-	struct msioretry_thread *mirt;
-	struct psc_thread *thr;
-	int i;
-return;
-
-	for (i = 0; i < NUM_IO_RETRY_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_IORETRY, msioretrythr_main,
-		    sizeof(*mirt), "msioretrythr%d", i);
-		mirt = msioretrythr(thr);
-		pfl_multiwait_init(&mirt->mirt_mw, "%s",
-		    thr->pscthr_name);
-		pscthr_setready(thr);
-	}
-}
-
-void
 msl_readahead_svc_destroy(void)
 {
 	pfl_poolmaster_destroy(&slc_readaheadrq_poolmaster);

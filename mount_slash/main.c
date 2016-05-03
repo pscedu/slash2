@@ -3907,11 +3907,6 @@ msl_init(void)
 	    dce_key, dce_hentry, 3 * slcfg_local->cfg_fidcachesz - 1,
 	    dircache_ent_cmp, "namecache");
 
-	psc_poolmaster_init(&msl_retry_req_poolmaster,
-	    struct slc_retry_req, srr_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "retryrq");
-	msl_retry_req_pool = psc_poolmaster_getmgr(&msl_retry_req_poolmaster);
-
 	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "asyncrq");
@@ -3931,9 +3926,6 @@ msl_init(void)
 	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
 	    "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
-
-	pll_init(&slc_retry_req_list, struct slc_retry_req, srr_lentry,
-	    NULL);
 
 	/* Start up service threads. */
 	slrpc_initcli();
@@ -3962,7 +3954,6 @@ msl_init(void)
 	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
-	msioretrythr_spawn();
 
 	name = getenv("MDS");
 	if (name == NULL)

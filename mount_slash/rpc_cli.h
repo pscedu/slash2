@@ -145,8 +145,6 @@ msl_getmw(void)
 		return (&msbwatchthr(thr)->mbwt_mw);
 	case MSTHRT_FLUSH:
 		return (&msflushthr(thr)->mflt_mw);
-	case MSTHRT_IORETRY:
-		return (&msioretrythr(thr)->mirt_mw);
 	case PFL_THRT_FS:
 		return (&msfsthr(thr)->mft_mw);
 	case MSTHRT_RCI:
