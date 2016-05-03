@@ -2352,14 +2352,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 }
 
 void
-msioretrythr_main(struct psc_thread *thr)
-{
-	while (pscthr_run(thr)) {
-		sleep(100000);
-	}
-}
-
-void
 msreadaheadthr_spawn(void)
 {
 	struct msreadahead_thread *mrat;
