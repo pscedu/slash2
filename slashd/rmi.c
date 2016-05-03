@@ -61,6 +61,7 @@
 int
 slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
+	int rc;
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
 	struct bmap_mds_info *bmi;
@@ -80,17 +81,16 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 		return (mp->rc);
 #endif
 
-	mp->rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
-	if (mp->rc)
-		return (mp->rc);
+	mp->rc = rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
 
-	DEBUG_BMAP(PLL_DIAG, b, "sending to sliod");
-
-	bmi = bmap_2_bmi(b);
-	memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
-	memcpy(&mp->crcstates, bmi->bmi_crcstates, sizeof(mp->crcstates));
-	bmap_op_done(b);
-	return (0);
+	if (!rc) {
+		bmi = bmap_2_bmi(b);
+		memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
+		memcpy(&mp->crcstates, bmi->bmi_crcstates, sizeof(mp->crcstates));
+		bmap_op_done(b);
+	}
+	DEBUG_BMAP(rc ? PLL_ERROR: PLL_DIAG, b, "reply to sliod, rc = %d", rc);
+	return (rc);
 }
 
 /*
