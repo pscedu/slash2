@@ -266,7 +266,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	DEBUG_BMAP(PLL_DIAG, b, "loading bmap; flags=%d", flags);
 	BMAP_ULOCK(b);
 
-	/* mds_bmap_read(), iod_bmap_retrieve(), msl_bmap_retrieve() */
+	/* msl_bmap_retrieve(), iod_bmap_retrieve(), mds_bmap_read() */
 	rc = sl_bmap_ops.bmo_retrievef(b, flags);
 
 	BMAP_LOCK(b);
