@@ -298,7 +298,7 @@ struct bmpc_ioreq *
 #define bmpce_lookup(r, b, fl, off, wq, ep)				\
 	_bmpce_lookup(PFL_CALLERINFO(), (r), (b), (fl), (off), (wq), (ep))
 
-int	 bmpce_init(struct psc_poolmgr *, void *);
+int	 bmpce_init(struct psc_poolmgr *, void *, int);
 int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
 	     struct bmap *, int, uint32_t, struct psc_waitq *,
 	     struct bmap_pagecache_entry **);
