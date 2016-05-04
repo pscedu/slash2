@@ -103,7 +103,7 @@ bmpce_destroy(void *p)
 	struct bmap_pagecache_entry *e = p;
 
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
-	return (0);
+	return (1);
 }
 
 int

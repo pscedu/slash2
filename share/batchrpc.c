@@ -762,7 +762,7 @@ slrpc_batch_req_dtor(void *item)
 
 	PSCFREE(bq->bq_reqbuf);
 	PSCFREE(bq->bq_repbuf);
-	return (0);
+	return (1);
 }
 
 int
@@ -783,7 +783,7 @@ slrpc_batch_rep_dtor(void *item)
 
 	PSCFREE(bp->bp_reqbuf);
 	PSCFREE(bp->bp_repbuf);
-	return (0);
+	return (1);
 }
 
 /*

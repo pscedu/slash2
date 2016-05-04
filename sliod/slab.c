@@ -61,7 +61,7 @@ slab_destroy(void *pri)
 	struct slab *slb = pri;
 
 	PSCFREE(slb->slb_base);
-	return (0);
+	return (1);
 }
 
 void
