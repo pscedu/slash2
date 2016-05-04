@@ -1521,6 +1521,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
 	SL_GET_RQ_STATUSF(csvc, rq, mp,
@@ -1528,7 +1529,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	if (rc) {
  error:
-		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
+		DEBUG_REQ(PLL_ERROR, rq, buf, "rc=%d", rc);
 		msl_readdir_error(d, p, rc);
 	} else {
 		size_t len;

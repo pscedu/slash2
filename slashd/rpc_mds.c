@@ -111,6 +111,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
 	struct rpmi_ios *si;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	struct {
 		struct srt_statfs	f;
 		struct srt_bwqueued	bwq;
@@ -119,7 +120,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 	psc_assert(idx >= 0);
 	data = pscrpc_msg_buf(m, idx, sizeof(*data));
 	if (data == NULL) {
-		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
+		DEBUG_REQ(PLL_ERROR, rq, buf, "unable to import statfs");
 		return;
 	}
 	resm = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
@@ -128,7 +129,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 		return;
 	}
 	if (data->f.sf_frsize == 0) {
-		DEBUG_REQ(PLL_MAX, rq, "%s sent bogus STATFS",
+		DEBUG_REQ(PLL_MAX, rq, buf, "%s sent bogus STATFS",
 		    resm->resm_name);
 		return;
 	}
@@ -194,17 +195,18 @@ slm_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct pscrpc_msg *m = rq->rq_reqmsg;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	if (m->opc == SRMT_CONNECT) {
 		struct srm_connect_req *mq;
 
 		if (m->bufcount < 1) {
-			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
+			DEBUG_REQ(PLL_ERROR, rq, buf, "unable to export fsuuid");
 			return;
 		}
 		mq = pscrpc_msg_buf(m, 0, sizeof(*mq));
 		if (mq == NULL) {
-			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
+			DEBUG_REQ(PLL_ERROR, rq, buf, "unable to export fsuuid");
 			return;
 		}
 

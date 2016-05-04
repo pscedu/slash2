@@ -155,6 +155,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 	struct srm_connect_req *mq;
 	struct pscrpc_msg *m;
 	uint64_t fsuuid;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	if (rq->rq_status)
 		return;
@@ -180,7 +181,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		fsuuid = mp->fsuuid;
 	}
 	if (!fsuuid) {
-		DEBUG_REQ(PLL_WARN, rq, "invalid zero fsuuid");
+		DEBUG_REQ(PLL_WARN, rq, buf, "invalid zero fsuuid");
 		return;
 	}
 

@@ -428,6 +428,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	const struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct sl_resm *m;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
@@ -444,7 +445,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 * export so this is not a fatal condition but
 			 * should be noted.
 			 */
-			DEBUG_REQ(PLL_WARN, rq,
+			DEBUG_REQ(PLL_WARN, rq, buf,
 			    "duplicate connect msg detected");
 
 		/*
@@ -1288,11 +1289,12 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
     struct iovec *iov, int n)
 {
 	char tbuf[AUTHBUF_ALGLEN];
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc = 0;
 
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
-		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
+		DEBUG_REQ(PLL_FATAL, rq, buf, "authbuf did not hash "
 		    "correctly -- ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}

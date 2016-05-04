@@ -251,6 +251,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
+	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
 
 	m = libsl_ios2resm(bmap_2_ios(b));
@@ -274,7 +275,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	mq->sbd = *bmap_2_sbd(b);
 
-	DEBUG_REQ(PLL_DIAG, rq, "sending WRITE RPC to iosid=%#x "
+	DEBUG_REQ(PLL_DIAG, rq, buf, "sending WRITE RPC to iosid=%#x "
 	    "fid="SLPRI_FG" off=%u sz=%u ios=%u infl=%d",
 	    m->resm_res_id, SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset,
 	    mq->size, bmap_2_ios(b), rpci->rpci_infl_rpcs);

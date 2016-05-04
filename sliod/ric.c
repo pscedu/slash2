@@ -493,6 +493,7 @@ int
 sli_ric_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
+	char buf[PSCRPC_NIDSTR_SIZE];
 
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
@@ -500,7 +501,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 			rc = -PFLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc) {
-			DEBUG_REQ(PLL_ERROR, rq,
+			DEBUG_REQ(PLL_ERROR, rq, buf,
 			  "client has not issued SRMT_CONNECT");
 			goto out;
 		}
