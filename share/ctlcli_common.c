@@ -239,9 +239,11 @@ void
 sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_fcmh *scf = m;
+	char fidbuf[SL_FIDBUF_LEN];
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 	int width;
 
+	sl_sprintf_fgen(scf->scf_fg.fg_gen, fidbuf, SL_FIDBUF_LEN);
 	width = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	pfl_fmt_human(buf, scf->scf_size);
 	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
@@ -260,8 +262,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
 	    scf->scf_flags & FCMH_DELETED	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
-	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
-	    scf->scf_ptruncgen, scf->scf_utimgen);
+	    scf->scf_refcnt, fidbuf, scf->scf_ptruncgen, scf->scf_utimgen);
 	if (width > 6)
 		printf(" %6"PRIu64, scf->scf_blksize);
 	printf("\n");

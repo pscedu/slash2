@@ -176,37 +176,4 @@ sl_sprintf_fgen(slfgen_t fgen, char *buf, size_t len)
 	return (rc);
 }
 
-static __inline const char *
-sl_sprinta_fid(slfid_t fid)
-{
-	char *buf;
-
-	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
-	sl_sprintf_fid(fid, buf, SL_FIDBUF_LEN);
-	return (buf);
-}
-
-static __inline const char *
-sl_sprinta_fgen(slfgen_t fgen)
-{
-	char *buf;
-
-	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
-	sl_sprintf_fgen(fgen, buf, SL_FIDBUF_LEN);
-	return (buf);
-}
-
-static __inline const char *
-sl_sprintfa_fg(struct sl_fidgen *fg)
-{
-	char *buf;
-	int rc;
-
-	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
-	rc = sl_sprintf_fid(fg->fg_fid, buf, SL_FIDBUF_LEN);
-	buf[rc] = ':';
-	rc = sl_sprintf_fgen(fg->fg_gen, buf + rc, SL_FIDBUF_LEN - rc);
-	return (buf);
-}
-
 #endif /* _SLASH_FID_H_ */
