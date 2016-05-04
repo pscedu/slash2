@@ -54,10 +54,6 @@ typedef uint32_t sl_ios_id_t;
 #define SL_SITE_MASK		0xffff0000
 #define SL_RES_MASK		0x0000ffff	/* resource ID mask */
 
-/* thread local storage */
-#define SL_TLSIDX_FIDBUF	(PFL_TLSIDX_LASTRESERVED)
-#define SL_TLSIDX_INOBUF	(PFL_TLSIDX_LASTRESERVED + 1)
-
 #define SL_NAME_MAX		255		/* file name component length */
 #define SL_PATH_MAX		4096		/* file path name length */
 

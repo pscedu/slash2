@@ -53,6 +53,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	int rc, locked, vfsid;
 	uint16_t vers;
 	size_t nb;
+	char buf[LINE_MAX];
 
 	f = inoh_2_fcmh(ih);
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
@@ -78,12 +79,12 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc == SLERR_SHORTIO && od_crc == 0 &&
 	    pfl_memchk(&ih->inoh_ino, 0, sizeof(ih->inoh_ino))) {
 		if (!mds_inode_update_interrupted(vfsid, ih, &rc)) {
-			DEBUG_INOH(PLL_INFO, ih, "detected a new inode");
+			DEBUG_INOH(PLL_INFO, ih, buf, "detected a new inode");
 			mds_inode_od_initnew(ih);
 			rc = 0;
 		}
 	} else if (rc && rc != SLERR_SHORTIO) {
-		DEBUG_INOH(PLL_ERROR, ih, "inode read error %d", rc);
+		DEBUG_INOH(PLL_ERROR, ih, buf, "inode read error %d", rc);
 	} else {
 		psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 		if (crc != od_crc) {
@@ -95,20 +96,20 @@ mds_inode_read(struct slash_inode_handle *ih)
 			else if (vers && vers < INO_VERSION)
 				rc = mds_inode_update(vfsid, ih, vers);
 			else if (rc == SLERR_SHORTIO)
-				DEBUG_INOH(PLL_INFO, ih,
+				DEBUG_INOH(PLL_INFO, ih, buf,
 				    "short read I/O (%zd vs %zd)",
 				    nb, sizeof(ih->inoh_ino) +
 				    sizeof(od_crc));
 			else {
 				rc = EIO;
-				DEBUG_INOH(PLL_WARN, ih, "CRC failed "
+				DEBUG_INOH(PLL_WARN, ih, buf, "CRC failed "
 				    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 				    od_crc, crc);
 			}
 		}
 		if (rc == 0) {
 			ih->inoh_flags &= ~INOH_INO_NOTLOADED;
-			DEBUG_INOH(PLL_INFO, ih, "successfully loaded inode od");
+			DEBUG_INOH(PLL_INFO, ih, buf, "successfully loaded inode od");
 		}
 	}
 	INOH_URLOCK(ih, locked);
@@ -124,6 +125,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
+	char buf[LINE_MAX];
 
 	INOH_LOCK_ENSURE(ih);
 
@@ -152,11 +154,11 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 		rc = SLERR_SHORTIO;
 
 	if (rc)
-		DEBUG_INOH(PLL_ERROR, ih,
+		DEBUG_INOH(PLL_ERROR, ih, buf,
 		    "mdsio_pwritev: error (resid=%zd nb=%zd rc=%d)",
 		    sizeof(ih->inoh_ino) + sizeof(crc), nb, rc);
 	else {
-		DEBUG_INOH(PLL_INFO, ih, "wrote inode, "
+		DEBUG_INOH(PLL_INFO, ih, buf, "wrote inode, "
 		    "flags=%x size=%"PRIu64" data=%p",
 		    ih->inoh_flags, inoh_2_fsz(ih),
 		    inoh_2_mfh(ih));
@@ -176,6 +178,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
+	char buf[LINE_MAX];
 
 	INOH_LOCK_ENSURE(ih);
 
@@ -205,7 +208,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (rc == 0 && nb != INOX_SZ + sizeof(crc))
 		rc = SLERR_SHORTIO;
 	if (rc)
-		DEBUG_INOH(PLL_ERROR, ih, "mdsio_pwritev: error (rc=%d)",
+		DEBUG_INOH(PLL_ERROR, ih, buf, "mdsio_pwritev: error (rc=%d)",
 		    rc);
 
 	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
@@ -220,6 +223,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	uint64_t crc, od_crc;
 	int rc, vfsid;
 	size_t nb;
+	char buf[LINE_MAX];
 
 	INOH_LOCK_ENSURE(ih);
 
@@ -241,10 +245,10 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 		rc = 0;
 	} else if (rc) {
 		rc = -abs(rc);
-		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d", rc);
+		DEBUG_INOH(PLL_ERROR, ih, buf, "read inox: %d", rc);
 	} else if (nb != INOX_SZ + sizeof(od_crc)) {
 		rc = -SLERR_SHORTIO;
-		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d nb=%zu", rc, nb);
+		DEBUG_INOH(PLL_ERROR, ih, buf, "read inox: %d nb=%zu", rc, nb);
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 		if (crc != od_crc) {
@@ -333,7 +337,9 @@ _dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 void
 dump_inoh(const struct slash_inode_handle *ih)
 {
-	DEBUG_INOH(PLL_MAX, ih, "");
+	char buf[LINE_MAX];
+
+	DEBUG_INOH(PLL_MAX, ih, buf, "");
 }
 
 void

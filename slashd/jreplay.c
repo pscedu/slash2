@@ -242,6 +242,7 @@ mds_replay_ino(void *jent, int op)
 	struct slash_inode_handle *ih = NULL;
 	struct sl_fidgen fg;
 	struct fidc_membh *f;
+	char buf[LINE_MAX];
 	int j, rc;
 
 	if (sjir->sjir_fid == FID_ANY) {
@@ -296,7 +297,7 @@ mds_replay_ino(void *jent, int op)
 			if (rc)
 				goto out;
 
-			DEBUG_INOH(PLL_DEBUG, ih, "replayed inox_repls");
+			DEBUG_INOH(PLL_DEBUG, ih, buf, "replayed inox_repls");
 		}
 
 		ih->inoh_ino.ino_replpol = sjir->sjir_replpol;

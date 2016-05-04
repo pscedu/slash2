@@ -121,6 +121,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	struct fidc_membh *f;
 	sl_replica_t *repl;
 	uint32_t j, k, *nr;
+	char buf[LINE_MAX];
 
 	f = inoh_2_fcmh(ih);
 	nr = &ih->inoh_ino.ino_nrepls;
@@ -144,7 +145,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = 0;
 		}
 
-		DEBUG_INOH(PLL_DEBUG, ih, "is rep[%u](=%u) == %u ?",
+		DEBUG_INOH(PLL_DEBUG, ih, buf, "is rep[%u](=%u) == %u ?",
 		    k, repl[k].bs_id, ios);
 
 		if (repl[k].bs_id == ios) {
@@ -190,7 +191,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		psc_assert(*nr <= SL_MAX_REPLICAS);
 		if (*nr == SL_MAX_REPLICAS) {
-			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
+			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
 			PFL_GOTOERR(out, rc = -ENOSPC);
 
 		} else if (*nr >= SL_DEF_REPLICAS) {
@@ -211,7 +212,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		repl[k].bs_id = ios;
 		++*nr;
 
-		DEBUG_INOH(PLL_DIAG, ih, "add IOS(%u) to repls, index %d",
+		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
 		mds_inodes_odsync(vfsid, f, mdslog_ino_repls);

@@ -110,12 +110,13 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	struct srt_stat sstb;
 	void *h = NULL, *th;
 	int rc;
+	char buf[LINE_MAX];
 
 	sic = &sl_ino_compat_table[old_version];
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
+	DEBUG_INOH(PLL_INFO, ih, buf, "updating old inode (v %d)",
 	    old_version);
 
 	f = inoh_2_fcmh(ih);
@@ -163,7 +164,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc) {
 		mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn,
 		    &rootcreds, NULL, NULL);
-		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode "
+		DEBUG_INOH(PLL_ERROR, ih, buf, "error updating old inode "
 		    "rc=%d", rc);
 	}
 	return (rc);
@@ -181,6 +182,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	mdsio_fid_t inum;
 	int exists = 0;
 	size_t nb;
+	char buf[LINE_MAX];
 
 	th = inoh_2_mfh(ih);
 
@@ -210,7 +212,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	if (crc != od_crc) {
 		OPSTAT_INCR("badcrc");
 		*rc = PFLERR_BADCRC;
-		DEBUG_INOH(PLL_WARN, ih, "CRC failed "
+		DEBUG_INOH(PLL_WARN, ih, buf, "CRC failed "
 		    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 		    od_crc, crc);
 		PFL_GOTOERR(out, *rc);
