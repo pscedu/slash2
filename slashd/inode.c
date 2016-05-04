@@ -311,7 +311,7 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
 char *
 _dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 {
-	char nbuf[LINE_MAX], rbuf[LINE_MAX];
+	char nbuf[16], rbuf[LINE_MAX];
 	int nr, j;
 
 	nr = ino->ino_nrepls;
