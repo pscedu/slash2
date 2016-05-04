@@ -755,13 +755,14 @@ slrpc_batch_req_ctor(__unusedx struct psc_poolmgr *m, void *item)
 	return (0);
 }
 
-void
+int
 slrpc_batch_req_dtor(void *item)
 {
 	struct slrpc_batch_req *bq = item;
 
 	PSCFREE(bq->bq_reqbuf);
 	PSCFREE(bq->bq_repbuf);
+	return (0);
 }
 
 int
@@ -775,13 +776,14 @@ slrpc_batch_rep_ctor(__unusedx struct psc_poolmgr *m, void *item)
 	return (0);
 }
 
-void
+int
 slrpc_batch_rep_dtor(void *item)
 {
 	struct slrpc_batch_rep *bp = item;
 
 	PSCFREE(bp->bp_reqbuf);
 	PSCFREE(bp->bp_repbuf);
+	return (0);
 }
 
 /*

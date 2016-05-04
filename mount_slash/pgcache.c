@@ -97,12 +97,13 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	return (0);
 }
 
-void
+int
 bmpce_destroy(void *p)
 {
 	struct bmap_pagecache_entry *e = p;
 
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
+	return (0);
 }
 
 int
@@ -262,8 +263,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
-	bmpce_init(bmpce_pool, e);
-	e->bmpce_flags = BMPCEF_FREED;
+	e->bmpce_flags = 0;
 	psc_pool_return(bmpce_pool, e);
 }
 

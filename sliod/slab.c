@@ -55,12 +55,13 @@ slab_init(__unusedx struct psc_poolmgr *m, void *pri)
 	return (0);
 }
 
-void
+int
 slab_destroy(void *pri)
 {
 	struct slab *slb = pri;
 
 	PSCFREE(slb->slb_base);
+	return (0);
 }
 
 void
