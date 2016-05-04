@@ -59,7 +59,7 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
  * Initialize write coalescer pool entry.
  */
 int
-bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
+bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 {
 	struct bmpc_write_coalescer *bwc = p;
 
@@ -72,7 +72,7 @@ void
 bwc_release(struct bmpc_write_coalescer *bwc)
 {
 	psc_dynarray_free(&bwc->bwc_biorqs);
-	bwc_init(bwc_pool, bwc);
+	bwc_init(bwc_pool, bwc, 0);
 	psc_pool_return(bwc_pool, bwc);
 }
 
@@ -80,20 +80,17 @@ bwc_release(struct bmpc_write_coalescer *bwc)
  * Initialize a bmap page cache entry.
  */
 int
-bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
+bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 {
 	struct bmap_pagecache_entry *e = p;
 	void *base;
 
-	base = e->bmpce_base;
 	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-	e->bmpce_base = base;
-	if (!e->bmpce_base)
-		e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
+	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
 	return (0);
 }
 
