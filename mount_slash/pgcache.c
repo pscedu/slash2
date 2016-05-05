@@ -103,6 +103,7 @@ bmpce_destroy(void *p)
 	struct bmap_pagecache_entry *e = p;
 
 	if (e->bmpce_flags & BMPCEF_KEEPME) {
+		e->bmpce_flags = BMPCEF_KEEPME;
 		OPSTAT_INCR("bmpce-keep");
 		return (0);
 	}
@@ -142,6 +143,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 					    "skipping an EIO page");
 					OPSTAT_INCR("msl.bmpce-eio");
 					BMPCE_ULOCK(e);
+
  retry:
 					psc_waitq_waitrelf_us(
 					    &b->bcm_fcmh->fcmh_waitq,
@@ -207,7 +209,8 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			e->bmpce_len = 0;
 			e->bmpce_start = off;
 			e->bmpce_waitq = wq;
-			e->bmpce_flags = flags;
+			e->bmpce_flags = 
+			    flags | (e->bmpce_flags & BMPCEF_KEEPME);
 			e->bmpce_bmap = b;
 
 			PSC_RB_XINSERT(bmap_pagecachetree,
@@ -251,6 +254,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	psc_assert(e->bmpce_ref == 0);
 	e->bmpce_flags |= BMPCEF_TOFREE;
+	DEBUG_BMPCE(PLL_INFO, e, "marking tofree");
 
 	BMPCE_ULOCK(e);
 
@@ -265,7 +269,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 	    BMPCEF_READAHEAD)
 		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
 
-	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
+	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
 
 	psc_pool_return(bmpce_pool, e);
 }
