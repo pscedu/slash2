@@ -59,7 +59,7 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
  * Initialize write coalescer pool entry.
  */
 int
-bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
+bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p, __unusedx int init)
 {
 	struct bmpc_write_coalescer *bwc = p;
 
@@ -83,7 +83,6 @@ int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 {
 	struct bmap_pagecache_entry *e = p;
-	void *base;
 
 	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
@@ -91,6 +90,8 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
 	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
+	if (init)
+		e->bmpce_flags |= BMPCEF_KEEPME;
 	return (0);
 }
 
@@ -99,6 +100,10 @@ bmpce_destroy(void *p)
 {
 	struct bmap_pagecache_entry *e = p;
 
+	if (e->bmpce_flags & BMPCEF_KEEPME) {
+		OPSTAT_INCR("bmpce-keep");
+		return (0);
+	}
 	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 	return (1);
 }
@@ -260,7 +265,6 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
-	e->bmpce_flags = 0;
 	psc_pool_return(bmpce_pool, e);
 }
 
