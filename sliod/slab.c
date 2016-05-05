@@ -45,7 +45,7 @@ struct psc_poolmaster	 slab_poolmaster;
 struct psc_poolmgr	*slab_pool;
 
 int
-slab_init(__unusedx struct psc_poolmgr *m, void *pri)
+slab_init(__unusedx struct psc_poolmgr *m, void *pri, __unusedx int init)
 {
 	struct slab *slb = pri;
 
