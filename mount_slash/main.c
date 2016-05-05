@@ -3756,20 +3756,22 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
-	int min, curr, last = 0;
+	int curr, last = 0;
 	while (pscthr_run(thr)) {
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
 		POOL_LOCK(bmpce_pool);
-		min = bmpce_pool->ppm_min;
-		curr = bmpce_pool->ppm_total;
+		curr = bmpce_pool->ppm_nfree;
 		POOL_ULOCK(bmpce_pool);
 
-		if (last == curr)
-			psc_pool_try_shrink(bmpce_pool, min);
+		if (last && curr >= last) 
+			psc_pool_try_shrink(bmpce_pool, curr);
 
-		last = curr;
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
+		POOL_LOCK(bmpce_pool);
+		last = bmpce_pool->ppm_nfree;
+		POOL_ULOCK(bmpce_pool);
+
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
 	}
 }
 
