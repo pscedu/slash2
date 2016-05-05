@@ -90,8 +90,10 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
 	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
-	if (init)
+	if (init) {
+		OPSTAT_INCR("bmpce-mark");
 		e->bmpce_flags |= BMPCEF_KEEPME;
+	}
 	return (0);
 }
 

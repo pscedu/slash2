@@ -745,7 +745,8 @@ slrpc_batches_drop(struct psc_listcache *l)
 }
 
 int
-slrpc_batch_req_ctor(__unusedx struct psc_poolmgr *m, void *item)
+slrpc_batch_req_ctor(__unusedx struct psc_poolmgr *m, 
+    void *item, __unusedx int init)
 {
 	struct slrpc_batch_req *bq = item;
 
@@ -766,7 +767,8 @@ slrpc_batch_req_dtor(void *item)
 }
 
 int
-slrpc_batch_rep_ctor(__unusedx struct psc_poolmgr *m, void *item)
+slrpc_batch_rep_ctor(__unusedx struct psc_poolmgr *m, 
+    void *item, __unusedx int init)
 {
 	struct slrpc_batch_rep *bp = item;
 
