@@ -946,8 +946,8 @@ msctlthr_spawn(void)
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("sys.mds", msctlparam_mds_get,
 	    NULL);
-	psc_ctlparam_register_var("sys.direct_io", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &msl_direct_io);
+	psc_ctlparam_register_var("sys.fuse_direct_io", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_fuse_direct_io);
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);

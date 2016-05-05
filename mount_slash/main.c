@@ -160,7 +160,7 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
-int				 msl_direct_io = 1;
+int				 msl_fuse_direct_io = 1;
 int				 msl_root_squash;
 int				 msl_max_retries = 5;
 uint64_t			 msl_pagecache_maxsize;
@@ -492,7 +492,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_fuse_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
 	FCMH_ULOCK(c);
@@ -609,7 +609,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	 * so don't enable DIO on executable files so they can be
 	 * executed.
 	 */
-	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_direct_io)
+	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_fuse_direct_io)
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
