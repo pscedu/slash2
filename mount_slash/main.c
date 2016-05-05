@@ -3754,6 +3754,32 @@ msattrflushthr_main(struct psc_thread *thr)
 }
 
 void
+msreapthr_main(struct psc_thread *thr)
+{
+	int min, curr, last = 0;
+	while (pscthr_run(thr)) {
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+
+		POOL_LOCK(bmpce_pool);
+		min = bmpce_pool->ppm_min;
+		curr = bmpce_pool->ppm_total;
+		POOL_ULOCK(bmpce_pool);
+
+		if (last == curr)
+			psc_pool_try_shrink(bmpce_pool, min);
+
+		last = curr;
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
+	}
+}
+
+void
+msreapthr_spawn(int thrtype, const char *name)
+{
+	pscthr_init(thrtype, msreapthr_main, 0, name);
+}
+
+void
 msattrflushthr_spawn(void)
 {
 	struct msattrflush_thread *maft;
@@ -3952,7 +3978,7 @@ msl_init(void)
 	    "msl.iorpc-wr:%s");
 
 	msbmapthr_spawn();
-	sl_freapthr_spawn(MSTHRT_FREAP, "msfreapthr");
+	msreapthr_spawn(MSTHRT_REAP, "pool reapthr");
 	msattrflushthr_spawn();
 	msreadaheadthr_spawn();
 

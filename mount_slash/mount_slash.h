@@ -53,6 +53,7 @@ enum {
 	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
+	MSTHRT_REAP,			/* pool reap thread */
 	MSTHRT_FREAP,			/* fcmh reap thread */
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FSMGR,			/* pscfs manager */
