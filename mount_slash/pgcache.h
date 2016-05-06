@@ -73,6 +73,12 @@ struct bmap_pagecache_entry {
 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
 };
+struct bmap_page_entry {
+	union {
+		struct psc_listentry	 page_lentry;
+		char			 page_buf[BMPC_BUFSZ];
+	};
+};
 
 /* bmpce_flags */
 #define BMPCEF_DATARDY		(1 <<  0)	/* data loaded in memory */

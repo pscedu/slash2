@@ -44,8 +44,13 @@
 
 struct psc_poolmaster	 bmpce_poolmaster;
 struct psc_poolmgr	*bmpce_pool;
+
+struct psc_poolmaster	 page_poolmaster;
+struct psc_poolmgr	*page_pool;
+
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
+
 int			 msl_bmpces_max = 16 * 1024; /* 512MiB */
 
 struct psc_listcache	 msl_idle_pages;
@@ -89,7 +94,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
+//	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
 	if (init) {
 		OPSTAT_INCR("bmpce-mark");
 		e->bmpce_flags |= BMPCEF_KEEPME;
@@ -107,7 +112,7 @@ bmpce_destroy(void *p)
 		OPSTAT_INCR("bmpce-keep");
 		return (0);
 	}
-	psc_free(e->bmpce_base, PAF_PAGEALIGN);
+//	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 	return (1);
 }
 
@@ -121,6 +126,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
+	void *page;
 
 	bmpc = bmap_2_bmpc(b);
 	q.bmpce_off = off;
@@ -194,8 +200,15 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL)
 					return (EAGAIN);
-			} else
+				page = psc_pool_shallowget(page_pool);
+				if (page == NULL) {
+					psc_pool_return(bmpce_pool, e2);
+					return (EAGAIN);
+				}
+			} else {
 				e2 = psc_pool_get(bmpce_pool);
+				page = psc_pool_get(page_pool);
+			}
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
@@ -212,6 +225,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			e->bmpce_flags = 
 			    flags | (e->bmpce_flags & BMPCEF_KEEPME);
 			e->bmpce_bmap = b;
+			e->bmpce_base = page;
 
 			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
@@ -225,6 +239,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
 		psc_pool_return(bmpce_pool, e2);
+		psc_pool_return(page_pool, page);
 	}
 
 	if (remove_idle) {
@@ -271,6 +286,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
 
+	psc_pool_return(page_pool, e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
 }
 
@@ -563,6 +579,12 @@ bmpc_global_init(void)
 	    512, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
+
+	psc_poolmaster_init(&page_poolmaster,
+	    struct bmap_page_entry, page_lentry, PPMF_AUTO | PPMF_ALIGN, 512,
+	    512, msl_bmpces_max, NULL, NULL, NULL,
+	    "page");
+	page_pool = psc_poolmaster_getmgr(&page_poolmaster);
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
