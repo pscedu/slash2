@@ -309,7 +309,8 @@ int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
 	     struct bmap_pagecache_entry **);
 void	 bmpce_release(struct bmap_pagecache_entry *);
 
-void	 bwc_release(struct bmpc_write_coalescer *);
+struct bmpc_write_coalescer *	 bwc_alloc(void);
+void				 bwc_free(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;

@@ -236,7 +236,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 	pfl_opstats_grad_incr(&slc_iorpc_iostats_wr, bwc->bwc_size);
 
-	bwc_release(bwc);
+	bwc_free(bwc);
 	sl_csvc_decref(csvc);
 
 	return (0);
@@ -425,7 +425,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	bwc_release(bwc);
+	bwc_free(bwc);
 }
 
 /*
@@ -591,7 +591,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
 
-	bwc = psc_pool_get(bwc_pool);
+	bwc = bwc_alloc();
 
 	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs);
 	    idx++, last = curr) {
@@ -678,7 +678,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	if (!(large || expired)) {
 		/* Clean up any lingering biorq's. */
 		bwc_desched(bwc);
-		bwc_release(bwc);
+		bwc_free(bwc);
 		bwc = NULL;
 	}
 

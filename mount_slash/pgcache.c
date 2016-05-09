@@ -166,21 +166,21 @@ pg_buf_reap()
 /*
  * Initialize write coalescer pool entry.
  */
-int
-bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p, __unusedx int init)
+struct bmpc_write_coalescer *
+bwc_alloc(void)
 {
-	struct bmpc_write_coalescer *bwc = p;
+	struct bmpc_write_coalescer *bwc;
 
+	bwc = psc_pool_get(bwc_pool);
 	memset(bwc, 0, sizeof(*bwc));
 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
-	return (0);
+	return (bwc);
 }
 
 void
-bwc_release(struct bmpc_write_coalescer *bwc)
+bwc_free(struct bmpc_write_coalescer *bwc)
 {
 	psc_dynarray_free(&bwc->bwc_biorqs);
-	bwc_init(bwc_pool, bwc, 0);
 	psc_pool_return(bwc_pool, bwc);
 }
 
@@ -665,7 +665,7 @@ bmpc_global_init(void)
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
-	    64, 0, bwc_init, NULL, NULL, "bwc");
+	    64, 0, NULL, NULL, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
 	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
