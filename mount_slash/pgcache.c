@@ -187,17 +187,14 @@ bwc_release(struct bmpc_write_coalescer *bwc)
 /*
  * Initialize a bmap page cache entry.
  */
-int
-bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, __unusedx int init)
+void
+bmpce_init(struct bmap_pagecache_entry *e)
 {
-	struct bmap_pagecache_entry *e = p;
-
 	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-	return (0);
 }
 
 int
@@ -301,6 +298,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 			e = e2;
 			e2 = NULL;
+			bmpce_init(e);
 			e->bmpce_off = off;
 			e->bmpce_ref = 1;
 			e->bmpce_len = 0;
@@ -658,8 +656,8 @@ bmpc_global_init(void)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
 
 	psc_poolmaster_init(&bmpce_poolmaster,
-	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512*4,
-	    512*4, msl_bmpces_max, bmpce_init, NULL, bmpce_reap,
+	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
+	    512, msl_bmpces_max, NULL, NULL, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
