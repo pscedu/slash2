@@ -188,7 +188,7 @@ bwc_release(struct bmpc_write_coalescer *bwc)
  * Initialize a bmap page cache entry.
  */
 int
-bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
+bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, __unusedx int init)
 {
 	struct bmap_pagecache_entry *e = p;
 
@@ -197,10 +197,6 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-	if (init) {
-		OPSTAT_INCR("bmpce-mark");
-		e->bmpce_flags |= BMPCEF_KEEPME;
-	}
 	return (0);
 }
 
@@ -310,8 +306,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			e->bmpce_len = 0;
 			e->bmpce_start = off;
 			e->bmpce_waitq = wq;
-			e->bmpce_flags = 
-			    flags | (e->bmpce_flags & BMPCEF_KEEPME);
+			e->bmpce_flags = flags;
 			e->bmpce_bmap = b;
 			e->bmpce_base = page;
 
