@@ -3770,7 +3770,10 @@ msreapthr_main(struct psc_thread *thr)
 		last = bmpce_pool->ppm_nfree;
 		POOL_ULOCK(bmpce_pool);
 
+		pg_buf_reap();
+
 		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+
 	}
 }
 

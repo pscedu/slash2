@@ -60,6 +60,112 @@ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
 RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
+struct psc_listcache	 page_buffers;
+int			 page_buffers_count;
+
+void *
+pg_buf_get(int wait)
+{
+	void *p;
+
+	p = lc_getnb(&page_buffers);
+	if (p)
+		return p;
+
+	LIST_CACHE_LOCK(&page_buffers);
+	if (page_buffers_count < msl_bmpces_max) {
+		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+		if (p) {
+			OPSTAT_INCR("mmap-success");
+			page_buffers_count++;
+			LIST_CACHE_ULOCK(&page_buffers);
+			return (p);
+		}
+		OPSTAT_INCR("mmap-failure");
+	}
+	LIST_CACHE_ULOCK(&page_buffers);
+
+	if (wait)
+		p = lc_getwait(&page_buffers);
+	else
+		p = lc_getnb(&page_buffers);
+	return (p);
+}
+
+void
+pg_buf_put(void *p)
+{
+	int rc;
+
+	LIST_CACHE_LOCK(&page_buffers);
+	if (page_buffers_count > msl_bmpces_max) {
+		rc = munmap(p, BMPC_BUFSZ);
+		if (rc)
+			OPSTAT_INCR("munmap-failure");
+		else
+			OPSTAT_INCR("munmap-success");
+		page_buffers_count--;
+	} else {
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&page_buffers, p);
+	}
+	LIST_CACHE_ULOCK(&page_buffers);
+}
+
+void
+pg_buf_init()
+{
+	int i;
+	void *p;
+
+	lc_reginit(&page_buffers, struct bmap_page_entry,
+	    page_lentry, "pagebuffers");
+
+	for (i = 0; i < 512; i++) {
+		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+		if (!p)
+			break;
+		OPSTAT_INCR("mmap-success");
+		page_buffers_count++;
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&page_buffers, p);
+	}
+}
+
+void
+pg_buf_reap()
+{
+	void *p;
+	int i, rc, nfree;
+	static int count;
+
+	if (!count || count != page_buffers_count) {
+		count = page_buffers_count;
+		return;
+	}
+	if (page_buffers_count <= 512)
+		return;
+
+	nfree = (page_buffers_count - 512)/2;
+	if (!nfree)
+		nfree = 1;
+	for (i = 0; i < nfree; i++) {
+		p = lc_getnb(&page_buffers);
+		if (!p)
+			break;
+		rc = munmap(p, BMPC_BUFSZ);
+		if (rc)
+			OPSTAT_INCR("munmap-failure");
+		else
+			OPSTAT_INCR("munmap-success");
+		LIST_CACHE_LOCK(&page_buffers);
+		page_buffers_count--;
+		LIST_CACHE_ULOCK(&page_buffers);
+	}
+}
+
 /*
  * Initialize write coalescer pool entry.
  */
@@ -107,11 +213,14 @@ bmpce_destroy(void *p)
 {
 	struct bmap_pagecache_entry *e = p;
 
+#if 0
 	if (e->bmpce_flags & BMPCEF_KEEPME) {
 		e->bmpce_flags = BMPCEF_KEEPME;
 		OPSTAT_INCR("bmpce-keep");
 		return (0);
 	}
+#endif
+
 //	psc_free(e->bmpce_base, PAF_PAGEALIGN);
 	return (1);
 }
@@ -200,14 +309,16 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL)
 					return (EAGAIN);
-				page = psc_pool_shallowget(page_pool);
+				//page = psc_pool_shallowget(page_pool);
+				page = pg_buf_get(0);
 				if (page == NULL) {
 					psc_pool_return(bmpce_pool, e2);
 					return (EAGAIN);
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
-				page = psc_pool_get(page_pool);
+				//page = psc_pool_get(page_pool);
+				page = pg_buf_get(1);
 			}
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
@@ -239,7 +350,8 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
 		psc_pool_return(bmpce_pool, e2);
-		psc_pool_return(page_pool, page);
+		pg_buf_put(page);
+		//psc_pool_return(page_pool, page);
 	}
 
 	if (remove_idle) {
@@ -286,7 +398,8 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
 
-	psc_pool_return(page_pool, e->bmpce_base);
+	//psc_pool_return(page_pool, e->bmpce_base);
+	pg_buf_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
 }
 
@@ -575,21 +688,26 @@ bmpc_global_init(void)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
 
 	psc_poolmaster_init(&bmpce_poolmaster,
-	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
+	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512*4,
+	    512*4, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
+	pg_buf_init();
+
+#if 0
 	psc_poolmaster_init(&page_poolmaster,
-	    struct bmap_page_entry, page_lentry, PPMF_AUTO | PPMF_ALIGN, 512,
-	    512, msl_bmpces_max, NULL, NULL, NULL,
+	    struct bmap_page_entry, page_lentry, PPMF_AUTO | PPMF_ALIGN, 512*4,
+	    512*4, msl_bmpces_max, NULL, NULL, NULL,
 	    "page");
 	page_pool = psc_poolmaster_getmgr(&page_poolmaster);
+#endif
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
 	    64, 0, bwc_init, NULL, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
+
 
 	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
 	    bmpce_lentry, "idlepages");
