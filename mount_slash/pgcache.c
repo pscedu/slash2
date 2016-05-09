@@ -45,9 +45,6 @@
 struct psc_poolmaster	 bmpce_poolmaster;
 struct psc_poolmgr	*bmpce_pool;
 
-struct psc_poolmaster	 page_poolmaster;
-struct psc_poolmgr	*page_pool;
-
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
@@ -309,7 +306,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL)
 					return (EAGAIN);
-				//page = psc_pool_shallowget(page_pool);
 				page = pg_buf_get(0);
 				if (page == NULL) {
 					psc_pool_return(bmpce_pool, e2);
@@ -317,7 +313,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
-				//page = psc_pool_get(page_pool);
 				page = pg_buf_get(1);
 			}
 			wrlock = 1;
@@ -351,7 +346,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 		OPSTAT_INCR("msl.bmpce-gratuitous");
 		psc_pool_return(bmpce_pool, e2);
 		pg_buf_put(page);
-		//psc_pool_return(page_pool, page);
 	}
 
 	if (remove_idle) {
@@ -398,7 +392,6 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
 
-	//psc_pool_return(page_pool, e->bmpce_base);
 	pg_buf_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
 }
@@ -695,19 +688,10 @@ bmpc_global_init(void)
 
 	pg_buf_init();
 
-#if 0
-	psc_poolmaster_init(&page_poolmaster,
-	    struct bmap_page_entry, page_lentry, PPMF_AUTO | PPMF_ALIGN, 512*4,
-	    512*4, msl_bmpces_max, NULL, NULL, NULL,
-	    "page");
-	page_pool = psc_poolmaster_getmgr(&page_poolmaster);
-#endif
-
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
 	    64, 0, bwc_init, NULL, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
-
 
 	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
 	    bmpce_lentry, "idlepages");
