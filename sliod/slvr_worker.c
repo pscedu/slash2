@@ -556,7 +556,7 @@ slvr_worker_init(void)
 	    sizeof(struct bcrcupd) +
 	    sizeof(struct srt_bmap_crcwire) * MAX_BMAP_INODE_PAIRS,
 	    offsetof(struct bcrcupd, bcr_lentry), PPMF_AUTO, 64,
-	    64, 0, NULL, NULL, NULL, NULL, "bcrcupd");
+	    64, 0, NULL, NULL, "bcrcupd");
 	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
 
 	for (i = 0; i < NSLVRCRC_THRS; i++)

@@ -1104,12 +1104,12 @@ slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, 512, 512, 0,
-	    NULL, NULL, NULL, "slvr");
+	    NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
 	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "readaheadrq");
+	    NULL, "readaheadrq");
 	sli_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &sli_readaheadrq_poolmaster);
 

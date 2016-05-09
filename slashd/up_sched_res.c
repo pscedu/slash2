@@ -1198,7 +1198,7 @@ slm_upsch_init(void)
 {
 	psc_poolmaster_init(&slm_upgen_poolmaster,
 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "upgen");
+	    NULL, "upgen");
 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
 
 	pfl_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,

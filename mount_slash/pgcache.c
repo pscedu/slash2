@@ -657,7 +657,7 @@ bmpc_global_init(void)
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, msl_bmpces_max, NULL, NULL, bmpce_reap,
+	    512, msl_bmpces_max, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
@@ -665,7 +665,7 @@ bmpc_global_init(void)
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
-	    64, 0, NULL, NULL, NULL, "bwc");
+	    64, 0, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
 	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,

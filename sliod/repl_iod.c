@@ -361,7 +361,7 @@ sli_repl_init(void)
 {
 	psc_poolmaster_init(&sli_replwkrq_poolmaster,
 	    struct sli_repl_workrq, srw_pending_lentry, PPMF_AUTO, 256,
-	    256, 0, NULL, NULL, NULL, "replwkrq");
+	    256, 0, NULL, "replwkrq");
 	sli_replwkrq_pool = psc_poolmaster_getmgr(&sli_replwkrq_poolmaster);
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,

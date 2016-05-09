@@ -539,7 +539,7 @@ main(int argc, char *argv[])
 
 	psc_poolmaster_init(&slm_repl_status_poolmaster,
 	    struct slm_replst_workreq, rsw_lentry, PPMF_AUTO, 64,
-	    64, 0, NULL, NULL, NULL, "replst");
+	    64, 0, NULL, "replst");
 	slm_repl_status_pool = psc_poolmaster_getmgr(
 	    &slm_repl_status_poolmaster);
 
@@ -550,7 +550,7 @@ main(int argc, char *argv[])
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
 	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
-	    2048, 0, NULL, NULL, NULL, "bmplease");
+	    2048, 0, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();

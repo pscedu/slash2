@@ -63,6 +63,41 @@ struct slrpc_wkdata_batch_rep {
 	int			 error;
 };
 
+int
+slrpc_batch_req_ctor( struct slrpc_batch_req *bq)
+{
+	INIT_LISTENTRY(&bq->bq_lentry_global);
+	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
+	bq->bq_repbuf = PSCALLOC(LNET_MTU);
+	return (0);
+}
+
+int
+slrpc_batch_req_dtor(struct slrpc_batch_req *bq)
+{
+	PSCFREE(bq->bq_reqbuf);
+	PSCFREE(bq->bq_repbuf);
+	return (1);
+}
+
+int
+slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
+{
+	INIT_LISTENTRY(&bp->bp_lentry);
+	bp->bp_reqbuf = PSCALLOC(LNET_MTU);
+	bp->bp_repbuf = PSCALLOC(LNET_MTU);
+	return (0);
+}
+
+int
+slrpc_batch_rep_dtor(struct slrpc_batch_rep *bp)
+{
+	PSCFREE(bp->bp_reqbuf);
+	PSCFREE(bp->bp_repbuf);
+	return (1);
+}
+
+
 /*
  * This routine is used to order batch RPC requests by expiration for
  * transmission time.
@@ -144,6 +179,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int error)
 	}
 
 	psc_dynarray_free(&bq->bq_scratch);
+	slrpc_batch_req_dtor(bq);
 	psc_pool_return(slrpc_batch_req_pool, bq);
 }
 
@@ -420,6 +456,7 @@ _slrpc_batch_rep_decref(const struct pfl_callerinfo *pci,
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "destroying");
 
 	sl_csvc_decref(bp->bp_csvc);
+	slrpc_batch_rep_dtor(bp);
 	psc_pool_return(slrpc_batch_rep_pool, bp);
 }
 
@@ -486,6 +523,7 @@ slrpc_batch_handle_request(struct slashrpc_cservice *csvc,
 		return (mp->rc = -EINVAL);
 
 	bp = psc_pool_get(slrpc_batch_rep_pool);
+	slrpc_batch_rep_ctor(bp);
 	qbuf = bp->bp_reqbuf;
 	pbuf = bp->bp_repbuf;
 	memset(bp, 0, sizeof(*bp));
@@ -527,8 +565,10 @@ slrpc_batch_handle_request(struct slashrpc_cservice *csvc,
 	bp = NULL;
 
  out:
-	if (bp)
+	if (bp) {
+		slrpc_batch_rep_dtor(bp);
 		psc_pool_return(slrpc_batch_rep_pool, bp);
+	}
 	return (mp->rc);
 }
 
@@ -641,6 +681,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	mq->bid = psc_atomic64_inc_getnew(&bid);
 
 	bq = psc_pool_get(slrpc_batch_req_pool);
+	slrpc_batch_req_ctor(bq);
 	qbuf = bq->bq_reqbuf;
 	pbuf = bq->bq_repbuf;
 	memset(bq, 0, sizeof(*bq));
@@ -744,50 +785,6 @@ slrpc_batches_drop(struct psc_listcache *l)
 	LIST_CACHE_ULOCK(l);
 }
 
-int
-slrpc_batch_req_ctor(__unusedx struct psc_poolmgr *m, 
-    void *item, __unusedx int init)
-{
-	struct slrpc_batch_req *bq = item;
-
-	INIT_LISTENTRY(&bq->bq_lentry_global);
-	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
-	bq->bq_repbuf = PSCALLOC(LNET_MTU);
-	return (0);
-}
-
-int
-slrpc_batch_req_dtor(void *item)
-{
-	struct slrpc_batch_req *bq = item;
-
-	PSCFREE(bq->bq_reqbuf);
-	PSCFREE(bq->bq_repbuf);
-	return (1);
-}
-
-int
-slrpc_batch_rep_ctor(__unusedx struct psc_poolmgr *m, 
-    void *item, __unusedx int init)
-{
-	struct slrpc_batch_rep *bp = item;
-
-	INIT_LISTENTRY(&bp->bp_lentry);
-	bp->bp_reqbuf = PSCALLOC(LNET_MTU);
-	bp->bp_repbuf = PSCALLOC(LNET_MTU);
-	return (0);
-}
-
-int
-slrpc_batch_rep_dtor(void *item)
-{
-	struct slrpc_batch_rep *bp = item;
-
-	PSCFREE(bp->bp_reqbuf);
-	PSCFREE(bp->bp_repbuf);
-	return (1);
-}
-
 /*
  * Initialize global variables for batch RPC API.
  *
@@ -799,13 +796,13 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 {
 	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
 	    struct slrpc_batch_req, bq_lentry_global, PPMF_AUTO, 8, 8,
-	    0, slrpc_batch_req_ctor, slrpc_batch_req_dtor, NULL,
+	    0, NULL,
 	    "batchrpcrq");
 	slrpc_batch_req_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_req_poolmaster);
 	psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
 	    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 8, 8, 0,
-	    slrpc_batch_rep_ctor, slrpc_batch_rep_dtor, NULL,
+	    NULL,
 	    "batchrpcrp");
 	slrpc_batch_rep_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_rep_poolmaster);

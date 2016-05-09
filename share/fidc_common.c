@@ -361,8 +361,8 @@ fidc_init(int privsiz)
 	_psc_poolmaster_init(&sl_fcmh_poolmaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
-	    PPMF_AUTO, nobj, nobj, 0, NULL,
-	    NULL, fidc_reaper, NULL, "fcmh");
+	    PPMF_AUTO, nobj, nobj, 0,
+	    fidc_reaper, NULL, "fcmh");
 	sl_fcmh_pool = psc_poolmaster_getmgr(&sl_fcmh_poolmaster);
 
 	lc_reginit(&sl_fcmh_idle, struct fidc_membh, fcmh_lentry,
