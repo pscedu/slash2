@@ -197,29 +197,11 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p, int init)
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_aio_lentry, &e->bmpce_lock);
-//	e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
 	if (init) {
 		OPSTAT_INCR("bmpce-mark");
 		e->bmpce_flags |= BMPCEF_KEEPME;
 	}
 	return (0);
-}
-
-int
-bmpce_destroy(void *p)
-{
-	struct bmap_pagecache_entry *e = p;
-
-#if 0
-	if (e->bmpce_flags & BMPCEF_KEEPME) {
-		e->bmpce_flags = BMPCEF_KEEPME;
-		OPSTAT_INCR("bmpce-keep");
-		return (0);
-	}
-#endif
-
-//	psc_free(e->bmpce_base, PAF_PAGEALIGN);
-	return (1);
 }
 
 int
@@ -682,7 +664,7 @@ bmpc_global_init(void)
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512*4,
-	    512*4, msl_bmpces_max, bmpce_init, bmpce_destroy, bmpce_reap,
+	    512*4, msl_bmpces_max, bmpce_init, NULL, bmpce_reap,
 	    "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
