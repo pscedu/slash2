@@ -44,24 +44,23 @@
 struct psc_poolmaster	 slab_poolmaster;
 struct psc_poolmgr	*slab_pool;
 
-int
-slab_init(__unusedx struct psc_poolmgr *m, void *pri, __unusedx int init)
+struct slab *
+slab_alloc(void)
 {
-	struct slab *slb = pri;
+	struct slab *slb;
 
+	slb = psc_pool_get(slab_pool);
 	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
 
-	return (0);
+	return (slb);
 }
 
-int
-slab_destroy(void *pri)
+void
+slab_free(struct slab *slb)
 {
-	struct slab *slb = pri;
-
 	PSCFREE(slb->slb_base);
-	return (1);
+	psc_pool_return(slab_pool, slb);
 }
 
 void
@@ -87,7 +86,7 @@ slab_cache_init(void)
 	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 	psc_poolmaster_init(&slab_poolmaster, struct slab,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    slab_init, slab_destroy, slab_cache_reap, "slab",
+	    NULL, NULL, slab_cache_reap, "slab",
 	    NULL);
 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 

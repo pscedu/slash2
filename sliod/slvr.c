@@ -763,7 +763,7 @@ slvr_remove(struct slvr *s)
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 	if (s->slvr_slab)
-		psc_pool_return(slab_pool, s->slvr_slab);
+		slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -974,7 +974,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = psc_pool_get(slab_pool);
+			tmp2 = slab_alloc();
 			BII_LOCK(bii);
 			goto retry;
 		}
@@ -1007,7 +1007,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
-		psc_pool_return(slab_pool, tmp2);
+		slab_free(tmp2);
 	}
 	return (s);
 }
