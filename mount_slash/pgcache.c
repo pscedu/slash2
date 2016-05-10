@@ -319,8 +319,8 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		psc_pool_return(bmpce_pool, e2);
 		pg_buf_put(page);
+		psc_pool_return(bmpce_pool, e2);
 	}
 
 	if (remove_idle) {
@@ -655,13 +655,12 @@ bmpc_global_init(void)
 	if (msl_pagecache_maxsize)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
 
+	pg_buf_init();
+
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, msl_bmpces_max, bmpce_reap,
-	    "bmpce");
+	    512, msl_bmpces_max, bmpce_reap, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
-
-	pg_buf_init();
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
