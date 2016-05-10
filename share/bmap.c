@@ -351,7 +351,7 @@ bmap_cache_init(size_t priv_size, int count)
 	_psc_poolmaster_init(&bmap_poolmaster,
 	    sizeof(struct bmap) + priv_size,
 	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, count, count, 0, NULL, NULL, NULL, NULL, "bmap");
+	    PPMF_AUTO, count, count, 0, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 
