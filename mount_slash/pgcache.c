@@ -48,7 +48,8 @@ struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
-int			 msl_bmpces_max = 16 * 1024; /* 512MiB */
+int			 msl_bmpces_min = 512;	 	/* 16MiB */
+int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
 struct psc_listcache	 msl_idle_pages;
 struct psc_listcache	 msl_readahead_pages;
@@ -69,7 +70,7 @@ msl_pgcache_init(void)
 	lc_reginit(&page_buffers, struct bmap_page_entry,
 	    page_lentry, "pagebuffers");
 
-	for (i = 0; i < 512; i++) {
+	for (i = 0; i < msl_bmpces_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 		if (!p) {
@@ -144,10 +145,10 @@ msl_pgcache_reap(void)
 		count = page_buffers_count;
 		return;
 	}
-	if (page_buffers_count <= 512)
+	if (page_buffers_count <= msl_bmpces_min)
 		return;
 
-	nfree = (page_buffers_count - 512)/2;
+	nfree = (page_buffers_count - msl_bmpces_min)/2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
@@ -654,8 +655,9 @@ bmpc_global_init(void)
 	msl_pgcache_init();
 
 	psc_poolmaster_init(&bmpce_poolmaster,
-	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
-	    512, msl_bmpces_max, bmpce_reap, "bmpce");
+	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
+	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
+	    bmpce_reap, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
 	psc_poolmaster_init(&bwc_poolmaster,
