@@ -674,6 +674,7 @@ bmpc_global_init(void)
 void
 bmap_pagecache_destroy(void)
 {
+	/* XXX destroy mmap()-based buffer as well */
 	pfl_poolmaster_destroy(&bwc_poolmaster);
 	pfl_poolmaster_destroy(&bmpce_poolmaster);
 }
