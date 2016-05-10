@@ -2363,7 +2363,7 @@ msreadaheadthr_spawn(void)
 
 	psc_poolmaster_init(&slc_readaheadrq_poolmaster,
 	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 4096, 4096,
-	    4096, NULL, NULL, NULL, "readaheadrq");
+	    4096, NULL, "readaheadrq");
 	slc_readaheadrq_pool = psc_poolmaster_getmgr(
 	    &slc_readaheadrq_poolmaster);
 
