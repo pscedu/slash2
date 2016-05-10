@@ -111,7 +111,7 @@ pg_buf_put(void *p)
 }
 
 void
-pg_buf_init(void)
+msl_pgcache_init(void)
 {
 	int i;
 	void *p;
@@ -122,8 +122,10 @@ pg_buf_init(void)
 	for (i = 0; i < 512; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (!p)
+		if (!p) {
+			OPSTAT_INCR("mmap-failure");
 			break;
+		}
 		OPSTAT_INCR("mmap-success");
 		page_buffers_count++;
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
@@ -655,7 +657,7 @@ bmpc_global_init(void)
 	if (msl_pagecache_maxsize)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
 
-	pg_buf_init();
+	msl_pgcache_init();
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
