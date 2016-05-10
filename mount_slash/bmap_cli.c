@@ -53,7 +53,6 @@ const struct timespec slc_bmap_diowait_max = { 60, 0 };
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
-	MSL_BMODECHG_CBARG_COMPL,
 	MSL_BMODECHG_CBARG_CSVC,
 };
 
