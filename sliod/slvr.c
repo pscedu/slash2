@@ -1125,12 +1125,12 @@ slvr_cache_init(void)
 	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
-		    1024, NULL, NULL, NULL, "iocb");
+		    1024, NULL, "iocb");
 		sli_iocb_pool = psc_poolmaster_getmgr(&sli_iocb_poolmaster);
 
 		psc_poolmaster_init(&sli_aiocbr_poolmaster,
 		    struct sli_aiocb_reply, aiocbr_lentry, PPMF_AUTO, 64,
-		    64, 1024, NULL, NULL, NULL, "aiocbr");
+		    64, 1024, NULL, "aiocbr");
 		sli_aiocbr_pool = psc_poolmaster_getmgr(&sli_aiocbr_poolmaster);
 
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,
