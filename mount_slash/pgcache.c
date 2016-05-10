@@ -132,7 +132,7 @@ pg_buf_init()
 }
 
 void
-pg_buf_reap()
+msl_pgcache_reap()
 {
 	void *p;
 	int i, rc, nfree;
