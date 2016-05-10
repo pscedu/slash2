@@ -352,7 +352,6 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	psc_assert(e->bmpce_ref == 0);
 	e->bmpce_flags |= BMPCEF_TOFREE;
-	DEBUG_BMPCE(PLL_INFO, e, "marking tofree");
 
 	BMPCE_ULOCK(e);
 
