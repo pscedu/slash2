@@ -41,10 +41,6 @@ struct slrpc_cservice;
 #define MSL_CBARG_RESM			6
 #define MSL_CBARG_IOVS			7
 
-enum {
-	MSL_BMLGET_CBARG_BMAP,
-	MSL_BMLGET_CBARG_CSVC
-};
 
 #define MSL_READDIR_CBARG_CSVC		0
 #define MSL_READDIR_CBARG_FCMH		1
