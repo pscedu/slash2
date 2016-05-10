@@ -61,7 +61,7 @@ struct psc_listcache	 page_buffers;
 int			 page_buffers_count;
 
 void *
-pg_buf_get(int wait)
+msl_pgcache_get(int wait)
 {
 	void *p;
 
@@ -91,7 +91,7 @@ pg_buf_get(int wait)
 }
 
 void
-pg_buf_put(void *p)
+msl_pgcache_put(void *p)
 {
 	int rc;
 
@@ -283,14 +283,14 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL)
 					return (EAGAIN);
-				page = pg_buf_get(0);
+				page = msl_pgcache_get(0);
 				if (page == NULL) {
 					psc_pool_return(bmpce_pool, e2);
 					return (EAGAIN);
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
-				page = pg_buf_get(1);
+				page = msl_pgcache_get(1);
 			}
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
@@ -321,7 +321,7 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		pg_buf_put(page);
+		msl_pgcache_put(page);
 		psc_pool_return(bmpce_pool, e2);
 	}
 
@@ -369,7 +369,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 
 	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
 
-	pg_buf_put(e->bmpce_base);
+	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
 }
 
