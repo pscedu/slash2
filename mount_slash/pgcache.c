@@ -60,6 +60,29 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 struct psc_listcache	 page_buffers;
 int			 page_buffers_count;
 
+void
+msl_pgcache_init(void)
+{
+	int i;
+	void *p;
+
+	lc_reginit(&page_buffers, struct bmap_page_entry,
+	    page_lentry, "pagebuffers");
+
+	for (i = 0; i < 512; i++) {
+		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+		if (!p) {
+			OPSTAT_INCR("mmap-failure");
+			break;
+		}
+		OPSTAT_INCR("mmap-success");
+		page_buffers_count++;
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&page_buffers, p);
+	}
+}
+
 void *
 msl_pgcache_get(int wait)
 {
@@ -108,29 +131,6 @@ msl_pgcache_put(void *p)
 		lc_add(&page_buffers, p);
 	}
 	LIST_CACHE_ULOCK(&page_buffers);
-}
-
-void
-msl_pgcache_init(void)
-{
-	int i;
-	void *p;
-
-	lc_reginit(&page_buffers, struct bmap_page_entry,
-	    page_lentry, "pagebuffers");
-
-	for (i = 0; i < 512; i++) {
-		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
-		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (!p) {
-			OPSTAT_INCR("mmap-failure");
-			break;
-		}
-		OPSTAT_INCR("mmap-success");
-		page_buffers_count++;
-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&page_buffers, p);
-	}
 }
 
 void
@@ -367,7 +367,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 	    BMPCEF_READAHEAD)
 		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
 
-	DEBUG_BMPCE(PLL_INFO, e, "destroying, locked = %d", locked);
+	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
 
 	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
