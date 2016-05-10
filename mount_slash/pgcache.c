@@ -462,12 +462,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			r->biorq_buf = PSCALLOC(len);
 		}
 	}
-
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
-
-//	OPSTAT_SET_MAX("msl.biorq-max", msl_biorq_pool->ppm_total -
-//	    msl_biorq_pool->ppm_used);
-
 	DEBUG_BIORQ(PLL_DIAG, r, "creating");
 
 	return (r);
