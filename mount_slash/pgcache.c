@@ -139,7 +139,7 @@ msl_pgcache_reap(void)
 {
 	void *p;
 	int i, rc, nfree;
-	static int count;
+	static int count;		/* this assume one reaper */
 
 	if (!count || count != page_buffers_count) {
 		count = page_buffers_count;
