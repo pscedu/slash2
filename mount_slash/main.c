@@ -3940,22 +3940,21 @@ msl_init(void)
 
 	psc_poolmaster_init(&msl_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "asyncrq");
+	    NULL, "asyncrq");
 	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
 	psc_poolmaster_init(&msl_biorq_poolmaster,
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 512, 512, 0,
-	    NULL, NULL, NULL, "biorq");
+	    NULL, "biorq");
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
 	psc_poolmaster_init(&msl_mfh_poolmaster,
 	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
-	    NULL, NULL, "mfh");
+	    NULL, "mfh");
 	msl_mfh_pool = psc_poolmaster_getmgr(&msl_mfh_poolmaster);
 
 	psc_poolmaster_init(&msl_iorq_poolmaster, struct msl_fsrqinfo,
-	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
-	    "iorq");
+	    mfsrq_lentry, PPMF_AUTO, 64, 64, 0, NULL, "iorq");
 	msl_iorq_pool = psc_poolmaster_getmgr(&msl_iorq_poolmaster);
 
 	/* Start up service threads. */
