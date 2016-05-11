@@ -284,7 +284,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
-	struct timespec tv, delta;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -325,9 +324,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->version = csvc->csvc_version;
 	mq->stkvers = sl_stk_version;
 
-	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv);
-	timespecsub(&tv, &pfl_uptime, &delta);
-	mq->uptime = delta.tv_sec;
+	mq->uptime = pfl_uptime.tv_sec;
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
