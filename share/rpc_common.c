@@ -1376,7 +1376,7 @@ slrpc_initcli(void)
 {
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "csvc");
+	    NULL, "csvc");
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
 }
 
