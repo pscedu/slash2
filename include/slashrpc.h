@@ -673,8 +673,9 @@ struct srm_connect_req {
 
 struct srm_connect_rep {
 	uint64_t		fsuuid;
-	 int32_t		rc;
+	uint64_t		uptime;
 	 int32_t		stkvers;
+	 int32_t		rc;
 } __packed;
 
 struct srm_ping_req {
