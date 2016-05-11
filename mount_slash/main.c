@@ -3949,7 +3949,7 @@ msl_init(void)
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
 	psc_poolmaster_init(&msl_mfh_poolmaster,
-	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
+	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "mfh");
 	msl_mfh_pool = psc_poolmaster_getmgr(&msl_mfh_poolmaster);
 
