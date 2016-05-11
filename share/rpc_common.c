@@ -311,6 +311,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	CSVC_ULOCK(csvc);
 
+	/* handled by slrpc_handle_connect() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
 		CSVC_LOCK(csvc);
