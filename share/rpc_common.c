@@ -284,6 +284,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
+	struct timespec tv, delta;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -323,6 +324,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
 	mq->stkvers = sl_stk_version;
+
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv);
+	timespecsub(&tv, &pfl_uptime, &delta);
+	mq->uptime = delta.tv_sec;
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
@@ -432,6 +437,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
+		uint64_t uptime;
 	} *expc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -455,6 +461,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->stkvers = mq->stkvers;
+		expc->uptime = mq->uptime;
 		break;
 	case SLCONNT_IOD:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -465,6 +472,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		if (!RES_ISFS(m->resm_res))
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_res->res_stkvers = mq->stkvers;
+		m->resm_res->res_uptime = mq->uptime;
 		break;
 	case SLCONNT_MDS:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -475,6 +483,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		if (m->resm_type != SLREST_MDS)
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_res->res_stkvers = mq->stkvers;
+		m->resm_res->res_uptime = mq->uptime;
 		break;
 	default:
 		psc_fatal("choke");

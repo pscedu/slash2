@@ -33,6 +33,7 @@ struct slctlmsg_conn {
 	int32_t			scc_flags;	/* CSVCF_* */
 	int32_t			scc_txcr;
 	int32_t			scc_stkvers;
+	int64_t			scc_uptime;
 };
 
 #define CSVCF_CTL_OLDER		CSVCF_FLAGSHIFT

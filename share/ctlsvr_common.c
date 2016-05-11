@@ -84,6 +84,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
+		uint64_t uptime;
 	} *expc;
 
 	CONF_LOCK();
@@ -103,6 +104,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = resm->resm_type;
+		scc->scc_uptime = r->res_uptime;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
@@ -132,6 +134,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = SLCTL_REST_CLI;
+		scc->scc_uptime = expc->uptime;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
@@ -325,7 +328,6 @@ slctlparam_version_get(char *val)
 void
 slctlparam_uptime_get(char *val)
 {
-	extern struct timespec pfl_uptime;
 	struct timespec tv, delta;
 
 	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv);

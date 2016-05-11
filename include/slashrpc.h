@@ -666,6 +666,7 @@ struct srm_connect_req {
 	uint32_t		version;
 	 int32_t		nnids;
 	uint64_t		fsuuid;		/* file system unique ID */
+	uint64_t		uptime;
 	uint32_t		stkvers;	/* software stack version */
 	uint32_t		upnonce;	/* uptime instance */
 } __packed;

@@ -96,6 +96,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
 	int col;
+	struct timespec tv1, t2, delta;
 
 	stype = slconn_restypes[scc->scc_type];
 
@@ -172,6 +173,11 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		uncolor();
 
 	printf("%4d %4d\n", scc->scc_txcr, scc->scc_refcnt);
+
+	printf("%ldd%ldh%ldm",
+	    scc->scc_uptime / (60 * 60 * 24),
+	    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
+	    (scc->scc_uptime % (60 * 60)) / 60);
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));

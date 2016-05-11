@@ -53,6 +53,7 @@ struct sli_repl_workrq;
 struct sli_exp_cli {
 	struct slrpc_cservice	*iexpc_csvc;		/* must be first field */
 	uint32_t		 iexpc_stkvers;		/* must be second field */
+	uint64_t		 iexpc_uptime;		/* must be third field */
 };
 
 /* aliases for connection management */

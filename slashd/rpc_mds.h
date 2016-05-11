@@ -76,6 +76,7 @@ enum slm_fwd_op {
 struct slm_exp_cli {
 	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
 	uint32_t			  mexpc_stkvers;	/* must be second field */
+	uint64_t			  mexpc_uptime;		/* must be third field */
 };
 
 void	slm_rpc_initsvc(void);
