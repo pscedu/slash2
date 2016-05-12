@@ -748,30 +748,6 @@ slrpc_getpeernid(struct pscrpc_export *exp,
 	return (peernid);
 }
 
-uint32_t *
-slrpc_getstkversp(struct slashrpc_cservice *csvc)
-{
-	struct sl_resm *m;
-	struct {
-		struct slashrpc_cservice *csvc;
-		uint32_t stkvers;
-		uint64_t uptime;
-	} *expc;
-
-	switch (csvc->csvc_peertype) {
-	case SLCONNT_CLI:
-		expc = (void *)csvc->csvc_params.scp_csvcp;
-		return (&expc->stkvers);
-	case SLCONNT_IOD:
-	case SLCONNT_MDS:
-		m = (void *)csvc->csvc_params.scp_csvcp;
-		return (&m->resm_res->res_stkvers);
-	default:
-		psc_fatalx("%d: bad peer connection type",
-		    csvc->csvc_peertype);
-	}
-}
-
 int
 csvc_cli_cmp(const void *a, const void *b)
 {
@@ -826,7 +802,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc = *csvcp;
 		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
 		CSVC_LOCK(csvc);
-		goto restart;
+		goto next;
 	}
 
 	CONF_LOCK();
@@ -834,7 +810,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
 		CONF_ULOCK();
-		goto restart;
+		goto next;
 	}
 
 	switch (peertype) {
@@ -915,7 +891,32 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CSVC_LOCK(csvc);
 	CONF_ULOCK();
 
+ next:
+	switch (csvc->csvc_peertype) {
+	case SLCONNT_CLI: {
+		struct {
+			struct slashrpc_cservice *csvc;
+			uint32_t stkvers;
+			uint64_t uptime;
+		} *expc;
+		expc = (void *)csvc->csvc_params.scp_csvcp;
+		stkversp = &expc->stkvers;
+		uptimep = &expc->uptime;
+		break;
+	    }
+	case SLCONNT_IOD:
+	case SLCONNT_MDS:
+		resm = (void *)csvc->csvc_params.scp_csvcp;
+		stkversp = &resm->resm_res->res_stkvers;
+		uptimep = &resm->resm_res->res_uptime;
+		break;
+	default:
+		psc_fatalx("%d: bad peer connection type",
+		    csvc->csvc_peertype);
+	}
+
  restart:
+
 	if (need_ref) {
 		sl_csvc_incref(csvc);
 		need_ref = 0;
@@ -998,13 +999,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
-		psc_assert(stkversp && uptimep);
-
-		/*
- 		 * Keep it for now, let us delete it much later.
- 		 */
-		if (stkversp == NULL)
-			stkversp = slrpc_getstkversp(csvc);
 		rc = ENETUNREACH;
 		DYNARRAY_FOREACH(nr, i, peernids)
 			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
