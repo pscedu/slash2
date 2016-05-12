@@ -57,8 +57,8 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-11s %38s %-7s %5s %5s %4s %4s\n",
-	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref");
+	printf("%-11s %38s %-7s %5s %5s %4s %4s %10s\n",
+	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
 }
 
 void
@@ -96,7 +96,6 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
 	int col;
-	struct timespec tv1, tv2, delta;
 
 	stype = slconn_restypes[scc->scc_type];
 
@@ -174,15 +173,10 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%4d %4d ", scc->scc_txcr, scc->scc_refcnt);
 
-	tv2.tv_sec = scc->scc_uptime;
-	tv2.tv_nsec = 0;
-	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv1);
-	timespecsub(&tv1, &tv2, &delta);
-
-	printf("%02ldd%02ldh%02ldm\n",
-	    delta.tv_sec / (60 * 60 * 24),
-	    (delta.tv_sec % (60 * 60 * 24)) / (60 * 60),
-	    (delta.tv_sec % (60 * 60)) / 60);
+	printf("%3ldd%02ldh%02ldm\n",
+	    scc->scc_uptime / (60 * 60 * 24),
+	    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
+	    (scc->scc_uptime % (60 * 60)) / 60);
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
