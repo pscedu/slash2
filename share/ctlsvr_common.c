@@ -80,6 +80,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
+	struct timespec tv1, tv2;
 	int i, j, rc = 1;
 	struct {
 		struct slashrpc_cservice *csvc;
@@ -87,6 +88,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		uint64_t uptime;
 	} *expc;
 
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv1);
 	CONF_LOCK();
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
 		if (resm == nodeResm ||
@@ -104,7 +106,10 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = resm->resm_type;
-		scc->scc_uptime = r->res_uptime;
+		tv2.tv_sec = r->res_uptime;
+		tv2.tv_nsec = 0;
+		timespecsub(&tv1, &tv2, &tv2);
+		scc->scc_uptime = tv2.tv_sec;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
@@ -134,7 +139,11 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = SLCTL_REST_CLI;
-		scc->scc_uptime = expc->uptime;
+
+		tv2.tv_sec = expc->uptime;
+		tv2.tv_nsec = 0;
+		timespecsub(&tv1, &tv2, &tv2);
+		scc->scc_uptime = tv2.tv_sec;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
