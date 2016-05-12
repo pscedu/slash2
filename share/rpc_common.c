@@ -228,6 +228,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[CBARG_CSVC];
 	uint32_t *stkversp = args->pointer_arg[CBARG_STKVER];
 	uint64_t *uptimep = args->pointer_arg[CBARG_UPTIME];
+	struct timespec tv1, tv2;
 	int rc;
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
@@ -238,8 +239,14 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
+
+		tv1.tv_sec = mp->uptime;
+		tv1.tv_nsec = 0;
+		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
+		timespecsub(&tv2, &tv1, &tv1);
+		*uptimep = tv1.tv_sec;
+
 		*stkversp = mp->stkvers;
-		*uptimep = mp->uptime;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
 	}
@@ -288,7 +295,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
-	struct timespec tv;
+	struct timespec tv1, tv2;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -330,9 +337,9 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->version = csvc->csvc_version;
 	mq->stkvers = sl_stk_version;
 
-	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv);
-	timespecsub(&tv, &pfl_uptime, &tv);
-	mq->uptime = tv.tv_sec;
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv1);
+	timespecsub(&tv1, &pfl_uptime, &tv1);
+	mq->uptime = tv1.tv_sec;
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_tryref++;
@@ -376,7 +383,12 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (rc == 0) {
 		rc = mp->rc;
 		*stkversp = mp->stkvers;
-		*uptimep = mp->uptime;
+
+		tv1.tv_sec = mp->uptime;
+		tv1.tv_nsec = 0;
+		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
+		timespecsub(&tv2, &tv1, &tv1);
+		*uptimep = tv1.tv_sec;
 	}
 	pscrpc_req_finished(rq);
 
