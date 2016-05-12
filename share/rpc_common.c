@@ -798,6 +798,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct timespec now;
 	lnet_nid_t peernid;
 
+	if (peertype != SLCONNT_CLI && 
+	    peertype != SLCONNT_MDS && 
+	    peertype != SLCONNT_IOD)
+		psc_fatalx("%d: bad peer connection type", peertype);
+
 	if (*csvcp) {
 		csvc = *csvcp;
 		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
@@ -836,8 +841,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		hldropf = sl_imp_hldrop_resm;
 		hldroparg = resm;
 		break;
-	default:
-		psc_fatalx("%d: bad peer type", peertype);
 	}
 
 	/* initialize service */
@@ -898,9 +901,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		stkversp = &resm->resm_res->res_stkvers;
 		uptimep = &resm->resm_res->res_uptime;
 		break;
-	default:
-		psc_fatalx("%d: bad peer connection type",
-		    csvc->csvc_peertype);
 	}
 
  restart:
