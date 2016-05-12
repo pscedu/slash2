@@ -96,13 +96,14 @@ packshow_bml(__unusedx char *s)
 	psc_ctlmsg_push(SLMCMT_GETBML, sizeof(struct slmctlmsg_bml));
 }
 
-void
+int
 slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-32s %7s %7s %7s %7s %7s %7s\n",
 	    "resource", "in-q", "in-bw", "out-q", "out-bw", "aggr-q",
 	    "aggr-bw");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -120,12 +121,13 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	psc_ctl_prnumber(0, scrq->scrq_aggr_assigned * BW_UNITSZ, 0, "\n");
 }
 
-void
+int
 slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-27s %2s %8s %7s %7s %6s %-17s\n",
 	    "resource", "fl", "capacity", "used", "remain", "utiliz", "type");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -204,7 +206,7 @@ slmctlcmd_upsch_query(int ac, char *av[])
 	strlcpy(scuq->scuq_query, av[0], len);
 }
 
-void
+int
 slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
@@ -212,6 +214,7 @@ slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 	    "%-15s %11s %9s\n",
 	    "bmap-lease-fid", "bmapno", "io-system",
 	    "client", "flags", "seqno");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void

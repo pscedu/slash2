@@ -54,11 +54,12 @@ __static const char *slconn_restypes[] = {
 	"serial"
 };
 
-void
+int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-11s %38s %-7s %5s %5s %4s %4s %10s\n",
 	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -182,7 +183,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	strlcpy(lastres, res, sizeof(lastres));
 }
 
-void
+int
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	int width;
@@ -192,6 +193,7 @@ sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 		printf("%-16s ", "addr");
 	printf("%-16s %6s %-9s %5s %18s %7s\n",
 	    "fid", "bmapno", "flags", "refs", "ios", "seqno");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -225,7 +227,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 # define BLKSIZE_LABEL "blksize"
 #endif
 
-void
+int
 sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	int width;
@@ -238,6 +240,7 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	if (width > 6)
 		printf(" %6s", BLKSIZE_LABEL);
 	printf("\n");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
