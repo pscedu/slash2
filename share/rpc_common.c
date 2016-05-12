@@ -874,6 +874,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 
+		addlist = 1;
 		break;
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
@@ -881,8 +882,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
 		break;
 	}
-	if (peertype == SLCONNT_CLI)
-		addlist = 1;
 
 	*csvcp = csvc;
 	CSVC_LOCK(csvc);
