@@ -59,7 +59,7 @@ sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-11s %38s %-7s %5s %5s %4s %4s %10s\n",
 	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
-	return(PSC_CTL_DISPLAY_WIDTH);
+	return(PSC_CTL_DISPLAY_WIDTH+11);
 }
 
 void
@@ -96,7 +96,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	char *p, *site, nid[NI_MAXHOST], *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
-	int col;
+	int col, connected = 0;
 
 	stype = slconn_restypes[scc->scc_type];
 
@@ -150,6 +150,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	if (scc->scc_flags & CSVCF_CONNECTED) {
 		setcolor(COLOR_GREEN);
 		printf("O");
+		connected = 1;
 		uncolor();
 	} else {
 		printf("-");
@@ -174,10 +175,13 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%4d %4d ", scc->scc_txcr, scc->scc_refcnt);
 
-	printf("%3ldd%02ldh%02ldm\n",
-	    scc->scc_uptime / (60 * 60 * 24),
-	    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
-	    (scc->scc_uptime % (60 * 60)) / 60);
+	if (connected)
+		printf("%3ldd%02ldh%02ldm\n",
+		    scc->scc_uptime / (60 * 60 * 24),
+		    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
+		    (scc->scc_uptime % (60 * 60)) / 60);
+	else
+		printf("\n");
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
