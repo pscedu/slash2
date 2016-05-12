@@ -853,11 +853,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	switch (peertype) {
 	case SLCONNT_CLI: {
 		char addrbuf[RESM_ADDRBUF_SZ];
-		struct {
-			struct slashrpc_cservice *csvc;
-			uint32_t stkvers;
-			uint64_t uptime;
-		} *expc;
 
 		/* Hold reference as the multiwait arg below. */
 		csvc->csvc_refcnt = 1;
@@ -868,11 +863,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			    addrbuf);
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
-		expc = (void *)csvc->csvc_params.scp_csvcp;
-		stkversp = &expc->stkvers;
-		uptimep = &expc->uptime;
-
-		//if (imp->imp_connection->c_peer)
 
 		break;
 	    }
@@ -880,8 +870,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	case SLCONNT_MDS:
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
-		stkversp = &resm->resm_res->res_stkvers;
-		uptimep = &resm->resm_res->res_uptime;
 		break;
 	}
 	if (peertype == SLCONNT_CLI)
