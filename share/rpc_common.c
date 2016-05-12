@@ -452,6 +452,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	if (mq->magic != magic || mq->version != version)
 		mp->rc = -EINVAL;
 
+	/* stkvers and uptime are returned in slctlrep_getconn() */
 	tv1.tv_sec = mq->uptime;
 	tv1.tv_nsec = 0;
 	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
@@ -742,6 +743,7 @@ slrpc_getstkversp(struct slashrpc_cservice *csvc)
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
+		uint64_t uptime;
 	} *expc;
 
 	switch (csvc->csvc_peertype) {
@@ -984,6 +986,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
+		psc_assert(stkversp);
+		psc_assert(uptimep);
 		if (stkversp == NULL)
 			stkversp = slrpc_getstkversp(csvc);
 		rc = ENETUNREACH;
