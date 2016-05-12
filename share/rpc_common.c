@@ -986,8 +986,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
-		psc_assert(stkversp);
-		psc_assert(uptimep);
+		psc_assert(stkversp && uptimep);
+
+		/*
+ 		 * Keep it for now, let us delete it much later.
+ 		 */
 		if (stkversp == NULL)
 			stkversp = slrpc_getstkversp(csvc);
 		rc = ENETUNREACH;
