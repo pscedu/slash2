@@ -797,6 +797,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
+	char addrbuf[RESM_ADDRBUF_SZ];
 	struct {
 		struct slashrpc_cservice *csvc;
 		uint32_t stkvers;
@@ -861,8 +862,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/* ensure peer is of the given resource type */
 	switch (peertype) {
-	case SLCONNT_CLI: {
-		char addrbuf[RESM_ADDRBUF_SZ];
+	case SLCONNT_CLI:
 
 		/* Hold reference as the multiwait arg below. */
 		csvc->csvc_refcnt = 1;
@@ -875,7 +875,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 
 		break;
-	    }
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
