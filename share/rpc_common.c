@@ -44,8 +44,9 @@
 
 #define CBARG_CSVC	0
 #define CBARG_STKVER	1
-#define CBARG_OLDIMPORT	2
-#define CBARG_NEWIMPORT	3
+#define CBARG_UPTIME	2
+#define CBARG_OLDIMPORT	3
+#define CBARG_NEWIMPORT	4
 
 struct pscrpc_request_set *sl_nbrqset;
 
@@ -226,6 +227,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	struct pscrpc_import *imp = args->pointer_arg[CBARG_NEWIMPORT];
 	struct slashrpc_cservice *csvc = args->pointer_arg[CBARG_CSVC];
 	uint32_t *stkversp = args->pointer_arg[CBARG_STKVER];
+	uint64_t *uptimep = args->pointer_arg[CBARG_UPTIME];
 	int rc;
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
@@ -237,6 +239,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
 		*stkversp = mp->stkvers;
+		*uptimep = mp->uptime;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
 	}
@@ -276,7 +279,8 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
 __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
     struct slashrpc_cservice *csvc, int flags,
-    __unusedx struct pfl_multiwait *mw, uint32_t *stkversp)
+    __unusedx struct pfl_multiwait *mw, 
+    uint32_t *stkversp, uint64_t *uptimep)
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
@@ -341,6 +345,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[CBARG_STKVER] = stkversp;
+		rq->rq_async_args.pointer_arg[CBARG_UPTIME] = uptimep;
 		rq->rq_async_args.pointer_arg[CBARG_OLDIMPORT] = oimp;
 		rq->rq_async_args.pointer_arg[CBARG_NEWIMPORT] = imp;
 		rc = SL_NBRQSET_ADD(csvc, rq);
@@ -371,6 +376,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (rc == 0) {
 		rc = mp->rc;
 		*stkversp = mp->stkvers;
+		*uptimep = mp->uptime;
 	}
 	pscrpc_req_finished(rq);
 
@@ -497,6 +503,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		psc_fatal("choke");
 	}
 	mp->stkvers = sl_stk_version;
+	timespecsub(&tv2, &pfl_uptime, &tv1);
+	mp->uptime = tv1.tv_sec; 
 	return (0);
 }
 
@@ -792,6 +800,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     enum slconn_type peertype, struct pfl_multiwait *mw)
 {
 	void *hldropf, *hldroparg;
+	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
 	int rc = 0, addlist = 0, need_ref = 1;
 	struct slashrpc_cservice *csvc;
@@ -857,6 +866,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		struct {
 			struct slashrpc_cservice *csvc;
 			uint32_t stkvers;
+			uint64_t uptime;
 		} *expc;
 
 		/* Hold reference as the multiwait arg below. */
@@ -870,6 +880,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 		expc = (void *)csvc->csvc_params.scp_csvcp;
 		stkversp = &expc->stkvers;
+		uptimep = &expc->uptime;
 
 		//if (imp->imp_connection->c_peer)
 
@@ -880,6 +891,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "res-%s", resm->resm_name);
 		stkversp = &resm->resm_res->res_stkvers;
+		uptimep = &resm->resm_res->res_uptime;
 		break;
 	}
 	if (peertype == SLCONNT_CLI)
@@ -981,7 +993,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				    LNET_NIDNET(pp->nid)) {
 					trc = slrpc_issue_connect(
 					    pp->nid, nr->resmnid_nid,
-					    csvc, flags, mw, stkversp);
+					    csvc, flags, mw, stkversp, 
+					    uptimep);
 					if (trc == 0) {
 						rc = 0;
 						goto proc_conn;
