@@ -797,6 +797,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
+	struct {
+		struct slashrpc_cservice *csvc;
+		uint32_t stkvers;
+		uint64_t uptime;
+	} *expc;
 
 	if (peertype != SLCONNT_CLI && 
 	    peertype != SLCONNT_MDS && 
@@ -805,8 +810,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (*csvcp) {
 		csvc = *csvcp;
-		psc_assert(csvc->csvc_peertype == peertype);
 		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
+		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
 		goto next;
 	}
@@ -886,17 +891,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
  next:
 	switch (peertype) {
-	case SLCONNT_CLI: {
-		struct {
-			struct slashrpc_cservice *csvc;
-			uint32_t stkvers;
-			uint64_t uptime;
-		} *expc;
+	case SLCONNT_CLI:
 		expc = (void *)csvc->csvc_params.scp_csvcp;
 		stkversp = &expc->stkvers;
 		uptimep = &expc->uptime;
 		break;
-	    }
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
 		resm = (void *)csvc->csvc_params.scp_csvcp;
