@@ -805,6 +805,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (*csvcp) {
 		csvc = *csvcp;
+		psc_assert(csvc->csvc_peertype == peertype);
 		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
 		CSVC_LOCK(csvc);
 		goto next;
@@ -813,6 +814,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CONF_LOCK();
 	if (*csvcp) {
 		csvc = *csvcp;
+		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
 		CONF_ULOCK();
 		goto next;
@@ -883,7 +885,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CONF_ULOCK();
 
  next:
-	switch (csvc->csvc_peertype) {
+	switch (peertype) {
 	case SLCONNT_CLI: {
 		struct {
 			struct slashrpc_cservice *csvc;
