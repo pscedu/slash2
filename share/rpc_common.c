@@ -1196,6 +1196,8 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 
 	spinlock(&sl_conn_lock);
 	rc = psc_dynarray_exists(&sct->sct_monres, scp);
+	if (!rc)
+		psc_dynarray_add(&sct->sct_monres, scp);
 	freelock(&sl_conn_lock);
 	if (rc)
 		return;
@@ -1209,7 +1211,6 @@ slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
 	spinlock(&sl_conn_lock);
 	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
 		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
-	psc_dynarray_add(&sct->sct_monres, scp);
 	freelock(&sl_conn_lock);
 }
 
