@@ -280,6 +280,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_mh = mh;
 
+	/* searched in mrsq_lookup() */
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
 
