@@ -341,8 +341,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
 	const struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
-	struct fidc_membh *f;
-	int rc = 0;
+	struct fidc_membh *f = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -352,14 +351,15 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		OPSTAT_INCR("getbmap-lease-read");
 	else {
 		mp->rc = -EINVAL;
-		return (0);
+		goto out;
 	}
 
 	pfl_fault_here(NULL, "slashd/getbmap_rpc");
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		return (0);
+		goto out;
+
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
@@ -371,8 +371,13 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		slm_pack_inode(f, &mp->ino);
 
  out:
-	fcmh_op_done(f);
-	return (rc ? rc : mp->rc);
+	if (f)
+		fcmh_op_done(f);
+	if (mp->rc)
+		OPSTAT_INCR("getbmap-lease-ok");
+	else
+		OPSTAT_INCR("getbmap-lease-err");
+	return (0);
 }
 
 int
