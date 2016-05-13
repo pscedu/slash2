@@ -306,7 +306,6 @@ sl_resm_hldrop(struct sl_resm *resm)
 		PLL_LOCK(&msctl_replsts);
 		PLL_FOREACH(mrsq, &msctl_replsts) {
 			spinlock(&mrsq->mrsq_lock);
-			mrsq->mrsq_refcnt++;
 			mrsq_release(mrsq, ECONNRESET);
 		}
 		PLL_ULOCK(&msctl_replsts);
