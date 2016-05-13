@@ -171,6 +171,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	struct pscrpc_request *rq;
 	int rc;
 
+	/* this is handled by msrcm_handle_getreplst() */
 	rc = SL_RSX_NEWREQ(rsw->rsw_csvc, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (rc);
