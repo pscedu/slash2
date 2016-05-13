@@ -59,7 +59,7 @@ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct psc_listcache	 page_buffers;
-int			 page_buffers_count;
+int			 page_buffers_count;	/* total, including free */
 
 void
 msl_pgcache_init(void)
@@ -138,17 +138,18 @@ void
 msl_pgcache_reap(void)
 {
 	void *p;
-	int i, rc, nfree;
+	int i, rc, curr, nfree;
 	static int count;		/* this assume one reaper */
 
-	if (!count || count != page_buffers_count) {
-		count = page_buffers_count;
+	curr = lc_nitems(&page_buffers);
+	if (!count || count != curr) {
+		count = curr;
 		return;
 	}
-	if (page_buffers_count <= msl_bmpces_min)
+	if (curr <= msl_bmpces_min)
 		return;
 
-	nfree = (page_buffers_count - msl_bmpces_min)/2;
+	nfree = (curr - msl_bmpces_min)/2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
