@@ -59,6 +59,7 @@ mrsq_lookup(int id)
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
+	psclog_warn("lookup: mrsq@%p ref=%d", mrsq, mrsq->mrsq_refcnt);
 	return (mrsq);
 }
 
@@ -71,7 +72,7 @@ mrsq_release(struct msctl_replstq *mrsq, int rc)
 	psc_assert(mrsq->mrsq_refcnt > 0);
 	if (--mrsq->mrsq_refcnt == 0)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
-	psclog_debug("mrsq@%p ref=%d rc=%d decref", mrsq,
+	psclog_warn("release: mrsq@%p ref=%d rc=%d", mrsq,
 	    mrsq->mrsq_refcnt, rc);
 	freelock(&mrsq->mrsq_lock);
 }
