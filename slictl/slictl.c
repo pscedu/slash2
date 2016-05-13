@@ -72,11 +72,12 @@ packshow_fcmhs(__unusedx char *fid)
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
-void
+int
 replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %28s %4s %7s %7s %6s\n",
 	    "replwk-stat-fid", "bmap#", "peer", "refs", "xfer", "total", "%prog");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -101,11 +102,12 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf(" %6s\n", rbuf);
 }
 
-void
+int
 slvr_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %4s %7s %5s %9s\n",
 	    "slvr-fid", "bmap#", "sl#", "refs", "flags", "err", "time");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void

@@ -641,11 +641,12 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	return (0);
 }
 
-void
+int
 fattr_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-59s %9s %6s\n",
 	    "file", "attribute", "value");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -671,12 +672,13 @@ fattr_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    val);
 }
 
-void
+int
 fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("%-59s %6s %6s %6s\n",
 	    "file-replication-status", "#valid", "#bmap", "%res");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -811,13 +813,14 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	return (-1);
 }
 
-void
+int
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %5s %3s %9s %6s "
 	    "%11s %3s %10s %10s %2s %2s %4s\n",
 	    "fid", "bno", "ref", "off", "len",
 	    "flags", "try", "sliod", "expire", "np", "nr", "addr");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
@@ -846,13 +849,14 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_nrq, msr->msr_addr);
 }
 
-void
+int
 ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %4s %7s %7s "
 	    "%11s %3s %3s %8s\n",
 	    "fid", "bno", "ref", "err", "offset", "start",
 	    "flags", "nwr", "aio", "lastacc");
+	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
 void
