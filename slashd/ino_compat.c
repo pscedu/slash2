@@ -189,6 +189,13 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    inoh_2_fid(ih));
 
+	/*
+ 	 * 05/11/2016: I replicate a slash2 tree from one IOS to another and
+ 	 * then build tree there.  The build stalls on .sconsign.dblite.
+ 	 * (setattr return EIO). Later I tried to rm this file. I got
+ 	 * ENONET from the following lookup, and mds_inode_read()
+ 	 * turns it into EIO.
+ 	 */
 	*rc = mdsio_lookup(vfsid, mds_tmpdir_inum[vfsid], fn, &inum,
 	    &rootcreds, NULL);
 	if (*rc)
