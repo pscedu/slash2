@@ -223,22 +223,22 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	int count = 0;
 
 	switch (abs(*rc)) {
-	case PFLERR_TIMEDOUT:
 
+	/* XXX always retry */
+	case PFLERR_TIMEDOUT:
+		*rc = ETIMEDOUT;
 	case ECONNABORTED:
 	case ECONNREFUSED:
 	case ECONNRESET:
 	case EHOSTDOWN:
 	case EHOSTUNREACH:
-	case EIO:
 	case ENETDOWN:
 	case ENETRESET:
 	case ENETUNREACH:
-#ifdef ENONET
-	case ENONET:
-#endif
 	case ENOTCONN:
 		break;
+
+	/* retry for somee number of times */
 	case ETIMEDOUT:
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
@@ -250,8 +250,11 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	 * Translate error codes from the SLASH2 level to the OS level.
 	 */
 	case PFLERR_NOTSUP:
-		PFL_GOTOERR(out, *rc = ENOTSUP);
-		/* FALLTHROUGH */
+		*rc = ENOTSUP;
+	case EIO:
+#ifdef ENONET
+	case ENONET:
+#endif
 	default:
 		PFL_GOTOERR(out, *rc);
 	}
