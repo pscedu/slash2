@@ -93,7 +93,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct msctlmsg_replst mrs;
+	struct msctlmsg_replst mrs;		/* XXX big stack usage */
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
@@ -127,8 +127,11 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    "<unknown IOS %#x>",
 			    mq->repls[n].bs_id);
 	}
+	psclog_warnx("Handle GETREPLST: id = %d, rc = %d, fd = %d - reply1", mq->id, mrsq->mrsq_fd, mq->rc);
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
+	psclog_warnx("Handle GETREPLST: id = %d, rc = %d, fd = %d - reply2", mq->id, mrsq->mrsq_fd, mq->rc);
 	mrsq_release(mrsq, rc ? 0 : EOF);
+	psclog_warnx("Handle GETREPLST: id = %d, rc = %d - reply3", mq->id, mq->rc);
 	return (0);
 }
 

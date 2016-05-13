@@ -298,7 +298,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	psclog_warn("add: mrsq@%p ref=%d.", &mrsq, mrsq.mrsq_refcnt);
+	psclog_warn("add: mrsq@%p fd = %d, ref=%d.", &mrsq, fd, mrsq.mrsq_refcnt);
 
 	spinlock(&mrsq.mrsq_lock);
 	while (mrsq.mrsq_refcnt) {
