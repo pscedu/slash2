@@ -78,8 +78,8 @@ mrsq_release(struct msctl_replstq *mrsq, int rc)
 }
 
 /*
- * Handle a GETREPLST request for CLI from MDS, which would have been
- * initiated by a client request originally.
+ * Handle a SRMT_REPL_GETST request for CLI from MDS, which would have 
+ * been initiated by a client request originally.
  * @rq: request.
  */
 int
@@ -95,6 +95,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	psclog_warn("Handle GETREPLST: id = %d", mq->id);
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL)
 		return (0);
@@ -126,8 +127,8 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 }
 
 /*
- * Handle a GETREPLST request for CLI from MDS, which would have been
- * initiated by a client request originally.
+ * Handle a SRMT_REPL_GETST_SLAVE request for CLI from MDS, which would 
+ * have been initiated by a client request originally.
  * @rq: request.
  */
 int
@@ -144,6 +145,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	rc = mq->rc;
 	if (rc == EOF)
 		rc = 0;
+
+	psclog_warn("Handle GETREPLST_SLAVE: id = %d", mq->id);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
