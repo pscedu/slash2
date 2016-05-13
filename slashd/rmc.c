@@ -1485,7 +1485,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		PFL_GOTOERR(out, mp->rc);
 
 	chfg = attr.sst_fg;
-	mp->rc = slm_fcmh_get(&chfg, &c);
+	mp->rc = -slm_fcmh_get(&chfg, &c);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
