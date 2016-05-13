@@ -502,7 +502,7 @@ main(int argc, char *argv[])
 		slm_mdfs_register(vfsid);
 
 	if (!zfs_nmounts)
-		errx(1, "No ZFS file system exists!");
+		errx(1, "No ZFS file system exists! Try zpool import -a.");
 
 	found = 0;
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++) {
