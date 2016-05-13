@@ -562,6 +562,9 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 {
 	int locked;
 
+	/* 05/13/2016: Hit crash on slashd during to invalid mutex
+ 	 * coming from pscrpc_fail_import().
+ 	 */
 	locked = CSVC_RLOCK(csvc);
 	csvc->csvc_flags |= CSVCF_WANTFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
