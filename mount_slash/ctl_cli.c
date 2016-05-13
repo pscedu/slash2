@@ -277,10 +277,15 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psc_waitq_init(&mrsq.mrsq_waitq);
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
+	mrsq.mrsq_refcnt = 1;
 	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_mh = mh;
 
-	/* searched in mrsq_lookup() */
+	/*
+ 	 * Let us be found in mrsq_lookup(). If the connection
+ 	 * is dropped, our reference count will be dropped for
+ 	 * us so we won't stuck forever.
+ 	 */
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
 
@@ -296,14 +301,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psclog_warn("add: mrsq@%p ref=%d.", &mrsq, mrsq.mrsq_refcnt);
 
 	spinlock(&mrsq.mrsq_lock);
-	while (mrsq.mrsq_rc == 0) {
-		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
-		spinlock(&mrsq.mrsq_lock);
-	}
-
-	freelock(&mrsq.mrsq_lock);
-	PLL_LOCK(&msctl_replsts);
-	spinlock(&mrsq.mrsq_lock);
 	while (mrsq.mrsq_refcnt) {
 		PLL_ULOCK(&msctl_replsts);
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
@@ -311,7 +308,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		spinlock(&mrsq.mrsq_lock);
 	}
 	pll_remove(&msctl_replsts, &mrsq);
-	PLL_ULOCK(&msctl_replsts);
 	psc_waitq_destroy(&mrsq.mrsq_waitq);
 	added = 0;
 
