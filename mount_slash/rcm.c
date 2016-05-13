@@ -66,11 +66,17 @@ mrsq_lookup(int id)
 void
 mrsq_release(struct msctl_replstq *mrsq, int rc)
 {
+	int wake = 0;
 	(void)reqlock(&mrsq->mrsq_lock);
-	if (mrsq->mrsq_rc == 0)
+	if (mrsq->mrsq_rc == 0) {
+		wake = 1;
 		mrsq->mrsq_rc = rc;
+	}
 	psc_assert(mrsq->mrsq_refcnt > 0);
 	if (--mrsq->mrsq_refcnt == 0)
+		wake = 1;
+
+	if (wake)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
 	psclog_warn("release: mrsq@%p ref=%d rc=%d", mrsq,
 	    mrsq->mrsq_refcnt, rc);
@@ -95,7 +101,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_warn("Handle GETREPLST: id = %d", mq->id);
+	psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL)
 		return (0);
@@ -146,7 +152,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	if (rc == EOF)
 		rc = 0;
 
-	psclog_warn("Handle GETREPLST_SLAVE: id = %d", mq->id);
+	psclog_warn("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
