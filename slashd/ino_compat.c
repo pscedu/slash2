@@ -116,7 +116,9 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_INFO, ih, buf, "updating old inode (v %d)",
+
+	OPSTAT_INCR("inode-update");
+	DEBUG_INOH(PLL_WARN, ih, buf, "updating old inode (v %d)",
 	    old_version);
 
 	f = inoh_2_fcmh(ih);
