@@ -62,9 +62,9 @@ mrsq_lookup(int id)
 void
 mrsq_release(struct msctl_replstq *mrsq, int rc)
 {
-	psclog_warn("release: mrsq@%p rc=%d", mrsq, rc);
+	psclog_diag("release: mrsq@%p rc=%d", mrsq, rc);
 
-	reqlock(&mrsq->mrsq_lock);
+	spinlock(&mrsq->mrsq_lock);
 	if (rc == 0) {
 		freelock(&mrsq->mrsq_lock);
 		return;
@@ -144,7 +144,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	if (rc == EOF)
 		rc = 0;
 
-	psclog_warn("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
+	psclog_diag("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {

@@ -304,10 +304,8 @@ sl_resm_hldrop(struct sl_resm *resm)
 
 	if (resm->resm_type == SLREST_MDS) {
 		PLL_LOCK(&msctl_replsts);
-		PLL_FOREACH(mrsq, &msctl_replsts) {
-			spinlock(&mrsq->mrsq_lock);
+		PLL_FOREACH(mrsq, &msctl_replsts)
 			mrsq_release(mrsq, ECONNRESET);
-		}
 		PLL_ULOCK(&msctl_replsts);
 	} else if (resm->resm_type == SLREST_ARCHIVAL_FS) {
 		struct psc_listcache *lc;
