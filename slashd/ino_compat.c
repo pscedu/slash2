@@ -120,6 +120,11 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	    old_version);
 
 	f = inoh_2_fcmh(ih);
+
+	/* 
+	 * This logic was introduced by commit 
+	 * 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
+	 */
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
 	    &rootcreds, O_RDWR | O_CREAT | O_TRUNC,
