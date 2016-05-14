@@ -288,7 +288,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fdlock = fdlock;
-	mrsq.mrsq_refcnt = 1;
 	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_mh = mh;
 
@@ -309,7 +308,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	psclog_warn("add: mrsq@%p fd = %d, ref=%d.", &mrsq, fd, mrsq.mrsq_refcnt);
+	psclog_warn("add: mrsq@%p fd = %d.", &mrsq, fd);
 
 	spinlock(&mrsq.mrsq_lock);
 	while (!mrsq.mrsq_rc) {

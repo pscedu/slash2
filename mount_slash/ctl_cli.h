@@ -135,7 +135,6 @@ struct msctl_replstq {
 	const struct psc_ctlmsghdr	*mrsq_mh;
 	psc_spinlock_t			 mrsq_lock;
 	slfid_t				 mrsq_fid;
-	int				 mrsq_refcnt;
 };
 
 void mrsq_release(struct msctl_replstq *, int);

@@ -52,14 +52,10 @@ mrsq_lookup(int id)
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == id) {
 			spinlock(&mrsq->mrsq_lock);
-			mrsq->mrsq_refcnt++;
-			psclog_debug("mrsq@%p ref=%d incref", mrsq,
-			    mrsq->mrsq_refcnt);
 			freelock(&mrsq->mrsq_lock);
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
-	psclog_warn("lookup: mrsq@%p ref=%d", mrsq, mrsq->mrsq_refcnt);
 	return (mrsq);
 }
 
