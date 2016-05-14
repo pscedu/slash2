@@ -66,20 +66,16 @@ mrsq_lookup(int id)
 void
 mrsq_release(struct msctl_replstq *mrsq, int rc)
 {
-	int wake = 0;
-	(void)reqlock(&mrsq->mrsq_lock);
-	if (mrsq->mrsq_rc == 0) {
-		wake = 1;
-		mrsq->mrsq_rc = rc;
-	}
-	psc_assert(mrsq->mrsq_refcnt > 0);
-	if (--mrsq->mrsq_refcnt == 0)
-		wake = 1;
+	psclog_warn("release: mrsq@%p rc=%d", mrsq, rc);
 
-	if (wake)
-		psc_waitq_wakeall(&mrsq->mrsq_waitq);
-	psclog_warn("release: mrsq@%p ref=%d rc=%d", mrsq,
-	    mrsq->mrsq_refcnt, rc);
+	reqlock(&mrsq->mrsq_lock);
+	if (rc == 0) {
+		freelock(&mrsq->mrsq_lock);
+		return;
+	}
+	/* only wake up in case of error or EOF */
+	mrsq->mrsq_rc = rc;
+	psc_waitq_wakeall(&mrsq->mrsq_waitq);
 	freelock(&mrsq->mrsq_lock);
 }
 

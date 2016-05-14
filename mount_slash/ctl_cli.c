@@ -312,7 +312,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psclog_warn("add: mrsq@%p fd = %d, ref=%d.", &mrsq, fd, mrsq.mrsq_refcnt);
 
 	spinlock(&mrsq.mrsq_lock);
-	while (mrsq.mrsq_refcnt) {
+	while (!mrsq.mrsq_rc) {
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		spinlock(&mrsq.mrsq_lock);
 	}
