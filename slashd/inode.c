@@ -101,10 +101,11 @@ mds_inode_read(struct slash_inode_handle *ih)
 				    nb, sizeof(ih->inoh_ino) +
 				    sizeof(od_crc));
 			else {
-				rc = EIO;
-				DEBUG_INOH(PLL_WARN, ih, buf, "CRC failed "
+				DEBUG_INOH(PLL_WARN, ih, buf, 
+				    "CRC failed (rc = %d)"
 				    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
-				    od_crc, crc);
+				    rc, od_crc, crc);
+				rc = EIO;
 			}
 		}
 		if (rc == 0) {
