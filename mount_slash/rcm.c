@@ -93,7 +93,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
+	psclog_diag("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL)
 		return (0);
