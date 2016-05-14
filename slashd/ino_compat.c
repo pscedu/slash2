@@ -182,12 +182,15 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	char fn[NAME_MAX + 1];
 	struct srt_stat sstb;
 	struct iovec iovs[2];
-	uint64_t crc, od_crc;
 	void *h = NULL, *th;
 	mdsio_fid_t inum;
 	int exists = 0;
 	size_t nb;
+	uint64_t od_crc;
+#if 0
+	uint64_t crc;
 	char buf[LINE_MAX];
+#endif
 
 	th = inoh_2_mfh(ih);
 
@@ -220,6 +223,14 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
+#if 0
+	/*
+ 	 * Let us trust ZFS o do the right thing. This code is trigger the
+ 	 * above-commented issue again. I need to re-visit the update 
+ 	 * interrupted issue some day.  ZFS never does write-in-place, we
+ 	 * should not need to create an "update" version of the file in
+ 	 * the first place.
+ 	 */
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	if (crc != od_crc) {
 		OPSTAT_INCR("badcrc");
@@ -229,6 +240,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 		    od_crc, crc);
 		PFL_GOTOERR(out, *rc);
 	}
+#endif
 
 	exists = 1;
 
