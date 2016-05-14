@@ -226,6 +226,16 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sl_fidgen fg;
 	int added = 0, rc;
 
+	struct psc_thread *thr;
+	struct psc_ctlthr *pct;
+	struct pfl_ctl_data *pcd;
+	struct pfl_mutex *fdlock;
+
+	thr = pscthr_get();
+	pct = psc_ctlthr(thr);
+	pcd = pct->pct_ctldata;
+	fdlock = &pcd->pcd_mutex;
+
 	if (mrq->mrq_fid == FID_ANY) {
 		fg.fg_fid = FID_ANY;
 		fg.fg_gen = FGEN_ANY;
@@ -277,6 +287,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psc_waitq_init(&mrsq.mrsq_waitq);
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
+	mrsq.mrsq_fdlock = fdlock;
 	mrsq.mrsq_refcnt = 1;
 	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_mh = mh;
