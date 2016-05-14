@@ -128,7 +128,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    mq->repls[n].bs_id);
 	}
 	psclog_warnx("Handle GETREPLST: id = %d, rc = %d, fd = %d - reply1", mq->id, mrsq->mrsq_fd, mq->rc);
-	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
+	rc = psc_ctlmsg_sendv_rpc(mrsq->mrsq_fd, &mh, &mrs);
 	psclog_warnx("Handle GETREPLST: id = %d, rc = %d, fd = %d - reply2", mq->id, mrsq->mrsq_fd, mq->rc);
 	mrsq_release(mrsq, rc ? 0 : EOF);
 	psclog_warnx("Handle GETREPLST: id = %d, rc = %d - reply3", mq->id, mq->rc);
@@ -185,7 +185,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	if (mp->rc == 0) {
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
 		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,
-		    mq->len + sizeof(*mrsl), mrsl);
+		    mq->len + sizeof(*mrsl), mrsl, NULL);
 		rc = rc ? 0 : EOF;
 	}
 

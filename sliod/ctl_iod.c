@@ -362,26 +362,26 @@ sli_import(FTSENT *f, void *arg)
 	if (abs(rc) == EEXIST) {
 		if (lstat(fn, &tstb) == -1) {
 			rc = errno;
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			a->rc = psc_ctlsenderr(a->fd, mh, NULL, "%s: %s", fn,
 			    sl_strerror(rc));
 		} else if (tstb.st_ino == stb->st_ino) {
 			rc = 0;
 			if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
-				a->rc = psc_ctlsenderr(a->fd, mh,
+				a->rc = psc_ctlsenderr(a->fd, mh, NULL,
 				    "reimporting %s%s", fn,
 				    S_ISDIR(stb->st_mode) ?
 				    "/" : "");
 		} else {
-			a->rc = psc_ctlsenderr(a->fd, mh,
+			a->rc = psc_ctlsenderr(a->fd, mh, NULL,
 			    "%s: another file has already been "
 			    "imported at this namespace node",
 			    fn);
 		}
 	} else if (rc)
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		a->rc = psc_ctlsenderr(a->fd, mh, NULL, "%s: %s", fn,
 		    sl_strerror(rc));
 	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
-		a->rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
+		a->rc = psc_ctlsenderr(a->fd, mh, NULL, "importing %s%s", fn,
 		    S_ISDIR(stb->st_mode) ? "/" : "");
 
 	if (rq)
@@ -406,10 +406,10 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	sfop->sfop_fn[sizeof(sfop->sfop_fn) - 1] = '\0';
 	sfop->sfop_fn2[sizeof(sfop->sfop_fn2) - 1] = '\0';
 	if (sfop->sfop_fn[0] == '\0')
-		return (psc_ctlsenderr(fd, mh, "import source: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "import source: %s",
 		    sl_strerror(ENOENT)));
 	if (sfop->sfop_fn2[0] == '\0')
-		return (psc_ctlsenderr(fd, mh, "import destination: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "import destination: %s",
 		    sl_strerror(ENOENT)));
 
 	/*
@@ -419,15 +419,15 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 
 	if (stat(slcfg_local->cfg_fsroot, &sb1) == -1)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 		    sfop->sfop_fn, sl_strerror(errno)));
 
 	if (lstat(sfop->sfop_fn, &sb2) == -1)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 		    sfop->sfop_fn, sl_strerror(errno)));
 
 	if (sb1.st_dev != sb2.st_dev)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 		    sfop->sfop_fn, sl_strerror(EXDEV)));
 
 	/*
@@ -436,15 +436,15 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 	if (S_ISREG(sb2.st_mode)) {
 		if (statvfs(slcfg_local->cfg_fsroot, &vfssb1) == -1)
-			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 			    sfop->sfop_fn, sl_strerror(errno)));
 
 		if (statvfs(sfop->sfop_fn, &vfssb2) == -1)
-			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 			    sfop->sfop_fn, sl_strerror(errno)));
 
 		if (vfssb1.f_fsid != vfssb2.f_fsid)
-			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 			    sfop->sfop_fn, sl_strerror(EXDEV)));
 	}
 
@@ -457,7 +457,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 		fl |= PFL_FILEWALKF_RECURSIVE;
 
 	if (realpath(sfop->sfop_fn, buf) == NULL)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: %s",
 		    sfop->sfop_fn, sl_strerror(errno)));
 	strlcpy(sfop->sfop_fn, buf, sizeof(sfop->sfop_fn));
 	pfl_filewalk(sfop->sfop_fn, fl, NULL, sli_import, &a);
@@ -482,7 +482,7 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		strlcpy(srws->srws_peer_addr, w->srw_src_res->res_name,
 		    sizeof(srws->srws_peer_addr));
 
-		rc = psc_ctlmsg_sendv(fd, mh, srws);
+		rc = psc_ctlmsg_sendv(fd, mh, srws, NULL);
 		if (!rc)
 			break;
 	}
@@ -510,7 +510,7 @@ slictlrep_getslvr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		ss->ss_ts.tv_sec = s->slvr_ts.tv_sec;
 		ss->ss_ts.tv_nsec = s->slvr_ts.tv_nsec;
 
-		rc = psc_ctlmsg_sendv(fd, mh, ss);
+		rc = psc_ctlmsg_sendv(fd, mh, ss, NULL);
 		if (!rc)
 			break;
 	}
@@ -526,7 +526,7 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	scb->scb_bno = b->bcm_bmapno;
 	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
 	scb->scb_flags = b->bcm_flags;
-	return (psc_ctlmsg_sendv(fd, mh, scb));
+	return (psc_ctlmsg_sendv(fd, mh, scb, NULL));
 }
 
 int
@@ -540,7 +540,7 @@ slictl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 
 	if (set && strcmp(pcp->pcp_value, "0") &&
 	    strcmp(pcp->pcp_value, "1"))
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "connected: invalid value"));
 
 	m = res_getmemb(r);

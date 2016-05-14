@@ -111,7 +111,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		timespecsub(&tv1, &tv2, &tv2);
 		scc->scc_uptime = tv2.tv_sec;
 
-		rc = psc_ctlmsg_sendv(fd, mh, scc);
+		rc = psc_ctlmsg_sendv(fd, mh, scc, NULL);
 		if (!rc)
 			goto done;
 	}
@@ -145,7 +145,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		timespecsub(&tv1, &tv2, &tv2);
 		scc->scc_uptime = tv2.tv_sec;
 
-		rc = psc_ctlmsg_sendv(fd, mh, scc);
+		rc = psc_ctlmsg_sendv(fd, mh, scc, NULL);
 		if (!rc)
 			break;
 	}
@@ -167,7 +167,7 @@ slctlmsg_fcmh_send(int fd, struct psc_ctlmsghdr *mh,
 	scf->scf_refcnt = f->fcmh_refcnt;
 	scf->scf_size = fcmh_2_fsz(f);
 	scf->scf_blksize = f->fcmh_sstb.sst_blksize;
-	return (psc_ctlmsg_sendv(fd, mh, scf));
+	return (psc_ctlmsg_sendv(fd, mh, scf, NULL));
 }
 
 int
@@ -197,7 +197,7 @@ slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 	} else {
 		if (sl_fcmh_peek_fid(scf->scf_fg.fg_fid, &f)) {
-			rc = psc_ctlsenderr(fd, mh,
+			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "FID "SLPRI_FID" not in cache",
 			    scf->scf_fg.fg_fid);
 		} else {
@@ -251,12 +251,12 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 	struct sl_site *s;
 
 	if (nlevels > 5)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	set = mh->mh_type == PCMT_SETPARAM;
 
 	if (set && nlevels != 5)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	/* sys.resources.<site>.<res>.<field> */
 	/* ex: sys.resources.SITE.RES.FIELD */
@@ -268,13 +268,13 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 
 	if (strlcpy(p_site, nlevels > 2 ? levels[2] : "*",
 	    sizeof(p_site)) >= sizeof(p_site))
-		return (psc_ctlsenderr(fd, mh, "invalid site"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid site"));
 	if (strlcpy(p_res, nlevels > 3 ? levels[3] : "*",
 	    sizeof(p_res)) >= sizeof(p_res))
-		return (psc_ctlsenderr(fd, mh, "invalid resource"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid resource"));
 	if (strlcpy(p_field, nlevels > 4 ? levels[4] : "*",
 	    sizeof(p_field)) >= sizeof(p_field))
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
 
 	CONF_FOREACH_RES(s, r, i) {
 		strlcpy(resname, r->res_name, sizeof(resname));
@@ -291,7 +291,7 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 
 		if (RES_ISCLUSTER(r)) {
 			if (strcmp(p_res, "*"))
-				return (psc_ctlsenderr(fd, mh,
+				return (psc_ctlsenderr(fd, mh, NULL,
 				    "invalid resource"));
 			continue;
 		}
@@ -313,17 +313,17 @@ slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 		}
 		if (!field_found && strcmp(p_field, "*") &&
 		    strcmp(p_res, "*") && strcmp(p_site, "*"))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid resources field: %s", p_field));
 	}
 	if (!site_found)
-		return (psc_ctlsenderr(fd, mh, "invalid site: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid site: %s",
 		    p_site));
 	if (!res_found)
-		return (psc_ctlsenderr(fd, mh, "invalid resource: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid resource: %s",
 		    p_res));
 	if (!field_found)
-		return (psc_ctlsenderr(fd, mh, "invalid field: %s",
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field: %s",
 		    p_field));
 	return (1);
 }

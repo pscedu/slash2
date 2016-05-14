@@ -89,7 +89,7 @@ slmctl_resfieldm_xid(int fd, struct psc_ctlmsghdr *mh,
 
 	sp = res2mdsinfo(r);
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "xid: field is read-only"));
 	snprintf(nbuf, sizeof(nbuf), "%"PRIu64, sp->sp_xid);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
@@ -106,7 +106,7 @@ slmctl_resfieldi_xid(int fd, struct psc_ctlmsghdr *mh,
 
 	si = res2iosinfo(r);
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "xid: field is read-only"));
 	snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
 	    si->si_xid);
@@ -124,7 +124,7 @@ slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
 
 	si = res2iosinfo(r);
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "batcho: field is read-only"));
 	snprintf(nbuf, sizeof(nbuf), "%"PRIu64, si->si_batchno);
 	return (psc_ctlmsg_param_send(fd, mh, pcp,
@@ -143,7 +143,7 @@ slmctl_resfieldi_disable_lease(int fd, struct psc_ctlmsghdr *mh,
 	si = res2iosinfo(r);
 	if (set) {
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 		rpmi = res2rpmi(r);
 		RPMI_LOCK(rpmi);
@@ -172,7 +172,7 @@ slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
 	si = res2iosinfo(r);
 	if (set) {
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
-			return (psc_ctlsenderr(fd, mh,
+			return (psc_ctlsenderr(fd, mh, NULL,
 			    "invalid operation"));
 		rpmi = res2rpmi(r);
 		RPMI_LOCK(rpmi);
@@ -199,7 +199,7 @@ slmctl_resfieldi_preclaim(int fd, struct psc_ctlmsghdr *mh,
 
 	si = res2iosinfo(r);
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "preclaim: field is read-only"));
 	snprintf(nbuf, sizeof(nbuf), "%d",
 	    si->si_flags & SIF_PRECLAIM_NOTSUP ? 0 : 1);
@@ -216,7 +216,7 @@ slmctl_resfieldi_upschq(int fd, struct psc_ctlmsghdr *mh,
 	char nbuf[16];
 
 	if (set)
-		return (psc_ctlsenderr(fd, mh,
+		return (psc_ctlsenderr(fd, mh, NULL,
 		    "upschq: field is read-only"));
 	rpmi = res2rpmi(r);
 	snprintf(nbuf, sizeof(nbuf), "%d",
@@ -314,7 +314,7 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 		scrq->scrq_aggr_queued = si->si_bw_aggr.bwd_queued +
 		    si->si_bw_aggr.bwd_inflight;
 		scrq->scrq_aggr_assigned = si->si_bw_aggr.bwd_assigned;
-		rc = psc_ctlmsg_sendv(fd, mh, scrq);
+		rc = psc_ctlmsg_sendv(fd, mh, scrq, NULL);
 
 		if (!rc)
 			goto done;
@@ -355,7 +355,7 @@ slmctlrep_getstatfs(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    sizeof(scsf->scsf_ssfb));
 		RPMI_ULOCK(rpmi);
 
-		rc = psc_ctlmsg_sendv(fd, mh, scsf);
+		rc = psc_ctlmsg_sendv(fd, mh, scsf, NULL);
 		if (!rc)
 			goto done;
 	}
@@ -405,7 +405,7 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	BHGEN_GET(b, &scb->scb_bgen);
 	scb->scb_flags = b->bcm_flags;
 	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
-	return (psc_ctlmsg_sendv(fd, mh, scb));
+	return (psc_ctlmsg_sendv(fd, mh, scb, NULL));
 }
 
 /*
@@ -446,7 +446,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 			scbl->scbl_ndups++;
 		BML_ULOCK(bml);
 
-		rc = psc_ctlmsg_sendv(fd, mh, scbl);
+		rc = psc_ctlmsg_sendv(fd, mh, scbl, NULL);
 		if (!rc)
 			break;
 	}
