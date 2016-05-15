@@ -50,11 +50,8 @@ mrsq_lookup(int id)
 
 	PLL_LOCK(&msctl_replsts);
 	PLL_FOREACH(mrsq, &msctl_replsts)
-		if (mrsq->mrsq_id == id) {
-			spinlock(&mrsq->mrsq_lock);
-			freelock(&mrsq->mrsq_lock);
+		if (mrsq->mrsq_id == id)
 			break;
-		}
 	PLL_ULOCK(&msctl_replsts);
 	return (mrsq);
 }
