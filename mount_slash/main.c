@@ -352,22 +352,6 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
-/*
- * Convert an error code acquired from RPC (either from the RPC stack,
- * underlying network stack, OS, or from the remote SLASH2 peer) to an
- * error value native to this system.
- */
-int
-msl_io_convert_errno(int rc)
-{
-	switch (rc) {
-	case -SLERR_ION_OFFLINE:
-		rc = ETIMEDOUT;
-		break;
-	}
-	return (rc);
-}
-
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -504,11 +488,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * failure of the creation itself.
 	 *
 	 * Instead, wait for the application to perform some actual I/O
-	 * then report the error then.
+	 * to retrieve bmap lease on-demand.
 	 */
-	rc2 = msl_io_convert_errno(mp->rc2);
-	if (rc2)
-		PFL_GOTOERR(out, rc2);
+	if (mp->rc2)
+		PFL_GOTOERR(out, mp->rc2);
 
 	/*
 	 * Instantiate a bmap and load it with the piggybacked lease
