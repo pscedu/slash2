@@ -229,9 +229,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	/*
  	 * Let us trust ZFS o do the right thing. This code is trigger the
  	 * above-commented issue again. I need to re-visit the update 
- 	 * interrupted issue some day.  ZFS never does write-in-place, we
- 	 * should not need to create an "update" version of the file in
- 	 * the first place.
+ 	 * interrupted issue some day.
  	 */
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	if (crc != od_crc) {
