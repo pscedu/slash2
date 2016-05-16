@@ -336,6 +336,7 @@ slm_rmc_handle_getinode(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* handle SRMT_GETBMAP RPC */
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
