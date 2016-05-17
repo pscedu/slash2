@@ -34,7 +34,7 @@ base=$dir/$prof.s2
 preinit
 
 # Initialization/configuration
-ulimit -n 100000
+ulimit -n 1000000
 ulimit -c $((1024 * 1024 * 1024 * 100))
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG=1
