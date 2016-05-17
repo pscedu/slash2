@@ -25,7 +25,7 @@ INCLUDES+=		-I${SLASH_BASE}/include
 INCLUDES+=		-I${SLASH_BASE}
 INCLUDES+=		${SQLITE3_INCLUDES}
 
-DEFINES+=		-DSL_STK_VERSION=$$(git log | grep -c ^commit)
+DEFINES+=		-DSL_STK_VERSION=$$(git log --topo-order | grep -c ^commit)
 SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		${SLASH_BASE}/include
