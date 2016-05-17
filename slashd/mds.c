@@ -243,6 +243,12 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	psc_assert(bml->bml_bmi->bmi_assign);
 
 	if (bml->bml_bmi->bmi_wr_ion) {
+		/*
+		 * Looks like we somehow end up with two write leases on
+		 * the same bmap, but likely with different IOSes, hence
+		 * the following assert triggers.  The bml_start value
+		 * between the two lease exceeds 60000.
+		 */
 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
 	} else {
 		psc_atomic32_inc(&rmmi->rmmi_refcnt);
