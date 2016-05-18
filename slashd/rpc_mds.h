@@ -73,12 +73,6 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH_NENTS		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH_NENTS		2048			/* garbage reclamation */
 
-struct slm_exp_cli {
-	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
-	uint32_t			  mexpc_stkvers;	/* must be second field */
-	uint64_t			  mexpc_uptime;		/* must be third field */
-};
-
 void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handle_lookup(struct pscrpc_request *);

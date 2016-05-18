@@ -49,13 +49,6 @@ struct sli_repl_workrq;
 #define SLI_RII_REPSZ		256
 #define SLI_RII_SVCNAME		"slirii"
 
-/* counterpart to csvc */
-struct sli_exp_cli {
-	struct slrpc_cservice	*iexpc_csvc;		/* must be first field */
-	uint32_t		 iexpc_stkvers;		/* must be second field */
-	uint64_t		 iexpc_uptime;		/* must be third field */
-};
-
 /* aliases for connection management */
 #define sli_geticsvcxf(resm, exp, flags)				\
 	sl_csvc_get(&(resm)->resm_csvc, (flags), (exp),			\

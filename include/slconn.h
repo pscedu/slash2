@@ -49,6 +49,20 @@ struct pscrpc_export;
 
 struct sl_resm;
 
+/* counterpart to csvc */
+struct sli_exp_cli {
+	struct slrpc_cservice	*iexpc_csvc;		/* must be first field */
+	uint32_t		 iexpc_stkvers;		/* must be second field */
+	uint64_t		 iexpc_uptime;		/* must be third field */
+};
+
+struct slm_exp_cli {
+	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
+	uint32_t			  mexpc_stkvers;	/* must be second field */
+	uint64_t			  mexpc_uptime;		/* must be third field */
+};
+
+
 enum slconn_type {
 	SLCONNT_CLI,
 	SLCONNT_IOD,
