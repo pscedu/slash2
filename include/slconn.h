@@ -51,7 +51,7 @@ struct sl_resm;
 
 struct sl_exp_cli {
 	struct slrpc_cservice	*expc_csvc;
-	uint32_t		 expc_stkvers;
+	uint32_t		 expc_stkvers;	/* see slctlrep_getconn() */
 	uint64_t		 expc_uptime;
 };
 

@@ -82,11 +82,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sl_site *s;
 	struct timespec tv1, tv2;
 	int i, j, rc = 1;
-	struct {
-		struct slrpc_cservice *csvc;
-		uint32_t stkvers;
-		uint64_t uptime;
-	} *expc;
+	struct sl_exp_cli *expc;
 
 	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv1);
 	CONF_LOCK();
@@ -133,14 +129,14 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(scc->scc_addrbuf, "?",
 			    sizeof(scc->scc_addrbuf));
 		expc = (void *)csvc->csvc_params.scp_csvcp;
-		scc->scc_stkvers = expc->stkvers;
+		scc->scc_stkvers = expc->expc_stkvers;
 		if (scc->scc_stkvers < sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_OLDER;
 		else if (scc->scc_stkvers > sl_stk_version)
 			scc->scc_flags |= CSVCF_CTL_NEWER;
 		scc->scc_type = SLCTL_REST_CLI;
 
-		tv2.tv_sec = expc->uptime;
+		tv2.tv_sec = expc->expc_uptime;
 		tv2.tv_nsec = 0;
 		timespecsub(&tv1, &tv2, &tv2);
 		scc->scc_uptime = tv2.tv_sec;
