@@ -1272,15 +1272,16 @@ void *
 sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 {
 	void *p;
+	int locked;
 
-	EXPORT_LOCK(exp);
+	locked = EXPORT_RLOCK(exp);
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
 		sl_expcli_ops.secop_allocpri(exp);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
 	p = exp->exp_private;
-	EXPORT_ULOCK(exp);
+	EXPORT_URLOCK(exp, locked);
 	return (p);
 }
 
