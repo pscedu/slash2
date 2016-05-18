@@ -43,10 +43,13 @@ sub start_page {
 				padding: .2em;
 				border: 1px solid #ded8c5;
 			}
+			td:first-child {
+				white-space: nowrap;
+			}
 			tr:nth-child(even) {
 				background: #eee8d5;
 			}
-			a {
+			.main a {
 				color: #fdf6e3;
 			}
 			td + td, th + th {
@@ -66,6 +69,7 @@ sub start_page {
 			th {
 				background-color: #268bd2;
 				color: #fdf6e3;
+				white-space: nowrap;
 			}
 			.ok {
 				background-color: #859900;
@@ -105,6 +109,15 @@ sub start_page {
 			}
 			.test-name {
 				white-space: nowrap;
+			}
+
+			h1 {
+				text-align: center;
+				color: #268bd2;
+			}
+
+			h2 {
+				color: #cb4b16;
 			}
 
 			/* svg objects */
@@ -254,17 +267,21 @@ sub start_page {
 					s += i + ':' + stringify(o[i]) + ';\n'
 				return s
 			}
+
+			window.onload = function(e) {
+				var o = getObj('output')
+				if (o)
+					o.scrollTop = o.scrollHeight
+			}
 		</script>
 	</head>
 	<body>
-		<h2>SLASH2 tsuite results</h2>
-		<table class='embed' id='main' cellspacing='0' cellpadding='0' border='0'>
+		<h1>SLASH2 tsuite results</h1>
 EOH
 }
 
 sub end_page {
 	print <<EOH;
-		</table>
 	</body>
 </html>
 EOH
@@ -300,6 +317,13 @@ SQL
 } elsif ($action eq "view") {
 
 	start_page($q);
+
+	print <<EOH;
+		<div style='text-align: center'>
+			<a href="?">View all results</a>
+		</div>
+		<table class='embed' id='main' cellspacing='0' cellpadding='0' border='0'>
+EOH
 
 	my $sth = $dbh->prepare(<<SQL)
 		SELECT	id,
@@ -391,6 +415,7 @@ EOH
 				  AND	r2.test_name = res.test_name
 				  AND	r2.run_id = run.id
 				  AND	run.success
+				  AND	run.diff = ''
 				  AND	r2.run_id != res.run_id
 			) AS havg_ms
 		FROM	s2ts_result res
@@ -449,18 +474,28 @@ EOH
 				<th>Output</th>
 			</tr>
 			<tr>
-				<td><div class='output'
+				<td><div id='output' class='output'
 				 >@{[$q->escapeHTML($run->{output})]}</div></td>
 			</tr>
 EOH
 	}
 
  VIEW_OUT:
+	print <<EOH;
+	</table>
+EOH
+
 	end_page();
 } else {
 	start_page($q);
 
 	print <<EOH;
+		<h2>Latest Results</h2>
+		Status: OK
+
+		<h2>Results</h2>
+
+		<table class='embed' id='main' cellspacing='0' cellpadding='0' border='0'>
 			<tr>
 				<th>Suite</th>
 				<th>Launch date</th>
@@ -503,6 +538,10 @@ SQL
 				  "OK" : "FAILED" ]}</a></td>
 			</tr>
 EOH
-	  }
+	}
+
+	print <<EOH;
+	</table>
+EOH
 	end_page();
 }
