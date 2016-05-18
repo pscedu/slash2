@@ -478,8 +478,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			    "duplicate connect msg detected");
 
 		/*
-		 * Call mexpc_allocpri() or iexpc_allocpri() to
-		 * establish a SLCONNT_CLI connection to our newly
+		 * Establish a SLCONNT_CLI connection to our newly
 		 * arrived client.
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
@@ -1279,6 +1278,7 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 
 	locked = EXPORT_RLOCK(exp);
 	if (exp->exp_private == NULL && populate) {
+		/* mexpc_allocpri() or iexpc_allocpri() */
 		sl_expcli_ops.secop_allocpri(exp);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
