@@ -210,7 +210,7 @@ __static int
 msl_ric_bflush_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_write_coalescer *bwc =
 	    args->pointer_arg[MSL_CBARG_BIORQS];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
@@ -244,7 +244,7 @@ msl_ric_bflush_cb(struct pscrpc_request *rq,
 
 __static int
 bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
-    struct slashrpc_cservice *csvc, struct bmap *b)
+    struct slrpc_cservice *csvc, struct bmap *b)
 {
 	struct pscrpc_request *rq = NULL;
 	struct resprof_cli_info *rpci;
@@ -374,7 +374,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 __static void
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	struct bmap *b;

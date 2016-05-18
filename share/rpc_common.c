@@ -54,7 +54,7 @@ struct psc_poolmaster	 sl_csvc_poolmaster;
 struct psc_poolmgr	*sl_csvc_pool;
 
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
-    struct slashrpc_cservice, csvc_lentry);
+    struct slrpc_cservice, csvc_lentry);
 
 psc_spinlock_t		 sl_conn_lock = SPINLOCK_INIT;
 
@@ -63,7 +63,7 @@ psc_spinlock_t		 sl_conn_lock = SPINLOCK_INIT;
  * communication happens herein.
  */
 int
-slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
+slrpc_newgenreq(struct slrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	int qlens[] = { qlen, sizeof(struct srt_authbuf_footer) };
@@ -79,7 +79,7 @@ slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
  * Common processing to all SLASH2 communication happens herein.
  */
 int
-slrpc_waitrep(struct slashrpc_cservice *csvc,
+slrpc_waitrep(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, int plen, void *mpp)
 {
 	int rc;
@@ -133,7 +133,7 @@ slrpc_rep_out(struct pscrpc_request *rq)
  * callbacks registered.
  */
 int
-slrpc_rep_in(struct slashrpc_cservice *csvc,
+slrpc_rep_in(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, int flags, int error)
 {
 	/*
@@ -151,7 +151,7 @@ slrpc_rep_in(struct slashrpc_cservice *csvc,
 }
 
 void
-sl_csvc_online(struct slashrpc_cservice *csvc)
+sl_csvc_online(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 
@@ -178,7 +178,7 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 }
 
 void
-sl_csvc_dectryref(struct slashrpc_cservice *csvc)
+sl_csvc_dectryref(struct slrpc_cservice *csvc)
 {
 	int locked;
 
@@ -190,7 +190,7 @@ sl_csvc_dectryref(struct slashrpc_cservice *csvc)
 }
 
 void
-slrpc_connect_finish(struct slashrpc_cservice *csvc,
+slrpc_connect_finish(struct slrpc_cservice *csvc,
     struct pscrpc_import *imp, struct pscrpc_import *old, int success)
 {
 	int locked;
@@ -225,7 +225,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	struct srm_connect_rep *mp = NULL;
 	struct pscrpc_import *oimp = args->pointer_arg[CBARG_OLDIMPORT];
 	struct pscrpc_import *imp = args->pointer_arg[CBARG_NEWIMPORT];
-	struct slashrpc_cservice *csvc = args->pointer_arg[CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[CBARG_CSVC];
 	uint32_t *stkversp = args->pointer_arg[CBARG_STKVER];
 	uint64_t *uptimep = args->pointer_arg[CBARG_UPTIME];
 	struct timespec tv1, tv2;
@@ -256,7 +256,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 }
 
 struct pscrpc_import *
-slrpc_new_import(struct slashrpc_cservice *csvc)
+slrpc_new_import(struct slrpc_cservice *csvc)
 {
 	struct pscrpc_import *imp;
 
@@ -285,7 +285,7 @@ slrpc_new_import(struct slashrpc_cservice *csvc)
  */
 __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
-    struct slashrpc_cservice *csvc, int flags,
+    struct slrpc_cservice *csvc, int flags,
     __unusedx struct pfl_multiwait *mw, 
     uint32_t *stkversp, uint64_t *uptimep)
 {
@@ -404,7 +404,7 @@ int
 slrpc_ping_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
+	struct slrpc_cservice *csvc = args->pointer_arg[0];
 	struct srm_ping_rep *mp;
 	int rc;
 
@@ -417,7 +417,7 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 }
 
 int
-slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
+slrpc_issue_ping(struct slrpc_cservice *csvc, int st_rc)
 {
 	struct pscrpc_request *rq;
 	struct srm_ping_req *mq;
@@ -455,7 +455,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	char buf[PSCRPC_NIDSTR_SIZE];
 	struct timespec tv1, tv2;
 	struct {
-		struct slashrpc_cservice *csvc;
+		struct slrpc_cservice *csvc;
 		uint32_t stkvers;
 		uint64_t uptime;
 	} *expc;
@@ -522,7 +522,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 }
 
 void
-_sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
+_sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 {
 	struct timespec ts;
 
@@ -539,7 +539,7 @@ _sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
  * @csvc: client service.
  */
 int
-sl_csvc_useable(struct slashrpc_cservice *csvc)
+sl_csvc_useable(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	if (csvc->csvc_import == NULL ||
@@ -558,7 +558,7 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
  * @csvc: client service.
  */
 void
-sl_csvc_markfree(struct slashrpc_cservice *csvc)
+sl_csvc_markfree(struct slrpc_cservice *csvc)
 {
 	int locked;
 
@@ -577,7 +577,7 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
  * Perform actual disconnect to a remote service.
  */
 void
-_sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
+_sl_csvc_disconnect_core(struct slrpc_cservice *csvc, int flags)
 {
 	struct pscrpc_import *imp;
 
@@ -612,7 +612,7 @@ _sl_csvc_disconnect_core(struct slashrpc_cservice *csvc, int flags)
  */
 void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc)
+    struct slrpc_cservice *csvc)
 {
 	struct pscrpc_import *imp;
 	int rc;
@@ -656,7 +656,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
  * XXX if CSVCF_WANTFREE is set, bail.
  */
 void
-sl_csvc_incref(struct slashrpc_cservice *csvc)
+sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
@@ -669,7 +669,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice *csvc)
+    struct slrpc_cservice *csvc)
 {
 	int locked;
 
@@ -700,11 +700,11 @@ sl_imp_hldrop_resm(void *arg)
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
-__static struct slashrpc_cservice *
+__static struct slrpc_cservice *
 sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
     void *hldroparg)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 
 	csvc = psc_pool_get(sl_csvc_pool);
 	memset(csvc, 0, sizeof(*csvc));
@@ -754,7 +754,7 @@ slrpc_getpeernid(struct pscrpc_export *exp,
 int
 csvc_cli_cmp(const void *a, const void *b)
 {
-	const struct slashrpc_cservice *ca = a, *cb = b;
+	const struct slrpc_cservice *ca = a, *cb = b;
 
 	/* XXX race */
 	if (ca->csvc_import->imp_connection == NULL ||
@@ -781,13 +781,13 @@ csvc_cli_cmp(const void *a, const void *b)
  * @mw: multiwait structure, used in non-blocking acquisitions.
  *
  * If we acquire a connection successfully, this function will return
- * the same slashrpc_cservice struct pointer as referred to by its
+ * the same slrpc_cservice struct pointer as referred to by its
  * first argument csvcp.  Otherwise, it returns NULL, but the structure
  * is left in the location referred to by csvcp for retry.
  */
-struct slashrpc_cservice *
+struct slrpc_cservice *
 _sl_csvc_get(const struct pfl_callerinfo *pci,
-    struct slashrpc_cservice **csvcp, int flags,
+    struct slrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, struct psc_dynarray *peernids,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
     enum slconn_type peertype, struct pfl_multiwait *mw)
@@ -796,13 +796,13 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
 	int rc = 0, addlist = 0, need_ref = 1;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
 	char addrbuf[RESM_ADDRBUF_SZ];
 	struct {
-		struct slashrpc_cservice *csvc;
+		struct slrpc_cservice *csvc;
 		uint32_t stkvers;
 		uint64_t uptime;
 	} *expc;
@@ -1081,7 +1081,7 @@ void
 slconnthr_main(struct psc_thread *thr)
 {
 	struct timespec ts0, ts1, diff, intv;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct slconn_thread *sct;
 	struct slconn_params *scp;
 	int i, rc, pingrc = 0;
@@ -1200,7 +1200,7 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
  * maintains an established connection.
  */
 void
-slconnthr_watch(struct psc_thread *thr, struct slashrpc_cservice *csvc,
+slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
     int flags, int (*useablef)(void *), void *useablearg)
 {
 	struct slconn_thread *sct;
@@ -1257,7 +1257,7 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 void
 sl_exp_hldrop_cli(struct pscrpc_export *exp)
 {
-	struct slashrpc_cservice **csvcp;
+	struct slrpc_cservice **csvcp;
 
 	EXPORT_LOCK(exp);
 	csvcp = exp->exp_private;
@@ -1409,7 +1409,7 @@ void
 slrpc_initcli(void)
 {
 	psc_poolmaster_init(&sl_csvc_poolmaster,
-	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct slrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "csvc");
 	sl_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
 }

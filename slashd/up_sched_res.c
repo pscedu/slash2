@@ -216,7 +216,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
 	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc, moreavail;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct slm_batchscratch_repl *bsr;
 	struct srt_replwk_req q;
 	struct sl_resm *dst_resm;
@@ -353,7 +353,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 }
 
 void
-slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
+slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
     struct bmap *b, int sched, int rc, int off)
 {
 	struct fidc_membh *f;
@@ -405,7 +405,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	int rc, off = av->space[IN_OFF];
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct slrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc);
@@ -423,7 +423,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct srt_ptrunc_req *mq;
 	struct srt_ptrunc_rep *mp;
 	struct pscrpc_async_args av;
@@ -553,7 +553,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slm_batchscratch_preclaim *bsp = NULL;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct srt_preclaim_req q;
 	struct sl_mds_iosinfo *si;
 	struct fidc_membh *f;
@@ -681,7 +681,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	int rc, off, val, pass, valid_exists = 0;
 	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;

@@ -100,7 +100,7 @@ struct sli_import_arg {
 };
 
 int
-sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
+sli_rmi_issue_mkdir(struct slrpc_cservice *csvc,
     const struct sl_fidgen *pfg, const char *name,
     const struct stat *stb, char fidfn[PATH_MAX])
 {
@@ -163,7 +163,7 @@ sli_import(FTSENT *f, void *arg)
 	int rc = 0, isdir, dolink = 0;
 	struct sli_import_arg *a = arg;
 	struct slictlmsg_fileop *sfop = a->sfop;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct sl_fidgen tfg, fg;
@@ -534,7 +534,7 @@ slictl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 	char nbuf[8];
 

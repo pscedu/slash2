@@ -253,7 +253,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 int
 sli_rim_handler(struct pscrpc_request *rq)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 	int rc;
 

@@ -150,7 +150,7 @@ void
 slihealththr_main(struct psc_thread *thr)
 {
 	struct psc_waitq dummy = PSC_WAITQ_INIT;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct timespec ts;
 	char cmdbuf[BUFSIZ];
 	int rc;

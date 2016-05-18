@@ -498,7 +498,7 @@ slrpc_batch_handle_req_workcb(void *arg)
  * @handlers: list of per-opcode handlers.
  */
 int
-slrpc_batch_handle_request(struct slashrpc_cservice *csvc,
+slrpc_batch_handle_request(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, struct slrpc_batch_req_handler *handlers)
 {
 	struct slrpc_wkdata_batch_rep *wk;
@@ -643,7 +643,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  */
 int
 slrpc_batch_req_add(struct psc_listcache *res_batches,
-    struct psc_listcache *workq, struct slashrpc_cservice *csvc,
+    struct psc_listcache *workq, struct slrpc_cservice *csvc,
     uint32_t opc, int rcvptl, int sndptl, void *buf, size_t len,
     void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
 {

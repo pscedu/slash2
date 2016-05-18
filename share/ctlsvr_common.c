@@ -40,7 +40,7 @@
 
 void
 slctl_fillconn(struct slctlmsg_conn *scc,
-    struct slashrpc_cservice *csvc)
+    struct slrpc_cservice *csvc)
 {
 	struct pscrpc_import *imp;
 	lnet_peer_t *lp;
@@ -73,7 +73,7 @@ slctl_fillconn(struct slctlmsg_conn *scc,
 int
 slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct slctlmsg_conn *scc = m;
 	struct pscrpc_import *imp;
 	struct sl_resm_nid *mn;
@@ -83,7 +83,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct timespec tv1, tv2;
 	int i, j, rc = 1;
 	struct {
-		struct slashrpc_cservice *csvc;
+		struct slrpc_cservice *csvc;
 		uint32_t stkvers;
 		uint64_t uptime;
 	} *expc;

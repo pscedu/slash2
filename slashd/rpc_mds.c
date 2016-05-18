@@ -148,7 +148,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 }
 
 int
-slm_rpc_newreq(struct slashrpc_cservice *csvc, int op,
+slm_rpc_newreq(struct slrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_IOD) {
@@ -191,7 +191,7 @@ slm_rpc_newreq(struct slashrpc_cservice *csvc, int op,
 }
 
 void
-slm_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
+slm_rpc_req_out(__unusedx struct slrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct pscrpc_msg *m = rq->rq_reqmsg;
@@ -228,7 +228,7 @@ slm_rpc_req_in(struct pscrpc_request *rq)
 }
 
 void
-slm_rpc_rep_in(struct slashrpc_cservice *csvc,
+slm_rpc_rep_in(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, int error)
 {
 	struct pscrpc_msg *m = rq->rq_repmsg;

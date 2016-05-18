@@ -56,7 +56,7 @@ int
 sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[1];
+	struct slrpc_cservice *csvc = args->pointer_arg[1];
 	struct psc_dynarray *a = args->pointer_arg[0];
 	struct srm_bmap_crcwrt_rep *mp;
 	struct srm_bmap_crcwrt_req *mq;
@@ -120,7 +120,7 @@ __static int
 slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
 	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_bmap_crcwrt_rep *mp;
 	struct iovec *iovs = NULL;

@@ -114,7 +114,7 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmapminseq_req *mq;
 	struct srm_getbmapminseq_rep *mp;
@@ -493,7 +493,7 @@ iod_bmap_retrieve(struct bmap *b, __unusedx int flags)
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	int rc, i;
 	struct bmap_iod_info *bii = bmap_2_bii(b);
 

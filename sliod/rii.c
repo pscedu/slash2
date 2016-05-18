@@ -306,7 +306,7 @@ __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
 	struct sli_repl_workrq *w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	struct slvr *s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 	int rc, slvridx;
@@ -334,7 +334,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
  * a replica source IOS.
  */
 int
-sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
+sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
     int slvridx, struct sli_repl_workrq *w)
 {
 	const struct srm_repl_read_rep *mp;

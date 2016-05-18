@@ -65,7 +65,7 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 
 void	sli_fg_makepath(const struct sl_fidgen *, char *);
 
-int	sli_rmi_lookup_fid(struct slashrpc_cservice *,
+int	sli_rmi_lookup_fid(struct slrpc_cservice *,
 	    const struct sl_fidgen *, const char *,
 	    struct sl_fidgen *, int *);
 

@@ -514,7 +514,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rc = slrpc_handle_connect(rq, SRIC_MAGIC, SRIC_VERSION,
 		    SLCONNT_CLI);
 		if (sli_selftest_rc) {
-			struct slashrpc_cservice *csvc;
+			struct slrpc_cservice *csvc;
 
 			csvc = sli_getclcsvc(rq->rq_export);
 			if (csvc)

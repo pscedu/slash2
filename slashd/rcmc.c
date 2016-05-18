@@ -72,7 +72,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
 }
 
 int
-slmrmcthr_replst_slave_fin(struct slashrpc_cservice *csvc,
+slmrmcthr_replst_slave_fin(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, struct fidc_membh *f)
 {
 	struct srm_replst_slave_req *mq;

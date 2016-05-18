@@ -1729,7 +1729,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	const struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 

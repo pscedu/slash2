@@ -112,7 +112,7 @@ int
 sli_rci_ctl_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
+	struct slrpc_cservice *csvc = args->pointer_arg[0];
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_ctl_rep, rc);
@@ -121,7 +121,7 @@ sli_rci_ctl_cb(struct pscrpc_request *rq,
 }
 
 void
-sli_rci_ctl_health_send(struct slashrpc_cservice *csvc)
+sli_rci_ctl_health_send(struct slrpc_cservice *csvc)
 {
 	struct pscrpc_request *rq;
 	struct srt_ctlsetopt *c;
@@ -245,7 +245,7 @@ sli_rpc_mds_pack_statfs(struct pscrpc_msg *m, int idx)
 }
 
 int
-sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
+sli_rpc_newreq(struct slrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
@@ -282,7 +282,7 @@ sli_rpc_newreq(struct slashrpc_cservice *csvc, int op,
 }
 
 void
-sli_rpc_req_out(struct slashrpc_cservice *csvc,
+sli_rpc_req_out(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct pscrpc_msg *m = rq->rq_reqmsg;
@@ -305,7 +305,7 @@ sli_rpc_req_in(struct pscrpc_request *rq)
 }
 
 void
-sli_rpc_rep_in(struct slashrpc_cservice *csvc,
+sli_rpc_rep_in(struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, int error)
 {
 	if (error)

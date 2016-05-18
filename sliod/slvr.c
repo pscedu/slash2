@@ -397,7 +397,7 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
     uint32_t off, struct slvr **slvrs, int nslvrs, struct iovec *iovs,
     int niovs, enum rw rw)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sli_aiocb_reply *a;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;

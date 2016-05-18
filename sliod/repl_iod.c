@@ -81,7 +81,7 @@ sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
 void
 sli_bwqueued_adj(int32_t *p, int amt_bytes)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	int amt;
 
 	amt = SIGN(amt_bytes) * howmany(abs(amt_bytes), BW_UNITSZ);
@@ -260,7 +260,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
     struct sli_repl_workrq **last)
 {
 	int rc, slvridx, slvrno = 0;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct bmap_iod_info *bii;
 	struct sl_resm *src_resm;
 

@@ -987,7 +987,7 @@ mds_send_batch_update(uint64_t batchno)
 {
 	int siter, i, rc, npeers, count, total, didwork = 0, record = 0;
 	struct srt_update_entry *u, *nu;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_mds_peerinfo *sp;
 	struct srm_update_rep *mp;
 	struct srm_update_req *mq;
@@ -1321,7 +1321,7 @@ int
 slm_rim_reclaim_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[CBARG_CSVC];
+	struct slrpc_cservice *csvc = av->pointer_arg[CBARG_CSVC];
 	struct reclaim_arg *ra = av->pointer_arg[CBARG_RARG];
 	struct sl_resource *res = av->pointer_arg[CBARG_RES];
 	struct resprof_mds_info *rpmi;
@@ -1375,7 +1375,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 {
 	int i, ri, rc, total, nios;
 	uint64_t batchno, next_batchno;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct pscrpc_request_set *set;
 	struct resprof_mds_info *rpmi;
 	struct srt_reclaim_entry *r;

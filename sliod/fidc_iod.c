@@ -124,7 +124,7 @@ sli_open_backing_file(struct fidc_membh *f)
 }
 
 int
-sli_rmi_lookup_fid(struct slashrpc_cservice *csvc,
+sli_rmi_lookup_fid(struct slrpc_cservice *csvc,
     const struct sl_fidgen *pfg, const char *cpn,
     struct sl_fidgen *cfg, int *isdir)
 {

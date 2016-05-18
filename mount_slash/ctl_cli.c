@@ -99,7 +99,7 @@ int
 msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	sl_replica_t repls[SL_MAX_REPLICAS];
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_replrq *mrq = m;
 	struct pscfs_clientctx pfcc;
@@ -214,7 +214,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -404,7 +404,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 int
 msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_fattr *mfa = m;
 	struct srm_set_fattr_req *mq;
@@ -471,7 +471,7 @@ int
 msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_bmapreplpol *mfbrp = m;
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
@@ -728,7 +728,7 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 	char nbuf[8];
 
@@ -765,7 +765,7 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 	char nbuf[32];
 

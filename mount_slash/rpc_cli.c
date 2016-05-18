@@ -324,7 +324,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 }
 
 void
-slc_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
+slc_rpc_req_out(__unusedx struct slrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct sl_resm *m;
@@ -334,7 +334,7 @@ slc_rpc_req_out(__unusedx struct slashrpc_cservice *csvc,
 }
 
 void
-slc_rpc_req_out_failed(__unusedx struct slashrpc_cservice *csvc,
+slc_rpc_req_out_failed(__unusedx struct slrpc_cservice *csvc,
     struct pscrpc_request *rq)
 {
 	struct sl_resm *m;
@@ -344,7 +344,7 @@ slc_rpc_req_out_failed(__unusedx struct slashrpc_cservice *csvc,
 }
 
 void
-slc_rpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
+slc_rpc_rep_in(__unusedx struct slrpc_cservice *csvc,
     struct pscrpc_request *rq, __unusedx int error)
 {
 	struct sl_resm *m;

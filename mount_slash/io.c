@@ -402,7 +402,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
  */
 int
 msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
-    struct sl_resm **pm, struct slashrpc_cservice **csvcp)
+    struct sl_resm **pm, struct slrpc_cservice **csvcp)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct fcmh_cli_info *fci;
@@ -857,7 +857,7 @@ int
 msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
@@ -935,7 +935,7 @@ int
 msl_read_cleanup(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct iovec *iovs = args->pointer_arg[MSL_CBARG_IOVS];
@@ -1015,7 +1015,7 @@ if (!pfl_rpc_max_retry) {
 int
 msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
@@ -1075,7 +1075,7 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 int
 msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
@@ -1091,7 +1091,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
 	int i, op, n, rc;
 	size_t len, off, size;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct pscrpc_request_set *nbs;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
@@ -1325,7 +1325,7 @@ __static int
 msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
     int startpage, int npages)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_pagecache_entry *e;
 	struct psc_dynarray *a = NULL;

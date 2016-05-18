@@ -57,7 +57,7 @@ struct sli_exp_cli {
 };
 
 struct slm_exp_cli {
-	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
+	struct slrpc_cservice	 *mexpc_csvc;		/* must be first field */
 	uint32_t			  mexpc_stkvers;	/* must be second field */
 	uint64_t			  mexpc_uptime;		/* must be third field */
 };
@@ -126,7 +126,7 @@ struct slrpc_cservice {
 #define csvc_rqptl	csvc_params.scp_rqptl
 #define csvc_rpptl	csvc_params.scp_rpptl
 };
-#define slashrpc_cservice slrpc_cservice
+#define slrpc_cservice slrpc_cservice
 
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
@@ -176,7 +176,7 @@ struct sl_expcli_ops {
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	({								\
-		struct slashrpc_cservice *_csvc = NULL;			\
+		struct slrpc_cservice *_csvc = NULL;			\
 		struct sl_resm *_resm;					\
 		int _rc = 0;						\
 									\
@@ -367,27 +367,27 @@ struct sl_expcli_ops {
 	} while (0)
 
 struct slrpc_ops {
-	int	 (*slrpc_newreq)(struct slashrpc_cservice *, int, struct pscrpc_request **, int, int, void *);
+	int	 (*slrpc_newreq)(struct slrpc_cservice *, int, struct pscrpc_request **, int, int, void *);
 	void	 (*slrpc_req_in)(struct pscrpc_request *);
-	void	 (*slrpc_req_out)(struct slashrpc_cservice *, struct pscrpc_request *);
-	void	 (*slrpc_req_out_failed)(struct slashrpc_cservice *, struct pscrpc_request *);
+	void	 (*slrpc_req_out)(struct slrpc_cservice *, struct pscrpc_request *);
+	void	 (*slrpc_req_out_failed)(struct slrpc_cservice *, struct pscrpc_request *);
 	int	 (*slrpc_allocrep)(struct pscrpc_request *, void *, int, void *, int, int);
-	void	 (*slrpc_rep_in)(struct slashrpc_cservice *, struct pscrpc_request *, int);
+	void	 (*slrpc_rep_in)(struct slrpc_cservice *, struct pscrpc_request *, int);
 	void	 (*slrpc_rep_out)(struct pscrpc_request *);
 };
 
-struct slashrpc_cservice *
+struct slrpc_cservice *
 	_sl_csvc_get(const struct pfl_callerinfo *,
 	    struct slrpc_cservice **, int, struct pscrpc_export *,
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
 	    uint32_t, enum slconn_type, struct pfl_multiwait *);
-void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
+void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
-	    struct slashrpc_cservice *);
-void	 sl_csvc_incref(struct slashrpc_cservice *);
-void	 sl_csvc_markfree(struct slashrpc_cservice *);
-int	 sl_csvc_useable(struct slashrpc_cservice *);
-void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
+	    struct slrpc_cservice *);
+void	 sl_csvc_incref(struct slrpc_cservice *);
+void	 sl_csvc_markfree(struct slrpc_cservice *);
+int	 sl_csvc_useable(struct slrpc_cservice *);
+void	_sl_csvc_waitrelv(struct slrpc_cservice *, long, long);
 
 void	 sl_exp_hldrop_resm(struct pscrpc_export *);
 void	*sl_exp_getpri_cli(struct pscrpc_export *, int);
@@ -396,7 +396,7 @@ void	 sl_resm_hldrop(struct sl_resm *);
 
 struct psc_thread
 	*slconnthr_spawn(int, const char *, int (*)(void *), void *);
-void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
+void	 slconnthr_watch(struct psc_thread *, struct slrpc_cservice *,
 	    int, int (*)(void *), void *);
 
 void	 slrpc_initcli(void);
@@ -405,10 +405,10 @@ void	 slrpc_destroy(void);
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t,
 	    uint32_t, enum slconn_type);
 
-int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
+int	 slrpc_newgenreq(struct slrpc_cservice *, int,
 	    struct pscrpc_request **, int, int, void *);
 
-int	 slrpc_waitrep(struct slashrpc_cservice *,
+int	 slrpc_waitrep(struct slrpc_cservice *,
 	    struct pscrpc_request *, int, void *);
 
 int	 slrpc_allocrepn(struct pscrpc_request *, void *, int, void *,
@@ -417,7 +417,7 @@ int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
 	    int, int);
 
 void	 slrpc_rep_out(struct pscrpc_request *);
-int	 slrpc_rep_in(struct slashrpc_cservice *,
+int	 slrpc_rep_in(struct slrpc_cservice *,
 	    struct pscrpc_request *, int, int);
 
 const char *

@@ -291,7 +291,7 @@ struct gid_mapping {
 #define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
 
 void	 msl_bmap_stash_lease(struct bmap *, const struct srt_bmapdesc *,  const char *);
-int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slashrpc_cservice **);
+int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmap *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_release(const struct pfl_callerinfo *, struct bmpc_ioreq *);
@@ -312,7 +312,7 @@ size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
 int	 msl_try_get_replica_res(struct bmap *, int, int,
-	    struct sl_resm **, struct slashrpc_cservice **);
+	    struct sl_resm **, struct slrpc_cservice **);
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 

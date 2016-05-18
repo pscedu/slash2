@@ -48,7 +48,7 @@
 struct sl_resm *rmi_resm;
 
 int
-sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
+sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 {
 	for (;;) {
 		*csvcp = sli_getmcsvc(rmi_resm);
@@ -90,7 +90,7 @@ sli_rmi_brelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	int rc;
-	struct slashrpc_cservice *csvc = args->pointer_arg[SLI_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[SLI_CBARG_CSVC];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep,
 	    rc);
@@ -104,7 +104,7 @@ sli_rmi_issue_bmap_release(struct srm_bmap_release_req *brr)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct slashrpc_cservice *csvc;
+	struct slrpc_cservice *csvc;
 	struct pscrpc_request *rq;
 	int rc;
 

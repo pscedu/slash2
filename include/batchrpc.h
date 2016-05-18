@@ -68,7 +68,7 @@ struct slrpc_batch_req {
 	struct psc_listcache		 *bq_workq;		/* work queue to process events */
 
 	struct pscrpc_request		 *bq_rq;
-	struct slashrpc_cservice	 *bq_csvc;
+	struct slrpc_cservice	 *bq_csvc;
 	int				  bq_snd_ptl:16;	/* bulk RPC portal */
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
@@ -93,7 +93,7 @@ struct slrpc_batch_rep {
 	struct slrpc_batch_req_handler	 *bp_handler;
 
 	struct pscrpc_request		 *bp_rq;
-	struct slashrpc_cservice	 *bp_csvc;
+	struct slrpc_cservice	 *bp_csvc;
 	int				  bp_refcnt;
 	int				  bp_flags;
 	int				  bp_error;
@@ -139,7 +139,7 @@ struct slrpc_batch_rep {
 	    (bp)->bp_repbuf, (bp)->bp_replen, (bp)->bp_error, ##__VA_ARGS__)
 
 int	slrpc_batch_req_add(struct psc_listcache *,
-	    struct psc_listcache *, struct slashrpc_cservice *,
+	    struct psc_listcache *, struct slrpc_cservice *,
 	    uint32_t, int, int, void *, size_t, void *,
 	    struct slrpc_batch_rep_handler *, int);
 
@@ -155,7 +155,7 @@ void	_slrpc_batch_rep_decref(const struct pfl_callerinfo *,
 	    struct slrpc_batch_rep *, int);
 
 int	slrpc_batch_handle_reply(struct pscrpc_request *);
-int	slrpc_batch_handle_request(struct slashrpc_cservice *,
+int	slrpc_batch_handle_request(struct slrpc_cservice *,
 	    struct pscrpc_request *, struct slrpc_batch_req_handler *);
 
 #endif /* _BATCHRPC_H_ */

@@ -113,7 +113,7 @@ void	slmbchrqthr_spawn(void);
 #define slm_geticsvc_nb(m, mw)	slm_geticsvc((m), NULL, CSVCF_NONBLOCK, (mw))
 
 #define _pfl_callerinfo pci
-static __inline struct slashrpc_cservice *
+static __inline struct slrpc_cservice *
 _slm_getclcsvc(const struct pfl_callerinfo *pci,
     struct pscrpc_export *exp)
 {

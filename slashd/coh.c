@@ -78,7 +78,7 @@ int
 slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
 {
-	struct slashrpc_cservice *csvc =
+	struct slrpc_cservice *csvc =
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 	struct bmap_mds_lease *bml =
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
@@ -121,7 +121,7 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 int
 mdscoh_req(struct bmap_mds_lease *bml)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;

@@ -207,7 +207,7 @@ __static int
 msl_bmap_retrieve_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMLGET_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_BMLGET_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_BMLGET_CBARG_BMAP];
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct srm_leasebmap_rep *mp;
@@ -253,7 +253,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
@@ -372,7 +372,7 @@ __static int
 msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
 	int rc;
@@ -418,7 +418,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 int
 msl_bmap_lease_extend(struct bmap *b, int blocking)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmapext_req *mq;
 	struct srm_leasebmapext_rep *mp;
@@ -520,7 +520,7 @@ int
 msl_bmap_modeset_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_BMODECHG_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_BMODECHG_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_BMODECHG_CBARG_BMAP];
 	struct srm_bmap_chwrmode_rep *mp;
 	struct sl_resource *r;
@@ -566,7 +566,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
@@ -694,7 +694,7 @@ __static int
 msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_reassignbmap_rep *mp;
 	int rc;
@@ -718,7 +718,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info  *bci  = bmap_2_bci(b);
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_reassignbmap_req *mq;
 	struct srm_reassignbmap_rep *mp;
@@ -855,7 +855,7 @@ int
 msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_bmap_release_req *mq;
 	uint32_t i;
 	int rc;
@@ -879,7 +879,7 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 void
 msl_bmap_release(struct sl_resm *resm)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
@@ -1071,7 +1071,7 @@ msbreleasethr_main(struct psc_thread *thr)
  */
 int
 msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
-    struct slashrpc_cservice **csvcp)
+    struct slrpc_cservice **csvcp)
 {
 	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;

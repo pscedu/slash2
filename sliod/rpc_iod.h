@@ -81,14 +81,14 @@ int	sli_rim_handler(struct pscrpc_request *);
 int	sli_ric_handler(struct pscrpc_request *);
 int	sli_rii_handler(struct pscrpc_request *);
 
-void	sli_rci_ctl_health_send(struct slashrpc_cservice *);
+void	sli_rci_ctl_health_send(struct slrpc_cservice *);
 
-int	sli_rmi_getcsvc(struct slashrpc_cservice **);
+int	sli_rmi_getcsvc(struct slrpc_cservice **);
 void	sli_rmi_setmds(const char *);
 
 void	sli_rmi_issue_bmap_release(struct srm_bmap_release_req *);
 
-int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int,
+int	sli_rii_issue_repl_read(struct slrpc_cservice *, int, int,
 	    struct sli_repl_workrq *);
 
 void	sli_rim_init(void);
@@ -97,7 +97,7 @@ extern struct pscrpc_svc_handle sli_ric_svc;
 extern struct pscrpc_svc_handle sli_rii_svc;
 extern struct pscrpc_svc_handle sli_rim_svc;
 
-static __inline struct slashrpc_cservice *
+static __inline struct slrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)
 {
 	struct sli_exp_cli *iexpc;

@@ -293,7 +293,7 @@ slm_rmm_forward_namespace(int op, struct sl_fidgen *fg,
     const struct slash_creds *crp, struct srt_stat *sstb,
     int32_t to_set)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct sl_resm *resm = NULL;
 	struct srm_forward_req *mq;
