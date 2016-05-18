@@ -245,7 +245,6 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv2);
 		timespecsub(&tv2, &tv1, &tv1);
 		*uptimep = tv1.tv_sec;
-
 		*stkversp = mp->stkvers;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
@@ -525,8 +524,7 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 	ts.tv_nsec = ns;
 
 	CSVC_LOCK_ENSURE(csvc);
-	pfl_multiwaitcond_waitrel(&csvc->csvc_mwc, &csvc->csvc_mutex,
-	    &ts);
+	pfl_multiwaitcond_waitrel(&csvc->csvc_mwc, &csvc->csvc_mutex, &ts);
 }
 
 /*
@@ -1273,17 +1271,16 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 void *
 sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 {
-	int locked;
 	void *p;
 
-	locked = EXPORT_RLOCK(exp);
+	EXPORT_LOCK(exp);
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
 		sl_expcli_ops.secop_allocpri(exp);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
 	p = exp->exp_private;
-	EXPORT_URLOCK(exp, locked);
+	EXPORT_ULOCK(exp);
 	return (p);
 }
 
