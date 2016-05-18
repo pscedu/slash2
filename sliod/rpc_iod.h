@@ -100,12 +100,12 @@ extern struct pscrpc_svc_handle sli_rim_svc;
 static __inline struct slrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)
 {
-	struct sli_exp_cli *iexpc;
+	struct sl_exp_cli *expc;
 
-	iexpc = sl_exp_getpri_cli(exp, 0);
-	if (iexpc == NULL)
+	expc = sl_exp_getpri_cli(exp, 0);
+	if (expc == NULL)
 		return (NULL);
-	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, NULL,
+	return (sl_csvc_get(&expc->expc_csvc, 0, exp, NULL,
 	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
 	    SLCONNT_CLI, NULL));
 }

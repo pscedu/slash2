@@ -454,11 +454,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	struct sl_resm *m;
 	char buf[PSCRPC_NIDSTR_SIZE];
 	struct timespec tv1, tv2;
-	struct {
-		struct slrpc_cservice *csvc;
-		uint32_t stkvers;
-		uint64_t uptime;
-	} *expc;
+	struct sl_exp_cli *expc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != magic || mq->version != version)
@@ -487,8 +483,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		 * arrived client.
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
-		expc->stkvers = mq->stkvers;
-		expc->uptime = tv1.tv_sec; 
+		expc->expc_stkvers = mq->stkvers;
+		expc->expc_uptime = tv1.tv_sec; 
 		break;
 	case SLCONNT_IOD:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -801,11 +797,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct timespec now;
 	lnet_nid_t peernid;
 	char addrbuf[RESM_ADDRBUF_SZ];
-	struct {
-		struct slrpc_cservice *csvc;
-		uint32_t stkvers;
-		uint64_t uptime;
-	} *expc;
+	struct sl_exp_cli *expc;
 
 	if (peertype != SLCONNT_CLI && 
 	    peertype != SLCONNT_MDS && 
@@ -894,8 +886,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	switch (peertype) {
 	case SLCONNT_CLI:
 		expc = (void *)csvc->csvc_params.scp_csvcp;
-		stkversp = &expc->stkvers;
-		uptimep = &expc->uptime;
+		stkversp = &expc->expc_stkvers;
+		uptimep = &expc->expc_uptime;
 		break;
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:

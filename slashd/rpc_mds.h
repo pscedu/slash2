@@ -117,12 +117,12 @@ static __inline struct slrpc_cservice *
 _slm_getclcsvc(const struct pfl_callerinfo *pci,
     struct pscrpc_export *exp)
 {
-	struct slm_exp_cli *mexpc;
+	struct sl_exp_cli *expc;
 
-	mexpc = sl_exp_getpri_cli(exp, 0);
-	if (mexpc == NULL)
+	expc = sl_exp_getpri_cli(exp, 0);
+	if (expc == NULL)
 		return (NULL);
-	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
+	return (sl_csvc_get(&expc->expc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
 	    SLCONNT_CLI, NULL));
 }

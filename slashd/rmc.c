@@ -1884,9 +1884,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
-	struct slm_exp_cli *mexpc;
+	struct sl_exp_cli *expc;
 
-	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
 	slm_getclcsvc(exp);
 }
 

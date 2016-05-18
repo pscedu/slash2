@@ -547,9 +547,9 @@ sli_ric_handler(struct pscrpc_request *rq)
 void
 iexpc_allocpri(struct pscrpc_export *exp)
 {
-	struct sli_exp_cli *iexpc;
+	struct sl_exp_cli *expc;
 
-	iexpc = exp->exp_private = PSCALLOC(sizeof(*iexpc));
+	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
 	sli_getclcsvc(exp);
 }
 
