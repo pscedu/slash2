@@ -83,10 +83,11 @@ $ssh_user = " -l $opts{u} " if $opts{u};
 my $ts_dir = dirname($0);
 my $ts_name = "suite0";
 my $ts_user = `id -un`;
+chomp $ts_user;
 $ts_name = shift @ARGV if @ARGV > 0;
 my $which_tests = @ARGV ? join(' ', @ARGV) : '*';
 
-sub min {
+sub min($$) {
 	$_[0] < $_[1] ? $_[0] : $_[1];
 }
 
@@ -557,7 +558,7 @@ foreach my $n (@mds) {
 }
 
 my $step_timeout = 60 * 7;		# single op interval timeout
-my $total_timeout = 60 * 60 * 16;	# entire client run duration
+my $total_timeout = 60 * 60 * 28;	# entire client run duration
 
 my $zfs_fuse = "zfs-fuse.sh";
 my $zpool = "zpool.sh";
@@ -637,7 +638,7 @@ foreach my $commspec (split /,/, $opts{c} || "") {
 	my ($dir, $comm) = split /:/, $commspec
 	    or fatal "invalid format: -c $opts{c}";
 	$dir = "." if $dir eq "pfl";
-	push @comm_checkout, "(cd $dir && git checkout $comm)";
+	push @comm_checkout, "(cd $dir && git checkout $comm)\n";
 }
 
 my $src_done_fn = ".src.done." . time();
@@ -817,15 +818,19 @@ sub daemon_setup {
 		: \${PSC_LOG_FILE:=$n->{base_dir}/$n->{type}.log}
 		while :; do
 			set +e
-			$sudo pkill -9 \$1 && sleep 3
-			$sudo env PSC_LOG_FILE=\$PSC_LOG_FILE "\$@"
+			$sudo pkill -9 \$1 && sleep 3 || :
+			$sudo env ASAN_SYMBOLIZER_PATH=\$(which llvm-symbolizer) ASAN_OPTIONS=symbolize=1 PSC_LOG_FILE=\$PSC_LOG_FILE "\$@"
 			local status=\$?
 			set -e
+			[ \$status -gt 128 ] && echo exited via signal \$((status - 128))
+
+			# A hard kill means another instance of tsuite
+			# has asked us to quietly go away.
 			[ \$status -eq 137 ] && break
+
 			[ \$status -eq 0 ] && break
 			local corefile=\$prog.core
 			if [ -e "\$corefile" ]; then
-				[ \$status -gt 128 ] && echo exited via signal \$((status - 128))
 				tail \$PSC_LOG_FILE
 				local cmdfile=$n->{base_dir}/$n->{type}.gdbcmd
 				{
@@ -1205,7 +1210,7 @@ if ($emsg) {
 	debug_msg "error encountered: $emsg";
 
 	# Give some time for the daemons to be examined for coredumps...
-	sleep 10;
+	sleep 20;
 }
 
 sub cleanup {
@@ -1292,28 +1297,30 @@ my ($sl2_commid) = $output =~ /^%SL2_COMMID% (\S+)/m;
 sub parse_results {
 	my ($output) = @_;
 
-	my @out;
+	my %out;
 	foreach my $result ($output =~
 	    /^%TSUITE_RESULT% (.*)$/gm) {
 		$result =~ m!^.*?([^:/]+):(\d+) (\d+)$! or next;
-		push @out, {
+		$out{"$1:$2"} = {
 			name		=> $1,
 			task_id		=> $2,
-			duration	=> $3,
+			duration_ms	=> $3,
 		};
 	}
 
-	return @out;
+	return %out;
 }
+
+my %results = parse_results($output);
+my $run_id;
 
 # Record results to database to track/analyze historical performance.
 if ($opts{R}) {
 	debug_msg "parsing output $output";
 
-	my @results = parse_results($output);
 	$output = "" if $success;
 
-	debug_msg "collecting results: ", Dumper(@results);
+	debug_msg "collecting results: ", Dumper(\%results);
 
 	my @keys = qw(dsn);
 	for my $arg (qw(db_user db_pass)) {
@@ -1367,9 +1374,10 @@ SQL
 	    or die "failed to execute query; query=$query; " .
 		   "params=@param; error=$DBI::errstr";
 
-	my $run_id = $dbh->last_insert_id("", "", "", "");
+	$run_id = $dbh->last_insert_id("", "", "", "");
 
-	my $sth = $dbh->prepare(<<SQL);
+	if ($success) {
+		$query = <<SQL;
 		INSERT INTO s2ts_result (
 			run_id,
 			test_name,
@@ -1382,16 +1390,51 @@ SQL
 			?
 		)
 SQL
-	foreach my $r (@results) {
-		my @params = ($run_id, @{$r}{qw(name task_id duration)});
-		$sth->execute(@params)
-		    or die "failed to execute query; params=@params; " .
-			   "error=$DBI::errstr";
+		my $sth = $dbh->prepare($query)
+		    or die "failed to prepare query; query=$query";
+
+		while (my (undef, $r) = each %results) {
+			my @params = ($run_id, @{$r}{qw(name task_id duration_ms)});
+			$sth->execute(@params)
+			    or die "failed to execute query; params=@params; " .
+				   "error=$DBI::errstr";
+		}
 	}
 
 	$query = "COMMIT";
 	$dbh->do($query) or die "failed to execute query; " .
 	    "query=$query; error=$DBI::errstr";
+
+	if ($opts{m} && $success) {
+		# Sending an e-mail report: pull out previous runs and
+		# compute an historical average for comparison.
+		my $sth = $dbh->prepare(<<SQL)
+		SELECT	*,
+			(
+				SELECT	AVG(r2.duration_ms)
+				FROM	s2ts_result r2,
+					s2ts_run run
+				WHERE	r2.task_id = res.task_id
+				  AND	r2.test_name = res.test_name
+				  AND	r2.run_id = run.id
+				  AND	run.success
+				  AND	run.diff = ''
+				  AND	r2.run_id != res.run_id
+			) AS havg_ms
+		FROM	s2ts_result res
+		WHERE	run_id = ?
+		ORDER BY
+			test_name ASC
+SQL
+		    or die "unable to execute SQL; err=$DBI::errstr";
+		$sth->execute($run_id) or die "unable to execute SQL; err=$DBI::errstr";
+		while (my $tr = $sth->fetchrow_hashref) {
+			my $r = $results{"$tr->{test_name}:$tr->{task_id}"};
+			$r->{havg_ms} = $tr->{havg_ms};
+			$r->{delta} = $r->{duration_ms} - $r->{havg_ms};
+			$r->{pct_change} = $r->{delta} / $r->{havg_ms} * 100;
+		}
+	}
 
 	$dbh->disconnect;
 } else {
@@ -1404,12 +1447,38 @@ if ($opts{m}) {
 
 	my $smtp = Net::SMTP->new('mailer.psc.edu');
 
-	my $to = 'slash2-devel+report@psc.edu';
+	my $to = 'slash2-devel@psc.edu';
 	my $from = 'slash2-devel@psc.edu';
 
-	# Trim output to last N lines.
-	my $index = min(75, @all_output);
-	my $output_small = splice @all_output, -$index;
+	my $body = "";
+	if ($emsg) {
+		my $body = <<EOE;
+Error encountered:
+$emsg
+EOE
+
+		# Trim output to last N lines.
+		my $index = min(300, @all_output);
+		$body .= join '', @all_output[$index .. -1];
+	} else {
+		$body .= "(all times in millisec)\n";
+		$body .= sprintf "%-26s %1s %9s %9s %9s %9s\n",
+		    qw(name t histavg duration delta %change);
+		$body .= "-" x 72 . "\n";
+		foreach my $key (sort { $a cmp $b } keys %results) {
+			my $r = $results{$key};
+			foreach my $key (qw(havg_ms delta pct_change)) {
+				$r->{$key} = 0 unless exists $r->{$key};
+			}
+			# Expect normal fluctuation.
+			# next if $r->{pct_change} < .05;
+			$r->{change} = sprintf "%.2f%%", $r->{pct_change};
+			$r->{change} = "+$r->{change}" unless $r->{change} =~ /^-/;
+			$body .= sprintf "%-26s %1d %9.2f %9.2f %9.2f %9s\n",
+			    @{$r}{qw(name task_id havg_ms duration_ms delta
+				change)};
+		}
+	}
 
 	$smtp->mail($from);
 	$smtp->to($to);
@@ -1419,16 +1488,16 @@ To: $to
 From: $from
 Subject: tsuite report
 
-Launched by user: $ts_user
+@{[defined($run_id) ? "URL: http://lime/results.pl?action=view;id=$run_id\n" : "" ]
+}Launched by user: $ts_user
+@{[defined($pfl_commid) ? "PFL commit ID: $pfl_commid\n" : "" ]
+}@{[defined($sl2_commid) ? "SLASH2 commit ID: $sl2_commid\n" : "" ]
+}Status: @{[$success ? "OK": "FAIL"]}
+Stock: @{[$diff ? "no" : "yes"]}
+@{[$opts{D} ? "Description: $opts{D}" : "" ]
+}------------------------------------------------------------------------
 
-@{[$emsg ? <<__EOE : ""]}
-------------------------------------------------------------------------
-error: $emsg
-------------------------------------------------------------------------
-__EOE
-
-$output_small
-
+$body
 EOM
 	$smtp->dataend();
 	$smtp->quit;
