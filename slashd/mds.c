@@ -1450,14 +1450,19 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	bmap_2_bmi(b)->bmi_assign = r;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
-	if (rc) {
-		bmap_2_bmi(b)->bmi_assign = NULL;
-		bml->bml_flags |= BML_FREEING | BML_RECOVERFAIL;
-	} else
-		r = NULL;
+	psc_assert(!rc);
+	/*
+ 	 * Leave it to the slmbmaptimeothr_begin() thread to free me.
+ 	 */
 	mds_bmap_bml_release(bml);
 
  out:
+	if (!rc)
+		OPSTAT_INCR("bmap-restart-ok");
+	else
+		/* XXX odtable leaks */
+		OPSTAT_INCR("bmap-restart-fail");
+
 	if (rc && slm_opstate == SLM_OPSTATE_NORMAL)
 		/*
 		 * XXX On startup, this will stuck at dmu_tx_try_assign()
