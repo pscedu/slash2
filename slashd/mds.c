@@ -963,7 +963,11 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	bml->bml_flags |= BML_BMI;
 
-	if (rw == SL_WRITE) {
+	if (rw == SL_READ) {
+		if (!wlease && !rlease)
+			bmi->bmi_readers++;
+		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	} else {
 		/*
 		 * Drop the lock prior to doing disk and possibly
 		 * network I/O.
@@ -1018,10 +1022,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 
-	} else { //rw == SL_READ
-		if (!wlease && !rlease)
-			bmi->bmi_readers++;
-		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	}
 
  out:
