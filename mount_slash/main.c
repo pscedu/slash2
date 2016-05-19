@@ -3089,9 +3089,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * XXX should we block access to the namecache until
 		 * this operation completes?
 		 */
-		if (mdie.mdie_pri)
+		if (mdie.mdie_pri) {
+			OPSTAT_INCR("msl.dircache-walk");
 			dircache_walk(c, msl_dircache_inval_entry,
 			    &mdie);
+		}
 
 		fcmh_op_done(c);
 	}
