@@ -231,12 +231,11 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	return (rc);
 }
 
-__static int
+__static void 
 mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 {
 	struct sl_resm *resm = libsl_ios2resm(bml->bml_ios);
 	struct resm_mds_info *rmmi;
-	int rc = 0;
 
 	rmmi = resm2rmmi(resm);
 
@@ -255,8 +254,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 		bml->bml_bmi->bmi_wr_ion = rmmi;
 	}
 
-	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
-		rc = 1;
+	mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH);
 
 	if (bml->bml_seq > bml->bml_bmi->bmi_seq)
 		bml->bml_bmi->bmi_seq = bml->bml_seq;
@@ -264,7 +262,6 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
 
-	return (rc);
 }
 
 int
@@ -929,7 +926,10 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
-	if (rc && !(bml->bml_flags & BML_RECOVER))
+	if (rc && (bml->bml_flags & BML_RECOVER))
+		rc = 0;
+
+	if (rc)
 		/*
 		 * 'rc' means that we're waiting on an async cb
 		 * completion.
@@ -1001,7 +1001,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ios_restart(bml);
+			mds_bmap_ios_restart(bml);
 
 		} else if (!wlease && bmi->bmi_writers == 1) {
 			/*
