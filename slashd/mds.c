@@ -1467,6 +1467,9 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		/*
 		 * XXX On startup, this will stuck at dmu_tx_try_assign()
 		 * which calls cv_wait().
+		 *	
+		 * However, it should be able to work because our cursor
+		 * thread (i.e. slmjcursorthr_main() has already started.
 		 */
 		pfl_odt_freeitem(slm_bia_odt, r);
 	if (b)
