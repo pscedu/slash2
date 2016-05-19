@@ -1291,8 +1291,7 @@ mds_open_cursor(void)
 	psclog_info("SLFID prior to replay="SLPRI_FID,
 	    mds_cursor.pjc_fid);
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
-	    mds_cursor.pjc_seqno_lwm);
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 
 	psclogs_info(SLMSS_INFO, "bmap sequence number LWM before replay is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
