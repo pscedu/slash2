@@ -899,25 +899,3 @@ namecache_delete(struct dircache_ent_update *dcu, int rc)
 	}
 	dcu->dcu_d = NULL;
 }
-
-void
-dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
-    void *a)
-{
-	struct dircache_page **pp = a;
-
-	if (*pp != p) {
-		PFLOG_DIRCACHEPG(PLL_MAX, p, "");
-		*pp = p;
-	}
-
-	fprintf(stderr, "   ent %.*s\n", e->dce_pfd->pfd_namelen,
-	    e->dce_pfd->pfd_name);
-}
-
-void
-dircache_dbgpr(struct fidc_membh *d)
-{
-	printf("pages %d\n", pll_nitems(&fcmh_2_fci(d)->fci_dc_pages));
-	dircache_walk(d, dircache_ent_dbgpr, NULL);
-}
