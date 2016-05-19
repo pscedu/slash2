@@ -1424,6 +1424,9 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
+	/*
+ 	 * So we only put a write lease into the odtable.
+ 	 */
 	BMAP_ULOCK(b);
 	bml = mds_bml_new(b, NULL, BML_WRITE | BML_RECOVER,
 	    &bia->bia_lastcli);
