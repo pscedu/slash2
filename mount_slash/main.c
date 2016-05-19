@@ -3090,9 +3090,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		 * this operation completes?
 		 */
 		if (mdie.mdie_pri) {
-			OPSTAT_INCR("msl.dircache-walk");
+			OPSTAT_INCR("msl.dircache-walk-begin");
 			dircache_walk(c, msl_dircache_inval_entry,
 			    &mdie);
+			OPSTAT_INCR("msl.dircache-walk-end");
 		}
 
 		fcmh_op_done(c);
