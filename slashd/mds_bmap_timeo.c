@@ -145,8 +145,15 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	if (pll_peekhead(&slm_bmap_leases.btt_leases) == bml)
 		update = 1;
 	pll_remove(&slm_bmap_leases.btt_leases, bml);
-	if (update) {
-		tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
+	if (!update)
+		return;
+
+	tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
+	/*
+ 	 * During log replay,  expired bmap leases will be tagged with
+ 	 * BMAPSEQ_ANY. Ignore them.
+ 	 */
+	if (tmp->bml_seq != BMAPSEQ_ANY) {
 		if (tmp)
 			slm_bmap_leases.btt_minseq = tmp->bml_seq;
 		else
