@@ -98,7 +98,6 @@ struct slrpc_cservice {
 	int			 csvc_lasterrno;	/* zeroed after a success */
 	int			 csvc_refcnt;
 
-	int			 csvc_nfails;
 	int			 csvc_lineno;
 	const char		*csvc_fn;
 	pthread_t		 csvc_owner;

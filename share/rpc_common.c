@@ -172,7 +172,6 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 	csvc->csvc_flags |= CSVCF_CONNECTED;
 
 	csvc->csvc_lasterrno = 0;
-	csvc->csvc_nfails = 0;
 
 	CSVC_WAKE(csvc);
 }
@@ -191,7 +190,6 @@ slrpc_connect_finish(struct slrpc_cservice *csvc,
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
-		csvc->csvc_nfails++;
 	}
 	CSVC_WAKE(csvc);
 	CSVC_URLOCK(csvc, locked);
@@ -971,7 +969,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	} else if (csvc->csvc_lasterrno == 0 ||
 	    csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
-	    now.tv_sec || csvc->csvc_nfails < 2) {
+	    now.tv_sec) {
 		struct sl_resm_nid *nr;
 		lnet_process_id_t *pp;
 		int i, j, trc;
