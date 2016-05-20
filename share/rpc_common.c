@@ -398,7 +398,7 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	sl_csvc_decref(csvc);
+	sl_csvc_decref_locked(csvc);
 	return (0);
 }
 
