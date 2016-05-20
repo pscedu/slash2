@@ -592,12 +592,17 @@ _sl_csvc_disconnect_core(struct slrpc_cservice *csvc, int flags)
  */
 void
 _sl_csvc_decref(const struct pfl_callerinfo *pci,
-    struct slrpc_cservice *csvc)
+    struct slrpc_cservice *csvc, int locked)
 {
 	struct pscrpc_import *imp;
 	int rc, freeme = 0;
 
-	CSVC_LOCK(csvc);
+	/*
+ 	 * Recursive locking won't let me unlock later unless you
+ 	 * ignore it.
+ 	 */
+	if (!locked)
+		CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
