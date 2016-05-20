@@ -238,7 +238,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		sl_csvc_online(csvc);
 	}
 	CSVC_WAKE(csvc);
-	sl_csvc_decref(csvc);
+	sl_csvc_decref_locked(csvc);
 	return (0);
 }
 
