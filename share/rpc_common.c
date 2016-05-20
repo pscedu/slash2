@@ -1133,18 +1133,15 @@ slconnthr_main(struct psc_thread *thr)
 						sl_csvc_disconnect(csvc);
 				}
 			}
-			sl_csvc_decref(csvc);
 
 			if (scp->scp_flags & CSVCF_MARKFREE) {
-				sl_csvc_decref(csvc);
-
 				spinlock(&sl_conn_lock);
-				psc_dynarray_remove(&sct->sct_monres,
-				    scp);
+				psc_dynarray_remove(&sct->sct_monres, scp);
 				freelock(&sl_conn_lock);
-
 				PSCFREE(scp);
+				sl_csvc_decref_locked(csvc);
 			}
+			sl_csvc_decref_locked(csvc);
  next:
 			spinlock(&sl_conn_lock);
 		}
