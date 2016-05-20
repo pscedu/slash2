@@ -184,6 +184,7 @@ slihealththr_main(struct psc_thread *thr)
 
 			sli_selftest_rc = rc;
 
+			CONF_LOCK();
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
 				CSVC_LOCK(csvc);
@@ -192,6 +193,7 @@ slihealththr_main(struct psc_thread *thr)
 				sli_rci_ctl_health_send(csvc);
 			}
 			PLL_ULOCK(&sl_clients);
+			CONF_ULOCK();
 		}
 	}
 }

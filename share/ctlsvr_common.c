@@ -117,6 +117,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (!rc)
 		return (rc);
 
+	CONF_LOCK();
 	PLL_LOCK(&sl_clients);
 	PLL_FOREACH(csvc, &sl_clients) {
 		slctl_fillconn(scc, csvc);
@@ -146,6 +147,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			break;
 	}
 	PLL_ULOCK(&sl_clients);
+	CONF_ULOCK();
 	return (rc);
 }
 

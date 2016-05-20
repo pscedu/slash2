@@ -121,21 +121,22 @@ struct slrpc_cservice {
 #define slrpc_cservice slrpc_cservice
 
 /* csvc_flags */
-#define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
-#define CSVCF_CONNECTED		(1 << 1)		/* conn online */
-#define CSVCF_MARKFREE		(1 << 2)		/* csvc mem resources need freed */
-#define CSVCF_PING		(1 << 3)		/* send keepalives */
-#define CSVCF_BUSY		(1 << 4)		/* send keepalives */
-#define CSVCF_DISCONNECTING	(1 << 5)		/* want to disconnect but in use; ASAP */
+#define CSVCF_CONNECTING	(1 << 0)	/* conn attempt in progress */
+#define CSVCF_CONNECTED		(1 << 1)	/* conn online */
+#define CSVCF_MARKFREE		(1 << 2)	/* to be freed - no new references */
+#define CSVCF_PING		(1 << 3)	/* send keepalives */
+#define CSVCF_BUSY		(1 << 4)	/* send keepalives */
+#define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
-#define CSVCF_NONBLOCK		(1 << 6)		/* don't timeout waiting for new establishment */
-#define CSVCF_NORECON		(1 << 7)		/* don't attempt reconnection if down */
+
+#define CSVCF_NONBLOCK		(1 << 6)	/* don't timeout waiting for establishment */
+#define CSVCF_NORECON		(1 << 7)	/* don't attempt reconnection if down */
 
 #define CSVCF_FLAGSHIFT		(1 << 8)
 
-#define CSVC_RECONNECT_INTV	10			/* seconds */
-#define CSVC_PING_INTV		60			/* seconds */
+#define CSVC_RECONNECT_INTV	10		/* seconds */
+#define CSVC_PING_INTV		60		/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,		\

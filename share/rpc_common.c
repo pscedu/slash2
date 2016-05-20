@@ -608,39 +608,57 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slrpc_cservice *csvc)
 {
 	struct pscrpc_import *imp;
-	int rc;
+	int rc, freeme = 0;
 
-	(void)CSVC_RLOCK(csvc);
+	CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
 	if (rc == 0) {
 		if (csvc->csvc_flags & CSVCF_MARKFREE) {
-			if (csvc->csvc_peertype == SLCONNT_CLI)
-				pll_remove(&sl_clients, csvc);
-
-			/*
-			 * Due to the nature of non-blocking CONNECT,
-			 * the import may or may not actually be
-			 * present.
-			 */
-			imp = csvc->csvc_import;
-			if (imp)
-				pscrpc_import_put(imp);
-
-			DEBUG_CSVC(PLL_DIAG, csvc, "freed");
-			// XXX assert(mutex.nwaiters == 0)
-			psc_mutex_unlock(&csvc->csvc_mutex);
-			psc_mutex_destroy(&csvc->csvc_mutex);
-			pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
-			psc_pool_return(sl_csvc_pool, csvc);
-			return;
+			CSVC_ULOCK(csvc);
+			goto try_free;
 		}
 		if (csvc->csvc_flags & CSVCF_DISCONNECTING)
 			_sl_csvc_disconnect_core(csvc,
 			    SLRPC_DISCONNF_HIGHLEVEL);
 	}
 	CSVC_ULOCK(csvc);
+	return;
+
+ try_free:
+
+	/* avoid a free and reference race */
+	CONF_LOCK();
+	CSVC_LOCK(csvc);
+	if (csvc->csvc_refcnt == 0) {
+		*csvc->csvc_params.scp_csvcp = NULL;
+		if (csvc->csvc_peertype == SLCONNT_CLI)
+			pll_remove(&sl_clients, csvc);
+		freeme = 1;
+	}
+	CSVC_ULOCK(csvc);
+	CONF_ULOCK();
+
+	if (!freeme)
+		return;
+
+	/*
+	 * Due to the nature of non-blocking CONNECT,
+	 * the import may or may not actually be
+	 * present.
+	 */
+	imp = csvc->csvc_import;
+	if (imp)
+		pscrpc_import_put(imp);
+
+	DEBUG_CSVC(PLL_DIAG, csvc, "freed");
+	// XXX assert(mutex.nwaiters == 0)
+	psc_mutex_unlock(&csvc->csvc_mutex);
+	psc_mutex_destroy(&csvc->csvc_mutex);
+	pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
+	psc_pool_return(sl_csvc_pool, csvc);
+
 }
 
 /*
@@ -788,8 +806,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	void *hldropf, *hldroparg;
 	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
-	int rc = 0, addlist = 0, need_ref = 1;
-	struct slrpc_cservice *csvc;
+	int rc = 0, addlist = 0;
+	struct slrpc_cservice *csvc = NULL;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
 	lnet_nid_t peernid;
@@ -801,19 +819,21 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	    peertype != SLCONNT_IOD)
 		psc_fatalx("%d: bad peer connection type", peertype);
 
-	if (*csvcp) {
-		csvc = *csvcp;
-		/* 04/04/2016: Hit crash with peer type SLCONNT_CLI */
-		psc_assert(csvc->csvc_peertype == peertype);
-		CSVC_LOCK(csvc);
-		goto next;
-	}
-
+ again:
+ 
 	CONF_LOCK();
 	if (*csvcp) {
 		csvc = *csvcp;
-		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_LOCK(csvc);
+		if (csvc->csvc_flags & CSVCF_MARKFREE) {
+			CSVC_ULOCK(csvc);
+			CONF_ULOCK();
+			sched_yield();
+			goto again;
+		}
+		sl_csvc_incref(csvc);
+		psc_assert(csvc->csvc_peertype == peertype);
+		CSVC_ULOCK(csvc);
 		CONF_ULOCK();
 		goto next;
 	}
@@ -852,6 +872,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
+	csvc->csvc_refcnt = 1;
 	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
@@ -881,11 +902,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		break;
 	}
 
+	/* publish now */
 	*csvcp = csvc;
-	CSVC_LOCK(csvc);
 	CONF_ULOCK();
 
  next:
+	CSVC_LOCK(csvc);
 	switch (peertype) {
 	case SLCONNT_CLI:
 		expc = (void *)csvc->csvc_params.scp_csvcp;
@@ -901,11 +923,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	}
 
  restart:
-
-	if (need_ref) {
-		sl_csvc_incref(csvc);
-		need_ref = 0;
-	}
 
 	if (sl_csvc_useable(csvc))
 		goto out;
