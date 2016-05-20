@@ -41,8 +41,8 @@ umount -l -f $mp 2>/dev/null
 [ -d $mp ] || mkdir -p $mp
 
 # Initialization/configuration
-ulimit -n 100000
-ulimit -c $((1024 * 1024 * 1024 * 50))
+ulimit -n 1000000
+ulimit -c $((1024 * 1024 * 1024 * 100))
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG_info=1
 export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
