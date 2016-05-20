@@ -1723,6 +1723,7 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* Handle SRMT_REPL_GETST RPC */
 int
 slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
