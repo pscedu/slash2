@@ -149,16 +149,17 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 		return;
 
 	tmp = pll_peekhead(&slm_bmap_leases.btt_leases);
+	if (!tmp) {
+		slm_bmap_leases.btt_minseq = slm_bmap_leases.btt_maxseq;
+		mds_bmap_timeotbl_journal_seqno();
+		return;
+	}
 	/*
- 	 * During log replay,  expired bmap leases will be tagged with
+ 	 * During log replay,  expired bmap leases are tagged with
  	 * BMAPSEQ_ANY. Ignore them.
  	 */
 	if (tmp->bml_seq != BMAPSEQ_ANY) {
-		if (tmp)
-			slm_bmap_leases.btt_minseq = tmp->bml_seq;
-		else
-			slm_bmap_leases.btt_minseq =
-			    slm_bmap_leases.btt_maxseq;
+		slm_bmap_leases.btt_minseq = tmp->bml_seq;
 		mds_bmap_timeotbl_journal_seqno();
 	}
 }
