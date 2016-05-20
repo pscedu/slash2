@@ -128,11 +128,10 @@ mds_bmap_timeotbl_getnextseq(void)
 	if (slm_bmap_leases.btt_maxseq == BMAPSEQ_ANY) {
 		OPSTAT_INCR("seqno-wrap");
 		slm_bmap_leases.btt_maxseq = 1;
-	}
-	/*
- 	 * This should never happen, but we have been burned.
- 	 */
-	if (slm_bmap_leases.btt_maxseq == 0) {
+	} else if (slm_bmap_leases.btt_maxseq == 0) {
+		/*
+ 		 * This should never happen, but we have been burned.
+ 		 */
 		OPSTAT_INCR("seqno-skip");
 		slm_bmap_leases.btt_maxseq = 1;
 	}
