@@ -790,10 +790,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
     enum slconn_type peertype, struct pfl_multiwait *mw)
 {
+	int rc = 0, success;
 	void *hldropf, *hldroparg;
 	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
-	int rc = 0, addlist = 0;
 	struct slrpc_cservice *csvc = NULL;
 	struct sl_resm *resm = NULL; /* gcc */
 	struct timespec now;
@@ -870,17 +870,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	switch (peertype) {
 	case SLCONNT_CLI:
 
-		/* Hold reference as the multiwait arg below. */
-		csvc->csvc_refcnt = 1;
-
-		snprintf(addrbuf, sizeof(addrbuf), "%p", csvc);
 		if (exp && exp->exp_connection)
 			pscrpc_id2str(exp->exp_connection->c_peer,
 			    addrbuf);
 		pfl_multiwaitcond_init(&csvc->csvc_mwc, csvc,
 		    PMWCF_WAKEALL, "cli-%s", addrbuf);
 
-		addlist = 1;
 		break;
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
@@ -911,6 +906,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
  restart:
 
+	success = 1;
 	if (sl_csvc_useable(csvc))
 		goto out;
 
@@ -954,7 +950,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
-			csvc = NULL;
+			success = 0;	
 			goto out;
 		}
 
@@ -965,7 +961,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	} else if (flags & CSVCF_NORECON) {
 
-		csvc = NULL;
+		success = 0;	
 		goto out;
 
 	} else if (csvc->csvc_lasterrno == 0 ||
@@ -1013,7 +1009,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		CSVC_LOCK(csvc);
 
 		if (rc == EWOULDBLOCK) {
-			csvc = NULL;
+			success = 0;	
 			goto out;
 		}
 
@@ -1031,37 +1027,22 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			 * Our caller is signified about this failure
 			 * via the NULL return here.
 			 */
-			csvc = NULL;
+			success = 0;	
+			goto out;
 		}
 	} else {
-		csvc = NULL;
+		success = 0;
 		goto out;
 	}
-	if (rc == 0)
-		sl_csvc_online(csvc);
-	CSVC_WAKE(*csvcp);
+	sl_csvc_online(csvc);
 
-	if (addlist)
-		pll_add_sorted(&sl_clients, *csvcp, csvc_cli_cmp);
+	if (peertype == SLCONNT_CLI)
+		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
 
  out:
-	if (csvc)
-		CSVC_ULOCK(csvc);
-	else {
-		if ((flags & CSVCF_NONBLOCK) && mw) {
-			spinlock(&sl_conn_lock);
-			if (pfl_multiwait_hascond(mw,
-			    &(*csvcp)->csvc_mwc))
-				pfl_multiwait_setcondwakeable(mw,
-				    &(*csvcp)->csvc_mwc, 1);
-			else
-				pfl_multiwait_addcond(mw,
-				    &(*csvcp)->csvc_mwc);
-			freelock(&sl_conn_lock);
-		}
-		sl_csvc_decref(*csvcp);
-	}
-	return (csvc);
+	CSVC_ULOCK(csvc);
+
+	return (success ? csvc : NULL);
 }
 
 /*
