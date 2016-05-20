@@ -129,6 +129,13 @@ mds_bmap_timeotbl_getnextseq(void)
 		OPSTAT_INCR("seqno-wrap");
 		slm_bmap_leases.btt_maxseq = 1;
 	}
+	/*
+ 	 * This should never happen, but we have been burned.
+ 	 */
+	if (slm_bmap_leases.btt_maxseq == 0) {
+		OPSTAT_INCR("seqno-skip");
+		slm_bmap_leases.btt_maxseq = 1;
+	}
 
 	hwm = slm_bmap_leases.btt_maxseq;
 	mds_bmap_timeotbl_journal_seqno();
