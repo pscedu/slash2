@@ -178,25 +178,13 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 }
 
 void
-sl_csvc_dectryref(struct slrpc_cservice *csvc)
-{
-	int locked;
-
-	locked = CSVC_RLOCK(csvc);
-	psc_assert(csvc->csvc_tryref > 0);
-	if (--csvc->csvc_tryref == 0)
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
-	CSVC_URLOCK(csvc, locked);
-}
-
-void
 slrpc_connect_finish(struct slrpc_cservice *csvc,
     struct pscrpc_import *imp, struct pscrpc_import *old, int success)
 {
 	int locked;
 
 	locked = CSVC_RLOCK(csvc);
-	sl_csvc_dectryref(csvc);
+	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	if (success) {
 		if (csvc->csvc_import != imp)
 			csvc->csvc_import = imp;
@@ -341,7 +329,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	mq->uptime = tv1.tv_sec;
 
 	CSVC_LOCK(csvc);
-	csvc->csvc_tryref++;
 	if (flags & CSVCF_NONBLOCK)
 		sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
@@ -964,8 +951,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    CSVCF_DISCONNECTING);
 		csvc->csvc_flags |= CSVCF_CONNECTED;
 
-	} else if (csvc->csvc_tryref ||
-	    (csvc->csvc_flags & CSVCF_CONNECTING)) {
+	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
 			csvc = NULL;
@@ -998,7 +984,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			}
 		} else if (csvc->csvc_import == NULL)
 			csvc->csvc_import = slrpc_new_import(csvc);
-		csvc->csvc_tryref++;
 		CSVC_ULOCK(csvc);
 
 		rc = ENETUNREACH;
@@ -1026,8 +1011,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
  proc_conn:
 		CSVC_LOCK(csvc);
-
-		sl_csvc_dectryref(csvc);
 
 		if (rc == EWOULDBLOCK) {
 			csvc = NULL;
