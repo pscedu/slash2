@@ -540,7 +540,7 @@ sl_csvc_useable(struct slrpc_cservice *csvc)
 	    csvc->csvc_import->imp_invalid)
 		return (0);
 	return ((csvc->csvc_flags &
-	  (CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_WANTFREE)) ==
+	  (CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_MARKFREE)) ==
 	    CSVCF_CONNECTED);
 }
 
@@ -559,7 +559,7 @@ sl_csvc_markfree(struct slrpc_cservice *csvc)
  	 * coming from pscrpc_fail_import().
  	 */
 	locked = CSVC_RLOCK(csvc);
-	csvc->csvc_flags |= CSVCF_WANTFREE;
+	csvc->csvc_flags |= CSVCF_MARKFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
 	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
@@ -615,7 +615,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
 	if (rc == 0) {
-		if (csvc->csvc_flags & CSVCF_WANTFREE) {
+		if (csvc->csvc_flags & CSVCF_MARKFREE) {
 			if (csvc->csvc_peertype == SLCONNT_CLI)
 				pll_remove(&sl_clients, csvc);
 
@@ -646,7 +646,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 /*
  * Account for starting to use a remote service connection.
  * @csvc: client service.
- * XXX if CSVCF_WANTFREE is set, bail.
+ * XXX if CSVCF_MARKFREE is set, bail.
  */
 void
 sl_csvc_incref(struct slrpc_cservice *csvc)
@@ -1149,7 +1149,7 @@ slconnthr_main(struct psc_thread *thr)
 			}
 			sl_csvc_decref(csvc);
 
-			if (scp->scp_flags & CSVCF_WANTFREE) {
+			if (scp->scp_flags & CSVCF_MARKFREE) {
 				sl_csvc_decref(csvc);
 
 				spinlock(&sl_conn_lock);

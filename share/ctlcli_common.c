@@ -157,7 +157,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	}
 
 	printf("%c%c ",
-	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
+	    scc->scc_flags & CSVCF_MARKFREE		? 'F' : '-',
 	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
 
 	if (scc->scc_flags & CSVCF_CTL_OLDER)

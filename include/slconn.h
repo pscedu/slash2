@@ -123,7 +123,7 @@ struct slrpc_cservice {
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
 #define CSVCF_CONNECTED		(1 << 1)		/* conn online */
-#define CSVCF_WANTFREE		(1 << 2)		/* csvc mem resources need freed */
+#define CSVCF_MARKFREE		(1 << 2)		/* csvc mem resources need freed */
 #define CSVCF_PING		(1 << 3)		/* send keepalives */
 #define CSVCF_BUSY		(1 << 4)		/* send keepalives */
 #define CSVCF_DISCONNECTING	(1 << 5)		/* want to disconnect but in use; ASAP */
@@ -142,7 +142,7 @@ struct slrpc_cservice {
 	    (csvc), (csvc)->csvc_flags,					\
 	    (csvc)->csvc_flags & CSVCF_CONNECTING	? "C" : "",	\
 	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
-	    (csvc)->csvc_flags & CSVCF_WANTFREE		? "F" : "",	\
+	    (csvc)->csvc_flags & CSVCF_MARKFREE		? "F" : "",	\
 	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
 	    (csvc)->csvc_flags & CSVCF_BUSY		? "B" : "",	\
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
