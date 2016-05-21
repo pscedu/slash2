@@ -313,6 +313,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
+	if (!rc)
+		rc = mp->rc;
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-retrieve-diowait");
 
@@ -494,6 +496,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
+	if (!rc)
+		rc = mp->rc;
 	if (rc && slc_rpc_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
@@ -637,6 +641,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
+	if (!rc)
+		rc = mp->rc;
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
