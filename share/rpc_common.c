@@ -56,7 +56,7 @@ struct psc_poolmgr	*sl_csvc_pool;
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slrpc_cservice, csvc_lentry);
 
-psc_spinlock_t		 sl_conn_lock = SPINLOCK_INIT;
+psc_spinlock_t		 sl_watch_lock = SPINLOCK_INIT;
 
 /*
  * Create a new generic RPC request.  Common processing in all SLASH2
@@ -1087,9 +1087,9 @@ slconnthr_main(struct psc_thread *thr)
 
 		pfl_multiwait_entercritsect(&sct->sct_mw);
 
-		spinlock(&sl_conn_lock);
+		spinlock(&sl_watch_lock);
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
-			freelock(&sl_conn_lock);
+			freelock(&sl_watch_lock);
 			csvc = sl_csvc_get(scp->scp_csvcp,
 			    scp->scp_flags | CSVCF_NONBLOCK, NULL,
 			    scp->scp_peernids,
@@ -1133,17 +1133,17 @@ slconnthr_main(struct psc_thread *thr)
 			}
 
 			if (scp->scp_flags & CSVCF_MARKFREE) {
-				spinlock(&sl_conn_lock);
+				spinlock(&sl_watch_lock);
 				psc_dynarray_remove(&sct->sct_monres, scp);
-				freelock(&sl_conn_lock);
+				freelock(&sl_watch_lock);
 				PSCFREE(scp);
 				sl_csvc_decref_locked(csvc);
 			}
 			sl_csvc_decref_locked(csvc);
  next:
-			spinlock(&sl_conn_lock);
+			spinlock(&sl_watch_lock);
 		}
-		freelock(&sl_conn_lock);
+		freelock(&sl_watch_lock);
 		pfl_multiwait_secs(&sct->sct_mw, &dummy, 1);
 	}
 }
@@ -1186,11 +1186,11 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	sct = thr->pscthr_private;
 	scp = &csvc->csvc_params;
 
-	spinlock(&sl_conn_lock);
+	spinlock(&sl_watch_lock);
 	rc = psc_dynarray_exists(&sct->sct_monres, scp);
 	if (!rc)
 		psc_dynarray_add(&sct->sct_monres, scp);
-	freelock(&sl_conn_lock);
+	freelock(&sl_watch_lock);
 	if (rc)
 		return;
 
@@ -1200,10 +1200,10 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);
 
-	spinlock(&sl_conn_lock);
+	spinlock(&sl_watch_lock);
 	if (!pfl_multiwait_hascond(&sct->sct_mw, &csvc->csvc_mwc))
 		pfl_multiwait_addcond(&sct->sct_mw, &csvc->csvc_mwc);
-	freelock(&sl_conn_lock);
+	freelock(&sl_watch_lock);
 }
 
 /*
