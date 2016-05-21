@@ -838,7 +838,8 @@ msl_bmap_reap_init(struct bmap *b)
 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAPF_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
-		psc_assert(r);
+		if (!r)
+			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
 		psc_assert(b->bcm_flags & BMAPF_WR);
 
 		if (r->res_type == SLREST_ARCHIVAL_FS)
