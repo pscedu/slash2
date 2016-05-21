@@ -152,7 +152,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	BMAP_LOCK_ENSURE(b);
 
 	if (!sbd->sbd_seq) {
-		psclog(PLL_WARN, "The bmap lease number is zero");
+		psclog(PLL_WARN, "Zero bmap lease number (%s)", action);
 		OPSTAT_INCR("zero-seqno");
 	}
 	psc_assert(sbd->sbd_fg.fg_fid);
