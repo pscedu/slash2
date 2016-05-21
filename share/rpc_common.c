@@ -622,7 +622,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	/* avoid a free and reference race */
 	pfl_rwlock_wrlock(&sl_conn_lock);
 	CSVC_LOCK(csvc);
-	if (csvc->csvc_refcnt == 0) {
+	if (csvc->csvc_flags & CSVCF_MARKFREE) {
+		psc_assert(csvc->csvc_refcnt == 0);
 		*csvc->csvc_params.scp_csvcp = NULL;
 		if (csvc->csvc_peertype == SLCONNT_CLI)
 			pll_remove(&sl_clients, csvc);
@@ -655,13 +656,13 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 /*
  * Account for starting to use a remote service connection.
  * @csvc: client service.
- * XXX if CSVCF_MARKFREE is set, bail.
  */
 void
 sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
+	csvc->csvc_flags &= ~CSVCF_MARKFREE;
 	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
 }
 
