@@ -828,7 +828,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
 		pfl_rwlock_unlock(&sl_conn_lock);
-		goto next;
+		goto gotit;
 	}
 
 	/* second grab write lock */
@@ -846,7 +846,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
 		pfl_rwlock_unlock(&sl_conn_lock);
-		goto next;
+		goto gotit;
 	}
 
 	switch (peertype) {
@@ -912,7 +912,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	*csvcp = csvc;
 	pfl_rwlock_unlock(&sl_conn_lock);
 
- next:
+ gotit:
 	CSVC_LOCK(csvc);
 	switch (peertype) {
 	case SLCONNT_CLI:
