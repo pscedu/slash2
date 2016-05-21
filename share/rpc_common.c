@@ -56,6 +56,7 @@ struct psc_poolmgr	*sl_csvc_pool;
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slrpc_cservice, csvc_lentry);
 
+struct pfl_rwlock	 sl_conn_lock;
 psc_spinlock_t		 sl_watch_lock = SPINLOCK_INIT;
 
 /*
@@ -619,7 +620,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
  try_free:
 
 	/* avoid a free and reference race */
-	CONF_LOCK();
+	pfl_rwlock_wrlock(&sl_conn_lock);
 	CSVC_LOCK(csvc);
 	if (csvc->csvc_refcnt == 0) {
 		*csvc->csvc_params.scp_csvcp = NULL;
@@ -628,7 +629,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		freeme = 1;
 	}
 	CSVC_ULOCK(csvc);
-	CONF_ULOCK();
+	pfl_rwlock_unlock(&sl_conn_lock);
 
 	if (!freeme)
 		return;
@@ -811,20 +812,39 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
  again:
  
-	CONF_LOCK();
+	/* first grab read lock */
+	pfl_rwlock_rdlock(&sl_conn_lock);
 	if (*csvcp) {
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
 		if (csvc->csvc_flags & CSVCF_MARKFREE) {
 			CSVC_ULOCK(csvc);
-			CONF_ULOCK();
+			pfl_rwlock_unlock(&sl_conn_lock);
 			sched_yield();
 			goto again;
 		}
 		sl_csvc_incref(csvc);
 		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
-		CONF_ULOCK();
+		pfl_rwlock_unlock(&sl_conn_lock);
+		goto next;
+	}
+
+	/* second grab write lock */
+	pfl_rwlock_wrlock(&sl_conn_lock);
+	if (*csvcp) {
+		csvc = *csvcp;
+		CSVC_LOCK(csvc);
+		if (csvc->csvc_flags & CSVCF_MARKFREE) {
+			CSVC_ULOCK(csvc);
+			pfl_rwlock_unlock(&sl_conn_lock);
+			sched_yield();
+			goto again;
+		}
+		sl_csvc_incref(csvc);
+		psc_assert(csvc->csvc_peertype == peertype);
+		CSVC_ULOCK(csvc);
+		pfl_rwlock_unlock(&sl_conn_lock);
 		goto next;
 	}
 
@@ -889,7 +909,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/* publish now */
 	*csvcp = csvc;
-	CONF_ULOCK();
+	pfl_rwlock_unlock(&sl_conn_lock);
 
  next:
 	CSVC_LOCK(csvc);
@@ -1385,6 +1405,7 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 void
 slrpc_initcli(void)
 {
+	pfl_rwlock_init(&sl_conn_lock);
 	psc_poolmaster_init(&sl_csvc_poolmaster,
 	    struct slrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "csvc");
