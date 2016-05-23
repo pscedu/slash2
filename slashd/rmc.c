@@ -1039,7 +1039,6 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	    chfg);
 	mds_unreserve_slot(2);
 
- out:
 	if (mp->rc == 0) {
 		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
 		if (op != np)
@@ -1072,6 +1071,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 			mp->srr_clattr.sst_fid = FID_ANY;
 	}
 
+ out:
 	if (np)
 		fcmh_op_done(np);
 	if (op && op != np)
