@@ -757,7 +757,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 	case NS_OP_RENAME: {
 
 		/* filled in by zfs_rename() */
-		struct {
+		struct zfs_rename_arg {
 			struct sl_fidgen clfg;
 			struct sl_fidgen *fgp;
 		} *aa;
