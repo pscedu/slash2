@@ -1080,10 +1080,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		mp->srr_clattr.sst_fid = FID_ANY;
 
  out:
-	if (np)
-		fcmh_op_done(np);
-	if (op && op != np)
+	if (op)
 		fcmh_op_done(op);
+	if (np && np != op)
+		fcmh_op_done(np);
 	return (0);
 }
 
