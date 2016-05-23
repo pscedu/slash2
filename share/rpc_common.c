@@ -1256,22 +1256,21 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 void
 sl_exp_hldrop_cli(struct pscrpc_export *exp)
 {
-	struct slrpc_cservice **csvcp;
+	struct slrpc_cservice *csvc;
+	struct sl_exp_cli *expc;
 
 	EXPORT_LOCK(exp);
-	csvcp = exp->exp_private;
+	expc = exp->exp_private;
 	exp->exp_private = NULL;
 	EXPORT_ULOCK(exp);
 
-	if (csvcp == NULL)
-		return;
+	csvc = expc->expc_csvc;
+	CSVC_LOCK(csvc);
+	sl_csvc_markfree(csvc);
+	sl_csvc_disconnect_locked(csvc);
+	sl_csvc_decref_locked(csvc);
 
-	CSVC_LOCK(*csvcp);
-	sl_csvc_markfree(*csvcp);
-	sl_csvc_disconnect_locked(*csvcp);
-	sl_csvc_decref_locked(*csvcp);
-
-	PSCFREE(csvcp);
+	PSCFREE(expc);
 }
 
 /*
