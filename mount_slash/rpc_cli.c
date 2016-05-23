@@ -221,13 +221,7 @@ slc_rmc_setmds(const char *name)
  * Determine if an I/O operation should be retried after successive
  * RPC/communication failures.
  *
- * We want to check:
- *	- administration/control/configuration policy (e.g. "5
- *	  retries").
- *	- user process/environment/file descriptor policy
- *	- user process interrupt
- *
- * XXX consult mfh for per-file handle settings?
+ * Return 0 if not going to retry and tweak rc if necessary.
  */
 int
 slc_rpc_retry(struct pscfs_req *pfr, int *rc)
