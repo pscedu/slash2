@@ -226,6 +226,7 @@ struct resprof_cli_info {
 	struct psc_waitq		 rpci_waitq;
 	int				 rpci_flags;
 	int				 rpci_timeouts;
+	int				 rpci_saw_error;
 	int				 rpci_infl_rpcs;
 	int				 rpci_max_infl_rpcs;
 };

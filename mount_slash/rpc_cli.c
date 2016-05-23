@@ -35,6 +35,7 @@
 #include "slashrpc.h"
 #include "slconn.h"
 #include "slerr.h"
+#include "subsys_cli.h"
 
 /*
  * This is the default MDS. Do not use it directly in order
@@ -47,16 +48,28 @@ struct pscrpc_svc_handle	*msl_rcm_svh;
 void
 msl_resm_throttle_wake(struct sl_resm *m, int rc)
 {
+	int logit = 0;	
 	struct resprof_cli_info *rpci;
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	if (abs(rc) == ETIMEDOUT)
 		rpci->rpci_timeouts++;
+	if (rc) {
+		if (!rpci->rpci_saw_error) {
+			logit = 1;
+			rpci->rpci_saw_error = 1;
+		}
+	} else if (rpci->rpci_saw_error)
+		rpci->rpci_saw_error = 0;
+
 	psc_assert(rpci->rpci_infl_rpcs > 0);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
+	if (logit)
+		psclogs_info(SLCSS_INFO, "RPC: resource = %s, rc = %d\n",
+		    m->resm_name, rc);
 }
 
 int
