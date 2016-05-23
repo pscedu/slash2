@@ -1039,18 +1039,29 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	    chfg);
 	mds_unreserve_slot(2);
 
-	mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
-	if (op != np)
-		mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	if (op != np) {
+		mp->rc = mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+		if (mp->rc)
+			PFL_GOTOERR(out, mp->rc);
+	}
 
 	if (chfg[0].fg_fid != FID_ANY &&
 	    slm_fcmh_get(&chfg[0], &c) == 0) {
-		mdsio_fcmh_refreshattr(c,
+		mp->rc = mdsio_fcmh_refreshattr(c,
 		    &mp->srr_cattr);
 		fcmh_op_done(c);
 	} else
 		mp->srr_cattr.sst_fid = FID_ANY;
 
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 	/*
  	 * This logic was introduced by the following commit:
  	 *
@@ -1063,8 +1074,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
  	 */
 	if (chfg[1].fg_fid != FID_ANY &&
 	    slm_fcmh_get(&chfg[1], &c) == 0) {
-		mdsio_fcmh_refreshattr(c,
-		    &mp->srr_clattr);
+		mp->rc = mdsio_fcmh_refreshattr(c, &mp->srr_clattr);
 		fcmh_op_done(c);
 	} else
 		mp->srr_clattr.sst_fid = FID_ANY;
