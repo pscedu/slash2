@@ -539,17 +539,11 @@ sl_csvc_useable(struct slrpc_cservice *csvc)
 void
 sl_csvc_markfree(struct slrpc_cservice *csvc)
 {
-	int locked;
-
-	/* 05/13/2016: Hit crash on slashd during to invalid mutex
- 	 * coming from pscrpc_fail_import().
- 	 */
-	locked = CSVC_RLOCK(csvc);
+	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_flags |= CSVCF_MARKFREE;
 	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
 	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
-	CSVC_URLOCK(csvc, locked);
 }
 
 /*
@@ -672,22 +666,26 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
  */
 void
 _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
-    struct slrpc_cservice *csvc)
+    struct slrpc_cservice *csvc, int locked)
 {
-	int locked;
 
-	locked = CSVC_RLOCK(csvc);
+	if (!locked)
+		CSVC_LOCK(csvc);
 	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING))
 		csvc->csvc_flags |= CSVCF_DISCONNECTING;
-	CSVC_URLOCK(csvc, locked);
+	if (!locked)
+		CSVC_ULOCK(csvc);
 }
 
 void
-sl_imp_hldrop_cli(void *csvc)
+sl_imp_hldrop_cli(void *arg)
 {
+    	struct slrpc_cservice *csvc = arg;
+
+	CSVC_LOCK(csvc);
 	sl_csvc_markfree(csvc);
-	sl_csvc_disconnect(csvc);
-	sl_csvc_decref(csvc);
+	sl_csvc_disconnect_locked(csvc);
+	sl_csvc_decref_locked(csvc);
 }
 
 void
@@ -1268,10 +1266,10 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 	if (csvcp == NULL)
 		return;
 
-	(void)CSVC_RLOCK(*csvcp);
+	CSVC_LOCK(*csvcp);
 	sl_csvc_markfree(*csvcp);
-	sl_csvc_disconnect(*csvcp);
-	sl_csvc_decref(*csvcp);
+	sl_csvc_disconnect_locked(*csvcp);
+	sl_csvc_decref_locked(*csvcp);
 
 	PSCFREE(csvcp);
 }

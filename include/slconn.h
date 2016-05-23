@@ -161,7 +161,9 @@ struct sl_expcli_ops {
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 0)
 #define sl_csvc_decref_locked(csvc)	_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 1)
-#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
+
+#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 0)
+#define sl_csvc_disconnect_locked(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc), 1)
 
 #define slrpc_getname(rq)						\
 	slrpc_getname_for_opcode(pflrpc_req_get_opcode(rq))
@@ -374,8 +376,7 @@ struct slrpc_cservice *
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
 	    uint32_t, enum slconn_type, struct pfl_multiwait *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
-void	_sl_csvc_disconnect(const struct pfl_callerinfo *,
-	    struct slrpc_cservice *);
+void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	 sl_csvc_incref(struct slrpc_cservice *);
 void	 sl_csvc_markfree(struct slrpc_cservice *);
 int	 sl_csvc_useable(struct slrpc_cservice *);
