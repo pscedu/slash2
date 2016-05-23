@@ -1039,37 +1039,35 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	    chfg);
 	mds_unreserve_slot(2);
 
-	if (mp->rc == 0) {
-		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
-		if (op != np)
-			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+	mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
+	if (op != np)
+		mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
 
-		if (chfg[0].fg_fid != FID_ANY &&
-		    slm_fcmh_get(&chfg[0], &c) == 0) {
-			mdsio_fcmh_refreshattr(c,
-			    &mp->srr_cattr);
-			fcmh_op_done(c);
-		} else
-			mp->srr_cattr.sst_fid = FID_ANY;
+	if (chfg[0].fg_fid != FID_ANY &&
+	    slm_fcmh_get(&chfg[0], &c) == 0) {
+		mdsio_fcmh_refreshattr(c,
+		    &mp->srr_cattr);
+		fcmh_op_done(c);
+	} else
+		mp->srr_cattr.sst_fid = FID_ANY;
 
-		/*
- 		 * This logic was introduced by the following commit:
- 		 *
- 		 * commit 686123166096a5ae07240f51fc68cb30afd7a0e3
- 		 * Author: Jared Yanovich <yanovich@psc.edu>
- 		 * Date:   Wed Jan 8 23:20:16 2014 +0000
- 		 *
- 		 * pass back RENAME clobbered file stat(2) attributes
- 		 *
- 		 */
-		if (chfg[1].fg_fid != FID_ANY &&
-		    slm_fcmh_get(&chfg[1], &c) == 0) {
-			mdsio_fcmh_refreshattr(c,
-			    &mp->srr_clattr);
-			fcmh_op_done(c);
-		} else
-			mp->srr_clattr.sst_fid = FID_ANY;
-	}
+	/*
+ 	 * This logic was introduced by the following commit:
+ 	 *
+ 	 * commit 686123166096a5ae07240f51fc68cb30afd7a0e3
+ 	 * Author: Jared Yanovich <yanovich@psc.edu>
+ 	 * Date:   Wed Jan 8 23:20:16 2014 +0000
+ 	 *
+ 	 * pass back RENAME clobbered file stat(2) attributes
+ 	 *
+ 	 */
+	if (chfg[1].fg_fid != FID_ANY &&
+	    slm_fcmh_get(&chfg[1], &c) == 0) {
+		mdsio_fcmh_refreshattr(c,
+		    &mp->srr_clattr);
+		fcmh_op_done(c);
+	} else
+		mp->srr_clattr.sst_fid = FID_ANY;
 
  out:
 	if (np)
