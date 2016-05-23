@@ -237,8 +237,6 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	switch (abs(*rc)) {
 
 	/* XXX always retry */
-	case PFLERR_TIMEDOUT:
-		*rc = ETIMEDOUT;
 	case ECONNABORTED:
 	case ECONNREFUSED:
 	case ECONNRESET:
@@ -252,6 +250,7 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 
 	/* retry for somee number of times */
 	case ETIMEDOUT:
+	case PFLERR_TIMEDOUT:
 		/* XXX track on per IOS/MDS basis */
 		OPSTAT_INCR("msl.timeout");
 		if (pfr && pfr->pfr_retries > msl_max_retries)
