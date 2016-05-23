@@ -2530,6 +2530,16 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 
 	/*
+	 * The following logic was introduced by the following commit:
+	 *
+	 * commit ef7e931f959d2e1055ef845a22fc91874a565e00
+	 * Author: Jared Yanovich <yanovich@psc.edu>
+	 * Date:   Wed Jan 8 23:26:58 2014 +0000
+	 *
+	 * fix an fcmh leak of child and refresh RENAME clobbered file stat(2) attributes
+	 *         
+	 */
+	/*
 	 * Refresh clobbered file's attributes.  This file might have
 	 * additional links and may not be completely destroyed so don't
 	 * evict.
