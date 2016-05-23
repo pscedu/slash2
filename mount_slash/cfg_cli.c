@@ -32,7 +32,6 @@
 void
 slc_init_rpci(struct resprof_cli_info *rpci)
 {
-	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
 	INIT_SPINLOCK(&rpci->rpci_lock);
 	psc_waitq_init(&rpci->rpci_waitq);
 }
@@ -40,7 +39,6 @@ slc_init_rpci(struct resprof_cli_info *rpci)
 void
 slc_destroy_rpci(struct resprof_cli_info *rpci)
 {
-	psc_dynarray_free(&rpci->rpci_pinned_bmaps);
 	psc_waitq_destroy(&rpci->rpci_waitq);
 }
 

@@ -221,7 +221,6 @@ struct msl_fsrqinfo {
  */
 struct resprof_cli_info {
 	struct psc_spinlock		 rpci_lock;
-	struct psc_dynarray		 rpci_pinned_bmaps;
 	struct statvfs			 rpci_sfb;
 	struct timespec			 rpci_sfb_time;
 	struct psc_waitq		 rpci_waitq;
