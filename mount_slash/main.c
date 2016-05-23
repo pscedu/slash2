@@ -3205,7 +3205,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			CSVC_LOCK(csvc);
 			sl_csvc_incref(csvc);
 			sl_csvc_markfree(csvc);
-			sl_csvc_decref(csvc);
+			sl_csvc_decref_locked(csvc);
 			continue;
 		}
 	pscrpc_set_kill(sl_nbrqset);
