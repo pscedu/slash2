@@ -232,8 +232,7 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 {
-	struct timespec ts;
-	int count = 0;
+	int count;
 
 	switch (abs(*rc)) {
 
@@ -282,15 +281,9 @@ slc_rpc_retry(struct pscfs_req *pfr, int *rc)
 	count = pfr->pfr_retries++;
 
 	if (pfr) {
-		ts.tv_sec = count ? count * 3 : 10;
-		ts.tv_nsec = 0;
-
-		/*
-		 * XXX we can do better here: in the case of offline
-		 * peers, we can multiwait on the csvc to be immediately
-		 * awoken when the connection is established.
-		 */
-		*rc = pflfs_req_sleep_rel(pfr, &ts);
+		sleep(count ? count * 3 : 10);
+		if (pfr->pfr_interrupted)
+			*rc = EINTR;
 	} else
 		sleep(count ? count * 1 : 10);
 
