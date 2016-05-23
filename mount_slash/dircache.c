@@ -845,6 +845,12 @@ _namecache_update(const struct pfl_callerinfo *pci,
 	else if (rc)
 		namecache_delete(dcu, rc);
 	else {
+		/*
+		 * Hit crash repeatedly at stable revision 41062 when 
+		 * renaming different files (e.g., run.pbs.e21100) from 
+		 * one directory to another on greenfield. The fid comes
+		 * from mp->srr_cattr.sst_fid.
+		 */
 		psc_assert(fid != FID_ANY);
 
 		psc_hashbkt_lock(dcu->dcu_bkt);
