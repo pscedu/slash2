@@ -1053,6 +1053,16 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		} else
 			mp->srr_cattr.sst_fid = FID_ANY;
 
+		/*
+ 		 * This logic was introduced by the following commit:
+ 		 *
+ 		 * commit 686123166096a5ae07240f51fc68cb30afd7a0e3
+ 		 * Author: Jared Yanovich <yanovich@psc.edu>
+ 		 * Date:   Wed Jan 8 23:20:16 2014 +0000
+ 		 *
+ 		 * pass back RENAME clobbered file stat(2) attributes
+ 		 *
+ 		 */
 		if (chfg[1].fg_fid != FID_ANY &&
 		    slm_fcmh_get(&chfg[1], &c) == 0) {
 			mdsio_fcmh_refreshattr(c,
