@@ -1068,8 +1068,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	if (!success)
  		sl_csvc_decref_locked(csvc);
-
-	CSVC_ULOCK(csvc);
+	else
+		CSVC_ULOCK(csvc);
 	return (success ? csvc : NULL);
 }
 
