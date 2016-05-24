@@ -268,6 +268,7 @@ void
 sl_resm_hldrop(struct sl_resm *resm)
 {
 	if (resm->resm_type == SLREST_MDS) {
+		psclog_warnx("Unexpected resource type, resm = %p", resm);
 	} else {
 		struct psc_listcache *l;
 
