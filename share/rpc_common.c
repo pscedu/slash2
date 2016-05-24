@@ -857,6 +857,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 * A service has one export for every client.
 		 *
 		 * This is the case when a client connets to MDS or IOS.
+		 *
+		 * XXX the same csvc will be dropped by sl_imp_hldrop_cli()
+		 * AND sl_exp_hldrop_cli().
 		 */
 		hldropf = sl_imp_hldrop_cli;
 		hldroparg = NULL;
