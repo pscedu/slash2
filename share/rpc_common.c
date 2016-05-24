@@ -857,6 +857,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 * of the connection to a target. An export is the server 
 		 * side. A client has one import for every target.
 		 * A service has one export for every client.
+		 *
+		 * This is the case when a client connets to MDS or IOS.
 		 */
 		hldropf = sl_imp_hldrop_cli;
 		hldroparg = NULL;
