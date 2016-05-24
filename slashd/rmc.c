@@ -1900,6 +1900,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/* called from sl_exp_getpri_cli() */
 void
 mexpc_allocpri(struct pscrpc_export *exp)
 {

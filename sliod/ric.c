@@ -544,6 +544,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/* called from sl_exp_getpri_cli() */
 void
 iexpc_allocpri(struct pscrpc_export *exp)
 {
