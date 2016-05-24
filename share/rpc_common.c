@@ -464,7 +464,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 
 		/*
 		 * Establish a SLCONNT_CLI connection to our newly
-		 * arrived client.
+		 * arrived client (not IOS).
 		 */
 		expc = sl_exp_getpri_cli(e, 1);
 		expc->expc_stkvers = mq->stkvers;
