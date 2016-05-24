@@ -849,7 +849,8 @@ _namecache_update(const struct pfl_callerinfo *pci,
 		 * Hit crash repeatedly at stable revision 41062 when 
 		 * renaming different files (e.g., run.pbs.e21100) from 
 		 * one directory to another on greenfield. The fid comes
-		 * from mp->srr_cattr.sst_fid.
+		 * from mp->srr_cattr.sst_fid. After 10+ crashed, things
+		 * appear to be calm now.
 		 */
 		psc_assert(fid != FID_ANY);
 
