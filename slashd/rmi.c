@@ -569,10 +569,10 @@ slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
-	rc = SL_EXP_REGISTER_RESM(rq->rq_export, slm_geticsvcx(_resm,
-	    rq->rq_export));
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export, 
+	    slm_geticsvcx(_resm, rq->rq_export));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
 
