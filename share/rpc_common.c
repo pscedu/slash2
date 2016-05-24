@@ -640,8 +640,6 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		pscrpc_import_put(imp);
 
 	DEBUG_CSVC(PLL_DIAG, csvc, "freed");
-	// XXX assert(mutex.nwaiters == 0)
-	psc_mutex_unlock(&csvc->csvc_mutex);
 	psc_mutex_destroy(&csvc->csvc_mutex);
 	pfl_multiwaitcond_destroy(&csvc->csvc_mwc);
 	psc_pool_return(sl_csvc_pool, csvc);
