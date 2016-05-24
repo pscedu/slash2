@@ -639,7 +639,6 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 	}
 
- out:
 	slrpc_rep_out(rq);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
