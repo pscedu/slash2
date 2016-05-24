@@ -694,6 +694,7 @@ sl_imp_hldrop_resm(void *arg)
 	struct sl_resm *resm = arg;
 
 	sl_csvc_disconnect(resm->resm_csvc);
+	OPSTAT_INCR("rpc.import-drop-resm");
 }
 
 /*
@@ -1252,6 +1253,7 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
 		psclog_warnx("no resm for %s", nidbuf);
 	}
+	OPSTAT_INCR("rpc.export-drop-resm");
 }
 
 /*
