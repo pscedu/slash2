@@ -638,7 +638,7 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
 	csvc->csvc_flags &= ~CSVCF_MARKFREE;
-	psclog_diag("take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_warnx("take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 }
 
 /*
@@ -1074,15 +1074,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 void
 slconnthr_main(struct psc_thread *thr)
 {
-	struct timespec ts0, ts1, diff, intv;
+	struct timespec ts0, ts1;
 	struct slrpc_cservice *csvc;
 	struct slconn_thread *sct;
 	struct slconn_params *scp;
 	int i, rc, pingrc = 0;
 	void *dummy;
-
-	intv.tv_sec = CSVC_PING_INTV;
-	intv.tv_nsec = 0;
 
 	sct = thr->pscthr_private;
 	memset(&ts0, 0, sizeof(ts0));
@@ -1094,15 +1091,10 @@ slconnthr_main(struct psc_thread *thr)
 		 */
 		clock_gettime(CLOCK_MONOTONIC, &ts1);
 		if (sct->sct_pingupc) {
-			timespecsub(&ts1, &ts0, &diff);
-			if (timespeccmp(&diff, &intv, >=)) {
-				pingrc = sct->sct_pingupc(
-				    sct->sct_pingupcarg);
-				if (pingrc)
-					psclog_diag("sct_pingupc "
-					    "failed (rc=%d)", pingrc);
-				memcpy(&ts0, &ts1, sizeof(ts0));
-			}
+			pingrc = sct->sct_pingupc( sct->sct_pingupcarg);
+			if (pingrc)
+				psclog_diag("sct_pingupc "
+				    "failed (rc=%d)", pingrc);
 		}
 
 		pfl_multiwait_entercritsect(&sct->sct_mw);
@@ -1142,17 +1134,12 @@ slconnthr_main(struct psc_thread *thr)
 			 */
 			if (sl_csvc_useable(csvc) &&
 			    scp->scp_flags & CSVCF_PING) {
-				timespecsub(&ts1, &csvc->csvc_mtime,
-				    &diff);
-				if (timespeccmp(&diff, &intv, >=)) {
-					CSVC_ULOCK(csvc);
-					rc = slrpc_issue_ping(csvc, pingrc);
-					if (rc)
-						sl_csvc_disconnect_locked(csvc);
-					CSVC_LOCK(csvc);
-					memcpy(&csvc->csvc_mtime, &ts1,
-					    sizeof(ts1));
-				}
+				CSVC_ULOCK(csvc);
+				rc = slrpc_issue_ping(csvc, pingrc);
+				if (rc)
+					sl_csvc_disconnect_locked(csvc);
+				CSVC_LOCK(csvc);
+				memcpy(&csvc->csvc_mtime, &ts1, sizeof(ts1));
 			}
 
 			if (scp->scp_flags & CSVCF_MARKFREE) {
@@ -1167,7 +1154,7 @@ slconnthr_main(struct psc_thread *thr)
 			spinlock(&sl_watch_lock);
 		}
 		freelock(&sl_watch_lock);
-		pfl_multiwait_secs(&sct->sct_mw, &dummy, 1);
+		pfl_multiwait_secs(&sct->sct_mw, &dummy, CSVC_PING_INTV);
 	}
 }
 
