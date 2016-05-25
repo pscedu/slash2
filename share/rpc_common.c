@@ -840,10 +840,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 *
 		 * This is the case when a client connets to MDS or IOS.
 		 *
-		 * XXX the same csvc will be dropped by sl_imp_hldrop_cli()
-		 * AND sl_exp_hldrop_cli().
+		 * We used to set hldropf to sl_imp_hldrop_cli() below. If 
+		 * so, the same csvc will be dropped by sl_imp_hldrop_cli()
+		 * and sl_exp_hldrop_cli().
 		 */
-		hldropf = sl_imp_hldrop_cli;
+		hldropf = NULL;
 		hldroparg = NULL;
 		break;
 	case SLCONNT_IOD:
