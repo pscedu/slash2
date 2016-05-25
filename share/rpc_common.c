@@ -830,7 +830,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		goto gotit;
 	}
 
-	/* second grab write lock */
+	/* upgrade to write lock */
 	pfl_rwlock_unlock(&sl_conn_lock);
 	pfl_rwlock_wrlock(&sl_conn_lock);
 	if (*csvcp) {
