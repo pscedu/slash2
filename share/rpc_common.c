@@ -869,7 +869,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
-	csvc->csvc_refcnt = 1;
+	csvc->csvc_refcnt = 2;
 	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
