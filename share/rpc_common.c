@@ -1147,11 +1147,11 @@ slconnthr_main(struct psc_thread *thr)
 				if (timespeccmp(&diff, &intv, >=)) {
 					CSVC_ULOCK(csvc);
 					rc = slrpc_issue_ping(csvc, pingrc);
+					if (rc)
+						sl_csvc_disconnect_locked(csvc);
 					CSVC_LOCK(csvc);
 					memcpy(&csvc->csvc_mtime, &ts1,
 					    sizeof(ts1));
-					if (rc)
-						sl_csvc_disconnect(csvc);
 				}
 			}
 
