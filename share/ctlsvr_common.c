@@ -94,7 +94,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pfl_rwlock_rdlock(&sl_conn_lock);
 		if (!resm->resm_csvc) {
 			pfl_rwlock_unlock(&sl_conn_lock);
-			return;
+			continue;
 		}
 		/*
  		 * csvc associated with a resource never goes
