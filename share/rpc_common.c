@@ -1087,6 +1087,11 @@ slconnthr_main(struct psc_thread *thr)
 	sct = thr->pscthr_private;
 	memset(&ts0, 0, sizeof(ts0));
 	while (pscthr_run(thr)) {
+
+		/*
+		 * Retrieve the current health status and send the
+		 * result via PING RPC later.  IOS only.
+		 */
 		clock_gettime(CLOCK_MONOTONIC, &ts1);
 		if (sct->sct_pingupc) {
 			timespecsub(&ts1, &ts0, &diff);
@@ -1131,6 +1136,9 @@ slconnthr_main(struct psc_thread *thr)
 			    !scp->scp_useablef(scp->scp_useablearg))
 				sl_csvc_disconnect(csvc);
 
+			/*
+			 * Ping MDS and send my health status. IOS only.
+			 */
 			CSVC_LOCK(csvc);
 			if (sl_csvc_useable(csvc) &&
 			    scp->scp_flags & CSVCF_PING) {
