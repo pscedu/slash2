@@ -49,6 +49,8 @@ struct pscrpc_export;
 
 struct sl_resm;
 
+extern struct pfl_rwlock	 sl_conn_lock;
+
 struct sl_exp_cli {
 	struct slrpc_cservice	*expc_csvc;
 	uint32_t		 expc_stkvers;	/* see slctlrep_getconn() */

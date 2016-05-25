@@ -91,7 +91,18 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    (RES_ISCLUSTER(r)))
 			continue;
 
+		pfl_rwlock_rdlock(&sl_conn_lock);
+		if (!resm->resm_csvc) {
+			pfl_rwlock_unlock(&sl_conn_lock);
+			return;
+		}
+		/*
+ 		 * csvc associated with a resource never goes
+ 		 * away, so we don't take a lock here.
+ 		 */
 		slctl_fillconn(scc, resm->resm_csvc);
+		pfl_rwlock_unlock(&sl_conn_lock);
+
 		/* XXX fix which nid is being used */
 		mn = psc_dynarray_getpos(&resm->resm_nids, 0);
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
