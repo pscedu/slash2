@@ -100,7 +100,9 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
  		 * csvc associated with a resource never goes
  		 * away, so we don't take a lock here.
  		 */
+		CSVC_LOCK(resm->resm_csvc);
 		slctl_fillconn(scc, resm->resm_csvc);
+		CSVC_ULOCK(resm->resm_csvc);
 		pfl_rwlock_unlock(&sl_conn_lock);
 
 		/* XXX fix which nid is being used */
