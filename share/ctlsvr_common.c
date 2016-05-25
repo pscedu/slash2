@@ -120,7 +120,14 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_LOCK();
 	PLL_LOCK(&sl_clients);
 	PLL_FOREACH(csvc, &sl_clients) {
+
+		CSVC_LOCK(csvc);
+		if (!csvc->csvc_refcnt) {
+			CSVC_ULOCK(csvc);
+			continue;
+		}
 		slctl_fillconn(scc, csvc);
+		CSVC_ULOCK(csvc);
 
 		imp = csvc->csvc_import;
 		if (imp && imp->imp_connection)

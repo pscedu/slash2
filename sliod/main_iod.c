@@ -188,6 +188,10 @@ slihealththr_main(struct psc_thread *thr)
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
 				CSVC_LOCK(csvc);
+				if (!csvc->csvc_refcnt) {
+					CSVC_ULOCK(csvc);
+					continue;
+				}
 				sl_csvc_incref(csvc);
 				CSVC_ULOCK(csvc);
 				sli_rci_ctl_health_send(csvc);

@@ -188,10 +188,8 @@ struct sl_expcli_ops {
 					_csvc = NULL;			\
 				}					\
 			}						\
-			if (_csvc == NULL) {				\
+			if (_csvc == NULL)				\
 				_csvc = getcsvc;			\
-				sl_csvc_decref(_csvc);			\
-			}						\
 									\
 			if ((exp)->exp_hldropf == NULL) {		\
 				EXPORT_LOCK(exp);			\

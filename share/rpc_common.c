@@ -589,7 +589,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
     struct slrpc_cservice *csvc, int locked)
 {
 	struct pscrpc_import *imp;
-	int rc, freeme = 0;
+	int rc;
 
 	/*
  	 * Recursive locking won't let me unlock later unless you
@@ -600,35 +600,16 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
-	if (rc == 0) {
-		if (csvc->csvc_flags & CSVCF_MARKFREE) {
-			CSVC_ULOCK(csvc);
-			goto try_free;
-		}
-		if (csvc->csvc_flags & CSVCF_DISCONNECTING)
-			_sl_csvc_disconnect_core(csvc,
-			    SLRPC_DISCONNF_HIGHLEVEL);
-	}
-	CSVC_ULOCK(csvc);
-	return;
-
- try_free:
-
-	/* avoid a free and reference race */
-	pfl_rwlock_wrlock(&sl_conn_lock);
-	CSVC_LOCK(csvc);
-	if (csvc->csvc_flags & CSVCF_MARKFREE) {
-		psc_assert(csvc->csvc_refcnt == 0);
-		*csvc->csvc_params.scp_csvcp = NULL;
-		if (csvc->csvc_peertype == SLCONNT_CLI)
-			pll_remove(&sl_clients, csvc);
-		freeme = 1;
-	}
-	CSVC_ULOCK(csvc);
-	pfl_rwlock_unlock(&sl_conn_lock);
-
-	if (!freeme)
+	if (rc > 0) {
+		CSVC_ULOCK(csvc);
 		return;
+	}
+
+	if (csvc->csvc_peertype == SLCONNT_CLI) {
+		CONF_LOCK();
+		pll_remove(&sl_clients, csvc);
+		CONF_ULOCK();
+	}
 
 	/*
 	 * Due to the nature of non-blocking CONNECT,
@@ -682,7 +663,7 @@ sl_imp_hldrop_cli(void *arg)
     	struct slrpc_cservice *csvc = arg;
 
 	CSVC_LOCK(csvc);
-	sl_csvc_markfree(csvc);
+	// sl_csvc_markfree(csvc);
 	sl_csvc_disconnect_locked(csvc);
 	sl_csvc_decref_locked(csvc);
 	OPSTAT_INCR("rpc.import-drop-client");
@@ -1273,7 +1254,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 
 	csvc = expc->expc_csvc;
 	CSVC_LOCK(csvc);
-	sl_csvc_markfree(csvc);
+	// sl_csvc_markfree(csvc);
 	sl_csvc_disconnect_locked(csvc);
 	sl_csvc_decref_locked(csvc);
 
