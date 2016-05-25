@@ -599,12 +599,13 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
-	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
+	psclog_warnx("drop ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	if (rc > 0) {
 		CSVC_ULOCK(csvc);
 		return;
 	}
 
+	CSVC_ULOCK(csvc);
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
 		CONF_LOCK();
 		pll_remove(&sl_clients, csvc);
@@ -637,7 +638,7 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
 	csvc->csvc_flags &= ~CSVCF_MARKFREE;
-	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
+	psclog_warnx("take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 }
 
 /*
@@ -775,7 +776,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
     uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
     enum slconn_type peertype, struct pfl_multiwait *mw)
 {
-	int rc = 0, success;
+	int rc = 0, refcnt, success;
 	void *hldropf, *hldroparg;
 	uint64_t *uptimep = NULL;
 	uint32_t *stkversp = NULL;
@@ -844,11 +845,13 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 * so, the same csvc will be dropped by sl_imp_hldrop_cli()
 		 * and sl_exp_hldrop_cli().
 		 */
+		refcnt = 1;
 		hldropf = NULL;
 		hldroparg = NULL;
 		break;
 	case SLCONNT_IOD:
 	case SLCONNT_MDS:
+		refcnt = 2;
 		peernid = slrpc_getpeernid(exp, peernids);
 		resm = libsl_nid2resm(peernid);
 
@@ -870,7 +873,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
-	csvc->csvc_refcnt = 2;
+	csvc->csvc_refcnt = refcnt;
 	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
 	csvc->csvc_peernids = peernids;
@@ -897,6 +900,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/* publish now */
 	*csvcp = csvc;
+	psclog_warnx("publish csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
