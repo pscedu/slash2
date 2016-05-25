@@ -136,7 +136,7 @@ struct slrpc_cservice {
 #define CSVCF_FLAGSHIFT		(1 << 8)
 
 #define CSVC_RECONNECT_INTV	10		/* seconds */
-#define CSVC_PING_INTV		60		/* seconds */
+#define CSVC_PING_INTV		30		/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,		\
