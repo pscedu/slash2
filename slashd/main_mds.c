@@ -178,7 +178,7 @@ slmconnthr_spawn(void)
 	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
 	CONF_FOREACH_RESM(s, r, i, m, j)
 		if (r->res_type == SLREST_MDS)
-			slm_getmcsvcf(m, CSVCF_NORECON);
+			; // slm_getmcsvcf(m, CSVCF_NORECON);
 		else if (RES_ISFS(r))
 			slm_geticsvcf(m, CSVCF_NORECON);
 }
