@@ -1123,6 +1123,7 @@ slconnthr_main(struct psc_thread *thr)
 				 */
 				goto next;
 
+			CSVC_LOCK(csvc);
 			/*
 			 * Only used by MDS to watch for its I/O
 			 * servers.  So scp_useablef is always
@@ -1134,12 +1135,11 @@ slconnthr_main(struct psc_thread *thr)
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
-				sl_csvc_disconnect(csvc);
+				sl_csvc_disconnect_locked(csvc);
 
 			/*
 			 * Ping MDS and send my health status. IOS only.
 			 */
-			CSVC_LOCK(csvc);
 			if (sl_csvc_useable(csvc) &&
 			    scp->scp_flags & CSVCF_PING) {
 				timespecsub(&ts1, &csvc->csvc_mtime,
