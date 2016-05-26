@@ -157,8 +157,6 @@ struct sl_expcli_ops {
 	_sl_csvc_get(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nids),	\
 	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
-#define SLRPC_DISCONNF_HIGHLEVEL	(1 << 0)
-
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 0)
 #define sl_csvc_decref_locked(csvc)	_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 1)
 
