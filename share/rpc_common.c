@@ -164,12 +164,9 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 	csvc->csvc_import->imp_failed = 0;
 	csvc->csvc_import->imp_invalid = 0;
 
-	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	csvc->csvc_flags |= CSVCF_CONNECTED;
 
 	csvc->csvc_lasterrno = 0;
-
-	CSVC_WAKE(csvc);
 }
 
 void
@@ -178,11 +175,9 @@ slrpc_connect_finish(struct slrpc_cservice *csvc,
 {
 
 	CSVC_LOCK(csvc);
-	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	if (success) {
 		if (csvc->csvc_import != imp)
 			csvc->csvc_import = imp;
-		sl_csvc_online(csvc);
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
@@ -216,6 +211,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
+		CSVC_LOCK(csvc);
+		sl_csvc_online(csvc);
 	} else {
 
 		tv1.tv_sec = mp->uptime;
@@ -225,8 +222,9 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		*uptimep = tv1.tv_sec;
 		*stkversp = mp->stkvers;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
+		CSVC_LOCK(csvc);
 	}
-	CSVC_LOCK(csvc);
+	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_lasterrno = rc;
 	CSVC_WAKE(csvc);
@@ -305,7 +303,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 		return (rc);
 	}
@@ -332,13 +329,11 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			CSVC_LOCK(csvc);
 			csvc->csvc_owner = 0;
-			CSVC_WAKE(csvc);
 			CSVC_ULOCK(csvc);
 			return (rc);
 		}
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 
 		/*
@@ -366,7 +361,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_LOCK(csvc);
 	csvc->csvc_owner = 0;
-	CSVC_WAKE(csvc);
 	CSVC_ULOCK(csvc);
 	return (rc);
 }
@@ -929,6 +923,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 	CSVC_ULOCK(csvc);
 
+	/*
+	 * Don't clear CSVCF_CONNECTING and wake up waiters until we
+	 * have tried all possibilities.
+	 */
 	rc = ENETUNREACH;
 	DYNARRAY_FOREACH(nr, i, peernids) {
 		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
@@ -958,6 +956,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_lasterrno = rc;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_flags &= ~CSVCF_CONNECTING;
+	CSVC_WAKE(csvc);
 	if (rc) {
 		if (csvc->csvc_import)
 			csvc->csvc_import->imp_failed = 1;
