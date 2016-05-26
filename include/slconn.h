@@ -123,7 +123,7 @@ struct slrpc_cservice {
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)	/* conn attempt in progress */
 #define CSVCF_CONNECTED		(1 << 1)	/* conn online */
-#define CSVCF_WATCH		(1 << 2)	/* send keepalives */
+#define CSVCF_WATCH		(1 << 2)	/* on watch list */
 #define CSVCF_PING		(1 << 3)	/* send keepalives */
 #define CSVCF_DISCONNECTING	(1 << 4)	/* want to disconnect but in use; ASAP */
 

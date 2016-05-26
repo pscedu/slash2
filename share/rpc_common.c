@@ -729,8 +729,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	    peertype != SLCONNT_IOD)
 		psc_fatalx("%d: bad peer connection type", peertype);
 
- again:
- 
 	/* first grab read lock */
 	pfl_rwlock_rdlock(&sl_conn_lock);
 	if (*csvcp) {
