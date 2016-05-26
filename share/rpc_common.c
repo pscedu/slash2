@@ -1006,8 +1006,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CSVC_ULOCK(csvc);
 
 	rc = ENETUNREACH;
-	DYNARRAY_FOREACH(nr, i, peernids)
-		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
+	DYNARRAY_FOREACH(nr, i, peernids) {
+		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
 			if (LNET_NIDNET(nr->resmnid_nid) ==
 			    LNET_NIDNET(pp->nid)) {
 				trc = slrpc_issue_connect(
@@ -1019,6 +1019,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 					goto proc_conn;
 				}
 			}
+		}
+	}
 
  proc_conn:
 
