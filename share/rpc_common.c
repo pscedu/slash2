@@ -973,8 +973,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		success = 0;	
 		goto out;
 
-	} else if (csvc->csvc_lasterrno == 0 ||
-	    csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
+	} else if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
 	    now.tv_sec) {
 		struct sl_resm_nid *nr;
 		lnet_process_id_t *pp;
