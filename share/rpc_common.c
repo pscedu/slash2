@@ -982,12 +982,13 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		goto out2;
 	}
 
-	if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV > now.tv_sec) {
+	if (csvc->csvc_mtime.tv_sec + CSVC_CONNECT_INTV > now.tv_sec) {
 		if (flags & CSVCF_NONBLOCK) {
 			success = 0;	
 			goto out2;
 		}
-		delta = csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV - now.tv_sec;
+		delta = csvc->csvc_mtime.tv_sec + CSVC_CONNECT_INTV 
+			- now.tv_sec;
 		CSVC_ULOCK(csvc);
 		sleep(delta);
 		goto recheck;
