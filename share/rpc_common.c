@@ -165,8 +165,6 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 	csvc->csvc_import->imp_invalid = 0;
 
 	csvc->csvc_flags |= CSVCF_CONNECTED;
-
-	csvc->csvc_lasterrno = 0;
 }
 
 void
@@ -895,8 +893,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		}
 
 		OPSTAT_INCR("csvc-wait");
-		pfl_multiwaitcond_wait(&csvc->csvc_mwc,
-		    &csvc->csvc_mutex);
+		pfl_multiwaitcond_wait(&csvc->csvc_mwc, &csvc->csvc_mutex);
 		OPSTAT_INCR("csvc-wake");
 
 		CSVC_LOCK(csvc);
@@ -926,8 +923,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CSVC_ULOCK(csvc);
 
 	/*
-	 * Don't clear CSVCF_CONNECTING and wake up waiters until we
-	 * have tried all possibilities.
+	 * Don't clear CSVCF_CONNECTING and wake up waiters in between until 
+	 * we have tried all possibilities.
 	 */
 	rc = ENETUNREACH;
 	DYNARRAY_FOREACH(nr, i, peernids) {
