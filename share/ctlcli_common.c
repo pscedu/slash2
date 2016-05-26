@@ -148,10 +148,8 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-');
 
 	if (scc->scc_flags & CSVCF_CONNECTED) {
-		setcolor(COLOR_GREEN);
 		printf("O");
 		connected = 1;
-		uncolor();
 	} else {
 		printf("-");
 	}
@@ -181,7 +179,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		    (scc->scc_uptime % (60 * 60 * 24)) / (60 * 60),
 		    (scc->scc_uptime % (60 * 60)) / 60);
 	else
-		printf("\n");
+		printf("  --------\n");
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
