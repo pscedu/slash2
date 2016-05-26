@@ -926,7 +926,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/*
 	 * Don't clear CSVCF_CONNECTING and wake up waiters in between until 
-	 * we have tried all possibilities.
+	 * we have tried all possibilities. Also, at most one async connection
+	 * is allowed.
 	 */
 	rc = ENETUNREACH;
 	DYNARRAY_FOREACH(nr, i, peernids) {

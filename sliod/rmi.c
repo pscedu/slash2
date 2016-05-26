@@ -88,12 +88,15 @@ sli_rmi_setmds(const char *name)
 	slconnthr_watch(sliconnthr, rmi_resm->resm_csvc, 
 	    CSVCF_PING, NULL, NULL);
 
+	/* Inform our IOS peers, not needed for correctness */
+	CONF_LOCK();
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
 		if (resm == nodeResm || resm == rmi_resm ||
 		    (RES_ISCLUSTER(r)))
 			continue;
 		sli_geticsvc_nb(resm);
 	}
+	CONF_ULOCK();
 }
 
 int
