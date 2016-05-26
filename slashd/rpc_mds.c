@@ -277,6 +277,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;
 		slrpc_batches_drop(l);
 	}
+	// sl_csvc_decref(resm->resm_csvc);
 }
 
 struct slrpc_ops slrpc_ops = {
