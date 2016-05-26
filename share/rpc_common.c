@@ -286,10 +286,8 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_fn = __FILE__;
 
 	if (csvc->csvc_import == NULL) {
-
 		imp = slrpc_new_import(csvc);
 		csvc->csvc_import = imp;
-
 	} else
 		imp = csvc->csvc_import;
 
@@ -727,7 +725,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_exp_cli *expc;
 	struct sl_resm_nid *nr;
 	lnet_process_id_t *pp;
-	int i, j, trc;
+	int i, j;
 	uint64_t delta;
 
 	if (peertype != SLCONNT_CLI && 
@@ -936,14 +934,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
 			if (LNET_NIDNET(nr->resmnid_nid) ==
 			    LNET_NIDNET(pp->nid)) {
-				trc = slrpc_issue_connect(
+				rc = slrpc_issue_connect(
 				    pp->nid, nr->resmnid_nid,
 				    csvc, flags, mw, stkversp, 
 				    uptimep);
-				if (trc == 0 || trc == EWOULDBLOCK) {
-					rc = trc;
+				if (rc == 0 || rc == EWOULDBLOCK)
 					goto proc_conn;
-				}
 			}
 		}
 	}
