@@ -147,7 +147,7 @@ struct slrpc_cservice {
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
 struct sl_expcli_ops {
-	void	(*secop_allocpri)(struct pscrpc_export *);
+	struct slrpc_cservice * (*secop_allocpri)(struct pscrpc_export *);
 };
 
 #define CSVC_CALLERINFO			PFL_CALLERINFO()

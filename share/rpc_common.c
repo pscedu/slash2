@@ -1191,11 +1191,13 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 {
 	void *p;
 	int locked;
+	static struct slrpc_cservice *csvc;
 
 	locked = EXPORT_RLOCK(exp);
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
-		sl_expcli_ops.secop_allocpri(exp);
+		csvc = sl_expcli_ops.secop_allocpri(exp);
+		psc_assert(csvc);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
 	p = exp->exp_private;

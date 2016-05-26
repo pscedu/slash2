@@ -1901,13 +1901,13 @@ slm_rmc_handler(struct pscrpc_request *rq)
 }
 
 /* called from sl_exp_getpri_cli() */
-void
+static struct slrpc_cservice *
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct sl_exp_cli *expc;
 
 	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
-	slm_getclcsvc(exp);
+	return(slm_getclcsvc(exp));
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
