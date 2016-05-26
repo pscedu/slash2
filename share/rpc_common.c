@@ -286,11 +286,13 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_fn = __FILE__;
 
 	if (csvc->csvc_import == NULL) {
+
 		imp = slrpc_new_import(csvc);
 		csvc->csvc_import = imp;
-	}
 
-	imp = csvc->csvc_import;
+	} else
+		imp = csvc->csvc_import;
+
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
 	imp->imp_connection = c;
