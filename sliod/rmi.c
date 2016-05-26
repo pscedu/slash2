@@ -60,7 +60,7 @@ sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 			CSVC_ULOCK(rmi_resm->resm_csvc);
 		else
 			sl_csvc_waitrel_s(rmi_resm->resm_csvc,
-			    CSVC_CONNECT_INTV);
+			    CSVC_CONN_INTV);
 	}
 	return (0);
 }

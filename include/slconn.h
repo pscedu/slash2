@@ -134,7 +134,7 @@ struct slrpc_cservice {
 
 #define CSVCF_FLAGSHIFT		(1 << 7)
 
-#define CSVC_CONNECT_INTV	10		/* seconds */
+#define CSVC_CONN_INTV		10		/* seconds */
 #define CSVC_PING_INTV		30		/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
