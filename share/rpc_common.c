@@ -285,9 +285,8 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	csvc->csvc_lineno = __LINE__;
 	csvc->csvc_fn = __FILE__;
 
-	if (flags & CSVCF_NONBLOCK || csvc->csvc_import == NULL) {
+	if (csvc->csvc_import == NULL) {
 		imp = slrpc_new_import(csvc);
-		oimp = csvc->csvc_import;
 		csvc->csvc_import = imp;
 	}
 
@@ -928,13 +927,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	csvc->csvc_flags |= CSVCF_CONNECTING;
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
-	if (flags & CSVCF_NONBLOCK) {
-		if (csvc->csvc_import) {
-			pscrpc_import_put(csvc->csvc_import);
-			csvc->csvc_import = NULL;
-		}
-	} else if (csvc->csvc_import == NULL)
-		csvc->csvc_import = slrpc_new_import(csvc);
 	CSVC_ULOCK(csvc);
 
 	rc = ENETUNREACH;
