@@ -61,6 +61,8 @@ struct sli_repl_workrq;
 	    SRMI_MAGIC, SRMI_VERSION, SLCONNT_MDS, NULL)
 
 #define sli_geticsvcx(m, exp)		sli_geticsvcxf((m), (exp), 0)
+#define sli_geticsvcx_nb(m, exp)	sli_geticsvcxf((m), (exp), CSVCF_NONBLOCK)
+
 #define sli_getmcsvcx(m, exp)		sli_getmcsvcxf((m), (exp), 0)
 #define sli_getmcsvcx_nb(m, exp)	sli_getmcsvcxf((m), (exp), CSVCF_NONBLOCK)
 
@@ -68,8 +70,9 @@ struct sli_repl_workrq;
 #define sli_getmcsvcf(m, flags)		sli_getmcsvcxf((m), NULL, (flags))
 
 #define sli_geticsvc(m)			sli_geticsvcx((m), NULL)
-#define sli_getmcsvc(m)			sli_getmcsvcx((m), NULL)
+#define sli_geticsvc_nb(m)		sli_geticsvcx_nb((m), NULL)
 
+#define sli_getmcsvc(m)			sli_getmcsvcx((m), NULL)
 #define sli_getmcsvc_nb(m)		sli_getmcsvcx_nb((m), NULL)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
