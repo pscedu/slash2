@@ -513,25 +513,8 @@ sl_csvc_useable(struct slrpc_cservice *csvc)
 	    csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
 		return (0);
-	return ((csvc->csvc_flags &
-	  (CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_MARKFREE)) ==
-	    CSVCF_CONNECTED);
-}
-
-/*
- * Mark that a connection will be freed when the last reference goes
- * away.  This should never be performed on service connections to
- * resms, only for service connections to clients.
- * @csvc: client service.
- */
-void
-sl_csvc_markfree(struct slrpc_cservice *csvc)
-{
-	CSVC_LOCK_ENSURE(csvc);
-	csvc->csvc_flags |= CSVCF_MARKFREE;
-	csvc->csvc_flags &= ~(CSVCF_CONNECTED | CSVCF_CONNECTING);
-	csvc->csvc_lasterrno = 0;
-	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
+	return ((csvc->csvc_flags & (CSVCF_CONNECTED | CSVCF_DISCONNECTING)) 
+	    == CSVCF_CONNECTED);
 }
 
 /*
@@ -558,6 +541,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		CSVC_ULOCK(csvc);
 		return;
 	}
+
+	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
 
 	CSVC_ULOCK(csvc);
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
@@ -591,7 +576,6 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
-	csvc->csvc_flags &= ~CSVCF_MARKFREE;
 	psclog_warnx("take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 }
 
@@ -757,12 +741,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (*csvcp) {
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
-		if (csvc->csvc_flags & CSVCF_MARKFREE) {
-			CSVC_ULOCK(csvc);
-			pfl_rwlock_unlock(&sl_conn_lock);
-			sched_yield();
-			goto again;
-		}
 		sl_csvc_incref(csvc);
 		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
@@ -776,12 +754,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (*csvcp) {
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
-		if (csvc->csvc_flags & CSVCF_MARKFREE) {
-			CSVC_ULOCK(csvc);
-			pfl_rwlock_unlock(&sl_conn_lock);
-			sched_yield();
-			goto again;
-		}
 		sl_csvc_incref(csvc);
 		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
@@ -829,7 +801,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	/* initialize service */
 	csvc = sl_csvc_create(rqptl, rpptl, hldropf, hldroparg);
 	csvc->csvc_params.scp_csvcp = csvcp;
-	/* one for holder, one for current use */
+
+	/* one for our pointer, the other for current connection attempt */
 	csvc->csvc_refcnt = 2;
 	csvc->csvc_flags = flags;
 	csvc->csvc_peertype = peertype;
@@ -1104,13 +1077,9 @@ slconnthr_main(struct psc_thread *thr)
 				memcpy(&csvc->csvc_mtime, &ts1, sizeof(ts1));
 			}
 
-			if (scp->scp_flags & CSVCF_MARKFREE) {
-				spinlock(&sl_watch_lock);
-				psc_dynarray_remove(&sct->sct_monres, scp);
-				freelock(&sl_watch_lock);
-				PSCFREE(scp);
-				sl_csvc_decref_locked(csvc);
-			}
+			/*
+			 * csvc being watched should never be freed.
+			 */
 			sl_csvc_decref_locked(csvc);
  next:
 			spinlock(&sl_watch_lock);
@@ -1167,7 +1136,7 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 		return;
 
 	CSVC_LOCK(csvc);
-	scp->scp_flags |= flags;
+	scp->scp_flags |= flags | CSVCF_WATCH;
 	scp->scp_useablef = useablef;
 	scp->scp_useablearg = useablearg;
 	CSVC_ULOCK(csvc);

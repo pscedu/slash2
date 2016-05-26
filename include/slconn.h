@@ -123,7 +123,7 @@ struct slrpc_cservice {
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)	/* conn attempt in progress */
 #define CSVCF_CONNECTED		(1 << 1)	/* conn online */
-#define CSVCF_MARKFREE		(1 << 2)	/* to be freed - no new references */
+#define CSVCF_WATCH		(1 << 2)	/* send keepalives */
 #define CSVCF_PING		(1 << 3)	/* send keepalives */
 #define CSVCF_DISCONNECTING	(1 << 4)	/* want to disconnect but in use; ASAP */
 
@@ -138,11 +138,10 @@ struct slrpc_cservice {
 #define CSVC_PING_INTV		30		/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
-	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s ref:%d " fmt,		\
+	psclog((lvl), "csvc@%p fl=%#x:%s%s%s ref:%d " fmt,		\
 	    (csvc), (csvc)->csvc_flags,					\
 	    (csvc)->csvc_flags & CSVCF_CONNECTING	? "C" : "",	\
 	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
-	    (csvc)->csvc_flags & CSVCF_MARKFREE		? "F" : "",	\
 	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
