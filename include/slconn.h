@@ -125,15 +125,14 @@ struct slrpc_cservice {
 #define CSVCF_CONNECTED		(1 << 1)	/* conn online */
 #define CSVCF_MARKFREE		(1 << 2)	/* to be freed - no new references */
 #define CSVCF_PING		(1 << 3)	/* send keepalives */
-#define CSVCF_BUSY		(1 << 4)	/* send keepalives */
-#define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
+#define CSVCF_DISCONNECTING	(1 << 4)	/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
 
-#define CSVCF_NONBLOCK		(1 << 6)	/* don't timeout waiting for establishment */
-#define CSVCF_NORECON		(1 << 7)	/* don't attempt reconnection if down */
+#define CSVCF_NONBLOCK		(1 << 5)	/* don't timeout waiting for establishment */
+#define CSVCF_NORECON		(1 << 6)	/* don't attempt reconnection if down */
 
-#define CSVCF_FLAGSHIFT		(1 << 8)
+#define CSVCF_FLAGSHIFT		(1 << 7)
 
 #define CSVC_CONNECT_INTV	10		/* seconds */
 #define CSVC_PING_INTV		30		/* seconds */
@@ -145,7 +144,6 @@ struct slrpc_cservice {
 	    (csvc)->csvc_flags & CSVCF_CONNECTED	? "O" : "",	\
 	    (csvc)->csvc_flags & CSVCF_MARKFREE		? "F" : "",	\
 	    (csvc)->csvc_flags & CSVCF_PING		? "P" : "",	\
-	    (csvc)->csvc_flags & CSVCF_BUSY		? "B" : "",	\
 	    (csvc)->csvc_refcnt, ##__VA_ARGS__)
 
 struct sl_expcli_ops {

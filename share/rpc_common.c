@@ -156,11 +156,6 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 
-	while (csvc->csvc_flags & CSVCF_BUSY) {
-		CSVC_WAIT(csvc);
-		CSVC_LOCK(csvc);
-	}
-
 	/*
 	 * Hit a crash here on FreeBSD on sliod due to NULL import field below.
 	 * The type is SLCONNT_MDS, the last errno is ETIMEDOUT (-60).
@@ -287,9 +282,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	c = pscrpc_get_connection(server_id, local, NULL);
 
 	CSVC_LOCK(csvc);
-	psc_assert((csvc->csvc_flags & CSVCF_BUSY) == 0);
 
-	csvc->csvc_flags |= CSVCF_BUSY;
 	csvc->csvc_owner = pthread_self();
 	csvc->csvc_lineno = __LINE__;
 	csvc->csvc_fn = __FILE__;
@@ -314,7 +307,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	if (rc) {
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		csvc->csvc_flags &= ~CSVCF_BUSY;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_ULOCK(csvc);
 		return (rc);
@@ -342,13 +334,11 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 			CSVC_LOCK(csvc);
 			csvc->csvc_owner = 0;
-			csvc->csvc_flags &= ~CSVCF_BUSY;
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			return (rc);
 		}
 		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
-		csvc->csvc_flags &= ~CSVCF_BUSY;
 		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 
@@ -374,7 +364,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	CSVC_LOCK(csvc);
 	csvc->csvc_owner = 0;
-	csvc->csvc_flags &= ~CSVCF_BUSY;
 	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_ULOCK(csvc);
 	return (rc);
