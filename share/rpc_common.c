@@ -781,6 +781,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	lnet_nid_t peernid;
 	char addrbuf[RESM_ADDRBUF_SZ];
 	struct sl_exp_cli *expc;
+	struct sl_resm_nid *nr;
+	lnet_process_id_t *pp;
+	int i, j, trc;
 
 	if (peertype != SLCONNT_CLI && 
 	    peertype != SLCONNT_MDS && 
@@ -913,7 +916,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		break;
 	}
 
- restart:
+ recheck:
 
 	success = 1;
 	if (sl_csvc_useable(csvc))
@@ -970,7 +973,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    &csvc->csvc_mutex);
 
 		CSVC_LOCK(csvc);
-		goto restart;
+		goto recheck;
 	}
 
 	if (flags & CSVCF_NORECON) {
@@ -979,9 +982,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	}
 
 	if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV < now.tv_sec) {
-		struct sl_resm_nid *nr;
-		lnet_process_id_t *pp;
-		int i, j, trc;
 
 		csvc->csvc_flags |= CSVCF_CONNECTING;
 		csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
