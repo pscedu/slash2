@@ -894,8 +894,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out2;
 		}
 
+		OPSTAT_INCR("csvc-wait");
 		pfl_multiwaitcond_wait(&csvc->csvc_mwc,
 		    &csvc->csvc_mutex);
+		OPSTAT_INCR("csvc-wake");
 
 		CSVC_LOCK(csvc);
 		goto recheck;
@@ -911,6 +913,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			success = 0;	
 			goto out2;
 		}
+		OPSTAT_INCR("csvc-delay");
 		delta = csvc->csvc_mtime.tv_sec + CSVC_CONNECT_INTV 
 			- now.tv_sec;
 		CSVC_ULOCK(csvc);
