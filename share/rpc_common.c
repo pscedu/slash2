@@ -784,6 +784,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_resm_nid *nr;
 	lnet_process_id_t *pp;
 	int i, j, trc;
+	uint64_t delta;
 
 	if (peertype != SLCONNT_CLI && 
 	    peertype != SLCONNT_MDS && 
@@ -981,63 +982,69 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		goto out2;
 	}
 
-	if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV < now.tv_sec) {
-
-		csvc->csvc_flags |= CSVCF_CONNECTING;
-		csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
+	if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV > now.tv_sec) {
 		if (flags & CSVCF_NONBLOCK) {
-			if (csvc->csvc_import) {
-				pscrpc_import_put(csvc->csvc_import);
-				csvc->csvc_import = NULL;
-			}
-		} else if (csvc->csvc_import == NULL)
-			csvc->csvc_import = slrpc_new_import(csvc);
+			success = 0;	
+			goto out2;
+		}
+		delta = csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV - now.tv_sec;
 		CSVC_ULOCK(csvc);
+		sleep(delta);
+		goto recheck;
+	}
 
-		rc = ENETUNREACH;
-		DYNARRAY_FOREACH(nr, i, peernids)
-			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
-				if (LNET_NIDNET(nr->resmnid_nid) ==
-				    LNET_NIDNET(pp->nid)) {
-					trc = slrpc_issue_connect(
-					    pp->nid, nr->resmnid_nid,
-					    csvc, flags, mw, stkversp, 
-					    uptimep);
-					if (trc == 0 || trc == EWOULDBLOCK) {
-						rc = trc;
-						goto proc_conn;
-					}
+	csvc->csvc_flags |= CSVCF_CONNECTING;
+	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
+	if (flags & CSVCF_NONBLOCK) {
+		if (csvc->csvc_import) {
+			pscrpc_import_put(csvc->csvc_import);
+			csvc->csvc_import = NULL;
+		}
+	} else if (csvc->csvc_import == NULL)
+		csvc->csvc_import = slrpc_new_import(csvc);
+	CSVC_ULOCK(csvc);
+
+	rc = ENETUNREACH;
+	DYNARRAY_FOREACH(nr, i, peernids)
+		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids)
+			if (LNET_NIDNET(nr->resmnid_nid) ==
+			    LNET_NIDNET(pp->nid)) {
+				trc = slrpc_issue_connect(
+				    pp->nid, nr->resmnid_nid,
+				    csvc, flags, mw, stkversp, 
+				    uptimep);
+				if (trc == 0 || trc == EWOULDBLOCK) {
+					rc = trc;
+					goto proc_conn;
 				}
+			}
 
  proc_conn:
-		CSVC_LOCK(csvc);
 
-		if (rc == EWOULDBLOCK) {
-			/* will drop shortly, this allows us to return NULL */
- 			sl_csvc_incref(csvc);
-			success = 0;	
-			goto out2;
-		}
+	CSVC_LOCK(csvc);
 
-		csvc->csvc_lasterrno = rc;
-		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
-		if (rc) {
-			if (csvc->csvc_import)
-				csvc->csvc_import->imp_failed = 1;
-			/*
-			 * The csvc stays allocated but is marked as
-			 * unusable until the next connection
-			 * establishment attempt.
-			 *
-			 * Our caller is signified about this failure
-			 * via the NULL return here.
-			 */
-			success = 0;	
-			goto out2;
-		}
-	} else {
-		success = 0;
+	if (rc == EWOULDBLOCK) {
+		/* will drop shortly, this allows us to return NULL */
+ 		sl_csvc_incref(csvc);
+		success = 0;	
+		goto out2;
+	}
+
+	csvc->csvc_lasterrno = rc;
+	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_flags &= ~CSVCF_CONNECTING;
+	if (rc) {
+		if (csvc->csvc_import)
+			csvc->csvc_import->imp_failed = 1;
+		/*
+		 * The csvc stays allocated but is marked as
+		 * unusable until the next connection
+		 * establishment attempt.
+		 *
+		 * Our caller is signified about this failure
+		 * via the NULL return here.
+		 */
+		success = 0;	
 		goto out2;
 	}
 
