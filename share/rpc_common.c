@@ -182,6 +182,7 @@ slrpc_connect_finish(struct slrpc_cservice *csvc,
 	if (success) {
 		if (csvc->csvc_import != imp)
 			csvc->csvc_import = imp;
+		sl_csvc_online(csvc);
 	} else {
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
@@ -224,7 +225,6 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		*uptimep = tv1.tv_sec;
 		*stkversp = mp->stkvers;
 		slrpc_connect_finish(csvc, imp, oimp, 1);
-		sl_csvc_online(csvc);
 	}
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
@@ -303,9 +303,9 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	/* handled by slrpc_handle_connect() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
-		csvc->csvc_owner = 0;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_LOCK(csvc);
+		csvc->csvc_owner = 0;
 		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 		return (rc);
@@ -330,7 +330,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			pscrpc_req_finished(rq);
-
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			CSVC_LOCK(csvc);
 			csvc->csvc_owner = 0;
@@ -351,8 +350,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0) {
-		rc = mp->rc;
+	if (rc == 0)
+		rc = -mp->rc;
+
+	if (!rc) {
 		*stkversp = mp->stkvers;
 
 		tv1.tv_sec = mp->uptime;
