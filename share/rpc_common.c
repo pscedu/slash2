@@ -501,13 +501,15 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 int
 sl_csvc_useable(struct slrpc_cservice *csvc)
 {
+	int flags;
+	
 	CSVC_LOCK_ENSURE(csvc);
 	if (csvc->csvc_import == NULL ||
 	    csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
 		return (0);
-	return ((csvc->csvc_flags & (CSVCF_CONNECTED | CSVCF_DISCONNECTING)) 
-	    == CSVCF_CONNECTED);
+	flags = CSVCF_CONNECTED | CSVCF_DISCONNECTING | CSVCF_CONNECTING;
+	return ((csvc->csvc_flags & flags) == CSVCF_CONNECTED);
 }
 
 /*
