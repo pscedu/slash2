@@ -597,7 +597,6 @@ sl_imp_hldrop_cli(void *arg)
     	struct slrpc_cservice *csvc = arg;
 
 	CSVC_LOCK(csvc);
-	// sl_csvc_markfree(csvc);
 	sl_csvc_disconnect_locked(csvc);
 	sl_csvc_decref_locked(csvc);
 	OPSTAT_INCR("rpc.import-drop-client");
@@ -1174,7 +1173,6 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 
 	csvc = expc->expc_csvc;
 	CSVC_LOCK(csvc);
-	// sl_csvc_markfree(csvc);
 	sl_csvc_disconnect_locked(csvc);
 	sl_csvc_decref_locked(csvc);
 
