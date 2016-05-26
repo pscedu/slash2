@@ -374,7 +374,6 @@ struct slrpc_cservice *
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	 sl_csvc_incref(struct slrpc_cservice *);
-void	 sl_csvc_markfree(struct slrpc_cservice *);
 int	 sl_csvc_useable(struct slrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slrpc_cservice *, long, long);
 

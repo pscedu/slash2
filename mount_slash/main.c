@@ -3204,7 +3204,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			csvc = m->resm_csvc;
 			CSVC_LOCK(csvc);
 			sl_csvc_incref(csvc);
-			sl_csvc_markfree(csvc);
+			csvc->csvc_flags &= ~CSVCF_WATCH;
 			sl_csvc_decref_locked(csvc);
 			continue;
 		}
