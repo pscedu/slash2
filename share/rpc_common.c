@@ -915,6 +915,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			- now.tv_sec;
 		CSVC_ULOCK(csvc);
 		sleep(delta);
+		CSVC_LOCK(csvc);
 		goto recheck;
 	}
 
