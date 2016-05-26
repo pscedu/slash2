@@ -1023,6 +1023,11 @@ slconnthr_main(struct psc_thread *thr)
 		pfl_multiwait_entercritsect(&sct->sct_mw);
 
 		spinlock(&sl_watch_lock);
+		/*
+		 * csvc being watched should never be freed because
+		 * they are associated with resources. Otherwise, we
+		 * would need a reference to keep them on this list.
+		 */
 		DYNARRAY_FOREACH(scp, i, &sct->sct_monres) {
 			freelock(&sl_watch_lock);
 			csvc = sl_csvc_get(scp->scp_csvcp,
@@ -1065,9 +1070,6 @@ slconnthr_main(struct psc_thread *thr)
 				memcpy(&csvc->csvc_mtime, &ts1, sizeof(ts1));
 			}
 
-			/*
-			 * csvc being watched should never be freed.
-			 */
 			sl_csvc_decref_locked(csvc);
  next:
 			spinlock(&sl_watch_lock);
