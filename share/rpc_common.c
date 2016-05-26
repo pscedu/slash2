@@ -176,9 +176,8 @@ void
 slrpc_connect_finish(struct slrpc_cservice *csvc,
     struct pscrpc_import *imp, struct pscrpc_import *old, int success)
 {
-	int locked;
 
-	locked = CSVC_RLOCK(csvc);
+	CSVC_LOCK(csvc);
 	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	if (success) {
 		if (csvc->csvc_import != imp)
@@ -187,8 +186,7 @@ slrpc_connect_finish(struct slrpc_cservice *csvc,
 		if (csvc->csvc_import == imp)
 			csvc->csvc_import = old;
 	}
-	CSVC_WAKE(csvc);
-	CSVC_URLOCK(csvc, locked);
+	CSVC_ULOCK(csvc);
 
 	if (!success) {
 		pscrpc_abort_inflight(imp);
@@ -215,9 +213,6 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	CSVC_LOCK(csvc);
-	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-	csvc->csvc_lasterrno = rc;
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 	} else {
@@ -231,6 +226,9 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		slrpc_connect_finish(csvc, imp, oimp, 1);
 		sl_csvc_online(csvc);
 	}
+	CSVC_LOCK(csvc);
+	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+	csvc->csvc_lasterrno = rc;
 	CSVC_WAKE(csvc);
 	sl_csvc_decref_locked(csvc);
 	return (0);
@@ -305,9 +303,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	/* handled by slrpc_handle_connect() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
-		CSVC_LOCK(csvc);
 		csvc->csvc_owner = 0;
 		slrpc_connect_finish(csvc, imp, oimp, 0);
+		CSVC_LOCK(csvc);
+		CSVC_WAKE(csvc);
 		CSVC_ULOCK(csvc);
 		return (rc);
 	}
@@ -332,9 +331,11 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		if (rc) {
 			pscrpc_req_finished(rq);
 
+			slrpc_connect_finish(csvc, imp, oimp, 0);
 			CSVC_LOCK(csvc);
 			csvc->csvc_owner = 0;
-			slrpc_connect_finish(csvc, imp, oimp, 0);
+			CSVC_WAKE(csvc);
+			CSVC_ULOCK(csvc);
 			return (rc);
 		}
 		CSVC_LOCK(csvc);
@@ -362,9 +363,10 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	}
 	pscrpc_req_finished(rq);
 
+	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
 	CSVC_LOCK(csvc);
 	csvc->csvc_owner = 0;
-	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
+	CSVC_WAKE(csvc);
 	CSVC_ULOCK(csvc);
 	return (rc);
 }
