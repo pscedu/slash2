@@ -543,39 +543,6 @@ sl_csvc_markfree(struct slrpc_cservice *csvc)
 }
 
 /*
- * Perform actual disconnect to a remote service.
- */
-void
-_sl_csvc_disconnect_core(struct slrpc_cservice *csvc, int flags)
-{
-	struct pscrpc_import *imp;
-
-	CSVC_LOCK_ENSURE(csvc);
-
-	if (flags & SLRPC_DISCONNF_HIGHLEVEL)
-		while (csvc->csvc_flags & CSVCF_BUSY) {
-			CSVC_WAIT(csvc);
-			CSVC_LOCK(csvc);
-		}
-	csvc->csvc_flags &= ~CSVCF_CONNECTED;
-	csvc->csvc_lasterrno = 0;
-	imp = csvc->csvc_import;
-	csvc->csvc_import = NULL;
-
-	CSVC_ULOCK(csvc);
-	if (imp) {
-		// deactivate(imp) ?
-		pscrpc_abort_inflight(imp);
-		if (flags & SLRPC_DISCONNF_HIGHLEVEL &&
-		    imp->imp_connection)
-			pscrpc_drop_conns(&imp->imp_connection->c_peer);
-		pscrpc_import_put(imp);
-	}
-	CSVC_LOCK(csvc);
-	CSVC_WAKE(csvc);
-}
-
-/*
  * Account for releasing the use of a remote service connection.
  * @csvc: client service.
  */
