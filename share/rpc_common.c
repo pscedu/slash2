@@ -956,7 +956,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		    CSVCF_DISCONNECTING);
 		csvc->csvc_flags |= CSVCF_CONNECTED;
 
-	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
+		goto out1;
+	}
+
+	if (csvc->csvc_flags & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
 			success = 0;	
@@ -965,16 +968,17 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		pfl_multiwaitcond_wait(&csvc->csvc_mwc,
 		    &csvc->csvc_mutex);
+
 		CSVC_LOCK(csvc);
 		goto restart;
+	}
 
-	} else if (flags & CSVCF_NORECON) {
-
+	if (flags & CSVCF_NORECON) {
 		success = 0;	
 		goto out2;
+	}
 
-	} else if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV <
-	    now.tv_sec) {
+	if (csvc->csvc_mtime.tv_sec + CSVC_RECONNECT_INTV < now.tv_sec) {
 		struct sl_resm_nid *nr;
 		lnet_process_id_t *pp;
 		int i, j, trc;
@@ -1036,11 +1040,13 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		success = 0;
 		goto out2;
 	}
+
+ out1:
+
 	sl_csvc_online(csvc);
 
 	if (peertype == SLCONNT_CLI)
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
-
  out2:
 
 	if (!success)
