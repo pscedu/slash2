@@ -582,8 +582,10 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 
 	if (!locked)
 		CSVC_LOCK(csvc);
-	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING))
+	if (!(csvc->csvc_flags & CSVCF_DISCONNECTING)) {
 		csvc->csvc_flags |= CSVCF_DISCONNECTING;
+		csvc->csvc_flags &= ~CSVCF_CONNECTED;
+	}
 	if (!locked)
 		CSVC_ULOCK(csvc);
 }
