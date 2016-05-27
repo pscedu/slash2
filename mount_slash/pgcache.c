@@ -574,6 +574,9 @@ bmpc_biorqs_flush(struct bmap *b)
 	BMAP_LOCK_ENSURE(b);
 
 	while (bmpc->bmpc_pndg_writes) {
+		/*
+		 * XXX Abort I/O buffers if an interrupt arrives.
+		 */
 		OPSTAT_INCR("msl.biorq-flush-wait");
 		bmpc_expire_biorqs(bmpc);
 		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
