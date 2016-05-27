@@ -726,7 +726,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 *
 		 * This is the case when a client connects to MDS or IOS.
 		 *
-		 * The same csvc will be dropped by both sl_imp_hldrop_cli()
+		 * The csvc will be dropped by both sl_imp_hldrop_cli()
 		 * and sl_exp_hldrop_cli().
 		 */
 		hldropf = sl_imp_hldrop_cli;
@@ -764,7 +764,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_version = version;
 	csvc->csvc_magic = magic;
 
-	/* ensure peer is of the given resource type */
 	switch (peertype) {
 	case SLCONNT_CLI:
 
@@ -782,7 +781,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		break;
 	}
 
-	/* publish now */
+	/* publish new csvc */
 	*csvcp = csvc;
 	psclog_warn("publish csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
