@@ -171,7 +171,6 @@ void
 slrpc_connect_finish(struct slrpc_cservice *csvc,
     struct pscrpc_import *imp, struct pscrpc_import *old, int success)
 {
-
 	CSVC_LOCK(csvc);
 	if (success) {
 		if (csvc->csvc_import != imp)
