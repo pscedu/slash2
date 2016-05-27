@@ -325,6 +325,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 			psc_pool_return(msl_async_req_pool, car);
 		}
 	}
+	psclog_warnx("drop resource %p: name = %s", resm, resm->resm_name);
 	sl_csvc_decref(resm->resm_csvc);
 }
 
