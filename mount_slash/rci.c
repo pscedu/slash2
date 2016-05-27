@@ -230,8 +230,7 @@ slc_rci_handler(struct pscrpc_request *rq)
 		rc = slc_rci_handle_ctl(rq);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}

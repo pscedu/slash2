@@ -283,8 +283,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 			sl_csvc_decref(csvc);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}

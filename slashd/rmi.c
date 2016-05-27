@@ -586,7 +586,6 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
-
 	case SRMT_GETBMAPMINSEQ:
 		rc = slm_rmi_handle_bmap_getminseq(rq);
 		break;
@@ -633,8 +632,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rc = -PFLERR_NOSYS;
 		break;
 	}

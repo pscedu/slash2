@@ -273,8 +273,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		rc = slm_rmm_handle_namespace_forward(rq);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}

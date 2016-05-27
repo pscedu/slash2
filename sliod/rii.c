@@ -438,8 +438,7 @@ sli_rii_handler(struct pscrpc_request *rq)
 		rc = sli_rii_handle_repl_read_aio(rq);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}

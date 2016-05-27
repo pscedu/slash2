@@ -295,14 +295,12 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		rc = slrpc_handle_connect(rq, SRCM_MAGIC, SRCM_VERSION,
 		    SLCONNT_MDS);
 		break;
-
 	case SRMT_REPL_GETST:
 		rc = msrcm_handle_getreplst(rq);
 		break;
 	case SRMT_REPL_GETST_SLAVE:
 		rc = msrcm_handle_getreplst_slave(rq);
 		break;
-
 	case SRMT_RELEASEBMAP:
 		rc = msrcm_handle_releasebmap(rq);
 		break;
@@ -314,8 +312,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psclog_errorx("unexpected opcode %d",
-		    rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
