@@ -551,7 +551,7 @@ iexpc_allocpri(struct pscrpc_export *exp)
 	struct sl_exp_cli *expc;
 
 	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
-	return(sli_getclcsvc(exp));
+	return (sli_getclcsvc(exp));
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
