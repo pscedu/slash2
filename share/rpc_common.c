@@ -1065,7 +1065,7 @@ slconnthr_main(struct psc_thread *thr)
 		}
 		freelock(&sl_watch_lock);
 		pfl_multiwait_secs(&sct->sct_mw, &dummy, CSVC_PING_INTV);
-		// pfl_multiwait_secs(&sct->sct_mw, &dummy, 100000);
+		//pfl_multiwait_secs(&sct->sct_mw, &dummy, 100000);
 	}
 }
 
@@ -1183,6 +1183,7 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
 	if (resm) {
+		/* (gdb) p resm->resm_csvc->csvc_refcnt */
 		sl_csvc_disconnect(resm->resm_csvc);
 		sl_resm_hldrop(resm);
 	} else {

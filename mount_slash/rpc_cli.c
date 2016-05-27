@@ -323,7 +323,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 			psc_pool_return(msl_async_req_pool, car);
 		}
 	}
-	// sl_csvc_decref(resm->resm_csvc);
+	sl_csvc_decref(resm->resm_csvc);
 }
 
 void
