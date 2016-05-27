@@ -531,7 +531,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
-	psclog_warn("drop ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_warn("after drop ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	if (rc > 0) {
 		CSVC_ULOCK(csvc);
 		return;
@@ -571,7 +571,7 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
-	psclog_warnx("take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_warnx("after take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 }
 
 /*
@@ -1065,6 +1065,7 @@ slconnthr_main(struct psc_thread *thr)
 		}
 		freelock(&sl_watch_lock);
 		pfl_multiwait_secs(&sct->sct_mw, &dummy, CSVC_PING_INTV);
+		// pfl_multiwait_secs(&sct->sct_mw, &dummy, 100000);
 	}
 }
 

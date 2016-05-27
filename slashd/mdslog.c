@@ -1583,8 +1583,11 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		rq->rq_async_args.pointer_arg[CBARG_RARG] = &rarg;
 		rq->rq_async_args.pointer_arg[CBARG_RES] = res;
 		rc = SL_NBRQSETX_ADD(set, csvc, rq);
-		if (!rc)
+		if (!rc) {
+			sl_csvc_decref(csvc);
 			continue;
+		}
+		csvc = NULL;
  out:
 		if (rq)
 			pscrpc_req_finished(rq);
