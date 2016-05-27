@@ -45,6 +45,8 @@ struct bmap_pagecache_entry;
 struct bmpc_ioreq;
 struct dircache_page;
 
+extern struct psc_thread *slcconnthr;
+
 /* mount_slash thread types */
 enum {
 	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
@@ -58,6 +60,7 @@ enum {
 	MSTHRT_FLUSH,			/* bmap write data flush thread */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
+	MSTHRT_CONN,			/* monitor connection to peers */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_READAHEAD,		/* readahead thread */

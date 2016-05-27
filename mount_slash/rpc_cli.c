@@ -211,6 +211,9 @@ slc_rmc_setmds(const char *name)
 		msl_rmc_resm = libsl_nid2resm(nid);
 
 	slc_getmcsvc_nb(msl_rmc_resm);
+	slconnthr_watch(slcconnthr, msl_rmc_resm->resm_csvc, 
+		0, NULL, NULL);
+
 	return (0);
 }
 

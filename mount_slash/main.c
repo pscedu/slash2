@@ -172,6 +172,8 @@ int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
 int				 msl_newent_inherit_groups = 1;
 
+struct psc_thread		*slcconnthr;
+
 /*
  * I/O requests that have failed due to timeouts are placed here for
  * retry.
@@ -3984,6 +3986,8 @@ msl_init(void)
 	name = getenv("MDS");
 	if (name == NULL)
 		psc_fatalx("environment variable MDS not specified");
+
+	slcconnthr = slconnthr_spawn(MSTHRT_CONN, "slc", NULL, NULL);
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
