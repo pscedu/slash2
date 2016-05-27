@@ -983,7 +983,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 void
 slconnthr_main(struct psc_thread *thr)
 {
-	struct timespec ts0, ts1;
+	struct timespec ts;
 	struct slrpc_cservice *csvc;
 	struct slconn_thread *sct;
 	struct slconn_params *scp;
@@ -991,14 +991,13 @@ slconnthr_main(struct psc_thread *thr)
 	void *dummy;
 
 	sct = thr->pscthr_private;
-	memset(&ts0, 0, sizeof(ts0));
 	while (pscthr_run(thr)) {
 
 		/*
 		 * Retrieve the current health status and send the
 		 * result via PING RPC later.  IOS only.
 		 */
-		clock_gettime(CLOCK_MONOTONIC, &ts1);
+		clock_gettime(CLOCK_MONOTONIC, &ts);
 		if (sct->sct_pingupc) {
 			pingrc = sct->sct_pingupc( sct->sct_pingupcarg);
 			if (pingrc)
@@ -1057,7 +1056,7 @@ slconnthr_main(struct psc_thread *thr)
 					sl_csvc_disconnect_locked(csvc);
 			        	scp->scp_flags &= ~CSVCF_PINGING;
 				}
-				memcpy(&csvc->csvc_mtime, &ts1, sizeof(ts1));
+				memcpy(&csvc->csvc_mtime, &ts, sizeof(ts));
 			}
 
 			sl_csvc_decref_locked(csvc);
