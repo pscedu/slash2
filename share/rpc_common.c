@@ -373,6 +373,7 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 
 	CSVC_LOCK(csvc);
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+       	csvc->csvc_flags &= ~CSVCF_PINGING;
 	sl_csvc_decref_locked(csvc);
 	return (0);
 }
@@ -1063,12 +1064,16 @@ slconnthr_main(struct psc_thread *thr)
 			 * Ping MDS and send my health status. IOS only.
 			 */
 			if (sl_csvc_useable(csvc) &&
-			    scp->scp_flags & CSVCF_PING) {
+			    (scp->scp_flags & CSVCF_PING) && 
+			    !(scp->scp_flags & CSVCF_PINGING)) {
+			        scp->scp_flags |= CSVCF_PINGING;
 				CSVC_ULOCK(csvc);
 				rc = slrpc_issue_ping(csvc, pingrc);
-				if (rc)
-					sl_csvc_disconnect_locked(csvc);
 				CSVC_LOCK(csvc);
+				if (rc) {
+					sl_csvc_disconnect_locked(csvc);
+			        	scp->scp_flags &= ~CSVCF_PINGING;
+				}
 				memcpy(&csvc->csvc_mtime, &ts1, sizeof(ts1));
 			}
 

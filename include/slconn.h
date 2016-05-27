@@ -125,14 +125,15 @@ struct slrpc_cservice {
 #define CSVCF_CONNECTED		(1 << 1)	/* conn online */
 #define CSVCF_WATCH		(1 << 2)	/* on watch list, for debugging */
 #define CSVCF_PING		(1 << 3)	/* send keepalives */
-#define CSVCF_DISCONNECTING	(1 << 4)	/* want to disconnect but in use; ASAP */
+#define CSVCF_PINGING		(1 << 4)	/* wait ping reply */
+#define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
 
 /* sl_csvc_get() flags, shared in numerical space */
 
-#define CSVCF_NONBLOCK		(1 << 5)	/* don't timeout waiting for establishment */
-#define CSVCF_NORECON		(1 << 6)	/* don't attempt reconnection if down */
+#define CSVCF_NONBLOCK		(1 << 6)	/* don't timeout waiting for establishment */
+#define CSVCF_NORECON		(1 << 7)	/* don't attempt reconnection if down */
 
-#define CSVCF_FLAGSHIFT		(1 << 7)
+#define CSVCF_FLAGSHIFT		(1 << 8)
 
 #define CSVC_CONN_INTV		10		/* seconds */
 #define CSVC_PING_INTV		30		/* seconds */
