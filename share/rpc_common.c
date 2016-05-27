@@ -59,6 +59,9 @@ struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
 struct pfl_rwlock	 sl_conn_lock;
 psc_spinlock_t		 sl_watch_lock = SPINLOCK_INIT;
 
+void	sl_imp_hldrop_cli(void *);
+void	sl_imp_hldrop_resm(void *);
+
 /*
  * Create a new generic RPC request.  Common processing in all SLASH2
  * communication happens herein.
@@ -588,26 +591,6 @@ _sl_csvc_disconnect(const struct pfl_callerinfo *pci,
 	}
 	if (!locked)
 		CSVC_ULOCK(csvc);
-}
-
-void
-sl_imp_hldrop_cli(void *arg)
-{
-    	struct slrpc_cservice *csvc = arg;
-
-	CSVC_LOCK(csvc);
-	sl_csvc_disconnect_locked(csvc);
-	sl_csvc_decref_locked(csvc);
-	OPSTAT_INCR("rpc.import-drop-client");
-}
-
-void
-sl_imp_hldrop_resm(void *arg)
-{
-	struct sl_resm *resm = arg;
-
-	sl_csvc_disconnect(resm->resm_csvc);
-	OPSTAT_INCR("rpc.import-drop-resm");
 }
 
 /*
@@ -1144,25 +1127,24 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	freelock(&sl_watch_lock);
 }
 
-/*
- * Callback triggered when an export to a resource member fails.
- * @exp: export to RPC peer.
- */
 void
-sl_exp_hldrop_resm(struct pscrpc_export *exp)
+sl_imp_hldrop_cli(void *arg)
 {
-	char nidbuf[PSCRPC_NIDSTR_SIZE];
-	struct sl_resm *resm;
+    	struct slrpc_cservice *csvc = arg;
 
-	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
-	if (resm) {
-		sl_csvc_disconnect(resm->resm_csvc);
-		sl_resm_hldrop(resm);
-	} else {
-		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
-		psclog_warnx("no resm for %s", nidbuf);
-	}
-	OPSTAT_INCR("rpc.export-drop-resm");
+	CSVC_LOCK(csvc);
+	sl_csvc_disconnect_locked(csvc);
+	sl_csvc_decref_locked(csvc);
+	OPSTAT_INCR("rpc.import-drop-client");
+}
+
+void
+sl_imp_hldrop_resm(void *arg)
+{
+	struct sl_resm *resm = arg;
+
+	sl_csvc_disconnect(resm->resm_csvc);
+	OPSTAT_INCR("rpc.import-drop-resm");
 }
 
 /*
@@ -1187,6 +1169,27 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 
 	OPSTAT_INCR("rpc.export-drop-client");
 	PSCFREE(expc);
+}
+
+/*
+ * Callback triggered when an export to a resource member fails.
+ * @exp: export to RPC peer.
+ */
+void
+sl_exp_hldrop_resm(struct pscrpc_export *exp)
+{
+	char nidbuf[PSCRPC_NIDSTR_SIZE];
+	struct sl_resm *resm;
+
+	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
+	if (resm) {
+		sl_csvc_disconnect(resm->resm_csvc);
+		sl_resm_hldrop(resm);
+	} else {
+		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
+		psclog_warnx("no resm for %s", nidbuf);
+	}
+	OPSTAT_INCR("rpc.export-drop-resm");
 }
 
 /*
