@@ -716,7 +716,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
 		sl_csvc_incref(csvc);
-		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
 		pfl_rwlock_unlock(&sl_conn_lock);
 		goto gotit;
@@ -729,7 +728,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		csvc = *csvcp;
 		CSVC_LOCK(csvc);
 		sl_csvc_incref(csvc);
-		psc_assert(csvc->csvc_peertype == peertype);
 		CSVC_ULOCK(csvc);
 		pfl_rwlock_unlock(&sl_conn_lock);
 		goto gotit;
@@ -807,7 +805,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
+
 	CSVC_LOCK(csvc);
+	psc_assert(csvc->csvc_peertype == peertype);
+
 	switch (peertype) {
 	case SLCONNT_CLI:
 		expc = (void *)csvc->csvc_params.scp_csvcp;
