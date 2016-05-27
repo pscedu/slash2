@@ -893,6 +893,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 	CSVC_ULOCK(csvc);
 
+	pfl_fault_here_rc(&rc, EIO, "slash2/connecting");
+
 	/*
 	 * Don't clear CSVCF_CONNECTING and wake up waiters in between until 
 	 * we have tried all possibilities. Also, at most one async connection
