@@ -176,14 +176,13 @@ struct sl_expcli_ops {
 		_resm = libsl_try_nid2resm(				\
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
-			_csvc = getcsvc;				\
-			if (_csvc && (exp)->exp_hldropf == NULL) {	\
-				EXPORT_LOCK(exp);			\
+			EXPORT_LOCK(exp);				\
+			if ((exp)->exp_hldropf == NULL) {		\
+				_csvc = getcsvc;			\
+				psc_assert(_csvc);			\
 				exp->exp_hldropf = sl_exp_hldrop_resm;	\
-				EXPORT_ULOCK(exp);			\
 			}						\
-			if (_csvc == NULL)				\
-				_rc = _csvc->csvc_lasterrno;		\
+			EXPORT_ULOCK(exp);				\
 		} else							\
 			_rc = SLERR_RES_UNKNOWN;			\
 		(_rc);							\
