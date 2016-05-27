@@ -514,7 +514,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		CSVC_LOCK(csvc);
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
-	psclog_warn("after drop ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
 	if (rc > 0) {
 		CSVC_ULOCK(csvc);
 		return;
@@ -554,7 +555,8 @@ sl_csvc_incref(struct slrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	csvc->csvc_refcnt++;
-	psclog_warnx("after take ref csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_diag("after take ref csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
 }
 
 /*
@@ -727,7 +729,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 * This is the case when a client connects to MDS or IOS.
 		 *
 		 * The csvc will be dropped by both sl_imp_hldrop_cli()
-		 * and sl_exp_hldrop_cli().
+		 * and sl_exp_hldrop_cli().  So the reference will be
+		 * initialized to two as well.
 		 */
 		hldropf = sl_imp_hldrop_cli;
 		hldroparg = NULL;
@@ -783,7 +786,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	/* publish new csvc */
 	*csvcp = csvc;
-	psclog_warn("publish csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
+	psclog_diag("publish csvc = %p, refcnt = %d", 
+	    csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
