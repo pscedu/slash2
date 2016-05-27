@@ -98,6 +98,10 @@ struct slrpc_cservice {
 	 */
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;	/* zeroed after a success */
+	/*
+ 	 * The reference count associated with a resource is not dropped
+ 	 * (except when the client module is unloaded by wokfs).
+ 	 */
 	int			 csvc_refcnt;
 
 	int			 csvc_lineno;

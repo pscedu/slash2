@@ -978,7 +978,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  *
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
- * CLI - needs to send PINGs to IONs
+ * CLI - needs to check if MDS is up periodically (not strictly needed).
  */
 void
 slconnthr_main(struct psc_thread *thr)
