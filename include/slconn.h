@@ -176,25 +176,14 @@ struct sl_expcli_ops {
 		_resm = libsl_try_nid2resm(				\
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
-			_csvc = _resm->resm_csvc;			\
-			/* ensure a csvc is allocated in exp_private */	\
-			if (_csvc) {					\
-				CSVC_LOCK(_csvc);			\
-				if (sl_csvc_useable(_csvc))		\
-					CSVC_ULOCK(_csvc);		\
-				else {					\
-					CSVC_ULOCK(_csvc);		\
-					_csvc = NULL;			\
-				}					\
-			}						\
-			if (_csvc == NULL)				\
-				_csvc = getcsvc;			\
-									\
-			if ((exp)->exp_hldropf == NULL) {		\
+			_csvc = getcsvc;				\
+			if (_csvc && (exp)->exp_hldropf == NULL) {	\
 				EXPORT_LOCK(exp);			\
 				exp->exp_hldropf = sl_exp_hldrop_resm;	\
 				EXPORT_ULOCK(exp);			\
 			}						\
+			if (_csvc == NULL)				\
+				_rc = _csvc->csvc_lasterrno;		\
 		} else							\
 			_rc = SLERR_RES_UNKNOWN;			\
 		(_rc);							\
