@@ -743,10 +743,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		 * side. A client has one import for every target.
 		 * A service has one export for every client.
 		 *
-		 * This is the case when a client connets to MDS or IOS.
+		 * This is the case when a client connects to MDS or IOS.
 		 *
-		 * We used to set hldropf to sl_imp_hldrop_cli() below. If 
-		 * so, the same csvc will be dropped by sl_imp_hldrop_cli()
+		 * The same csvc will be dropped by both sl_imp_hldrop_cli()
 		 * and sl_exp_hldrop_cli().
 		 */
 		hldropf = sl_imp_hldrop_cli;
