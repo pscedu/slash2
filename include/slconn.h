@@ -104,9 +104,6 @@ struct slrpc_cservice {
  	 */
 	int			 csvc_refcnt;
 
-	int			 csvc_lineno;
-	const char		*csvc_fn;
-	pthread_t		 csvc_owner;
 	void			*csvc_hldropf;
 	void			*csvc_hldroparg;
 

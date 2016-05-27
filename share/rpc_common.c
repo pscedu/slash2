@@ -278,10 +278,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 
 	CSVC_LOCK(csvc);
 
-	csvc->csvc_owner = pthread_self();
-	csvc->csvc_lineno = __LINE__;
-	csvc->csvc_fn = __FILE__;
-
 	if (csvc->csvc_import == NULL) {
 		imp = slrpc_new_import(csvc);
 		csvc->csvc_import = imp;
@@ -300,9 +296,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
-		CSVC_LOCK(csvc);
-		csvc->csvc_owner = 0;
-		CSVC_ULOCK(csvc);
 		return (rc);
 	}
 	mq->magic = csvc->csvc_magic;
@@ -326,15 +319,8 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		if (rc) {
 			pscrpc_req_finished(rq);
 			slrpc_connect_finish(csvc, imp, oimp, 0);
-			CSVC_LOCK(csvc);
-			csvc->csvc_owner = 0;
-			CSVC_ULOCK(csvc);
 			return (rc);
 		}
-		CSVC_LOCK(csvc);
-		csvc->csvc_owner = 0;
-		CSVC_ULOCK(csvc);
-
 		/*
 		 * XXX wait a short amount of time and check for
 		 * establishment before returning.
@@ -358,9 +344,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	pscrpc_req_finished(rq);
 
 	slrpc_connect_finish(csvc, imp, oimp, rc == 0);
-	CSVC_LOCK(csvc);
-	csvc->csvc_owner = 0;
-	CSVC_ULOCK(csvc);
 	return (rc);
 }
 
