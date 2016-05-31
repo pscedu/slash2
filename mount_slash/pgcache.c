@@ -570,7 +570,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort)
  *
  * @b: bmap to flush.
  */
-void
+int
 bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
 	int abort;
@@ -579,22 +579,14 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK_ENSURE(b);
 
-	while (bmpc->bmpc_pndg_writes) {
-		/*
-		 * XXX Abort I/O buffers if an interrupt arrives.
-		 */
-		OPSTAT_INCR("msl.biorq-flush-wait");
-
+	if (bmpc->bmpc_pndg_writes) {
 		abort = 0;
 		if (pfr && pfr->pfr_interrupted)
 			abort = 1;
-
 		bmpc_expire_biorqs(bmpc, abort);
-
-		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
-		    100);
-		BMAP_LOCK(b);
+		return 1;
 	}
+	return 0;
 }
 
 void
