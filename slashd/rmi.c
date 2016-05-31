@@ -540,13 +540,19 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
  		 * issue CONNECT RPCs. It does issue PING RPCs. For some 
  		 * reason, the SL_EXP_REGISTER_RESM() does not re-establish 
  		 * the connection (maybe becuase exp_hldropf is not NULL).
- 		 * The following code is added to solve this problem.
+ 		 * It could be that we did not clear export when we return
+ 		 * it to pscrpc_export_pool.
+ 		 *
+ 		 * Anyway, the following code is added to solve this problem.
  		 */
 		csvc = m->resm_csvc;
 		CSVC_LOCK(csvc);
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
-		if (!(csvc->csvc_flags & CSVCF_CONNECTED))
+		if (!(csvc->csvc_flags & CSVCF_CONNECTED)) {
 			sl_csvc_online(csvc);
+			psclog_warnx("csvc %p for %s is back online", 
+			    csvc, m->resm_name);
+		}
 		CSVC_ULOCK(csvc);
 
 		si = res2iosinfo(m->resm_res);

@@ -1166,6 +1166,8 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 	struct sl_resm *resm;
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
+	psclog_warnx("drop export %p, resm = %p, name = %s", 
+	    exp, resm, resm->resm_name);
 	if (resm) {
 		/* (gdb) p resm->resm_csvc->csvc_refcnt */
 		sl_csvc_disconnect(resm->resm_csvc);
