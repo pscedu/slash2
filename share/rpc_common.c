@@ -213,6 +213,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	if (rc) {
 		slrpc_connect_finish(csvc, imp, oimp, 0);
 		CSVC_LOCK(csvc);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	} else {
 		tv1.tv_sec = mp->uptime;
 		tv1.tv_nsec = 0;
@@ -224,7 +225,6 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		CSVC_LOCK(csvc);
 		sl_csvc_online(csvc);
 	}
-	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_lasterrno = rc;
 	CSVC_WAKE(csvc);
