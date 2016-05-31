@@ -1229,8 +1229,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
-
-	psc_waitq_destroy(&bmpc->bmpc_waitq);
 }
 
 #if PFL_DEBUG > 0

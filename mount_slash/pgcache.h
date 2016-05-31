@@ -251,7 +251,6 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
-	struct psc_waitq		 bmpc_waitq;
 
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
@@ -331,8 +330,6 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    biorq_lentry, NULL);
 	pll_init(&bmpc->bmpc_biorqs_exp, struct bmpc_ioreq,
 	    biorq_exp_lentry, NULL);
-
-	psc_waitq_init(&bmpc->bmpc_waitq);
 
 	RB_INIT(&bmpc->bmpc_biorqs);
 }
