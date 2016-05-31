@@ -1021,6 +1021,14 @@ slconnthr_main(struct psc_thread *thr)
 			 * Note that the above sl_csvc_get() only
 			 * returns csvc when the connection is already
 			 * established.
+			 *
+			 * XXX We don't really need this logic, because
+			 * slm_try_sliodresm() will check it as well.
+			 *
+			 * We mark it as disconnected, and yet we don't
+			 * try to connect to IOS (we use CSVCF_NORECON).
+			 * We might as well let the PINGs from IOS to
+			 * take care things.
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
