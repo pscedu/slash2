@@ -530,34 +530,6 @@ bmpc_freeall(struct bmap *b)
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
-void
-bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
-{
-	struct bmpc_ioreq *r;
-	int wake = 0;
-
-	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
-		BIORQ_LOCK(r);
-		/*
-		 * A biorq can only be added at the end of the list.  So
-		 * when we encounter an already expired biorq we can
-		 * stop since we've already processed it and all biorqs
-		 * before it.
-		 */
-		if (r->biorq_flags & BIORQ_EXPIRE) {
-			BIORQ_ULOCK(r);
-			break;
-		}
-		r->biorq_retries = 0;
-		r->biorq_flags |= BIORQ_EXPIRE;
-		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
-		BIORQ_ULOCK(r);
-		wake = 1;
-	}
-	if (wake)
-		bmap_flushq_wake(BMAPFLSH_EXPIRE);
-}
-
 /*
  * Flush all biorqs on the bmap's `new' biorq list, which all writes get
  * initially placed on.  This routine is called in all flush code paths
@@ -568,6 +540,8 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 void
 bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
+	int wake;
+	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
@@ -578,7 +552,28 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 		 * XXX Abort I/O buffers if an interrupt arrives.
 		 */
 		OPSTAT_INCR("msl.biorq-flush-wait");
-		bmpc_expire_biorqs(bmpc);
+		wake = 0;
+		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+			BIORQ_LOCK(r);
+			/*
+			 * A biorq can only be added at the end of the list.  So
+			 * when we encounter an already expired biorq we can
+			 * stop since we've already processed it and all biorqs
+			 * before it.
+			 */
+			if (r->biorq_flags & BIORQ_EXPIRE) {
+				BIORQ_ULOCK(r);
+				break;
+			}
+			r->biorq_retries = 0;
+			r->biorq_flags |= BIORQ_EXPIRE;
+			DEBUG_BIORQ(PLL_DIAG, r, "force expire");
+			BIORQ_ULOCK(r);
+			wake = 1;
+		}
+		if (wake)
+			bmap_flushq_wake(BMAPFLSH_EXPIRE);
+
 		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
 		    100);
 		BMAP_LOCK(b);
