@@ -540,8 +540,9 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
  		 * issue CONNECT RPCs. It does issue PING RPCs. For some 
  		 * reason, the SL_EXP_REGISTER_RESM() does not re-establish 
  		 * the connection (maybe becuase exp_hldropf is not NULL).
+ 		 *
  		 * It could be that we did not clear export when we return
- 		 * it to pscrpc_export_pool.
+ 		 * it to pscrpc_export_pool. Or the export was not dropped.
  		 *
  		 * Anyway, the following code is added to solve this problem.
  		 */
