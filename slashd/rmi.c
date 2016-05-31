@@ -533,7 +533,15 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	if (m == NULL)
 		mp->rc = -SLERR_ION_UNKNOWN;
 	else {
-
+		/*
+ 		 * If I put sliod under gdb, and let it continue after a 
+ 		 * while, the MDS thinks the sliod is down, but the sliod 
+ 		 * thinks it is still connected to the MDS. So it does not 
+ 		 * issue CONNECT RPCs. It does issue PING RPCs. For some 
+ 		 * reason, the SL_EXP_REGISTER_RESM() does not re-establish 
+ 		 * the connection (maybe becuase exp_hldropf is not NULL).
+ 		 * The following code is added to solve this problem.
+ 		 */
 		csvc = m->resm_csvc;
 		CSVC_LOCK(csvc);
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
