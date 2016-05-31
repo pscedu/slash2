@@ -261,8 +261,8 @@ struct bmap_pagecache {
 	 */
 	int				 bmpc_pndg_writes;
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* for flushing/expiring */
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* pending I/O requests */
+	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* flush/expir/abort */
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all pending requests */
 };
 
 struct bmpc_write_coalescer {
