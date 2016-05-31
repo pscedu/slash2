@@ -310,6 +310,8 @@ bmap_abort_biorq(struct bmpc_ioreq *r, int rc)
 	BMAP_ULOCK(r->biorq_bmap);
 
 	msl_bmpces_fail(r, rc);
+
+	BIORQ_ULOCK(r);
 	msl_biorq_release(r);
 }
 
@@ -352,7 +354,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	}
 	if (r->biorq_flags & BIORQ_ABORT) {
 		OPSTAT_INCR("biorq-abort-kill");
-		bmap_abort_biorq(r, rc);
+		bmap_abort_biorq(r, EINTR);
 		return;
 	}
 
