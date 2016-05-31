@@ -57,9 +57,9 @@ __static const char *slconn_restypes[] = {
 int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-11s %38s %-7s %5s %5s %4s %5s %10s\n",
-	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref", "uptime");
-	return(PSC_CTL_DISPLAY_WIDTH+12);
+	printf("%-11s %38s %-7s %5s %7s %4s %5s %10s\n",
+	    "resource", "host", "type", "flags", "version", "txcr", "#ref", "uptime");
+	return(PSC_CTL_DISPLAY_WIDTH+14);
 }
 
 void
@@ -167,7 +167,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 
 	if (scc->scc_stkvers)
 		setcolor(col);
-	printf("%5d ", scc->scc_stkvers);
+	printf("%7d ", scc->scc_stkvers);
 	if (scc->scc_stkvers)
 		uncolor();
 
