@@ -1914,7 +1914,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
  * Note that this function is called (at least) once for each open.
  */
 __static int
-msl_flush(struct msl_fhent *mfh)
+msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
@@ -1949,7 +1949,7 @@ msl_flush(struct msl_fhent *mfh)
 
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
-		bmpc_biorqs_flush(b);
+		bmpc_biorqs_flush(pfr, b);
 		if (!rc)
 			rc = -bmap_2_bci(b)->bci_flush_rc;
 		bmap_2_bci(b)->bci_flush_rc = 0;
@@ -2114,7 +2114,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
-	rc = msl_flush(mfh);
+	rc = msl_flush(pfr, mfh);
 	rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
 	if (!rc)
 		rc = rc2;
@@ -3129,7 +3129,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 	} else {
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
-		rc = msl_flush(mfh);
+		rc = msl_flush(pfr, mfh);
 		if (!datasync_only) {
 			int rc2;
 

@@ -566,7 +566,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
  * @b: bmap to flush.
  */
 void
-bmpc_biorqs_flush(struct bmap *b)
+bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
 	struct bmap_pagecache *bmpc;
 
