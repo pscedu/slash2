@@ -541,6 +541,7 @@ void
 bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
 	int wake;
+	uint32_t flags;
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 
@@ -553,6 +554,9 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 		 */
 		OPSTAT_INCR("msl.biorq-flush-wait");
 		wake = 0;
+		flags = BIORQ_EXPIRE;
+		if (pfr && pfr->pfr_interrupted)
+			flags |= BIORQ_ABORT;
 		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
 			BIORQ_LOCK(r);
 			/*
@@ -561,12 +565,12 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 			 * stop since we've already processed it and all biorqs
 			 * before it.
 			 */
-			if (r->biorq_flags & BIORQ_EXPIRE) {
+			if ((r->biorq_flags & flags) == flags) {
 				BIORQ_ULOCK(r);
 				break;
 			}
 			r->biorq_retries = 0;
-			r->biorq_flags |= BIORQ_EXPIRE;
+			r->biorq_flags |= flags;
 			DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 			BIORQ_ULOCK(r);
 			wake = 1;

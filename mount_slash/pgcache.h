@@ -188,6 +188,7 @@ struct bmpc_ioreq {
 #define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 #define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
+#define BIORQ_ABORT		(1 << 11)	/* I/O is interrupted */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
