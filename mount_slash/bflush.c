@@ -360,8 +360,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	if (!(r->biorq_flags & BIORQ_ONTREE)) {
 		bmpc = bmap_2_bmpc(b);
-		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs,
-		    r);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 		pll_addtail(&bmpc->bmpc_new_biorqs_exp, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
