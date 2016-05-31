@@ -295,7 +295,7 @@ void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
 void	 bmpc_biorqs_flush(struct pscfs_req *, struct bmap *);
 
-void	bmpc_expire_biorqs(struct bmap_pagecache *);
+void	bmpc_expire_biorqs(struct bmap_pagecache *, int);
 
 struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,

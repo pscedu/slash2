@@ -2977,7 +2977,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 				bmpc = bmap_2_bmpc(b);
 				BMAP_LOCK(b);
-				bmpc_expire_biorqs(bmpc);
+				bmpc_expire_biorqs(bmpc, 0);
 				BMAP_ULOCK(b);
 			}
 

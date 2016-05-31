@@ -530,6 +530,39 @@ bmpc_freeall(struct bmap *b)
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
+
+void
+bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort) 
+{
+	uint32_t flags;
+	struct bmpc_ioreq *r;
+	int wake = 0;
+
+	flags = BIORQ_EXPIRE;
+	if (abort)
+		flags |= BIORQ_ABORT;
+
+	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+		BIORQ_LOCK(r);
+		/*
+		 * A biorq can only be added at the end of the list.  So
+		 * when we encounter an already expired biorq we can
+		 * stop since we've already processed it and all biorqs
+		 * before it.
+		 */
+		if ((r->biorq_flags & flags) == flags) {
+			BIORQ_ULOCK(r);
+			break;
+		}
+		r->biorq_retries = 0;
+		r->biorq_flags |= flags;
+		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
+		BIORQ_ULOCK(r);
+		wake = 1;
+	}
+	if (wake)
+		bmap_flushq_wake(BMAPFLSH_EXPIRE);
+}
 /*
  * Flush all biorqs on the bmap's `new' biorq list, which all writes get
  * initially placed on.  This routine is called in all flush code paths
@@ -540,9 +573,7 @@ bmpc_freeall(struct bmap *b)
 void
 bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
-	int wake;
-	uint32_t flags;
-	struct bmpc_ioreq *r;
+	int abort;
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
@@ -553,30 +584,12 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 		 * XXX Abort I/O buffers if an interrupt arrives.
 		 */
 		OPSTAT_INCR("msl.biorq-flush-wait");
-		wake = 0;
-		flags = BIORQ_EXPIRE;
+
+		abort = 0;
 		if (pfr && pfr->pfr_interrupted)
-			flags |= BIORQ_ABORT;
-		PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
-			BIORQ_LOCK(r);
-			/*
-			 * A biorq can only be added at the end of the list.  So
-			 * when we encounter an already expired biorq we can
-			 * stop since we've already processed it and all biorqs
-			 * before it.
-			 */
-			if ((r->biorq_flags & flags) == flags) {
-				BIORQ_ULOCK(r);
-				break;
-			}
-			r->biorq_retries = 0;
-			r->biorq_flags |= flags;
-			DEBUG_BIORQ(PLL_DIAG, r, "force expire");
-			BIORQ_ULOCK(r);
-			wake = 1;
-		}
-		if (wake)
-			bmap_flushq_wake(BMAPFLSH_EXPIRE);
+			abort = 1;
+
+		bmpc_expire_biorqs(bmpc, abort);
 
 		psc_waitq_waitrel_us(&bmpc->bmpc_waitq, &b->bcm_lock,
 		    100);
