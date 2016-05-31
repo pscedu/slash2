@@ -367,6 +367,8 @@ void	 sl_csvc_incref(struct slrpc_cservice *);
 int	 sl_csvc_useable(struct slrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slrpc_cservice *, long, long);
 
+void	sl_csvc_online(struct slrpc_cservice *);
+
 void	 sl_exp_hldrop_resm(struct pscrpc_export *);
 void	*sl_exp_getpri_cli(struct pscrpc_export *, int);
 

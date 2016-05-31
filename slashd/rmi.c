@@ -525,6 +525,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct srm_ping_rep *mp;
+	struct slrpc_cservice *csvc;
 	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -532,6 +533,14 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	if (m == NULL)
 		mp->rc = -SLERR_ION_UNKNOWN;
 	else {
+
+		csvc = m->resm_csvc;
+		CSVC_LOCK(csvc);
+		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
+		if (!(csvc->csvc_flags & CSVCF_CONNECTED))
+			sl_csvc_online(csvc);
+		CSVC_ULOCK(csvc);
+
 		si = res2iosinfo(m->resm_res);
 		if (clock_gettime(CLOCK_MONOTONIC,
 		    &si->si_lastcomm) == -1)
@@ -569,6 +578,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
+	/* (gdb) call libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) */
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export, 
 	    slm_geticsvcx(_resm, rq->rq_export));
 	if (rq->rq_status)

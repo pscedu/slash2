@@ -167,6 +167,7 @@ sl_csvc_online(struct slrpc_cservice *csvc)
 	csvc->csvc_import->imp_failed = 0;
 	csvc->csvc_import->imp_invalid = 0;
 
+	csvc->csvc_flags &= ~(CSVCF_CONNECTING | CSVCF_DISCONNECTING);
 	csvc->csvc_flags |= CSVCF_CONNECTED;
 }
 
@@ -849,10 +850,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			pscrpc_put_connection(c);
 
 		csvc->csvc_mtime = now;
-		csvc->csvc_flags &= ~(CSVCF_CONNECTING |
-		    CSVCF_DISCONNECTING);
-		csvc->csvc_flags |= CSVCF_CONNECTED;
-
 		goto out1;
 	}
 
