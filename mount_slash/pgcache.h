@@ -31,6 +31,7 @@
 #include <time.h>
 
 #include "pfl/atomic.h"
+#include "pfl/fs.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/lock.h"
@@ -262,7 +263,7 @@ struct bmap_pagecache {
 	int				 bmpc_pndg_writes;
 	struct bmpc_biorq_tree		 bmpc_biorqs;
 	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expir/abort */
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all pending requests */
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all requests */
 };
 
 struct bmpc_write_coalescer {
