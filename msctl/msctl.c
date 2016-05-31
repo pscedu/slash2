@@ -816,11 +816,11 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 int
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%16s %5s %3s %9s %10s "
-	    "%12s %3s %16s %10s %4s %2s %14s\n",
+	printf("%16s %5s %3s %10s %10s "
+	    "%12s %3s %16s %10s %4s %12s\n",
 	    "fid", "bno", "ref", "off", "len",
-	    "flags", "try", "sliod", "expire", "np", "nr", "addr");
-	return(PSC_CTL_DISPLAY_WIDTH+35);
+	    "flags", "try", "sliod", "expire", "np", "addr");
+	return(PSC_CTL_DISPLAY_WIDTH+31);
 }
 
 void
@@ -828,9 +828,9 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_biorq *msr = m;
 
-	printf("%016"SLPRIxFID" %5d %3d %9d %10d "
+	printf("%016"SLPRIxFID" %5d %3d %10d %10d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%3d %16s %10"PRId64" %4d %2d %#lx\n",
+	    "%3d %16s %10"PRId64" %4d %lx\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
 	    msr->msr_len,
 	    msr->msr_flags & BIORQ_READ			? 'r' : '-',
@@ -847,7 +847,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_ABORT		? 'A' : '-',
 	    msr->msr_retries, msr->msr_last_sliod,
 	    msr->msr_expire.tv_sec, msr->msr_npages,
-	    msr->msr_nrq, msr->msr_addr);
+	    msr->msr_addr);
 }
 
 int
