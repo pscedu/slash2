@@ -185,7 +185,7 @@ struct bmpc_ioreq {
 #define BIORQ_FLUSHRDY		(1 <<  5)	/* write buffer is filled */
 #define BIORQ_FREEBUF		(1 <<  6)	/* DIO READ needs a buffer */
 #define BIORQ_WAIT		(1 <<  7)	/* at least one waiter for aio */
-#define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_new_biorqs rbtree */
+#define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 #define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
 #define BIORQ_ABORT		(1 << 11)	/* I/O is interrupted */
@@ -260,7 +260,7 @@ struct bmap_pagecache {
 	 * The tree is protected by the bmap lock.
 	 */
 	int				 bmpc_pndg_writes;
-	struct bmpc_biorq_tree		 bmpc_new_biorqs;
+	struct bmpc_biorq_tree		 bmpc_biorqs;
 	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expir/abort */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all pending requests */
 };
@@ -333,7 +333,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	psc_waitq_init(&bmpc->bmpc_waitq);
 
-	RB_INIT(&bmpc->bmpc_new_biorqs);
+	RB_INIT(&bmpc->bmpc_biorqs);
 }
 
 #endif /* _MSL_PGCACHE_H_ */

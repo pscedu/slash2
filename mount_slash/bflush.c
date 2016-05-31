@@ -360,7 +360,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	if (!(r->biorq_flags & BIORQ_ONTREE)) {
 		bmpc = bmap_2_bmpc(b);
-		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 		r->biorq_flags |= BIORQ_ONTREE;
 	}
 	OPSTAT_INCR("msl.bmap-flush-resched");
@@ -427,7 +427,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 	}
 	BMAP_ULOCK(b);
 
@@ -574,7 +574,7 @@ bmap_flushable(struct bmap *b)
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
-	flush = !RB_EMPTY(&bmpc->bmpc_new_biorqs);
+	flush = !RB_EMPTY(&bmpc->bmpc_biorqs);
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
@@ -819,7 +819,7 @@ bmap_flush(void)
 
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
-		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
+		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
 		}

@@ -743,7 +743,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAPF_REASSIGNREQ) ||
-	    RB_EMPTY(&bmpc->bmpc_new_biorqs) ||
+	    RB_EMPTY(&bmpc->bmpc_biorqs) ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs) ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
@@ -1200,7 +1200,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 	BMAP_ULOCK(b);
 }
 
@@ -1215,7 +1215,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 
 	/*
 	 * Assert that this bmap can no longer be scheduled by the write
