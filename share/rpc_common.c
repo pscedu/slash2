@@ -817,8 +817,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	if (sl_csvc_useable(csvc))
 		goto out2;
 
-	csvc->csvc_flags &= ~CSVCF_CONNECTED;
-
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	if (exp) {
@@ -888,6 +886,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	}
 
 	csvc->csvc_flags |= CSVCF_CONNECTING;
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 	CSVC_ULOCK(csvc);
 
