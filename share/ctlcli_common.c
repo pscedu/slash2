@@ -58,7 +58,7 @@ int
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-11s %38s %-7s %5s %7s %4s %5s %10s\n",
-	    "resource", "host", "type", "flags", "version", "txcr", "#ref", "uptime");
+	    "resource", "host", "type", "flags", "stkvers", "txcr", "#ref", "uptime");
 	return(PSC_CTL_DISPLAY_WIDTH+14);
 }
 

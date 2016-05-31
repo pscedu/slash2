@@ -78,7 +78,7 @@ struct sl_resource {
 	sl_ios_id_t		 res_id;
 	int			 res_flags;	/* see RESF_* below */
 	enum sl_res_type	 res_type;
-	uint32_t		 res_stkvers;	/* peer SLASH2 version */
+	uint32_t		 res_stkvers;	/* peer SLASH2 stack version */
 	uint64_t		 res_uptime;	/* peer uptime in secs */
 	struct sl_site		*res_site;	/* backpointer to site */
 	struct psc_dynarray	 res_peers;
