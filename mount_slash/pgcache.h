@@ -170,7 +170,7 @@ struct bmpc_ioreq {
 	struct timespec		 biorq_expire;
 	struct psc_dynarray	 biorq_pages;	/* array of bmpce */
 	struct psc_listentry	 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
-	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_new_biorqs_exp */
+	struct psc_listentry	 biorq_exp_lentry;/* chain on bmpc_biorqs_exp */
 	struct psc_listentry	 biorq_aio_lentry;/* chain on bmpce's aios */
 	RB_ENTRY(bmpc_ioreq)	 biorq_tentry;	/* indexed on offset for write coalescing */
 	struct bmap		*biorq_bmap;	/* backpointer to our bmap */
@@ -261,7 +261,7 @@ struct bmap_pagecache {
 	 */
 	int				 bmpc_pndg_writes;
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_new_biorqs_exp;	/* flush/expir/abort */
+	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expir/abort */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all pending requests */
 };
 
@@ -328,7 +328,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	/* Double check the exclusivity of these lists... */
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
-	pll_init(&bmpc->bmpc_new_biorqs_exp, struct bmpc_ioreq,
+	pll_init(&bmpc->bmpc_biorqs_exp, struct bmpc_ioreq,
 	    biorq_exp_lentry, NULL);
 
 	psc_waitq_init(&bmpc->bmpc_waitq);

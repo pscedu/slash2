@@ -542,7 +542,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort)
 	if (abort)
 		flags |= BIORQ_ABORT;
 
-	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_new_biorqs_exp) {
+	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_biorqs_exp) {
 		BIORQ_LOCK(r);
 		/*
 		 * A biorq can only be added at the end of the list.  So
