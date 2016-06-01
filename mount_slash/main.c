@@ -1919,7 +1919,7 @@ msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int i, rc = 0, didwork;
+	int i, rc = 0, didwork, interrupted;
 
 	f = mfh->mfh_fcmh;
 
@@ -1951,12 +1951,19 @@ msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
 
 	/* mark all bmaps before waiting */
 	didwork = 0;
+	interrupted = pfr->pfr_interrupted;
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
 		didwork += bmpc_biorqs_flush(pfr, b);
 		BMAP_ULOCK(b);
 	}
 	if (didwork) {
+		/* interrupt may arrive when all the work is already done */
+		if (interrupted) {
+			OPSTAT_INCR("msl.biorq-flush-intr");
+			rc = EINTR;
+			goto out;
+		}
 		OPSTAT_INCR("msl.biorq-flush-wait");
 		FCMH_LOCK(f);
 		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
@@ -1970,6 +1977,7 @@ msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
 		bmap_2_bci(b)->bci_flush_rc = 0;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
+ out:
 	psc_dynarray_free(&a);
 
 	return (rc);
