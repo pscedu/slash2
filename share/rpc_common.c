@@ -887,7 +887,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	csvc->csvc_flags |= CSVCF_CONNECTING;
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
-	psc_assert(!(csvc->csvc_flags & CSVCF_CONNECTED));
+	/*
+ 	 * We can't assert CSVCF_CONNECTED is not set here because 
+	 * sl_csvc_useable() has other ideas why it is not connected.
+	 */
+	csvc->csvc_flags &= ~CSVCF_CONNECTED;
 	CSVC_ULOCK(csvc);
 
 	/*
