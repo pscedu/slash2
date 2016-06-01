@@ -312,7 +312,6 @@ ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
 	    const char *, void *, size_t, struct fidc_membh *, size_t *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
-int	 msl_fd_should_retry(struct msl_fhent *, struct pscfs_req *, int);
 
 int	 msl_try_get_replica_res(struct bmap *, int, int,
 	    struct sl_resm **, struct slrpc_cservice **);
