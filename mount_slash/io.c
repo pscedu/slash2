@@ -871,7 +871,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 
  restart:
 
-	if (!slc_rpc_retry(pfr, &rc0))
+	if (!slc_rpc_should_retry(pfr, &rc0))
 		return (0);
 
 	csvc = slc_geticsvc(m);
@@ -1245,7 +1245,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 if (!pfl_rpc_max_retry) {
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		OPSTAT_INCR("msl.dio-retried");
 		if (nbs)
 			pscrpc_set_destroy(nbs);

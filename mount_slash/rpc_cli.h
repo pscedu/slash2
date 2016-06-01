@@ -114,7 +114,7 @@ struct slrpc_cservice;
 #define slc_getmcsvc_nb(resm)		slc_getmcsvcxf((resm), CSVCF_NONBLOCK, NULL)
 
 void	slc_rpc_initsvc(void);
-int	slc_rpc_retry(struct pscfs_req *, int *);
+int	slc_rpc_should_retry(struct pscfs_req *, int *);
 
 int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
 int	slc_rmc_setmds(const char *);

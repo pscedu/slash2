@@ -421,7 +421,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -695,7 +695,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		}
-	} while (rc && slc_rpc_retry(pfr, &rc));
+	} while (rc && slc_rpc_should_retry(pfr, &rc));
 
 	rc = abs(rc);
 	if (rc == 0)
@@ -823,7 +823,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		namecache_hold_entry(&dcu, p, newname);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
 	}
@@ -920,7 +920,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -982,7 +982,7 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 
 	rc = abs(rc);
@@ -1255,7 +1255,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		namecache_hold_entry(&dcu, p, name);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry;
 	}
@@ -1376,7 +1376,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  retry2:
 
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -1706,7 +1706,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
-				if (!slc_rpc_retry(pfr, &rc)) {
+				if (!slc_rpc_should_retry(pfr, &rc)) {
 					DIRCACHE_ULOCK(d);
 					PFL_GOTOERR(out, rc);
 				}
@@ -1781,7 +1781,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(d, off, size, 1);
-		if (rc && !slc_rpc_retry(pfr, &rc))
+		if (rc && !slc_rpc_should_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
 		DIRCACHE_WRLOCK(d);
 		goto restart;
@@ -1877,7 +1877,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		rc = SL_RSX_WAITREPF(csvc, rq, mp,
 		    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
 	}
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 	rc = abs(rc);
 	if (!rc)
@@ -2092,7 +2092,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_LOCK(f);
 	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
@@ -2529,7 +2529,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&odcu);
 		namecache_fail(&ndcu);
 		goto retry1;
@@ -2657,7 +2657,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (rc == 0)
@@ -2748,7 +2748,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
 	}
@@ -3057,7 +3057,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
  retry:
 	rc = msl_setattr(c, to_set, &sstb, setattrflags);
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 
  out:
@@ -3157,7 +3157,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 			int rc2;
 
 			rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
-			//if (rc && slc_rpc_retry(pfr, &rc))
+			//if (rc && slc_rpc_should_retry(pfr, &rc))
 			if (!rc)
 				rc = rc2;
 		}
@@ -3436,7 +3436,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3520,7 +3520,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3608,7 +3608,7 @@ slc_getxattr(struct pscfs_req *pfr,
 	rc = SL_RSX_WAITREPF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK);
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (!rc)
@@ -3700,7 +3700,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_retry(pfr, &rc))
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
 	rc = abs(rc);
 	if (rc == 0)

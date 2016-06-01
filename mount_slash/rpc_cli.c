@@ -229,7 +229,7 @@ slc_rmc_setmds(const char *name)
  * Return 0 if not going to retry and tweak rc if necessary.
  */
 int
-slc_rpc_retry(struct pscfs_req *pfr, int *rc)
+slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 {
 	int count;
 
