@@ -574,6 +574,7 @@ int
 bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 {
 	int abort;
+	struct psc_thread *thr;
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
@@ -581,8 +582,11 @@ bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
 
 	if (bmpc->bmpc_pndg_writes) {
 		abort = 0;
-		if (pfr && pfr->pfr_interrupted)
+		if (pfr && pfr->pfr_interrupted) {
+			thr = pscthr_get();
+			psclog_warnx("thread %p is interrupted, pfr = %p", thr, pfr);
 			abort = 1;
+		}
 		bmpc_expire_biorqs(bmpc, abort);
 		return 1;
 	}
