@@ -393,7 +393,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	msl_bmap_lease_reassign(r->biorq_bmap);
 }
 
-__static void
+__static int
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
 	struct slrpc_cservice *csvc;
@@ -436,7 +436,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (!rc)
-		return;
+		return (0);
 
  out:
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs)
@@ -446,6 +446,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		sl_csvc_decref(csvc);
 
 	bwc_free(bwc);
+	OPSTAT_INCR("msl.bmap-flush-rpc-fail");
+	return (rc);
 }
 
 /*
@@ -783,7 +785,7 @@ bmap_flush(void)
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	struct bmap *b, *tmpb;
-	int i, j, didwork = 0;
+	int i, j, rc, didwork = 0;
 
 	LIST_CACHE_LOCK(&msl_bmapflushq);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
@@ -826,11 +828,12 @@ bmap_flush(void)
 		BMAP_ULOCK(b);
 
 		j = 0;
-		while (j < psc_dynarray_len(&reqs) &&
+		rc = 0;
+		while (!rc && j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
-			bmap_flush_send_rpcs(bwc);
+			rc = bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);
 
