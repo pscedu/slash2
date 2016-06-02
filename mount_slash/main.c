@@ -3812,7 +3812,7 @@ msattrflushthr_spawn(void)
 	int i;
 
 	lc_reginit(&msl_attrtimeoutq, struct fcmh_cli_info, fci_lentry,
-	    "attrtimeout");
+	    "attr-timeout");
 
 	for (i = 0; i < NUM_ATTR_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_ATTR_FLUSH,
