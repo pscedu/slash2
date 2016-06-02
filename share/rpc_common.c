@@ -1081,7 +1081,7 @@ slconnthr_spawn(int thrtype, const char *thrnamepre,
 	sct->sct_pingupc = pingupc;
 	sct->sct_pingupcarg = pingupcarg;
 	pfl_multiwait_init(&sct->sct_mw, "resmon");
-	pfl_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "rebuild");
+	pfl_multiwaitcond_init(&sct->sct_mwc, NULL, 0, "connection");
 	pfl_multiwait_addcond(&sct->sct_mw, &sct->sct_mwc);
 	pscthr_setready(thr);
 	return (thr);
