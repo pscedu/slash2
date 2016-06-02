@@ -2302,7 +2302,9 @@ slmbkdbthr_main(struct psc_thread *thr)
 	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
 	while (pscthr_run(thr)) {
 		// XXX sqlite3_backup_init()
+		thr->pscthr_waitq = "sleep 120";
 		sleep(120);
+		thr->pscthr_waitq = NULL;
 		(void)system(cmd);
 	}
 }
