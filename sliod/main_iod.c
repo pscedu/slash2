@@ -137,7 +137,9 @@ slistatfsthr_main(struct psc_thread *thr)
 			    sizeof(sli_ssfb.sf_type));
 			freelock(&sli_ssfb_lock);
 		}
+		thr->pscthr_waitq = "sleep 60";
 		sleep(60);
+		thr->pscthr_waitq = NULL;
 	}
 }
 
