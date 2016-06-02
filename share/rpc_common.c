@@ -1032,6 +1032,12 @@ slconnthr_main(struct psc_thread *thr)
 			 * try to connect to IOS (we use CSVCF_NORECON).
 			 * We might as well let the PINGs from IOS to
 			 * take care things.
+			 *
+			 * I drop my IOS into gdb for 30+minutes, the
+			 * export/import drop functions are not called.
+			 * But here, we mark the csvc as disconnected.
+			 * This is why I need slm_rmi_handle_ping() to
+			 * bring the csvc back online.
 			 */
 			if (scp->scp_useablef &&
 			    !scp->scp_useablef(scp->scp_useablearg))
