@@ -486,7 +486,9 @@ sl_freapthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED))
 			;
+		thr->pscthr_waitq = "sleep 10";
 		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
+		thr->pscthr_waitq = NULL;
 	}
 }
 
