@@ -189,7 +189,6 @@ struct bmpc_ioreq {
 #define BIORQ_ONTREE		(1 <<  8)	/* on bmpc_biorqs rbtree */
 #define BIORQ_READAHEAD		(1 <<  9)	/* performed by readahead */
 #define BIORQ_AIOWAKE		(1 << 10)	/* aio needs wakeup */
-#define BIORQ_ABORT		(1 << 11)	/* I/O is interrupted */
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
@@ -293,9 +292,9 @@ void	 bmap_pagecache_destroy(void);
 
 void	 bmpc_global_init(void);
 void	 bmpc_freeall(struct bmap *);
-int	 bmpc_biorqs_flush(struct pscfs_req *, struct bmap *);
+void	 bmpc_biorqs_flush(struct bmap *);
 
-void	bmpc_expire_biorqs(struct bmap_pagecache *, int);
+void	bmpc_expire_biorqs(struct bmap_pagecache *);
 
 struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,

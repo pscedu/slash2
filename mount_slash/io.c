@@ -1514,7 +1514,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	if (needflush) {
 		/* XXX make this interruptible */
 		BMAP_LOCK(r->biorq_bmap);
-		bmpc_biorqs_flush(NULL, r->biorq_bmap);
+		bmpc_biorqs_flush(r->biorq_bmap);
 		BMAP_ULOCK(r->biorq_bmap);
 	}
 

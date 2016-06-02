@@ -532,15 +532,10 @@ bmpc_freeall(struct bmap *b)
 
 
 void
-bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort) 
+bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 {
-	uint32_t flags;
 	struct bmpc_ioreq *r;
 	int wake = 0;
-
-	flags = BIORQ_EXPIRE;
-	if (abort)
-		flags |= BIORQ_ABORT;
 
 	PLL_FOREACH_BACKWARDS(r, &bmpc->bmpc_biorqs_exp) {
 		BIORQ_LOCK(r);
@@ -550,19 +545,20 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort)
 		 * stop since we've already processed it and all biorqs
 		 * before it.
 		 */
-		if ((r->biorq_flags & flags) == flags) {
+		if (r->biorq_flags & BIORQ_EXPIRE) {
 			BIORQ_ULOCK(r);
 			break;
 		}
 		r->biorq_retries = 0;
-		r->biorq_flags |= flags;
-		DEBUG_BIORQ(PLL_DIAG, r, "force expire/abort");
+		r->biorq_flags |= BIORQ_EXPIRE;
+		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
 		wake = 1;
 	}
 	if (wake)
 		bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
+
 /*
  * Flush all biorqs on the bmap's `new' biorq list, which all writes get
  * initially placed on.  This routine is called in all flush code paths
@@ -570,27 +566,26 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc, int abort)
  *
  * @b: bmap to flush.
  */
-int
-bmpc_biorqs_flush(struct pscfs_req *pfr, struct bmap *b)
+
+void
+bmpc_biorqs_flush(struct bmap *b)
 {
-	int abort;
-	struct psc_thread *thr;
+	struct fidc_membh *f;
 	struct bmap_pagecache *bmpc;
 
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK_ENSURE(b);
 
-	if (bmpc->bmpc_pndg_writes) {
-		abort = 0;
-		if (pfr && pfr->pfr_interrupted) {
-			thr = pscthr_get();
-			psclog_warnx("thread %p is interrupted, pfr = %p", thr, pfr);
-			abort = 1;
-		}
-		bmpc_expire_biorqs(bmpc, abort);
-		return 1;
+	while (bmpc->bmpc_pndg_writes) {
+		OPSTAT_INCR("msl.biorq-flush-wait");
+		bmpc_expire_biorqs(bmpc);
+		BMAP_ULOCK(b);
+		f = b->bcm_fcmh;
+		FCMH_LOCK(f);
+		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock,
+		    100);
+		BMAP_LOCK(b);
 	}
-	return 0;
 }
 
 void
@@ -627,7 +622,6 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		OPSTAT_INCR("msl.bmpce-reap-spin");
 	LIST_CACHE_ULOCK(lc);
 }
-
 /*
  * Reap pages from the idle and/or readahead lists.  The readahead list
  * is only considered if we are desperate and unable to reap anything

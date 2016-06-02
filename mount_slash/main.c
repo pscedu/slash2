@@ -1914,12 +1914,12 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
  * Note that this function is called (at least) once for each open.
  */
 __static int
-msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
+msl_flush(struct msl_fhent *mfh)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int i, rc = 0, didwork, interrupted;
+	int i, rc = 0;
 
 	f = mfh->mfh_fcmh;
 
@@ -1947,37 +1947,14 @@ msl_flush(struct pscfs_req *pfr, struct msl_fhent *mfh)
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
- again:
-
-	/* mark all bmaps before waiting */
-	didwork = 0;
-	interrupted = pfr->pfr_interrupted;
 	DYNARRAY_FOREACH(b, i, &a) {
 		BMAP_LOCK(b);
-		didwork += bmpc_biorqs_flush(pfr, b);
-		BMAP_ULOCK(b);
-	}
-	if (didwork) {
-		/* interrupt may arrive when all the work is already done */
-		if (interrupted) {
-			OPSTAT_INCR("msl.biorq-flush-intr");
-			rc = EINTR;
-			goto out;
-		}
-		OPSTAT_INCR("msl.biorq-flush-wait");
-		FCMH_LOCK(f);
-		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
-		goto again;
-	}
-
-	DYNARRAY_FOREACH(b, i, &a) {
-		BMAP_LOCK(b);
+		bmpc_biorqs_flush(b);
 		if (!rc)
 			rc = -bmap_2_bci(b)->bci_flush_rc;
 		bmap_2_bci(b)->bci_flush_rc = 0;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
- out:
 	psc_dynarray_free(&a);
 
 	return (rc);
@@ -2137,7 +2114,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
-	rc = msl_flush(pfr, mfh);
+	rc = msl_flush(mfh);
 	rc2 = msl_flush_ioattrs(pfr, mfh->mfh_fcmh);
 	if (!rc)
 		rc = rc2;
@@ -3000,7 +2977,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 				bmpc = bmap_2_bmpc(b);
 				BMAP_LOCK(b);
-				bmpc_expire_biorqs(bmpc, 0);
+				bmpc_expire_biorqs(bmpc);
 				BMAP_ULOCK(b);
 			}
 
@@ -3152,7 +3129,7 @@ mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 	} else {
 		DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing");
 
-		rc = msl_flush(pfr, mfh);
+		rc = msl_flush(mfh);
 		if (!datasync_only) {
 			int rc2;
 

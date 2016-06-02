@@ -298,23 +298,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (rc);
 }
 
-
-void
-bmap_abort_biorq(struct bmpc_ioreq *r, int rc)
-{
-	struct bmap_cli_info *bci;
-
-	bci = bmap_2_bci(r->biorq_bmap);
-	if (rc && !bci->bci_flush_rc)
-		bci->bci_flush_rc = rc;
-	BMAP_ULOCK(r->biorq_bmap);
-
-	msl_bmpces_fail(r, rc);
-
-	BIORQ_ULOCK(r);
-	msl_biorq_release(r);
-}
-
 /*
  * Called in error contexts where the biorq must be rescheduled by
  * putting it back to the new request queue.  Typically this is from a
@@ -325,6 +308,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
+	struct bmap_cli_info *bci;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched rc=%d", rc);
 
@@ -336,25 +320,17 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (rc == -ENOSPC) {
-		OPSTAT_INCR("biorq-abort-enospc");
-		bmap_abort_biorq(r, rc);
-		return;
-	}
-	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
-		OPSTAT_INCR("biorq-abort-retries");
-		bmap_abort_biorq(r, rc);
-		return;
-	}
-	if ((r->biorq_flags & BIORQ_EXPIRE) && 
-	    (r->biorq_retries >= msl_max_retries * 32)) {
-		OPSTAT_INCR("biorq-abort-expire");
-		bmap_abort_biorq(r, rc);
-		return;
-	}
-	if (r->biorq_flags & BIORQ_ABORT) {
-		OPSTAT_INCR("biorq-abort-kill");
-		bmap_abort_biorq(r, EINTR);
+	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
+	    ((r->biorq_flags & BIORQ_EXPIRE) && 
+	     (r->biorq_retries >= msl_max_retries * 32))) {
+
+		bci = bmap_2_bci(r->biorq_bmap);
+		if (rc && !bci->bci_flush_rc)
+			bci->bci_flush_rc = rc;
+		BMAP_ULOCK(r->biorq_bmap);
+
+		msl_bmpces_fail(r, rc);
+		msl_biorq_release(r);
 		return;
 	}
 
