@@ -251,7 +251,9 @@ slicrudthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&bcr_ready);
 
 		if (!psc_dynarray_len(bcrs)) {
+			thr->pscthr_waitq = "usleep 100";
 			usleep(100);
+			thr->pscthr_waitq = NULL;
 			continue;
 		}
 
