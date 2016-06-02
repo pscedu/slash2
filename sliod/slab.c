@@ -68,7 +68,9 @@ slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
 		psc_pool_reap(slab_pool, 0);
+		thr->pscthr_waitq = "sleep 10";
 		sleep(10);
+		thr->pscthr_waitq = NULL;
 	}
 }
 
