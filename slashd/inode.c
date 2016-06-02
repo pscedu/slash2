@@ -87,7 +87,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 		DEBUG_INOH(PLL_ERROR, ih, buf, "inode read error %d", rc);
 	} else {
 		psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
-		if (crc != od_crc) {
+		if (crc != od_crc && slm_crc_check) {
 			vers = ih->inoh_ino.ino_version;
 			memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
 
