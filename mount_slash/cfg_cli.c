@@ -33,7 +33,7 @@ void
 slc_init_rpci(struct resprof_cli_info *rpci)
 {
 	INIT_SPINLOCK(&rpci->rpci_lock);
-	psc_waitq_init(&rpci->rpci_waitq);
+	psc_waitq_init(&rpci->rpci_waitq, "rpci");
 }
 
 void

@@ -116,7 +116,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
 struct psc_hashtbl		 msl_namecache_hashtbl;
-struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
+struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT("flush-attr");
 
 struct psc_listcache		 msl_attrtimeoutq;
 

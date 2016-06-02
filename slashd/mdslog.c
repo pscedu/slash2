@@ -112,7 +112,7 @@ struct psc_journal_cursor	 mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT;
+struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT("cursor");
 psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
 int				 slm_cursor_update_inprog;
 int				 slm_cursor_update_needed;
@@ -1954,8 +1954,8 @@ mds_journal_init(uint64_t fsuuid)
 	 */
 	pscthr_init(SLMTHRT_CURSOR, slmjcursorthr_main, 0, "slmjcursorthr");
 
-	psc_waitq_init(&nsupd_prg.waitq);
-	psc_waitq_init(&reclaim_prg.waitq);
+	psc_waitq_init(&nsupd_prg.waitq,"suspd");
+	psc_waitq_init(&reclaim_prg.waitq, "reclaim");
 
 	INIT_SPINLOCK(&nsupd_prg.lock);
 	INIT_SPINLOCK(&reclaim_prg.lock);

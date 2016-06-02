@@ -53,7 +53,7 @@ void
 bim_init(void)
 {
 	INIT_SPINLOCK(&sli_bminseq.bim_lock);
-	psc_waitq_init(&sli_bminseq.bim_waitq);
+	psc_waitq_init(&sli_bminseq.bim_waitq, "bim");
 	sli_bminseq.bim_minseq = 0;
 }
 

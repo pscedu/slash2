@@ -50,7 +50,7 @@ struct psc_poolmgr	 *sl_fcmh_pool;
 struct psc_listcache	  sl_fcmh_idle;		/* identity untouched, but reapable */
 struct psc_hashtbl	  sl_fcmh_hashtbl;
 struct psc_thread	 *sl_freapthr;
-struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT;
+struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT("fcmh-reap");;
 
 #if PFL_DEBUG > 0
 psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
@@ -292,7 +292,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
 	psc_hashent_init(&sl_fcmh_hashtbl, f);
-	psc_waitq_init(&f->fcmh_waitq);
+	psc_waitq_init(&f->fcmh_waitq, "fcmh");
 	pfl_rwlock_init(&f->fcmh_rwlock);
 
 	f->fcmh_fg.fg_fid = fid;

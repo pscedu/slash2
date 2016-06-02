@@ -66,7 +66,7 @@ int				 msl_max_nretries = 256;
 
 #define MIN_COALESCE_RPC_SZ	 LNET_MTU
 
-struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT;
+struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT("bflush");
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
@@ -917,7 +917,7 @@ msbmapthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	psc_waitq_init(&slc_bflush_waitq);
+	psc_waitq_init(&slc_bflush_waitq, "bmap-flush");
 
 	lc_reginit(&msl_bmapflushq, struct bmap,
 	    bcm_lentry, "bmapflushq");
