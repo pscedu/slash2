@@ -84,12 +84,12 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	mp->rc = rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
 
 	if (!rc) {
+		DEBUG_BMAP(PLL_DIAG, b, "reply to sliod.");
 		bmi = bmap_2_bmi(b);
 		memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
 		memcpy(&mp->crcstates, bmi->bmi_crcstates, sizeof(mp->crcstates));
 		bmap_op_done(b);
 	}
-	DEBUG_BMAP(rc ? PLL_ERROR: PLL_DIAG, b, "reply to sliod, rc = %d", rc);
 	return (rc);
 }
 
