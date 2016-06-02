@@ -227,6 +227,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 void
 slmbmaptimeothr_begin(struct psc_thread *thr)
 {
+	char wait[16];
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
@@ -280,8 +281,12 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
  out:
 		psclog_debug("nsecs=%d", nsecs);
 
-		if (nsecs > 0)
+		if (nsecs > 0) {
+			snprintf(wait, 16, "sleep %d", nsecs);
+			thr->pscthr_waitq = wait;
 			sleep((uint32_t)nsecs);
+			thr->pscthr_waitq = NULL;
+		}
 	}
 }
 
