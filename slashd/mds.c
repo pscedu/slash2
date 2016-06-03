@@ -1390,6 +1390,8 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	struct bmap *b = NULL;
 	int rc;
 
+	OPSTAT_INCR("bmap-restart-check");
+
 	r = PSCALLOC(sizeof(*r));
 	memcpy(r, odtr, sizeof(*r));
 
