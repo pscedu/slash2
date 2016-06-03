@@ -1441,7 +1441,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	 */
 	bml->bml_start = bia->bia_start;
 	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
-	if (bml->bml_expire > time(NULL))
+	if (bml->bml_expire <= time(NULL))
 		OPSTAT_INCR("bmap-restart-expired");
 
 	if (bia->bia_flags & BIAF_DIO)
