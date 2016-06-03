@@ -1462,7 +1462,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		OPSTAT_INCR("bmap-restart-ok");
 	else
 		/* XXX odtable leaks */
-		OPSTAT_INCR("bmap-restart-fail");
+		OPSTAT_INCR("bmap-restart-err");
 
 	if (rc && slm_opstate == SLM_OPSTATE_NORMAL)
 		/*
