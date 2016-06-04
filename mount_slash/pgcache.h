@@ -260,7 +260,7 @@ struct bmap_pagecache {
 	 */
 	int				 bmpc_pndg_writes;
 	struct bmpc_biorq_tree		 bmpc_biorqs;
-	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expir/abort */
+	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expire */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all requests */
 };
 
