@@ -68,8 +68,9 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int			slm_force_dio;
-int			slm_crc_check = 1;
 int			slm_global_mount;
+int			slm_crc_check = 1;
+int			slm_conn_debug = 1;
 
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;

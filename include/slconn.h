@@ -50,6 +50,7 @@ struct pscrpc_export;
 struct sl_resm;
 
 extern struct pfl_rwlock	 sl_conn_lock;
+extern int			 sl_conn_debug;
 
 struct sl_exp_cli {
 	struct slrpc_cservice	*expc_csvc;

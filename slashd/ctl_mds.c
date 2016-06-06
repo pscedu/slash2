@@ -492,6 +492,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.crc_check",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_crc_check);
 
+	psc_ctlparam_register_var("sys.conn_debug",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &sl_conn_debug);
+
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 

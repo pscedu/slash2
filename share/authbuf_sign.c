@@ -41,6 +41,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
+int	sl_conn_debug = 1;
+
 /*
  * Sign a message with the secret key.
  * @rq: request structure to sign.
@@ -111,8 +113,6 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 		    bd->bd_iov_count);
 }
 
-int debug_connection = 1;
-
 /*
  * Check signature validity of a authbuf.
  * @rq: request structure to check.
@@ -152,8 +152,14 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	}
 
 	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
+	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
+	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
+	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
+	    saf->saf_secret.sas_dst_pid != self_prid.pid)
+		rc = SLERR_AUTHBUF_BADPEER;
 
-	if (debug_connection) {
+	if ((sl_conn_debug == 2) ||
+	    (rc == SLERR_AUTHBUF_BADPEER && sl_conn_debug == 1)) {
 
 		lnet_process_id_t src_prid;
 		lnet_process_id_t dst_prid;
@@ -174,16 +180,12 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 		pscrpc_id2str(peer_prid, peer_buf);
 		pscrpc_id2str(self_prid, self_buf);
 
-		psclog_debug("authbuf src/dst PRIDs: "
-		    "authbuf (src=%s, dst=%s) actual (self=%s, peer=%s)",
+		psclog_max("authbuf: (src=%s, dst=%s), "
+		    "actual: (self=%s, peer=%s)",
 		    src_buf, dst_buf, self_buf, peer_buf);
 	}
-
-	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
-	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
-	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
-	    saf->saf_secret.sas_dst_pid != self_prid.pid)
-		return (SLERR_AUTHBUF_BADPEER);
+	if (rc)
+		return (rc);
 
 	gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 	if (gerr) {
