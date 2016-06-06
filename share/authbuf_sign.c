@@ -111,6 +111,8 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 		    bd->bd_iov_count);
 }
 
+int debug_connection = 1;
+
 /*
  * Check signature validity of a authbuf.
  * @rq: request structure to check.
@@ -150,6 +152,33 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	}
 
 	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
+
+	if (debug_connection) {
+
+		lnet_process_id_t src_prid;
+		lnet_process_id_t dst_prid;
+		char src_buf[PSCRPC_NIDSTR_SIZE];
+		char dst_buf[PSCRPC_NIDSTR_SIZE];
+		char self_buf[PSCRPC_NIDSTR_SIZE];
+		char peer_buf[PSCRPC_NIDSTR_SIZE];
+
+		src_prid.nid = saf->saf_secret.sas_src_nid;
+		src_prid.pid = saf->saf_secret.sas_src_pid;
+
+		dst_prid.nid = saf->saf_secret.sas_dst_nid;
+		dst_prid.pid = saf->saf_secret.sas_dst_pid;
+
+		pscrpc_id2str(src_prid, src_buf);
+		pscrpc_id2str(dst_prid, dst_buf);
+
+		pscrpc_id2str(peer_prid, peer_buf);
+		pscrpc_id2str(self_prid, self_buf);
+
+		psclog_debug("authbuf src/dst PRIDs: "
+		    "authbuf (src=%s, dst=%s) actual (self=%s, peer=%s)",
+		    src_buf, dst_buf, self_buf, peer_buf);
+	}
+
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
 	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
 	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
