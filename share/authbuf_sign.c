@@ -181,8 +181,8 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 		pscrpc_id2str(self_prid, self_buf);
 
 		psclog_max("authbuf: (src=%s, dst=%s), "
-		    "actual: (self=%s, peer=%s)",
-		    src_buf, dst_buf, self_buf, peer_buf);
+		    "actual: (self=%s, peer=%s), rc = %d",
+		    src_buf, dst_buf, self_buf, peer_buf, rc);
 	}
 	if (rc)
 		return (rc);
