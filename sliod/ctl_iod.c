@@ -608,7 +608,10 @@ slictlthr_main(const char *fn)
 	pflrpc_register_ctlops(slictlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
+
+#ifdef Linux
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
+#endif
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
@@ -653,7 +656,9 @@ slictlthr_main(const char *fn)
 
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
+#ifdef Linux
 	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+#endif
 
 	psc_ctlparam_register_var("sys.sync_max_writes",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
