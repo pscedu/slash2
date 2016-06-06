@@ -554,10 +554,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "created");
 
-	CSVC_LOCK(csvc);
-	sl_csvc_incref(csvc);
-	CSVC_ULOCK(csvc);
-
 	wk = pfl_workq_getitem(slrpc_batch_handle_req_workcb,
 	    struct slrpc_wkdata_batch_rep);
 	wk->bp = bp;
