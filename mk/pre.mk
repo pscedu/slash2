@@ -18,6 +18,15 @@
 # ---------------------------------------------------------------------
 # %END_LICENSE%
 
+UNAME := $(shell uname -s)
+
+ifeq ($(UNAME), Linux)
+DEFINES+=		-DLinux
+endif
+ifeq ($(UNAME), FreeBSD)
+DEFINES+=		-DFreeBSD
+endif
+ 
 ifndef INCL_SLASH2_PRE_MK
 INCL_SLASH2_PRE_MK=1
 
