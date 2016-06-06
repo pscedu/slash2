@@ -916,7 +916,10 @@ msctlthr_spawn(void)
 	pflfs_register_ctlops(msctlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
+
+#ifdef Linux
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
+#endif
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
@@ -983,7 +986,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.rpc_max_retry", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &pfl_rpc_max_retry);
 
+#ifdef Linux
 	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+#endif
 
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
