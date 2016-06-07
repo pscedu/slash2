@@ -1886,18 +1886,20 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (mp->len > SL_PATH_MAX) {
-		rc = EINVAL;
-	} else if (!mp->flag) {
+	if (mp->len > SL_PATH_MAX) 
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	if (!mp->flag) {
 		retbuf = mp->buf;
+		retbuf[mp->len] = '\0';
 	} else {
 		iov.iov_len = mp->len;
 		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
-		if (rc == 0)
+		if (rc == 0) {
 			OPSTAT_INCR("msl.readlink-bulk");
+			buf[mp->len] = '\0';
+		}
 	}
-	if (!rc)
-		retbuf[mp->len] = '\0';
 
  out:
 	pscfs_reply_readlink(pfr, retbuf, rc);
