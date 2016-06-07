@@ -117,11 +117,13 @@ mds_inode_read(struct slash_inode_handle *ih)
 	return (rc);
 }
 
+static int debug_inode_write;
+
 int
 mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, wasbusy, waslocked;
+	int rc, level, wasbusy, waslocked;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
@@ -154,7 +156,11 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
-	DEBUG_INOH(rc ? PLL_ERROR:PLL_INFO, ih, buf, "wrote inode, "
+	if (debug_inode_write)
+		level = PLL_MAX;
+	else
+		level = rc ? PLL_ERROR:PLL_INFO;
+	DEBUG_INOH(level, ih, buf, "wrote inode, "
 	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
 	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
 
