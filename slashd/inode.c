@@ -34,6 +34,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+int debug_inode_write;
+
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *ih)
 {
@@ -117,7 +119,6 @@ mds_inode_read(struct slash_inode_handle *ih)
 	return (rc);
 }
 
-static int debug_inode_write;
 
 int
 mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,

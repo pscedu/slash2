@@ -109,7 +109,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	void *h = NULL, *th;
-	int rc;
+	int rc, level;
 	char buf[LINE_MAX];
 
 	sic = &sl_ino_compat_table[old_version];
@@ -118,7 +118,9 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 		return (rc);
 
 	OPSTAT_INCR("inode-update");
-	DEBUG_INOH(PLL_WARN, ih, buf, "updating old inode (v %d)",
+
+	level = debug_inode_write ? PLL_MAX : PLL_WARN;
+	DEBUG_INOH(level, ih, buf, "updating old inode (v %d)",
 	    old_version);
 
 	f = inoh_2_fcmh(ih);
