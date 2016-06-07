@@ -926,6 +926,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 static int symlink_always_bulk;
 
+/* Handle SRMT_READLINK RPC */
 int
 slm_rmc_handle_readlink(struct pscrpc_request *rq)
 {

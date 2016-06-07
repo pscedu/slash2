@@ -479,15 +479,12 @@ slisyncthr_main(struct psc_thread *thr)
 void
 slislvrthr_main(struct psc_thread *thr)
 {
-	static struct pfl_mutex mtx = PSC_MUTEX_INIT;
-
 	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
 	struct timespec expire;
 	struct slvr *s, *dummy;
 	int i;
 
 	while (pscthr_run(thr)) {
-		psc_mutex_lock(&mtx);
 
 		LIST_CACHE_LOCK(&sli_crcqslvrs);
 		lc_peekheadwait(&sli_crcqslvrs);
@@ -519,16 +516,12 @@ slislvrthr_main(struct psc_thread *thr)
 				s->slvr_flags |= SLVRF_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
-				/* XXX can't we break here ? */
 			}
 			SLVR_ULOCK(s);
-			if (psc_dynarray_len(&ss) >=
-			    MAX_BMAP_NCRC_UPDATES)
+			if (psc_dynarray_len(&ss) >= MAX_BMAP_NCRC_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_crcqslvrs);
-
-		psc_mutex_unlock(&mtx);
 
 		/*
 		 * If we didn't do any work, induce sleep to avoid
