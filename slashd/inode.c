@@ -154,18 +154,13 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
-	if (rc)
-		DEBUG_INOH(PLL_ERROR, ih, buf,
-		    "mdsio_pwritev: error (resid=%zd nb=%zd rc=%d)",
-		    sizeof(ih->inoh_ino) + sizeof(crc), nb, rc);
-	else {
-		DEBUG_INOH(PLL_INFO, ih, buf, "wrote inode, "
-		    "flags=%x size=%"PRIu64" data=%p",
-		    ih->inoh_flags, inoh_2_fsz(ih),
-		    inoh_2_mfh(ih));
+	DEBUG_INOH(rc ? PLL_ERROR:PLL_INFO, ih, buf, "wrote inode, "
+	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
+	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
+
+	if (!rc) 
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
-	}
 	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
 	return (rc);
 }
