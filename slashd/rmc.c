@@ -924,6 +924,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
+static int symlink_always_bulk;
+
 int
 slm_rmc_handle_readlink(struct pscrpc_request *rq)
 {
@@ -951,10 +953,12 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	mp->len = len;
 
-	if (len < sizeof(mp->buf)) {
+	if (!symlink_always_bulk && len < sizeof(mp->buf)) {
+		mp->flag = 0;
 		memcpy(mp->buf, buf, len);
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	} else {
+		mp->flag = 1;
 		iov.iov_base = buf;
 		iov.iov_len = len;
 		rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
