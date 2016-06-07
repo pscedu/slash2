@@ -119,12 +119,10 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 
 	OPSTAT_INCR("inode-update");
 
-	level = debug_inode_write ? PLL_MAX : PLL_WARN;
-	DEBUG_INOH(level, ih, buf, "updating old inode (v %d)",
-	    old_version);
+	level = debug_ondisk_inode ? PLL_MAX : PLL_WARN;
+	DEBUG_INOH(level, ih, buf, "updating old inode (v %d)", old_version);
 
 	f = inoh_2_fcmh(ih);
-
 	/* 
 	 * Introduced by commit 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
 	 */

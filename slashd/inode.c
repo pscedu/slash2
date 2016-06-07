@@ -34,7 +34,7 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-int debug_inode_write;
+int debug_ondisk_inode;
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *ih)
@@ -78,7 +78,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
 		rc = SLERR_SHORTIO;
 
-	level = debug_inode_write ? PLL_MAX : PLL_WARN;
+	level = debug_ondisk_inode ? PLL_MAX : PLL_WARN;
 	DEBUG_INOH(level, ih, buf, "read inode");
 
 	if (rc == SLERR_SHORTIO && od_crc == 0 &&
@@ -160,7 +160,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
-	if (debug_inode_write)
+	if (debug_ondisk_inode)
 		level = PLL_MAX;
 	else
 		level = rc ? PLL_ERROR:PLL_INFO;
