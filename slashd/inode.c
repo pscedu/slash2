@@ -52,7 +52,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	uint64_t crc, od_crc = 0;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	int rc, locked, vfsid, level;
+	int rc, vfsid, level;
 	uint16_t vers;
 	size_t nb;
 	char buf[LINE_MAX];
@@ -62,7 +62,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc)
 		return (-rc);
 
-	locked = INOH_RLOCK(ih); /* XXX bad on slow archiver */
+	INOH_LOCK_ENSURE(ih);
 	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
 
 	memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
@@ -118,7 +118,6 @@ mds_inode_read(struct slash_inode_handle *ih)
 			DEBUG_INOH(PLL_INFO, ih, buf, "successfully loaded inode od");
 		}
 	}
-	INOH_URLOCK(ih, locked);
 	return (rc);
 }
 
