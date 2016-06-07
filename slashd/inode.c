@@ -52,7 +52,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	uint64_t crc, od_crc = 0;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	int rc, locked, vfsid;
+	int rc, locked, vfsid, level;
 	uint16_t vers;
 	size_t nb;
 	char buf[LINE_MAX];
@@ -77,6 +77,9 @@ mds_inode_read(struct slash_inode_handle *ih)
 
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
 		rc = SLERR_SHORTIO;
+
+	level = debug_inode_write ? PLL_MAX : PLL_WARN;
+	DEBUG_INOH(level, ih, buf, "read inode");
 
 	if (rc == SLERR_SHORTIO && od_crc == 0 &&
 	    pfl_memchk(&ih->inoh_ino, 0, sizeof(ih->inoh_ino))) {
