@@ -926,7 +926,8 @@ struct srm_readlink_req {
 
 struct srm_readlink_rep {
 	 int32_t		rc;
-	uint32_t		len;
+	uint16_t		len;
+	uint16_t		flag;
 	unsigned char		buf[832];
 /* buf is in bulk */
 } __packed;
