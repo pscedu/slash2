@@ -1886,7 +1886,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (mp->len > LNET_MTU) {
+	if (mp->len > SL_PATH_MAX) {
 		rc = EINVAL;
 	} else if (!mp->flag) {
 		retbuf = mp->buf;
