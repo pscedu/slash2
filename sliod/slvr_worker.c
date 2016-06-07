@@ -516,11 +516,9 @@ slislvrthr_main(struct psc_thread *thr)
 				s->slvr_flags |= SLVRF_FAULTING;
 				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
-				/* XXX can't we break here ? */
 			}
 			SLVR_ULOCK(s);
-			if (psc_dynarray_len(&ss) >=
-			    MAX_BMAP_NCRC_UPDATES)
+			if (psc_dynarray_len(&ss) >= MAX_BMAP_NCRC_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_crcqslvrs);
