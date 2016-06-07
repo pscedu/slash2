@@ -126,8 +126,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	f = inoh_2_fcmh(ih);
 
 	/* 
-	 * This logic was introduced by commit 
-	 * 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
+	 * Introduced by commit 85f8cf4f751fe8348e1dc997d6f73f99a1d37938
 	 */
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
@@ -159,7 +158,6 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-//	mdsio_rename(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 	rc = mds_inode_dump(vfsid, NULL, ih, h);
 	if (rc)
 		PFL_GOTOERR(out, rc);
