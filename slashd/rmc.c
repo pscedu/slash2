@@ -615,6 +615,8 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	return (0);
 }
 
+static int create_verbose_debug;
+
 /*
  * Handle a CREATE from CLI.  As an optimization, we bundle a write
  * lease for bmap 0 in the reply.
@@ -628,7 +630,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct slash_creds cr;
 	slfid_t fid = 0;
 	void *mfh;
-	int vfsid;
+	int vfsid, level;
+
+	level = create_verbose_debug ? PLL_MAX : PLL_DEBUG;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
@@ -666,7 +670,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
+	DEBUG_FCMH(level, p, "create op start for %s", mq->name);
 
 	mp->cattr.sst_ctim = mq->time;
 	mds_reserve_slot(1);
@@ -676,16 +680,17 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	    fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
+	DEBUG_FCMH(level, p, "create op done for %s, rc = %d", 
+	    mq->name, mp->rc);
+
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-
 	/*
 	 * Refresh the cached attributes of our parent and pack them in
 	 * the reply.
 	 */
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
 	/*
 	 * XXX enter this into the fidcache instead of doing it again
 	 * This release may be the sanest thing actually, unless EXCL is
@@ -693,8 +698,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 */
 	mdsio_release(vfsid, &rootcreds, mfh);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
-	    mq->name);
+	DEBUG_FCMH(level, p, "mdsio_release() done for %s", mq->name);
 
 	if (fid)
 		PFL_GOTOERR(out, mp->rc2 = ENOENT);
@@ -710,6 +714,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL, 1);
+
+	DEBUG_FCMH(level, p, "bmap load done for %s, rc = %d",
+	    mq->name, mp->rc2);
 
 	fcmh_op_done(c);
 
