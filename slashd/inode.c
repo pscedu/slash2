@@ -62,7 +62,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc)
 		return (-rc);
 
-	INOH_LOCK_ENSURE(ih);
+	psc_assert(f->fcmh_flags & FCMH_INITING);
 	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
 
 	memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
