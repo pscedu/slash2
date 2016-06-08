@@ -159,10 +159,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
-	if (debug_ondisk_inode)
-		level = PLL_MAX;
-	else
-		level = rc ? PLL_ERROR:PLL_INFO;
+	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_INFO);
 	DEBUG_INOH(level, ih, buf, "wrote inode, "
 	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
 	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
@@ -178,7 +175,7 @@ int
 mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, wasbusy, waslocked;
+	int rc, level, wasbusy, waslocked;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
@@ -212,9 +209,11 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	if (rc == 0 && nb != INOX_SZ + sizeof(crc))
 		rc = SLERR_SHORTIO;
-	if (rc)
-		DEBUG_INOH(PLL_ERROR, ih, buf, "mdsio_pwritev: error (rc=%d)",
-		    rc);
+
+	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_INFO);
+	DEBUG_INOH(level, ih, buf, "inodex write, "
+	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
+	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
 
 	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
 	return (rc);
