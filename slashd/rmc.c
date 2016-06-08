@@ -615,7 +615,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	return (0);
 }
 
-static int create_verbose_debug;
+static int debug_create;
 
 /*
  * Handle a CREATE from CLI.  As an optimization, we bundle a write
@@ -632,7 +632,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	void *mfh;
 	int vfsid, level;
 
-	level = create_verbose_debug ? PLL_MAX : PLL_DEBUG;
+	level = debug_create ? PLL_MAX : PLL_DEBUG;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
