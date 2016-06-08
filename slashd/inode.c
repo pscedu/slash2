@@ -78,7 +78,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
 		rc = SLERR_SHORTIO;
 
-	level = debug_ondisk_inode ? PLL_MAX : PLL_WARN;
+	level = debug_ondisk_inode ? PLL_MAX : PLL_DIAG;
 	DEBUG_INOH(level, ih, buf, "read inode");
 
 	if (rc == SLERR_SHORTIO && od_crc == 0 &&
