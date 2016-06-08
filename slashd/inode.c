@@ -81,6 +81,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	level = debug_ondisk_inode ? PLL_MAX : PLL_DIAG;
 	DEBUG_INOH(level, ih, buf, "read inode, nb = %zd, rc = %d", nb, rc);
 
+	/* XXX if nb = 0, pfl_memchk() is not needed because we just memset */
 	if (rc == SLERR_SHORTIO && od_crc == 0 &&
 	    pfl_memchk(&ih->inoh_ino, 0, sizeof(ih->inoh_ino))) {
 		if (!mds_inode_update_interrupted(vfsid, ih, &rc)) {
