@@ -95,8 +95,8 @@ struct fcmh_mds_info {
 #define IS_REMOTE_FID(fid)						\
 	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
 
-#define slm_fcmh_get(fgp, fp)	sl_fcmh_get_fg((fgp), (fp))
-#define slm_fcmh_peek(fgp, fp)	sl_fcmh_peek_fg((fgp), (fp))
+#define slm_fcmh_get(fgp, fp)	sl_fcmh_lookup_fg((fgp), FIDC_LOOKUP_CREATE, (fp))
+#define slm_fcmh_peek(fgp, fp)	sl_fcmh_peek((fgp)->fg_fid, (fgp)->fg_gen, (fp))
 
 #define mds_fcmh_setattr(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 1)
 #define mds_fcmh_setattr_nolog(vfsid, f, to_set, sstb)	_mds_fcmh_setattr((vfsid), (f), (to_set), (sstb), 0)
