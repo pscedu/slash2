@@ -711,6 +711,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL, 1);
 
+	DEBUG_FCMH(PLL_DEBUG, p, "bmap load done for %s, rc = %d",
+	    mq->name, mp->rc2);
+
 	fcmh_op_done(c);
 
 	if (mp->rc2)
