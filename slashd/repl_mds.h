@@ -66,19 +66,36 @@ void	 mds_brepls_check(uint8_t *, int);
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified IOS */
 
 /* walk the bmap replica bitmap, iv and ni specify the IOS index array and its size */
-#define mds_repl_bmap_walk(b, t, r, fl, iv, ni)		_mds_repl_bmap_walk((b), (t), (r), (fl), (iv), (ni), NULL, NULL)
-#define mds_repl_bmap_walk_all(b, t, r, fl)		_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, NULL, NULL)
-#define mds_repl_bmap_walkcb(b, t, r, fl, cbf, arg)	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, (cbf), (arg))
-#define mds_repl_bmap_apply(b, tract, retifset, off)	_mds_repl_bmap_apply((b), (tract), (retifset), 0, (off), NULL, NULL, NULL)
+
+#define mds_repl_bmap_walk(b, t, r, fl, iv, ni)			\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), (iv), (ni), NULL, NULL)
+
+#define mds_repl_bmap_walk_all(b, t, r, fl)			\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, NULL, NULL)
+
+#define mds_repl_bmap_walkcb(b, t, r, fl, cbf, arg)		\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, (cbf), (arg))
+
+#define mds_repl_bmap_apply(b, tract, retifset, off)		\
+	_mds_repl_bmap_apply((b), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
 #define IOSV_LOOKUPF_ADD	1
 #define IOSV_LOOKUPF_DEL	2
 
-#define mds_repl_ios_lookup_add(vfsid, ih, iosid)		_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_ADD)
-#define mds_repl_ios_lookup(vfsid, ih, iosid)			_mds_repl_ios_lookup((vfsid), (ih), (iosid), 0)
-#define mds_repl_iosv_lookup(vfsid, ih, ios, idx, nios)		_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 0)
-#define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
-#define mds_repl_iosv_remove(vfsid, ih, ios, idx, nios)		_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_DEL)
+#define mds_repl_ios_lookup_add(vfsid, ih, iosid)		\
+	_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_ADD)
+
+#define mds_repl_ios_lookup(vfsid, ih, iosid)			\
+	_mds_repl_ios_lookup((vfsid), (ih), (iosid), 0)
+
+#define mds_repl_iosv_lookup(vfsid, ih, ios, idx, nios)		\
+	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 0)
+
+#define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	\
+	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
+
+#define mds_repl_iosv_remove(vfsid, ih, ios, idx, nios)		\
+	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_DEL)
 
 extern struct psc_listcache	 slm_replst_workq;
 extern int			 slm_bwqueuesz;
