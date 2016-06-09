@@ -58,7 +58,8 @@
  * +-------------+-----+-------------------+---------+-------------------+-----
  * | inode + CRC | gap | extra inode + CRC |   gap   | block 0 map + CRC |
  * +-------------+-----+-------------------+---------+-------------------+-----
- *       72                   752                          1192
+ *       72                   752                            1192 
+ *                                                     struct bmap_ondisk 
  *
  * CRC are 8 bytes.  For a file with one bmap, the size is 2728 bytes.
  *
@@ -91,7 +92,7 @@ struct slm_ino_od {
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
 	uint32_t		 ino_nrepls;			/* number of replicas */
-	uint32_t		 ino_replpol;			/* new bmap BRPOL_* policy */
+	uint32_t		 ino_replpol;			/* BRPOL_ONETIME or BRPOL_PERSIST */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* st_blocks constituents */
 };
