@@ -337,6 +337,10 @@ extern struct timespec	 pfl_uptime;
 static __inline sl_ios_id_t
 sl_global_id_build(sl_siteid_t site_id, uint32_t intres_id)
 {
+	if (!site_id)
+		psclog_warnx("Use site ID of zero is not recommended");
+	if (!intres_id)
+		psc_fatalx("Resource ID must be non-zero and unique");
 	psc_assert(site_id != SITE_ID_ANY);
 	psc_assert(intres_id < (1 << SL_RES_BITS) - 1);
 	return (((sl_ios_id_t)site_id << SL_SITE_BITS) | intres_id);
