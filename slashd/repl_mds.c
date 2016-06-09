@@ -120,7 +120,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	struct sl_resource *res;
 	struct fidc_membh *f;
 	sl_replica_t *repl;
-	uint32_t j, k, *nr;
+	uint32_t i, k, *nr;
 	char buf[LINE_MAX];
 
 	f = inoh_2_fcmh(ih);
@@ -131,8 +131,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 */
-	for (j = 0, k = 0; j < *nr; j++, k++) {
-		if (j == SL_DEF_REPLICAS) {
+	for (i = 0, k = 0; i < *nr; i++, k++) {
+		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
 			 * itself, the rest are in the extras block.
@@ -154,19 +154,19 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 					mds_inox_ensure_loaded(ih);
 					ix = ih->inoh_extras;
 				}
-				if (j < SL_DEF_REPLICAS - 1) {
+				if (i < SL_DEF_REPLICAS - 1) {
 					memmove(&repl[k], &repl[k + 1],
 					    (SL_DEF_REPLICAS - k - 1) *
 					    sizeof(*repl));
 				}
-				if (j < SL_DEF_REPLICAS) {
+				if (i < SL_DEF_REPLICAS) {
 					if (*nr > SL_DEF_REPLICAS)
 						repl[SL_DEF_REPLICAS - 1].bs_id =
 						    ix->inox_repls[0].bs_id;
 					k = 0;
 				}
 				if (*nr > SL_DEF_REPLICAS &&
-				    j < SL_MAX_REPLICAS - 1) {
+				    i < SL_MAX_REPLICAS - 1) {
 					repl = ix->inox_repls;
 					memmove(&repl[k], &repl[k + 1],
 					    (SL_INOX_NREPLICAS - k - 1) *
@@ -176,7 +176,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				mds_inodes_odsync(vfsid, f,
 				    mdslog_ino_repls);
 			}
-			rc = j;
+			rc = i; 
 			goto out;
 		}
 	}
@@ -200,11 +200,11 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
-			k = j - SL_DEF_REPLICAS;
+			k = i - SL_DEF_REPLICAS;
 
 		} else {
 			repl = ih->inoh_ino.ino_repls;
-			k = j;
+			k = i;
 		}
 
 		wasbusy = FCMH_REQ_BUSY(f, &waslk);
@@ -213,13 +213,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		++*nr;
 
 		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
-		    ios, j);
+		    ios, i);
 
 		mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
 
 		FCMH_UREQ_BUSY(f, wasbusy, waslk);
 
-		rc = j;
+		rc = i;
 	}
 
  out:
