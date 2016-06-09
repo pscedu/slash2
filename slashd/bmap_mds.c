@@ -36,6 +36,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+extern int debug_ondisk_inode;
+
 static __inline void *
 bmap_2_mfh(struct bmap *b)
 {
@@ -271,7 +273,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	int rc, vfsid;
+	int rc, vfsid, level;
 	uint64_t crc;
 	size_t nb;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
@@ -303,8 +305,9 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
 
-	DEBUG_BMAP(rc ? PLL_ERROR: PLL_DIAG, b, 
-	    "mdsio_pwritev: bno = %d, rc=%d", b->bcm_bmapno, rc);
+	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_DIAG);
+	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
+	    b->bcm_bmapno, rc);
 
 	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
 		BMAPOD_READ_DONE(b, 0);
