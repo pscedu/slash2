@@ -650,6 +650,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
+	if (strcmp(mq->name, ".sconsign.dblite") == 0)
+		psclog_max("creating file .sconsign.dblite");
+
 	cr.scr_uid = mq->owner.scr_uid;
 	cr.scr_gid = mq->owner.scr_gid;
 
