@@ -60,9 +60,12 @@ msl_resm_throttle_wake(struct sl_resm *m, int rc)
 			logit = 1;
 			rpci->rpci_saw_error = 1;
 		}
-	} else if (rpci->rpci_saw_error) {
-		logit = 1;
-		rpci->rpci_saw_error = 0;
+	}
+	if (!rc) {
+		if (rpci->rpci_saw_error) {
+			logit = 1;
+			rpci->rpci_saw_error = 0;
+		}
 	}
 
 	psc_assert(rpci->rpci_infl_rpcs > 0);
