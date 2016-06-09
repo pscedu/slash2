@@ -88,7 +88,9 @@ struct bmap_extra_state {
 /**
  * bmap_ondisk - Bmap over-wire/on-disk structure.  This structure maps
  *	the persistent state of the bmap within the inode's metafile.
- *	This structure is followed by a 64-bit CRC on disk.
+ *
+ *	This structure is followed by a 64-bit CRC on disk. 1184 bytes
+ *	in all.
  */
 struct bmap_ondisk {
 	struct bmap_core_state	bod_corestate;
