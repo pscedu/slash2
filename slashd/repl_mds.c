@@ -125,13 +125,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	f = inoh_2_fcmh(ih);
 	nr = &ih->inoh_ino.ino_nrepls;
+	repl = ih->inoh_ino.ino_repls;
 	locked = INOH_RLOCK(ih);
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 */
-	for (j = 0, k = 0, repl = ih->inoh_ino.ino_repls;
-	    j < *nr; j++, k++) {
+	for (j = 0, k = 0; j < *nr; j++, k++) {
 		if (j == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
