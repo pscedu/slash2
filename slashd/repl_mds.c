@@ -691,6 +691,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	if (rel) {
 		BMAPOD_READ_DONE(b, locked);
 
+		/* hit crash on busy from mds_replay_bmap_assign() */
 		FCMH_UNBUSY(b->bcm_fcmh);
 
 		BMAP_LOCK(b);
