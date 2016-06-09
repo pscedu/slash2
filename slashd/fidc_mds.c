@@ -285,6 +285,10 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	}
 	FCMH_ULOCK(p);
 
+	/*
+	 * XXX If you don't set BREPLST_VALID, this logic is not really used.
+ 	 * The only information that might be useful is the policy perhaps.
+ 	 */
 	FCMH_WAIT_BUSY(c);
 	fcmh_2_replpol(c) = pol;
 	fcmh_2_ino(c)->ino_nrepls = nr;
