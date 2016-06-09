@@ -91,6 +91,9 @@ struct slm_ino_od {
 	uint16_t		 ino_version;
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
+	/*
+ 	 * Incremented in _mds_repl_ios_lookup().
+ 	 */
 	uint32_t		 ino_nrepls;			/* number of replicas */
 	uint32_t		 ino_replpol;			/* BRPOL_ONETIME or BRPOL_PERSIST */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
