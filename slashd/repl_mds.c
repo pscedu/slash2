@@ -120,7 +120,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	struct sl_resource *res;
 	struct fidc_membh *f;
 	sl_replica_t *repl;
-	uint32_t i, k, *nr;
+	uint32_t i, j, *nr;
 	char buf[LINE_MAX];
 
 	f = inoh_2_fcmh(ih);
@@ -131,7 +131,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 */
-	for (i = 0, k = 0; i < *nr; i++, k++) {
+	for (i = 0, j = 0; i < *nr; i++, j++) {
 		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
@@ -142,34 +142,34 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				goto out;
 			ix = ih->inoh_extras;
 			repl = ix->inox_repls;
-			k = 0;
+			j = 0;
 		}
 
 		DEBUG_INOH(PLL_DEBUG, ih, buf, "is rep[%u](=%u) == %u ?",
-		    k, repl[k].bs_id, ios);
+		    j, repl[j].bs_id, ios);
 
-		if (repl[k].bs_id == ios) {
+		if (repl[j].bs_id == ios) {
 			if (flags == IOSV_LOOKUPF_DEL) {
 				if (*nr > SL_DEF_REPLICAS) {
 					mds_inox_ensure_loaded(ih);
 					ix = ih->inoh_extras;
 				}
 				if (i < SL_DEF_REPLICAS - 1) {
-					memmove(&repl[k], &repl[k + 1],
-					    (SL_DEF_REPLICAS - k - 1) *
+					memmove(&repl[j], &repl[j + 1],
+					    (SL_DEF_REPLICAS - j - 1) *
 					    sizeof(*repl));
 				}
 				if (i < SL_DEF_REPLICAS) {
 					if (*nr > SL_DEF_REPLICAS)
 						repl[SL_DEF_REPLICAS - 1].bs_id =
 						    ix->inox_repls[0].bs_id;
-					k = 0;
+					j = 0;
 				}
 				if (*nr > SL_DEF_REPLICAS &&
 				    i < SL_MAX_REPLICAS - 1) {
 					repl = ix->inox_repls;
-					memmove(&repl[k], &repl[k + 1],
-					    (SL_INOX_NREPLICAS - k - 1) *
+					memmove(&repl[j], &repl[j + 1],
+					    (SL_INOX_NREPLICAS - j - 1) *
 					    sizeof(*repl));
 				}
 				--*nr;
@@ -200,16 +200,16 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
-			k = i - SL_DEF_REPLICAS;
+			j = i - SL_DEF_REPLICAS;
 
 		} else {
 			repl = ih->inoh_ino.ino_repls;
-			k = i;
+			j = i;
 		}
 
 		wasbusy = FCMH_REQ_BUSY(f, &waslk);
 
-		repl[k].bs_id = ios;
+		repl[j].bs_id = ios;
 		++*nr;
 
 		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
