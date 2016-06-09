@@ -151,7 +151,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		if (repl[j].bs_id == ios) {
 			if (flags == IOSV_LOOKUPF_DEL) {
 				if (*nr > SL_DEF_REPLICAS) {
-					mds_inox_ensure_loaded(ih);
+					inox_rc = mds_inox_ensure_loaded(ih);
+					if (inox_rc)
+						goto out;
 					ix = ih->inoh_extras;
 				}
 				if (i < SL_DEF_REPLICAS - 1) {
