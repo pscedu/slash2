@@ -60,7 +60,7 @@
  * +-------------+-----+-------------------+---------+-------------------+-----
  *       72                   752                          1192
  *
- * CRC are 8 bytes.
+ * CRC are 8 bytes.  For a file with one bmap, the size is 2728 bytes.
  *
  */
 #define SL_EXTRAS_START_OFF	((off_t)0x0200)
