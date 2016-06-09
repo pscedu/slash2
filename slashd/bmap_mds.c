@@ -302,11 +302,10 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
-	if (rc)
-		DEBUG_BMAP(PLL_ERROR, b,
-		    "mdsio_write: error (rc=%d)", rc);
-	else
-		DEBUG_BMAP(PLL_DIAG, b, "written successfully");
+
+	DEBUG_BMAP(rc ? PLL_ERROR: PLL_DIAG, b, 
+	    "mdsio_pwritev: bno = %d, rc=%d", b->bcm_bmapno, rc);
+
 	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
 		BMAPOD_READ_DONE(b, 0);
 
