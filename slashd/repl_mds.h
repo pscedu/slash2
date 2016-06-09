@@ -94,9 +94,6 @@ void	 mds_brepls_check(uint8_t *, int);
 #define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	\
 	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
 
-#define mds_repl_iosv_remove(vfsid, ih, ios, idx, nios)		\
-	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_DEL)
-
 extern struct psc_listcache	 slm_replst_workq;
 extern int			 slm_bwqueuesz;
 extern struct psc_poolmgr	*slm_repl_status_pool;
