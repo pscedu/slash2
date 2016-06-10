@@ -49,7 +49,7 @@ mds_inode_od_initnew(struct slash_inode_handle *ih)
 int
 mds_inode_read(struct slash_inode_handle *ih)
 {
-	uint64_t crc, od_crc = 0;
+	uint64_t crc, od_crc;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	int rc, vfsid, level;
@@ -75,50 +75,55 @@ mds_inode_read(struct slash_inode_handle *ih)
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mfh(ih));
 
-	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
-		rc = SLERR_SHORTIO;
+	/*
+	 * If this is an empty inode, write it now with correct CRC. Normally,
+	 * for a newly-created file, the bmap assignment process will trigger
+	 * an inode write shortly in _mds_repl_ios_lookup(ADD).  However, if 
+	 * no IOS is online, the replication addition won't happen.
+	 *
+	 * Later, we grant a write bmap lease and write the inode, leaving the 
+	 * first inode part completely zero. Now, the inode size is 2728 bytes 
+	 * and we will read the empty inode successfully only to find out that 
+	 * CRC won't match, and we convert that into EIO.
+	 */
+	if (rc == 0 && nb == 0) {
+		OPSTAT_INCR("inode-init");
+		mds_inode_od_initnew(ih);
+		psc_crc64_calc(&od_crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
+		rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
+		    0, inoh_2_mfh(ih), NULL, NULL);
+		goto out;
+	}
 
+	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
+		rc = EIO;
+	if (rc)
+		goto out;
+
+	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
+	if (crc != od_crc && slm_crc_check) {
+		vers = ih->inoh_ino.ino_version;
+		memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
+
+		if (mds_inode_update_interrupted(vfsid, ih, &rc))
+			;
+		else if (vers && vers < INO_VERSION)
+			rc = mds_inode_update(vfsid, ih, vers);
+		else {
+			DEBUG_INOH(PLL_WARN, ih, buf, 
+			    "CRC failed"
+			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
+			    od_crc, crc);
+			rc = EIO;
+		}
+	}
+	OPSTAT_INCR("inode-load");
+ out:
+	if (rc == 0)
+		ih->inoh_flags &= ~INOH_INO_NOTLOADED;
 	level = debug_ondisk_inode ? PLL_MAX : PLL_DIAG;
 	DEBUG_INOH(level, ih, buf, "read inode, nb = %zd, rc = %d", nb, rc);
 
-	/* XXX if nb = 0, pfl_memchk() is not needed because we just memset */
-	if (rc == SLERR_SHORTIO && od_crc == 0 &&
-	    pfl_memchk(&ih->inoh_ino, 0, sizeof(ih->inoh_ino))) {
-		if (!mds_inode_update_interrupted(vfsid, ih, &rc)) {
-			DEBUG_INOH(PLL_INFO, ih, buf, "detected a new inode");
-			mds_inode_od_initnew(ih);
-			rc = 0;
-		}
-	} else if (rc && rc != SLERR_SHORTIO) {
-		DEBUG_INOH(PLL_ERROR, ih, buf, "inode read error %d", rc);
-	} else {
-		psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
-		if (crc != od_crc && slm_crc_check) {
-			vers = ih->inoh_ino.ino_version;
-			memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
-
-			if (mds_inode_update_interrupted(vfsid, ih, &rc))
-				;
-			else if (vers && vers < INO_VERSION)
-				rc = mds_inode_update(vfsid, ih, vers);
-			else if (rc == SLERR_SHORTIO)
-				DEBUG_INOH(PLL_INFO, ih, buf,
-				    "short read I/O (%zd vs %zd)",
-				    nb, sizeof(ih->inoh_ino) +
-				    sizeof(od_crc));
-			else {
-				DEBUG_INOH(PLL_WARN, ih, buf, 
-				    "CRC failed (rc = %d) "
-				    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
-				    rc, od_crc, crc);
-				rc = EIO;
-			}
-		}
-		if (rc == 0) {
-			ih->inoh_flags &= ~INOH_INO_NOTLOADED;
-			DEBUG_INOH(PLL_INFO, ih, buf, "successfully loaded inode od");
-		}
-	}
 	return (rc);
 }
 
