@@ -112,12 +112,11 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	int rc, level;
 	char buf[LINE_MAX];
 
+	OPSTAT_INCR("inode-update");
 	sic = &sl_ino_compat_table[old_version];
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-
-	OPSTAT_INCR("inode-update");
 
 	level = debug_ondisk_inode ? PLL_MAX : PLL_WARN;
 	DEBUG_INOH(level, ih, buf, "updating old inode (v %d)", old_version);
