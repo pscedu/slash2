@@ -720,6 +720,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
+/* Handled by slm_rmc_handle_reassignbmapls() */
 void
 msl_bmap_lease_reassign(struct bmap *b)
 {
