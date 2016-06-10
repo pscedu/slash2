@@ -230,7 +230,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
-		/* ignore all errors for background operation */
+		/* ignore all errors for this background operation */
 		BMAP_LOCK(b);
 	}
 
@@ -385,7 +385,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
-	/* ignore all errors for background operation */
+	/* ignore all errors for this background operation */
 	if (!rc)
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 
@@ -534,7 +534,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	BMAP_LOCK(b);
-	/* ignore all errors for background operation */
+	/* ignore all errors for this background operation */
 	if (!rc) {
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
@@ -591,6 +591,10 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	fci = fcmh_2_fci(f);
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
+	/*
+ 	 * Hit a crash here with b->bcm_flags = 1100000000000110. It comes
+ 	 * from a readahead thread.
+ 	 */
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
 
 	if (b->bcm_flags & BMAPF_WR) {
@@ -683,11 +687,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			BMAP_LOCK(b);
 		}
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d",
-		    rc);
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
 		BMAP_LOCK(b);
 	}
 
+	/* We can get here for !blocking case */
 	b->bcm_flags &= ~BMAPF_MODECHNG;
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);

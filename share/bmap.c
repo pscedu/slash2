@@ -326,6 +326,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		BMAP_LOCK(b);
 
+		/* probably redundant */
 		if ((flags & BMAPGETF_NONBLOCK) == 0 || rc)
 			b->bcm_flags &= ~BMAPF_MODECHNG;
 		bmap_wake_locked(b);
