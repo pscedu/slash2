@@ -1082,7 +1082,7 @@ int
 msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
     struct slrpc_cservice **csvcp)
 {
-	int has_residency, j, i, locked, rc;
+	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;
 	struct pfl_multiwait *mw;
 	struct sl_resm *m;
