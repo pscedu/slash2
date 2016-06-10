@@ -317,8 +317,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
 		b->bcm_flags |= BMAPF_MODECHNG;
 
-		DEBUG_BMAP(PLL_DIAG, b, "about to mode change (rw=%d)",
-		    rw);
+		DEBUG_BMAP(PLL_DIAG, b, "mode change (rw=%d)", rw);
 
 		BMAP_ULOCK(b);
 

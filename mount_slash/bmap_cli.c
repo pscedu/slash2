@@ -306,7 +306,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
@@ -489,7 +489,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
@@ -634,7 +634,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 		}
-		return (0);
+		return (rc);
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 

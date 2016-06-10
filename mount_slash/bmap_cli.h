@@ -45,7 +45,7 @@ struct bmap_cli_info {
 	uint8_t			 bci_repls[SL_REPLICA_NBYTES];
 };
 
-/* mount_slash specific bcm_flags */
+/* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  9) */
 #define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* requesting a lease ext */
 #define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)
 #define BMAPF_LEASEEXPIRED	(_BMAPF_SHIFT << 2)	/* lease has expired, new one is needed */
