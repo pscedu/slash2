@@ -1081,7 +1081,7 @@ int
 msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
     struct slrpc_cservice **csvcp)
 {
-	int has_residency, i, j, locked, rc;
+	int has_residency, j, i, locked, rc;
 	struct fcmh_cli_info *fci;
 	struct pfl_multiwait *mw;
 	struct sl_resm *m;
@@ -1140,13 +1140,14 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 *	 again and use that connection.
 	 */
 	has_residency = 0;
-	for (j = 0; j < 2; j++) {
+	for (i = 0; i < 2; i++) {
 		pfl_multiwait_reset(mw);
 		pfl_multiwait_entercritsect(mw);
 
-		for (i = 0; i < fci->fci_inode.nrepls; i++) {
+		/* fci->u.f.inode.nrepls */
+		for (j = 0; j < fci->fci_inode.nrepls; j++) {
 			rc = msl_try_get_replica_res(b,
-			    fci->fcif_idxmap[i], j ? has_residency : 1,
+			    fci->fcif_idxmap[j], i ? has_residency : 1,
 			    pm, csvcp);
 			switch (rc) {
 			case 0:
