@@ -75,6 +75,25 @@ mds_inode_read(struct slash_inode_handle *ih)
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mfh(ih));
 
+	/*
+	 * If this is an empty inode, write it now with correct CRC. Normally,
+	 * for a newly-created file, the bmap assignment process will trigger
+	 * an inode write shortly in _mds_repl_ios_lookup(ADD).  However, if 
+	 * no IOS is online, the replication addition won't happen.
+	 *
+	 * Later, we grant a write bmap lease and write the inode, leaving the 
+	 * first inode part completely zero. Now, the inode size is 2728 bytes 
+	 * and we will read the empty inode successfully only to find out that 
+	 * CRC won't match, and we convert that into EIO.
+	 */
+	if (rc == 0 && nb == 0) {
+		mds_inode_od_initnew(ih);
+		psc_crc64_calc(&od_crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
+		rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
+		    0, inoh_2_mfh(ih), NULL, NULL);
+		return (rc);
+	}
+
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
 		rc = SLERR_SHORTIO;
 
