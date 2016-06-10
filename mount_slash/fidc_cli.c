@@ -161,7 +161,7 @@ msl_fcmh_stash_inode(struct fidc_membh *f, struct srt_inode *ino)
 	FCMH_LOCK_ENSURE(f);
 
 	fci->fci_inode = *ino;
-	/* XXX Do we really need this identity map? */
+	/* XXX Do we really need this map just for stir? */
 	for (i = 0; i < fci->fci_inode.nrepls; i++)
 		fci->fcif_idxmap[i] = i;
 	fci->fcif_mapstircnt = MAPSTIR_THRESH;
