@@ -602,11 +602,10 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		 * Write enabled bmaps are allowed to read with no
 		 * further action being taken.
 		 */
-		if (!blocking) {
-			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_MODECHNG;
-			BMAP_ULOCK(b);
-		}
+		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAPF_MODECHNG;
+		bmap_wake_locked(b);
+		BMAP_ULOCK(b);
 		return (0);
 	}
 
