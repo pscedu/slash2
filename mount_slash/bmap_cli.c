@@ -468,10 +468,10 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
  retry:
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->sbd = *sbd;
 
@@ -767,11 +767,11 @@ msl_bmap_lease_reassign(struct bmap *b)
 	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->sbd = bci->bci_sbd;
 	memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
@@ -903,13 +903,13 @@ msl_bmap_release(struct sl_resm *resm)
 		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
 		if (rc == 0)
 			rc = -ETIMEDOUT;
-		goto out;
+		PFL_GOTOERR(out, rc);
 	}
 
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
