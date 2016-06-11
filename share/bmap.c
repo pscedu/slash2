@@ -258,7 +258,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if (b->bcm_flags & BMAPF_LOADED)
 			OPSTAT_INCR("bmap-already-loaded");
 		else
-			OPSTAT_INCR("bmap-notyet-loaded");
+			OPSTAT_INCR("bmap-not-yet-loaded");
 		goto out;
 	}
 

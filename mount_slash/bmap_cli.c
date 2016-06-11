@@ -588,13 +588,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
 
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
-	/*
- 	 * Hit a crash here with b->bcm_flags = 1100000000000110. It comes
- 	 * from a readahead thread.
- 	 */
 	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
-
 	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
