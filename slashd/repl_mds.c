@@ -221,6 +221,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				if (rc)
 					goto out;
 			}
+			/* XXX EEXIST for IOSV_LOOKUPF_ADD? */
 			rc = i; 
 			goto out;
 		}
