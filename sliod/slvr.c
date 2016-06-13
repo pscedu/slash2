@@ -50,14 +50,11 @@
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
-struct psc_poolmaster	 sli_readaheadrq_poolmaster;
 
 struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
-struct psc_poolmgr	*sli_readaheadrq_pool;
 
-struct psc_listcache	 sli_readaheadq;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
@@ -1103,18 +1100,9 @@ void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, SLAB_DEF_COUNT,
-	    0, NULL, "slvr");
+	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
+	    SLAB_DEF_COUNT, 0, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
-
-	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
-	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, "readaheadrq");
-	sli_readaheadrq_pool = psc_poolmaster_getmgr(
-	    &sli_readaheadrq_poolmaster);
-
-	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
-	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
