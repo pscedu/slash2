@@ -153,6 +153,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		    j, repl[j].bs_id, ios);
 
 		if (repl[j].bs_id == ios) {
+			/*
+ 			 * Luckily, this code is only called by mds_repl_delrq() 
+ 			 * for directories.
+ 			 */
 			if (flags == IOSV_LOOKUPF_DEL) {
 				if (*nr > SL_DEF_REPLICAS) {
 					inox_rc = mds_inox_ensure_loaded(ih);
