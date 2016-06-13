@@ -544,9 +544,11 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
 	    bia->bia_ios);
 
-	if (iosidx < 0)
-		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
+	if (iosidx < 0) {
+		psclog_warnx("ios_lookup_add %d: %s", bia->bia_ios,
 		    sl_strerror(iosidx));
+		return (iosidx);
+	}
 
 //	BMAP_WAIT_BUSY(b);
 
@@ -604,6 +606,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 __static int
 mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 {
+	int rc;
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
@@ -670,10 +673,11 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia);
 
-	if (mds_bmap_add_repl(b, bia)) {
+	rc = mds_bmap_add_repl(b, bia);
+	if (rc) {
 		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 		// release odt ent?
-		return (-1); // errno
+		return (rc);
 	}
 
 	bml->bml_seq = bia->bia_seq;
