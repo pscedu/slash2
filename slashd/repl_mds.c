@@ -141,6 +141,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		PFL_GOTOERR(out, rc = -ENOSPC);
 	}
 
+	res = libsl_id2res(ios);
+	if (res == NULL || !RES_ISFS(res))
+		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
+
 	/*
  	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
  	 */
@@ -208,10 +212,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			goto out;
 		}
 	}
-
-	res = libsl_id2res(ios);
-	if (res == NULL || !RES_ISFS(res))
-		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/* It doesn't exist; add to inode replica table if requested. */
 	if (flag == IOSV_LOOKUPF_ADD) {
