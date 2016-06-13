@@ -144,6 +144,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
+	 *
+	 * This code can step through zero IOS IDs just fine.
+	 *
 	 */
 	for (i = 0, j = 0; i < *nr; i++, j++) {
 		if (i == SL_DEF_REPLICAS) {
