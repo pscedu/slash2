@@ -113,7 +113,7 @@ _slm_repl_bmap_rel_type(struct bmap *b, int type)
 
 int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
-    sl_ios_id_t ios, int flags)
+    sl_ios_id_t ios, int flag)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
 	struct slm_inox_od *ix = NULL;
@@ -123,6 +123,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	uint32_t i, j, *nr;
 	char buf[LINE_MAX];
 
+	psc_assert(flag == IOSV_LOOKUPF_ADD || 
+		   flag == IOSV_LOOKUPF_DEL ||
+		   flag == IOSV_LOOKUPF_LOOKUP);
 	/*
  	 * Can I assume that IOS ID are non-zeros.  If so, I can use
  	 * it to mark a free slots.  See sl_global_id_build().
@@ -133,7 +136,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	locked = INOH_RLOCK(ih);
 
 	psc_assert(*nr <= SL_MAX_REPLICAS);
-	if (*nr == SL_MAX_REPLICAS && flags == IOSV_LOOKUPF_ADD) {
+	if (*nr == SL_MAX_REPLICAS && flag == IOSV_LOOKUPF_ADD) {
 		DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
 		PFL_GOTOERR(out, rc = -ENOSPC);
 	}
@@ -164,7 +167,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * Luckily, this code is only called by mds_repl_delrq() 
  			 * for directories.
  			 */
-			if (flags == IOSV_LOOKUPF_DEL) {
+			if (flag == IOSV_LOOKUPF_DEL) {
 				OPSTAT_INCR("replicate-del");
 				if (*nr > SL_DEF_REPLICAS) {
 					inox_rc = mds_inox_ensure_loaded(ih);
@@ -206,7 +209,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/* It doesn't exist; add to inode replica table if requested. */
-	if (flags == IOSV_LOOKUPF_ADD) {
+	if (flag == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
 		if (*nr >= SL_DEF_REPLICAS) {
@@ -244,13 +247,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
-    const sl_replica_t iosv[], int iosidx[], int nios, int flags)
+    const sl_replica_t iosv[], int iosidx[], int nios, int flag)
 {
 	int k;
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
-		    iosv[k].bs_id, flags)) < 0)
+		    iosv[k].bs_id, flag)) < 0)
 			return (-iosidx[k]);
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);

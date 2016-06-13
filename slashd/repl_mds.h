@@ -81,15 +81,16 @@ void	 mds_brepls_check(uint8_t *, int);
 
 #define IOSV_LOOKUPF_ADD	1
 #define IOSV_LOOKUPF_DEL	2
+#define IOSV_LOOKUPF_LOOKUP	3
 
 #define mds_repl_ios_lookup_add(vfsid, ih, iosid)		\
 	_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_ADD)
 
 #define mds_repl_ios_lookup(vfsid, ih, iosid)			\
-	_mds_repl_ios_lookup((vfsid), (ih), (iosid), 0)
+	_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_LOOKUP)
 
 #define mds_repl_iosv_lookup(vfsid, ih, ios, idx, nios)		\
-	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 0)
+	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_LOOKUP)
 
 #define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	\
 	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
