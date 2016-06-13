@@ -162,8 +162,10 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	INOH_LOCK(ih);
 
+	if (rc)
+		rc = -abs(rc);
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
-		rc = SLERR_SHORTIO;
+		rc = -SLERR_SHORTIO;
 
 	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_INFO);
 	DEBUG_INOH(level, ih, buf, "wrote inode, "
@@ -213,8 +215,10 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	INOH_LOCK(ih);
 
+	if (rc)
+		rc = -abs(rc);
 	if (rc == 0 && nb != INOX_SZ + sizeof(crc))
-		rc = SLERR_SHORTIO;
+		rc = -SLERR_SHORTIO;
 
 	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_INFO);
 	DEBUG_INOH(level, ih, buf, "inodex write, "
