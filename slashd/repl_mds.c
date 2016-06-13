@@ -115,7 +115,7 @@ int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
     sl_ios_id_t ios, int flag)
 {
-	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
+	int locked, rc = -ENOENT;
 	struct slm_inox_od *ix = NULL;
 	struct sl_resource *res;
 	struct fidc_membh *f;
@@ -142,6 +142,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	}
 
 	/*
+ 	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
+ 	 */
+	rc = -ENOENT;
+	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 *
@@ -154,8 +158,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			 * The first few replicas are in the inode
 			 * itself, the rest are in the extras block.
 			 */
-			inox_rc = mds_inox_ensure_loaded(ih);
-			if (inox_rc)
+			rc = mds_inox_ensure_loaded(ih);
+			if (rc)
 				goto out;
 			ix = ih->inoh_extras;
 			repl = ix->inox_repls;
@@ -173,8 +177,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			if (flag == IOSV_LOOKUPF_DEL) {
 				OPSTAT_INCR("replicate-del");
 				if (*nr > SL_DEF_REPLICAS) {
-					inox_rc = mds_inox_ensure_loaded(ih);
-					if (inox_rc)
+					rc = mds_inox_ensure_loaded(ih);
+					if (rc)
 						goto out;
 					ix = ih->inoh_extras;
 				}
@@ -205,8 +209,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		}
 	}
 
-	/* XXX error out if we can't find it in the IOSV_LOOKUPF_DEL case */
-
 	res = libsl_id2res(ios);
 	if (res == NULL || !RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
@@ -216,8 +218,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		int waslk, wasbusy;
 
 		if (*nr >= SL_DEF_REPLICAS) {
-			inox_rc = mds_inox_ensure_loaded(ih);
-			if (inox_rc)
+			rc = mds_inox_ensure_loaded(ih);
+			if (rc)
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
@@ -245,7 +247,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
  out:
 	INOH_URLOCK(ih, locked);
-	return (inox_rc ? inox_rc : rc);
+	return (rc);
 }
 
 int
