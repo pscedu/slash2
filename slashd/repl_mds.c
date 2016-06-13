@@ -131,6 +131,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	nr = &ih->inoh_ino.ino_nrepls;
 	repl = ih->inoh_ino.ino_repls;
 	locked = INOH_RLOCK(ih);
+
+	psc_assert(*nr <= SL_MAX_REPLICAS);
+	if (*nr == SL_MAX_REPLICAS && flags == IOSV_LOOKUPF_ADD) {
+		DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
+		PFL_GOTOERR(out, rc = -ENOSPC);
+	}
+
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
@@ -202,12 +209,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	if (flags == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
-		psc_assert(*nr <= SL_MAX_REPLICAS);
-		if (*nr == SL_MAX_REPLICAS) {
-			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
-			PFL_GOTOERR(out, rc = -ENOSPC);
-
-		} else if (*nr >= SL_DEF_REPLICAS) {
+		if (*nr >= SL_DEF_REPLICAS) {
 			inox_rc = mds_inox_ensure_loaded(ih);
 			if (inox_rc)
 				goto out;
