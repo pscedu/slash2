@@ -192,6 +192,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		}
 	}
 
+	/* XXX error out if we can't find it in the IOSV_LOOKUPF_DEL case */
+
 	res = libsl_id2res(ios);
 	if (res == NULL || !RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
