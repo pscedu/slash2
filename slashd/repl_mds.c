@@ -115,7 +115,7 @@ int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
     sl_ios_id_t ios, int flag)
 {
-	int locked, rc = -ENOENT;
+	int locked, rc;
 	struct slm_inox_od *ix = NULL;
 	struct sl_resource *res;
 	struct fidc_membh *f;
@@ -149,18 +149,20 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
  	 */
 	rc = -ENOENT;
+
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 *
-	 * This code can step through zero IOS IDs just fine.
+	 * The following code can step through zero IOS IDs just fine.
 	 *
 	 */
 	for (i = 0, j = 0; i < *nr; i++, j++) {
 		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
-			 * itself, the rest are in the extras block.
+			 * itself, the rest are in the extras inode
+			 * block.
 			 */
 			rc = mds_inox_ensure_loaded(ih);
 			if (rc)
