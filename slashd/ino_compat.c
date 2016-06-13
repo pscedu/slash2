@@ -274,6 +274,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	return (exists);
 }
 
+/* called by sic_read_ino() */
 int
 mds_ino_read_v1(struct slash_inode_handle *ih)
 {
@@ -320,6 +321,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	return (0);
 }
 
+/* called by sic_read_inox() */
 int
 mds_inox_read_v1(struct slash_inode_handle *ih)
 {
@@ -362,6 +364,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	return (0);
 }
 
+/* called by sic_read_bmap() */
 int
 mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 {
