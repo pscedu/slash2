@@ -111,6 +111,10 @@ _slm_repl_bmap_rel_type(struct bmap *b, int type)
 	bmap_op_done_type(b, type);
 }
 
+
+/*
+ * Return the index of the given IOS ID or a negative error code on failure.
+ */
 int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
     sl_ios_id_t ios, int flag)
