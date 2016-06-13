@@ -123,9 +123,20 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	uint32_t i, j, *nr;
 	char buf[LINE_MAX];
 
-	psc_assert(flag == IOSV_LOOKUPF_ADD || 
-		   flag == IOSV_LOOKUPF_DEL ||
-		   flag == IOSV_LOOKUPF_LOOKUP);
+	switch (flag) {
+	    case IOSV_LOOKUPF_ADD:
+		OPSTAT_INCR("replicate-add");
+		break;
+	    case IOSV_LOOKUPF_DEL:
+		OPSTAT_INCR("replicate-del");
+		break;
+	    case IOSV_LOOKUPF_LOOKUP:
+		OPSTAT_INCR("replicate-lookup");
+		break;
+	    default:
+		psc_fatalx("Invalid IOS lookup flag %d", flag);
+	}
+
 	/*
  	 * Can I assume that IOS ID are non-zeros.  If so, I can use
  	 * it to mark a free slots.  See sl_global_id_build().
@@ -181,7 +192,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * for directories.
  			 */
 			if (flag == IOSV_LOOKUPF_DEL) {
-				OPSTAT_INCR("replicate-del");
 				if (*nr > SL_DEF_REPLICAS) {
 					rc = mds_inox_ensure_loaded(ih);
 					if (rc)
