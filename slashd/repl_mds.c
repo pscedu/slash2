@@ -158,6 +158,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * for directories.
  			 */
 			if (flags == IOSV_LOOKUPF_DEL) {
+				OPSTAT_INCR("replicate-del");
 				if (*nr > SL_DEF_REPLICAS) {
 					inox_rc = mds_inox_ensure_loaded(ih);
 					if (inox_rc)
