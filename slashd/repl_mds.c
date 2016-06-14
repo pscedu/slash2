@@ -302,6 +302,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	return (rc);
 }
 
+/*
+ * Given a vector of IOS IDs, return their indexes.
+ */
 int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
     const sl_replica_t iosv[], int iosidx[], int nios, int flag)
