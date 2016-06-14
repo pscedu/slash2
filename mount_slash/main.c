@@ -3886,10 +3886,13 @@ parse_allowexe(void)
 int
 msl_init(void)
 {
+	struct sl_site *s;
 	struct sl_resource *r;
+	struct sl_resm *m;
+	struct slrpc_cservice *csvc;
 	char *name;
 	time_t now;
-	int rc;
+	int i, rc;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION)) {
@@ -4006,6 +4009,14 @@ msl_init(void)
 			    name);
 		else
 			slc_setprefios(r->res_id);
+	}
+	CONF_FOREACH_RES(s, r, i) {
+		if (r->res_type == SLREST_MDS)
+			continue;
+		m = res_getmemb(r);
+		csvc = slc_geticsvc_nb(m);
+		if (csvc)
+			sl_csvc_decref(csvc);
 	}
 
 	pscfs_entry_timeout = 8.;
