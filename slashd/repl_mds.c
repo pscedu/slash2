@@ -194,33 +194,64 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			/*
  			 * Luckily, this code is only called by mds_repl_delrq() 
  			 * for directories.
+ 			 *
+ 			 * Make sure that the following edge cases works:
+ 			 *
+ 			 *    (1) There is only one item in the basic array.
+ 			 *    (2) There is only one item in the extra array.
+ 			 *    (3) The number of items is SL_DEF_REPLICAS.
+ 			 *    (4) The number of items is SL_MAX_REPLICAS.
  			 */
 			if (flag == IOSV_LOOKUPF_DEL) {
-				if (nr > SL_DEF_REPLICAS) {
-					rc = mds_inox_ensure_loaded(ih);
-					if (rc)
-						goto out;
-					ix = ih->inoh_extras;
-				}
+				/*
+				 * Compact the array if the IOS is not the last
+				 * one. The last one will be either overwritten
+				 * or zeroed.  Note that we might move extra 
+				 * garbage at the end if the total number is less 
+				 * than SL_DEF_REPLICAS.
+				 */
 				if (i < SL_DEF_REPLICAS - 1) {
 					memmove(&repl[j], &repl[j + 1],
 					    (SL_DEF_REPLICAS - j - 1) *
 					    sizeof(*repl));
 				}
+				/*
+				 * All items in the basic array, zero the last
+				 * one and we are done.
+				 */
+				if (nr <= SL_DEF_REPLICAS) {
+					repl[nr-1].bs_id = 0;
+					goto syncit;
+				}
+				/*
+ 				 * If we are in the basic array, move the first 
+ 				 * item from the extra array to the end of the 
+ 				 * basic array (overwrite).
+				 */
 				if (i < SL_DEF_REPLICAS) {
-					if (nr > SL_DEF_REPLICAS)
-						repl[SL_DEF_REPLICAS - 1].bs_id =
-						    ix->inox_repls[0].bs_id;
+					rc = mds_inox_ensure_loaded(ih);
+					if (rc)
+						goto out;
+					ix = ih->inoh_extras;
+
+					repl[SL_DEF_REPLICAS - 1].bs_id =
+					    ix->inox_repls[0].bs_id;
+
+					repl = ix->inox_repls;
 					j = 0;
 				}
-				/* if i < SL_DEF_REPLICAS, we still need to compact */
-				if (nr > SL_DEF_REPLICAS &&
-				    i < SL_MAX_REPLICAS - 1) {
-					repl = ix->inox_repls;
+				/*
+				 * Compact the extra array unless the IOS is
+				 * the last one, which will be zeroed.
+				 */
+				if (i < SL_MAX_REPLICAS - 1) {
 					memmove(&repl[j], &repl[j + 1],
-					    (SL_INOX_NREPLICAS - j - 1) *
+					    (SL_INOX_NREPLICAS - j - 1) * 
 					    sizeof(*repl));
 				}
+
+				repl[nr-SL_DEF_REPLICAS-1].bs_id = 0;
+ syncit:
 				ih->inoh_ino.ino_nrepls = nr - 1;
 				rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
 				if (rc)
@@ -236,11 +267,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	if (flag == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
+		/* paranoid */
+		psc_assert(i == nr);
 		if (nr >= SL_DEF_REPLICAS) {
-			rc = mds_inox_ensure_loaded(ih);
-			if (rc)
-				goto out;
-
 			repl = ih->inoh_extras->inox_repls;
 			j = i - SL_DEF_REPLICAS;
 
@@ -253,8 +282,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		repl[j].bs_id = ios;
 
-		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
-		    ios, i);
+		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) at idx %d", ios, i);
 
 		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
