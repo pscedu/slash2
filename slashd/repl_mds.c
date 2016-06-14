@@ -224,9 +224,12 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 					goto syncit;
 				}
 				/*
- 				 * If we are in the basic array, move the first 
- 				 * item from the extra array to the end of the 
- 				 * basic array (overwrite).
+				 * Now we know we have more than SL_DEF_REPLICAS
+				 * items.  However, if we are in the basic array,
+				 * we have not read the extra array yet. In this
+				 * case, we should also move the first item from 
+				 * the extra array to the last one in the basic 
+				 * array (overwrite).
 				 */
 				if (i < SL_DEF_REPLICAS) {
 					rc = mds_inox_ensure_loaded(ih);
