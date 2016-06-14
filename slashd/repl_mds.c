@@ -213,6 +213,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 						    ix->inox_repls[0].bs_id;
 					j = 0;
 				}
+				/* XXX what if i < SL_DEF_REPLICAS? */
 				if (*nr > SL_DEF_REPLICAS &&
 				    i < SL_MAX_REPLICAS - 1) {
 					repl = ix->inox_repls;
