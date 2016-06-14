@@ -124,7 +124,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	struct sl_resource *res;
 	struct fidc_membh *f;
 	sl_replica_t *repl;
-	uint32_t i, j, *nr;
+	uint32_t i, j, nr;
 	char buf[LINE_MAX];
 
 	switch (flag) {
@@ -146,12 +146,12 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  	 * it to mark a free slots.  See sl_global_id_build().
  	 */
 	f = inoh_2_fcmh(ih);
-	nr = &ih->inoh_ino.ino_nrepls;
+	nr = ih->inoh_ino.ino_nrepls;
 	repl = ih->inoh_ino.ino_repls;
 	locked = INOH_RLOCK(ih);
 
-	psc_assert(*nr <= SL_MAX_REPLICAS);
-	if (*nr == SL_MAX_REPLICAS && flag == IOSV_LOOKUPF_ADD) {
+	psc_assert(nr <= SL_MAX_REPLICAS);
+	if (nr == SL_MAX_REPLICAS && flag == IOSV_LOOKUPF_ADD) {
 		DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
 		PFL_GOTOERR(out, rc = -ENOSPC);
 	}
@@ -172,7 +172,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	 * The following code can step through zero IOS IDs just fine.
 	 *
 	 */
-	for (i = 0, j = 0; i < *nr; i++, j++) {
+	for (i = 0, j = 0; i < nr; i++, j++) {
 		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
@@ -196,7 +196,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * for directories.
  			 */
 			if (flag == IOSV_LOOKUPF_DEL) {
-				if (*nr > SL_DEF_REPLICAS) {
+				if (nr > SL_DEF_REPLICAS) {
 					rc = mds_inox_ensure_loaded(ih);
 					if (rc)
 						goto out;
@@ -208,20 +208,20 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 					    sizeof(*repl));
 				}
 				if (i < SL_DEF_REPLICAS) {
-					if (*nr > SL_DEF_REPLICAS)
+					if (nr > SL_DEF_REPLICAS)
 						repl[SL_DEF_REPLICAS - 1].bs_id =
 						    ix->inox_repls[0].bs_id;
 					j = 0;
 				}
 				/* XXX what if i < SL_DEF_REPLICAS? */
-				if (*nr > SL_DEF_REPLICAS &&
+				if (nr > SL_DEF_REPLICAS &&
 				    i < SL_MAX_REPLICAS - 1) {
 					repl = ix->inox_repls;
 					memmove(&repl[j], &repl[j + 1],
 					    (SL_INOX_NREPLICAS - j - 1) *
 					    sizeof(*repl));
 				}
-				--*nr;
+				ih->inoh_ino.ino_nrepls = nr - 1;
 				rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
 				if (rc)
 					goto out;
@@ -236,7 +236,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	if (flag == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
-		if (*nr >= SL_DEF_REPLICAS) {
+		if (nr >= SL_DEF_REPLICAS) {
 			rc = mds_inox_ensure_loaded(ih);
 			if (rc)
 				goto out;
@@ -252,11 +252,11 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		wasbusy = FCMH_REQ_BUSY(f, &waslk);
 
 		repl[j].bs_id = ios;
-		++*nr;
 
 		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) to repls, index %d",
 		    ios, i);
 
+		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
 		if (rc)
 			goto out;
