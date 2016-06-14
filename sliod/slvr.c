@@ -759,8 +759,7 @@ slvr_remove(struct slvr *s)
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
-	if (s->slvr_slab)
-		slab_free(s->slvr_slab);
+	slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
