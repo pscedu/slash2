@@ -73,10 +73,10 @@ msl_pgcache_init(void)
 	for (i = 0; i < msl_bmpces_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (p == MAP_FAILED) {
-			OPSTAT_INCR("mmap-failure");
-			break;
-		}
+
+		if (p == MAP_FAILED)
+			psc_fatalx("Please raise vm.max_map_count limit");
+
 		OPSTAT_INCR("mmap-success");
 		page_buffers_count++;
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
