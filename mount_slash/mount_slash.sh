@@ -43,6 +43,9 @@ umount -l -f $mp 2>/dev/null
 # Initialization/configuration
 ulimit -n 1000000
 ulimit -c $((1024 * 1024 * 1024 * 100))
+
+sysctl vm.max_map_count=655300
+
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG_info=1
 export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
