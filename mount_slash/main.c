@@ -3173,6 +3173,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 
 	psc_waitq_wakeall(&msl_flush_attrq);
 
+	/* XXX crash on NULL sl_freapthr on destroy */
 	pscthr_setdead(sl_freapthr, 1);
 	psc_waitq_wakeall(&sl_freap_waitq);
 
