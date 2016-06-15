@@ -99,6 +99,7 @@ msl_pgcache_get(int wait)
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 		if (p != MAP_FAILED) {
+			warned = 0;
 			OPSTAT_INCR("mmap-success");
 			page_buffers_count++;
 			LIST_CACHE_ULOCK(&page_buffers);
@@ -122,21 +123,9 @@ msl_pgcache_get(int wait)
 void
 msl_pgcache_put(void *p)
 {
-	int rc;
-
 	LIST_CACHE_LOCK(&page_buffers);
-	if (page_buffers_count > msl_bmpces_max) {
-		/* XXX never reached */
-		rc = munmap(p, BMPC_BUFSZ);
-		if (rc)
-			OPSTAT_INCR("munmap-failure");
-		else
-			OPSTAT_INCR("munmap-success");
-		page_buffers_count--;
-	} else {
-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&page_buffers, p);
-	}
+	INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+	lc_add(&page_buffers, p);
 	LIST_CACHE_ULOCK(&page_buffers);
 }
 
