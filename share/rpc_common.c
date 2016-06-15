@@ -1017,9 +1017,8 @@ slconnthr_main(struct psc_thread *thr)
 
 			CSVC_LOCK(csvc);
 			/*
-			 * Only used by MDS to watch for its I/O
-			 * servers.  So scp_useablef is always
-			 * mds_sliod_alive().
+			 * Only used by MDS to watch for its I/O servers.  
+			 * And scp_useablef is always mds_sliod_alive().
 			 *
 			 * Note that the above sl_csvc_get() only
 			 * returns csvc when the connection is already
