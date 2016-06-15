@@ -176,7 +176,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		if (i == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
-			 * itself, the rest are in the extras inode
+			 * itself, the rest are in the extra inode
 			 * block.
 			 */
 			rc = mds_inox_ensure_loaded(ih);

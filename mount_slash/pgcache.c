@@ -121,6 +121,7 @@ msl_pgcache_put(void *p)
 
 	LIST_CACHE_LOCK(&page_buffers);
 	if (page_buffers_count > msl_bmpces_max) {
+		/* XXX never reached */
 		rc = munmap(p, BMPC_BUFSZ);
 		if (rc)
 			OPSTAT_INCR("munmap-failure");
