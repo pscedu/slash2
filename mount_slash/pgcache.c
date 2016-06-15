@@ -73,7 +73,7 @@ msl_pgcache_init(void)
 	for (i = 0; i < msl_bmpces_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (!p) {
+		if (p == MAP_FAILED) {
 			OPSTAT_INCR("mmap-failure");
 			break;
 		}
@@ -97,7 +97,7 @@ msl_pgcache_get(int wait)
 	if (page_buffers_count < msl_bmpces_max) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (p) {
+		if (p != MAP_FAILED) {
 			OPSTAT_INCR("mmap-success");
 			page_buffers_count++;
 			LIST_CACHE_ULOCK(&page_buffers);
