@@ -4010,6 +4010,11 @@ msl_init(void)
 		else
 			slc_setprefios(r->res_id);
 	}
+	/*
+	 * Right now, when an IOS is contacted for the first time, the
+	 * operation (e.g. read a file) will fail with ETIMEDOUT. This
+	 * is mostly a workaround for this issue.
+	 */
 	CONF_FOREACH_RES(s, r, i) {
 		if (r->res_type == SLREST_MDS)
 			continue;
