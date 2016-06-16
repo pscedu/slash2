@@ -794,6 +794,16 @@ slvr_remove_all(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}
+		/*
+		 * If slab_cache_reap() tries to free a sliver, this
+		 * reference count should hold the bmap. Otherwise,
+		 * slab_cache_reap() will try to grab the fcmh_rwlock
+		 * to remove the bmap from the fcmh tree and we have
+		 * a deadlock.
+		 *
+		 * Unfortunately, we still hit a deadlock due to this
+		 * race. More invetigation is needed.
+		 */
 		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
 		psc_dynarray_add(&a, b);
 
