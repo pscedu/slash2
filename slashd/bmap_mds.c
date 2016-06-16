@@ -402,7 +402,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inode_write(vfsid, ih, NULL, NULL);
 	}
 
-	if (_mds_repl_inv_except(bmap, idx, 1)) {
+	if (mds_repl_inv_except(bmap, idx, 1)) {
 		/* XXX why are we writing the bmap twice??? */
 		mds_bmap_write_logrepls(bmap);
 	} else {
