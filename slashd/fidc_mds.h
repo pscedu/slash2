@@ -79,7 +79,6 @@ struct fcmh_mds_info {
 #define fcmh_2_dino_mfh(f)	fcmh_2_dino_mfhp(f)->fh
 #define fcmh_2_dino_mfid(f)	fcmh_2_fmi(f)->fmi_dino_mfid
 
-#undef fcmh_2_nrepls
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
