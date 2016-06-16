@@ -99,7 +99,9 @@ mds_bmap_ensure_valid(struct bmap *b)
 
 	/* 
 	 * 04/13/2016 & 04/15/2016: Hit during bmap relay (B_REPLAY_OP_CRC).
-	 * 06/16/2016: Hit during normal operation in slm_rmc_handle_getbmap().
+	 *
+	 * 06/16/2016: Hit when called by slm_rmc_handle_getbmap() and the
+	 *             number of replicas is zero.
 	 */
 	if (!rc) {
 		level = (slm_opstate == SLM_OPSTATE_NORMAL) ? 
