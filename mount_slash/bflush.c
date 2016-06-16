@@ -106,6 +106,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 	FCMH_LOCK_ENSURE(f);
 
 	/* 03/18/2016: Hit SIGSEGV when called from do_setattr() */
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		DEBUG_BMAP(PLL_DIAG, b, "mark bmap free");
 
@@ -132,6 +133,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		BMAP_ULOCK(b);
 	}
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
 	/*
 	 * Need to race with the bmap timeout code path.
 	 */
