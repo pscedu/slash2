@@ -363,6 +363,11 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	if (!fcmh_isreg(f)) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
