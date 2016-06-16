@@ -87,7 +87,7 @@ mds_bmap_initnew(struct bmap *b)
 void
 mds_bmap_ensure_valid(struct bmap *b)
 {
-	int rc, retifset[NBREPLST];
+	int rc, level, retifset[NBREPLST];
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
@@ -95,17 +95,16 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT);
+	rc = mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT);
+
 	/* 
-	 * 04/13/2016: Hit this during log replay.
-	 * 04/15/2016: Hit during bmap relay (B_REPLAY_OP_CRC).
+	 * 04/13/2016 & 04/15/2016: Hit during bmap relay (B_REPLAY_OP_CRC).
+	 * 06/16/2016: Hit during normal operation.
 	 */
 	if (!rc) {
-		if (slm_opstate == SLM_OPSTATE_NORMAL)
-			DEBUG_BMAP(PLL_FATAL, b, "bmap has no valid replicas");
-		else
-			DEBUG_BMAP(PLL_WARN, b, "bmap has no valid replicas");
+		level = (slm_opstate == SLM_OPSTATE_NORMAL) ? 
+		    PLL_FATAL : PLL_WARN;
+		DEBUG_BMAP(level, b, "bmap has no valid replicas");
 	}
 }
 
