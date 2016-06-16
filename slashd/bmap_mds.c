@@ -248,6 +248,7 @@ mds_bmap_read(struct bmap *b, int flags)
 		return (rc);
 	}
 
+	/* (gdb) p ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls */
 	mds_bmap_ensure_valid(b);
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
