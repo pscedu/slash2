@@ -780,6 +780,10 @@ slvr_remove_all(struct fidc_membh *f)
 	PFL_GETTIMESPEC(&ts0);
 
 	/*
+ 	 * If we are called by sli_rim_handle_reclaim(), we already 
+ 	 * to the FCMH lock, so take the read lock below is redundant
+ 	 * and does not get us anything.
+ 	 *
 	 * Use two loops to avoid entanglement with some background
 	 * operations.
 	 */
