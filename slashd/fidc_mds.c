@@ -273,8 +273,12 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	uint32_t pol;
 
 	FCMH_LOCK(p);
-	pol = fcmh_2_ino(p)->ino_replpol;
 	nr = fcmh_2_nrepls(p);
+	if (!nr) {
+		FCMH_ULOCK(p);
+		return (0);
+	}
+	pol = fcmh_2_ino(p)->ino_replpol;
 	memcpy(repls, fcmh_2_ino(p)->ino_repls, sizeof(repls[0]) *
 	    SL_DEF_REPLICAS);
 	if (nr > SL_DEF_REPLICAS) {
