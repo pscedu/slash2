@@ -44,6 +44,8 @@ umount -l -f $mp 2>/dev/null
 ulimit -n 1000000
 ulimit -c $((1024 * 1024 * 1024 * 100))
 
+# For mmap-based page cache buffers
+
 sysctl vm.max_map_count=655300
 
 export LD_LIBRARY_PATH=/usr/local/lib
