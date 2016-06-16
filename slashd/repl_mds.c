@@ -479,6 +479,11 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	int scircuit, nr, off, k, rc, trc;
 
 	scircuit = rc = 0;
+
+	/* 
+	 * ((struct fcmh_mds_info *)(b->bcm_fcmh + 1))->
+	 * fmi_inodeh.inoh_ino.ino_nrepls 
+	 */ 
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
 
 	if (nios == 0)
