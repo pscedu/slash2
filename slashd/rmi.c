@@ -414,7 +414,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			tract[BREPLST_GARBAGE] = BREPLST_VALID;
 			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 		} else
-			rc = mds_repl_inv_except(b, idx);
+			rc = _mds_repl_inv_except(b, idx, 0);
 		if (rc) {
 			bmap_op_done(b);
 			PFL_GOTOERR(out, mp->rc = rc);

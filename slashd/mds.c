@@ -556,7 +556,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
  	 */
-	rc = mds_repl_inv_except(b, iosidx);
+	rc = _mds_repl_inv_except(b, iosidx, 0);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_UNBUSY(b);
