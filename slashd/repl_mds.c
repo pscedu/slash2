@@ -483,6 +483,9 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	/* 
 	 * ((struct fcmh_mds_info *)(b->bcm_fcmh + 1))->
 	 * fmi_inodeh.inoh_ino.ino_nrepls 
+	 *
+ 	 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls
+ 	 *
 	 */ 
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
 

@@ -95,6 +95,9 @@ struct bmap_extra_state {
 struct bmap_ondisk {
 	struct bmap_core_state	bod_corestate;
 	struct bmap_extra_state	bod_extrastate;
+
+/* used by SL_REPL_GET_BMAP_IOS_STAT() */
+
 #define bod_repls	bod_corestate.bcs_repls
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs

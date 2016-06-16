@@ -717,8 +717,12 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
+#if 0
+	mp->rc2 = ENOENT;
+#else
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL, 1);
+#endif
 
 	DEBUG_FCMH(level, p, "bmap load done for %s, rc = %d",
 	    mq->name, mp->rc2);
