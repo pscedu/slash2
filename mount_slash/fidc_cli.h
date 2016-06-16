@@ -93,7 +93,6 @@ struct fcmh_cli_info {
 	struct timespec			 fci_etime;	/* attr expire time */
 };
 
-#define fcmh_2_nrepls(f)	fcmh_2_fci(f)->fci_inode.nrepls
 #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)
 
 #define MAPSTIR_THRESH			10
