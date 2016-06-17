@@ -186,23 +186,14 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	int exists = 0;
 	size_t nb;
 	uint64_t od_crc;
-#if 0
 	uint64_t crc;
 	char buf[LINE_MAX];
-#endif
 
 	th = inoh_2_mfh(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    inoh_2_fid(ih));
 
-	/*
- 	 * 05/11/2016: I replicate a slash2 tree from one IOS to another and
- 	 * then build tree there.  The build stalls on .sconsign.dblite.
- 	 * (setattr return EIO). Later I tried to rm this file. I got
- 	 * ENONET from the following lookup, and mds_inode_read()
- 	 * turns it into EIO.
- 	 */
 	*rc = mdsio_lookup(vfsid, mds_tmpdir_inum[vfsid], fn, &inum,
 	    &rootcreds, NULL);
 	if (*rc)
@@ -222,14 +213,8 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-#if 0
-	/*
- 	 * Let us trust ZFS o do the right thing. This code is trigger the
- 	 * above-commented issue again. I need to re-visit the update 
- 	 * interrupted issue some day.
- 	 */
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
-	if (crc != od_crc) {
+	if (crc != od_crc && slm_crc_check) {
 		OPSTAT_INCR("badcrc");
 		*rc = PFLERR_BADCRC;
 		DEBUG_INOH(PLL_WARN, ih, buf, "CRC failed "
@@ -237,7 +222,6 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 		    od_crc, crc);
 		PFL_GOTOERR(out, *rc);
 	}
-#endif
 
 	exists = 1;
 
@@ -401,7 +385,7 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 		return (SLERR_SHORTIO);
 
 	psc_crc64_calc(&crc, &bod, sizeof(bod));
-	if (crc != od_crc) {
+	if (crc != od_crc && slm_crc_check) {
 		OPSTAT_INCR("badcrc");
 		return (PFLERR_BADCRC);
 	}
