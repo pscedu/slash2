@@ -1155,6 +1155,12 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 				break;
 			}
 		}
+		/*
+ 		 * A quick fix so that we don't return ETIMEDOUT when
+ 		 * an IOS is contacted first for an operation (e.g.,
+ 		 * read a file.
+ 		 */
+		sleep(3);
 
 //		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
 //		    SRM_LEASEBMAPF_DATA);
