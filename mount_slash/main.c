@@ -175,7 +175,7 @@ int				 msl_newent_inherit_groups = 1;
 
 struct psc_thread		*slcconnthr;
 
-#define DO_DEBUG
+//#define DO_DEBUG
 
 #ifdef DO_DEBUG
 struct sl_fidgen		 debug_fg;	
