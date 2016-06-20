@@ -273,6 +273,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		/* paranoid */
 		psc_assert(i == nr);
 		if (nr >= SL_DEF_REPLICAS) {
+			/* be careful with the case of nr = SL_DEF_REPLICAS */
+			rc = mds_inox_ensure_loaded(ih);
+			if (rc)
+				goto out;
 			repl = ih->inoh_extras->inox_repls;
 			j = i - SL_DEF_REPLICAS;
 
