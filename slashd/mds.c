@@ -627,14 +627,16 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	if (!resm) {
 		struct sl_resource *r;
+		struct fidc_membh *f = b->bcm_fcmh;
 
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
-		psclog_warnx("unable to contact IOS %#x (pref_ios=%s) "
-		    "for lease", iosid, r ? r->res_name : NULL);
+		psclog_warnx("Fail to contact IOS %#x (pref_ios=%s) "
+		    "for lease, fid = "SLPRI_FID, iosid, 
+		    r ? r->res_name : NULL, fcmh_2_fid(f)); 
 
 		return (-SLERR_ION_OFFLINE);
 	}
