@@ -34,7 +34,7 @@ main(int argc, char *argv[])
 				break;
 		}   
 	}
-	if (optind > argc - 1) {
+	if (optind != argc - 1) {
 		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] filename\n");
 		exit(0);
 	}   
