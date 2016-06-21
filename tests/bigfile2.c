@@ -54,7 +54,8 @@ main(int argc, char *argv[])
 		exit(0);
 	}
 	srandom(seed);
-	printf("Seed = %d, file name = %s, size = %ld\n", seed, filename, nblocks * bsize);
+	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
+		seed, filename, bsize, nblocks, (long)nblocks * bsize);
 	for (i = 0; i < nblocks; i++) {
 
 		if (readonly)
@@ -88,5 +89,10 @@ main(int argc, char *argv[])
 		if (error > 20)
 			break;
 	}
+	if (!error && readonly)
+		printf("No corruption has been found.\007\n");
+	if (!error && !readonly)
+		printf("File has been created successfully.\007\n");
+	if (!error && !readonly)
         close(fd);
 }
