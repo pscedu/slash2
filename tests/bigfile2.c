@@ -10,7 +10,8 @@
 main(int argc, char *argv[])
 {
 	long val;
-	char *buf, *filename;
+	char *filename;
+	unsigned char *buf;
 	int error = 0, readonly = 0;
 	size_t i, j, c, fd, seed, size, bsize, nblocks;
 
@@ -53,7 +54,7 @@ main(int argc, char *argv[])
 		exit(0);
 	}
 	srandom(seed);
-	printf("Seed = %d, file size = %ld\n", seed, nblocks * bsize);
+	printf("Seed = %d, file name = %s, size = %ld\n", seed, filename, nblocks * bsize);
 	for (i = 0; i < nblocks; i++) {
 
 		if (readonly)
@@ -62,7 +63,7 @@ main(int argc, char *argv[])
 			for (j = 0; j < bsize; j++) {
 				val = random();
 				//printf("%lx\n", val);
-				buf[j] = val & 0xff;
+				buf[j] = (unsigned char)val & 0xff;
 			}
 			size = write(fd, buf, bsize);
 		}
@@ -75,7 +76,9 @@ main(int argc, char *argv[])
 			continue;
 
 		for (j = 0; j < bsize; j++) {
-			if (buf[j] != random() & 0xff) {
+			val = random();
+			//printf("%lx\n", val);
+			if (buf[j] != (unsigned char)val & 0xff) {
 				printf("Unexpected data at offset = %ld\n",
 					i * nblocks * j);
 				error++;
