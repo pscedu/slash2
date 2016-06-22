@@ -850,6 +850,9 @@ msl_bmap_reap_init(struct bmap *b)
 	/*
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
+	 *
+	 * XXX hit crash because it is already on the list. Called from
+	 * msl_bmap_retrieve_cb().
 	 */
 	lc_addtail(&msl_bmaptimeoutq, bci);
 }
