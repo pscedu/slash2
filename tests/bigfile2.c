@@ -14,8 +14,8 @@ main(int argc, char *argv[])
 	char *filename;
 	struct stat stbuf;
 	unsigned char *buf;
-	int error = 0, readonly = 0;
-	size_t i, j, c, fd, seed, size, bsize, nblocks, remainder = 0;
+	int fd, error = 0, readonly = 0;
+	size_t i, j, c, seed, size, bsize, nblocks, remainder = 0;
 
 	bsize = 5678;
 	nblocks = 12345;
