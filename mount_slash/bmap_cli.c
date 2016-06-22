@@ -1158,7 +1158,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		/*
  		 * A quick fix so that we don't return ETIMEDOUT when
  		 * an IOS is contacted first for an operation (e.g.,
- 		 * read a file.
+ 		 * read a file.  Note that we return earlier if !rc. 
  		 */
 		sleep(3);
 
