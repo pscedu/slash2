@@ -6,14 +6,16 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <assert.h>
 
 main(int argc, char *argv[])
 {
-	long val;
+	long val, fsize;
 	char *filename;
+	struct stat stbuf;
 	unsigned char *buf;
 	int error = 0, readonly = 0;
-	size_t i, j, c, fd, seed, size, bsize, nblocks;
+	size_t i, j, c, fd, seed, size, bsize, nblocks, remainder = 0;
 
 	bsize = 5678;
 	nblocks = 12345;
@@ -47,6 +49,17 @@ main(int argc, char *argv[])
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(0);
 	}
+	if (fstat(fd, &stbuf) < 0) {
+		printf("Failed to stat file %s, errno = %d\n", filename, errno);
+		exit(0);
+	}
+	if (readonly) {
+		fsize = stbuf.st_size;
+		nblocks = fsize / bsize;
+	} else {
+		assert(!stbuf.st_size);
+		fsize = (long)nblocks * bsize;
+	}
 
 	buf = malloc(bsize);
 	if (buf == NULL) {
@@ -55,9 +68,9 @@ main(int argc, char *argv[])
 	}
 	srandom(seed);
 	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
-		seed, filename, bsize, nblocks, (long)nblocks * bsize);
-	for (i = 0; i < nblocks; i++) {
+		seed, filename, bsize, readonly ? nblocks + 1: nblocks, fsize);
 
+	for (i = 0; i < nblocks; i++) {
 		if (readonly)
 			size = read(fd, buf, bsize);
 		else {
@@ -86,13 +99,33 @@ main(int argc, char *argv[])
 				break;
 			}
 		}
-		if (error > 20)
+		if (error > 10)
 			break;
 	}
+	if (error || !readonly || nblocks * bsize == fsize)
+		goto done;
+
+	remainder = fsize - (long)nblocks * bsize;
+	size = read(fd, buf, remainder);
+	if (size != remainder) {
+		printf("Fail to %s file, errno = %d\n",
+			readonly ? "read" : "write", errno);
+		goto done;
+	}
+	for (i = 0; i < remainder; i++) {
+		val = random();
+		//printf("%lx\n", val);
+		if (buf[i] != (unsigned char)val & 0xff) {
+			printf("Unexpected data at offset = %ld\n",
+				bsize * nblocks * i);
+			error++;
+		}
+	}
+
+ done:
 	if (!error && readonly)
-		printf("No corruption has been found.\007\n");
+		printf("No corruption has been found (last block has %d bytes)\n", remainder);
 	if (!error && !readonly)
 		printf("File has been created successfully.\007\n");
-	if (!error && !readonly)
         close(fd);
 }
