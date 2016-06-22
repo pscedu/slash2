@@ -689,7 +689,7 @@ main(int argc, char *argv[])
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
-	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64,
+	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64" bytes",
 	    arc_get_maxsize());
 
 	pfl_fault_register(RMC_HANDLE_FAULT);
