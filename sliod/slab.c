@@ -93,6 +93,6 @@ slab_cache_init(void)
 
 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
 
-	psclogs_info(SLISS_INFO, "SLASH2 slab cache size is %zd bytes", 
-	    slcfg_local->cfg_slab_cache_size);
+	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %zd bufs", 
+	    slcfg_local->cfg_slab_cache_size, nbuf);
 }
