@@ -414,8 +414,13 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 	fci = fcmh_2_fci(b->bcm_fcmh);
 	res = libsl_id2res(fci->fci_inode.reptbl[iosidx].bs_id);
 	if (res == NULL) {
-		DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
-		    "unknown IOS in reptbl: %#x",
+		/*
+		 * This can happen because we don't remove IOS
+		 * from a file's replication table even if all
+		 * its bmaps are off the corresponding IOS.
+		 */
+		DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
+		    "unknown or obsolete IOS in reptbl: %#x",
 		    fci->fci_inode.reptbl[iosidx].bs_id);
 		return (-1);
 	}

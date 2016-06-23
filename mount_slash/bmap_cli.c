@@ -850,6 +850,9 @@ msl_bmap_reap_init(struct bmap *b)
 	/*
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
+	 *
+	 * XXX hit crash because it is already on the list. Called from
+	 * msl_bmap_retrieve_cb().
 	 */
 	lc_addtail(&msl_bmaptimeoutq, bci);
 }
@@ -1158,7 +1161,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		/*
  		 * A quick fix so that we don't return ETIMEDOUT when
  		 * an IOS is contacted first for an operation (e.g.,
- 		 * read a file.
+ 		 * read a file.  Note that we return earlier if !rc. 
  		 */
 		sleep(3);
 

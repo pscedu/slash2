@@ -152,6 +152,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			return (rc);
 		}
 
+		/* introduced by d56424e5f35de84cef5ba3b61afb8583efbd0a7b */
 		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
 		    fcmh_2_fid(f));
 
