@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(0);
 	}
-	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n", 
+	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
@@ -131,13 +131,13 @@ int main(int argc, char *argv[])
 	}
 	for (i = 0; i < nthreads; i++) {
 		pthread_join(threads[i], NULL);
-		printf("Thread %d is done with errno = %d, fd = %d\n", 
+		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
 		close(args[i].fd);
 	}
         close(fd);
 
-	printf("Now verifying file contents ... \n");
+	printf("\nNow verifying file contents ... \n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
