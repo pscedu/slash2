@@ -26,9 +26,9 @@ pthread_t threads[MAX_THREADS];
 
 static void* thread_worker(void *arg)
 {
-	char *buf;
 	int i, j, ret;
 	int32_t result;
+	unsigned char *buf;
 	char rand_statebuf[32];
 	struct random_data rand_state;
 	struct arg_and_ret *myarg = (struct arg_and_ret *)arg;
@@ -67,8 +67,12 @@ static void* thread_worker(void *arg)
 int main(int argc, char *argv[])
 {
 	char *filename;
-	int fd, ret, nthreads;
-	size_t i, c, seed, size, bsize, nblocks;
+	int32_t result;
+	unsigned char *buf;
+	char rand_statebuf[32];
+	int i, j, fd, ret, nthreads;
+	struct random_data rand_state;
+	size_t c, seed, size, bsize, nblocks;
 
 	bsize = 7178;
 	nthreads = 5;
@@ -94,6 +98,11 @@ int main(int argc, char *argv[])
 		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] [-t nthreads (1-128)] filename\n");
 		exit(0);
 	} 
+	buf = malloc(bsize);
+	if (buf == NULL) {
+		printf("Allocation failed with errno = %d\n", errno);
+		exit(0);
+	}
 	filename = argv[optind];
        	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
@@ -127,4 +136,26 @@ int main(int argc, char *argv[])
 		close(args[i].fd);
 	}
         close(fd);
+
+	printf("Now verifying file contents ... \n");
+	memset(rand_statebuf, 0, sizeof(rand_statebuf));
+	memset(&rand_state, 0, sizeof(rand_state));
+	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
+
+       	fd = open(filename, O_RDONLY);
+	for (i = 0; i < nblocks; i++) {
+		ret = read(fd, buf, bsize);
+		if (ret != bsize) {
+			printf("Read file failed with errno = %d.\n", errno);
+			exit(0);
+		}
+		for (j = 0; j < bsize; j++) {
+			random_r(&rand_state, &result);
+			if (buf[j] != (unsigned char)result & 0xff) {
+				printf("File corrupted: %2x vs %2x\n", buf[j], result & 0xff);
+				exit(0);
+			}
+		}
+	}
+	close(fd);
 }
