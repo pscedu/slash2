@@ -16,7 +16,7 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
-int tweak = 0;
+int tweak = 1;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <pthread.h>
 
 #define	MAX_THREADS	128
 
@@ -39,7 +40,6 @@ static void* thread_worker(void *arg)
 	buf = malloc(myarg->bsize);
 	if (buf == NULL) {
 		myarg->ret = errno;
-		close(myarg->fd);
 		pthread_exit(NULL);
 	}
 	for (i = 0; i < myarg->id * myarg->bsize; i++)
@@ -60,7 +60,7 @@ static void* thread_worker(void *arg)
 			random_r(&rand_state, &result);
 		lseek(myarg->fd, j, SEEK_CUR);
 	}
-	close(myarg->fd);
+	free(buf);
 	pthread_exit(NULL);
 }
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 				break;
 		}   
 	}
-	if (optind != argc - 1 || nthreads > MAX_THREADS) {
+	if (optind != argc - 1 || nthreads < 1 || nthreads > MAX_THREADS) {
 		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] [-t nthreads (1-128)] filename\n");
 		exit(0);
 	} 
@@ -100,12 +100,15 @@ int main(int argc, char *argv[])
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(0);
 	}
-
 	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n", 
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
-		args[i].fd = open(filename, O_RDWR);
+		args[i].fd = open(filename, O_RDWR, 0600);
+		if (args[i].fd < 0) {
+			printf("Fail to open file, errno = %d\n", errno);
+			exit(0);
+		}
 		args[i].ret = 0;
 		args[i].seed = seed;
 		args[i].bsize = bsize;
@@ -118,9 +121,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	for (i = 0; i < nthreads; i++) {
-		close(args[i].fd);
 		pthread_join(threads[i], NULL);
+		printf("Thread %d is done with errno = %d, fd = %d\n", 
+			i, args[i].ret, args[i].fd);
+		close(args[i].fd);
 	}
-
         close(fd);
 }
