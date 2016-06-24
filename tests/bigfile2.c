@@ -1,5 +1,5 @@
 /*
- * 06/21/2016: bigfile2.c
+ * 06/21/2016: bigfile2.c, read and write a file with different block sizes.
  */
 #include <stdio.h>
 #include <fcntl.h>

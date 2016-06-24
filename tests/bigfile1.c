@@ -1,5 +1,5 @@
 /*
- * 03/07/2013: An I/O stresser with big files.
+ * 03/07/2013: bigfile1.c, read and write random regions within a file.
  */
 #include <stdio.h>
 #include <stdlib.h>
