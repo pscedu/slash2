@@ -37,11 +37,14 @@ static void* thread_worker(void *arg)
 	initstate_r(myarg->seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
 
 	buf = malloc(myarg->bsize);
+	if (buf == NULL) {
+		myarg->ret = errno;
+		pthread_exit(NULL);
+	}
 	for (i = 0; i < myarg->id * myarg->bsize; i++)
 		random_r(&rand_state, &result);
-	lseek(myarg->fd, i, SEEK_SET);
 
-	myarg->ret = 0;
+	lseek(myarg->fd, i, SEEK_SET);
 	for (i = 0; i < myarg->nblocks; i++) {
 		for (j = 0; j < myarg->bsize; j++) {
 			random_r(&rand_state, &result);
@@ -52,7 +55,7 @@ static void* thread_worker(void *arg)
 			myarg->ret = errno;
 			break;
 		}
-		for (j = 0; j < myarg->bsize * myarg->nthreads; j++)
+		for (j = 0; j < myarg->bsize * (myarg->nthreads - 1); j++)
 			random_r(&rand_state, &result);
 		lseek(myarg->fd, j, SEEK_CUR);
 	}
@@ -63,11 +66,11 @@ int main(int argc, char *argv[])
 {
 	char *filename;
 	int fd, ret, nthreads;
-	size_t i, c, seed, size, bsize, nblocks, remainder = 0;
+	size_t i, c, seed, size, bsize, nblocks;
 
-	bsize = 5678;
+	bsize = 7178;
 	nthreads = 5;
-	nblocks = 12345;
+	nblocks = 14345;
 	seed = getpid();
 	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
 		switch (c) {
@@ -96,9 +99,13 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
+	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n", 
+		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
 		args[i].fd = fd;
+		args[i].ret = 0;
+		args[i].seed = seed;
 		args[i].bsize = bsize;
 		args[i].nblocks = nblocks;
 		args[i].nthreads = nthreads;
