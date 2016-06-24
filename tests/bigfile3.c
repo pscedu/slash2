@@ -39,6 +39,7 @@ static void* thread_worker(void *arg)
 	buf = malloc(myarg->bsize);
 	if (buf == NULL) {
 		myarg->ret = errno;
+		close(myarg->fd);
 		pthread_exit(NULL);
 	}
 	for (i = 0; i < myarg->id * myarg->bsize; i++)
@@ -59,6 +60,7 @@ static void* thread_worker(void *arg)
 			random_r(&rand_state, &result);
 		lseek(myarg->fd, j, SEEK_CUR);
 	}
+	close(myarg->fd);
 	pthread_exit(NULL);
 }
 
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
 	nthreads = 5;
 	nblocks = 14345;
 	seed = getpid();
-	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
+	while ((c = getopt(argc, argv, "b:s:n:t:")) != -1) {
 		switch (c) {
 			case 'b':
 				bsize = atoi(optarg);
@@ -103,7 +105,7 @@ int main(int argc, char *argv[])
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
-		args[i].fd = fd;
+		args[i].fd = open(filename, O_RDWR);
 		args[i].ret = 0;
 		args[i].seed = seed;
 		args[i].bsize = bsize;
@@ -116,6 +118,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	for (i = 0; i < nthreads; i++) {
+		close(args[i].fd);
 		pthread_join(threads[i], NULL);
 	}
 
