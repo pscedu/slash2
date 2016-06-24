@@ -37,6 +37,9 @@ static void* thread_worker(void *arg)
 	initstate_r(myarg->seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
 
 	buf = malloc(myarg->bsize);
+	for (i = 0; i < myarg->id * myarg->bsize; i++)
+		random_r(&rand_state, &result);
+	lseek(myarg->fd, i, SEEK_SET);
 
 	myarg->ret = 0;
 	for (i = 0; i < myarg->nblocks; i++) {
@@ -49,6 +52,9 @@ static void* thread_worker(void *arg)
 			myarg->ret = errno;
 			break;
 		}
+		for (j = 0; j < myarg->bsize * myarg->nthreads; j++)
+			random_r(&rand_state, &result);
+		lseek(myarg->fd, j, SEEK_CUR);
 	}
 	pthread_exit(NULL);
 }
