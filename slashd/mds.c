@@ -1228,6 +1228,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			    bmi->bmi_assign, &bia);
 
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+			/*
+ 			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
+ 			 * bmi_seq = -1, and bml_flags = 101000010.
+ 			 */
 			if (bia->bia_seq !=  bmi->bmi_seq) {
 				psc_fatalx("Mismatch seqno: %ld vs. %ld, "
 				     "bno = %d, fid = "SLPRI_FID,
