@@ -1233,7 +1233,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
  			 * bmi_seq = -1, and bml_flags = 101000010.
  			 */
 			if (bia->bia_seq !=  bmi->bmi_seq) {
-				psc_fatalx("Mismatch seqno: %ld vs. %ld, "
+				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
 				     "bno = %d, fid = "SLPRI_FID,
 				     bia->bia_seq, bmi->bmi_seq, 
 				     b->bcm_bmapno, fcmh_2_fid(f)); 
