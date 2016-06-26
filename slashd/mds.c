@@ -1226,8 +1226,14 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			pfl_odt_getitem(slm_bia_odt,
 			    bmi->bmi_assign, &bia);
-			psc_assert(bia->bia_seq == bmi->bmi_seq);
+
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+			if (bia->bia_seq !=  bmi->bmi_seq) {
+				psc_fatalx("Mismatch seqno: %ld vs. %ld, "
+				     "bno = %d, fid = "SLPRI_FID,
+				     bia->bia_seq, bmi->bmi_seq, 
+				     b->bcm_bmapno, fcmh_2_fid(f)); 
+			}
 
 			pfl_odt_freebuf(slm_bia_odt, bia, NULL);
 
