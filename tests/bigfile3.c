@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 	}
         close(fd);
 
-	printf("\nNow verifying file contents ... \n");
+	printf("\nAll threads has exited. Now verifying file contents ... \n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
