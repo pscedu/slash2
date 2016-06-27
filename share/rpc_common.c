@@ -860,7 +860,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 		pfl_multiwaitcond_wait(&csvc->csvc_mwc, &csvc->csvc_mutex);
-		OPSTAT_INCR("csvc-wake");
 
 		CSVC_LOCK(csvc);
 		goto recheck;
@@ -877,8 +876,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			goto out2;
 		}
 		OPSTAT_INCR("csvc-delay");
-		delta = csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV 
-			- now.tv_sec;
+		delta = csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV - now.tv_sec;
 		CSVC_ULOCK(csvc);
 		sleep(delta);
 		CSVC_LOCK(csvc);
@@ -888,7 +886,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_flags |= CSVCF_CONNECTING;
 	csvc->csvc_flags &= ~CSVCF_DISCONNECTING;
 	/*
- 	 * We can't assert CSVCF_CONNECTED is not set here because 
+ 	 * We can't assert CSVCF_CONNECTED is not set below because 
 	 * sl_csvc_useable() has other ideas why it is not connected.
 	 */
 	csvc->csvc_flags &= ~CSVCF_CONNECTED;
