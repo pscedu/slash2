@@ -143,7 +143,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	/*
  	 * Can I assume that IOS ID are non-zeros.  If so, I can use
- 	 * it to mark a free slots.  See sl_global_id_build().
+ 	 * zero to mark a free slot.  See sl_global_id_build().
  	 */
 	f = inoh_2_fcmh(ih);
 	nr = ih->inoh_ino.ino_nrepls;
