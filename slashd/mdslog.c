@@ -1831,8 +1831,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
 
-	BMAPOD_READ_DONE(bmap, 0);
-
 	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
 
 	/*
