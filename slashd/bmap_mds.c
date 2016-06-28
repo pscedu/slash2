@@ -409,13 +409,14 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	}
 
 	if (mds_repl_inv_except(bmap, idx, 1)) {
-		/* XXX why are we writing the bmap twice??? */
-		mds_bmap_write_logrepls(bmap);
-	} else {
-		BMAPOD_MODIFY_DONE(bmap, 0);
-		BMAP_UNBUSY(bmap);
-		FCMH_UNBUSY(f);
+		/* 
+		 * This case should not happen.
+		 */
+		psclog_warnx("IOS %x is not found.", idx);
 	}
+	BMAPOD_MODIFY_DONE(bmap, 0);
+	BMAP_UNBUSY(bmap);
+	FCMH_UNBUSY(f);
 
 	waslocked = BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
