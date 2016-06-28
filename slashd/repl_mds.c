@@ -423,7 +423,8 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 	if (val >= NBREPLST)
-		psc_fatalx("corrupt bmap");
+		psc_fatalx("corrupt bmap, val = %d, bno = %ld, fid="SLPRI_FID,
+			 val, b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
 	if (cbf)
 		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
