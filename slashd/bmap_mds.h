@@ -126,24 +126,6 @@ bmap_2_bmi(struct bmap *b)
 #define BMAPOD_READ_START(b)	BMAPOD_REQRDLOCK(bmap_2_bmi(b))
 #define BMAPOD_READ_DONE(b, lk)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (lk))
 
-#define BHREPL_POLICY_SET(b, pol)					\
-	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_MODIFY_START(b);				\
-		bmap_2_replpol(b) = (pol);				\
-		BMAPOD_MODIFY_DONE((b), _lk);				\
-	} while (0)
-
-#define BHREPL_POLICY_GET(b, pol)					\
-	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_READ_START(b);				\
-		*(pol) = bmap_2_replpol(b);				\
-		BMAPOD_READ_DONE((b), _lk);				\
-	} while (0)
-
 #define BHGEN_INCREMENT(b)						\
 	do {								\
 		int _lk;						\

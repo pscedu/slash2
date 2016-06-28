@@ -599,7 +599,12 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
 
-	BHREPL_POLICY_GET(b, &policy);
+	{
+		int _lk;
+		_lk = BMAPOD_READ_START(b);
+		policy = bmap_2_replpol(b);
+		BMAPOD_READ_DONE((b), _lk);
+	}
 
 	/*
 	 * Invalidate all other replicas.
