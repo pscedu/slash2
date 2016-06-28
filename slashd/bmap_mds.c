@@ -403,10 +403,10 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 
 		FCMH_LOCK(f);
 
-		if (idx >= SL_DEF_REPLICAS)
-			mds_inox_write(vfsid, ih, NULL, NULL);
-		else
+		if (idx < SL_DEF_REPLICAS)
 			mds_inode_write(vfsid, ih, NULL, NULL);
+		else
+			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
 	if (mds_repl_inv_except(bmap, idx, 1)) {
