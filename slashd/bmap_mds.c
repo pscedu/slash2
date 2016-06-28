@@ -317,8 +317,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
 	    b->bcm_bmapno, rc);
 
-	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
-		BMAPOD_READ_DONE(b, 0);
+	BMAPOD_UREQLOCK(bmi, 0);
 
 	return (rc);
 }
