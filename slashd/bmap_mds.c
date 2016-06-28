@@ -78,12 +78,7 @@ mds_bmap_initnew(struct bmap *b)
 	pol = fcmh_2_ino(f)->ino_replpol;
 	INOH_ULOCK(fcmh_2_inoh(f));
 
-	{
-		int _lk;
-		_lk = BMAPOD_MODIFY_START(b);
-		bmap_2_replpol(b) = pol;
-		BMAPOD_MODIFY_DONE((b), _lk);
-	}
+	bmap_2_replpol(b) = pol;
 
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
