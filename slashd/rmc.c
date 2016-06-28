@@ -1273,6 +1273,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	struct srm_set_bmapreplpol_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
+	int waslocked;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1297,12 +1298,10 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	FCMH_ULOCK(f);
 
 	BMAP_WAIT_BUSY(b);
-	{
-		int _lk;
-		_lk = BMAPOD_MODIFY_START(b);
-		bmap_2_replpol(b) = mq->pol;
-		BMAPOD_MODIFY_DONE((b), _lk);
-	}
+
+	waslocked = BMAPOD_MODIFY_START(b);
+	bmap_2_replpol(b) = mq->pol;
+	BMAPOD_MODIFY_DONE((b), waslocked);
 
 	mds_bmap_write_logrepls(b);
 	/* XXX upd_enqueue */
