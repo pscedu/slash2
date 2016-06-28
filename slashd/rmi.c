@@ -286,7 +286,7 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 }
 
 int
-slm_rmi_handle_import(struct pscrpc_request *rq)
+slm_rmi_handle_import(__unusedx struct pscrpc_request *rq)
 {
 
 	/* please find old old in git history */
