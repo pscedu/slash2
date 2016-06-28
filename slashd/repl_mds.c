@@ -600,9 +600,9 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
 
-	waslocked = BMAPOD_READ_START(b);
+	waslocked = BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	policy = bmap_2_replpol(b);
-	BMAPOD_READ_DONE((b), waslocked);
+	BMAPOD_UREQLOCK(bmap_2_bmi(b), waslocked);
 
 	/*
 	 * Invalidate all other replicas.
