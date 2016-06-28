@@ -372,12 +372,15 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (rc)
 		return (-rc);
 	if (vfsid != current_vfsid)
-		return (EINVAL);
+		return (-EINVAL);
 
 	FCMH_WAIT_BUSY(f);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
-	if (idx < 0)
-		psc_fatal("not found");
+	if (idx < 0) {
+		FCMH_UNBUSY(f);
+		psclog_warnx("CRC update: invalid IOS %lx", iosid);
+		return (idx);
+	}
 
 	/*
 	 * Only update the block usage when there is a real change.
