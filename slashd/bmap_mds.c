@@ -359,7 +359,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	struct srt_stat sstb;
-	int rc, fl, idx, vfsid;
+	int rc, fl, idx, vfsid, waslocked;
 	uint32_t i;
 	uint64_t nblks;
 
@@ -421,7 +421,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	crclog.scl_crcup = crcup;
 	crclog.scl_iosid = iosid;
 
-	BMAPOD_REQWRLOCK(bmi);
+	waslocked = BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
@@ -431,6 +431,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
+	BMAPOD_UREQLOCK(bmi, waslocked);
 	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
 }
 
