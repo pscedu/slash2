@@ -373,7 +373,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	int locked = 0, unlock = 0, relock = 0, val, rc = 0, dummy;
+	int unlock = 0, relock = 0, val, rc = 0, dummy;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct fidc_membh *f = b->bcm_fcmh;
 
@@ -385,14 +385,9 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 			if (FCMH_HAS_LOCK(f))
 				FCMH_ULOCK(f);
 		} else {
-			if (BMAP_HASLOCK(b)) {
-				locked = 1;
-				BMAP_ULOCK(b);
-			}
+			psc_assert(!BMAP_HASLOCK(b));
 			(void)FCMH_REQ_BUSY(f, &dummy);
 			FCMH_ULOCK(f);
-			if (locked)
-				BMAP_LOCK(b);
 		}
 
 		if (BMAPOD_HASWRLOCK(bmi)) {
