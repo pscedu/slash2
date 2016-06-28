@@ -485,15 +485,17 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	scircuit = rc = 0;
 
 	/* 
-	 * ((struct fcmh_mds_info *)(b->bcm_fcmh + 1))->
-	 * fmi_inodeh.inoh_ino.ino_nrepls 
+ 	 * gdb help:
+ 	 *
+	 * ((struct fcmh_mds_info *)
+	 * (b->bcm_fcmh + 1))->fmi_inodeh.inoh_ino.ino_nrepls 
 	 *
  	 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls
  	 *
 	 */ 
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
 
-	if (nios == 0)
+	if (nios == 0) {
 		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
@@ -504,7 +506,9 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 			if (scircuit)
 				break;
 		}
-	else if (flags & REPL_WALKF_MODOTH) {
+		return (rc);
+	}
+	if (flags & REPL_WALKF_MODOTH) {
 		/* modify sites all sites except those specified */
 		for (k = 0, off = 0; k < nr; k++,
 		    off += SL_BITS_PER_REPLICA)
@@ -517,17 +521,19 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 				if (scircuit)
 					break;
 			}
-	} else
-		/* modify only the sites specified */
-		for (k = 0; k < nios; k++) {
-			trc = _mds_repl_bmap_apply(b, tract, retifset,
-			    flags, iosidx[k] * SL_BITS_PER_REPLICA,
-			    &scircuit, cbf, cbarg);
-			if (trc)
-				rc = trc;
-			if (scircuit)
-				break;
-		}
+		return (rc);
+	} 
+
+	/* modify only the sites specified */
+	for (k = 0; k < nios; k++) {
+		trc = _mds_repl_bmap_apply(b, tract, retifset,
+		    flags, iosidx[k] * SL_BITS_PER_REPLICA,
+		    &scircuit, cbf, cbarg);
+		if (trc)
+			rc = trc;
+		if (scircuit)
+			break;
+	}
 
 	return (rc);
 }
