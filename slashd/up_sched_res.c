@@ -899,6 +899,10 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
  out:
 	if (rc) {
+		/*
+		 * XXX Do we need to do any work if rc is an error code
+		 * instead 1 here?
+		 */
 		struct slm_wkdata_upsch_purge *wk;
 
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
