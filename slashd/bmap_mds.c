@@ -362,6 +362,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	struct srt_stat sstb;
 	int rc, fl, idx, vfsid;
 	uint32_t i;
+	uint64_t nblks;
 
 	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
 
@@ -378,16 +379,19 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0) {
 		FCMH_UNBUSY(f);
-		psclog_warnx("CRC update: invalid IOS %lx", iosid);
+		psclog_warnx("CRC update: invalid IOS %x", iosid);
 		return (idx);
 	}
+	if (idx < SL_DEF_REPLICAS)
+		nblks = fcmh_2_ino(f)->ino_repl_nblks[idx];
+	else
+		nblks = fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS];
 
 	/*
 	 * Only update the block usage when there is a real change.
 	 */
-	if (crcup->nblks != fcmh_2_repl_nblks(f, idx)) {
-		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
-		    fcmh_2_repl_nblks(f, idx);
+	if (crcup->nblks != nblks) {
+		sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks - nblks;
 		fl = SL_SETATTRF_NBLKS;
 
 		fcmh_set_repl_nblks(f, idx, crcup->nblks);

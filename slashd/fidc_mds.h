@@ -127,15 +127,6 @@ fcmh_2_repl(struct fidc_membh *f, int idx)
 	return (fcmh_2_inox(f)->inox_repls[idx - SL_DEF_REPLICAS].bs_id);
 }
 
-static __inline uint64_t
-fcmh_2_repl_nblks(struct fidc_membh *f, int idx)
-{
-	if (idx < SL_DEF_REPLICAS)
-		return (fcmh_2_ino(f)->ino_repl_nblks[idx]);
-	mds_inox_ensure_loaded(fcmh_2_inoh(f));
-	return (fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS]);
-}
-
 static __inline void
 fcmh_set_repl_nblks(struct fidc_membh *f, int idx, uint64_t nblks)
 {
