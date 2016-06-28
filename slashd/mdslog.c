@@ -1764,6 +1764,9 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log entry");
 }
 
+/*
+ * Perform the work scheduled by mdslog_bmap_repls().
+ */
 int
 slm_wkcb_wr_brepl(void *p)
 {
@@ -1798,8 +1801,8 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	 * mdslogfill_bmap_repls(), to whichever wkthr who gets it.
 	 */
 	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "pass BUSY to wkthr");
+	BMAP_LOCK(b);
 	b->bcm_fcmh->fcmh_owner = 0;
-	(void)BMAP_RLOCK(b);
 	b->bcm_owner = 0;
 	b->bcm_flags |= BMAPF_REPLMODWR;
 	BMAP_ULOCK(b);
