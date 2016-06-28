@@ -103,7 +103,6 @@ struct fcmh_mds_info {
 int	_mds_fcmh_setattr(int, struct fidc_membh *, int, const struct srt_stat *, int);
 
 #define slm_fcmh_endow(vfsid, p, c)			_slm_fcmh_endow((vfsid), (p), (c), 1)
-#define slm_fcmh_endow_nolog(vfsid, p, c)		_slm_fcmh_endow((vfsid), (p), (c), 0)
 
 int	_slm_fcmh_endow(int, struct fidc_membh *, struct fidc_membh *, int);
 
