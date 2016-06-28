@@ -266,8 +266,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
  * info in the SLASH2 metafile.
  */
 int
-_slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
-    int wr)
+slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 {
 	sl_replica_t repls[SL_MAX_REPLICAS];
 	int nr, rc = 0;
@@ -305,8 +304,7 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 		    &repls[SL_DEF_REPLICAS], sizeof(repls[0]) *
 		    SL_INOX_NREPLICAS);
 	}
-	if (wr)
-		mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
+	rc = mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
 	FCMH_UNBUSY(c);
 	return (rc);
 }
