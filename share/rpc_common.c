@@ -983,8 +983,9 @@ slconnthr_main(struct psc_thread *thr)
 		 * result via PING RPC later.  IOS only.
 		 */
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		if (sct->sct_pingupc) {
-			pingrc = sct->sct_pingupc( sct->sct_pingupcarg);
+		if (sct->sct_pingupc) { 
+			/* slirmiconnthr_upcall() */
+			pingrc = sct->sct_pingupc(sct->sct_pingupcarg);
 			if (pingrc)
 				psclog_diag("sct_pingupc "
 				    "failed (rc=%d)", pingrc);

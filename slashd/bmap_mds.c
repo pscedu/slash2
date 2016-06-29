@@ -95,7 +95,12 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	BMAP_WAIT_BUSY(b);
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT);
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(b->bcm_fcmh);
 
 	/* 
 	 * 04/13/2016 & 04/15/2016: Hit during bmap relay (B_REPLAY_OP_CRC).

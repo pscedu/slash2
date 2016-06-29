@@ -373,45 +373,22 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	int unlock = 0, relock = 0, val, rc = 0;
+	int unlock = 0, val, rc = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct fidc_membh *f = b->bcm_fcmh;
 
-	psc_assert(!BMAP_HASLOCK(b));
+	FCMH_BUSY_ENSURE(f);
+	BMAP_BUSY_ENSURE(b);
 	if (tract) {
-		if (BMAPOD_HASWRLOCK(bmi))
-			FCMH_BUSY_ENSURE(f);
-
-		if (FCMH_HAS_BUSY(f)) {
-			if (FCMH_HAS_LOCK(f))
-				FCMH_ULOCK(f);
-		} else {
-			FCMH_WAIT_BUSY(f);
-			FCMH_ULOCK(f);
-		}
-
-		if (BMAPOD_HASWRLOCK(bmi)) {
-			BMAP_LOCK(b);
-			BMAP_BUSY_ENSURE(b);
-			psc_assert((b->bcm_flags &
-			    BMAPF_REPLMODWR) == 0);
-			BMAP_ULOCK(b);
-		} else {
-			BMAP_WAIT_BUSY(b);
-			psc_assert((b->bcm_flags &
-			    BMAPF_REPLMODWR) == 0);
-			BMAP_ULOCK(b);
-			/* grab write lock on bmi */
+		psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
+		if (!BMAPOD_HASWRLOCK(bmi)) {
 			BMAPOD_MODIFY_START(b);
 			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 			    sizeof(bmi->bmi_orepls));
 		}
 	} else if (!BMAPOD_HASWRLOCK(bmi) && !BMAPOD_HASRDLOCK(bmi)) {
-		relock = BMAP_HASLOCK(b);
-		BMAP_WAIT_BUSY(b);
-		BMAPOD_RDLOCK(bmi);
-		BMAP_UNBUSY(b);
 		unlock = 1;
+		BMAPOD_RDLOCK(bmi);
 	}
 
 	if (scircuit)
@@ -423,7 +400,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 	if (val >= NBREPLST)
-		psc_fatalx("corrupt bmap, val = %d, bno = %ld, fid="SLPRI_FID,
+		psc_fatalx("corrupt bmap, val = %d, bno = %d, fid="SLPRI_FID,
 			 val, b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
 	if (cbf)
@@ -449,8 +426,6 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
  out:
 	if (unlock)
 		BMAPOD_ULOCK(bmi);
-	if (relock)
-		BMAP_LOCK(b);
 	return (rc);
 }
 

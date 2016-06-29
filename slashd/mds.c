@@ -550,7 +550,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		return (iosidx);
 	}
 
-//	BMAP_WAIT_BUSY(b);
+	BMAP_WAIT_BUSY(b);
 
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
