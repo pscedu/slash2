@@ -62,6 +62,8 @@ zfs)	pool=$1
 	esac
 esac
 
+# check disk space utilization
+
 if [ $util -gt 0 ]; then
 	# phase 2: disable if X% full
 	fs_util=$(df $fs | awk '{print $5}' | tr -d % | tail -1)
