@@ -181,8 +181,8 @@ slihealththr_main(struct psc_thread *thr)
 		else if (WIFEXITED(rc))
 			rc = WEXITSTATUS(rc);
 		if (sli_selftest_rc != rc) {
-			psclog_notice("health changed from %d to %d "
-			    "(error=%d)", sli_selftest_rc, rc, errno);
+			psclog_warnx("health changed from %d to %d "
+			    "(errno=%d)", sli_selftest_rc, rc, errno);
 
 			sli_selftest_rc = rc;
 
