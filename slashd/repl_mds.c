@@ -101,8 +101,7 @@ iosidx_in(int idx, const int *iosidx, int nios)
 void
 slm_repl_bmap_rel(struct bmap *b, int type)
 {
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
-	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
+	if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
 		/* we took a write lock but did not modify; undo */
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(b->bcm_fcmh);
@@ -539,7 +538,6 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct iosidv qv;
 	uint32_t policy;
-	int waslocked;
 
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
@@ -563,9 +561,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
 
-	waslocked = BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	policy = bmap_2_replpol(b);
-	BMAPOD_UREQLOCK(bmap_2_bmi(b), waslocked);
 
 	/*
 	 * Invalidate all other replicas.
