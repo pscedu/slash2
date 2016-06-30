@@ -182,7 +182,11 @@ mds_replay_bmap(void *jent, int op)
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
+	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	BMAP_WAIT_BUSY(b);
 	rc = mds_bmap_write(b, NULL, NULL);
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(b->bcm_fcmh);
 
 	if (0)
  unbusy:
