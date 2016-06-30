@@ -155,6 +155,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 void
 slm_bmap_resetnonce(struct bmap *b)
 {
+	int rc;
 	struct bmap_nonce_cbarg a;
 
 	memset(&a, 0, sizeof(a));
@@ -178,7 +179,9 @@ slm_bmap_resetnonce(struct bmap *b)
 		    SQLITE_INTEGER, sl_sys_upnonce,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
-		mds_bmap_write_logrepls(b);
+		rc = mds_bmap_write_logrepls(b);
+		if (!rc)
+			b->bcm_flags |= BMAPF_REPLMODWR;
 	}
 }
 

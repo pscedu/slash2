@@ -188,8 +188,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		    error);
 	}
 
-	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
+	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off)) {
 		mds_bmap_write_logrepls(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
+	}
 	slm_repl_bmap_rel(b, BMAP_OPCNT_LOOKUP);
 	b = NULL;
 
@@ -234,6 +236,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
 		upschq_resm(dst_resm, UPDT_PAGEIN);
 //		upschq_resm(src_resm, UPDT_PAGEIN);
 		return (1);
@@ -318,6 +321,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	rc = mds_bmap_write_logrepls(b);
 	psc_assert(rc == 0);
+	b->bcm_flags |= BMAPF_REPLMODWR;
 
 	/*
 	 * We succesfully scheduled some work; if there is more
@@ -380,6 +384,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		if (ret != BREPLST_TRUNCPNDG_SCHED)
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
 	}
 
 	if (!rc) {
@@ -421,7 +426,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc;
 	struct srt_ptrunc_req *mq;
@@ -542,6 +546,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc >= 0) {
 		mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 		mds_bmap_write_logrepls(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
 	}
 
  out:
@@ -604,6 +609,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		PFL_GOTOERR(out, rc);
 	rc = mds_bmap_write_logrepls(b);
 	psc_assert(rc == 0);
+	b->bcm_flags |= BMAPF_REPLMODWR;
 
 	return (1);
 
@@ -661,9 +667,10 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		FCMH_WAIT_BUSY(b->bcm_fcmh);
 		BMAP_WAIT_BUSY(b);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
-		    1))
+		    1)) {
 			mds_bmap_write_logrepls(b);
-		else {
+			b->bcm_flags |= BMAPF_REPLMODWR;
+		} else {
 			BMAP_UNBUSY(b);
 			FCMH_UNBUSY(b->bcm_fcmh);
 		}
@@ -831,6 +838,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (mds_repl_bmap_apply(b, tract,
 				    retifset, off)) {
 					mds_bmap_write_logrepls(b);
+					b->bcm_flags |= BMAPF_REPLMODWR;
 					goto out;
 				}
 			}

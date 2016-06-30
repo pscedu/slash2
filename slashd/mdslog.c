@@ -1796,17 +1796,6 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	    sjbr, sizeof(*sjbr));
 	pjournal_put_buf(slm_journal, sjbr);
 
-	/*
-	 * Pass ownership, which was asserted in mdslogfill_bmap_repls(), 
-	 * to whichever wkthr who gets it.
-	 */
-	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "pass BUSY to wkthr");
-	BMAP_LOCK(b);
-	b->bcm_fcmh->fcmh_owner = 0;
-	b->bcm_owner = 0;
-	b->bcm_flags |= BMAPF_REPLMODWR;
-	BMAP_ULOCK(b);
-
 	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
 	    struct slm_wkdata_wr_brepl);
 	wk->b = b;
