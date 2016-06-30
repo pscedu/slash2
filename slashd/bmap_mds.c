@@ -432,13 +432,15 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	BMAP_UNBUSY(bmap);
-	FCMH_UNBUSY(f);
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 	crclog.scl_iosid = iosid;
-	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
+	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
+
+	BMAP_UNBUSY(bmap);
+	FCMH_UNBUSY(f);
+	return (rc);
 }
 
 void
