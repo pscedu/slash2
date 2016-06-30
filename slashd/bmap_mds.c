@@ -416,7 +416,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
-	FCMH_WAIT_BUSY(f);
 	BMAP_WAIT_BUSY(bmap);
 	if (mds_repl_inv_except(bmap, idx, 1)) {
 		/* 
