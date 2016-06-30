@@ -1386,6 +1386,7 @@ dump_upd(struct slm_update_data *upd)
 }
 #endif
 
+/* see upd_type_enum  */
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_hldrop,

@@ -47,7 +47,7 @@ struct slm_update_data {
 #define UPDF_BUSY			(1 << 0)	/* item is being modified */
 
 /* upd_type, which is used, among other things, to index *upd_proctab[] */
-enum {
+enum upd_type_enum {
 	UPDT_BMAP,			/* upd_proc_bmap() */
 	UPDT_HLDROP,			/* upd_proc_hldrop() */
 	UPDT_PAGEIN,			/* upd_proc_pagein() */
