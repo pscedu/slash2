@@ -862,6 +862,11 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
 			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
 
+		/*
+ 		 * XXX This appears to be a problem because we can
+ 		 * acquire a fmch more than once without releasing
+ 		 * it.
+ 		 */
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc) {
 			if (rc == -SLERR_BMAP_ZERO) {
