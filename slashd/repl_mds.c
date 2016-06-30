@@ -857,23 +857,20 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
+
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
-		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
-			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
 
-		/*
- 		 * XXX This appears to be a problem because we can
- 		 * acquire a fmch more than once without releasing
- 		 * it.
- 		 */
+		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX) {
+			rc = -PFLERR_WOULDBLOCK;
+			break;
+		}
+
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO) {
+			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-				break;
-			}
-			PFL_GOTOERR(out, rc);
+			break;
 		}
 
 		/*
@@ -913,9 +910,10 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
 		slm_repl_bmap_rel(b);
-		if (flags & FLAG_REPLICA_STATE_INVALID)
-			PFL_GOTOERR(out,
-			    rc = -SLERR_REPLICA_STATE_INVALID);
+		if (flags & FLAG_REPLICA_STATE_INVALID) {
+			rc = -SLERR_REPLICA_STATE_INVALID;
+			break;
+		}
 	}
 
  out:
