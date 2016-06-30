@@ -794,6 +794,11 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);
 
+	/*
+ 	 * XXX The purpose of ZFS callback is to link a transaction ID with
+ 	 * the corresponding journal log entry which lives outside of the ZFS.
+ 	 * So anything other than writing the log entry should go away.
+ 	 */
 	if (op == NS_OP_RECLAIM ||
 	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1)) {
 		struct slm_wkdata_upsch_purge *wk;
