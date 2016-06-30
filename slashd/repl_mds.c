@@ -373,7 +373,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	int unlock = 0, val, rc = 0;
+	int val, rc = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct fidc_membh *f = b->bcm_fcmh;
 
@@ -381,14 +381,8 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	BMAP_BUSY_ENSURE(b);
 	if (tract) {
 		psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
-		if (!BMAPOD_HASWRLOCK(bmi)) {
-			BMAPOD_MODIFY_START(b);
-			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
-			    sizeof(bmi->bmi_orepls));
-		}
-	} else if (!BMAPOD_HASWRLOCK(bmi) && !BMAPOD_HASRDLOCK(bmi)) {
-		unlock = 1;
-		BMAPOD_RDLOCK(bmi);
+		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
+		    sizeof(bmi->bmi_orepls));
 	}
 
 	if (scircuit)
@@ -425,8 +419,6 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	}
 
  out:
-	if (unlock)
-		BMAPOD_ULOCK(bmi);
 	return (rc);
 }
 

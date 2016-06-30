@@ -656,6 +656,8 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			psclog_error("iosv_lookup: rc=%d", rc);
 			goto next;
 		}
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		BMAP_WAIT_BUSY(b);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))
 			mds_bmap_write_logrepls(b);
