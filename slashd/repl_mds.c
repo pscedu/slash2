@@ -628,7 +628,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		char		*stat[SL_MAX_REPLICAS];
 		unsigned	 nios;
 	} add, del, chg;
-	int locked, off, vold, vnew, sprio, uprio, rc;
+
+	int off, vold, vnew, sprio, uprio, rc;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
@@ -648,8 +649,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	pthr = pthread_self();
 	f->fcmh_owner = pthr;
 	b->bcm_owner = pthr;
-
-	locked = BMAPOD_READ_START(b);
 
 	memset(&chg, 0, sizeof(chg));
 
@@ -754,7 +753,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	bmap_2_bmi(b)->bmi_usr_prio = -1;
 
 	if (rel) {
-		BMAPOD_READ_DONE(b, locked);
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REPLMODWR;
