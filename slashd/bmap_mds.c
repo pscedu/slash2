@@ -152,6 +152,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	return (0);
 }
 
+/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 */
 void
 slm_bmap_resetnonce(struct bmap *b)
 {
@@ -193,7 +194,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, new, vfsid, retifset[NBREPLST];
+	int rc, new, unbusy, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -268,7 +269,10 @@ mds_bmap_read(struct bmap *b, int flags)
 
  out2:
 
-	FCMH_WAIT_BUSY(f);
+	if (!FCMH_HAS_BUSY(f)) {
+		unbusy = 1;
+		FCMH_WAIT_BUSY(f);
+	}
 	BMAP_WAIT_BUSY(b);
 
 	if (!new)
@@ -288,8 +292,11 @@ mds_bmap_read(struct bmap *b, int flags)
 			slm_bmap_resetnonce(b);
 	}
 
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(f);
+	if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
+		BMAP_UNBUSY(b);
+
+	if (unbusy)
+		FCMH_UNBUSY(f);
 	return (0);
 }
 
