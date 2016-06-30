@@ -865,8 +865,10 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
+		BMAP_WAIT_BUSY(b);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
+			BMAP_UNBUSY(b);
 			bmap_op_done(b);
 			continue;
 		}
@@ -903,6 +905,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			/* we took a write lock but did not modify; undo */
 			BMAP_UNBUSY(b);
 		}
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
 			rc = -SLERR_REPLICA_STATE_INVALID;
 			break;
