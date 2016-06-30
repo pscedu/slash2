@@ -858,6 +858,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
 
+	FCMH_WAIT_BUSY(f);
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 
@@ -909,12 +910,18 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			UPD_UNBUSY(upd);
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
-		slm_repl_bmap_rel(b);
+
+		if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
+			/* we took a write lock but did not modify; undo */
+			BMAPOD_MODIFY_DONE(b, 0);
+			BMAP_UNBUSY(b);
+		}
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
 			rc = -SLERR_REPLICA_STATE_INVALID;
 			break;
 		}
 	}
+	FCMH_UNBUSY(f);
 
  out:
 	if (f)
