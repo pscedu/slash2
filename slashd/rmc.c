@@ -1299,9 +1299,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	BMAP_WAIT_BUSY(b);
 
-	waslocked = BMAPOD_MODIFY_START(b);
 	bmap_2_replpol(b) = mq->pol;
-	BMAPOD_MODIFY_DONE((b), waslocked);
 
 	mds_bmap_write_logrepls(b);
 	/* XXX upd_enqueue */

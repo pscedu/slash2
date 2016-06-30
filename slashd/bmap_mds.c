@@ -367,7 +367,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	struct srt_stat sstb;
-	int rc, fl, idx, vfsid, waslocked;
+	int rc, fl, idx, vfsid;
 	uint32_t i;
 	uint64_t nblks;
 
@@ -422,11 +422,9 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		 */
 		psclog_warnx("IOS %x is not found.", idx);
 	}
-	BMAPOD_MODIFY_DONE(bmap, 0);
 	BMAP_UNBUSY(bmap);
 	FCMH_UNBUSY(f);
 
-	waslocked = BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
@@ -436,7 +434,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	BMAPOD_UREQLOCK(bmi, waslocked);
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;

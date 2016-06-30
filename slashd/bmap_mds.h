@@ -120,28 +120,14 @@ bmap_2_bmi(struct bmap *b)
 	return (bmap_get_pri(b));
 }
 
-#define BMAPOD_MODIFY_START(b)	BMAPOD_REQWRLOCK(bmap_2_bmi(b))
-#define BMAPOD_MODIFY_DONE(b,w)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (w))
-
-#define BMAPOD_READ_START(b)	BMAPOD_REQRDLOCK(bmap_2_bmi(b))
-#define BMAPOD_READ_DONE(b, lk)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (lk))
-
 #define BHGEN_INCREMENT(b)						\
 	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_MODIFY_START(b);				\
 		bmap_2_bgen(b)++;					\
-		BMAPOD_MODIFY_DONE((b), _lk);				\
 	} while (0)
 
 #define BHGEN_GET(b, bgen)						\
 	do {								\
-		int _lk;						\
-									\
-		_lk = BMAPOD_READ_START(b);				\
 		*(bgen) = bmap_2_bgen(b);				\
-		BMAPOD_READ_DONE((b), _lk);				\
 	} while (0)
 
 struct bmap_timeo_table {

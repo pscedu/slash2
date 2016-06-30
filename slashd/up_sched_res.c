@@ -662,7 +662,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		    1))
 			mds_bmap_write_logrepls(b);
 		else {
-			BMAPOD_MODIFY_DONE(b, 0);
 			BMAP_UNBUSY(b);
 			FCMH_UNBUSY(b->bcm_fcmh);
 		}
@@ -846,8 +845,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 		}
 	}
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
-		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
 
@@ -891,7 +888,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	}
 
 	BMAP_WAIT_BUSY(b);
-	BMAPOD_WRLOCK(bmi);
 
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
@@ -917,7 +913,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
 	if (b) {
-		BMAPOD_ULOCK(bmi);
 		BMAP_UNBUSY(b);
 		bmap_op_done(b);
 	}
@@ -1105,8 +1100,6 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
-	else
-		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
 

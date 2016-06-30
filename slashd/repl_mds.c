@@ -104,7 +104,6 @@ _slm_repl_bmap_rel_type(struct bmap *b, int type)
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
 	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
 		/* we took a write lock but did not modify; undo */
-		BMAPOD_MODIFY_DONE(b, 0);
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(b->bcm_fcmh);
 	}
@@ -905,7 +904,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
 			/* we took a write lock but did not modify; undo */
-			BMAPOD_MODIFY_DONE(b, 0);
 			BMAP_UNBUSY(b);
 		}
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
