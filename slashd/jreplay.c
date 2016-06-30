@@ -177,6 +177,7 @@ mds_replay_bmap(void *jent, int op)
 				break;
 			}
 
+		FCMH_UNBUSY(b->bcm_fcmh);
 		break;
 	}
 
