@@ -2373,6 +2373,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			check = 1;
 		}
 
+		/* see slmbkdbthr_main() on how we back the database */
 		if (rc != SQLITE_OK) {
 			psc_assert(slm_opstate == SLM_OPSTATE_REPLAY);
 
