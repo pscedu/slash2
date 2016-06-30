@@ -1834,8 +1834,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
 
-	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
-
 	/*
 	 * See if we need to distill the file enlargement information.
 	 */
@@ -1868,11 +1866,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	}
 
 	psc_assert(t == crcup->nups);
-
-	/* Signify that the update has occurred. */
-	BMAP_LOCK(bmap);
-	bmap->bcm_flags &= ~BMAPF_CRC_UP;
-	BMAP_ULOCK(bmap);
 }
 
 void

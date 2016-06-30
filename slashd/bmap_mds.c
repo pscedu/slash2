@@ -371,8 +371,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	uint32_t i;
 	uint64_t nblks;
 
-	psc_assert(bmap->bcm_flags & BMAPF_CRC_UP);
-
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
 

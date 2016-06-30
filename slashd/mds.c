@@ -1610,6 +1610,11 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	/* Call the journal and update the in-memory CRCs. */
 	rc = mds_bmap_crc_update(bmap, iosid, c);
 
+	/* Signify that the update has occurred. */
+	BMAP_LOCK(bmap);
+	bmap->bcm_flags &= ~BMAPF_CRC_UP;
+	BMAP_ULOCK(bmap);
+
 	/*
 	 * As a security precaution, most systems disable setuid or
 	 * setgid when a file is modified by nonsuperuser.  Since
