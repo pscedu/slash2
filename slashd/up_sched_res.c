@@ -869,7 +869,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
-	struct bmap_mds_info *bmi = NULL;
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
@@ -883,7 +882,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (rc)
 		goto out;
 	BMAP_ULOCK(b);
-	bmi = bmap_2_bmi(b);
 
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
