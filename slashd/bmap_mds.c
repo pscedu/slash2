@@ -206,13 +206,12 @@ mds_bmap_read(struct bmap *b, int flags)
 	UPD_UNBUSY(upd);
 
 	new = 0;
+	f = b->bcm_fcmh;
 	if (flags & BMAPGETF_NODISKREAD) {
 		new = 1;
 		mds_bmap_initnew(b);
 		goto out2;
 	}
-
-	f = b->bcm_fcmh;
 
 	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
@@ -268,12 +267,16 @@ mds_bmap_read(struct bmap *b, int flags)
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
-	/* (gdb) p ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls */
 
-	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	FCMH_WAIT_BUSY(f);
 	BMAP_WAIT_BUSY(b);
 
 	if (!new)
+		/* 
+		 * gdb help:
+		 *
+		 * ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls 
+		 */
 		mds_bmap_ensure_valid(b);
 
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
@@ -286,7 +289,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	}
 
 	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(b->bcm_fcmh);
+	FCMH_UNBUSY(f);
 	return (0);
 }
 
