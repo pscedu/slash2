@@ -416,15 +416,14 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
+	FCMH_WAIT_BUSY(f);
+	BMAP_WAIT_BUSY(bmap);
 	if (mds_repl_inv_except(bmap, idx, 1)) {
 		/* 
 		 * This case should not happen.
 		 */
 		psclog_warnx("IOS %x is not found.", idx);
 	}
-	BMAP_UNBUSY(bmap);
-	FCMH_UNBUSY(f);
-
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
@@ -434,6 +433,8 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
+	BMAP_UNBUSY(bmap);
+	FCMH_UNBUSY(f);
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
