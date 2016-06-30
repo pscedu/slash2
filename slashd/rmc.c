@@ -1273,7 +1273,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	struct srm_set_bmapreplpol_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
-	int waslocked;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
