@@ -274,16 +274,15 @@ mds_bmap_read(struct bmap *b, int flags)
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
-	if (slm_opstate == SLM_OPSTATE_REPLAY)
-		goto out3;
+	if (slm_opstate != SLM_OPSTATE_REPLAY) {
+		brepls_init(retifset, 0);
+		retifset[BREPLST_REPL_SCHED] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+		if (mds_repl_bmap_walk_all(b, NULL, retifset,
+		    REPL_WALKF_SCIRCUIT))
+			slm_bmap_resetnonce(b);
+	}
 
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		slm_bmap_resetnonce(b);
- out3:
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(b->bcm_fcmh);
 	return (0);
