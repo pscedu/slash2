@@ -1165,6 +1165,10 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	if (!rc)
+		OPSTAT_INCR("upsch-insert-ok");
+	else
+		OPSTAT_INCR("upsch-insert-err");
 	return (rc);
 }
 
