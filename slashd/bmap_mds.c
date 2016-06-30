@@ -193,7 +193,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, vfsid, retifset[NBREPLST];
+	int rc, new, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -205,10 +205,10 @@ mds_bmap_read(struct bmap *b, int flags)
 	upd_init(upd, UPDT_BMAP);
 	UPD_UNBUSY(upd);
 
+	new = 0;
 	if (flags & BMAPGETF_NODISKREAD) {
+		new = 1;
 		mds_bmap_initnew(b);
-		FCMH_WAIT_BUSY(b->bcm_fcmh);
-		BMAP_WAIT_BUSY(b);
 		goto out2;
 	}
 
@@ -265,15 +265,17 @@ mds_bmap_read(struct bmap *b, int flags)
 		return (rc);
 	}
 
+	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
+
+ out2:
 	/* (gdb) p ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls */
 
 	FCMH_WAIT_BUSY(b->bcm_fcmh);
 	BMAP_WAIT_BUSY(b);
-	mds_bmap_ensure_valid(b);
 
-	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
+	if (!new)
+		mds_bmap_ensure_valid(b);
 
- out2:
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_SCHED] = 1;
