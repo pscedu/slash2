@@ -897,6 +897,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
+	FCMH_WAIT_BUSY(f);
 	BMAP_WAIT_BUSY(b);
 
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
@@ -904,6 +905,11 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		upsch_enqueue(bmap_2_upd(b));
 	else
 		rc = 1;
+
+	if (!(b->bcm_flags & BMAPF_REPLMODWR))
+		BMAP_UNBUSY(b);
+
+	FCMH_UNBUSY(f);
 
  out:
 	if (rc) {
@@ -923,7 +929,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
 	if (b) {
-		BMAP_UNBUSY(b);
 		bmap_op_done(b);
 	}
 	if (f)
