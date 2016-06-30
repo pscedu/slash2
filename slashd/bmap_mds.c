@@ -87,7 +87,7 @@ mds_bmap_initnew(struct bmap *b)
 void
 mds_bmap_ensure_valid(struct bmap *b)
 {
-	int rc, level, retifset[NBREPLST];
+	int rc, retifset[NBREPLST];
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
@@ -111,12 +111,15 @@ mds_bmap_ensure_valid(struct bmap *b)
 	 * ((struct bmap_mds_info *)(b+1))->bmi_corestate.bcs_repls
 	 *
 	 */
-	if (!rc) {
-		level = (slm_opstate == SLM_OPSTATE_NORMAL) ? 
-		    PLL_FATAL : PLL_WARN;
-		DEBUG_BMAP(level, b, "no valid replicas, bno = %d, fid = "SLPRI_FID,
-		    b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh)); 
-	}
+	if (rc) 
+		return;
+
+	/*
+ 	 * See this during normal operation.  However, it can recover if we
+ 	 * request a bmap from an IOS. So let us warn instead of crash.
+ 	 */
+	DEBUG_BMAP(PLL_WARN, b, "no valid replicas, bno = %d, fid = "SLPRI_FID,
+	    b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh)); 
 }
 
 struct bmap_nonce_cbarg {
