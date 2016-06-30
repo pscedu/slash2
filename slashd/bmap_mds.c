@@ -96,11 +96,8 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_TRUNCPNDG] = 1;
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
-	FCMH_WAIT_BUSY(b->bcm_fcmh);
-	BMAP_WAIT_BUSY(b);
+	/* Caller should busy fcmh and bmap. */
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT);
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(b->bcm_fcmh);
 
 	/* 
 	 * 04/13/2016 & 04/15/2016: Hit during bmap relay (B_REPLAY_OP_CRC).
@@ -117,7 +114,8 @@ mds_bmap_ensure_valid(struct bmap *b)
 	if (!rc) {
 		level = (slm_opstate == SLM_OPSTATE_NORMAL) ? 
 		    PLL_FATAL : PLL_WARN;
-		DEBUG_BMAP(level, b, "bmap has no valid replicas");
+		DEBUG_BMAP(level, b, "no valid replicas, bno = %d, fid = "SLPRI_FID,
+		    b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh)); 
 	}
 }
 
@@ -203,6 +201,8 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	if (flags & BMAPGETF_NODISKREAD) {
 		mds_bmap_initnew(b);
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		BMAP_WAIT_BUSY(b);
 		goto out2;
 	}
 
@@ -260,13 +260,16 @@ mds_bmap_read(struct bmap *b, int flags)
 	}
 
 	/* (gdb) p ((struct bmap_mds_info*)(b+1))->bmi_corestate.bcs_repls */
+
+	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	BMAP_WAIT_BUSY(b);
 	mds_bmap_ensure_valid(b);
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
 	if (slm_opstate == SLM_OPSTATE_REPLAY)
-		return (0);
+		goto out3;
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
@@ -274,6 +277,9 @@ mds_bmap_read(struct bmap *b, int flags)
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		slm_bmap_resetnonce(b);
+ out3:
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(b->bcm_fcmh);
 	return (0);
 }
 
@@ -291,7 +297,6 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	size_t nb;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-	BMAPOD_REQRDLOCK(bmi);
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
@@ -321,8 +326,6 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_DIAG);
 	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
 	    b->bcm_bmapno, rc);
-
-	BMAPOD_UREQLOCK(bmi, 0);
 
 	return (rc);
 }

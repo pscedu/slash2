@@ -1257,6 +1257,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_TRUNCPNDG] = 1;
+
+		BMAP_ULOCK(b);
+		FCMH_WAIT_BUSY(f);
+		BMAP_WAIT_BUSY(b);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
@@ -1264,16 +1268,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-			psc_assert(!FCMH_HAS_LOCK(f));
-
-			if (!FCMH_HAS_BUSY(f))
-				BMAP_ULOCK(b);
-			FCMH_WAIT_BUSY(f);
-			FCMH_ULOCK(f);
-			BMAP_WAIT_BUSY(b);
-			BMAPOD_RDLOCK(bmi);
-
 			brepls_init(qifset, 0);
 			qifset[BREPLST_REPL_QUEUED] = 1;
 			qifset[BREPLST_TRUNCPNDG] = 1;
@@ -1284,12 +1278,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
 			UPD_UNBUSY(upd);
-			BMAPOD_ULOCK(bmi);
-			BMAP_UNBUSY(b);
-			FCMH_UNBUSY(f);
-
-			BMAP_LOCK(b);
 		}
+
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(f);
+		BMAP_LOCK(b);
 	}
 
  out:

@@ -403,6 +403,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 		psc_fatalx("corrupt bmap, val = %d, bno = %d, fid="SLPRI_FID,
 			 val, b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
+	/* callback can be used to track if we did make any changes */
 	if (cbf)
 		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
 
