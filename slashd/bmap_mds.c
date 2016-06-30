@@ -269,6 +269,7 @@ mds_bmap_read(struct bmap *b, int flags)
 
  out2:
 
+	unbusy = 0;
 	if (!FCMH_HAS_BUSY(f)) {
 		unbusy = 1;
 		FCMH_WAIT_BUSY(f);
