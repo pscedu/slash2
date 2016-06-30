@@ -140,6 +140,9 @@ mds_replay_bmap(void *jent, int op)
 
 		/* a no-op will gather the locks for us */
 		brepls_init(tract, -1);
+
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		BMAP_WAIT_BUSY(b);
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
@@ -155,6 +158,8 @@ mds_replay_bmap(void *jent, int op)
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		b->bcm_flags |= BMAPF_REPLMODWR;
+		BMAP_ULOCK(b);
+
 		// bmi_sys_prio =
 		// bmi_usr_prio =
 		slm_repl_upd_write(b, 1);
