@@ -99,7 +99,7 @@ iosidx_in(int idx, const int *iosidx, int nios)
 }
 
 void
-_slm_repl_bmap_rel_type(struct bmap *b, int type)
+slm_repl_bmap_rel(struct bmap *b, int type)
 {
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
 	    !(b->bcm_flags & BMAPF_REPLMODWR)) {
@@ -1048,7 +1048,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			mds_bmap_write_logrepls(b);
 
  bmap_done:
-		slm_repl_bmap_rel(b);
+		slm_repl_bmap_rel(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
