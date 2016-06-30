@@ -292,7 +292,7 @@ mds_bmap_read(struct bmap *b, int flags)
 			slm_bmap_resetnonce(b);
 	}
 
-	if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
+	if (!(b->bcm_flags & BMAPF_REPLMODWR)) 
 		BMAP_UNBUSY(b);
 
 	if (unbusy)
