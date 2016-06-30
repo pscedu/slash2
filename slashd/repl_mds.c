@@ -745,8 +745,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		b->bcm_flags &= ~BMAPF_REPLMODWR;
 		BMAP_UNBUSY(b);
 
-		FCMH_UNBUSY(b->bcm_fcmh);
-
 		UPD_UNBUSY(upd);
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
