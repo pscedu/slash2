@@ -623,7 +623,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	struct fidc_membh *f;
 	struct sl_resource *r;
 	sl_ios_id_t resid;
-	pthread_t pthr;
 	unsigned n;
 
 	bmi = bmap_2_bmi(b);
@@ -631,13 +630,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	f = b->bcm_fcmh;
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
-
-#if 0
-	/* Transfer ownership to us. */
-	pthr = pthread_self();
-	f->fcmh_owner = pthr;
-	b->bcm_owner = pthr;
-#endif
 
 	memset(&chg, 0, sizeof(chg));
 
@@ -742,7 +734,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	bmap_2_bmi(b)->bmi_usr_prio = -1;
 
 	if (rel) {
-
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REPLMODWR;
 		bmap_wake_locked(b);
