@@ -385,9 +385,7 @@ fcmh_getsize(struct fidc_membh *f)
 {
 	ssize_t size;
 
-	FCMH_LOCK(f);
 	size = fcmh_2_fsz(f);
-	FCMH_ULOCK(f);
 	return (size);
 }
 
