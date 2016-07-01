@@ -377,8 +377,8 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 
 	FCMH_BUSY_ENSURE(f);
 	BMAP_BUSY_ENSURE(b);
+	psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
 	if (tract) {
-		psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 	}
