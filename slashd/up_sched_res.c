@@ -1110,6 +1110,8 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	FCMH_WAIT_BUSY(f);
+	BMAP_WAIT_BUSY(b);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
