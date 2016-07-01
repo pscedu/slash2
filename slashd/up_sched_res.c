@@ -452,14 +452,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
-	FCMH_WAIT_BUSY(f);
-	BMAP_WAIT_BUSY(b);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
 		    "truncate already scheduled");
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(f);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
