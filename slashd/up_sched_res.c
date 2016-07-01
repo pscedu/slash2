@@ -844,11 +844,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 		}
 	}
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(f);
-
  out:
-	;
+
+	if (!(b->bcm_flags & BMAPF_REPLMODWR))
+		BMAP_UNBUSY(b);
+	FCMH_UNBUSY(f);
 }
 
 /*
