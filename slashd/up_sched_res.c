@@ -706,10 +706,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
-	FCMH_ULOCK(f);
-
 	BMAP_WAIT_BUSY(b);
-	BMAP_ULOCK(b);
 
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
