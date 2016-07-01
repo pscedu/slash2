@@ -894,7 +894,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 				UPD_ULOCK(upd);
 			}
 			mds_bmap_write_logrepls(b);
-			b->bcm_flags |= BMAPF_REPLMODWR;
 			UPD_UNBUSY(upd);
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
@@ -1044,7 +1043,6 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		    nios, slm_repl_delrq_cb, &flags);
 		if (flags & FLAG_DIRTY) {
 			mds_bmap_write_logrepls(b);
-			b->bcm_flags |= BMAPF_REPLMODWR;
 		}
 
  bmap_done:

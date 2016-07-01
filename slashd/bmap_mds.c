@@ -181,8 +181,6 @@ slm_bmap_resetnonce(struct bmap *b)
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
 		rc = mds_bmap_write_logrepls(b);
-		if (!rc)
-			b->bcm_flags |= BMAPF_REPLMODWR;
 	}
 }
 

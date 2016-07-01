@@ -239,7 +239,6 @@ slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
 	mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
 	mds_bmap_write_logrepls(b);
-	b->bcm_flags |= BMAPF_REPLMODWR;
 	/* XXX handle error */
 	bmap_op_done(b);
 
@@ -257,7 +256,6 @@ slm_rmi_ptrunc_cb(struct pscrpc_request *rq)
 #if 0
 		/* this trigger bmap ensure valid assert, disable for now */
 		mds_bmap_write_logrepls(b);
-		b->bcm_flags |= BMAPF_REPLMODWR;
 #endif
 		/* XXX handle error */
 		bmap_op_done(b);

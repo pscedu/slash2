@@ -2135,7 +2135,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 			bmap_op_done(b);
 			goto out2;
 		}
-		b->bcm_flags |= BMAPF_REPLMODWR;
 		queued++;
 		/*
 		 * Queue work immediately instead
@@ -2177,7 +2176,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		    NULL, NULL);
 		if (ret) {
 			mds_bmap_write_logrepls(b);
-			b->bcm_flags |= BMAPF_REPLMODWR;
 		}
 		bmap_op_done(b);
 	}

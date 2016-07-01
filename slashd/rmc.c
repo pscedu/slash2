@@ -1301,7 +1301,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	bmap_2_replpol(b) = mq->pol;
 
 	mds_bmap_write_logrepls(b);
-	b->bcm_flags |= BMAPF_REPLMODWR;
 	/* XXX upd_enqueue */
 
  out:
