@@ -655,14 +655,15 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			goto next;
 		}
 		FCMH_WAIT_BUSY(b->bcm_fcmh);
-		BMAP_WAIT_BUSY(b);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1)) {
 			mds_bmap_write_logrepls(b);
-		} else {
-			BMAP_UNBUSY(b);
-			FCMH_UNBUSY(b->bcm_fcmh);
 		}
+
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(b->bcm_fcmh);
  next:
 		UPD_DECREF(upd);
 
@@ -702,7 +703,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
-	BMAP_WAIT_BUSY(b);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
@@ -842,8 +844,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	}
  out:
 
-	if (!(b->bcm_flags & BMAPF_REPLMODWR))
-		BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 }
 
@@ -881,7 +882,9 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	}
 
 	FCMH_WAIT_BUSY(f);
-	BMAP_WAIT_BUSY(b);
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
@@ -889,9 +892,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	else
 		rc = 1;
 
-	if (!(b->bcm_flags & BMAPF_REPLMODWR))
-		BMAP_UNBUSY(b);
-
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 
  out:
@@ -1095,12 +1096,14 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
 	FCMH_WAIT_BUSY(f);
-	BMAP_WAIT_BUSY(b);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
-	BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 
  out:

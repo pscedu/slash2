@@ -376,7 +376,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	struct fidc_membh *f = b->bcm_fcmh;
 
 	FCMH_BUSY_ENSURE(f);
-	BMAP_BUSY_ENSURE(b);
+	BMAP_LOCK_ENSURE(b);
 	psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
 	if (tract) {
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
@@ -632,10 +632,12 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
 
+#if 0
 	/* Transfer ownership to us. */
 	pthr = pthread_self();
 	f->fcmh_owner = pthr;
 	b->bcm_owner = pthr;
+#endif
 
 	memset(&chg, 0, sizeof(chg));
 
@@ -743,10 +745,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_REPLMODWR;
-		BMAP_UNBUSY(b);
-
-		UPD_UNBUSY(upd);
-
+		bmap_wake_locked(b);
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 	}
 }
@@ -863,7 +862,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
-		BMAP_WAIT_BUSY(b);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
 			BMAP_UNBUSY(b);
@@ -898,10 +898,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
 
-		if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
-			/* we took a write lock but did not modify; undo */
-			BMAP_UNBUSY(b);
-		}
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
 			rc = -SLERR_REPLICA_STATE_INVALID;

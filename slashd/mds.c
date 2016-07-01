@@ -550,7 +550,8 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		return (iosidx);
 	}
 
-	BMAP_WAIT_BUSY(b);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
@@ -559,7 +560,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	rc = mds_repl_inv_except(b, iosidx, 0);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
-		BMAP_UNBUSY(b);
+		BMAP_ULOCK(b);
 		FCMH_UNBUSY(f);
 		return (rc);
 	}
@@ -574,7 +575,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 
 	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
-	BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(f);
 
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
@@ -1260,7 +1261,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 		BMAP_ULOCK(b);
 		FCMH_WAIT_BUSY(f);
-		BMAP_WAIT_BUSY(b);
+	
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
@@ -1280,7 +1283,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			UPD_UNBUSY(upd);
 		}
 
-		BMAP_UNBUSY(b);
+		BMAP_ULOCK(b);
 		FCMH_UNBUSY(f);
 		BMAP_LOCK(b);
 	}

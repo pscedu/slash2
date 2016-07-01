@@ -272,7 +272,8 @@ mds_bmap_read(struct bmap *b, int flags)
 		unbusy = 1;
 		FCMH_WAIT_BUSY(f);
 	}
-	BMAP_WAIT_BUSY(b);
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	if (!new)
 		/* 
@@ -291,9 +292,7 @@ mds_bmap_read(struct bmap *b, int flags)
 			slm_bmap_resetnonce(b);
 	}
 
-	if (!(b->bcm_flags & BMAPF_REPLMODWR)) 
-		BMAP_UNBUSY(b);
-
+	BMAP_ULOCK(b);
 	if (unbusy)
 		FCMH_UNBUSY(f);
 	return (0);
@@ -435,7 +434,10 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
-	BMAP_WAIT_BUSY(bmap);
+	
+	BMAP_LOCK(bmap);
+	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
+	
 	if (mds_repl_inv_except(bmap, idx, 1)) {
 		/* 
 		 * This case should not happen.
@@ -457,7 +459,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	crclog.scl_iosid = iosid;
 	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
 
-	BMAP_UNBUSY(bmap);
+	BMAP_ULOCK(bmap);
 	FCMH_UNBUSY(f);
 	return (rc);
 }

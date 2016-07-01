@@ -1755,7 +1755,7 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	FCMH_BUSY_ENSURE(f);
-	BMAP_BUSY_ENSURE(b);
+	BMAP_LOCK_ENSURE(b);
 
 	sjbr->sjbr_fid = fcmh_2_fid(f);
 	sjbr->sjbr_bmapno = b->bcm_bmapno;

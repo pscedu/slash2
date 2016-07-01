@@ -142,7 +142,9 @@ mds_replay_bmap(void *jent, int op)
 		brepls_init(tract, -1);
 
 		FCMH_WAIT_BUSY(b->bcm_fcmh);
-		BMAP_WAIT_BUSY(b);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
@@ -184,9 +186,11 @@ mds_replay_bmap(void *jent, int op)
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
 	FCMH_WAIT_BUSY(b->bcm_fcmh);
-	BMAP_WAIT_BUSY(b);
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
-	BMAP_UNBUSY(b);
+	BMAP_ULOCK(b);
 	FCMH_UNBUSY(b->bcm_fcmh);
 
 	if (0)

@@ -182,7 +182,7 @@ struct fidc_membh {
 			(f)->fcmh_owner = _pthr;			\
 			(f)->fcmh_lineno = __LINE__;			\
 			(f)->fcmh_fn = __FILE__;			\
-			DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");		\
+			DEBUG_FCMH(PLL_MAX, (f), "set BUSY");		\
 		}							\
 		(_wasbusy);						\
 	} _PFL_RVEND
@@ -196,7 +196,7 @@ struct fidc_membh {
 		} else {						\
 			(f)->fcmh_owner = 0;				\
 			(f)->fcmh_flags &= ~FCMH_BUSY;			\
-			DEBUG_FCMH(PLL_DEBUG, (f), "cleared BUSY");	\
+			DEBUG_FCMH(PLL_MAX, (f), "cleared BUSY, %d", __LINE__);	\
 			fcmh_wake_locked(f);				\
 		}							\
 		FCMH_URLOCK((f), (waslocked));				\
