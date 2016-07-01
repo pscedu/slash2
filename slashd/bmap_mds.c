@@ -345,6 +345,11 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
 	    b->bcm_bmapno, rc);
 
+	if (!rc && logf == (void *)mdslog_bmap_repls) {
+		BMAP_LOCK_ENSURE(b);
+		b->bcm_flags |= BMAPF_REPLMODWR;
+	}
+
 	return (rc);
 }
 
