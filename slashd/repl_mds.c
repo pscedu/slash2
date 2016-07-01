@@ -617,7 +617,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	} add, del, chg;
 
 	int off, vold, vnew, sprio, uprio, rc;
-	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
@@ -626,7 +625,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	unsigned n;
 
 	bmi = bmap_2_bmi(b);
-	upd = &bmi->bmi_upd;
 	f = b->bcm_fcmh;
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
