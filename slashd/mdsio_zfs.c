@@ -55,20 +55,19 @@ mdsio_fid_t		 mds_tmpdir_inum[MAX_FILESYSTEMS];
 int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
-	int locked, rc, vfsid;
-	pthread_t pthr;
+	int rc, vfsid;
 
-	pthr = pthread_self();
-	locked = FCMH_RLOCK(f);
-	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY) &&
-	    f->fcmh_owner != pthr);
+	FCMH_RLOCK(f);
+	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY));
+
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	psc_assert(rc == 0);
 	rc = mdsio_getattr(vfsid, fcmh_2_mfid(f),
 	    fcmh_2_mfh(f), &rootcreds, &f->fcmh_sstb);
 	if (out_sstb)
 		*out_sstb = f->fcmh_sstb;
-	FCMH_URLOCK(f, locked);
+
+	FCMH_ULOCK(f);
 	return (rc);
 }
 
