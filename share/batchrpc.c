@@ -441,6 +441,9 @@ _slrpc_batch_rep_decref(const struct pfl_callerinfo *pci,
 		/*
 		 * An error was encountered that applies to the entire
 		 * batch RPC reply.  Try another transmission.
+		 *
+		 * XXX 07/05/2016: Hit invalid lock value when MDS is
+		 * done.
 		 */
 		bp->bp_refcnt++;
 		bp->bp_flags &= ~BATCHF_REPLIED;
