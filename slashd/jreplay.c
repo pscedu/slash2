@@ -175,7 +175,12 @@ mds_replay_bmap(void *jent, int op)
 				resid = fcmh_2_repl(f, n);
 
 				// XXX sys/usr prio
-				slm_upsch_insert(b, resid, 0, 0);
+				rc = slm_upsch_insert(b, resid, 0, 0);
+				if (rc)
+					psclog_warnx("upsch insert failed: bno = %d, "
+					    "fid="SLPRI_FID", ios= %#x, rc = %d",
+					    b->bcm_bmapno, bmap_2_fid(b), 
+					    resid, rc);
 				break;
 			}
 
