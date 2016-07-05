@@ -172,8 +172,8 @@ mds_replay_bmap(void *jent, int op)
 			case BREPLST_GARBAGE:
 				resid = fcmh_2_repl(f, n);
 
-				// XXX sys/usr prio
-				rc = slm_upsch_insert(b, resid, 0, 0);
+				rc = slm_upsch_insert(b, resid, 
+				    bmi->bmi_sys_prio, bmi->bmi_usr_prio);
 				if (rc)
 					psclog_warnx("upsch insert failed: bno = %d, "
 					    "fid="SLPRI_FID", ios= %#x, rc = %d",
