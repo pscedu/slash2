@@ -692,11 +692,12 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	for (n = 0; n < add.nios; n++) {
 		rc = slm_upsch_insert(b, add.iosv[n].bs_id, sprio,
 		    uprio);
-		if (rc)
-			DEBUG_BMAPOD(PLL_WARN, b,
-			    "unable to insert into upsch database; "
-			    "ios=%#x rc=%d",
-			    add.iosv[n].bs_id, rc);
+		if (!rc)
+			continue;
+		psclog_warnx("upsch insert failed: bno = %d, "
+		    "fid="SLPRI_FID", ios= %#x, rc = %d",
+		    b->bcm_bmapno, bmap_2_fid(b), 
+		    add.iosv[n].bs_id, rc);
 	}
 
 	for (n = 0; n < del.nios; n++)
