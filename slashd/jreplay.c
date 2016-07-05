@@ -138,12 +138,12 @@ mds_replay_bmap(void *jent, int op)
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
-		/* a no-op will gather the locks for us */
-		brepls_init(tract, -1);
-
 		FCMH_WAIT_BUSY(b->bcm_fcmh);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
+		/* a no-op will gather the locks for us */
+		brepls_init(tract, -1);
 
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
