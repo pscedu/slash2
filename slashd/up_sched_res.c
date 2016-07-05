@@ -80,6 +80,8 @@ struct pfl_multiwait	 slm_upsch_mw;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
+int	upsch_total;
+
 void (*upd_proctab[])(struct slm_update_data *);
 
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
@@ -1065,6 +1067,13 @@ upd_proc(struct slm_update_data *upd)
 		psc_pool_return(slm_upgen_pool, upg);
 		break;
 	}
+}
+
+int
+slm_upsch_tally_cb(__unusedx struct slm_sth *sth, __unusedx void *p)
+{
+	upsch_total++;
+	return (0);
 }
 
 /*

@@ -904,7 +904,7 @@ msctlthr_main(struct psc_thread *thr)
 
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
-	psc_ctlthr_main(fn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
+	psc_ctlthr_main(fn, msctlops, nitems(msctlops), 0, MSTHRT_CTLAC);
 }
 
 void

@@ -623,6 +623,8 @@ main(int argc, char *argv[])
 		    " GROUP BY uid");
 	}
 
+	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+
 	slrpc_initcli();
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");

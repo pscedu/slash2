@@ -467,6 +467,19 @@ struct psc_ctlop slmctlops[] = {
 };
 
 void
+slmctlparam_upsch_get(char *val)
+{
+	upsch_total = 0;
+
+	dbdo(slm_upsch_tally_cb, NULL,
+	    " SELECT	fid,"
+	    "		bno"
+	    " FROM	upsch");
+
+	snprintf(val, PCP_VALUE_MAX, "%d", upsch_total);
+}
+
+void
 slmctlthr_main(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
@@ -540,5 +553,9 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register_var("sys.bwqueuesz", PFLCTL_PARAMT_INT,
 	    0, &slm_bwqueuesz);
 
-	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
+	psc_ctlparam_register_simple("sys.upsch",
+	    slmctlparam_upsch_get, NULL);
+
+	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 
+	    sizeof(struct slmctl_thread), SLMTHRT_CTLAC);
 }

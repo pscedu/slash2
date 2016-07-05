@@ -160,6 +160,9 @@ void	 slm_upsch_init(void);
 void	 slmupschthr_spawn(void);
 
 int	 slm_upsch_insert(struct bmap *, sl_ios_id_t, int, int);
+
+int	 upsch_total;
+int	 slm_upsch_tally_cb(struct slm_sth *, void *);
 int	 slm_upsch_revert_cb(struct slm_sth *, void *);
 
 void	 upd_initf(struct slm_update_data *, int, int);
