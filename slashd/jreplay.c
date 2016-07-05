@@ -162,8 +162,6 @@ mds_replay_bmap(void *jent, int op)
 		b->bcm_flags |= BMAPF_REPLMODWR;
 		BMAP_ULOCK(b);
 
-		// bmi_sys_prio =
-		// bmi_usr_prio =
 		slm_repl_upd_write(b, 1);
 
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);

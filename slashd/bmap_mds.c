@@ -359,6 +359,9 @@ mds_bmap_init(struct bmap *b)
 	pll_init(&bmi->bmi_leases, struct bmap_mds_lease,
 	    bml_bmi_lentry, &b->bcm_lock);
 	pfl_rwlock_init(&bmi->bmi_rwlock);
+
+	bmi->bmi_sys_prio = -1;
+	bmi->bmi_usr_prio = -1;
 }
 
 void
