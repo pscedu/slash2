@@ -142,10 +142,11 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
+
+	FCMH_WAIT_BUSY(f);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
-	BMAP_ULOCK(b);
 
 	// XXX grab bmap write lock before checking bgen!!!
 
@@ -197,8 +198,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
+	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
