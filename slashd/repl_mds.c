@@ -867,6 +867,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		flags = 0;
 		_mds_repl_bmap_walk(b, tract, NULL, 0, iosidx, nios,
 		    slm_repl_addrq_cb, &flags);
+
+		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
 		if (flags & FLAG_DIRTY) {
