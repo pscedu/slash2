@@ -1392,13 +1392,13 @@ void (*upd_proctab[])(struct slm_update_data *) = {
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {
-	slm_batch_repl_cb,
-	sizeof(struct srt_replwk_req),
-	sizeof(struct srt_replwk_rep),
+	slm_batch_repl_cb,				/* bph_cbf */
+	sizeof(struct srt_replwk_req),			/* bph_qlen */
+	sizeof(struct srt_replwk_rep),			/* bph_plen */
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_preclaim = {
-	slm_batch_preclaim_cb,
-	sizeof(struct srt_preclaim_req),
-	sizeof(struct srt_preclaim_rep),
+	slm_batch_preclaim_cb,				/* bph_cbf */
+	sizeof(struct srt_preclaim_req),		/* bph_qlen */
+	sizeof(struct srt_preclaim_rep),		/* bph_plen */
 };
