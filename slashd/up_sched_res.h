@@ -34,6 +34,8 @@
 
 #include <sqlite3.h>
 
+#define	SLM_UPSCH_PAUSE		5
+
 struct slm_update_data {
 	int				 upd_type:4;
 	int				 upd_flags;

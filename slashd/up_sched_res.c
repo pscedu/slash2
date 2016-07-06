@@ -1209,7 +1209,7 @@ slmupschthr_main(struct psc_thread *thr)
 			 * database.
 			 */
 			rc = pfl_multiwait_secs(&slm_upsch_mw, &upd,
-			    30);
+			    SLM_UPSCH_PAUSE);
 			if (rc == -ETIMEDOUT)
 				upschq_resm(NULL, UPDT_PAGEIN);
 		}

@@ -566,6 +566,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
  out:
 	if (bp) {
 		slrpc_batch_rep_dtor(bp);
+		/* 07/06/2016: assert */
 		psc_pool_return(slrpc_batch_rep_pool, bp);
 	}
 	return (mp->rc);
