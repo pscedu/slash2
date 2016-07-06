@@ -66,6 +66,7 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 	struct sl_fidgen fg;
+	uint8_t bmi_orepls[SL_REPLICA_NBYTES];
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
@@ -146,13 +147,9 @@ mds_replay_bmap(void *jent, int op)
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
-		/* a no-op will gather the locks for us */
-		brepls_init(tract, -1);
-
-		mds_repl_bmap_walk_all(b, tract, NULL, 0);
-
-		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
+		memcpy(bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
+
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
@@ -165,6 +162,9 @@ mds_replay_bmap(void *jent, int op)
 
 		b->bcm_flags |= BMAPF_REPLMODWR;
 		BMAP_ULOCK(b);
+
+		memcpy(bmi->bmi_orepls, bmi_orepls,
+		    sizeof(bmi->bmi_orepls));
 
 		slm_repl_upd_write(b, 1);
 
