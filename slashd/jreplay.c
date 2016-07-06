@@ -173,7 +173,8 @@ mds_replay_bmap(void *jent, int op)
  		 * marked BREPLST_REPL_QUEUED and BREPLST_GARBAGE before
  		 * log replay are inserted into the table.
  		 *
- 		 * I got some warning after the locking revamp.
+ 		 * I got some not-unique warning (rc = 19) after the locking 
+ 		 * revamp.
  		 */
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 		    n++, off += SL_BITS_PER_REPLICA)
@@ -186,8 +187,8 @@ mds_replay_bmap(void *jent, int op)
 				rc = slm_upsch_insert(b, resid, 
 				    bmi->bmi_sys_prio, bmi->bmi_usr_prio);
 				if (rc)
-					psclog_warnx("upsch insert failed: bno = %d, "
-					    "fid="SLPRI_FID", ios= %#x, rc = %d",
+					psclog_warnx("upsch insert failed: bno=%d, "
+					    "fid="SLPRI_FID", ios=%#x, rc=%d",
 					    b->bcm_bmapno, bmap_2_fid(b), 
 					    resid, rc);
 				break;
