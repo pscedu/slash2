@@ -138,6 +138,10 @@ mds_replay_bmap(void *jent, int op)
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
+		/*
+		 * So we have some changes in the journal, but not
+		 * in the sql table.
+		 */
 		FCMH_WAIT_BUSY(b->bcm_fcmh);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
@@ -164,6 +168,13 @@ mds_replay_bmap(void *jent, int op)
 
 		slm_repl_upd_write(b, 1);
 
+		/*
+ 		 * The following seems to make sure those replicas already
+ 		 * marked BREPLST_REPL_QUEUED and BREPLST_GARBAGE before
+ 		 * log replay are inserted into the table.
+ 		 *
+ 		 * I got some warning after the locking revamp.
+ 		 */
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 		    n++, off += SL_BITS_PER_REPLICA)
 			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,

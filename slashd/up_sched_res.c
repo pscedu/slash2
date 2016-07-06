@@ -458,6 +458,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
+	FCMH_WAIT_BUSY(f);
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		DEBUG_BMAPOD(PLL_FATAL, b,
