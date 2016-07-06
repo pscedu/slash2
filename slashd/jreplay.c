@@ -135,6 +135,8 @@ mds_replay_bmap(void *jent, int op)
 		break;
 	    }
 	case B_REPLAY_OP_REPLS:
+
+		OPSTAT_INCR("replay-repls");
 		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
@@ -173,7 +175,7 @@ mds_replay_bmap(void *jent, int op)
  		 * marked BREPLST_REPL_QUEUED and BREPLST_GARBAGE before
  		 * log replay are inserted into the table.
  		 *
- 		 * I got some not-unique warning (rc = 19) after the locking 
+ 		 * I got some not-unique warning (rc=19) after the locking 
  		 * revamp.
  		 */
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
