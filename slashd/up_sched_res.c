@@ -134,9 +134,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		error = p->rc;
 
 	if (error)
-		OPSTAT_INCR("repl-schedwk-fail");
+		OPSTAT_INCR("repl-schedwk-err");
 	else
-		OPSTAT_INCR("repl-schedwk");
+		OPSTAT_INCR("repl-schedwk-ok");
 
 	dst_resm = res_getmemb(bsr->bsr_res);
 	src_resm = libsl_ios2resm(q->src_resid);
