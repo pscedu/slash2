@@ -1071,11 +1071,12 @@ upd_proc(struct slm_update_data *upd)
 }
 
 int
-slm_upsch_tally_cb(__unusedx struct slm_sth *sth, void *p)
+slm_upsch_tally_cb(struct slm_sth *sth, void *p)
 {
 	int *val = p;
 
-	(*val)++;
+	*val = sqlite3_column_int(sth->sth_sth, 0);
+
 	return (0);
 }
 

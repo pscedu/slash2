@@ -471,9 +471,14 @@ slmctlparam_upsch_get(char *val)
 {
 	int upsch_total = 0;
 
+#if 0
 	dbdo(slm_upsch_tally_cb, &upsch_total,
 	    " SELECT	fid,"
 	    "		bno"
+	    " FROM	upsch");
+#endif
+	dbdo(slm_upsch_tally_cb, &upsch_total,
+	    " SELECT	count (*)"
 	    " FROM	upsch");
 
 	snprintf(val, PCP_VALUE_MAX, "%d", upsch_total);
