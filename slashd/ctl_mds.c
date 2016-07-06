@@ -469,9 +469,9 @@ struct psc_ctlop slmctlops[] = {
 void
 slmctlparam_upsch_get(char *val)
 {
-	upsch_total = 0;
+	int upsch_total = 0;
 
-	dbdo(slm_upsch_tally_cb, NULL,
+	dbdo(slm_upsch_tally_cb, &upsch_total,
 	    " SELECT	fid,"
 	    "		bno"
 	    " FROM	upsch");

@@ -1071,9 +1071,11 @@ upd_proc(struct slm_update_data *upd)
 }
 
 int
-slm_upsch_tally_cb(__unusedx struct slm_sth *sth, __unusedx void *p)
+slm_upsch_tally_cb(__unusedx struct slm_sth *sth, void *p)
 {
-	upsch_total++;
+	int *val = p;
+
+	(*val)++;
 	return (0);
 }
 
