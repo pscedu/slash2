@@ -668,11 +668,13 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
+			OPSTAT_INCR("batch-add");
 			goto add;
 		}
 
 	/* not found; create */
 
+	OPSTAT_INCR("batch-new");
 	error = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
 	if (error)
 		PFL_GOTOERR(out, error);
