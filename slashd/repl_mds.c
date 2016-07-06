@@ -695,7 +695,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		if (!rc)
 			continue;
 		psclog_warnx("upsch insert failed: bno = %d, "
-		    "fid="SLPRI_FID", ios= %#x, rc = %d",
+		    "fid=%"PRId64", ios= %d, rc = %d",
 		    b->bcm_bmapno, bmap_2_fid(b), 
 		    add.iosv[n].bs_id, rc);
 	}
