@@ -146,6 +146,13 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
+	/*
+ 	 *  The following message during start up should be harmless:
+ 	 *
+	 * cannot import XXX: a pool with that name is already created/imported,
+	 * and no additional pools with that name were found
+	 * cannot mount XXX: mountpoint or dataset is busy
+	 */
 	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
 	    zfspoolcf ? "-c '" : "",
 	    zfspoolcf ? zfspoolcf : "",
