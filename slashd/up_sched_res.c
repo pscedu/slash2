@@ -149,6 +149,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	// XXX grab bmap write lock before checking bgen!!!
 
