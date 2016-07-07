@@ -62,7 +62,7 @@ struct slrpc_batch_req {
 	psc_spinlock_t			  bq_lock;
 	uint64_t			  bq_bid;		/* batch RPC ID */
 	struct psc_listcache		 *bq_res_batches;	/* resource's list of batches */
-	struct psc_listentry		  bq_lentry_global;	/* global list membership */
+	struct psc_listentry		  bq_lentry;		/* list membership */
 	struct psc_listentry		  bq_lentry_res;	/* membership on bq_res_batches */
 	struct timeval			  bq_expire;		/* when to transmit */
 	struct psc_listcache		 *bq_workq;		/* work queue to process events */

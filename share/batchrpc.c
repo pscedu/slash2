@@ -66,7 +66,7 @@ struct slrpc_wkdata_batch_rep {
 int
 slrpc_batch_req_ctor( struct slrpc_batch_req *bq)
 {
-	INIT_LISTENTRY(&bq->bq_lentry_global);
+	INIT_LISTENTRY(&bq->bq_lentry);
 	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
 	bq->bq_repbuf = PSCALLOC(LNET_MTU);
 	return (0);
@@ -681,7 +681,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	bq->bq_repbuf = pbuf;
 
 	INIT_SPINLOCK(&bq->bq_lock);
-	INIT_PSC_LISTENTRY(&bq->bq_lentry_global);
+	INIT_PSC_LISTENTRY(&bq->bq_lentry);
 	INIT_PSC_LISTENTRY(&bq->bq_lentry_res);
 	bq->bq_rq = rq;
 	bq->bq_rcv_ptl = rcvptl;
@@ -795,7 +795,7 @@ void
 slrpc_batches_init(int thrtype, const char *thrprefix)
 {
 	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
-	    struct slrpc_batch_req, bq_lentry_global, PPMF_AUTO, 8, 8,
+	    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 8, 8,
 	    0, NULL, "batchrpcrq");
 	slrpc_batch_req_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_req_poolmaster);
@@ -807,11 +807,11 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 	    &slrpc_batch_rep_poolmaster);
 
 	lc_reginit(&slrpc_batch_req_delayed, struct slrpc_batch_req,
-	    bq_lentry_global, "batchrpcdelay");
+	    bq_lentry, "batchrpcdelay");
 	lc_reginit(&slrpc_batch_req_waitreply, struct slrpc_batch_req,
-	    bq_lentry_global, "batchrpcwait");
+	    bq_lentry, "batchrpcwait");
 	lc_reginit(&slrpc_batch_rep_retrans, struct slrpc_batch_req,
-	    bq_lentry_global, "batchrpcwait");
+	    bq_lentry, "batchrpcwait");
 
 	pscthr_init(thrtype, slrpc_batch_thr_main, 0,
 	    "%sbatchrpcthr", thrprefix);
