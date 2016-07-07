@@ -811,6 +811,8 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 	    bq_lentry_global, "batchrpcdelay");
 	lc_reginit(&slrpc_batch_req_waitreply, struct slrpc_batch_req,
 	    bq_lentry_global, "batchrpcwait");
+	lc_reginit(&slrpc_batch_rep_retrans, struct slrpc_batch_req,
+	    bq_lentry_global, "batchrpcwait");
 
 	pscthr_init(thrtype, slrpc_batch_thr_main, 0,
 	    "%sbatchrpcthr", thrprefix);
