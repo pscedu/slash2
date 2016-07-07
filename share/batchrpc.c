@@ -408,11 +408,7 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int error)
 	}
 	freelock(&bp->bp_lock);
 
-	if (!(bp->bp_flags & BATCHF_REPLIED)) {
-		bp->bp_flags |= BATCHF_REPLIED;
-		slrpc_batch_rep_send(bp);
-		return;
-	}
+	slrpc_batch_rep_send(bp);
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "destroying");
 
