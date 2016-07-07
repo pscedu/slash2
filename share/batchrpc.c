@@ -141,10 +141,9 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	    (BATCHF_WAITREPLY | BATCHF_RQINFL)) == BATCHF_RQINFL) {
 		psc_assert(bq->bq_refcnt > 1);
 		bq->bq_refcnt--;
-	} else
-		psc_assert(bq->bq_refcnt > 0);
-
+	}
 	bq->bq_refcnt--;
+	psc_assert(bq->bq_refcnt >= 0);
 	if (bq->bq_refcnt) {
 		SLRPC_BATCH_REQ_ULOCK(bq);
 		return;
@@ -164,7 +163,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	pscrpc_req_finished(bq->bq_rq);
 	sl_csvc_decref(bq->bq_csvc);
 
-	/* Run callback on each item contained in batch. */
+	/* Run callback on each item contained in the batch. */
 	h = bq->bq_handler;
 	n = bq->bq_replen / h->bph_plen;
 	for (q = bq->bq_reqbuf, p = bq->bq_repbuf, i = 0; i < n;
