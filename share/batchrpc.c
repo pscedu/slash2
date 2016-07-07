@@ -563,6 +563,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
+	int found = 0;
 
 	memset(&iov, 0, sizeof(iov));
 
@@ -573,6 +574,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	}
+
+ retry:
 
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, lc)
@@ -588,11 +591,15 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			slrpc_batch_req_sched_finish(bq,
 			    mq->rc ? mq->rc : mp->rc);
 
+			found = 1;
 			break;
 		}
 	LIST_CACHE_ULOCK(lc);
-	if (bq == NULL)
-		mp->rc = -ENOENT;
+	if (!found) {
+		sleep(1);
+		OPSTAT_INCR("batch-early");
+		goto retry;
+	}
 	return (mp->rc);
 }
 
