@@ -127,15 +127,13 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_batch_rep_handler *h;
 	char *q, *p, *scratch;
-	int i, n, finish = 0;
+	int i, n;
 
 	SLRPC_BATCH_REQ_RLOCK(bq);
-
 	if (bq->bq_error == 0)
 		bq->bq_error = rc;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
-
 	/*
 	 * If the request was sent out, another reference was taken.
 	 */
@@ -146,15 +144,13 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	} else
 		psc_assert(bq->bq_refcnt > 0);
 
-	if (--bq->bq_refcnt == 0) {
-		bq->bq_flags |= BATCHF_FREEING;
-		finish = 1;
-	}
-
-	SLRPC_BATCH_REQ_ULOCK(bq);
-
-	if (!finish)
+	bq->bq_refcnt--;
+	if (bq->bq_refcnt) {
+		SLRPC_BATCH_REQ_ULOCK(bq);
 		return;
+	}
+	bq->bq_flags |= BATCHF_FREEING;
+	SLRPC_BATCH_REQ_ULOCK(bq);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
