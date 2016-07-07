@@ -93,7 +93,7 @@ struct slrpc_batch_rep {
 	struct slrpc_batch_req_handler	 *bp_handler;
 
 	struct pscrpc_request		 *bp_rq;
-	struct slrpc_cservice	 *bp_csvc;
+	struct slrpc_cservice		 *bp_csvc;
 	int				  bp_refcnt;
 	int				  bp_flags;
 	int				  bp_error;
