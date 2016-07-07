@@ -298,7 +298,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct pscrpc_request *rq;
 	struct psc_listcache *ml;
 	struct iovec iov;
-	int error;
+	int rc;
 
 	ml = &slrpc_batch_req_delayed;
 
@@ -318,15 +318,15 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	iov.iov_base = bq->bq_reqbuf;
 	iov.iov_len = bq->bq_reqlen;
-	error = slrpc_bulkclient(rq, BULK_GET_SOURCE, bq->bq_snd_ptl,
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, bq->bq_snd_ptl,
 	    &iov, 1);
 
-	if (!error) {
+	if (!rc) {
 		rq->rq_interpret_reply = slrpc_batch_req_send_cb;
 		rq->rq_async_args.pointer_arg[0] = bq;
-		error = SL_NBRQSET_ADD(bq->bq_csvc, rq);
+		rc = SL_NBRQSET_ADD(bq->bq_csvc, rq);
 	}
-	if (error) {
+	if (rc) {
 		/*
 		 * If we failed, check again to see if the connection
 		 * has been reestablished since there can be delay in
@@ -336,7 +336,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		bq->bq_refcnt--;
 		bq->bq_rq = rq;
 		bq->bq_flags &= ~BATCHF_RQINFL;
-		slrpc_batch_req_decref(bq, error);
+		slrpc_batch_req_decref(bq, rc);
 	}
 }
 
