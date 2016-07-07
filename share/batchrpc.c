@@ -690,6 +690,11 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "created");
 
 	lc_add(res_batches, bq);
+
+	CSVC_LOCK(csvc);
+	sl_csvc_incref(csvc);
+	CSVC_ULOCK(csvc);
+
 	goto lookup;
 
  add:
@@ -710,12 +715,9 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	else
 		freelock(&bq->bq_lock);
 
-	csvc = NULL;
-
  out:
 	LIST_CACHE_ULOCK(res_batches);
-	if (csvc)
-		sl_csvc_decref(csvc);
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
