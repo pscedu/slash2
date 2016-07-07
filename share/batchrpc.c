@@ -134,14 +134,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 		bq->bq_error = rc;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
-	/*
-	 * If the request was sent out, another reference was taken.
-	 */
-	if (rc && (bq->bq_flags &
-	    (BATCHF_WAITREPLY | BATCHF_RQINFL)) == BATCHF_RQINFL) {
-		psc_assert(bq->bq_refcnt > 1);
-		bq->bq_refcnt--;
-	}
+
 	bq->bq_refcnt--;
 	psc_assert(bq->bq_refcnt >= 0);
 	if (bq->bq_refcnt) {
@@ -326,7 +319,6 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
-		bq->bq_refcnt--;
 		bq->bq_rq = rq;
 		bq->bq_flags &= ~BATCHF_RQINFL;
 		slrpc_batch_req_decref(bq, rc);
