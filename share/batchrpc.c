@@ -281,15 +281,11 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 void
 slrpc_batch_req_send(struct slrpc_batch_req *bq)
 {
-	struct pscrpc_request *rq;
 	struct iovec iov;
 	int rc;
 
-	rq = bq->bq_rq;
-
 	bq->bq_refcnt++;
 	bq->bq_flags |= BATCHF_RQINFL;
-	bq->bq_rq = NULL;
 
 	freelock(&bq->bq_lock);
 
@@ -300,13 +296,13 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	iov.iov_len = bq->bq_reqlen;
 	iov.iov_base = bq->bq_reqbuf;
-	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, bq->bq_snd_ptl,
+	rc = slrpc_bulkclient(bq->bq_rq, BULK_GET_SOURCE, bq->bq_snd_ptl,
 	    &iov, 1);
 
 	if (!rc) {
-		rq->rq_interpret_reply = slrpc_batch_req_send_cb;
-		rq->rq_async_args.pointer_arg[0] = bq;
-		rc = SL_NBRQSET_ADD(bq->bq_csvc, rq);
+		bq->bq_rq->rq_interpret_reply = slrpc_batch_req_send_cb;
+		bq->bq_rq->rq_async_args.pointer_arg[0] = bq;
+		rc = SL_NBRQSET_ADD(bq->bq_csvc, bq->bq_rq);
 	}
 	if (rc) {
 		/*
@@ -314,7 +310,6 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
-		bq->bq_rq = rq;
 		bq->bq_flags &= ~BATCHF_RQINFL;
 		slrpc_batch_req_decref(bq, rc);
 	}
