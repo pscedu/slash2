@@ -632,7 +632,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	void *qbuf, *pbuf;
-	int error = 0;
+	int rc = 0;
 
 	LIST_CACHE_LOCK(res_batches);
 	LIST_CACHE_FOREACH(bq, res_batches) {
@@ -658,9 +658,9 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	/* not found; create */
 
 	OPSTAT_INCR("batch-new");
-	error = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
-	if (error)
-		PFL_GOTOERR(out, error);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	mq->opc = opc;
 	mq->bid = psc_atomic64_inc_getnew(&bid);
@@ -717,7 +717,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	LIST_CACHE_ULOCK(res_batches);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (error);
+	return (rc);
 }
 
 /*
