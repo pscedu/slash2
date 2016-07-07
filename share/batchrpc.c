@@ -123,7 +123,7 @@ slrpc_batch_cmp(const void *a, const void *b)
  * @error: general error during RPC communication.
  */
 void
-slrpc_batch_req_decref(struct slrpc_batch_req *bq, int error)
+slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_batch_rep_handler *h;
 	char *q, *p, *scratch;
@@ -132,14 +132,14 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int error)
 	SLRPC_BATCH_REQ_RLOCK(bq);
 
 	if (bq->bq_error == 0)
-		bq->bq_error = error;
+		bq->bq_error = rc;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
 
 	/*
 	 * If the request was sent out, another reference was taken.
 	 */
-	if (error && (bq->bq_flags &
+	if (rc && (bq->bq_flags &
 	    (BATCHF_WAITREPLY | BATCHF_RQINFL)) == BATCHF_RQINFL) {
 		psc_assert(bq->bq_refcnt > 1);
 		bq->bq_refcnt--;
