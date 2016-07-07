@@ -283,13 +283,8 @@ void
 slrpc_batch_req_send(struct slrpc_batch_req *bq)
 {
 	struct pscrpc_request *rq;
-	struct psc_listcache *ml;
 	struct iovec iov;
 	int rc;
-
-	ml = &slrpc_batch_req_delayed;
-
-	LIST_CACHE_LOCK_ENSURE(ml);
 
 	rq = bq->bq_rq;
 
@@ -297,8 +292,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	bq->bq_flags |= BATCHF_RQINFL;
 	bq->bq_rq = NULL;
 
-	lc_remove(ml, bq);
-
+	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "sending");
@@ -739,14 +733,12 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 	stall.tv_usec = 0;
 
 	while (pscthr_run(thr)) {
-		LIST_CACHE_LOCK(ml);
 		bq = lc_peekheadwait(ml);
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &bq->bq_expire, >))
 			slrpc_batch_req_send(bq);
 		else
 			timersub(&bq->bq_expire, &now, &stall);
-		LIST_CACHE_ULOCK(ml);
 
 		usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 
