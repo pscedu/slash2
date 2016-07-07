@@ -400,17 +400,15 @@ slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
 void
 slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int error)
 {
-	int done = 0;
-
 	spinlock(&bp->bp_lock);
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
-	psc_assert(bp->bp_refcnt > 0);
-	if (--bp->bp_refcnt == 0)
-		done = 1;
-	freelock(&bp->bp_lock);
-
-	if (!done)
+	bp->bp_refcnt--;
+	psc_assert(bp->bp_refcnt >= 0);
+	if (bp->bp_refcnt) {
+		freelock(&bp->bp_lock);
 		return;
+	}
+	freelock(&bp->bp_lock);
 
 	if (error && error != -ENOENT) {
 		/*
