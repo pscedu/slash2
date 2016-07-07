@@ -346,7 +346,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	struct pscrpc_request *rq = bp->bp_rq;
 	struct srm_batch_req *mq;
 	struct iovec iov;
-	int error;
+	int rc;
 
 	slrpc_batch_rep_incref(bp);
 
@@ -358,20 +358,20 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
-	error = slrpc_bulkclient(rq, BULK_GET_SOURCE,
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
-	if (error)
-		PFL_GOTOERR(out, error);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "sending");
 
 	rq->rq_interpret_reply = slrpc_batch_rep_send_cb;
 	rq->rq_async_args.pointer_arg[0] = bp;
-	error = SL_NBRQSET_ADD(bp->bp_csvc, rq);
+	rc = SL_NBRQSET_ADD(bp->bp_csvc, rq);
 
  out:
-	if (error)
-		slrpc_batch_rep_decref(bp, error);
+	if (rc)
+		slrpc_batch_rep_decref(bp, rc);
 }
 
 /*
