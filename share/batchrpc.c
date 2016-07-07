@@ -51,8 +51,6 @@ struct psc_poolmgr	*slrpc_batch_rep_pool;
 struct psc_listcache	 slrpc_batch_req_delayed;	/* waiting to be filled/timeout to be sent */
 struct psc_listcache	 slrpc_batch_req_waitreply;	/* awaiting reply */
 
-struct psc_listcache	 slrpc_batch_rep_retrans;	/* to be retransmitted */
-
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
 	int			 error;
@@ -409,19 +407,6 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int error)
 		return;
 	}
 	freelock(&bp->bp_lock);
-
-	if (error && error != -ENOENT) {
-		/*
-		 * An error was encountered that applies to the entire
-		 * batch RPC reply.  Try another transmission.
-		 *
-		 * XXX 07/05/2016: Hit invalid lock value when MDS is
-		 * done.
-		 */
-		bp->bp_refcnt++;
-		bp->bp_flags &= ~BATCHF_REPLIED;
-		lc_add(&slrpc_batch_rep_retrans, bp);
-	}
 
 	if (!(bp->bp_flags & BATCHF_REPLIED)) {
 		bp->bp_flags |= BATCHF_REPLIED;
@@ -808,8 +793,6 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 	    bq_lentry, "batchrpc-delay");
 	lc_reginit(&slrpc_batch_req_waitreply, struct slrpc_batch_req,
 	    bq_lentry, "batchrpc-wait");
-	lc_reginit(&slrpc_batch_rep_retrans, struct slrpc_batch_req,
-	    bq_lentry, "batchrpc-retrans");
 
 	pscthr_init(thrtype, slrpc_batch_thr_main, 0,
 	    "%sbatchrpcthr", thrprefix);
