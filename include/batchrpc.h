@@ -68,7 +68,7 @@ struct slrpc_batch_req {
 	struct psc_listcache		 *bq_workq;		/* work queue to process events */
 
 	struct pscrpc_request		 *bq_rq;
-	struct slrpc_cservice	 *bq_csvc;
+	struct slrpc_cservice		 *bq_csvc;
 	int				  bq_snd_ptl:16;	/* bulk RPC portal */
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
