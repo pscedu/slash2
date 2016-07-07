@@ -205,19 +205,18 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int error)
 {
 	struct slrpc_wkdata_batch_req *wk;
 	struct psc_listcache *lc;
-	int locked = 0;
 
 	lc = &slrpc_batch_req_waitreply;
-	locked = LIST_CACHE_RLOCK(lc);
+	LIST_CACHE_LOCK(lc);
 	if (bq->bq_flags & BATCHF_SCHED_FINISH) {
-		LIST_CACHE_URLOCK(lc, locked);
+		LIST_CACHE_ULOCK(lc);
 		return;
 	}
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for finishing");
 
 	bq->bq_flags |= BATCHF_SCHED_FINISH;
-	LIST_CACHE_URLOCK(lc, locked);
+	LIST_CACHE_ULOCK(lc);
 
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
@@ -275,13 +274,13 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slrpc_batch_req *bq = av->pointer_arg[0];
-	int error;
+	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(bq->bq_csvc, rq, struct srm_batch_rep,
-	    error);
+	    rc);
 
-	if (error)
-		slrpc_batch_req_sched_finish(bq, error);
+	if (rc)
+		slrpc_batch_req_sched_finish(bq, rc);
 	else
 		slrpc_batch_req_sched_waitreply(bq);
 	return (0);
@@ -316,8 +315,8 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "sending");
 
-	iov.iov_base = bq->bq_reqbuf;
 	iov.iov_len = bq->bq_reqlen;
+	iov.iov_base = bq->bq_reqbuf;
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, bq->bq_snd_ptl,
 	    &iov, 1);
 
@@ -332,7 +331,6 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
-
 		bq->bq_refcnt--;
 		bq->bq_rq = rq;
 		bq->bq_flags &= ~BATCHF_RQINFL;
