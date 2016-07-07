@@ -641,8 +641,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 			/*
 			 * Tack this request onto the existing pending
 			 * batch request.
+			 *
+			 * The caller must ensure that the destination 
+			 * of the RPC is the same.
 			 */
-			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
 			OPSTAT_INCR("batch-add");
