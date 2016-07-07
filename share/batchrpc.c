@@ -285,12 +285,11 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	int rc;
 
-	bq->bq_refcnt++;
 	bq->bq_flags |= BATCHF_RQINFL;
-	freelock(&bq->bq_lock);
-
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
+
+	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "sending");
 
@@ -311,7 +310,6 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * using this API.
 		 */
 		spinlock(&bq->bq_lock);
-		bq->bq_flags &= ~BATCHF_RQINFL;
 		slrpc_batch_req_decref(bq, rc);
 	}
 }
