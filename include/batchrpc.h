@@ -137,8 +137,7 @@ void	slrpc_batches_init(int, const char *);
 void	slrpc_batches_destroy(void);
 void	slrpc_batches_drop(struct psc_listcache *);
 
-#define slrpc_batch_rep_decref(rep, error)				\
-	_slrpc_batch_rep_decref(PFL_CALLERINFO(), (rep), (error))
+void	slrpc_batch_rep_decref(struct slrpc_batch_rep *, int);
 
 void	slrpc_batch_rep_incref(struct slrpc_batch_rep *);
 void	_slrpc_batch_rep_decref(const struct pfl_callerinfo *,

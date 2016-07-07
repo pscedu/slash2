@@ -398,8 +398,7 @@ slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
  * @error: general error to apply to the entire batch.
  */
 void
-_slrpc_batch_rep_decref(const struct pfl_callerinfo *pci,
-    struct slrpc_batch_rep *bp, int error)
+slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int error)
 {
 	int done = 0;
 
