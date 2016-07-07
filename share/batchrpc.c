@@ -129,7 +129,6 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	char *q, *p, *scratch;
 	int i, n;
 
-	SLRPC_BATCH_REQ_RLOCK(bq);
 	if (bq->bq_error == 0)
 		bq->bq_error = rc;
 
@@ -138,11 +137,11 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	bq->bq_refcnt--;
 	psc_assert(bq->bq_refcnt >= 0);
 	if (bq->bq_refcnt) {
-		SLRPC_BATCH_REQ_ULOCK(bq);
+		freelock(&bq->bq_lock);
 		return;
 	}
 	bq->bq_flags |= BATCHF_FREEING;
-	SLRPC_BATCH_REQ_ULOCK(bq);
+	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
@@ -228,7 +227,7 @@ slrpc_batch_req_waitreply_workcb(void *p)
 	struct slrpc_wkdata_batch_req *wk = p;
 	struct slrpc_batch_req *bq = wk->bq;
 
-	SLRPC_BATCH_REQ_LOCK(bq);
+	spinlock(&bq->bq_lock);
 	bq->bq_flags &= ~BATCHF_RQINFL;
 	bq->bq_flags |= BATCHF_WAITREPLY;
 	slrpc_batch_req_decref(bq, 0);
@@ -291,6 +290,8 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	bq->bq_refcnt++;
 	bq->bq_flags |= BATCHF_RQINFL;
 	bq->bq_rq = NULL;
+
+	freelock(&bq->bq_lock);
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
@@ -382,12 +383,10 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 void
 slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
 {
-	int waslocked;
-
-	waslocked = SLRPC_BATCH_REP_RLOCK(bp);
+	spinlock(&bp->bp_lock);
 	bp->bp_refcnt++;
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
-	SLRPC_BATCH_REP_URLOCK(bp, waslocked);
+	freelock(&bp->bp_lock);
 }
 
 /*
@@ -406,12 +405,12 @@ _slrpc_batch_rep_decref(const struct pfl_callerinfo *pci,
 {
 	int done = 0;
 
-	SLRPC_BATCH_REP_RLOCK(bp);
+	spinlock(&bp->bp_lock);
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
 	psc_assert(bp->bp_refcnt > 0);
 	if (--bp->bp_refcnt == 0)
 		done = 1;
-	SLRPC_BATCH_REP_ULOCK(bp);
+	freelock(&bp->bp_lock);
 
 	if (!done)
 		return;
@@ -636,7 +635,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	int error = 0;
 
 	LIST_CACHE_LOCK(res_batches);
-	LIST_CACHE_FOREACH(bq, res_batches)
+	LIST_CACHE_FOREACH(bq, res_batches) {
+		spinlock(&bq->bq_lock);
 		if ((bq->bq_flags & (BATCHF_RQINFL |
 		    BATCHF_WAITREPLY)) == 0 &&
 		    opc == bq->bq_opc) {
@@ -650,6 +650,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 			OPSTAT_INCR("batch-add");
 			goto add;
 		}
+		freelock(&bq->bq_lock);
+	}
+
+	LIST_CACHE_ULOCK(res_batches);
 
 	/* not found; create */
 
@@ -690,6 +694,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
 	lc_add(res_batches, bq);
 	lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
+	spinlock(&bq->bq_lock);
 
  add:
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
@@ -699,11 +704,12 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
 	/*
 	 * OK, the requested entry has been added.  If the next
-	 * slrpc_batch_req_add() would overflow, send out what we have
-	 * now.
+	 * addition would overflow, send out what we have now.
 	 */
 	if (bq->bq_reqlen + len > LNET_MTU)
 		slrpc_batch_req_send(bq);
+	else
+		freelock(&bq->bq_lock);
 
 	csvc = NULL;
 
@@ -734,11 +740,15 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		bq = lc_peekheadwait(ml);
+
+		spinlock(&bq->bq_lock);
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &bq->bq_expire, >))
 			slrpc_batch_req_send(bq);
-		else
+		else {
+			freelock(&bq->bq_lock);
 			timersub(&bq->bq_expire, &now, &stall);
+		}
 
 		usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 
