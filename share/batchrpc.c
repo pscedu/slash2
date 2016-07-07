@@ -630,6 +630,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	void *qbuf, *pbuf;
 	int rc = 0;
 
+ lookup:
 	LIST_CACHE_LOCK(res_batches);
 	LIST_CACHE_FOREACH(bq, res_batches) {
 		spinlock(&bq->bq_lock);
@@ -690,7 +691,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
 	lc_add(res_batches, bq);
 	lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
-	spinlock(&bq->bq_lock);
+	goto lookup;
 
  add:
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
