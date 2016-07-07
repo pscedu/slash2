@@ -120,17 +120,18 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	struct bmap_iod_info *bii;
 	struct bmap *b = NULL;
 	size_t len;
-	int error, i;
+	int rc, i;
 
+	rc = 0;
 	if (q->fg.fg_fid == FID_ANY)
-		PFL_GOTOERR(out, error = EINVAL);
+		PFL_GOTOERR(out, rc = EINVAL);
 	if (q->len < 1 || q->len > SLASH_BMAP_SIZE)
-		PFL_GOTOERR(out, error = EINVAL);
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	if (q->src_resid != IOS_ID_ANY) {
 		res = libsl_id2res(q->src_resid);
 		if (res == NULL)
-			PFL_GOTOERR(out, error = SLERR_ION_UNKNOWN);
+			PFL_GOTOERR(out, rc = SLERR_ION_UNKNOWN);
 	}
 
 	/*
@@ -139,14 +140,14 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	 * work.
 	 */
 	if (sli_repl_findwq(&q->fg, q->bno))
-		PFL_GOTOERR(out, error = PFLERR_ALREADY);
+		PFL_GOTOERR(out, rc = PFLERR_ALREADY);
 
-	error = sli_fcmh_get(&q->fg, &f);
-	if (error)
-		PFL_GOTOERR(out, error);
-	error = bmap_get(f, q->bno, SL_READ, &b);
-	if (error)
-		PFL_GOTOERR(out, error);
+	rc = sli_fcmh_get(&q->fg, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	rc = bmap_get(f, q->bno, SL_READ, &b);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	/*
 	 * If the MDS asks us to replicate a sliver, I do not
@@ -155,7 +156,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	if (!sli_has_enough_space(f, q->bno, q->bno * SLASH_BMAP_SIZE,
 	    q->len)) {
 		OPSTAT_INCR("repl-out-of-space");
-		PFL_GOTOERR(out, error = ENOSPC);
+		PFL_GOTOERR(out, rc = ENOSPC);
 	}
 
 	w = psc_pool_get(sli_replwkrq_pool);
@@ -194,8 +195,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	sli_replwk_queue(w);
 
  out:
-	if (error)
-		p->rc = error;
+	p->rc = rc;
 	if (b)
 		bmap_op_done(b);
 	if (f)
