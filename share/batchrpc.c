@@ -690,10 +690,12 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "created");
 
 	lc_add(res_batches, bq);
-	lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
 	goto lookup;
 
  add:
+	if (!bq->bq_reqlen)
+		lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
+
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
 	bq->bq_reqlen += len;
 	mq->len += len;
