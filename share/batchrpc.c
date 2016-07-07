@@ -254,6 +254,9 @@ slrpc_batch_req_sched_waitreply(struct slrpc_batch_req *bq)
  * the work was received and started processing.  A separate RPC with
  * status codes will be sent to us later.
  *
+ * This means that if we can't batch successfully, we end up using more
+ * RPCs.  In addition, we must handle early reply as well.
+ *
  * @rq: RPC.
  * @av: callback arguments.
  */
