@@ -201,7 +201,7 @@ slrpc_batch_req_finish_workcb(void *p)
 }
 
 void
-slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int error)
+slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 	struct psc_listcache *lc;
@@ -221,7 +221,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int error)
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
-	wk->error = error;
+	wk->error = rc;
 	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
