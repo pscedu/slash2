@@ -183,6 +183,7 @@ slrpc_batch_req_finish_workcb(void *p)
 	struct slrpc_wkdata_batch_req *wk = p;
 	struct slrpc_batch_req *bq = wk->bq;
 
+	spinlock(&bq->bq_lock);
 	slrpc_batch_req_decref(bq, wk->error);
 	return (0);
 }
@@ -286,7 +287,6 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	bq->bq_refcnt++;
 	bq->bq_flags |= BATCHF_RQINFL;
-
 	freelock(&bq->bq_lock);
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
@@ -310,6 +310,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
+		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_RQINFL;
 		slrpc_batch_req_decref(bq, rc);
 	}
