@@ -807,11 +807,11 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 	    &slrpc_batch_rep_poolmaster);
 
 	lc_reginit(&slrpc_batch_req_delayed, struct slrpc_batch_req,
-	    bq_lentry, "batchrpcdelay");
+	    bq_lentry, "batchrpc-delay");
 	lc_reginit(&slrpc_batch_req_waitreply, struct slrpc_batch_req,
-	    bq_lentry, "batchrpcwait");
+	    bq_lentry, "batchrpc-wait");
 	lc_reginit(&slrpc_batch_rep_retrans, struct slrpc_batch_req,
-	    bq_lentry, "batchrpcwait");
+	    bq_lentry, "batchrpc-retrans");
 
 	pscthr_init(thrtype, slrpc_batch_thr_main, 0,
 	    "%sbatchrpcthr", thrprefix);
