@@ -282,7 +282,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	int rc;
 
-	bq->bq_flags &= BATCHF_DELAY;
+	bq->bq_flags &= ~BATCHF_DELAY;
 	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
@@ -481,6 +481,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	mp->opc = mq->opc;	
 	if (mq->len < 1 || mq->len > LNET_MTU)
 		return (mp->rc = -EINVAL);
 	if (mq->opc < 0 || mq->opc >= NSRMT)
