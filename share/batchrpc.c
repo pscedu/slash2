@@ -417,22 +417,29 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 	psc_pool_return(slrpc_batch_rep_pool, bp);
 }
 
+/*
+ * Add work in the worker thread after receiving a SRMT_BATCH_RQ
+ * request from the MDS.
+ */
 int
 slrpc_batch_handle_req_workcb(void *arg)
 {
 	struct slrpc_wkdata_batch_rep *wk = arg;
 	struct slrpc_batch_req_handler *h;
 	struct slrpc_batch_rep *bp;
-	int i, n, error = 0;
+	int i, n, rc = 0;
 	char *q, *p;
 
 	bp = wk->bp;
 	h = bp->bp_handler;
 	n = bp->bp_reqlen / h->bqh_qlen;
+	psc_assert(n);
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
 	    i++, q += h->bqh_qlen, p += h->bqh_plen) {
-		error = h->bqh_cbf(bp, q, p);
-		if (error)
+
+		/* sli_repl_addwk() or sli_rim_batch_handle_preclaim() */
+		rc = h->bqh_cbf(bp, q, p);
+		if (rc)
 			break;
 	}
 
@@ -441,7 +448,7 @@ slrpc_batch_handle_req_workcb(void *arg)
 	 * reference.  So the destruction of the batch_rep will happen
 	 * when any such references are released.
 	 */
-	slrpc_batch_rep_decref(bp, error);
+	slrpc_batch_rep_decref(bp, rc);
 	return (0);
 }
 
