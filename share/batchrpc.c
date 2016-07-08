@@ -575,9 +575,12 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
-
+			/*
+ 			 * mq is actually a batch request reply here.
+ 			 * See slrpc_batch_rep_send().
+ 			 */
 			slrpc_batch_req_sched_finish(bq,
-			    mq->rc ? mq->rc : mp->rc);
+			    mp->rc ? mp->rc : mq->rc);
 
 			found = 1;
 			break;
