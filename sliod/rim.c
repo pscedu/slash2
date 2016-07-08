@@ -57,8 +57,7 @@
 uint64_t	sli_current_reclaim_xid;
 uint64_t	sli_current_reclaim_batchno;
 
-struct slrpc_batch_req_handler
-		sli_rim_batch_req_handlers[NSRMT];
+struct slrpc_batch_req_handler sli_rim_batch_req_handlers[NSRMT];
 
 /*
  * Handle a piece of PRECLAIM (partial reclaim) work.  If our backend
