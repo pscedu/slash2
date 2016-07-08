@@ -182,24 +182,21 @@ slrpc_batch_req_finish_workcb(void *p)
 	return (0);
 }
 
+/*
+ * Called if we can't send a batch request or when the reply for
+ * the batch request has come back.
+ */
 void
 slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
-	struct psc_listcache *lc;
 
-	lc = &slrpc_batch_req_waitreply;
-	LIST_CACHE_LOCK(lc);
-	if (bq->bq_flags & BATCHF_SCHED_FINISH) {
-		LIST_CACHE_ULOCK(lc);
-		return;
-	}
+	spinlock(&bq->bq_lock);
+	psc_assert(!bq->bq_flags & BATCHF_SCHED_FINISH);
+	bq->bq_flags |= BATCHF_SCHED_FINISH;
+	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for finishing");
-
-	bq->bq_flags |= BATCHF_SCHED_FINISH;
-	LIST_CACHE_ULOCK(lc);
-
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
