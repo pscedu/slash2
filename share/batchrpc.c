@@ -116,7 +116,7 @@ slrpc_batch_cmp(const void *a, const void *b)
  * @error: general error during RPC communication.
  */
 void
-slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
+slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_batch_rep_handler *h;
 	char *q, *p, *scratch;
@@ -132,12 +132,6 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
 
-	bq->bq_refcnt--;
-	psc_assert(bq->bq_refcnt >= 0);
-	if (bq->bq_refcnt) {
-		freelock(&bq->bq_lock);
-		return;
-	}
 	bq->bq_flags |= BATCHF_FREEING;
 	freelock(&bq->bq_lock);
 
@@ -186,7 +180,7 @@ slrpc_batch_req_finish_workcb(void *p)
 	struct slrpc_batch_req *bq = wk->bq;
 
 	spinlock(&bq->bq_lock);
-	slrpc_batch_req_decref(bq, wk->rc);
+	slrpc_batch_req_done(bq, wk->rc);
 	return (0);
 }
 
@@ -314,7 +308,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * using this API.
 		 */
 		spinlock(&bq->bq_lock);
-		slrpc_batch_req_decref(bq, rc);
+		slrpc_batch_req_done(bq, rc);
 	}
 }
 
