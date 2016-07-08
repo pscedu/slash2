@@ -155,6 +155,10 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	for (q = bq->bq_reqbuf, p = bq->bq_repbuf, i = 0; i < n;
 	    i++, q += h->bph_qlen, p += h->bph_plen) {
 		scratch = psc_dynarray_getpos(&bq->bq_scratch, i);
+		/*
+ 		 * The callback handle is either slm_batch_repl_cb()
+ 		 * or slm_batch_preclaim_cb().
+ 		 */
 		bq->bq_handler->bph_cbf(q, p, scratch, -bq->bq_rc);
 		PSCFREE(scratch);
 	}
