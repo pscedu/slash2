@@ -215,7 +215,10 @@ struct srm_batch_req {
 /* bulk data is array of user-defined entries */
 };
 
-#define srm_batch_rep		srm_generic_rep
+struct srm_batch_rep {
+	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	 int32_t		opc;		/* opcode - to be used for santity check */
+} __packed;
 
 struct srm_ctl_req {
 	uint32_t		opc;		/* operation */
