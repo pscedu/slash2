@@ -712,9 +712,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	 * OK, the requested entry has been added.  If the next
 	 * addition would overflow, send out what we have now.
 	 */
-	if (bq->bq_reqlen + len > LNET_MTU)
+	if (bq->bq_reqlen + len > LNET_MTU) {
+		OPSTAT_INCR("batch-send-full");
 		slrpc_batch_req_send(bq);
-	else
+	} else
 		freelock(&bq->bq_lock);
 
  out:
@@ -746,9 +747,10 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 
 		spinlock(&bq->bq_lock);
 		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &bq->bq_expire, >))
+		if (timercmp(&now, &bq->bq_expire, >)) {
+			OPSTAT_INCR("batch-send-expire");
 			slrpc_batch_req_send(bq);
-		else {
+		} else {
 			freelock(&bq->bq_lock);
 			timersub(&bq->bq_expire, &now, &stall);
 		}
