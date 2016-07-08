@@ -53,12 +53,12 @@ struct psc_listcache	 slrpc_batch_req_waitreply;	/* awaiting reply */
 
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
-	int			 error;
+	int			 rc;
 };
 
 struct slrpc_wkdata_batch_rep {
 	struct slrpc_batch_rep	*bp;
-	int			 error;
+	int			 rc;
 };
 
 void
@@ -178,7 +178,7 @@ slrpc_batch_req_finish_workcb(void *p)
 	struct slrpc_batch_req *bq = wk->bq;
 
 	spinlock(&bq->bq_lock);
-	slrpc_batch_req_decref(bq, wk->error);
+	slrpc_batch_req_decref(bq, wk->rc);
 	return (0);
 }
 
@@ -203,7 +203,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
-	wk->error = rc;
+	wk->rc = rc;
 	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
@@ -465,7 +465,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	struct srm_batch_rep *mp;
 	struct iovec iov;
 	void *pbuf, *qbuf;
-	int error;
+	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -504,10 +504,9 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	bp->bp_replen = mq->len / h->bqh_qlen * h->bqh_plen;
 	bp->bp_opc = mq->opc;
 
-	error = SL_RSX_NEWREQ(bp->bp_csvc, SRMT_BATCH_RP, bp->bp_rq, mq,
-	    mp);
-	if (error)
-		PFL_GOTOERR(out, error);
+	rc = SL_RSX_NEWREQ(bp->bp_csvc, SRMT_BATCH_RP, bp->bp_rq, mq, mp);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "created");
 
@@ -520,7 +519,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
  out:
 	if (bp) {
 		slrpc_batch_rep_dtor(bp);
-		/* 07/06/2016: assert */
 		psc_pool_return(slrpc_batch_rep_pool, bp);
 	}
 	return (mp->rc);
@@ -528,8 +526,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 /*
  * Handle a BATCHRP (i.e. a reply to a BATCHRQ) that arrives after a
- * recipient of a BATCHRQ is done processing the contents and sends us a
- * response indicating success/failure.
+ * recipient of a BATCHRQ is done processing the contents and sends us
+ * a response indicating success/failure.
  *
  * @rq: RPC of batch reply.
  */
