@@ -339,6 +339,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 		sl_csvc_decref(csvc);
 	}
 	if (rc) {
+		OPSTAT_INCR("repl-ignore-error");
 		spinlock(&w->srw_lock);
 		w->srw_slvr[slvridx] = NULL;
 		BMAP_LOCK(w->srw_bcm);
