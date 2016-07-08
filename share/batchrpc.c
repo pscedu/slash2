@@ -61,38 +61,34 @@ struct slrpc_wkdata_batch_rep {
 	int			 error;
 };
 
-int
+void
 slrpc_batch_req_ctor( struct slrpc_batch_req *bq)
 {
 	INIT_LISTENTRY(&bq->bq_lentry);
 	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
 	bq->bq_repbuf = PSCALLOC(LNET_MTU);
-	return (0);
 }
 
-int
+void
 slrpc_batch_req_dtor(struct slrpc_batch_req *bq)
 {
 	PSCFREE(bq->bq_reqbuf);
 	PSCFREE(bq->bq_repbuf);
-	return (1);
 }
 
-int
+void
 slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
 {
 	INIT_LISTENTRY(&bp->bp_lentry);
 	bp->bp_reqbuf = PSCALLOC(LNET_MTU);
 	bp->bp_repbuf = PSCALLOC(LNET_MTU);
-	return (0);
 }
 
-int
+void
 slrpc_batch_rep_dtor(struct slrpc_batch_rep *bp)
 {
 	PSCFREE(bp->bp_reqbuf);
 	PSCFREE(bp->bp_repbuf);
-	return (1);
 }
 
 
@@ -325,12 +321,12 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slrpc_batch_rep *bp = av->pointer_arg[0];
-	int error;
+	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(bp->bp_csvc, rq, struct srm_batch_rep,
-	    error);
+	    rc);
 
-	slrpc_batch_rep_decref(bp, error);
+	slrpc_batch_rep_decref(bp, rc);
 	return (0);
 }
 
@@ -396,9 +392,13 @@ slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
  * @error: general error to apply to the entire batch.
  */
 void
-slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int error)
+slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 {
 	spinlock(&bp->bp_lock);
+
+	if (rc && !bp->bp_error)
+		bp->bp_error = rc;
+
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
 	bp->bp_refcnt--;
 	psc_assert(bp->bp_refcnt >= 0);
