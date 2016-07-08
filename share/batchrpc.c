@@ -123,8 +123,8 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	char *q, *p, *scratch;
 	int i, n;
 
-	if (bq->bq_error == 0)
-		bq->bq_error = rc;
+	if (bq->bq_rc == 0)
+		bq->bq_rc = rc;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
 
@@ -155,7 +155,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	for (q = bq->bq_reqbuf, p = bq->bq_repbuf, i = 0; i < n;
 	    i++, q += h->bph_qlen, p += h->bph_plen) {
 		scratch = psc_dynarray_getpos(&bq->bq_scratch, i);
-		bq->bq_handler->bph_cbf(q, p, scratch, -bq->bq_error);
+		bq->bq_handler->bph_cbf(q, p, scratch, -bq->bq_rc);
 		PSCFREE(scratch);
 	}
 
@@ -349,7 +349,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	mq->len = bp->bp_replen;
 	mq->bid = bp->bp_bid;
-	mq->rc = bp->bp_error;
+	mq->rc = bp->bp_rc;
 
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
@@ -396,8 +396,8 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 {
 	spinlock(&bp->bp_lock);
 
-	if (rc && !bp->bp_error)
-		bp->bp_error = rc;
+	if (rc && !bp->bp_rc)
+		bp->bp_rc = rc;
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
 	bp->bp_refcnt--;

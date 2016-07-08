@@ -73,7 +73,7 @@ struct slrpc_batch_req {
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
 	int				  bq_refcnt;
-	int				  bq_error;		/* return/processing error code */
+	int				  bq_rc;		/* return/processing return code */
 	uint32_t			  bq_opc;		/* underlying RPC operation code */
 
 	void				 *bq_reqbuf;		/* outgoing request bulk RPC */
@@ -96,7 +96,7 @@ struct slrpc_batch_rep {
 	struct slrpc_cservice		 *bp_csvc;
 	int				  bp_refcnt;
 	int				  bp_flags;
-	int				  bp_error;
+	int				  bp_rc;
 	uint32_t			  bp_opc;		/* underlying RPC operation code */
 
 	void				 *bp_reqbuf;		/* incoming request bulk RPC */
@@ -118,7 +118,7 @@ struct slrpc_batch_rep {
 	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
 	    (bq), (bq)->bq_bid, (bq)->bq_refcnt, (bq)->bq_flags,	\
 	    (bq)->bq_opc, (bq)->bq_reqbuf, (bq)->bq_reqlen,		\
-	    (bq)->bq_repbuf, (bq)->bq_replen, (bq)->bq_error, ##__VA_ARGS__)
+	    (bq)->bq_repbuf, (bq)->bq_replen, (bq)->bq_rc, ##__VA_ARGS__)
 
 #define PFLOG_BATCH_REP(level, bp, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
@@ -126,7 +126,7 @@ struct slrpc_batch_rep {
 	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
 	    (bp), (bp)->bp_bid, (bp)->bp_refcnt, (bp)->bp_flags,	\
 	    (bp)->bp_opc, (bp)->bp_reqbuf, (bp)->bp_reqlen,		\
-	    (bp)->bp_repbuf, (bp)->bp_replen, (bp)->bp_error, ##__VA_ARGS__)
+	    (bp)->bp_repbuf, (bp)->bp_replen, (bp)->bp_rc, ##__VA_ARGS__)
 
 int	slrpc_batch_req_add(struct psc_listcache *,
 	    struct psc_listcache *, struct slrpc_cservice *,
