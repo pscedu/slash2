@@ -193,6 +193,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	PFLOG_REPLWK(PLL_DEBUG, w, "created; #slivers=%d",
 	    w->srw_nslvr_tot);
 
+	/* for sli_repl_findwq() to detect duplicate request */
 	pll_add(&sli_replwkq_active, w);
 	sli_replwk_queue(w);
 
@@ -241,9 +242,8 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 void
 sli_replwk_queue(struct sli_repl_workrq *w)
 {
-	int locked;
 
-	locked = LIST_CACHE_RLOCK(&sli_replwkq_pending);
+	LIST_CACHE_LOCK(&sli_replwkq_pending);
 	spinlock(&w->srw_lock);
 	if (!lc_conjoint(&sli_replwkq_pending, w)) {
 		psc_atomic32_inc(&w->srw_refcnt);
@@ -251,7 +251,7 @@ sli_replwk_queue(struct sli_repl_workrq *w)
 		lc_add(&sli_replwkq_pending, w);
 	}
 	freelock(&w->srw_lock);
-	LIST_CACHE_URLOCK(&sli_replwkq_pending, locked);
+	LIST_CACHE_ULOCK(&sli_replwkq_pending);
 }
 
 /*
