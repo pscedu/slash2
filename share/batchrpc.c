@@ -123,7 +123,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	char *q, *p, *scratch;
 	int i, n;
 
-	if (bq->bq_rc == 0)
+	if (rc && !bq->bq_rc)
 		bq->bq_rc = rc;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
@@ -419,7 +419,7 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 
 /*
  * Add work in the worker thread after receiving a SRMT_BATCH_RQ
- * request from the MDS.
+ * request from the MDS. See slrpc_batch_handle_request().
  */
 int
 slrpc_batch_handle_req_workcb(void *arg)
@@ -544,7 +544,6 @@ int
 slrpc_batch_handle_reply(struct pscrpc_request *rq)
 {
 	struct slrpc_batch_req *bq, *bq_next;
-	struct psc_listcache *lc;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
@@ -552,9 +551,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 
 	memset(&iov, 0, sizeof(iov));
 
-	lc = &slrpc_batch_req_waitreply;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
 	if (mq->len < 0 || mq->len > LNET_MTU) {
 		mp->rc = -EINVAL;
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
@@ -562,8 +559,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 
  retry:
 
-	LIST_CACHE_LOCK(lc);
-	LIST_CACHE_FOREACH_SAFE(bq, bq_next, lc)
+	LIST_CACHE_LOCK(&slrpc_batch_req_waitreply);
+	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitreply)
 		if (mq->bid == bq->bq_bid) {
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
@@ -579,10 +576,10 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			found = 1;
 			break;
 		}
-	LIST_CACHE_ULOCK(lc);
+	LIST_CACHE_ULOCK(&slrpc_batch_req_waitreply);
 	if (!found) {
 		sleep(1);
-		OPSTAT_INCR("batch-early");
+		OPSTAT_INCR("batch-reply-early");
 		goto retry;
 	}
 	return (mp->rc);
