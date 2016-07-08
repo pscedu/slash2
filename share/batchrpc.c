@@ -139,7 +139,7 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
-	if (bq->bq_flags & (BATCHF_WAITREPLY | BATCHF_RQINFL))
+	if (bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY))
 		lc_remove(&slrpc_batch_req_waitreply, bq);
 	else
 		lc_remove(&slrpc_batch_req_delayed, bq);
@@ -192,8 +192,8 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 	struct slrpc_wkdata_batch_req *wk;
 
 	spinlock(&bq->bq_lock);
-	psc_assert(!bq->bq_flags & BATCHF_SCHED_FINISH);
-	bq->bq_flags |= BATCHF_SCHED_FINISH;
+	psc_assert(!(bq->bq_flags & BATCHF_FINISH));
+	bq->bq_flags |= BATCHF_FINISH;
 	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for finishing");
@@ -220,8 +220,8 @@ slrpc_batch_req_waitreply_workcb(void *p)
 	struct slrpc_batch_req *bq = wk->bq;
 
 	spinlock(&bq->bq_lock);
-	bq->bq_flags &= ~BATCHF_RQINFL;
-	bq->bq_flags |= BATCHF_WAITREPLY;
+	bq->bq_flags &= ~BATCHF_INFL;
+	bq->bq_flags |= BATCHF_REPLY;
 	slrpc_batch_req_decref(bq, 0);
 	return (0);
 }
@@ -280,7 +280,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	int rc;
 
-	bq->bq_flags |= BATCHF_RQINFL;
+	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
 
@@ -559,7 +559,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitreply);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitreply) {
 		spinlock(&bq->bq_lock);
-		if (mq->bid == bq->bq_bid && (bq->bq_flags & BATCHF_WAITREPLY)) {
+		if (mq->bid == bq->bq_bid && (bq->bq_flags & BATCHF_REPLY)) {
 			freelock(&bq->bq_lock);
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
@@ -632,8 +632,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	LIST_CACHE_LOCK(res_batches);
 	LIST_CACHE_FOREACH(bq, res_batches) {
 		spinlock(&bq->bq_lock);
-		if ((bq->bq_flags & (BATCHF_RQINFL |
-		    BATCHF_WAITREPLY)) == 0 &&
+		if ((bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY)) == 0 &&
 		    opc == bq->bq_opc) {
 			/*
 			 * Tack this request onto the existing pending

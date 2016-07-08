@@ -105,12 +105,10 @@ struct slrpc_batch_rep {
 	int				  bp_replen;
 };
 
-#define BATCHF_RQINFL			(1 << 0)	/* request RPC inflight */
-#define BATCHF_WAITREPLY		(1 << 1)	/* awaiting RPC reply */
-#define BATCHF_SCHED_FINISH		(1 << 2)	/* scheduled for cleanup */
+#define BATCHF_INFL			(1 << 0)	/* request RPC inflight */
+#define BATCHF_REPLY			(1 << 1)	/* awaiting RPC reply */
+#define BATCHF_FINISH			(1 << 2)	/* scheduled for cleanup */
 #define BATCHF_FREEING			(1 << 3)	/* trying to destroy */
-
-#define BATCHF_REPLIED			(1 << 4)	/* reply sent */
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
