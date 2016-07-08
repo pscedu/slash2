@@ -224,7 +224,6 @@ slrpc_batch_req_waitreply_workcb(void *p)
 	spinlock(&bq->bq_lock);
 	bq->bq_flags &= ~BATCHF_INFL;
 	bq->bq_flags |= BATCHF_REPLY;
-	psc_assert(bq->bq_refcnt == 1);
 	freelock(&bq->bq_lock);
 	return (0);
 }
@@ -685,7 +684,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	bq->bq_bid = mq->bid;
 	bq->bq_res_batches = res_batches;
 	bq->bq_handler = handler;
-	bq->bq_refcnt = 1;
 	bq->bq_opc = opc;
 	bq->bq_workq = workq;
 

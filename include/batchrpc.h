@@ -72,7 +72,6 @@ struct slrpc_batch_req {
 	int				  bq_snd_ptl:16;	/* bulk RPC portal */
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
-	int				  bq_refcnt;
 	int				  bq_rc;		/* return/processing return code */
 	uint32_t			  bq_opc;		/* underlying RPC operation code */
 
@@ -112,9 +111,9 @@ struct slrpc_batch_rep {
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrq@%p bid=%"PRIu64" refs=%d flags=%#x opc=%d "	\
+	    "batchrpcrq@%p bid=%"PRIu64" flags=%#x opc=%d "		\
 	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
-	    (bq), (bq)->bq_bid, (bq)->bq_refcnt, (bq)->bq_flags,	\
+	    (bq), (bq)->bq_bid, (bq)->bq_flags,				\
 	    (bq)->bq_opc, (bq)->bq_reqbuf, (bq)->bq_reqlen,		\
 	    (bq)->bq_repbuf, (bq)->bq_replen, (bq)->bq_rc, ##__VA_ARGS__)
 
