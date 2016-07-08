@@ -139,8 +139,10 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 	 * crashes, comes back online, and assigns gratuitous requeue
 	 * work.
 	 */
-	if (sli_repl_findwq(&q->fg, q->bno))
+	if (sli_repl_findwq(&q->fg, q->bno)) {
+		OPSTAT_INCR("repl-already-queued");
 		PFL_GOTOERR(out, rc = PFLERR_ALREADY);
+	}
 
 	rc = sli_fcmh_get(&q->fg, &f);
 	if (rc)
