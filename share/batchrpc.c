@@ -484,11 +484,11 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	mp->opc = mq->opc;	
 	if (mq->len < 1 || mq->len > LNET_MTU)
 		return (mp->rc = -EINVAL);
-	if (mq->opc < 0 || mq->opc >= NSRMT)
+	if (mq->opc < 0 || mq->opc >= SRMT_TOTAL)
 		return (mp->rc = -EINVAL);
 	h = &handlers[mq->opc];
 	if (h->bqh_cbf == NULL)
-		return (mp->rc = -PFLERR_NOTSUP);
+		return (mp->rc = -EINVAL);
 	if (mq->len % h->bqh_qlen)
 		return (mp->rc = -EINVAL);
 

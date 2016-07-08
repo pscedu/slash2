@@ -189,7 +189,7 @@ enum {
 	SRMT_BATCH_RP,				/* 50: async batch reply */
 	SRMT_CTL,				/* 51: generic control */
 
-	NSRMT
+	SRMT_TOTAL
 };
 
 extern const char *slrpc_names[];

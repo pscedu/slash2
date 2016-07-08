@@ -1349,7 +1349,7 @@ slrpc_destroy(void)
 const char *
 slrpc_getname_for_opcode(int opc)
 {
-	if (opc < 1 || opc >= NSRMT)
+	if (opc < 1 || opc >= SRMT_TOTAL)
 		return (NULL);
 	return (slrpc_names[opc]);
 }
