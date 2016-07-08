@@ -734,16 +734,13 @@ void
 slrpc_batch_thr_main(struct psc_thread *thr)
 {
 	struct timeval now, stall;
-	struct psc_listcache *ml;
 	struct slrpc_batch_req *bq;
-
-	ml = &slrpc_batch_req_delayed;
 
 	stall.tv_sec = 0;
 	stall.tv_usec = 0;
 
 	while (pscthr_run(thr)) {
-		bq = lc_peekheadwait(ml);
+		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
 
 		spinlock(&bq->bq_lock);
 		PFL_GETTIMEVAL(&now);
