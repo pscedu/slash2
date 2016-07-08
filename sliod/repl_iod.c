@@ -263,16 +263,17 @@ void
 sli_repl_try_work(struct sli_repl_workrq *w,
     struct sli_repl_workrq **last)
 {
-	int rc, slvridx, slvrno = 0;
+	int rc, slvridx, slvrno;
 	struct slrpc_cservice *csvc;
 	struct bmap_iod_info *bii;
 	struct sl_resm *src_resm;
 
 	spinlock(&w->srw_lock);
 	if (w->srw_status)
-		goto release;
+		goto out;
 
 	BMAP_LOCK(w->srw_bcm);
+	slvrno = 0;
 	bii = bmap_2_bii(w->srw_bcm);
 	while (slvrno < SLASH_SLVRS_PER_BMAP) {
 		if (bii->bii_crcstates[slvrno] & BMAP_SLVR_WANTREPL)
@@ -283,10 +284,10 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	if (slvrno == SLASH_SLVRS_PER_BMAP) {
 		BMAP_ULOCK(w->srw_bcm);
 		/* No work to do; we are done with this bmap. */
-		goto release;
+		goto out;
 	}
 
-	/* Find a pointer slot we can use to transmit the sliver. */
+	/* Find a free slot we can use to transmit the sliver. */
 	for (slvridx = 0; slvridx < nitems(w->srw_slvr); slvridx++)
 		if (w->srw_slvr[slvridx] == NULL)
 			break;
@@ -310,7 +311,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 				*last = w;
 			LIST_CACHE_ULOCK(&sli_replwkq_pending);
 		}
-		goto release;
+		goto out;
 	}
 	*last = NULL;
 
@@ -343,7 +344,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 		freelock(&w->srw_lock);
 	}
 
- release:
+ out:
 	sli_replwkrq_decref(w, 0);
 }
 
