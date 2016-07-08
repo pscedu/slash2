@@ -211,7 +211,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
-	(void)reqlock(&w->srw_lock);
+	spinlock(&w->srw_lock);
 
 	rc = pflrpc_portable_errno(rc);
 
@@ -326,6 +326,10 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	src_resm = psc_dynarray_getpos(&w->srw_src_res->res_members, 0);
 	csvc = sli_geticsvc(src_resm);
 
+	/*
+ 	 * We just take the work off the sli_replwkq_pending. Now we
+ 	 * are putting it back again?
+ 	 */
 	sli_replwk_queue(w);
 
 	if (csvc == NULL)
