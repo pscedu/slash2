@@ -91,7 +91,6 @@ slrpc_batch_rep_dtor(struct slrpc_batch_rep *bp)
 	PSCFREE(bp->bp_repbuf);
 }
 
-
 /*
  * This routine is used to order batch RPC requests by expiration for
  * transmission time.
@@ -338,6 +337,11 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
 	else
 		OPSTAT_INCR("batch-reply-err");
 
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "destroying");
+	sl_csvc_decref(bp->bp_csvc);
+	slrpc_batch_rep_dtor(bp);
+	psc_pool_return(slrpc_batch_rep_pool, bp);
+
 	return (0);
 }
 
@@ -346,15 +350,13 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
  *
  * @bp: batch reply to send.
  */
-void
+int
 slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 {
 	struct pscrpc_request *rq = bp->bp_rq;
 	struct srm_batch_req *mq;
 	struct iovec iov;
 	int rc;
-
-	slrpc_batch_rep_incref(bp);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
@@ -376,17 +378,15 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	}
 	if (rc)
 		OPSTAT_INCR("batch-reply-err");
+	return (rc);
 }
 
-/*
- * Increase the reference count of a batch RPC reply.
- */
 void
 slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
 {
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
 	spinlock(&bp->bp_lock);
 	bp->bp_refcnt++;
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
 	freelock(&bp->bp_lock);
 }
 
@@ -417,13 +417,13 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 	}
 	freelock(&bp->bp_lock);
 
-	slrpc_batch_rep_send(bp);
-
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "destroying");
-
-	sl_csvc_decref(bp->bp_csvc);
-	slrpc_batch_rep_dtor(bp);
-	psc_pool_return(slrpc_batch_rep_pool, bp);
+	rc = slrpc_batch_rep_send(bp);
+	if (rc) {
+		PFLOG_BATCH_REP(PLL_DIAG, bp, "destroying");
+		sl_csvc_decref(bp->bp_csvc);
+		slrpc_batch_rep_dtor(bp);
+		psc_pool_return(slrpc_batch_rep_pool, bp);
+	}
 }
 
 /*
