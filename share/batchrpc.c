@@ -585,6 +585,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	}
 	if (!found) {
 		mp->rc = -EINVAL;
+		OPSTAT_INCR("batch-reply-enoent");
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	}
 	return (mp->rc);
