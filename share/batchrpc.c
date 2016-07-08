@@ -222,7 +222,8 @@ slrpc_batch_req_waitreply_workcb(void *p)
 	spinlock(&bq->bq_lock);
 	bq->bq_flags &= ~BATCHF_INFL;
 	bq->bq_flags |= BATCHF_REPLY;
-	slrpc_batch_req_decref(bq, 0);
+	psc_assert(bq->bq_refcnt == 1);
+	freelock(&bq->bq_lock);
 	return (0);
 }
 
