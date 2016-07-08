@@ -547,7 +547,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
-	int found = 0;
+	int found = 0, tried = 0;
 
 	memset(&iov, 0, sizeof(iov));
 
@@ -577,10 +577,15 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			break;
 		}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_waitreply);
-	if (!found) {
+	if (!found && !tried) {
 		sleep(1);
+		tried = 1;
 		OPSTAT_INCR("batch-reply-early");
 		goto retry;
+	}
+	if (!found) {
+		mp->rc = -EINVAL;
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	}
 	return (mp->rc);
 }
