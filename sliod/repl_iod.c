@@ -195,6 +195,8 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 
 	/* for sli_repl_findwq() to detect duplicate request */
 	pll_add(&sli_replwkq_active, w);
+
+	/* for slireplpndthr_main() */
 	sli_replwk_queue(w);
 
  out:

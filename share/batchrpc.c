@@ -436,8 +436,10 @@ slrpc_batch_handle_req_workcb(void *arg)
 	psc_assert(n);
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
 	    i++, q += h->bqh_qlen, p += h->bqh_plen) {
-
-		/* sli_repl_addwk() or sli_rim_batch_handle_preclaim() */
+		/*
+		 * The callback function is either sli_repl_addwk() 
+		 * or sli_rim_batch_handle_preclaim().
+		 */ 
 		rc = h->bqh_cbf(bp, q, p);
 		if (rc)
 			break;
