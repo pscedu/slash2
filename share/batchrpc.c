@@ -126,6 +126,11 @@ slrpc_batch_req_decref(struct slrpc_batch_req *bq, int rc)
 	if (rc && !bq->bq_rc)
 		bq->bq_rc = rc;
 
+	if (abs(rc) == ETIMEDOUT) {
+		OPSTAT_INCR("batch-request-timeout");
+		psclog_warnx("batch request rc = %d", rc);
+	}
+
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
 
 	bq->bq_refcnt--;
