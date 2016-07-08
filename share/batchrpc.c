@@ -557,8 +557,10 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  retry:
 
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitreply);
-	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitreply)
-		if (mq->bid == bq->bq_bid) {
+	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitreply) {
+		spinlock(&bq->bq_lock);
+		if (mq->bid == bq->bq_bid && (bq->bq_flags & BATCHF_WAITREPLY)) {
+			freelock(&bq->bq_lock);
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
 				iov.iov_len = bq->bq_replen = mq->len;
@@ -573,6 +575,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			found = 1;
 			break;
 		}
+		freelock(&bq->bq_lock);
+	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_waitreply);
 	if (!found && !tried) {
 		sleep(1);
@@ -683,9 +687,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	PFL_GETTIMEVAL(&bq->bq_expire);
 	bq->bq_expire.tv_sec += expire;
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "created");
-
 	lc_add(res_batches, bq);
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "created");
 
 	CSVC_LOCK(csvc);
 	sl_csvc_incref(csvc);
