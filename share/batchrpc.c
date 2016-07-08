@@ -113,7 +113,7 @@ slrpc_batch_cmp(const void *a, const void *b)
  * handler.  If a connection is dropped, the handler is run then.
  *
  * @bq: batch request.
- * @error: general error during RPC communication.
+ * @rc: return code during RPC communication.
  */
 void
 slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
@@ -392,7 +392,7 @@ slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
  * deallocate memory for the batch.
  *
  * @bp: batch reply.
- * @error: general error to apply to the entire batch.
+ * @rc: return code to apply to the entire batch.
  */
 void
 slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
