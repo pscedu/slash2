@@ -282,6 +282,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	int rc;
 
+	bq->bq_flags &= BATCHF_DELAY;
 	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
@@ -700,8 +701,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	goto lookup;
 
  add:
-	if (!bq->bq_reqlen)
+	if (!bq->bq_reqlen) {
+		bq->bq_flags |= BATCHF_DELAY;
 		lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
+	}
 
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
 	bq->bq_reqlen += len;
