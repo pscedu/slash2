@@ -333,7 +333,11 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS_TYPE(bp->bp_csvc, rq, struct srm_batch_rep,
 	    rc);
 
-	slrpc_batch_rep_decref(bp, rc);
+	if (!rc)
+		OPSTAT_INCR("batch-reply-ok");
+	else
+		OPSTAT_INCR("batch-reply-err");
+
 	return (0);
 }
 
@@ -360,20 +364,18 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
-	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
-	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "sending");
 
-	rq->rq_interpret_reply = slrpc_batch_rep_send_cb;
-	rq->rq_async_args.pointer_arg[0] = bp;
-	rc = SL_NBRQSET_ADD(bp->bp_csvc, rq);
-
- out:
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
+	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
+	if (!rc) {
+		rq->rq_interpret_reply = slrpc_batch_rep_send_cb;
+		rq->rq_async_args.pointer_arg[0] = bp;
+		rc = SL_NBRQSET_ADD(bp->bp_csvc, rq);
+	}
 	if (rc)
-		slrpc_batch_rep_decref(bp, rc);
+		OPSTAT_INCR("batch-reply-err");
 }
 
 /*
