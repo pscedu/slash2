@@ -234,7 +234,7 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 {
-	int count, in_rc;
+	int count, timeout, in_rc;
 
 	in_rc = *rc;		/* for gdb session */
 
@@ -253,7 +253,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 		psclog_warnx("Unexpected error code %d", in_rc);
 		break;
 
-	/* retry for somee number of times */
+	/* only retry for a limited number of times */
 	case ETIMEDOUT:
 	case PFLERR_TIMEDOUT:
 		/* XXX track on per IOS/MDS basis */
@@ -281,15 +281,25 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 	if (!pfr)
 		PFL_GOTOERR(out, *rc = ETIMEDOUT);
 
+	/*
+ 	 * Clear incoming error code and sleep for a while before retry.
+ 	 */
 	*rc = 0;
 	count = pfr->pfr_retries++;
 
 	if (pfr) {
-		sleep(count ? count * 3 : 10);
+		timeout = count ? count * 3 : 10;
+		if (timeout > 60)
+			timeout = 60;
+		sleep(timeout);
 		if (pfr->pfr_interrupted)
 			*rc = EINTR;
-	} else
-		sleep(count ? count * 1 : 10);
+	} else {
+		timeout = count ? count * 1 : 10;
+		if (timeout > 60)
+			timeout = 60;
+		sleep(timeout);
+	}
 
  out:
 	if (*rc)
