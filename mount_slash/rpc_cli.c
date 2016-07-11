@@ -250,6 +250,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 	case ENETRESET:
 	case ENETUNREACH:
 	case ENOTCONN:
+		psclog_warnx("Unexpected error code %d", in_rc);
 		break;
 
 	/* retry for somee number of times */
