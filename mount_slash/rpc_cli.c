@@ -234,7 +234,9 @@ slc_rmc_setmds(const char *name)
 int
 slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 {
-	int count;
+	int count, in_rc;
+
+	in_rc = *rc;		/* for gdb session */
 
 	switch (abs(*rc)) {
 
