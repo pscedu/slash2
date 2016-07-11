@@ -8,23 +8,46 @@ then
     exit 0
 fi
 
+
 for ((i=0; i < $3; i++))
 do
         filename=$1-$i.$2
         if [ -e $filename ]
         then
-                echo "$filename exist"
+                echo "$filename already exist, bail."
                 exit 0
         fi  
+
         touch $filename
         if [ $? -ne 0 ] 
         then
-                echo "fail to create file $filename"
+                echo "Fail to create file $filename"
                 exit 0
         fi
+
+        date > $filename
+        if [ $? -ne 0 ] 
+        then
+                echo "Fail to write file $filename"
+                exit 0
+        fi
+	
 	id=`stat -c "%i" $filename`
-	id=`echo "obase=16; $id" | bc`
-	echo "The ID of $filename is $id"
-	unlink $filename
+	id=`echo "obase=10; $id" | bc`
+        echo "File $filename $id has been created ..."
 done
 
+for ((i=0; i < $3; i++))
+do
+        filename=$1-$i.$2
+	unlink $filename
+        if [ $? -ne 0 ] 
+        then
+                echo "Fail to unlink file $filename"
+                exit 0
+        fi
+        echo "File $filename has been unlinked ..."
+done
+
+echo
+echo "Total file created and linked: $3"
