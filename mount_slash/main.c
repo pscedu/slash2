@@ -1146,6 +1146,9 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 
 	namecache_hold_entry(dcup, p, name);
+	/*
+	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
+	 */
 	if (dcup->dcu_dce->dce_pfd->pfd_ino == FID_ANY ||
 	    sl_fcmh_lookup(dcup->dcu_dce->dce_pfd->pfd_ino, FGEN_ANY,
 	    FIDC_LOOKUP_LOCK, &c, pfr)) {
