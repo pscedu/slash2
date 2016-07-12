@@ -144,7 +144,15 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 
 	lc_remove(bq->bq_res_batches, bq);
 
+#if 0
+	/*
+ 	 * This would trigger an assert on psclist_disjoint(&rq->rq_set_chain_lentry)
+ 	 * I think our reaper should do this.  However, this function might need this
+ 	 * when the connection is dropped. I need to investigate if we really need
+ 	 * the drop function - timeout should handle it.
+ 	 */
 	pscrpc_req_finished(bq->bq_rq);
+#endif
 	sl_csvc_decref(bq->bq_csvc);
 
 	/* Run callback on each item contained in the batch. */

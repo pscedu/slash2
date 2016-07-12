@@ -244,7 +244,6 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 void
 sli_replwk_queue(struct sli_repl_workrq *w)
 {
-
 	LIST_CACHE_LOCK(&sli_replwkq_pending);
 	spinlock(&w->srw_lock);
 	if (!lc_conjoint(&sli_replwkq_pending, w)) {
@@ -269,8 +268,10 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	struct sl_resm *src_resm;
 
 	spinlock(&w->srw_lock);
-	if (w->srw_status)
+	if (w->srw_status) {
+		freelock(&w->srw_lock);
 		goto out;
+	}
 
 	BMAP_LOCK(w->srw_bcm);
 	slvrno = 0;
@@ -284,6 +285,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 	if (slvrno == SLASH_SLVRS_PER_BMAP) {
 		BMAP_ULOCK(w->srw_bcm);
 		/* No work to do; we are done with this bmap. */
+		freelock(&w->srw_lock);
 		goto out;
 	}
 
