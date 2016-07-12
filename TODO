@@ -896,3 +896,14 @@ zfs tuning
 
     Re-issue the command line while lemon is still down works fine.
 
+07/12/2016
+----------
+
+I was able to create 2000000 small files and remove them without problems (done in 23 hours).
+but the memory is not freed afterwards:
+
+zhihui@yuzu: ~/projects-yuzu/slash2/msctl$ ./msctl -p pool.dircachent.free
+parameter                                               value
+================================================================================
+pool.dircachent.free                                    1485976
+
