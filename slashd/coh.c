@@ -177,7 +177,10 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	PFLOG_BML(PLL_WARN, bml, "rc=%d", rc);
+	if (rc == PFLERR_NOTCONN)
+		PFLOG_BML(PLL_WARN, bml, "not connected");
+	else
+		PFLOG_BML(PLL_WARN, bml, "rc=%d", rc);
 
 	return (rc);
 }
