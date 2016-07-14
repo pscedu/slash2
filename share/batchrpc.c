@@ -716,6 +716,9 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	/*
 	 * OK, the requested entry has been added.  If the next
 	 * addition would overflow, send out what we have now.
+	 *
+	 * This logical relies on the fact that each request is 
+	 * of the same size.
 	 */
 	if (bq->bq_reqlen + len > LNET_MTU) {
 		OPSTAT_INCR("batch-send-full");
