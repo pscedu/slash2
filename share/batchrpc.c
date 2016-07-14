@@ -484,7 +484,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
-	void *pbuf, *qbuf;
 	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -501,15 +500,11 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 		return (mp->rc = -EINVAL);
 
 	bp = psc_pool_get(slrpc_batch_rep_pool);
-	slrpc_batch_rep_ctor(bp);
-	qbuf = bp->bp_reqbuf;
-	pbuf = bp->bp_repbuf;
 	memset(bp, 0, sizeof(*bp));
-	bp->bp_reqbuf = qbuf;
-	bp->bp_repbuf = pbuf;
+	slrpc_batch_rep_ctor(bp);
 
 	iov.iov_len = mq->len;
-	iov.iov_base = qbuf;
+	iov.iov_base = bp->bp_reqbuf;
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, h->bqh_rcv_ptl,
 	    &iov, 1);
 	if (mp->rc)
