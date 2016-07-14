@@ -280,7 +280,7 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Transmit a batch RPC request to peer.
+ * Transmit a SRMT_BATCH_RQ request to peer.
  *
  * @bq: batch request to send.
  */
