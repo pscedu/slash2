@@ -146,8 +146,8 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	sl_csvc_decref(bq->bq_csvc);
 
 	/*
-	 * Run callback on each item contained in the batch. The handler must be
-	 * either slm_batch_rep_repl or slm_batch_rep_preclaim.
+	 * Run callback on each item contained in the batch. The handler must 
+	 * be either slm_batch_rep_repl or slm_batch_rep_preclaim.
 	 */
 	h = bq->bq_handler;
 	n = bq->bq_reqlen / h->bph_qlen;
@@ -158,7 +158,8 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
  		 * The callback handle is either slm_batch_repl_cb()
  		 * or slm_batch_preclaim_cb().
  		 */
-		bq->bq_handler->bph_cbf(q, bq->bq_replen ? p : NULL, scratch, -bq->bq_rc);
+		bq->bq_handler->bph_cbf(q, bq->bq_replen ? p : NULL, 
+		    scratch, -bq->bq_rc);
 		PSCFREE(scratch);
 	}
 
