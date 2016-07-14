@@ -112,9 +112,9 @@ struct slrpc_batch_rep {
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
-	    "batchrpcrq@%p bid=%"PRIu64" flags=%#x opc=%d "		\
+	    "batchrpcrq@%p bid=%"PRIu64" rq=%p flags=%#x opc=%d "	\
 	    "reqbuf=%p qlen=%d repbuf=%p plen=%d rc=%d "fmt,		\
-	    (bq), (bq)->bq_bid, (bq)->bq_flags,				\
+	    (bq), (bq)->bq_bid, (bq)->bq_rq, (bq)->bq_flags,		\
 	    (bq)->bq_opc, (bq)->bq_reqbuf, (bq)->bq_reqlen,		\
 	    (bq)->bq_repbuf, (bq)->bq_replen, (bq)->bq_rc, ##__VA_ARGS__)
 
