@@ -638,7 +638,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	struct pscrpc_request *rq;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
-	void *qbuf, *pbuf;
 	int rc = 0;
 
  lookup:
@@ -675,12 +674,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	mq->bid = psc_atomic64_inc_getnew(&bid);
 
 	bq = psc_pool_get(slrpc_batch_req_pool);
-	slrpc_batch_req_ctor(bq);
-	qbuf = bq->bq_reqbuf;
-	pbuf = bq->bq_repbuf;
 	memset(bq, 0, sizeof(*bq));
-	bq->bq_reqbuf = qbuf;
-	bq->bq_repbuf = pbuf;
+	slrpc_batch_req_ctor(bq);
 
 	INIT_SPINLOCK(&bq->bq_lock);
 	INIT_PSC_LISTENTRY(&bq->bq_lentry);
