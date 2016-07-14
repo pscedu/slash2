@@ -107,10 +107,9 @@ slrpc_batch_cmp(const void *a, const void *b)
 }
 
 /*
- * Decrement a reference to a batch request.  Requests are initialized
- * with an extra reference in anticipation of an eventual response,
- * which will finalize the reference count to zero and run the reply
- * handler.  If a connection is dropped, the handler is run then.
+ * If all things are good, a request is done when the reply comes
+ * back. Otherwise, it may be destroyed when the request can't be
+ * sent out or a reply won't come back.
  *
  * @bq: batch request.
  * @rc: return code during RPC communication.
