@@ -155,7 +155,10 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 #endif
 	sl_csvc_decref(bq->bq_csvc);
 
-	/* Run callback on each item contained in the batch. */
+	/*
+	 * Run callback on each item contained in the batch. The handler must be
+	 * either slm_batch_rep_repl or slm_batch_rep_preclaim.
+	 */
 	h = bq->bq_handler;
 	n = bq->bq_replen / h->bph_plen;
 	for (q = bq->bq_reqbuf, p = bq->bq_repbuf, i = 0; i < n;
