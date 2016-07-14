@@ -728,7 +728,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
  out:
 	LIST_CACHE_ULOCK(res_batches);
-	sl_csvc_decref(csvc);
 	return (rc);
 }
 
