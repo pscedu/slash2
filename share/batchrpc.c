@@ -794,13 +794,13 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 {
 	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
 	    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 8, 8,
-	    0, NULL, "batchrpcrq");
+	    0, NULL, "batch-req");
 	slrpc_batch_req_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_req_poolmaster);
 
 	psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
 	    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 8, 8, 0,
-	    NULL, "batchrpcrp");
+	    NULL, "batch-rep");
 	slrpc_batch_rep_pool = psc_poolmaster_getmgr(
 	    &slrpc_batch_rep_poolmaster);
 
