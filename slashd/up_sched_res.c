@@ -125,13 +125,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct slm_batchscratch_repl *bsr = scratch;
 	struct sl_resm *dst_resm, *src_resm;
-	struct srt_replwk_rep *p = rep;
+	struct srt_replwk_rep *pp = rep;
 	struct srt_replwk_req *q = req;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 
-	if (!error && p && p->rc)
-		error = p->rc;
+	if (!error && pp && pp->rc)
+		error = pp->rc;
 
 	if (error)
 		OPSTAT_INCR("repl-schedwk-err");
@@ -170,7 +170,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		OPSTAT2_ADD("repl-compl", bsr->bsr_amt);
 	} else {
-		if (p == NULL ||
+		if (pp == NULL ||
 		    error == PFLERR_ALREADY ||
 		    error == SLERR_ION_OFFLINE ||
 		    error == ECONNRESET) {
@@ -511,12 +511,12 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
-	struct srt_preclaim_rep *p = rep;
+	struct srt_preclaim_rep *pp = rep;
 	struct fidc_membh *f;
 	struct bmap *b;
 
-	if (!error && p && p->rc)
-		error = -p->rc;
+	if (!error && pp && pp->rc)
+		error = -pp->rc;
 
 	if (error == -PFLERR_NOTSUP) {
 		struct resprof_mds_info *rpmi;
