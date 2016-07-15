@@ -654,6 +654,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		spinlock(&bq->bq_lock);
 		if ((bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY)) == 0 &&
 		    opc == bq->bq_opc) {
+			LIST_CACHE_ULOCK(res_batches);
 			/*
 			 * Tack this request onto the existing pending
 			 * batch request.
@@ -735,7 +736,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	} else
 		freelock(&bq->bq_lock);
 
-	LIST_CACHE_ULOCK(res_batches);
 	return (rc);
 }
 
