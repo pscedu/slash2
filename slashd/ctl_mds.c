@@ -40,6 +40,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slconn.h"
+#include "up_sched_res.h"
 
 struct slm_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
@@ -560,6 +561,9 @@ slmctlthr_main(const char *fn)
 
 	psc_ctlparam_register_simple("sys.upsch",
 	    slmctlparam_upsch_get, NULL);
+
+	psc_ctlparam_register_var("sys.upsch_delay",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_delay);
 
 	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 
 	    sizeof(struct slmctl_thread), SLMTHRT_CTLAC);
