@@ -273,6 +273,10 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
+int			send_times = 0;
+long			send_bytes = 0;
+psc_spinlock_t		send_lock = SPINLOCK_INIT;
+
 /*
  * Transmit a SRMT_BATCH_RQ request to peer.
  *
@@ -288,6 +292,11 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitreply, bq);
+
+	spinlock(&send_lock);
+	send_times ++;
+	send_bytes += bq->bq_reqlen;
+	freelock(&send_lock);
 
 	freelock(&bq->bq_lock);
 
@@ -341,6 +350,8 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
 
 	return (0);
 }
+
+
 
 /*
  * Send out a batch RPC reply.
