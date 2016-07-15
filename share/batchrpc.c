@@ -48,8 +48,8 @@ struct psc_poolmaster	 slrpc_batch_rep_poolmaster;
 struct psc_poolmgr	*slrpc_batch_req_pool;
 struct psc_poolmgr	*slrpc_batch_rep_pool;
 
-struct psc_listcache	 slrpc_batch_req_delayed;	/* waiting to be filled/timeout to be sent */
-struct psc_listcache	 slrpc_batch_req_waitreply;	/* awaiting reply */
+struct psc_listcache	 slrpc_batch_req_delayed;	/* to be filled/expired */
+struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
@@ -137,7 +137,7 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
 	if (bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY))
-		lc_remove(&slrpc_batch_req_waitreply, bq);
+		lc_remove(&slrpc_batch_req_waitrep, bq);
 	else
 		lc_remove(&slrpc_batch_req_delayed, bq);
 
@@ -218,7 +218,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
  * @p: work callback.
  */
 int
-slrpc_batch_req_waitreply_workcb(void *p)
+slrpc_batch_req_waitrep_workcb(void *p)
 {
 	struct slrpc_wkdata_batch_req *wk = p;
 	struct slrpc_batch_req *bq = wk->bq;
@@ -237,7 +237,7 @@ slrpc_batch_req_sched_waitreply(struct slrpc_batch_req *bq)
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for WAITREPLY");
 
-	wk = pfl_workq_getitem(slrpc_batch_req_waitreply_workcb,
+	wk = pfl_workq_getitem(slrpc_batch_req_waitrep_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
 	pfl_workq_putitemq(bq->bq_workq, wk);
@@ -291,7 +291,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	bq->bq_flags &= ~BATCHF_DELAY;
 	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
-	lc_add(&slrpc_batch_req_waitreply, bq);
+	lc_add(&slrpc_batch_req_waitrep, bq);
 
 	spinlock(&send_lock);
 	send_times ++;
@@ -572,8 +572,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 
  retry:
 
-	LIST_CACHE_LOCK(&slrpc_batch_req_waitreply);
-	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitreply) {
+	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
+	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		spinlock(&bq->bq_lock);
 		if (mq->bid == bq->bq_bid && (bq->bq_flags & BATCHF_REPLY)) {
 			freelock(&bq->bq_lock);
@@ -596,7 +596,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 		}
 		freelock(&bq->bq_lock);
 	}
-	LIST_CACHE_ULOCK(&slrpc_batch_req_waitreply);
+	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 	if (!found && !tried) {
 		sleep(1);
 		tried = 1;
@@ -814,7 +814,7 @@ slrpc_batches_init(int thrtype, const char *thrprefix)
 
 	lc_reginit(&slrpc_batch_req_delayed, struct slrpc_batch_req,
 	    bq_lentry, "batchrpc-delay");
-	lc_reginit(&slrpc_batch_req_waitreply, struct slrpc_batch_req,
+	lc_reginit(&slrpc_batch_req_waitrep, struct slrpc_batch_req,
 	    bq_lentry, "batchrpc-wait");
 
 	pscthr_init(thrtype, slrpc_batch_thr_main, 0,
@@ -828,7 +828,7 @@ void
 slrpc_batches_destroy(void)
 {
 	pfl_listcache_destroy_registered(&slrpc_batch_req_delayed);
-	pfl_listcache_destroy_registered(&slrpc_batch_req_waitreply);
+	pfl_listcache_destroy_registered(&slrpc_batch_req_waitrep);
 	pfl_poolmaster_destroy(&slrpc_batch_req_poolmaster);
 	pfl_poolmaster_destroy(&slrpc_batch_rep_poolmaster);
 }
