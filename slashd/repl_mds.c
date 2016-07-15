@@ -843,7 +843,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
-			BMAP_UNBUSY(b);
 			bmap_op_done(b);
 			continue;
 		}
