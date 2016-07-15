@@ -326,7 +326,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	psc_assert(rc == 0);
 
 	/*
-	 * We succesfully scheduled some work; if there is more
+	 * We have successfully scheduled some work; if there is more
 	 * bandwidth available, schedule more work.
 	 */
 	if (moreavail)
@@ -386,10 +386,16 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		tract[BREPLST_TRUNCPNDG_SCHED] = rc ?
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
+
+		FCMH_WAIT_BUSY(f);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
 		if (ret != BREPLST_TRUNCPNDG_SCHED)
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(f);
 	}
 
 	if (!rc) {
