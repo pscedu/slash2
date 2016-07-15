@@ -668,7 +668,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		}
 		freelock(&bq->bq_lock);
 	}
-
 	LIST_CACHE_ULOCK(res_batches);
 
 	/* not found; create */
@@ -676,7 +675,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	OPSTAT_INCR("batch-new");
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		return (rc);
 
 	mq->opc = opc;
 	mq->bid = psc_atomic64_inc_getnew(&bid);
@@ -736,7 +735,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	} else
 		freelock(&bq->bq_lock);
 
- out:
 	LIST_CACHE_ULOCK(res_batches);
 	return (rc);
 }
