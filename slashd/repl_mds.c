@@ -98,18 +98,6 @@ iosidx_in(int idx, const int *iosidx, int nios)
 	return (0);
 }
 
-void
-slm_repl_bmap_rel(struct bmap *b, int type)
-{
-	if (!(b->bcm_flags & BMAPF_REPLMODWR)) {
-		/* we took a write lock but did not modify; undo */
-		BMAP_UNBUSY(b);
-		FCMH_UNBUSY(b->bcm_fcmh);
-	}
-	bmap_op_done_type(b, type);
-}
-
-
 /*
  * Return the index of the given IOS ID or a negative error code on failure.
  */
@@ -977,6 +965,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
+	FCMH_WAIT_BUSY(f);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
 
@@ -1033,15 +1022,17 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
  bmap_done:
-		slm_repl_bmap_rel(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
 	}
 
  out:
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
+	}
 	*nbmaps = nbmaps_processed;
 	return (rc);
 }

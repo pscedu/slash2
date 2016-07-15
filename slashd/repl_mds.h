@@ -53,7 +53,6 @@ int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [
 int	 resmpair_bw_adj(struct sl_resm *, struct sl_resm *, int64_t, int *);
 
 void	 slm_repl_upd_write(struct bmap *, int);
-void	 slm_repl_bmap_rel(struct bmap *, int);
 
 void	 mds_brepls_check(uint8_t *, int);
 

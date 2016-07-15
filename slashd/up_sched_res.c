@@ -195,8 +195,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off)) {
 		mds_bmap_write_logrepls(b);
 	}
-	slm_repl_bmap_rel(b, BMAP_OPCNT_LOOKUP);
-	b = NULL;
 
  out:
 	if (b)
@@ -343,9 +341,13 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		/* undo brepls change */
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+
+		FCMH_WAIT_BUSY(f);
+		BMAP_LOCK(b);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
-		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-		slm_repl_bmap_rel(b, BMAP_OPCNT_UPSCH);
+		BMAP_ULOCK(b);
+		FCMH_UNBUSY(f);
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
