@@ -65,7 +65,6 @@ void
 slrpc_batch_req_ctor(struct slrpc_batch_req *bq)
 {
     	struct slrpc_batch_rep_handler *h = bq->bq_handler;
-	INIT_LISTENTRY(&bq->bq_lentry);
 	bq->bq_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_qlen);
 	bq->bq_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_plen);
 }
@@ -81,7 +80,6 @@ void
 slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
 {
     	struct slrpc_batch_req_handler *h = bp->bp_handler;
-	INIT_LISTENTRY(&bp->bp_lentry);
 	bp->bp_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_qlen);
 	bp->bp_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_plen);
 }
