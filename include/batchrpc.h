@@ -40,6 +40,12 @@
 #include "slconfig.h"
 #include "slconn.h"
 
+/*
+ * A single failure will doom the entire batch. So a larger number
+ * may not be always good.
+ */
+#define	SLRPC_BATCH_MAX_COUNT		1024
+
 struct psc_listcache;
 
 struct slrpc_batch_rep;
@@ -75,6 +81,7 @@ struct slrpc_batch_req {
 	int				  bq_rc;		/* return/processing return code */
 	uint32_t			  bq_opc;		/* underlying RPC operation code */
 
+	int				  bq_cnt;
 	void				 *bq_reqbuf;		/* outgoing request bulk RPC */
 	void				 *bq_repbuf;		/* incoming reply bulk RPC */
 	int				  bq_reqlen;
@@ -128,7 +135,7 @@ struct slrpc_batch_rep {
 
 int	slrpc_batch_req_add(struct psc_listcache *,
 	    struct psc_listcache *, struct slrpc_cservice *,
-	    uint32_t, int, int, void *, size_t, void *,
+	    uint32_t, int, int, void *, int, void *,
 	    struct slrpc_batch_rep_handler *, int);
 
 void	slrpc_batches_init(int, const char *);

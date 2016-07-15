@@ -62,11 +62,12 @@ struct slrpc_wkdata_batch_rep {
 };
 
 void
-slrpc_batch_req_ctor( struct slrpc_batch_req *bq)
+slrpc_batch_req_ctor(struct slrpc_batch_req *bq)
 {
+    	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 	INIT_LISTENTRY(&bq->bq_lentry);
-	bq->bq_reqbuf = PSCALLOC(LNET_MTU);
-	bq->bq_repbuf = PSCALLOC(LNET_MTU);
+	bq->bq_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_qlen);
+	bq->bq_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_plen);
 }
 
 void
@@ -79,9 +80,10 @@ slrpc_batch_req_dtor(struct slrpc_batch_req *bq)
 void
 slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
 {
+    	struct slrpc_batch_req_handler *h = bp->bp_handler;
 	INIT_LISTENTRY(&bp->bp_lentry);
-	bp->bp_reqbuf = PSCALLOC(LNET_MTU);
-	bp->bp_repbuf = PSCALLOC(LNET_MTU);
+	bp->bp_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_qlen);
+	bp->bp_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_plen);
 }
 
 void
@@ -507,6 +509,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	bp = psc_pool_get(slrpc_batch_rep_pool);
 	memset(bp, 0, sizeof(*bp));
+	bp->bp_handler = h;
 	slrpc_batch_rep_ctor(bp);
 
 	iov.iov_len = mq->len;
@@ -521,7 +524,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	bp->bp_bid = mq->bid;
 	bp->bp_refcnt = 1;
 	bp->bp_reqlen = mq->len;
-	bp->bp_handler = h;
 	bp->bp_csvc = csvc;
 	bp->bp_replen = mq->len / h->bqh_qlen * h->bqh_plen;
 	bp->bp_opc = mq->opc;
@@ -635,7 +637,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 int
 slrpc_batch_req_add(struct psc_listcache *res_batches,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
-    uint32_t opc, int rcvptl, int sndptl, void *buf, size_t len,
+    uint32_t opc, int rcvptl, int sndptl, void *buf, int len,
     void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
@@ -645,6 +647,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	int rc = 0;
+
+	psc_assert(handler->bph_qlen == len);
 
  lookup:
 	LIST_CACHE_LOCK(res_batches);
@@ -681,6 +685,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
 	bq = psc_pool_get(slrpc_batch_req_pool);
 	memset(bq, 0, sizeof(*bq));
+	bq->bq_handler = handler;
 	slrpc_batch_req_ctor(bq);
 
 	INIT_SPINLOCK(&bq->bq_lock);
@@ -692,7 +697,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	bq->bq_csvc = csvc;
 	bq->bq_bid = mq->bid;
 	bq->bq_res_batches = res_batches;
-	bq->bq_handler = handler;
 	bq->bq_opc = opc;
 	bq->bq_workq = workq;
 
@@ -726,7 +730,9 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	 * This logical relies on the fact that each request is 
 	 * of the same size.
 	 */
-	if (bq->bq_reqlen + len > LNET_MTU) {
+	bq->bq_cnt++;
+	psc_assert(bq->bq_cnt <= SLRPC_BATCH_MAX_COUNT);
+	if (bq->bq_cnt == SLRPC_BATCH_MAX_COUNT) {
 		OPSTAT_INCR("batch-send-full");
 		slrpc_batch_req_send(bq);
 	} else
