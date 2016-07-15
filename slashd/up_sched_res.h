@@ -34,7 +34,8 @@
 
 #include <sqlite3.h>
 
-#define	SLM_UPSCH_PAUSE		30
+#define	SLM_UPSCH_PAUSE			30
+#define	SLM_UPSCH_BATCH_TIME		5
 
 struct slm_update_data {
 	int				 upd_type:4;

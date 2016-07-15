@@ -315,7 +315,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
-	    &slm_batch_rep_repl, 5);
+	    &slm_batch_rep_repl, SLM_UPSCH_BATCH_TIME);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
