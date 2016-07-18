@@ -270,6 +270,7 @@ slmrcmthr_main(struct psc_thread *thr)
 
 	srcm = slmrcmthr(thr);
 	while (pscthr_run(thr)) {
+		/* handle requests for SRMT_REPL_GETST */
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
