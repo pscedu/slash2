@@ -91,7 +91,7 @@ void	 mds_brepls_check(uint8_t *, int);
 	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
 
 extern struct psc_listcache	 slm_replst_workq;
-extern int			 slm_bwqueuesz;
+extern int			 slm_upsch_bandwidth;
 extern struct psc_poolmgr	*slm_repl_status_pool;
 
 #endif /* _SL_MDS_REPL_H_ */

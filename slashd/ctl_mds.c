@@ -556,14 +556,15 @@ slmctlthr_main(const char *fn)
 	    0, &slm_bmap_leases.btt_maxseq);
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &slm_bmap_leases.btt_minseq);
-	psc_ctlparam_register_var("sys.bwqueuesz", PFLCTL_PARAMT_INT,
-	    0, &slm_bwqueuesz);
 
 	psc_ctlparam_register_simple("sys.upsch",
 	    slmctlparam_upsch_get, NULL);
 
 	psc_ctlparam_register_var("sys.upsch_delay",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_delay);
+
+	psc_ctlparam_register_var("sys.upsch_bandwidth",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_bandwidth);
 
 	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 
 	    sizeof(struct slmctl_thread), SLMTHRT_CTLAC);
