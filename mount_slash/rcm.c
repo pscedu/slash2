@@ -134,14 +134,12 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct srm_replst_slave_rep *mp;
 	struct msctl_replstq *mrsq;
 	struct iovec iov;
-	int rc;
+	int rc, level;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	rc = mq->rc;
 	if (rc == EOF)
 		rc = 0;
-
-	psclog_diag("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
@@ -176,6 +174,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
  out:
+	level = mp->rc ? PLL_WARN : PLL_DIAG;
+	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
 	mrsq_release(mrsq, rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
