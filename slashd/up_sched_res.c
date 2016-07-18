@@ -120,10 +120,10 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
  * and set things back to a virgin state for future processing.
  */
 void
-slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
+slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 {
 	sl_bmapgen_t bgen;
-	int rc, tract[NBREPLST], retifset[NBREPLST];
+	int tmprc, tract[NBREPLST], retifset[NBREPLST];
 	struct slm_batchscratch_repl *bsr = scratch;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srt_replwk_rep *pp = rep;
@@ -131,10 +131,10 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 
-	if (!error && pp && pp->rc)
-		error = pp->rc;
+	if (!rc && pp && pp->rc)
+		rc = pp->rc;
 
-	if (error)
+	if (rc)
 		OPSTAT_INCR("repl-schedwk-err");
 	else
 		OPSTAT_INCR("repl-schedwk-ok");
@@ -142,13 +142,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	dst_resm = res_getmemb(bsr->bsr_res);
 	src_resm = libsl_ios2resm(q->src_resid);
 
-	rc = slm_fcmh_get(&q->fg, &f);
-	if (rc)
+	tmprc = slm_fcmh_get(&q->fg, &f);
+	if (tmprc)
 		goto out;
 
 	FCMH_WAIT_BUSY(f);
-	rc = bmap_get(f, q->bno, SL_WRITE, &b);
-	if (rc)
+	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
+	if (tmprc)
 		goto out;
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -157,13 +157,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 	// XXX check fgen
 
 	BHGEN_GET(b, &bgen);
-	if (!error && q->bgen != bgen)
-		error = SLERR_GEN_OLD;
+	if (!rc && q->bgen != bgen)
+		rc = SLERR_GEN_OLD;
 
 	brepls_init(tract, -1);
 	brepls_init(retifset, 0);
 
-	if (error == 0) {
+	if (rc == 0) {
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -172,9 +172,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 		OPSTAT2_ADD("repl-compl", bsr->bsr_amt);
 	} else {
 		if (pp == NULL ||
-		    error == PFLERR_ALREADY ||
-		    error == SLERR_ION_OFFLINE ||
-		    error == ECONNRESET) {
+		    rc == PFLERR_ALREADY ||
+		    rc == SLERR_ION_OFFLINE ||
+		    rc == ECONNRESET) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 			OPSTAT_INCR("repl-fail-soft");
 		} else {
@@ -187,15 +187,14 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int error)
 
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
-		    "error=%d",
+		    "rc=%d",
 		    src_resm ? src_resm->resm_name : NULL,
 		    dst_resm ? dst_resm->resm_name : NULL,
-		    error);
+		    rc);
 	}
 
-	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off)) {
+	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
 		mds_bmap_write_logrepls(b);
-	}
 
  out:
 	if (b)
