@@ -1376,6 +1376,8 @@ upsch_enqueue(struct slm_update_data *upd)
 	int locked;
 
 	locked = UPD_RLOCK(upd);
+
+	/* enqueue work for slmupschthr_main() */
 	if (!pfl_mlist_conjoint(&slm_upschq, upd)) {
 		if (upd->upd_type == UPDT_BMAP &&
 		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
