@@ -970,6 +970,8 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 }
 
 /*
+ * Handle UPDT_PAGEIN.
+ *
  * Page in some work for the update scheduler to do.  This consults the
  * upsch database, potentially restricting to a single resource for work
  * to schedule.
