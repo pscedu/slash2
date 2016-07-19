@@ -71,7 +71,7 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
  */
-int slm_bwqueuesz = 8 * 32 * 1024;
+int slm_upsch_bandwidth = 8 * 32;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -1037,7 +1037,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 }
 
 #define HAS_BW(bwd, amt)						\
-	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_bwqueuesz)
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_upsch_bandwidth * 1024)
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
