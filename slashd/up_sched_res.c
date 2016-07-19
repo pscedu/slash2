@@ -1260,7 +1260,7 @@ slmupschthr_spawn(void)
 			pfl_multiwait_addcond(&slm_upsch_mw,
 			    &m->resm_csvc->csvc_mwc);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 1; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
