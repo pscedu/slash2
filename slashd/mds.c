@@ -1279,12 +1279,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			qifset[BREPLST_TRUNCPNDG] = 1;
 
 			upd = &bmi->bmi_upd;
-			UPD_LOCK(upd);
-			UPD_WAIT(upd);
 			if (mds_repl_bmap_walk_all(b, NULL, qifset,
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
-			UPD_UNBUSY(upd);
 		}
 
 		BMAP_ULOCK(b);
