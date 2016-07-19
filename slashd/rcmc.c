@@ -276,11 +276,11 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			OPSTAT_INCR("replst-all");
-
-			UPSCH_LOCK();
+			
+			spinlock(&slm_upsch_lock);
 			dbdo(slmrcmthr_walk, &da,
 			    "SELECT DISTINCT fid FROM upsch");
-			UPSCH_ULOCK();
+			freelock(&slm_upsch_lock);
 
 			DYNARRAY_FOREACH(p, n, &da) {
 				fg.fg_fid = (slfid_t)p;

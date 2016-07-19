@@ -75,10 +75,9 @@
 #define IP_SRCRESM	2
 #define IP_BMAP		3
 
-struct pfl_mlist	slm_upschq;
-
-psc_spinlock_t          slm_upsch_lock;
-struct psc_waitq	slm_upsch_waitq;
+psc_spinlock_t           slm_upsch_lock;
+struct psc_waitq	 slm_upsch_waitq;
+struct psc_listcache     slm_upsch_queue;
 
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
@@ -261,7 +260,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	bsr->bsr_res = dst_res;
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
+	    CSVCF_NORECON, NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 
@@ -345,8 +344,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
-
-	UPSCH_WAKE();
 
 	PSCFREE(bsr);
 
@@ -470,7 +467,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	BMAP_ULOCK(b);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
+	    CSVCF_NORECON, NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 	av.pointer_arg[IP_CSVC] = csvc;
@@ -583,7 +580,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	m = res_getmemb(r);
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
-	    &slm_upsch_mw);
+	    NULL);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
@@ -810,7 +807,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 					csvc = slm_geticsvc(m, NULL,
 					    CSVCF_NONBLOCK |
 					    CSVCF_NORECON,
-					    &slm_upsch_mw);
+					    NULL);
 					if (csvc == NULL)
 						continue;
 					sl_csvc_decref(csvc);
@@ -1045,11 +1042,6 @@ void
 upd_proc(struct slm_update_data *upd)
 {
 	struct slm_update_generic *upg;
-	int locked;
-
-	locked = UPSCH_HASLOCK();
-	if (locked)
-		UPSCH_ULOCK();
 
 	DPRINTF_UPD(PLL_DIAG, upd, "start");
 
@@ -1061,9 +1053,6 @@ upd_proc(struct slm_update_data *upd)
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
 	UPD_ULOCK(upd);
-
-	if (locked)
-		UPSCH_LOCK();
 
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
@@ -1190,36 +1179,11 @@ void
 slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
-	struct sl_resource *r;
-	struct sl_resm *m;
-	struct sl_site *s;
-	int i, j, rc;
 
 	while (pscthr_run(thr)) {
-		CONF_FOREACH_RESM(s, r, i, m, j)
-			if (RES_ISFS(r))
-				pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-				    &m->resm_csvc->csvc_mwc, 0);
-
-		UPSCH_LOCK();
-		pfl_multiwait_entercritsect(&slm_upsch_mw);
-		upd = pfl_mlist_tryget(&slm_upschq);
-		if (upd)
-			upd_proc(upd);
-		UPSCH_ULOCK();
-		if (upd)
-			pfl_multiwait_leavecritsect(&slm_upsch_mw);
-		else {
-			/*
-			 * In theory we should avoid this.  However,
-			 * there might be outside updates to the upsch
-			 * database.
-			 */
-			rc = pfl_multiwait_secs(&slm_upsch_mw, &upd,
-			    SLM_UPSCH_PAUSE);
-			if (rc == -ETIMEDOUT)
-				upschq_resm(NULL, UPDT_PAGEIN);
-		}
+		upd = lc_getwait(&slm_upsch_queue);
+		upd_proc(upd);
+		upschq_resm(NULL, UPDT_PAGEIN);
 	}
 }
 
@@ -1231,7 +1195,7 @@ slm_upsch_init(void)
 	    NULL, "upgen");
 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
 
-	pfl_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
+	lc_reginit(&slm_upsch_queue, struct slm_update_data,
 	    upd_lentry, "upschq");
 }
 
@@ -1241,18 +1205,7 @@ slmupschthr_spawn(void)
 	struct psc_thread *thr;
 	struct sl_resource *r;
 	struct sl_site *s;
-	struct sl_resm *m;
-	int i, j;
-
-	pfl_multiwait_init(&slm_upsch_mw, "upsch");
-	if (pfl_multiwait_addcond(&slm_upsch_mw,
-	    &slm_upschq.pml_mwcond_empty) == -1)
-		psc_fatal("pfl_multiwait_addcond");
-
-	CONF_FOREACH_RESM(s, r, i, m, j)
-		if (RES_ISFS(r))
-			pfl_multiwait_addcond(&slm_upsch_mw,
-			    &m->resm_csvc->csvc_mwc);
+	int i;
 
 	for (i = 0; i < 1; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
@@ -1316,8 +1269,9 @@ upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
 	upd->upd_type = type;
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
-	psc_mutex_init(&upd->upd_mutex);
-	pfl_multiwaitcond_init(&upd->upd_mwc, upd, 0, "upd-%p", upd);
+
+	INIT_SPINLOCK(&upd->upd_lock);
+	psc_waitq_init(&upd->upd_waitq, "upd");
 
 	switch (type) {
 	case UPDT_BMAP: {
@@ -1341,8 +1295,6 @@ upd_destroy(struct slm_update_data *upd)
 	DPRINTF_UPD(PLL_DIAG, upd, "destroy");
 	psc_assert(psclist_disjoint(&upd->upd_lentry));
 	psc_assert(!(upd->upd_flags & UPDF_BUSY));
-	psc_mutex_destroy(&upd->upd_mutex);
-	pfl_multiwaitcond_destroy(&upd->upd_mwc);
 	memset(upd, 0, sizeof(*upd));
 }
 
@@ -1369,20 +1321,19 @@ slm_wk_upsch_purge(void *p)
 void
 upsch_enqueue(struct slm_update_data *upd)
 {
-	int locked;
-
-	locked = UPD_RLOCK(upd);
+	spinlock(&upd->upd_lock);
 
 	/* enqueue work for slmupschthr_main() */
-	if (!pfl_mlist_conjoint(&slm_upschq, upd)) {
+	if (!(upd->upd_flags & UPDF_LIST)) {
+		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP &&
 		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
-			pfl_mlist_addtail(&slm_upschq, upd);
+			lc_addtail(&slm_upsch_queue, upd);
 		else
-			pfl_mlist_addhead(&slm_upschq, upd);
+			lc_addhead(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
-	UPD_URLOCK(upd, locked);
+	freelock(&upd->upd_lock);
 }
 
 void *

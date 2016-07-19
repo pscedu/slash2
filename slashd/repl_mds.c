@@ -866,10 +866,11 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
 				upd_init(upd, UPDT_BMAP);
 			} else {
-				UPD_WAIT(upd);
+				spinlock(&upd->upd_lock);
 				upd->upd_flags |= UPDF_BUSY;
 				upd->upd_owner = pthread_self();
-				UPD_ULOCK(upd);
+				psc_waitq_wakeall(&upd->upd_waitq);
+				freelock(&upd->upd_lock);
 			}
 			mds_bmap_write_logrepls(b);
 			UPD_UNBUSY(upd);
@@ -1109,8 +1110,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		 * We released some bandwidth; wake anyone waiting for
 		 * some.
 		 */
+#if 0
 		CSVC_WAKE(src->resm_csvc);
 		CSVC_WAKE(dst->resm_csvc);
+#endif
 	}
 
 	RPMI_ULOCK(r_max);

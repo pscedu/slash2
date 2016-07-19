@@ -38,17 +38,22 @@
 
 extern int slm_upsch_delay;
 
+extern psc_spinlock_t           slm_upsch_lock;
+extern struct psc_waitq		slm_upsch_waitq;
+extern struct psc_listcache     slm_upsch_queue;
+
 struct slm_update_data {
 	int				 upd_type:4;
 	int				 upd_flags;
 	pthread_t			 upd_owner;
-	struct pfl_mutex		 upd_mutex;
-	struct pfl_multiwaitcond	 upd_mwc;
+	psc_spinlock_t			 upd_lock;
+	struct psc_waitq		 upd_waitq;
 	struct psc_listentry		 upd_lentry;
 };
 
 /* upd_flags */
 #define UPDF_BUSY			(1 << 0)	/* item is being modified */
+#define UPDF_LIST			(1 << 1)	/* item is on list */
 
 /* upd_type, which is used, among other things, to index *upd_proctab[] */
 enum upd_type_enum {
@@ -73,30 +78,28 @@ struct slm_update_generic {
 
 #define UPD_CALLERINFO()		PFL_CALLERINFOSS(SLMSS_UPSCH)
 
-#define UPD_LOCK(upd)			_psc_mutex_lock(UPD_CALLERINFO(), &(upd)->upd_mutex)
-#define UPD_ULOCK(upd)			_psc_mutex_unlock(UPD_CALLERINFO(), &(upd)->upd_mutex)
-#define UPD_RLOCK(upd)			_psc_mutex_reqlock(UPD_CALLERINFO(), &(upd)->upd_mutex)
-#define UPD_URLOCK(upd, lk)		_psc_mutex_ureqlock(UPD_CALLERINFO(), &(upd)->upd_mutex, (lk))
-#define UPD_HASLOCK(upd)		_psc_mutex_haslock(UPD_CALLERINFO(), &(upd)->upd_mutex)
-#define UPD_WAKE(upd)			pfl_multiwaitcond_wakeup(&(upd)->upd_mwc)
+#define UPD_LOCK(upd)			spinlock(&(upd)->upd_lock)
+#define UPD_ULOCK(upd)			freelock(&(upd)->upd_lock)
 
 #define UPD_WAIT(upd)							\
 	do {								\
-		UPD_RLOCK(upd);						\
+		LOCK_ENSURE(&(upd)->upd_lock);				\
 		while ((upd)->upd_flags & UPDF_BUSY) {			\
-			pfl_multiwaitcond_wait(&(upd)->upd_mwc,		\
-			    &(upd)->upd_mutex);				\
-			UPD_LOCK(upd);					\
+			psc_waitq_wait(&(upd)->upd_waitq, 		\
+				&(upd)->upd_lock);			\
+			spinlock(&(upd)->upd_lock);			\
 		}							\
 	} while (0)
 
+#define UPD_WAKE(upd)	psc_waitq_wakeall(&(upd)->upd_waitq); 
+		
 #define UPD_UNBUSY(upd)							\
 	do {								\
-		UPD_RLOCK(upd);						\
+		spinlock(&(upd)->upd_lock);				\
 		(upd)->upd_flags &= ~UPDF_BUSY;				\
 		(upd)->upd_owner = 0;					\
-		UPD_WAKE(upd);						\
-		UPD_ULOCK(upd);						\
+		psc_waitq_wakeall(&(upd)->upd_waitq);			\
+		freelock(&(upd)->upd_lock);				\
 	} while (0)
 
 #define UPD_INCREF(upd)							\
@@ -172,16 +175,6 @@ void	 upd_initf(struct slm_update_data *, int, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
 void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
-
-#define UPSCH_LOCK()		MLIST_LOCK(&slm_upschq)
-#define UPSCH_ULOCK()		MLIST_ULOCK(&slm_upschq)
-#define UPSCH_HASLOCK()		MLIST_HASLOCK(&slm_upschq)
-#define UPSCH_RLOCK()		MLIST_REQLOCK(&slm_upschq)
-#define UPSCH_URLOCK(lk)	MLIST_URLOCK(&slm_upschq, (lk))
-#define UPSCH_LOCK_ENSURE()	MLIST_LOCK_ENSURE(&slm_upschq)
-#define UPSCH_WAKE()		pfl_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
-
-extern struct pfl_mlist		 slm_upschq;
 
 struct slm_sth {
 	struct pfl_hashentry	 sth_hentry;
