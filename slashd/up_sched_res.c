@@ -75,8 +75,11 @@
 #define IP_SRCRESM	2
 #define IP_BMAP		3
 
-struct pfl_mlist	 slm_upschq;
-struct pfl_multiwait	 slm_upsch_mw;
+struct pfl_mlist	slm_upschq;
+
+psc_spinlock_t          slm_upsch_lock;
+struct psc_waitq	slm_upsch_waitq;
+
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
@@ -245,15 +248,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 
 	if (!resmpair_bw_adj(src_resm, dst_resm, amt, &moreavail)) {
-		/*
-		 * No bandwidth available: bail and add "src to become
-		 * unbusy" and "dst to become unbusy" conditions to
-		 * multiwait.
-		 */
-		pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-		    &src_resm->resm_csvc->csvc_mwc, 1);
-		pfl_multiwait_setcondwakeable(&slm_upsch_mw,
-		    &dst_resm->resm_csvc->csvc_mwc, 1);
 
 		OPSTAT_INCR("repl-throttle");
 
