@@ -1195,6 +1195,8 @@ slm_upsch_init(void)
 	    NULL, "upgen");
 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
 
+	INIT_SPINLOCK(&slm_upsch_lock);
+	psc_waitq_init(&slm_upsch_waitq, "upsch");
 	lc_reginit(&slm_upsch_queue, struct slm_update_data,
 	    upd_lentry, "upschq");
 }
