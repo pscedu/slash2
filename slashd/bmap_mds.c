@@ -201,6 +201,7 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
+	UPD_LOCK(upd);
 	UPD_UNBUSY(upd);
 
 	new = 0;
