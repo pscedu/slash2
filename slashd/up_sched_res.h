@@ -95,7 +95,7 @@ struct slm_update_generic {
 		
 #define UPD_UNBUSY(upd)							\
 	do {								\
-		spinlock(&(upd)->upd_lock);				\
+		LOCK_ENSURE(&(upd)->upd_lock);				\
 		(upd)->upd_flags &= ~UPDF_BUSY;				\
 		(upd)->upd_owner = 0;					\
 		psc_waitq_wakeall(&(upd)->upd_waitq);			\
