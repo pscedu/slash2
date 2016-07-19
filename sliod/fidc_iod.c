@@ -107,6 +107,10 @@ sli_open_backing_file(struct fidc_membh *f)
 	int lvl = PLL_DIAG, incr, rc = 0;
 	char fidfn[PATH_MAX];
 
+	/*
+ 	 * XXX hit setrlimit: operation not permitted, but no open-fail.
+ 	 * This per open system call should go!
+ 	 */
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 	sli_fg_makepath(&f->fcmh_fg, fidfn);
 	fcmh_2_fd(f) = open(fidfn, O_CREAT|O_RDWR, 0600);
