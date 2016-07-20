@@ -1046,11 +1046,16 @@ upd_proc(struct slm_update_data *upd)
 	DPRINTF_UPD(PLL_DIAG, upd, "start");
 
 	UPD_LOCK(upd);
+	upd->upd_flags &= ~UPDF_LIST;
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
 	UPD_ULOCK(upd);
 
+	/*
+ 	 * Call upd_proc_bmap(), upd_proc_hldrop(), and
+ 	 * upd_proc_pagein,(), upd_proc_pagein_unit().
+ 	 */
 	upd_proctab[upd->upd_type](upd);
 
 	UPD_LOCK(upd);
