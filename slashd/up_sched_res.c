@@ -1051,6 +1051,22 @@ upd_proc(struct slm_update_data *upd)
  	 * UPDT_PAGEIN: upd_proc_pagein()
  	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit().
  	 */
+	switch (upd->upd_type) {
+	case UPDT_BMAP:
+		OPSTAT_INCR("upsch-bmap");
+		break;
+	case UPDT_HLDROP:
+		OPSTAT_INCR("upsch-hldrop");
+		break;
+	case UPDT_PAGEIN:
+		OPSTAT_INCR("upsch-pagein");
+		break;
+	case UPDT_PAGEIN_UNIT:
+		OPSTAT_INCR("upsch-pagein_unit");
+		break;
+	default:
+		psc_fatalx("Unknown type %d", upd->upd_type);
+	}
 	upd_proctab[upd->upd_type](upd);
 
 	UPD_LOCK(upd);
