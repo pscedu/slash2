@@ -1200,11 +1200,18 @@ void
 slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j;
 
 	while (pscthr_run(thr)) {
+		CONF_FOREACH_RESM(s, r, i, m, j) {
+			if (RES_ISFS(r))
+				upschq_resm(m, UPDT_PAGEIN);
+		}
 		upd = lc_getwait(&slm_upsch_queue);
 		upd_proc(upd);
-		upschq_resm(NULL, UPDT_PAGEIN);
 	}
 }
 
