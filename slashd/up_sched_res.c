@@ -1266,6 +1266,12 @@ upschq_resm(struct sl_resm *m, int type)
 void
 upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
 {
+
+	psc_assert(type == UPDT_BMAP   || 
+		   type == UPDT_HLDROP || 
+		   type == UPDT_PAGEIN || 
+		   type == UPDT_PAGEIN_UNIT);
+
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
 	upd->upd_type = type;
