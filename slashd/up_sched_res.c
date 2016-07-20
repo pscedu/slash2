@@ -1206,9 +1206,12 @@ slmupschthr_main(struct psc_thread *thr)
 	int i, j;
 
 	while (pscthr_run(thr)) {
-		CONF_FOREACH_RESM(s, r, i, m, j) {
-			if (RES_ISFS(r))
+		if (lc_nitems(&slm_upsch_queue) < 32) {
+			CONF_FOREACH_RESM(s, r, i, m, j) {
+				if (!RES_ISFS(r))
+					continue;
 				upschq_resm(m, UPDT_PAGEIN);
+			}
 		}
 		upd = lc_getwait(&slm_upsch_queue);
 		upd_proc(upd);
