@@ -198,23 +198,6 @@ struct sl_expcli_ops {
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
-#define sl_csvc_waitevent_rel_s(csvc, cond, s)				\
-	do {								\
-		struct timeval _start_tm, _now_tm, _diff_tm;		\
-									\
-		PFL_GETTIMEVAL(&_start_tm);				\
-		for (;;) {						\
-			sl_csvc_reqlock(csvc);				\
-			if (cond)					\
-				break;					\
-			PFL_GETTIMEVAL(&_now_tm);			\
-			timersub(&_now_tm, &_start_tm, &_diff_tm);	\
-			if (_diff_tm.tv_sec >= (s))			\
-				break;					\
-			sl_csvc_waitrel_s((csvc), (s));			\
-		}							\
-	} while (0)
-
 #define SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK (1 << 0)
 
 #ifndef SL_FAULT_PREFIX
