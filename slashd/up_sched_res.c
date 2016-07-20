@@ -1254,6 +1254,8 @@ upschq_resm(struct sl_resm *m, int type)
 	upd = &upg->upg_upd;
 	upd_init(upd, type);
 	upsch_enqueue(upd);
+
+	spinlock(&upd->upd_lock);
 	UPD_UNBUSY(upd);
 }
 
@@ -1355,8 +1357,7 @@ upd_getpriv(struct slm_update_data *upd)
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
 	case UPDT_PAGEIN_UNIT:
-		return (p - offsetof(struct slm_update_generic,
-		    upg_upd));
+		return (p - offsetof(struct slm_update_generic, upg_upd));
 	default:
 		psc_fatal("type");
 	}
