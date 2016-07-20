@@ -864,6 +864,11 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 			upd = &bmap_2_bmi(b)->bmi_upd;
 			if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
+				/*
+ 				 * This should not happen, because
+ 				 * we init it when the bmap was read
+ 				 * for the first time.
+ 				 */
 				upd_init(upd, UPDT_BMAP);
 			} else {
 				spinlock(&upd->upd_lock);
@@ -873,6 +878,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 				freelock(&upd->upd_lock);
 			}
 			mds_bmap_write_logrepls(b);
+			spinlock(&upd->upd_lock);
 			UPD_UNBUSY(upd);
 		} else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);

@@ -1055,6 +1055,7 @@ upd_proc(struct slm_update_data *upd)
 
 	UPD_LOCK(upd);
 	upd->upd_flags &= ~UPDF_BUSY;
+	upd->upd_owner = 0;
 	UPD_WAKE(upd);
 	UPD_ULOCK(upd);
 
