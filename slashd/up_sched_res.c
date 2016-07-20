@@ -703,21 +703,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	f = b->bcm_fcmh;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
-	/* skip, there is more important work to do */
-	if (b->bcm_flags & BMAPF_REPLMODWR) {
-		DEBUG_FCMH(PLL_DEBUG, f, "skip: upd=%p", upd);
-		return;
-	}
-
-	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
-	UPD_WAIT(upd);
-	upd->upd_flags |= UPDF_BUSY;
-	upd->upd_owner = pthread_self();
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
