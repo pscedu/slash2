@@ -1268,7 +1268,6 @@ upschq_resm(struct sl_resm *m, int type)
  * Initialize a peer resource update.
  * @upd: peer update structure.
  * @type: type of update.
- * @flags: operation flags.
  */
 void
 upd_init(struct slm_update_data *upd, int type)
