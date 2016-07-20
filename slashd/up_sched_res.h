@@ -155,8 +155,6 @@ struct slm_update_generic {
 	    (upd)->upd_flags & UPDF_BUSY	? "b" : "",		\
 	    ## __VA_ARGS__)
 
-#define upd_init(upd, type)	upd_initf((upd), (type), 0)
-
 void	 upsch_enqueue(struct slm_update_data *);
 void	 upsch_purge(slfid_t);
 void	 upschq_resm(struct sl_resm *, int);
@@ -171,7 +169,7 @@ int	 slm_upsch_insert(struct bmap *, sl_ios_id_t, int, int);
 int	 slm_upsch_tally_cb(struct slm_sth *, void *);
 int	 slm_upsch_revert_cb(struct slm_sth *, void *);
 
-void	 upd_initf(struct slm_update_data *, int, int);
+void	 upd_init(struct slm_update_data *, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
 void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);

@@ -1264,7 +1264,7 @@ upschq_resm(struct sl_resm *m, int type)
  * @flags: operation flags.
  */
 void
-upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
+upd_init(struct slm_update_data *upd, int type)
 {
 
 	psc_assert(type == UPDT_BMAP   || 
