@@ -1049,7 +1049,11 @@ upd_proc(struct slm_update_data *upd)
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
+	UPD_ULOCK(upd);
+
 	upd_proctab[upd->upd_type](upd);
+
+	UPD_LOCK(upd);
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
 	UPD_ULOCK(upd);
