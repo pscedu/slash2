@@ -931,6 +931,8 @@ upd_pagein_wk(void *p)
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = wk->bno;
 	upsch_enqueue(&upg->upg_upd);
+	
+	spinlock(&upg->upg_upd.upd_lock);
 	UPD_UNBUSY(&upg->upg_upd);
 	return (0);
 }
