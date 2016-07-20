@@ -1062,7 +1062,7 @@ upd_proc(struct slm_update_data *upd)
 		OPSTAT_INCR("upsch-pagein");
 		break;
 	case UPDT_PAGEIN_UNIT:
-		OPSTAT_INCR("upsch-pagein_unit");
+		OPSTAT_INCR("upsch-pagein-unit");
 		break;
 	default:
 		psc_fatalx("Unknown type %d", upd->upd_type);
