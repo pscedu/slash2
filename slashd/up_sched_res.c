@@ -1243,19 +1243,15 @@ upschq_resm(struct sl_resm *m, int type)
 	struct sl_mds_iosinfo *si;
 
 	if (type == UPDT_PAGEIN && m) {
-		int proc = 1;
-
 		rpmi = res2rpmi(m->resm_res);
 		si = res2iosinfo(m->resm_res);
 		RPMI_LOCK(rpmi);
-		if (si->si_flags & SIF_UPSCH_PAGING)
-			proc = 0;
-		else
-			si->si_flags |= SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
-
-		if (!proc)
+		if (si->si_flags & SIF_UPSCH_PAGING) {
+			RPMI_ULOCK(rpmi);
 			return;
+		}
+		si->si_flags |= SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
 	}
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
