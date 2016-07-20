@@ -1042,8 +1042,12 @@ upd_proc(struct slm_update_data *upd)
 	UPD_ULOCK(upd);
 
 	/*
- 	 * Call upd_proc_bmap(), upd_proc_hldrop(),
- 	 * upd_proc_pagein(), and upd_proc_pagein_unit().
+ 	 * Call the one of the following handlers:
+ 	 *
+ 	 * UPDT_BMAP: upd_proc_bmap()
+ 	 * UPDT_HLDROP: upd_proc_hldrop()
+ 	 * UPDT_PAGEIN: upd_proc_pagein()
+ 	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit().
  	 */
 	upd_proctab[upd->upd_type](upd);
 
