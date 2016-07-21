@@ -1207,13 +1207,13 @@ slmupschthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, empty;
+	int i, j, count;
 
 	while (pscthr_run(thr)) {
-		dbdo(slm_upsch_tally_cb, &empty,
+		dbdo(slm_upsch_tally_cb, &count,
 		    " SELECT	count (*)"
 		    " FROM	upsch");
-		if (!empty && lc_nitems(&slm_upsch_queue) < 32) {
+		if (count && lc_nitems(&slm_upsch_queue) < 32) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
