@@ -1706,10 +1706,14 @@ mds_bmap_load_fg(const struct sl_fidgen *fg, sl_bmapno_t bmapno,
 	psc_assert(*bp == NULL);
 
 	rc = slm_fcmh_peek(fg, &f);
-	if (rc)
+	if (rc) {
+		psclog_warnx("here");
 		return (rc);
+	}
 
 	rc = bmap_get(f, bmapno, SL_WRITE, &b);
+	if (rc)
+		psclog_warnx("here");
 	if (rc == 0)
 		*bp = b;
 
