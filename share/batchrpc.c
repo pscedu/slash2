@@ -121,6 +121,9 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	char *q, *p, *scratch;
 	int i, n;
 
+	psc_assert(!(bq->bq_flags & BATCHF_FINISH));
+	bq->bq_flags |= BATCHF_FINISH;
+
 	if (rc && !bq->bq_rc)
 		bq->bq_rc = rc;
 
@@ -140,8 +143,6 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		lc_remove(&slrpc_batch_req_waitrep, bq);
 	else
 		lc_remove(&slrpc_batch_req_delayed, bq);
-
-	lc_remove(bq->bq_res_batches, bq);
 
 	sl_csvc_decref(bq->bq_csvc);
 
@@ -195,10 +196,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	spinlock(&bq->bq_lock);
-	psc_assert(!(bq->bq_flags & BATCHF_FINISH));
-	bq->bq_flags |= BATCHF_FINISH;
-	freelock(&bq->bq_lock);
+	lc_remove(bq->bq_res_batches, bq);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for finishing");
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
@@ -318,8 +316,9 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * has been reestablished since there can be delay in
 		 * using this API.
 		 */
-		spinlock(&bq->bq_lock);
+		lc_remove(bq->bq_res_batches, bq);
 		pscrpc_req_finished(bq->bq_rq);
+		spinlock(&bq->bq_lock);
 		slrpc_batch_req_done(bq, rc);
 	}
 }
