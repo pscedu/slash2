@@ -1052,7 +1052,7 @@ upd_proc(struct slm_update_data *upd)
  	 * UPDT_BMAP: upd_proc_bmap()
  	 * UPDT_HLDROP: upd_proc_hldrop()
  	 * UPDT_PAGEIN: upd_proc_pagein()
- 	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit().
+ 	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit()
  	 */
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
@@ -1070,6 +1070,7 @@ upd_proc(struct slm_update_data *upd)
 	default:
 		psc_fatalx("Unknown type %d", upd->upd_type);
 	}
+
 	upd_proctab[upd->upd_type](upd);
 
 	UPD_LOCK(upd);
