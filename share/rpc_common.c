@@ -475,9 +475,8 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 	ts.tv_sec = s;
 	ts.tv_nsec = ns;
 
-	LOCK_ENSURE(&csvc->csvc_lock);
-	psc_waitq_waitrel_ts(&csvc->csvc_waitq, &csvc->csvc_lock, &ts);
 	spinlock(&csvc->csvc_lock);
+	psc_waitq_waitrel_ts(&csvc->csvc_waitq, &csvc->csvc_lock, &ts);
 }
 
 /*

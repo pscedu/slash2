@@ -55,12 +55,7 @@ sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 		if (*csvcp)
 			break;
 
-		CSVC_LOCK(rmi_resm->resm_csvc);
-		if (sl_csvc_useable(rmi_resm->resm_csvc))
-			CSVC_ULOCK(rmi_resm->resm_csvc);
-		else
-			sl_csvc_waitrel_s(rmi_resm->resm_csvc,
-			    CSVC_CONN_INTV);
+		sl_csvc_waitrel_s(rmi_resm->resm_csvc, CSVC_CONN_INTV);
 	}
 	return (0);
 }
