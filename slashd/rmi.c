@@ -81,6 +81,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 		return (mp->rc);
 #endif
 
+	/* XXX should be look or load */
 	mp->rc = slm_fcmh_peek(&mq->fg, &f);
 	if (mp->rc) {
 		psclog_warnx("here, rc = %d", mp->rc);
