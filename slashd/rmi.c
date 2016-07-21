@@ -61,7 +61,7 @@
 int
 slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
-	int rc;
+	struct fidc_membh *f;
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
 	struct bmap_mds_info *bmi;
@@ -81,16 +81,27 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 		return (mp->rc);
 #endif
 
-	mp->rc = rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
+	/* XXX should be look or load */
+	mp->rc = slm_fcmh_peek(&mq->fg, &f);
+	if (mp->rc) {
+		psclog_warnx("here, rc = %d", mp->rc);
+		return (0);
+	}
 
-	if (!rc) {
+	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
+	if (mp->rc)
+		psclog_warnx("here, rc = %d", mp->rc);
+
+	if (!mp->rc) {
 		DEBUG_BMAP(PLL_DIAG, b, "reply to sliod.");
 		bmi = bmap_2_bmi(b);
 		memcpy(&mp->crcs, bmi->bmi_crcs, sizeof(mp->crcs));
 		memcpy(&mp->crcstates, bmi->bmi_crcstates, sizeof(mp->crcstates));
 		bmap_op_done(b);
 	}
-	return (rc);
+
+	fcmh_op_done(f);
+	return (0);
 }
 
 /*
