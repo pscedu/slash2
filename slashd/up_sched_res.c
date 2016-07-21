@@ -1245,7 +1245,7 @@ slmupschthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);

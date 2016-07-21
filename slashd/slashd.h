@@ -345,6 +345,7 @@ struct mio_rootnames {
 };
 
 #define SLM_NWORKER_THREADS	4
+#define SLM_NUPSCHED_THREADS	2
 
 enum {
 	SLM_OPSTATE_INIT = 0,
