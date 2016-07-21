@@ -787,6 +787,7 @@ slrpc_batches_drop(struct psc_listcache *l)
 
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH(bq, l)
+		/* XXX race with regular batch request finish */
 		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
 	LIST_CACHE_ULOCK(l);
 }
