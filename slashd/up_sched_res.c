@@ -1243,8 +1243,6 @@ void
 slmupschthr_spawn(void)
 {
 	struct psc_thread *thr;
-	struct sl_resource *r;
-	struct sl_site *s;
 	int i;
 
 	for (i = 0; i < 2; i++) {
@@ -1252,14 +1250,6 @@ slmupschthr_spawn(void)
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
 	}
-
-#if 0
-	/* page in initial replrq workload */
-	CONF_FOREACH_RES(s, r, i)
-		if (RES_ISFS(r))
-			upschq_resm(res_getmemb(r), UPDT_PAGEIN);
-#endif
-
 }
 
 /*
