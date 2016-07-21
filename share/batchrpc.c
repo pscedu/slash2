@@ -577,7 +577,13 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		spinlock(&bq->bq_lock);
-		if (mq->bid == bq->bq_bid && (bq->bq_flags & BATCHF_REPLY)) {
+		if (mq->bid == bq->bq_bid) {
+			if (!(bq->bq_flags & BATCHF_REPLY)) {
+				sleep(1);
+				freelock(&bq->bq_lock);
+				LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+				goto retry;
+			}
 			freelock(&bq->bq_lock);
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
