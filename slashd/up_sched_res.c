@@ -926,7 +926,10 @@ upd_pagein_wk(void *p)
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
-	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
+
+	/* Schedule a call to upd_proc_pagein_unit() */
+	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT); 
+
 	upg->upg_fg.fg_fid = wk->fg.fg_fid;
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = wk->bno;
@@ -1294,11 +1297,8 @@ upschq_resm(struct sl_resm *m, int type)
 void
 upd_init(struct slm_update_data *upd, int type)
 {
-
-	psc_assert(type == UPDT_BMAP   || 
-		   type == UPDT_HLDROP || 
-		   type == UPDT_PAGEIN || 
-		   type == UPDT_PAGEIN_UNIT);
+	psc_assert(type == UPDT_BMAP   || type == UPDT_HLDROP || 
+		   type == UPDT_PAGEIN || type == UPDT_PAGEIN_UNIT);
 
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
