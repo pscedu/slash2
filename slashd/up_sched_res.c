@@ -1362,11 +1362,10 @@ upsch_enqueue(struct slm_update_data *upd)
 	/* enqueue work for slmupschthr_main() */
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
-		if (upd->upd_type == UPDT_BMAP &&
-		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
-			lc_addtail(&slm_upsch_queue, upd);
-		else
+		if (upd->upd_type == UPDT_BMAP)
 			lc_addhead(&slm_upsch_queue, upd);
+		else
+			lc_addtail(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);
