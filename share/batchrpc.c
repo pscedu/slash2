@@ -495,15 +495,18 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->opc = mq->opc;	
-	if (mq->len < 1 || mq->len > LNET_MTU)
-		return (mp->rc = -EINVAL);
 	if (mq->opc < 0 || mq->opc >= SRMT_TOTAL)
 		return (mp->rc = -EINVAL);
 	h = &handlers[mq->opc];
 	if (h->bqh_cbf == NULL)
 		return (mp->rc = -EINVAL);
-	if (mq->len % h->bqh_qlen)
+
+	if (mq->len < h->bqh_qlen || mq->len > LNET_MTU || 
+	    mq->len % h->bqh_qlen) {
+		psclog_warnx("opc = %d, len = %d, qlen = %d", 
+		    mq->opc, mq->len, h->bqh_qlen);
 		return (mp->rc = -EINVAL);
+	}
 
 	bp = psc_pool_get(slrpc_batch_rep_pool);
 	memset(bp, 0, sizeof(*bp));
