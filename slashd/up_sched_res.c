@@ -1250,10 +1250,13 @@ slmupschthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
+#if 0
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
 		if (RES_ISFS(r))
 			upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+#endif
+
 }
 
 /*
