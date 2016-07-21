@@ -578,6 +578,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		spinlock(&bq->bq_lock);
 		if (mq->bid == bq->bq_bid) {
+
+			/* there is time between send and setting the flag */
 			if (!(bq->bq_flags & BATCHF_REPLY)) {
 				sleep(1);
 				freelock(&bq->bq_lock);
