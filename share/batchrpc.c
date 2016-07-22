@@ -343,6 +343,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	mq->len = bp->bp_replen;
 	mq->bid = bp->bp_bid;
+	mq->opc = bp->bp_opc;
 	mq->rc = bp->bp_rc;
 
 	iov.iov_base = bp->bp_repbuf;
