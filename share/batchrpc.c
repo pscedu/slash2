@@ -658,6 +658,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	if (newbq) {
 		bq = newbq;
 		newbq = NULL;
+		bq->bq_flags |= BATCHF_DELAY;
+		PFL_GETTIMEVAL(&bq->bq_expire);
+		bq->bq_expire.tv_sec += expire;
+		lc_addtail(&slrpc_batch_req_delayed, bq);
 		lc_add(res_batches, bq);
 		LIST_CACHE_ULOCK(res_batches);
 		goto lookup;
@@ -700,12 +704,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	goto lookup;
 
  add:
-	if (!bq->bq_reqlen) {
-		bq->bq_flags |= BATCHF_DELAY;
-		PFL_GETTIMEVAL(&bq->bq_expire);
-		bq->bq_expire.tv_sec += expire;
-		lc_addtail(&slrpc_batch_req_delayed, bq);
-	}
 
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
 	bq->bq_reqlen += len;
@@ -757,7 +755,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 
 		spinlock(&bq->bq_lock);
 		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &bq->bq_expire, >)) {
+		if (bq->bq_cnt && timercmp(&now, &bq->bq_expire, >)) {
 			OPSTAT_INCR("batch-send-expire");
 			slrpc_batch_req_send(bq);
 		} else {
