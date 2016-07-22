@@ -292,7 +292,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	lc_add(&slrpc_batch_req_waitrep, bq);
 
 	spinlock(&send_lock);
-	send_times ++;
+	send_times++;
 	send_bytes += bq->bq_reqlen;
 	freelock(&send_lock);
 
@@ -578,7 +578,6 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		spinlock(&bq->bq_lock);
 		if (mq->bid == bq->bq_bid) {
-
 			/* there is time between send and setting the flag */
 			if (!(bq->bq_flags & BATCHF_REPLY)) {
 				sleep(1);
@@ -587,6 +586,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				goto retry;
 			}
 			freelock(&bq->bq_lock);
+			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
 				iov.iov_len = bq->bq_replen = mq->len;
@@ -602,11 +602,12 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			    mp->rc ? mp->rc : mq->rc);
 
 			found = 1;
-			break;
+			goto out;
 		}
 		freelock(&bq->bq_lock);
 	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+ out:
 	if (!found && !tried) {
 		sleep(1);
 		tried = 1;
