@@ -43,10 +43,10 @@
 #include "slashrpc.h"
 #include "slconn.h"
 
-struct psc_poolmaster	 slrpc_batch_req_poolmaster;
-struct psc_poolmaster	 slrpc_batch_rep_poolmaster;
-struct psc_poolmgr	*slrpc_batch_req_pool;
-struct psc_poolmgr	*slrpc_batch_rep_pool;
+static struct psc_poolmaster	 slrpc_batch_req_poolmaster;
+static struct psc_poolmaster	 slrpc_batch_rep_poolmaster;
+static struct psc_poolmgr	*slrpc_batch_req_pool;
+static struct psc_poolmgr	*slrpc_batch_rep_pool;
 
 struct psc_listcache	 slrpc_batch_req_delayed;	/* to be filled/expired */
 struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
