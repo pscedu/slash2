@@ -180,7 +180,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 
 	lc_remove(bq->bq_res_batches, bq);
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for finishing");
+	PFLOG_BATCH_REQ(PLL_MAX, bq, "finishing, rc = %d", rc);
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
@@ -268,10 +268,10 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	bq->bq_flags &= ~BATCHF_DELAY;
 	bq->bq_flags |= BATCHF_INFL;
+	freelock(&bq->bq_lock);
+
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
-
-	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_MAX, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
@@ -639,8 +639,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	LIST_CACHE_LOCK(res_batches);
 	LIST_CACHE_FOREACH(bq, res_batches) {
 		spinlock(&bq->bq_lock);
-		if ((bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY)) == 0 &&
-		    opc == bq->bq_opc) {
+		if ((bq->bq_flags & BATCHF_DELAY) && opc == bq->bq_opc) {
 			LIST_CACHE_ULOCK(res_batches);
 			/*
 			 * Tack this request onto the existing pending
