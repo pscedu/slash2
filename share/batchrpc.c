@@ -409,7 +409,6 @@ void
 slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 {
 	spinlock(&bp->bp_lock);
-
 	if (rc && !bp->bp_rc)
 		bp->bp_rc = rc;
 
@@ -715,9 +714,6 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	newbq->bq_opc = opc;
 	newbq->bq_workq = workq;
 
-	PFL_GETTIMEVAL(&newbq->bq_expire);
-	newbq->bq_expire.tv_sec += expire;
-
 	PFLOG_BATCH_REQ(PLL_DIAG, newbq, "created");
 
 	CSVC_LOCK(csvc);
@@ -729,6 +725,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
  add:
 	if (!bq->bq_reqlen) {
 		bq->bq_flags |= BATCHF_DELAY;
+		PFL_GETTIMEVAL(&bq->bq_expire);
+		bq->bq_expire.tv_sec += expire;
 		lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
 	}
 
