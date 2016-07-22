@@ -544,7 +544,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
-	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
