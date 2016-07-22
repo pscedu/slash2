@@ -271,9 +271,6 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
-int			send_times = 0;
-long			send_bytes = 0;
-psc_spinlock_t		send_lock = SPINLOCK_INIT;
 
 /*
  * Transmit a SRMT_BATCH_RQ request to peer.
@@ -283,22 +280,19 @@ psc_spinlock_t		send_lock = SPINLOCK_INIT;
 void
 slrpc_batch_req_send(struct slrpc_batch_req *bq)
 {
-	struct iovec iov;
 	int rc;
+	struct iovec iov;
+	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
 	bq->bq_flags &= ~BATCHF_DELAY;
 	bq->bq_flags |= BATCHF_INFL;
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
 
-	spinlock(&send_lock);
-	send_times++;
-	send_bytes += bq->bq_reqlen;
-	freelock(&send_lock);
-
 	freelock(&bq->bq_lock);
 
-	PFLOG_BATCH_REQ(PLL_MAX, bq, "sending");
+	PFLOG_BATCH_REQ(PLL_MAX, bq, "sending: qlen = %d, plen = %d", 
+	    h->bph_qlen, h->bph_plen);
 
 	iov.iov_len = bq->bq_reqlen;
 	iov.iov_base = bq->bq_reqbuf;
