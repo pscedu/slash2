@@ -841,7 +841,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 
-		CSVC_LOCK(csvc);
 		psc_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
 		CSVC_LOCK(csvc);
 
