@@ -759,8 +759,8 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			OPSTAT_INCR("batch-send-expire");
 			slrpc_batch_req_send(bq);
 		} else {
-			freelock(&bq->bq_lock);
 			timersub(&bq->bq_expire, &now, &stall);
+			freelock(&bq->bq_lock);
 		}
 
 		usleep(stall.tv_sec * 1000000 + stall.tv_usec);
