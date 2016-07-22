@@ -291,7 +291,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 
 	freelock(&bq->bq_lock);
 
-	PFLOG_BATCH_REQ(PLL_MAX, bq, "sending: qlen = %d, plen = %d", 
+	PFLOG_BATCH_REQ(PLL_MAX, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
 
 	iov.iov_len = bq->bq_reqlen;
