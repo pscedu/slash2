@@ -92,21 +92,6 @@ slrpc_batch_rep_dtor(struct slrpc_batch_rep *bp)
 }
 
 /*
- * This routine is used to order batch RPC requests by expiration for
- * transmission time.
- *
- * @a: one batch.
- * @a: another batch.
- */
-int
-slrpc_batch_cmp(const void *a, const void *b)
-{
-	const struct slrpc_batch_req *pa = a, *pb = b;
-
-	return (timercmp(&pa->bq_expire, &pb->bq_expire, <));
-}
-
-/*
  * If all things are good, a request is done when the reply comes
  * back. Otherwise, it may be destroyed when the request can't be
  * sent out or a reply won't come back.
@@ -721,7 +706,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		bq->bq_flags |= BATCHF_DELAY;
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
-		lc_add_sorted(&slrpc_batch_req_delayed, bq, slrpc_batch_cmp);
+		lc_addtail(&slrpc_batch_req_delayed, bq);
 	}
 
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
