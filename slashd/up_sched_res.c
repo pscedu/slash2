@@ -514,8 +514,8 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
 	struct srt_preclaim_rep *pp = rep;
-	struct fidc_membh *f;
-	struct bmap *b;
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
 
 	if (!error && pp && pp->rc)
 		error = -pp->rc;
@@ -537,7 +537,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
-		return;
+		goto out;
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -552,7 +552,8 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
  out:
 	if (b)
 		bmap_op_done(b);
-	fcmh_op_done(f);
+	if (f)
+		fcmh_op_done(f);
 }
 
 int
