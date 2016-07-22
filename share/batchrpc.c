@@ -560,6 +560,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			}
 			freelock(&bq->bq_lock);
 			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+			psc_assert((mq->opc == bq->bq_opc));	
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
 				iov.iov_len = bq->bq_replen = mq->len;
@@ -619,7 +620,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 int
 slrpc_batch_req_add(struct psc_listcache *res_batches,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
-    uint32_t opc, int rcvptl, int sndptl, void *buf, int len,
+    int32_t opc, int rcvptl, int sndptl, void *buf, int len,
     void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);

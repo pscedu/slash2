@@ -79,7 +79,7 @@ struct slrpc_batch_req {
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
 	int				  bq_rc;		/* return/processing return code */
-	uint32_t			  bq_opc;		/* underlying RPC operation code */
+	int32_t			  	  bq_opc;		/* underlying RPC operation code */
 
 	int				  bq_cnt;
 	void				 *bq_reqbuf;		/* outgoing request bulk RPC */
@@ -134,7 +134,7 @@ struct slrpc_batch_rep {
 
 int	slrpc_batch_req_add(struct psc_listcache *,
 	    struct psc_listcache *, struct slrpc_cservice *,
-	    uint32_t, int, int, void *, int, void *,
+	    int32_t, int, int, void *, int, void *,
 	    struct slrpc_batch_rep_handler *, int);
 
 void	slrpc_batches_init(int, const char *);
