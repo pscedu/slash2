@@ -720,9 +720,8 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	newbq->bq_workq = workq;
 
 	PFL_GETTIMEVAL(&newbq->bq_expire);
-	bq->bq_expire.tv_sec += expire;
+	newbq->bq_expire.tv_sec += expire;
 
-	lc_add(res_batches, newbq);
 	PFLOG_BATCH_REQ(PLL_DIAG, newbq, "created");
 
 	CSVC_LOCK(csvc);
