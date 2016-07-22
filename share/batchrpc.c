@@ -683,12 +683,9 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	if (newbq) {
 		bq = newbq;
 		newbq = NULL;
-		spinlock(&bq->bq_lock);
 		lc_add(res_batches, bq);
 		LIST_CACHE_ULOCK(res_batches);
-		mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0, sizeof(*mq));
-		OPSTAT_INCR("batch-new");
-		goto add;
+		goto lookup;
 	}
 	LIST_CACHE_ULOCK(res_batches);
 
