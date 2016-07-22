@@ -932,11 +932,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
  out2:
 
-	if (!success)
+	if (!success) {
+		csvc = NULL;
  		sl_csvc_decref_locked(csvc);
-	else
+	} else
 		CSVC_ULOCK(csvc);
-	return (success ? csvc : NULL);
+	return (csvc);
 }
 
 /*
