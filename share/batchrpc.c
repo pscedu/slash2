@@ -106,8 +106,11 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	char *q, *p, *scratch;
 	int i, n;
 
-	psc_assert(!(bq->bq_flags & BATCHF_FINISH));
-	bq->bq_flags |= BATCHF_FINISH;
+	psc_assert(!(bq->bq_flags & BATCHF_FREEING));
+	bq->bq_flags |= BATCHF_FREEING;
+	freelock(&bq->bq_lock);
+
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
 	if (rc && !bq->bq_rc)
 		bq->bq_rc = rc;
@@ -117,12 +120,6 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		psclog_warnx("batch request rc = %d", rc);
 	}
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "decref");
-
-	bq->bq_flags |= BATCHF_FREEING;
-	freelock(&bq->bq_lock);
-
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
 	if (bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY))
 		lc_remove(&slrpc_batch_req_waitrep, bq);
