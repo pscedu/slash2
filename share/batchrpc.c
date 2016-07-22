@@ -650,7 +650,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 
-	struct slrpc_batch_req *bq;
+	struct slrpc_batch_req *bq, *newbq = NULL;
 	struct pscrpc_request *rq;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
@@ -659,6 +659,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	psc_assert(handler->bph_qlen == len);
 
  lookup:
+
 	LIST_CACHE_LOCK(res_batches);
 	LIST_CACHE_FOREACH(bq, res_batches) {
 		spinlock(&bq->bq_lock);
@@ -679,11 +680,21 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		}
 		freelock(&bq->bq_lock);
 	}
+	if (newbq) {
+		bq = newbq;
+		newbq = NULL;
+		spinlock(&bq->bq_lock);
+		lc_add(res_batches, bq);
+		LIST_CACHE_ULOCK(res_batches);
+		mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0, sizeof(*mq));
+		OPSTAT_INCR("batch-new");
+		goto add;
+	}
 	LIST_CACHE_ULOCK(res_batches);
 
 	/* not found; create */
 
-	OPSTAT_INCR("batch-new");
+	OPSTAT_INCR("batch-alloc");
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -691,28 +702,28 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	mq->opc = opc;
 	mq->bid = psc_atomic64_inc_getnew(&bid);
 
-	bq = psc_pool_get(slrpc_batch_req_pool);
-	memset(bq, 0, sizeof(*bq));
-	bq->bq_handler = handler;
-	slrpc_batch_req_ctor(bq);
+	newbq = psc_pool_get(slrpc_batch_req_pool);
+	memset(newbq, 0, sizeof(*newbq));
+	newbq->bq_handler = handler;
+	slrpc_batch_req_ctor(newbq);
 
-	INIT_SPINLOCK(&bq->bq_lock);
-	INIT_PSC_LISTENTRY(&bq->bq_lentry);
-	INIT_PSC_LISTENTRY(&bq->bq_lentry_res);
-	bq->bq_rq = rq;
-	bq->bq_rcv_ptl = rcvptl;
-	bq->bq_snd_ptl = sndptl;
-	bq->bq_csvc = csvc;
-	bq->bq_bid = mq->bid;
-	bq->bq_res_batches = res_batches;
-	bq->bq_opc = opc;
-	bq->bq_workq = workq;
+	INIT_SPINLOCK(&newbq->bq_lock);
+	INIT_PSC_LISTENTRY(&newbq->bq_lentry);
+	INIT_PSC_LISTENTRY(&newbq->bq_lentry_res);
+	newbq->bq_rq = rq;
+	newbq->bq_rcv_ptl = rcvptl;
+	newbq->bq_snd_ptl = sndptl;
+	newbq->bq_csvc = csvc;
+	newbq->bq_bid = mq->bid;
+	newbq->bq_res_batches = res_batches;
+	newbq->bq_opc = opc;
+	newbq->bq_workq = workq;
 
-	PFL_GETTIMEVAL(&bq->bq_expire);
+	PFL_GETTIMEVAL(&newbq->bq_expire);
 	bq->bq_expire.tv_sec += expire;
 
-	lc_add(res_batches, bq);
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "created");
+	lc_add(res_batches, newbq);
+	PFLOG_BATCH_REQ(PLL_DIAG, newbq, "created");
 
 	CSVC_LOCK(csvc);
 	sl_csvc_incref(csvc);
@@ -746,6 +757,13 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	} else
 		freelock(&bq->bq_lock);
 
+	if (newbq) {
+		OPSTAT_INCR("batch-free");
+		pscrpc_req_finished(newbq->bq_rq);
+		sl_csvc_decref(newbq->bq_csvc);
+		slrpc_batch_req_dtor(newbq);
+		psc_pool_return(slrpc_batch_req_pool, newbq);
+	}
 	return (rc);
 }
 
