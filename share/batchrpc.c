@@ -350,8 +350,6 @@ slrpc_batch_rep_send_cb(struct pscrpc_request *rq,
 	return (0);
 }
 
-
-
 /*
  * Send out a batch RPC reply.
  *

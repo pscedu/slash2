@@ -59,9 +59,8 @@ struct psc_poolmgr	*sli_replwkrq_pool;
 struct psc_listcache	 sli_replwkq_pending;
 
 /* and all registered replication requests are listed here */
-struct psc_lockedlist	 sli_replwkq_active =
-    PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq,
-	    srw_active_lentry);
+struct psc_lockedlist	 sli_replwkq_active = 
+    PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq, srw_active_lentry);
 
 struct sli_repl_workrq *
 sli_repl_findwq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno)
