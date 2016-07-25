@@ -115,8 +115,7 @@ struct slrpc_batch_rep {
 #define BATCHF_INFL			(1 << 0)	/* request RPC inflight */
 #define BATCHF_DELAY			(1 << 1)	/* wait to batch more  */
 #define BATCHF_REPLY			(1 << 2)	/* awaiting RPC reply */
-#define BATCHF_WORKQ			(1 << 3)	/* scheduled */
-#define BATCHF_FREEING			(1 << 4)	/* trying to destroy */
+#define BATCHF_FREEING			(1 << 3)	/* trying to destroy */
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
