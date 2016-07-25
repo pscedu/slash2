@@ -125,8 +125,6 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	else
 		lc_remove(&slrpc_batch_req_delayed, bq);
 
-	if (bq->bq_flags & BATCHF_REPLY)
-		lc_remove(bq->bq_res_batches, bq);
 	sl_csvc_decref(bq->bq_csvc);
 
 	/*
@@ -551,6 +549,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  			 * mq is actually a batch request reply here.
  			 * See slrpc_batch_rep_send().
  			 */
+			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
 			    mp->rc ? mp->rc : mq->rc);
 
@@ -762,14 +761,8 @@ slrpc_batches_drop(struct psc_listcache *l)
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH_SAFE(bq, dummy, l) {
 		/* ECONNRESET = 104  */
-#if 0
-		spinlock(&bq->bq_lock);
-		if (!(bq->bq_flags & BATCHF_REPLY)) {
-			freelock(&bq->bq_lock);
-			continue;
-		}
+		lc_remove(bq->bq_res_batches, bq);
 		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
-#endif
 	}
 	LIST_CACHE_ULOCK(l);
 }
