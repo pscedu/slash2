@@ -266,12 +266,18 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
-	bq->bq_flags &= ~BATCHF_DELAY;
+	psc_assert(!(bq->bq_flags & BATCHF_INFL));
 	bq->bq_flags |= BATCHF_INFL;
-	freelock(&bq->bq_lock);
+	bq->bq_flags &= ~BATCHF_DELAY;
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
+	/*
+ 	 * slrpc_batch_handle_reply() takes lock in the reverse order,
+ 	 * but this lock has not been sent out yet.
+ 	 */
 	lc_add(&slrpc_batch_req_waitrep, bq);
+
+	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_MAX, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
