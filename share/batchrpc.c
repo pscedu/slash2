@@ -537,6 +537,10 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			}
 			freelock(&bq->bq_lock);
 			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+			/*
+ 			 * mq is actually a batch request reply here.
+ 			 * See slrpc_batch_rep_send().
+ 			 */
 			psc_assert((mq->opc == bq->bq_opc));	
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
@@ -545,10 +549,6 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
-			/*
- 			 * mq is actually a batch request reply here.
- 			 * See slrpc_batch_rep_send().
- 			 */
 			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
 			    mp->rc ? mp->rc : mq->rc);
