@@ -459,7 +459,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 {
 	struct slrpc_wkdata_batch_rep *wk;
 	struct slrpc_batch_req_handler *h;
-	struct slrpc_batch_rep *bp;
+	struct slrpc_batch_rep *bp = NULL;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
