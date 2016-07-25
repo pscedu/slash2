@@ -533,8 +533,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		if (!trylock(&bq->bq_lock)) {
-			sched_yield();
 			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+			OPSTAT_INCR("batch-reply-yield");
 			goto retry;
 		}
 		if (mq->bid == bq->bq_bid) {
@@ -543,6 +543,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				sleep(1);
 				freelock(&bq->bq_lock);
 				LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+				OPSTAT_INCR("batch-reply-wait");
 				goto retry;
 			}
 			freelock(&bq->bq_lock);
