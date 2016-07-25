@@ -266,12 +266,14 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
-	bq->bq_flags &= ~BATCHF_DELAY;
+	psc_assert(!(bq->bq_flags & BATCHF_INFL));
 	bq->bq_flags |= BATCHF_INFL;
-	freelock(&bq->bq_lock);
+	bq->bq_flags &= ~BATCHF_DELAY;
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
+
+	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
@@ -554,7 +556,11 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
-		spinlock(&bq->bq_lock);
+		if (!trylock(&bq->bq_lock)) {
+			sched_yield();
+			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
+			goto retry;
+		}
 		if (mq->bid == bq->bq_bid) {
 			/* there is time between send and setting the flag */
 			if (!(bq->bq_flags & BATCHF_REPLY)) {
