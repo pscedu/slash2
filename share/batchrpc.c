@@ -768,6 +768,7 @@ slrpc_batches_drop(struct psc_listcache *l)
 
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH_SAFE(bq, dummy, l)
+		/* ECONNRESET = 104  */
 		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
 	LIST_CACHE_ULOCK(l);
 }
