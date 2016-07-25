@@ -188,17 +188,6 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
-void
-slrpc_batch_req_sched_waitreply(struct slrpc_batch_req *bq)
-{
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "wait for reply");
-
-	spinlock(&bq->bq_lock);
-	bq->bq_flags &= ~BATCHF_INFL;
-	bq->bq_flags |= BATCHF_REPLY;
-	freelock(&bq->bq_lock);
-}
-
 /*
  * Handle the event when a batch request has been successfully received
  * by peer.  This doesn't mean the processing has finished, just that
@@ -224,8 +213,12 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 
 	if (rc)
 		slrpc_batch_req_sched_finish(bq, rc);
-	else
-		slrpc_batch_req_sched_waitreply(bq);
+	else {
+		spinlock(&bq->bq_lock);
+		bq->bq_flags &= ~BATCHF_INFL;
+		bq->bq_flags |= BATCHF_REPLY;
+		freelock(&bq->bq_lock);
+	}
 	return (0);
 }
 
