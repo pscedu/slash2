@@ -619,7 +619,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 	LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
 		spinlock(&bq->bq_lock);
-		if ((newbq->bq_res_batches == res_batches) && 
+		if ((bq->bq_res_batches == res_batches) && 
 		    (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
