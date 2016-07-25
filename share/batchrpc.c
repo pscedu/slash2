@@ -470,6 +470,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	mp->opc = mq->opc;	
 	if (mq->opc < 0 || mq->opc >= SRMT_TOTAL)
 		return (mp->rc = -EINVAL);
+
+	/* See sli_rim_batch_req_handlers set up in sli_rim_init() */
 	h = &handlers[mq->opc];
 	if (h->bqh_cbf == NULL)
 		return (mp->rc = -EINVAL);
@@ -488,6 +490,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	iov.iov_len = mq->len;
 	iov.iov_base = bp->bp_reqbuf;
+
+	/* retrieve buffer sent by slrpc_batch_req_send() */
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, h->bqh_rcv_ptl,
 	    &iov, 1);
 	if (mp->rc)
