@@ -180,7 +180,7 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 
 	lc_remove(bq->bq_res_batches, bq);
 
-	PFLOG_BATCH_REQ(PLL_MAX, bq, "finishing, rc = %d", rc);
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finishing, rc = %d", rc);
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 	wk->bq = bq;
@@ -273,7 +273,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
 
-	PFLOG_BATCH_REQ(PLL_MAX, bq, "qlen = %d, plen = %d, sending", 
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
 
 	iov.iov_len = bq->bq_reqlen;
@@ -349,7 +349,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
 
-	PFLOG_BATCH_REP(PLL_MAX, bp, "sending");
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "sending");
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
