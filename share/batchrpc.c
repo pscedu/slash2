@@ -125,6 +125,8 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	else
 		lc_remove(&slrpc_batch_req_delayed, bq);
 
+	if (bq->bq_flags & BATCHF_REPLY)
+		lc_remove(bq->bq_res_batches, bq);
 	sl_csvc_decref(bq->bq_csvc);
 
 	/*
@@ -176,7 +178,6 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	lc_remove(bq->bq_res_batches, bq);
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finishing, rc = %d", rc);
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
@@ -215,6 +216,7 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
 		bq->bq_flags |= BATCHF_REPLY;
+		lc_add(bq->bq_res_batches, bq);
 		freelock(&bq->bq_lock);
 	}
 	return (0);
@@ -612,11 +614,12 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
  lookup:
 
-	LIST_CACHE_LOCK(res_batches);
-	LIST_CACHE_FOREACH(bq, res_batches) {
+	LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
+	LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
 		spinlock(&bq->bq_lock);
-		if ((bq->bq_flags & BATCHF_DELAY) && opc == bq->bq_opc) {
-			LIST_CACHE_ULOCK(res_batches);
+		if ((newbq->bq_res_batches == res_batches) && 
+		    (opc == bq->bq_opc)) {
+			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
 			 * Tack this request onto the existing pending
 			 * batch request.
@@ -638,11 +641,10 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
 		lc_addtail(&slrpc_batch_req_delayed, bq);
-		lc_add(res_batches, bq);
-		LIST_CACHE_ULOCK(res_batches);
+		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 		goto lookup;
 	}
-	LIST_CACHE_ULOCK(res_batches);
+	LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 
 	/* not found; create */
 
