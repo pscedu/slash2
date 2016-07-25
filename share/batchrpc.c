@@ -100,26 +100,31 @@ slrpc_batch_rep_dtor(struct slrpc_batch_rep *bp)
  * @rc: return code during RPC communication.
  */
 void
-slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
+slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc, int callback)
 {
 	struct slrpc_batch_rep_handler *h;
 	char *q, *p, *scratch;
 	int i, n;
 
+	spinlock(&bq->bq_lock);
+	if (rc && !bq->bq_rc)
+		bq->bq_rc = rc;
+	if ((bq->bq_flags & BATCHF_WORKQ) && !callback) {
+		freelock(&bq->bq_lock);
+		return;
+	}
 	psc_assert(!(bq->bq_flags & BATCHF_FREEING));
 	bq->bq_flags |= BATCHF_FREEING;
 	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "destroying");
 
-	if (rc && !bq->bq_rc)
-		bq->bq_rc = rc;
-
 	if (abs(rc) == ETIMEDOUT) {
 		OPSTAT_INCR("batch-request-timeout");
 		psclog_warnx("batch request rc = %d", rc);
 	}
 
+	lc_remove(bq->bq_res_batches, bq);
 
 	if (bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY))
 		lc_remove(&slrpc_batch_req_waitrep, bq);
@@ -164,8 +169,7 @@ slrpc_batch_req_finish_workcb(void *p)
 	struct slrpc_wkdata_batch_req *wk = p;
 	struct slrpc_batch_req *bq = wk->bq;
 
-	spinlock(&bq->bq_lock);
-	slrpc_batch_req_done(bq, wk->rc);
+	slrpc_batch_req_done(bq, wk->rc, 1);
 	return (0);
 }
 
@@ -178,13 +182,15 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	lc_remove(bq->bq_res_batches, bq);
-
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finishing, rc = %d", rc);
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
+
+	spinlock(&bq->bq_lock);
 	wk->bq = bq;
 	wk->rc = rc;
+	bq->bq_flags |= BATCHF_WORKQ;
+	freelock(&bq->bq_lock);
 	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
@@ -211,9 +217,9 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS_TYPE(bq->bq_csvc, rq, struct srm_batch_rep,
 	    rc);
 
-	if (rc)
+	if (rc) {
 		slrpc_batch_req_sched_finish(bq, rc);
-	else {
+	} else {
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
 		bq->bq_flags |= BATCHF_REPLY;
@@ -265,8 +271,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 */
 		lc_remove(bq->bq_res_batches, bq);
 		pscrpc_req_finished(bq->bq_rq);
-		spinlock(&bq->bq_lock);
-		slrpc_batch_req_done(bq, rc);
+		slrpc_batch_req_done(bq, rc, 0);
 	}
 }
 
@@ -763,7 +768,6 @@ slrpc_batches_drop(struct psc_listcache *l)
 
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH_SAFE(bq, dummy, l)
-		/* XXX race with regular batch request finish */
 		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
 	LIST_CACHE_ULOCK(l);
 }

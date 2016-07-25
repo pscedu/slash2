@@ -66,6 +66,7 @@ struct slrpc_batch_rep_handler {
 
 struct slrpc_batch_req {
 	psc_spinlock_t			  bq_lock;
+	int				  bq_refcnt;
 	uint64_t			  bq_bid;		/* batch RPC ID */
 	struct psc_listcache		 *bq_res_batches;	/* resource's list of batches */
 	struct psc_listentry		  bq_lentry;		/* list membership */
@@ -114,7 +115,8 @@ struct slrpc_batch_rep {
 #define BATCHF_INFL			(1 << 0)	/* request RPC inflight */
 #define BATCHF_DELAY			(1 << 1)	/* wait to batch more  */
 #define BATCHF_REPLY			(1 << 2)	/* awaiting RPC reply */
-#define BATCHF_FREEING			(1 << 3)	/* trying to destroy */
+#define BATCHF_WORKQ			(1 << 3)	/* scheduled */
+#define BATCHF_FREEING			(1 << 4)	/* trying to destroy */
 
 #define PFLOG_BATCH_REQ(level, bq, fmt, ...)				\
 	psclogs((level), PSS_RPC,					\
