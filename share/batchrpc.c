@@ -188,39 +188,15 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
 	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
-/*
- * Move a batch RPC request to the 'waitreply' list, meaning the batch
- * has been received by peer and is being processed and is awaiting a
- * BATCH_RP signifying all actual work in the batch has completed.
- * As this may be a lot of processing, it is not done in RPC callback
- * context and instead by generic worker thread.
- *
- * @p: work callback.
- */
-int
-slrpc_batch_req_waitrep_workcb(void *p)
+void
+slrpc_batch_req_sched_waitreply(struct slrpc_batch_req *bq)
 {
-	struct slrpc_wkdata_batch_req *wk = p;
-	struct slrpc_batch_req *bq = wk->bq;
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "wait for reply");
 
 	spinlock(&bq->bq_lock);
 	bq->bq_flags &= ~BATCHF_INFL;
 	bq->bq_flags |= BATCHF_REPLY;
 	freelock(&bq->bq_lock);
-	return (0);
-}
-
-void
-slrpc_batch_req_sched_waitreply(struct slrpc_batch_req *bq)
-{
-	struct slrpc_wkdata_batch_req *wk;
-
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "scheduled for WAITREPLY");
-
-	wk = pfl_workq_getitem(slrpc_batch_req_waitrep_workcb,
-	    struct slrpc_wkdata_batch_req);
-	wk->bq = bq;
-	pfl_workq_putitemq(bq->bq_workq, wk);
 }
 
 /*
