@@ -549,6 +549,9 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
+			/*
+ 			 * XXX race with connection drop callback.
+ 			 */
 			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
 			    mp->rc ? mp->rc : mq->rc);
