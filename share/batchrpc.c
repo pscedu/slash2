@@ -109,6 +109,9 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	spinlock(&bq->bq_lock);
 	if (rc && !bq->bq_rc)
 		bq->bq_rc = rc;
+	/*
+ 	 * Use to catch any unhandled anomaly.
+ 	 */
 	psc_assert(!(bq->bq_flags & BATCHF_FREEING));
 	bq->bq_flags |= BATCHF_FREEING;
 	freelock(&bq->bq_lock);
@@ -214,6 +217,11 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
 		bq->bq_flags |= BATCHF_REPLY;
+		/*
+		 * XXX what if the connection dropped right
+		 * before we add bq to the list? Is it 
+		 * possible?
+		 */
 		lc_add(bq->bq_res_batches, bq);
 		freelock(&bq->bq_lock);
 	}
@@ -550,7 +558,8 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    1);
 			}
 			/*
- 			 * XXX race with connection drop callback.
+ 			 * XXX What if connection dropped right before
+ 			 * we remove it from the list? Is it possible?
  			 */
 			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
