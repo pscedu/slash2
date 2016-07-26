@@ -720,7 +720,7 @@ retry:
 		freelock(&bq->bq_lock);
 
 	if (newbq) {
-		OPSTAT_INCR("batch-free");
+		OPSTAT_INCR("batch-req-free");
 		pscrpc_req_finished(newbq->bq_rq);
 		sl_csvc_decref(newbq->bq_csvc);
 		slrpc_batch_req_dtor(newbq);
