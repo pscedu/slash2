@@ -623,10 +623,15 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 
 	psc_assert(handler->bph_qlen == len);
 
- lookup:
+retry: 
 
 	LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 	LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
+		if (!trylock(&bq->bq_lock)) {
+			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+			OPSTAT_INCR("batch-reply-yield");
+			goto retry;
+		}
 		spinlock(&bq->bq_lock);
 		if ((bq->bq_res_batches == res_batches) && 
 		    (opc == bq->bq_opc)) {
@@ -653,7 +658,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 		bq->bq_expire.tv_sec += expire;
 		lc_addtail(&slrpc_batch_req_delayed, bq);
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
-		goto lookup;
+		goto retry;
 	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 
@@ -690,7 +695,7 @@ slrpc_batch_req_add(struct psc_listcache *res_batches,
 	sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
-	goto lookup;
+	goto retry;
 
  add:
 
