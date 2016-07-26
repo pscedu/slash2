@@ -217,12 +217,6 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
 		bq->bq_flags |= BATCHF_REPLY;
-		/*
-		 * XXX what if the connection dropped right
-		 * before we add bq to the list? Is it 
-		 * possible?
-		 */
-		lc_add(bq->bq_res_batches, bq);
 		freelock(&bq->bq_lock);
 	}
 	return (0);
@@ -557,11 +551,6 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
-			/*
- 			 * XXX What if connection dropped right before
- 			 * we remove it from the list? Is it possible?
- 			 */
-			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
 			    mp->rc ? mp->rc : mq->rc);
 
@@ -772,15 +761,16 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 void
 slrpc_batches_drop(struct psc_listcache *l)
 {
-	struct slrpc_batch_req *bq, *dummy;
+	struct slrpc_batch_req *bq, *bq_next;
 
-	LIST_CACHE_LOCK(l);
-	LIST_CACHE_FOREACH_SAFE(bq, dummy, l) {
-		/* ECONNRESET = 104  */
-		lc_remove(bq->bq_res_batches, bq);
-		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
+	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
+	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
+		if (bq->bq_res_batches == l) {
+			/* ECONNRESET = 104  */
+			slrpc_batch_req_sched_finish(bq, -ECONNRESET);
+		}
 	}
-	LIST_CACHE_ULOCK(l);
+	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 }
 
 /*
