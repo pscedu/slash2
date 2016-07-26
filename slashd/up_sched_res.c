@@ -305,7 +305,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(out, rc = -ENODEV);
 
-	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
 	    &slm_batch_rep_repl, slm_upsch_delay);
@@ -607,7 +607,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		PFL_GOTOERR(out, rc = EINVAL);
 	}
 
-	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(r,
 	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
 	    &slm_batch_rep_preclaim, 30);

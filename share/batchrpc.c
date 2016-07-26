@@ -597,7 +597,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  * Note that only RPCs of the same opcode can be batched together.
  */
 int
-slrpc_batch_req_add(struct psc_listcache *res_batches,
+slrpc_batch_req_add(struct sl_resource *dst_res,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
     int32_t opc, int rcvptl, int sndptl, void *buf, int len,
     void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
@@ -621,7 +621,7 @@ retry:
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
-		if ((bq->bq_res_batches == res_batches) && 
+		if ((bq->bq_res == dst_res) && 
 		    (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
@@ -667,13 +667,12 @@ retry:
 
 	INIT_SPINLOCK(&newbq->bq_lock);
 	INIT_PSC_LISTENTRY(&newbq->bq_lentry);
-	INIT_PSC_LISTENTRY(&newbq->bq_lentry_res);
 	newbq->bq_rq = rq;
 	newbq->bq_rcv_ptl = rcvptl;
 	newbq->bq_snd_ptl = sndptl;
 	newbq->bq_csvc = csvc;
 	newbq->bq_bid = mq->bid;
-	newbq->bq_res_batches = res_batches;
+	newbq->bq_res = dst_res;
 	newbq->bq_opc = opc;
 	newbq->bq_workq = workq;
 
@@ -759,13 +758,13 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  * @l: list of batches, attached from sl_resource.
  */
 void
-slrpc_batches_drop(struct psc_listcache *l)
+slrpc_batches_drop(struct sl_resource *res)
 {
 	struct slrpc_batch_req *bq, *bq_next;
 
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
-		if (bq->bq_res_batches == l) {
+		if (bq->bq_res == res) {
 			/* ECONNRESET = 104  */
 			slrpc_batch_req_sched_finish(bq, -ECONNRESET);
 		}
