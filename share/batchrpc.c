@@ -632,7 +632,6 @@ retry:
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
-		spinlock(&bq->bq_lock);
 		if ((bq->bq_res_batches == res_batches) && 
 		    (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
