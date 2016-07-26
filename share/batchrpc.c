@@ -629,7 +629,7 @@ retry:
 	LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
 		if (!trylock(&bq->bq_lock)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
-			OPSTAT_INCR("batch-reply-yield");
+			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
 		spinlock(&bq->bq_lock);
@@ -645,7 +645,7 @@ retry:
 			 */
 			mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
-			OPSTAT_INCR("batch-add");
+			OPSTAT_INCR("batch-req-add");
 			goto add;
 		}
 		freelock(&bq->bq_lock);
@@ -664,7 +664,7 @@ retry:
 
 	/* not found; create */
 
-	OPSTAT_INCR("batch-alloc");
+	OPSTAT_INCR("batch-req-alloc");
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
 	if (rc)
 		return (rc);
