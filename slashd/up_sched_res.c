@@ -1268,8 +1268,14 @@ upschq_resm(struct sl_resm *m, int type)
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
+	struct slrpc_cservice *csvc;
 
-	if (type == UPDT_PAGEIN && m) {
+	if (type == UPDT_PAGEIN) {
+		csvc = slm_geticsvc(m, NULL, 
+		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+		if (!csvc)
+			return;
+		sl_csvc_decref(csvc);
 		rpmi = res2rpmi(m->resm_res);
 		si = res2iosinfo(m->resm_res);
 		RPMI_LOCK(rpmi);
@@ -1280,6 +1286,7 @@ upschq_resm(struct sl_resm *m, int type)
 		si->si_flags |= SIF_UPSCH_PAGING;
 		RPMI_ULOCK(rpmi);
 	}
+
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
