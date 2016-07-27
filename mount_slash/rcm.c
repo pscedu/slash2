@@ -93,7 +93,8 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
 		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
-		return (0);
+		mp->rc = -PFLERR_CANCELED;
+		return (mp->rc);
 	}
 
 	mh = *mrsq->mrsq_mh;
@@ -138,13 +139,10 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	int rc, level;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	rc = mq->rc;
-	if (rc == EOF)
-		rc = 0;
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
-		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
+		psclog_warnx("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, mq->rc);
 		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
@@ -176,8 +174,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
  out:
-	level = rc ? PLL_WARN : PLL_DIAG;
-	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
+	level = mq->rc ? PLL_WARN : PLL_DIAG;
+	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, mq->rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
 }
