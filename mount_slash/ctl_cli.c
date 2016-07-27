@@ -314,7 +314,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	spinlock(&mrsq.mrsq_lock);
 	while (!mrsq.mrsq_rc) {
-		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
+		psc_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 30);
 		spinlock(&mrsq.mrsq_lock);
 	}
 
