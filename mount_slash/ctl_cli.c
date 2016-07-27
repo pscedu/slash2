@@ -239,8 +239,10 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (mrq->mrq_fid == FID_ANY) {
 		fg.fg_fid = FID_ANY;
 		fg.fg_gen = FGEN_ANY;
+		OPSTAT_INCR("getreplst-any");
 		goto issue;
 	}
+	OPSTAT_INCR("getreplst-file");
 
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
