@@ -86,13 +86,14 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
-	int rc, n;
+	int n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
-		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
+		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", 
+		    mq->id, mq->rc);
 		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
@@ -103,6 +104,9 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	if (mq->rc) {
 		/* XXX no need to send msctl an EOF message? */
+		if (mq->rc != EOF)
+			psclog_warnx("release: mrsq@%p: id=%d, rc=%d", 
+			    mrsq, mp->id, mq->rc);
 		mrsq_release(mrsq, mq->rc);
 		return (0);
 	}
@@ -119,8 +123,12 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    "<unknown IOS %#x>",
 			    mq->repls[n].bs_id);
 	}
-	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs, mrsq->mrsq_fdlock);
-	mrsq_release(mrsq, rc ? 0 : EOF);
+	(void) psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs, mrsq->mrsq_fdlock);
+	/*
+ 	 * We used to call mrsq_release() here. And if msctl exits for some
+ 	 * reason (e.g., files are moved), we are going to drop the mrsq,
+ 	 * causing a lot of PFLERR_CANCELED later.
+ 	 */
 	return (0);
 }
 
@@ -143,7 +151,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
-		psclog_warnx("Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, mq->rc);
+		psclog_warnx("Handle GETREPLST_SLAVE: id = %d, rc = %d", 
+		    mq->id, mq->rc);
 		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
