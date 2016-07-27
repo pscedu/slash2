@@ -217,12 +217,6 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
 		bq->bq_flags |= BATCHF_REPLY;
-		/*
-		 * XXX what if the connection dropped right
-		 * before we add bq to the list? Is it 
-		 * possible?
-		 */
-		lc_add(bq->bq_res_batches, bq);
 		freelock(&bq->bq_lock);
 	}
 	return (0);
@@ -557,11 +551,6 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
-			/*
- 			 * XXX What if connection dropped right before
- 			 * we remove it from the list? Is it possible?
- 			 */
-			lc_remove(bq->bq_res_batches, bq);
 			slrpc_batch_req_sched_finish(bq,
 			    mp->rc ? mp->rc : mq->rc);
 
@@ -608,7 +597,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  * Note that only RPCs of the same opcode can be batched together.
  */
 int
-slrpc_batch_req_add(struct psc_listcache *res_batches,
+slrpc_batch_req_add(struct sl_resource *dst_res,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
     int32_t opc, int rcvptl, int sndptl, void *buf, int len,
     void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
@@ -632,8 +621,7 @@ retry:
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
-		spinlock(&bq->bq_lock);
-		if ((bq->bq_res_batches == res_batches) && 
+		if ((bq->bq_res == dst_res) && 
 		    (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
@@ -679,13 +667,12 @@ retry:
 
 	INIT_SPINLOCK(&newbq->bq_lock);
 	INIT_PSC_LISTENTRY(&newbq->bq_lentry);
-	INIT_PSC_LISTENTRY(&newbq->bq_lentry_res);
 	newbq->bq_rq = rq;
 	newbq->bq_rcv_ptl = rcvptl;
 	newbq->bq_snd_ptl = sndptl;
 	newbq->bq_csvc = csvc;
 	newbq->bq_bid = mq->bid;
-	newbq->bq_res_batches = res_batches;
+	newbq->bq_res = dst_res;
 	newbq->bq_opc = opc;
 	newbq->bq_workq = workq;
 
@@ -771,17 +758,18 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  * @l: list of batches, attached from sl_resource.
  */
 void
-slrpc_batches_drop(struct psc_listcache *l)
+slrpc_batches_drop(struct sl_resource *res)
 {
-	struct slrpc_batch_req *bq, *dummy;
+	struct slrpc_batch_req *bq, *bq_next;
 
-	LIST_CACHE_LOCK(l);
-	LIST_CACHE_FOREACH_SAFE(bq, dummy, l) {
-		/* ECONNRESET = 104  */
-		lc_remove(bq->bq_res_batches, bq);
-		slrpc_batch_req_sched_finish(bq, -ECONNRESET);
+	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
+	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
+		if (bq->bq_res == res) {
+			/* ECONNRESET = 104  */
+			slrpc_batch_req_sched_finish(bq, -ECONNRESET);
+		}
 	}
-	LIST_CACHE_ULOCK(l);
+	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 }
 
 /*

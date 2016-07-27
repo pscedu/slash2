@@ -305,7 +305,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc != BREPLST_REPL_QUEUED)
 		PFL_GOTOERR(out, rc = -ENODEV);
 
-	rc = slrpc_batch_req_add(&res2rpmi(dst_res)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
 	    &slm_batch_rep_repl, slm_upsch_delay);
@@ -607,7 +607,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		PFL_GOTOERR(out, rc = EINVAL);
 	}
 
-	rc = slrpc_batch_req_add(&res2rpmi(r)->rpmi_batchrqs,
+	rc = slrpc_batch_req_add(r,
 	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
 	    &slm_batch_rep_preclaim, 30);
@@ -1268,8 +1268,14 @@ upschq_resm(struct sl_resm *m, int type)
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
+	struct slrpc_cservice *csvc;
 
-	if (type == UPDT_PAGEIN && m) {
+	if (type == UPDT_PAGEIN) {
+		csvc = slm_geticsvc(m, NULL, 
+		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+		if (!csvc)
+			return;
+		sl_csvc_decref(csvc);
 		rpmi = res2rpmi(m->resm_res);
 		si = res2iosinfo(m->resm_res);
 		RPMI_LOCK(rpmi);
@@ -1280,6 +1286,7 @@ upschq_resm(struct sl_resm *m, int type)
 		si->si_flags |= SIF_UPSCH_PAGING;
 		RPMI_ULOCK(rpmi);
 	}
+
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);

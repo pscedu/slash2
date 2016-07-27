@@ -68,9 +68,8 @@ struct slrpc_batch_req {
 	psc_spinlock_t			  bq_lock;
 	int				  bq_refcnt;
 	uint64_t			  bq_bid;		/* batch RPC ID */
-	struct psc_listcache		 *bq_res_batches;	/* resource's list of batches */
 	struct psc_listentry		  bq_lentry;		/* list membership */
-	struct psc_listentry		  bq_lentry_res;	/* membership on bq_res_batches */
+	struct sl_resource		 *bq_res;
 	struct timeval			  bq_expire;		/* when to transmit */
 	struct psc_listcache		 *bq_workq;		/* work queue to process events */
 
@@ -133,14 +132,14 @@ struct slrpc_batch_rep {
 	    (bp)->bp_opc, (bp)->bp_reqbuf, (bp)->bp_reqlen,		\
 	    (bp)->bp_repbuf, (bp)->bp_replen, (bp)->bp_rc, ##__VA_ARGS__)
 
-int	slrpc_batch_req_add(struct psc_listcache *,
+int	slrpc_batch_req_add(struct sl_resource *,
 	    struct psc_listcache *, struct slrpc_cservice *,
 	    int32_t, int, int, void *, int, void *,
 	    struct slrpc_batch_rep_handler *, int);
 
 void	slrpc_batches_init(int, const char *);
 void	slrpc_batches_destroy(void);
-void	slrpc_batches_drop(struct psc_listcache *);
+void	slrpc_batches_drop(struct sl_resource *res);
 
 void	slrpc_batch_rep_decref(struct slrpc_batch_rep *, int);
 
