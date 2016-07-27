@@ -301,7 +301,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
 
-	psclog_warnx("add: mrsq@%p: fd = %d, id = %d.", &mrsq, fd, mq->id);
+	psclog_diag("add: mrsq@%p: fd = %d, id = %d.", &mrsq, fd, mq->id);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
