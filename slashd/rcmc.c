@@ -92,6 +92,8 @@ slmrmcthr_replst_slave_fin(struct slrpc_cservice *csvc,
 	mq->len = nb;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
 	    fcmh_2_nrepls(f) + SL_NBITS_REPLST_BHDR);
+
+	/* use piggyback or bulk transfer */
 	if (nb > sizeof(mq->buf)) {
 		iov.iov_base = srcm->srcm_page;
 		iov.iov_len = nb;

@@ -90,10 +90,11 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_diag("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 	mrsq = mrsq_lookup(mq->id);
-	if (mrsq == NULL)
+	if (mrsq == NULL) {
+		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 		return (0);
+	}
 
 	mh = *mrsq->mrsq_mh;
 
@@ -143,6 +144,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
+		psclog_warnx("Handle GETREPLST: id = %d, rc = %d", mq->id, mq->rc);
 		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
