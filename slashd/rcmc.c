@@ -304,6 +304,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		/* signal EOF */
 		slm_rcm_issue_getreplst(rsw, NULL);
 
+		/* XXX if we failed above, client will never know */
 		sl_csvc_decref(rsw->rsw_csvc);
 		psc_pool_return(slm_repl_status_pool, rsw);
 		psc_dynarray_reset(&da);
