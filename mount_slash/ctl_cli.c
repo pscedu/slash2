@@ -315,9 +315,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		spinlock(&mrsq.mrsq_lock);
 	}
-	pll_remove(&msctl_replsts, &mrsq);
-	psc_waitq_destroy(&mrsq.mrsq_waitq);
-	added = 0;
 
 	rc = 1;
 	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
