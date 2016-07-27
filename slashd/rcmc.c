@@ -210,6 +210,8 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	int rc, rc2;
 
 	rc = slm_rcm_issue_getreplst(rsw, f);
+	if (rc)
+		return (rc);
 	if (fcmh_isreg(f)) {
 		for (n = 0; rc == 0; n++) {
 			/*
