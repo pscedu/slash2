@@ -102,6 +102,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrs.mrs_fid = mq->fg.fg_fid;
 
 	if (mq->rc) {
+		/* XXX no need to send msctl an EOF message? */
 		mrsq_release(mrsq, mq->rc);
 		return (0);
 	}
@@ -174,7 +175,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
  out:
-	level = mq->rc ? PLL_WARN : PLL_DIAG;
+	level = (mq->rc && mq->rc != EOF) ? PLL_WARN : PLL_DIAG;
 	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, mq->rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
