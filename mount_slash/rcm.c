@@ -178,7 +178,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
  out:
 	level = rc ? PLL_WARN : PLL_DIAG;
 	psclog(level, "Handle GETREPLST_SLAVE: id = %d, rc = %d", mq->id, rc);
-	mrsq_release(mrsq, rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
 }
