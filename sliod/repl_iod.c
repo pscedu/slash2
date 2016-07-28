@@ -204,7 +204,7 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-	return (0);
+	return (rc);
 }
 
 void
