@@ -370,6 +370,8 @@ slireplpndthr_main(struct psc_thread *thr)
 void
 sli_repl_init(void)
 {
+	int i;
+
 	psc_poolmaster_init(&sli_replwkrq_poolmaster,
 	    struct sli_repl_workrq, srw_pending_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, "replwkrq");
@@ -378,5 +380,8 @@ sli_repl_init(void)
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_pending_lentry, "replwkpnd");
 
-	pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, "slireplpndthr");
+	for (i = 0; i < 2; i++) {
+		pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, 
+		    "slireplpndthr%d", i);
+	}
 }
