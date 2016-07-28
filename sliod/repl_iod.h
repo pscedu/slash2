@@ -48,7 +48,6 @@ struct slvr;
 
 struct sli_repl_workrq {				/* sli_replwkrq_pool */
 	struct sl_fidgen	 srw_fg;
-	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
 	uint32_t		 srw_len;		/* bmap size */
