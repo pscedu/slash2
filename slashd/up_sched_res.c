@@ -208,7 +208,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
-//	upschq_resm(src_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -242,7 +241,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
 		upschq_resm(dst_resm, UPDT_PAGEIN);
-//		upschq_resm(src_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
