@@ -349,10 +349,6 @@ mds_brepls_check(uint8_t *repls, int nr)
  * @cbf: callback routine for more detailed processing.
  * @cbarg: argument to callback.
  *
- * Notes: the locks are acquired in the following order:
- *	(*) FCMH_BUSY
- *	(*) BMAPF_BUSY
- *	(*) BMAPOD_WRLOCK
  */
 int
 _mds_repl_bmap_apply(struct bmap *b, const int *tract,
