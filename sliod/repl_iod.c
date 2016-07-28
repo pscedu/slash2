@@ -380,7 +380,7 @@ sli_repl_init(void)
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_pending_lentry, "replwkpnd");
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 1; i++) {
 		pscthr_init(SLITHRT_REPLPND, slireplpndthr_main, 0, 
 		    "slireplpndthr%d", i);
 	}
