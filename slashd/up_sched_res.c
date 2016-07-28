@@ -579,6 +579,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		return (0);
 	}
 
+	OPSTAT_INCR("preclaim-attempt");
 	si = res2iosinfo(r);
 	if (si->si_flags & SIF_PRECLAIM_NOTSUP) {
 		OPSTAT_INCR("preclaim-notsup");
