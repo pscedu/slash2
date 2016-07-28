@@ -74,7 +74,6 @@ struct bmap_mds_info {
 	int32_t			 bmi_writers;
 	int32_t			 bmi_readers;
 	int32_t			 bmi_diocb;		/* # of DIO downgrade RPCs inflight */
-	struct pfl_rwlock	 bmi_rwlock;		/* rwlock for modifying bmap contents */
 	struct slm_update_data	 bmi_upd;		/* data for upsch (replication engine) */
 
 	/*
@@ -105,14 +104,6 @@ struct bmap_mds_info {
 #define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
-#define BMAPOD_RDLOCK(bmi)	_pfl_rwlock_rdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQRDLOCK(bmi)	_pfl_rwlock_reqrdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQWRLOCK(bmi)	_pfl_rwlock_reqwrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_HASRDLOCK(bmi)	 pfl_rwlock_hasrdlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_HASWRLOCK(bmi)	 pfl_rwlock_haswrlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_ULOCK(bmi)	_pfl_rwlock_unlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_UREQLOCK(bmi, l)	_pfl_rwlock_ureqlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
-#define BMAPOD_WRLOCK(bmi)	_pfl_rwlock_wrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 
 static __inline struct bmap_mds_info *
 bmap_2_bmi(struct bmap *b)
