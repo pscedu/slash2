@@ -314,6 +314,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	OPSTAT2_ADD("repl-sched", amt);
 
+	/*
+	 * Write it out. This is needed because we can't expect the bmap
+	 * to be cached until it is replicated.
+	 */
 	rc = mds_bmap_write_logrepls(b);
 	if (rc)
 		goto out;
