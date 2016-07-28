@@ -302,8 +302,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * proceed; otherwise, bail: perhaps the user dequeued the
 	 * replication request or something.
 	 */
-	if (rc != BREPLST_REPL_QUEUED)
+	if (rc != BREPLST_REPL_QUEUED) {
+		psclog_warnx("Unexpected bmap state [off %d]: %d", off, rc);
 		PFL_GOTOERR(out, rc = -ENODEV);
+	}
 
 	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
@@ -315,7 +317,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	OPSTAT2_ADD("repl-sched", amt);
 
 	rc = mds_bmap_write_logrepls(b);
-	psc_assert(rc == 0);
+	if (rc)
+		goto out;
 
 	/*
 	 * We have successfully scheduled some work; if there is more

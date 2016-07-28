@@ -392,7 +392,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 		}
 	}
 
-	/* apply any translations */
+	/* apply any translations - this must be done after retifset */
 	if (tract && tract[val] != -1) {
 		DEBUG_BMAPOD(PLL_DEBUG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(bmi->bmi_repls, off,
