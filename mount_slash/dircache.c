@@ -851,6 +851,9 @@ _namecache_update(const struct pfl_callerinfo *pci,
 		 * one directory to another on greenfield. The fid comes
 		 * from mp->srr_cattr.sst_fid. After 10+ crashed, things
 		 * appear to be calm now.
+		 *
+		 * 07/28/2016: Crash again on greenfield when moving a
+		 * file from one directory to another.
 		 */
 		psc_assert(fid != FID_ANY);
 
