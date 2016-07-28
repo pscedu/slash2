@@ -73,6 +73,7 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	struct fidc_membh *f;
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
+	OPSTAT_INCR("preclaim-attempt");
 	p->rc = sli_fcmh_get(&q->fg, &f);
 	if (p->rc)
 		return (0);
@@ -86,6 +87,7 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	fcmh_op_done(f);
 	return (0);
 #else
+	OPSTAT_INCR("preclaim-notsupport");
 	(void)q;
 	(void)p;
 	(void)f;
