@@ -322,10 +322,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 			slrpc_connect_finish(csvc, imp, oimp, 0);
 			return (rc);
 		}
-		/*
-		 * XXX wait a short amount of time and check for
-		 * establishment before returning.
-		 */
 		return (EWOULDBLOCK);
 	}
 
