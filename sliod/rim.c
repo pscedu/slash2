@@ -91,7 +91,8 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	(void)q;
 	(void)p;
 	(void)f;
-	return (-PFLERR_NOTSUP);
+	p->rc = -PFLERR_NOTSUP;
+	return (0);
 #endif
 }
 
