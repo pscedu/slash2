@@ -194,7 +194,6 @@ struct sl_expcli_ops {
 
 #define CSVC_LOCK(csvc)			spinlock(&(csvc)->csvc_lock)
 #define CSVC_ULOCK(csvc)		freelock(&(csvc)->csvc_lock)
-#define CSVC_WAIT(csvc)			pfl_multiwaitcond_wait(&(csvc)->csvc_mwc, &(csvc)->csvc_mutex)
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
