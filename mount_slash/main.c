@@ -3114,7 +3114,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (busied)
 			FCMH_UNBUSY(c);
 
-		/*
+#if 0
+		/* 
+		 * 07/30/2016: I hit a three task hang again with the following stack
+		 * in my self build test:
+		 *
+ 		 * fuse_dev_write --> fuse_dev_do_write --> fuse_reverse_inval_entry
+ 		 *
+ 		 * So I disable for now.
+		 *
 		 * If permissions changed for a directory, we need to
 		 * specifically invalidate all entries under the dir
 		 * from the cache in the kernel, otherwise there will be
@@ -3138,6 +3146,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			    &mdie);
 			OPSTAT_INCR("msl.dircache-walk-end");
 		}
+#endif
 
 		fcmh_op_done(c);
 	}
