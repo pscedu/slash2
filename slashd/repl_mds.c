@@ -484,6 +484,21 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 	return (rc);
 }
 
+struct iosidv {
+	sl_replica_t	iosv[SL_MAX_REPLICAS];
+	int		nios;
+};
+
+void
+mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
+{
+	struct iosidv *qv = arg;
+
+	if (val == BREPLST_VALID)
+		qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh,
+		    idx);
+}
+
 /*
  * For the given bmap, change the status of all its replicas marked
  * "valid" to "invalid" except for the replica specified.
@@ -505,6 +520,7 @@ int
 mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
+	struct iosidv qv;
 	uint32_t policy;
 
 	/* Ensure replica on active IOS is marked valid. */
@@ -545,8 +561,9 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
 
+	qv.nios = 0;
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
-	    &iosidx, 1, NULL, NULL))
+	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
 	if (defer)
