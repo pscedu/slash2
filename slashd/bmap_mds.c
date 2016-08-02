@@ -391,6 +391,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	int rc, fl, idx, vfsid;
 	uint32_t i;
 	uint64_t nblks;
+	int retifset[NBREPLST];
 
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
@@ -408,6 +409,22 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		psclog_warnx("CRC update: invalid IOS %x", iosid);
 		return (idx);
 	}
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_VALID] = 1;
+
+	BMAP_LOCK(bmap);
+	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
+
+	rc = _mds_repl_bmap_walk(bmap, NULL, retifset, 0,
+	    &idx, 1, NULL, NULL);
+	if (!rc) {
+		BMAP_ULOCK(bmap);
+		FCMH_UNBUSY(f);
+		OPSTAT_INCR("crcup-invalid");
+		return (-EINVAL);
+	}
+
 	if (idx < SL_DEF_REPLICAS)
 		nblks = fcmh_2_ino(f)->ino_repl_nblks[idx];
 	else
@@ -435,16 +452,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inox_write(vfsid, ih, NULL, NULL);
 	}
 
-	
-	BMAP_LOCK(bmap);
-	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
-	
-	if (mds_repl_inv_except(bmap, idx, 1)) {
-		/* 
-		 * This case should not happen.
-		 */
-		psclog_warnx("IOS %x is not found.", idx);
-	}
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
