@@ -63,4 +63,6 @@ opts=$(IFS=, ; echo "${xargs[*]}")
 
 mod_dir=$(dirname $(which $prog))/../lib/wokfs
 
+# pfl/utils/daemon/pfl_daemon.sh
+
 rundaemon $filter $prog -L "insert 0 $mod_dir/$mod $opts" -U $mp
