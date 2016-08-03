@@ -490,8 +490,10 @@ main(int argc, char *argv[])
 		arc_set_maxsize(slcfg_local->cfg_arc_max);
 
 	rc = mdsio_init();
-	if (rc)
+	if (rc) {
+		/* 08/03/2016: saw this today and the mds is still up */
 		psc_fatal("failed to initialize ZFS, rc= %d", rc);
+	}
 	import_zpool(zpname, zpcachefn);
 
 	psc_hashtbl_init(&slm_roots, PHTF_STR, struct mio_rootnames,
@@ -509,7 +511,8 @@ main(int argc, char *argv[])
 		slm_mdfs_register(vfsid);
 
 	if (!zfs_nmounts)
-		errx(1, "No ZFS file system exists! Try zpool import -a with zfs-fuse.");
+		/* sometimes you need to do a export/import cycle */
+		errx(1, "No ZFS file system exists! Try zpool import -a or pool-name with zfs-fuse.");
 
 	found = 0;
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++) {
