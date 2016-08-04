@@ -529,6 +529,10 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	tract[BREPLST_INVALID] = BREPLST_VALID;
 	tract[BREPLST_GARBAGE] = BREPLST_VALID;
 
+	/*
+	 * The old state for this bmap on the given IOS is
+	 * either valid or invalid.
+	 */
 	brepls_init_idx(retifset);
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
@@ -540,11 +544,12 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	 * happens a few times.
 	 */
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
-	if (rc)
+	if (rc) {
 		psclog_errorx("bcs_repls has active IOS marked in a "
 		    "weird state while invalidating other replicas; "
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
+	}
 
 	policy = bmap_2_replpol(b);
 
