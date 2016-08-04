@@ -40,7 +40,7 @@ struct slm_replst_workreq {
 
 typedef void (*brepl_walkcb_t)(struct bmap *, int, int, void *);
 
-int	 mds_repl_inv_except(struct bmap *, int, int);
+int	 mds_repl_inv_except(struct bmap *, int);
 int	 mds_repl_addrq(const struct sl_fidgen *, sl_bmapno_t,
 	    sl_bmapno_t *, sl_replica_t *, int, int, int);
 

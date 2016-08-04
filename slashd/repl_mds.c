@@ -517,7 +517,7 @@ mds_repl_inv_requeue(struct bmap *b, int idx, int val, void *arg)
  *	stored in the inode during log replay.
  */
 int
-mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
+mds_repl_inv_except(struct bmap *b, int iosidx)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct iosidv qv;
@@ -565,9 +565,6 @@ mds_repl_inv_except(struct bmap *b, int iosidx, int defer)
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
 	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
-
-	if (defer)
-		return (rc);
 
 	rc = mds_bmap_write(b, NULL, NULL);
 
