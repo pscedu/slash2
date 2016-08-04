@@ -68,6 +68,7 @@ int
 sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
     void *req, void *rep)
 {
+	int rc;
 	struct srt_preclaim_req *q = req;
 	struct srt_preclaim_rep *p = rep;
 	struct fidc_membh *f;
@@ -80,10 +81,16 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 
 	OPSTAT_INCR("slvr-remove-preclaim");
 	slvr_remove_all(f);
-	if (fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
+	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
 	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE,
-	    SLASH_BMAP_SIZE) == -1)
+	    SLASH_BMAP_SIZE);
+	if (rc < 0) {
 		p->rc = errno;
+		OPSTAT_INCR("preclaim-err");
+	} else {
+		p->rc = 0;
+		OPSTAT_INCR("preclaim-ok");
+	}
 
 	fcmh_op_done(f);
 	return (0);
