@@ -365,6 +365,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	if (tract) {
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
+		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 	}
 
 	if (scircuit)
