@@ -553,10 +553,10 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	retifset[BREPLST_REPL_SCHED] = 1;
 
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
-	    &iosidx, 1, NULL, NULL))
+	    &iosidx, 1, NULL, NULL)) {
 		BHGEN_INCREMENT(b);
-
-	rc = mds_bmap_write(b, NULL, NULL);
+		rc = mds_bmap_write_logrepls(b);
+	}
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
