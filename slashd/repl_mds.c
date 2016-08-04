@@ -560,6 +560,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
 
 	qv.nios = 0;
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
