@@ -58,7 +58,7 @@
 
 struct pfl_odt		*slm_bia_odt;
 
-int			slm_ptrunc_enabled;
+int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *);
@@ -2080,6 +2080,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
+	FCMH_WAIT_BUSY(f);
 	fmi = fcmh_2_fmi(f);
 
 	/* get the number of replies we expect */
@@ -2096,14 +2097,13 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	/*
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
-	DEBUG_BMAPOD(PLL_DIAG, b, "truncate bmap");
-	BMAP_ULOCK(b);
 	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
 	if (fmi->fmi_ptrunc_nios) {
