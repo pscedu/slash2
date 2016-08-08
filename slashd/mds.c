@@ -2251,12 +2251,18 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 	FCMH_ULOCK(f);
 
-	/* XXX assert on PJF_REPLAYINPROG during replay */
-	mds_reserve_slot(1);
-	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
-	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
-	    fcmh_2_mfh(f), mdslog_namespace);
-	mds_unreserve_slot(1);
+	if (slm_opstate == SLM_OPSTATE_REPLAY) {
+		rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
+		    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
+		    fcmh_2_mfh(f), NULL);
+		DEBUG_FCMH(rc ? PLL_MAX: PLL_DIAG, f, "prepare ptrunc");
+	} else {
+		mds_reserve_slot(1);
+		rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
+		    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
+		    fcmh_2_mfh(f), mdslog_namespace);
+		mds_unreserve_slot(1);
+	}
 
 	if (!rc) 
 		rc = slm_ptrunc_apply(f);
