@@ -149,6 +149,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			DEBUG_FCMH(PLL_WARN, f, "mdsio_opendir failed; "
 			    "mio_fid=%"PRIx64" rc=%d", fcmh_2_mfid(f),
 			    rc);
+			fmi->fmi_ctor_rc = rc;
 			return (rc);
 		}
 
