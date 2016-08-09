@@ -48,9 +48,8 @@ struct fcmh_mds_info {
 	int			  fmi_ctor_rc;		/* constructor return code */
 	union {
 		struct {
-			mio_fid_t fmid_dino_mfid;	/* for inode */
-			struct mio_fh
-				  fmid_dino_mfh;
+			mio_fid_t	fmid_dino_mfid;	/* for inode */
+			struct mio_fh	fmid_dino_mfh;
 		} d;
 		struct {
 			int	  fmif_ptrunc_nios;
