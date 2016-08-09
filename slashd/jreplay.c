@@ -415,10 +415,9 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
  * @replay: whether this is a replay or remote MDS update.
  */
 int
-mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
+mds_replay_namespace(struct slmds_jent_namespace *sjnm)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
-	struct fidc_membh *f = NULL;
 	struct srt_stat sstb;
 	int rc;
 
@@ -505,27 +504,8 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
-		if (!replay) {
-			/*
-			 * Make sure that we propagate attributes
-			 * to the fcmh layer if work is done at
-			 * the ZFS layer.
-			 */
-			rc = sl_fcmh_peek_fg(&sstb.sst_fg, &f);
-			if (f)
-				FCMH_LOCK(f);
-		}
 		rc = mdsio_redo_setattr(current_vfsid,
 		    sjnm->sjnm_target_fid, sjnm->sjnm_mask, &sstb);
-		slm_setattr_core(f, &sstb,
-		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
-		if (!replay) {
-			if (f) {
-				/* setattr() above has filled sstb */
-				COPY_SSTB(&sstb, &f->fcmh_sstb);
-				fcmh_op_done(f);
-			}
-		}
 		break;
 	    default:
 		psclog_errorx("Unexpected opcode %d", sjnm->sjnm_op);
@@ -571,7 +551,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
 		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		rc = mds_replay_namespace(sjnm, 1);
+		rc = mds_replay_namespace(sjnm);
 
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here

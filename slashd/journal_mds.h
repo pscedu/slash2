@@ -232,7 +232,7 @@ int	mds_bmap_crc_update(struct bmap *, sl_ios_id_t,
 void	mds_reserve_slot(int);
 void	mds_unreserve_slot(int);
 
-int	mds_replay_namespace(struct slmds_jent_namespace *, int);
+int	mds_replay_namespace(struct slmds_jent_namespace *);
 int	mds_replay_handler(struct psc_journal_enthdr *);
 
 extern struct psc_journal		*slm_journal;
