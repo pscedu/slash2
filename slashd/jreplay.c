@@ -420,6 +420,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm)
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct srt_stat sstb;
 	int rc;
+	struct fidc_membh *f = NULL;
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
@@ -506,6 +507,17 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm)
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(current_vfsid,
 		    sjnm->sjnm_target_fid, sjnm->sjnm_mask, &sstb);
+		if (rc)
+			break;
+		/*
+		 * Throw away a cached copy to force a reload.
+		 */
+		rc = sl_fcmh_peek_fg(&sstb.sst_fg, &f);
+		if (!rc) {
+			FCMH_LOCK(f);
+			f->fcmh_flags |= FCMH_TOFREE;
+			fcmh_op_done(f);
+		}
 		break;
 	    default:
 		psclog_errorx("Unexpected opcode %d", sjnm->sjnm_op);
