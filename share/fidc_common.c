@@ -72,7 +72,7 @@ fcmh_destroy(struct fidc_membh *f)
 
 	psc_waitq_destroy(&f->fcmh_waitq);
 
-	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
+	/* slc_fcmh_dtor(), slm_fcmh_dtor(), and sli_fcmh_dtor() */
 	sl_fcmh_ops.sfop_dtor(f);
 
 	f->fcmh_flags = FCMH_FREE;
