@@ -243,8 +243,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
 		/* call sli_fcmh_reopen() sliod only */
-		if (sl_fcmh_ops.sfop_modify) {
-			rc = sl_fcmh_ops.sfop_modify(f, fgen);
+		if (sl_fcmh_ops.sfop_reopen) {
+			rc = sl_fcmh_ops.sfop_reopen(f, fgen);
 			FCMH_LOCK_ENSURE(f);
 		}
 		if (rc)
