@@ -227,9 +227,7 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 
 		rc = sli_open_backing_file(f);
 		/* Notify upper layers that open() has failed. */
-		if (rc)
-			f->fcmh_flags |= FCMH_CTOR_FAILED;
-		else
+		if (!rc)
 			f->fcmh_flags |= FCMH_IOD_BACKFILE;
 
 		/* Do some upfront garbage collection. */
@@ -243,10 +241,8 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 	} else if (!(f->fcmh_flags & FCMH_IOD_BACKFILE)) {
 
 		rc = sli_open_backing_file(f);
-		if (!rc) {
-			f->fcmh_flags &= ~FCMH_CTOR_FAILED;
+		if (!rc)
 			f->fcmh_flags |= FCMH_IOD_BACKFILE;
-		}
 		OPSTAT_INCR("generation-same");
 	}
 	return (rc);
