@@ -111,6 +111,14 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	uint32_t n, nrepls = 0;
 	int rc;
 
+	/*
+	 * Reject if the user is not root and replication add/del
+	 * is not enabled.
+	 */
+	if (!msl_repl_enable)
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "replication request: %s", strerror(EPERM)));
+
 	if (mrq->mrq_nios < 1 ||
 	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
 		return (psc_ctlsenderr(fd, mh, NULL,
@@ -975,6 +983,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.predio_issue_maxpages",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_predio_issue_maxpages);
+	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
