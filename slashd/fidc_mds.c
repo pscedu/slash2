@@ -126,7 +126,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));
 	if (rc) {
-		fmi->fmi_ctor_rc = rc;
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_lookup_slfid failed; "
 		    "fid="SLPRI_FID" rc=%d",
 		    fcmh_2_fid(f), rc);
@@ -149,7 +148,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			DEBUG_FCMH(PLL_WARN, f, "mdsio_opendir failed; "
 			    "mio_fid=%"PRIx64" rc=%d", fcmh_2_mfid(f),
 			    rc);
-			fmi->fmi_ctor_rc = rc;
 			return (rc);
 		}
 
@@ -198,7 +196,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
  			 */
 			mdsio_release(vfsid, &rootcreds, fcmh_2_dino_mfh(f));
 		} else if (rc) {
-			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_lookup failed; rc=%d", rc);
 			return (rc);
@@ -230,7 +227,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 				    "mfid=%"PRIx64" rc=%d",
 				    ino_mfid, rc);
 		} else {
-			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_opencreate failed; "
 			    "mfid=%"PRIx64" rc=%d",
@@ -251,7 +247,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	fmi = fcmh_2_fmi(f);
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
-		if (!fmi->fmi_ctor_rc) {
+		if (fcmh_2_mfh(f)) {
 			psc_assert(fcmh_2_mfh(f));
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
@@ -261,7 +257,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	}
 
 	if (fcmh_isdir(f)) {
-		if (!fmi->fmi_ctor_rc) {
+		if (fcmh_2_dino_mfh(f)) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			psc_assert(fcmh_2_dino_mfh(f));
 			rc = mdsio_release(vfsid, &rootcreds,

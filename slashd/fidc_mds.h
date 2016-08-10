@@ -45,7 +45,6 @@ struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
 	mio_fid_t		  fmi_mfid;		/* backing object inum */
 	struct mio_fh		  fmi_mfh;		/* file handle */
-	int			  fmi_ctor_rc;		/* constructor return code */
 	union {
 		struct {
 			/*
