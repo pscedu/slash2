@@ -189,6 +189,13 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 			psc_assert(rc == 0);
 
+			/*
+ 			 * We are going to open this file again shortly by
+ 			 * setting ino_mfid.
+ 			 *
+ 			 * We should just use the file handle without close
+ 			 * and open it again.
+ 			 */
 			mdsio_release(vfsid, &rootcreds, fcmh_2_dino_mfh(f));
 		} else if (rc) {
 			fmi->fmi_ctor_rc = rc;
