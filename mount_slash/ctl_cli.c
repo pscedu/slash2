@@ -115,7 +115,13 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 * Reject if the user is not root and replication add/del
 	 * is not enabled.
 	 */
-	if (!msl_repl_enable)
+	rc = msctl_getcreds(fd, &pcr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mrq->mrq_fid, strerror(rc)));
+
+	if (pcr.pcr_uid && !msl_repl_enable)
 		return (psc_ctlsenderr(fd, mh, NULL,
 		    "replication request: %s", strerror(EPERM)));
 
@@ -124,11 +130,6 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL,
 		    "replication request: %s", strerror(EINVAL)));
 
-	rc = msctl_getcreds(fd, &pcr);
-	if (rc)
-		return (psc_ctlsenderr(fd, mh, NULL,
-		    SLPRI_FID": unable to obtain credentials: %s",
-		    mrq->mrq_fid, strerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, NULL,
