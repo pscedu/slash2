@@ -260,10 +260,12 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	}
 
 	if (fcmh_isdir(f)) {
-		slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
-		rc = mdsio_release(vfsid, &rootcreds,
-		    fcmh_2_dino_mfh(f));
-		psc_assert(rc == 0);
+		if (!fmi->fmi_ctor_rc) {
+			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+			rc = mdsio_release(vfsid, &rootcreds,
+			    fcmh_2_dino_mfh(f));
+			psc_assert(rc == 0);
+		}
 	}
 
 	if (fmi->fmi_inodeh.inoh_extras)
