@@ -266,8 +266,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 		}
 	}
 
-	if (fmi->fmi_inodeh.inoh_extras)
-		PSCFREE(fmi->fmi_inodeh.inoh_extras);
+	PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
 /*
