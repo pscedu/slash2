@@ -386,7 +386,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 		clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 		if (!(csvc->csvc_flags & CSVCF_CONNECTED)) {
 			sl_csvc_online(csvc);
-			psclog_warnx("csvc %p for %s is back online", 
+			psclog_warnx("csvc %p for resource %s is back online", 
 			    csvc, m->resm_name);
 		}
 		CSVC_ULOCK(csvc);

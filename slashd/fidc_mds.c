@@ -189,8 +189,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 			psc_assert(rc == 0);
 
-			mdsio_release(vfsid, &rootcreds,
-			    fcmh_2_dino_mfh(f));
+			mdsio_release(vfsid, &rootcreds, fcmh_2_dino_mfh(f));
 		} else if (rc) {
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
