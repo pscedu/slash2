@@ -111,19 +111,19 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	uint32_t n, nrepls = 0;
 	int rc;
 
-	/*
-	 * Reject if the user is not root and replication add/del
-	 * is not enabled.
-	 */
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, NULL,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mrq->mrq_fid, strerror(rc)));
 
+	/*
+	 * Reject if the user is not root and replication add/del
+	 * is not enabled.
+	 */
 	if (pcr.pcr_uid && !msl_repl_enable)
 		return (psc_ctlsenderr(fd, mh, NULL,
-		    "replication request: %s", strerror(EPERM)));
+		    "replication request: %s", strerror(EACCES)));
 
 	if (mrq->mrq_nios < 1 ||
 	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
