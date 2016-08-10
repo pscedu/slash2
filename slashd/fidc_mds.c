@@ -252,6 +252,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
+			psc_assert(fcmh_2_mfh(f));
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fcmh_2_mfh(f));
@@ -262,6 +263,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	if (fcmh_isdir(f)) {
 		if (!fmi->fmi_ctor_rc) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+			psc_assert(fcmh_2_dino_mfh(f));
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fcmh_2_dino_mfh(f));
 			psc_assert(rc == 0);
