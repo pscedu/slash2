@@ -162,7 +162,7 @@ struct psc_hashtbl		 msl_gidmap_int;
 int				 msl_acl;
 int				 msl_force_dio;
 int				 msl_root_squash;
-int				 msl_repl_enable = 1;
+int				 msl_repl_enable;
 int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
