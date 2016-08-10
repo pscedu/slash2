@@ -203,8 +203,8 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 	if (fcmh_isdir(f) || fcmh_isreg(f)) {
 		/*
-		 * We shouldn't need O_LARGEFILE because SLASH2
-		 * metafiles are small.
+		 * We shouldn't need O_LARGEFILE because SLASH2 metafiles 
+		 * are small.
 		 *
 		 * I created a file with size of 8070450532247928832
 		 * using dd by seeking to a large offset and writing one
