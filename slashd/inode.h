@@ -124,7 +124,7 @@ struct slm_inoh {
 	int			 inoh_flags;			/* see INOH_* */
 };
 
-#define slash_inode_handle slm_inoh
+#define slash_inode_handle	 slm_inoh
 
 /* inoh_flags */
 #define INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
