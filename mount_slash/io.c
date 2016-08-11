@@ -2159,6 +2159,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		PFL_GETTIMESPEC(&ts0);
 
 		rc = bmap_get(f, start + i, rw, &b);
+		/* XXX got EHOSTDOWN (112) */
 		if (rc)
 			PFL_GOTOERR(out2, rc);
 
