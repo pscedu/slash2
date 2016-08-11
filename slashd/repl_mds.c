@@ -505,7 +505,7 @@ _mds_repl_bmap_walk(struct bmap *b, const int *tract,
 int
 mds_repl_inv_except(struct bmap *b, int iosidx)
 {
-	int rc, tract[NBREPLST], retifset[NBREPLST];
+	int rc, logit = 0, tract[NBREPLST], retifset[NBREPLST];
 	uint32_t policy;
 
 	/* Ensure replica on active IOS is marked valid. */
@@ -554,9 +554,13 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 
 	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
 	    &iosidx, 1, NULL, NULL)) {
+		logit = 1;
 		BHGEN_INCREMENT(b);
-		rc = mds_bmap_write_logrepls(b);
 	}
+	if (logit)
+		rc = mds_bmap_write_logrepls(b);
+	else
+		rc = mds_bmap_write(b, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
