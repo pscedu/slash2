@@ -1,0 +1,11 @@
+08/11/2016
+----------
+
+zhihui@yuzu: /zzh-slash2/zhihui$ time tar xvf ~/linux-4.2.tar.xz 
+
+......
+
+real    5m29.231s
+user    0m10.900s
+sys     0m9.935s
+
