@@ -2099,7 +2099,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 */
 		rc = mds_bmap_write_logrepls(b);
 		if (rc) {
-			FCMH_UNBUSY(f);
 			bmap_op_done(b);
 			goto out2;
 		}
@@ -2119,10 +2118,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 * must hold the bmap reference to avoid a race.
 		 */
 		upsch_enqueue(upd);
-	} else {
-		FCMH_UNBUSY(f);
+	} else
 		bmap_op_done(b);
-	}
 
 	i++;
 
@@ -2149,6 +2146,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	}
 
  out2:
+	FCMH_UNBUSY(f);
 	if (!queued && !rc) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
