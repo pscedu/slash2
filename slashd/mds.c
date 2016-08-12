@@ -2118,6 +2118,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		 * must hold the bmap reference to avoid a race.
 		 */
 		upsch_enqueue(upd);
+		BMAP_ULOCK(b);
 	} else
 		bmap_op_done(b);
 
@@ -2135,7 +2136,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
 
-		BMAP_ULOCK(b);
 		BHGEN_INCREMENT(b);
 		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
