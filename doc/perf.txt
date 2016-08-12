@@ -1,6 +1,64 @@
 08/11/2016
 ----------
 
+All tests are run by themselves.  System configuration are as follows:
+
+zhihui@yuzu: ~/projects-yuzu/slash2/msctl$ ./msctl -p sys
+parameter                                               value
+================================================================================
+sys.bmap_max_cache                                      1024
+sys.datadir                                             /var/lib/slash2-zhihui
+sys.force_dio                                           0
+sys.fuse_direct_io                                      1
+sys.ios_max_inflight_rpcs                               480
+sys.max_retries                                         5
+sys.mds                                                 orange@PSC1
+sys.mds_max_inflight_rpcs                               2048
+sys.mountpoint                                          /zzh-slash2
+sys.nbrq_outstanding                                    0
+sys.nbrqthr_wait                                        16
+sys.offline_nretries                                    256
+sys.pid                                                 23826
+sys.predio_issue_maxpages                               32768
+sys.predio_issue_minpages                               32
+sys.predio_window_size                                  4194304
+sys.pref_ios                                            lemon@PSC1
+sys.repl_enable                                         0
+sys.resources.PSC1.orange.connected                     1
+sys.resources.PSC1.orange.timeouts                      0
+sys.resources.PSC1.orange.infl_rpcs                     0
+sys.resources.PSC1.orange.max_infl_rpcs                 8
+sys.resources.PSC1.orange.mtime                         6241486
+sys.resources.PSC1.lime.connected                       1
+sys.resources.PSC1.lime.timeouts                        0
+sys.resources.PSC1.lime.infl_rpcs                       0
+sys.resources.PSC1.lime.max_infl_rpcs                   1
+sys.resources.PSC1.lime.mtime                           6241486
+sys.resources.PSC1.lemon.connected                      1
+sys.resources.PSC1.lemon.timeouts                       0
+sys.resources.PSC1.lemon.infl_rpcs                      0
+sys.resources.PSC1.lemon.max_infl_rpcs                  480
+sys.resources.PSC1.lemon.mtime                          6241486
+sys.root_squash                                         0
+sys.rpc_max_retry                                       0
+sys.rpc_timeout                                         60
+sys.rss                                                 714920kB
+sys.statfs_pref_ios_only                                0
+sys.uptime                                              0d17h31m
+sys.version                                             15992
+
+zhihui@yuzu: ~/projects-yuzu/slash2/msctl$ uname -a
+Linux yuzu.psc.edu 4.4.0-1.el7.x86_64.netboot #1 SMP Fri Jan 22 00:31:19 EST 2016 x86_64 x86_64 x86_64 GNU/Linux
+
+zhihui@lemon: ~$ uname -a
+Linux lemon.psc.edu 3.10.0-123.20.1.el7.netboot #2 SMP Fri Feb 6 15:16:28 EST 2015 x86_64 x86_64 x86_64 GNU/Linux
+zhihui@lemon: ~$ 
+
+zhihui@orange: ~$ uname -a
+Linux orange.psc.edu 4.4.0-1.el7.x86_64.netboot #1 SMP Fri Jan 22 00:31:19 EST 2016 x86_64 x86_64 x86_64 GNU/Linux
+zhihui@orange: ~$ 
+
+
 zhihui@yuzu: /zzh-slash2/zhihui$ time tar xvf ~/linux-4.2.tar.xz 
 
 ......
@@ -8,4 +66,48 @@ zhihui@yuzu: /zzh-slash2/zhihui$ time tar xvf ~/linux-4.2.tar.xz
 real    5m29.231s
 user    0m10.900s
 sys     0m9.935s
+
+zhihui@yuzu: /zzh-slash2/zhihui/linux-4.2$ time make -j 3
+
+.....
+
+  CC [M]  drivers/watchdog/softdog.o
+  LD      drivers/watchdog/watchdog.o
+  LD      drivers/watchdog/built-in.o
+  LD      drivers/built-in.o
+
+real    166m56.945s
+user    56m25.391s
+sys     11m57.797s
+
+zhihui@yuzu: /zzh-slash2/zhihui$ time rm -rvf *
+
+......
+
+removed ‘linux-4.2/MAINTAINERS’
+removed directory: ‘linux-4.2’
+
+real    6m30.554s
+user    0m1.950s
+sys     0m7.020s
+
+
+
+zhihui@yuzu: /zzh-slash2/zhihui$ time ~/iozone -a
+
+......
+
+iozone test complete.
+
+real    16m19.561s
+user    0m3.041s
+sys     1m21.899s
+
+zhihui@yuzu: /zzh-slash2/zhihui/projects-stable-yuzu-2016-08-12$ time make
+
+......
+
+real    3m33.958s
+user    6m50.028s
+sys     2m5.610s
 
