@@ -695,7 +695,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 }
 
 /*
- * Process a bmap for upsch work.
+ * Process a bmap for upsch work. Called by upd_proc().
  */
 void
 upd_proc_bmap(struct slm_update_data *upd)
