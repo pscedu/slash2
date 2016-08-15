@@ -135,8 +135,9 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
+	OPSTAT_INCR("slvr-remove-truncate");
+	slvr_remove_all(f);
 	off = SLASH_BMAP_SIZE * mq->bmapno + mq->offset;
-	/* XXX lock/clear sliver pages in memory? */
 	if (ftruncate(fcmh_2_fd(f), off) == -1) {
 		mp->rc = errno;
 		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", mp->rc);
@@ -146,8 +147,8 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	}
 
 	/*
-	 * XXX queue a CRC update to be transmitted back if this
-	 * truncation cut a sliver.
+	 * Simulate a write to trigger a CRC update to be transmitted 
+	 * back to MDS.
 	 */
 	slvr_crc_update(f, mq->bmapno, mq->offset);
 
