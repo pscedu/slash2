@@ -913,7 +913,7 @@ slvr_io_done(struct slvr *s, int rc)
 void
 slvr_rio_done(struct slvr *s)
 {
-	SLVR_RLOCK(s);
+	SLVR_LOCK(s);
 	psc_assert(s->slvr_refcnt > 0);
 
 	s->slvr_refcnt--;
