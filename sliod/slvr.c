@@ -726,16 +726,8 @@ slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
 	slvrno = offset / SLASH_SLVR_SIZE;
 	for (i = slvrno; i < SLASH_SLVRS_PER_BMAP; i++) {
 		s = slvr_lookup(slvrno + i, bmap_2_bii(bmap));
-		/*
- 		 * XXX likely triggers SLVRF_DATARDY assert for
- 		 * slislvrthr_proc().
- 		 */
 		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
-		if (rc)
-			break;
-		/*
- 		 * XXX AIO will call me as well.
- 		 */
+		slvr_io_done(s, rc);
 		slvr_wio_done(s, 0);
 	}
 	bmap_op_done(bmap);
