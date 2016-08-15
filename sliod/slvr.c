@@ -731,11 +731,8 @@ slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
  		 * slislvrthr_proc().
  		 */
 		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
-		if (rc == -SLERR_AIOWAIT) {
-			SLVR_LOCK(s);
-			SLVR_WAIT(s, s->slvr_flags & SLVRF_FAULTING);
-			SLVR_ULOCK(s);
-		}
+		if (rc)
+			break;
 		/*
  		 * XXX AIO will call me as well.
  		 */
