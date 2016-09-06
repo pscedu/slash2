@@ -511,7 +511,10 @@ main(int argc, char *argv[])
 		slm_mdfs_register(vfsid);
 
 	if (!zfs_nmounts)
-		/* sometimes you need to do a export/import cycle */
+		/* 
+		 * Sometimes you need to do an export/import cycle
+		 * or just run zfs mount -a.
+		 */
 		errx(1, "No ZFS file system found! Try zpool import -a "
 			"or pool-name with zfs-fuse first.");
 
