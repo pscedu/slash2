@@ -166,7 +166,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			goto out;
 		}
 
-again: 
+ again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_ADDRQ, rq, mq,
 		    mp, rc);
