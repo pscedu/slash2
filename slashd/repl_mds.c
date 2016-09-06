@@ -255,7 +255,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	/* It doesn't exist; add to inode replica table if requested. */
 	if (flag == IOSV_LOOKUPF_ADD) {
-		int waslk, wasbusy;
 
 		/* paranoid */
 		psc_assert(i == nr);
@@ -272,16 +271,12 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			j = i;
 		}
 
-		wasbusy = FCMH_REQ_BUSY(f, &waslk);
-
 		repl[j].bs_id = ios;
 
 		DEBUG_INOH(PLL_DIAG, ih, buf, "add IOS(%u) at idx %d", ios, i);
 
 		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
-
-		FCMH_UREQ_BUSY(f, wasbusy, waslk);
 
 		if (rc)
 			goto out;
