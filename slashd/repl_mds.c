@@ -181,7 +181,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
  			 * Luckily, this code is only called by mds_repl_delrq() 
  			 * for directories.
  			 *
- 			 * Make sure that the following edge cases works:
+ 			 * Make sure that the logic works for at least the following 
+ 			 * edge cases:
  			 *
  			 *    (1) There is only one item in the basic array.
  			 *    (2) There is only one item in the extra array.
