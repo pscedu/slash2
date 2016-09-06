@@ -277,10 +277,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		ih->inoh_ino.ino_nrepls = nr + 1;
 		rc = mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
-
-		if (rc)
-			goto out;
-		rc = i;
+		if (!rc)
+			rc = i;
 	}
 
  out:
