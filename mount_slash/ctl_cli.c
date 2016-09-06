@@ -166,7 +166,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			goto out;
 		}
 
- issue:
+again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_ADDRQ, rq, mq,
 		    mp, rc);
@@ -193,7 +193,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (mp->nbmaps_processed < mrq->mrq_nbmaps) {
 				mrq->mrq_bmapno += mp->nbmaps_processed;
 				mrq->mrq_nbmaps -= mp->nbmaps_processed;
-				goto issue;
+				goto again;
 			}
 			rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": "
 			    "invalid reply received from MDS",
