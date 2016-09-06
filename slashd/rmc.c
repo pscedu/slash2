@@ -1747,6 +1747,7 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* Handle SRMT_REPL_ADDRQ request */
 int
 slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 {
@@ -1760,6 +1761,7 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* Handle SRMT_REPL_DELRQ request */
 int
 slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 {
@@ -1773,7 +1775,7 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
-/* Handle SRMT_REPL_GETST RPC */
+/* Handle SRMT_REPL_GETST request */
 int
 slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
