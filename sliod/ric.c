@@ -108,6 +108,10 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	off_t rc, f_off;
 	int fd, percentage;
 
+	/*
+ 	 * Set sli_min_space_reserve_gb/pct to zero to disable
+ 	 * the reserve.
+ 	 */
 	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
 	    >= (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
 		return (1);
