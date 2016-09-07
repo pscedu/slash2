@@ -990,17 +990,17 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		replv.n = 0;
 		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
 		    slm_repl_countvalid_cb, &replv);
-		if (replv.n == 0)
-			PFL_GOTOERR(bmap_done, rc = -SLERR_LASTREPL);
 
-		flags = 0;
-		rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
-		    nios, slm_repl_delrq_cb, &flags);
-		if (flags & FLAG_DIRTY) {
-			mds_bmap_write_logrepls(b);
+		if (replv.n == 0)
+			rc = -SLERR_LASTREPL;
+		else {
+			flags = 0;
+			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
+			    nios, slm_repl_delrq_cb, &flags);
+			if (flags & FLAG_DIRTY)
+				mds_bmap_write_logrepls(b);
 		}
 
- bmap_done:
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
