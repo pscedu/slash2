@@ -894,7 +894,7 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
     void *arg)
 {
 	struct slm_repl_valid *t = arg;
-	int j;
+	int i;
 
 	/* If the state isn't VALID, nothing to count. */
 	if (val != BREPLST_VALID)
@@ -904,8 +904,8 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
 	 * If we find an IOS that was specified, we can't factor it into
 	 * our count since it won't be here much longer.
 	 */
-	for (j = 0; j < t->nios; j++)
-		if (iosidx == t->idx[j])
+	for (i = 0; i < t->nios; i++)
+		if (iosidx == t->idx[i])
 			return;
 	t->n++;
 }
