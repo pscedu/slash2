@@ -917,20 +917,12 @@ slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	int *flags = arg;
 
 	switch (val) {
-	case BREPLST_INVALID:
 	case BREPLST_REPL_QUEUED:
 	case BREPLST_REPL_SCHED:
-		break;
-
-	case BREPLST_GARBAGE:
-	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_VALID:
-		 *flags |= FLAG_DIRTY;
-		 break;
-
+		*flags |= FLAG_DIRTY;
+		break;
 	default:
-		 /* Report that the replica will not be made invalid. */
-		 *flags |= FLAG_REPLICA_STATE_INVALID;
 		 break;
 	}
 }
