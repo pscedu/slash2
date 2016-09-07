@@ -166,6 +166,11 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	brepls_init(retifset, 0);
 
 	if (rc == 0) {
+		/*
+ 		 * If a bmap is already marked as GARBAGE, the
+ 		 * replication will be done in vain.  See
+ 		 * mds_repl_delrq().
+ 		 */
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
