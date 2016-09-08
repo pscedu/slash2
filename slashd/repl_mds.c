@@ -866,6 +866,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (flags & FLAG_REPLICA_STATE_INVALID) {
+			/* See pfl_register_errno() */
 			rc = -SLERR_REPLICA_STATE_INVALID;
 			break;
 		}
@@ -1000,12 +1001,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			if (flags & FLAG_DIRTY)
 				mds_bmap_write_logrepls(b);
 		}
-
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-		if (flags & FLAG_REPLICA_STATE_INVALID) {
-			/* See pfl_register_errno() */
-			rc = -SLERR_REPLICA_STATE_INVALID;
-		}
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
