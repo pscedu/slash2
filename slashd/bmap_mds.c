@@ -31,6 +31,7 @@
 #include "fidc_mds.h"
 #include "mdsio.h"
 #include "repl_mds.h"
+#include "slashd.h"
 #include "slerr.h"
 #include "up_sched_res.h"
 
@@ -310,6 +311,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	int rc, vfsid, level;
 	uint64_t crc;
 	size_t nb;
+	struct slm_wkdata_wr_brepl *wk;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	mds_bmap_ensure_valid(b);
@@ -345,6 +347,12 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	if (!rc && logf == (void *)mdslog_bmap_repls) {
 		BMAP_LOCK_ENSURE(b);
 		b->bcm_flags |= BMAPF_REPLMODWR;
+		psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
+		wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
+		    struct slm_wkdata_wr_brepl);
+		wk->b = b;
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+		pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
 	}
 
 	return (rc);

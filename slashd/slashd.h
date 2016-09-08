@@ -377,6 +377,7 @@ int	 mdscoh_req(struct bmap_mds_lease *);
 void	 slm_coh_delete_file(struct fidc_membh *);
 
 void	 slm_mdfs_scan(void);
+int	 slm_wkcb_wr_brepl(void *);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
 int	 _dbdo(const struct pfl_callerinfo *,

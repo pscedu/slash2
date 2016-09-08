@@ -1790,22 +1790,13 @@ void
 mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_bmap_repls *sjbr;
-	struct slm_wkdata_wr_brepl *wk;
 	struct bmap *b = datap;
-
-	psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
 
 	sjbr = pjournal_get_buf(slm_journal, sizeof(*sjbr));
 	mdslogfill_bmap_repls(b, sjbr);
 	pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_REPLS, 0,
 	    sjbr, sizeof(*sjbr));
 	pjournal_put_buf(slm_journal, sjbr);
-
-	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
-	    struct slm_wkdata_wr_brepl);
-	wk->b = b;
-	bmap_op_start_type(b, BMAP_OPCNT_WORK);
-	pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
 }
 
 /*
