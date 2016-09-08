@@ -44,7 +44,7 @@ char *sl_errstrs[] = {
 /* 16 */ "Authorization buffer has a bad hash",
 /* 17 */ "Authorization buffer not provided",
 /* 18 */ "User account does not exist",
-/* 19 */ "Busy replica state",
+/* 19 */ "unknown code 19",
 /* 20 */ "File generation old",
 /* 21 */ "File generation invalid",
 /* 22 */ "unknown code 22",
