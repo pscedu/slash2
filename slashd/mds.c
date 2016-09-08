@@ -1505,6 +1505,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	int rc, vfsid;
+	struct srt_stat sstb;
 
 	rc = slfid_to_vfsid(c->fg.fg_fid, &vfsid);
 	if (rc)
@@ -1619,14 +1620,10 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * turn them off after any modification.
 	 */
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
-		struct srt_stat sstb;
-
-		FCMH_WAIT_BUSY(f);
-		sstb.sst_mode = f->fcmh_sstb.sst_mode &
-		    ~(S_ISGID | S_ISUID);
-		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE,
-		    &sstb);
-		FCMH_UNBUSY(f);
+		FCMH_LOCK(f);
+		sstb.sst_mode = f->fcmh_sstb.sst_mode & ~(S_ISGID | S_ISUID);
+		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE, &sstb);
+		FCMH_ULOCK(f);
 	}
 
  out:

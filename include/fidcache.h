@@ -207,8 +207,10 @@ struct fidc_membh {
 	do {								\
 		int _wb;						\
 									\
+		FCMH_LOCK_ENSURE((f));					\
 		_wb = FCMH_REQ_BUSY((f));				\
 		psc_assert(_wb == 0);					\
+		FCMH_ULOCK((f));					\
 	} while (0)
 
 #define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0)
