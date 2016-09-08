@@ -969,6 +969,12 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
+
+	/*
+ 	 * The following loop will bail out on the very first error. 
+ 	 * However,  its previous action, if any, has already taken
+ 	 * effect.
+ 	 */
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
