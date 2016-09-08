@@ -429,7 +429,9 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	freelock(&fcmh_ref_lock);
 #endif
 
-	(void)FCMH_RLOCK(f);
+	if (!FCMH_HAS_LOCK(f))
+		FCMH_LOCK(f);
+
 	rc = f->fcmh_refcnt--;
 	psc_assert(rc > 0);
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
