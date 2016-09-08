@@ -931,7 +931,7 @@ int
 mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
     sl_bmapno_t *nbmaps, sl_replica_t *iosv, int nios)
 {
-	int tract[NBREPLST], rc, iosidx[SL_MAX_REPLICAS], flags = 0;
+	int tract[NBREPLST], rc, iosidx[SL_MAX_REPLICAS], flags;
 	sl_bmapno_t nbmaps_processed = 0;
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
@@ -947,15 +947,15 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	FCMH_WAIT_BUSY(f);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
+	else
+		flags = IOSV_LOOKUPF_LOOKUP;
 
 	/* Find replica IOS indexes. */
 	rc = -_mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
 	    iosidx, nios, flags);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
-	if (fcmh_isdir(f))
-		PFL_GOTOERR(out, 0);
+	if (fcmh_isdir(f) || rc)
+		PFL_GOTOERR(out, rc);
 
 	replv.nios = nios;
 	replv.idx = iosidx;
