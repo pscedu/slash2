@@ -1002,6 +1002,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		/* pfl_register_errno() */
 		if (flags & FLAG_REPLICA_STATE_INVALID)
 			PFL_GOTOERR(out,
 			    rc = -SLERR_REPLICA_STATE_INVALID);
