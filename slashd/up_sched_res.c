@@ -545,6 +545,11 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
+	/*
+ 	 * XXX Should we drop the lock on the fcmh?  Otherwise the work thread
+ 	 * won't be able to be done with a bmap and then move on to clear the
+ 	 * BMAPF_REPLMODWR flag of other bmaps in the same file.
+ 	 */
 	FCMH_WAIT_BUSY(f);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
