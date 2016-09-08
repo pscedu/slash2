@@ -991,10 +991,10 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		mds_repl_bmap_walkcb(b, NULL, NULL, 0,
 		    slm_repl_countvalid_cb, &replv);
 
+		flags = 0;
 		if (replv.n == 0)
 			rc = -SLERR_LASTREPL;
 		else {
-			flags = 0;
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
 			if (flags & FLAG_DIRTY)
