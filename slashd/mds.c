@@ -102,14 +102,9 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	sl_bmapno_t lastbno;
 	int64_t amt = 0;
 
-	locked[1] = 0; /* gcc */
-
 	f = b->bcm_fcmh;
 	locked[0] = FCMH_RLOCK(f);
-	if (locked[0] == PSLRV_WASLOCKED)
-		locked[1] = BMAP_RLOCK(b);
-	else
-		BMAP_LOCK(b);
+	locked[1] = BMAP_RLOCK(b);
 
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno)
@@ -145,10 +140,7 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 			amt += SLASH_SLVR_SIZE;
 		}
 	}
-	if (locked[0] == PSLRV_WASLOCKED)
-		BMAP_URLOCK(b, locked[1]);
-	else
-		BMAP_ULOCK(b);
+	BMAP_URLOCK(b, locked[1]);
 	FCMH_URLOCK(f, locked[0]);
 	return (amt);
 }
