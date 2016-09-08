@@ -2062,13 +2062,13 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 int
 msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
-	int dummy, flush_size = 0, flush_mtime = 0;
-	int rc, waslocked, to_set = 0;
+	int flush_size = 0, flush_mtime = 0;
+	int rc, wasbusy, to_set = 0;
 	struct srt_stat attr;
 
 	memset(&attr, 0, sizeof(attr));
 
-	waslocked = FCMH_RLOCK(f);
+	FCMH_LOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_BUSY);
 
 	/*
@@ -2078,20 +2078,20 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
 		flush_size = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_DSIZE;
-		FCMH_REQ_BUSY(f, &dummy);
+		wasbusy = FCMH_REQ_BUSY(f);
 		to_set |= PSCFS_SETATTRF_DATASIZE;
 		attr.sst_size = f->fcmh_sstb.sst_size;
 	}
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
 		flush_mtime = 1;
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_MTIME;
-		FCMH_REQ_BUSY(f, &dummy);
+		wasbusy = FCMH_REQ_BUSY(f);
 		to_set |= PSCFS_SETATTRF_MTIME;
 		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
 	if (!to_set) {
 		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
-		FCMH_URLOCK(f, waslocked);
+		FCMH_ULOCK(f);
 		return (0);
 	}
 
@@ -2100,14 +2100,14 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	rc = msl_setattr(f, to_set, &attr, 0);
 
 	FCMH_LOCK(f);
-	FCMH_UREQ_BUSY(f, 0, PSLRV_WASLOCKED);
+	FCMH_UREQ_BUSY(f, wasbusy);
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 		fcmh_wake_locked(f);
-		FCMH_URLOCK(f, waslocked);
+		FCMH_ULOCK(f);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -2126,10 +2126,8 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-		if (waslocked == PSLRV_WASLOCKED)
-			FCMH_LOCK(f);
 	} else
-		FCMH_URLOCK(f, waslocked);
+		FCMH_ULOCK(f);
 
 	return (rc);
 }

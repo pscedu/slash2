@@ -164,12 +164,13 @@ struct fidc_membh {
 		(_got);							\
 	} _PFL_RVEND
 
-#define FCMH_REQ_BUSY(f, waslocked)					\
+#define FCMH_REQ_BUSY(f)						\
 	_PFL_RVSTART {							\
 		pthread_t _pthr = pthread_self();			\
 		int _wasbusy = 0;					\
+		int _waslocked;						\
 									\
-		*(waslocked) = FCMH_RLOCK(f);				\
+		_waslocked = FCMH_RLOCK(f);				\
 		if (((f)->fcmh_flags & FCMH_BUSY) &&			\
 		    (f)->fcmh_owner == _pthr) {				\
 			 _wasbusy = 1;					\
@@ -183,13 +184,14 @@ struct fidc_membh {
 			(f)->fcmh_fn = __FILE__;			\
 			DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");		\
 		}							\
+		FCMH_URLOCK(f, _waslocked);				\
 		(_wasbusy);						\
 	} _PFL_RVEND
 
-#define FCMH_UREQ_BUSY(f, wasbusy, waslocked)				\
+#define FCMH_UREQ_BUSY(f, wasbusy)					\
 	do {								\
-		(void)FCMH_RLOCK(f);					\
-		FCMH_BUSY_ENSURE(f);					\
+		int _waslocked;						\
+		_waslocked = FCMH_RLOCK(f);				\
 		if (wasbusy) {						\
 			DEBUG_FCMH(PLL_DEBUG, (f), "unrequire BUSY");	\
 		} else {						\
@@ -198,18 +200,18 @@ struct fidc_membh {
 			DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");	\
 			fcmh_wake_locked(f);				\
 		}							\
-		FCMH_URLOCK((f), (waslocked));				\
+		FCMH_URLOCK((f), _waslocked);				\
 	} while (0)
 
 #define FCMH_WAIT_BUSY(f)						\
 	do {								\
-		int _wb, _waslocked;					\
+		int _wb;						\
 									\
-		_wb = FCMH_REQ_BUSY((f), &_waslocked);			\
+		_wb = FCMH_REQ_BUSY((f));				\
 		psc_assert(_wb == 0);					\
 	} while (0)
 
-#define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0, PSLRV_WASNOTLOCKED)
+#define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0)
 
 #define FCMH_HAS_BUSY(f)						\
 	(((f)->fcmh_flags & FCMH_BUSY) &&				\
