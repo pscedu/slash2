@@ -451,6 +451,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		fcmh_set_repl_nblks(f, idx, crcup->nblks);
 
 		/* use nolog because mdslog_bmap_crc() will cover this */
+		FCMH_LOCK(f);
 		rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
 		if (rc)
 			psclog_error("unable to setattr: rc=%d", rc);
@@ -459,6 +460,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 			mds_inode_write(vfsid, ih, NULL, NULL);
 		else
 			mds_inox_write(vfsid, ih, NULL, NULL);
+		FCMH_ULOCK(f);
 	}
 
 	for (i = 0; i < crcup->nups; i++) {
