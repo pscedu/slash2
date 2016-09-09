@@ -3783,8 +3783,8 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 
-			msl_flush_ioattrs(NULL, f);
 			FCMH_ULOCK(f);
+			msl_flush_ioattrs(NULL, f);
 			break;
 		}
 		if (fci == NULL) {
