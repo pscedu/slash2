@@ -142,28 +142,6 @@ struct fidc_membh {
 			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
 	} while (0)
 
-#define FCMH_TRYBUSY(f)							\
-	_PFL_RVSTART {							\
-		pthread_t _pthr = pthread_self();			\
-		int _waslocked, _got = 0;				\
-									\
-		_waslocked = FCMH_RLOCK(f);				\
-		if ((f)->fcmh_flags & FCMH_BUSY) {			\
-			if ((f)->fcmh_owner == _pthr)			\
-				DEBUG_FCMH(PLL_FATAL, (f),		\
-				    "TRYBUSY: already holding");	\
-		} else {						\
-			(f)->fcmh_flags |= FCMH_BUSY;			\
-			(f)->fcmh_owner = _pthr;			\
-			(f)->fcmh_lineno = __LINE__;			\
-			(f)->fcmh_fn = __FILE__;			\
-			DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");		\
-			_got = 1;					\
-		}							\
-		FCMH_URLOCK(f, _waslocked);				\
-		(_got);							\
-	} _PFL_RVEND
-
 #define FCMH_WAIT_BUSY(f, unlock)					\
 	do {								\
 		pthread_t _pthr = pthread_self();			\
