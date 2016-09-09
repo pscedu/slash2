@@ -2868,6 +2868,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	busied = 1;
+	FCMH_LOCK(c);
 	FCMH_WAIT_BUSY(c);
 
 	slc_getfscreds(pfr, &pcr);
