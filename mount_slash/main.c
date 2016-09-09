@@ -2063,13 +2063,13 @@ int
 msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 {
 	int flush_size = 0, flush_mtime = 0;
-	int rc, wasbusy, to_set = 0;
+	int rc, to_set = 0;
 	struct srt_stat attr;
 
 	memset(&attr, 0, sizeof(attr));
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f);
+	FCMH_WAIT_BUSY(f, 1);
 
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
@@ -2089,7 +2089,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	}
 	if (!to_set) {
 		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		return (0);
 	}
 
@@ -2103,7 +2103,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -2119,13 +2119,13 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 
 		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	} else
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 
 	return (rc);
 }
@@ -2867,7 +2867,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	busied = 1;
 	FCMH_LOCK(c);
-	FCMH_WAIT_BUSY(c);
+	FCMH_WAIT_BUSY(c, 1);
 
 	slc_getfscreds(pfr, &pcr);
 
@@ -3110,7 +3110,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if (c) {
 		if (busied)
-			FCMH_UNBUSY(c);
+			FCMH_UNBUSY(c, 1);
 
 #if 0
 		/* 

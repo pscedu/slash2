@@ -536,7 +536,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f);
+	FCMH_WAIT_BUSY(f, 1);
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
 	    bia->bia_ios);
 
@@ -557,7 +557,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		return (rc);
 	}
 	mds_reserve_slot(1);
@@ -572,7 +572,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
@@ -1256,7 +1256,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		retifset[BREPLST_TRUNCPNDG] = 1;
 
 		BMAP_ULOCK(b);
-		FCMH_WAIT_BUSY(f);
+		FCMH_LOCK(f);
+		FCMH_WAIT_BUSY(f, 1);
 	
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
@@ -1278,7 +1279,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		}
 
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		BMAP_LOCK(b);
 	}
 
@@ -2056,7 +2057,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	fmi = fcmh_2_fmi(f);
 
 	/* get the number of replies we expect */
@@ -2136,7 +2138,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	}
 
  out2:
-	FCMH_UNBUSY(f);
 	if (!queued && !rc) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
@@ -2144,6 +2145,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc completed.");
 		FCMH_ULOCK(f);
 	}
+	FCMH_UNBUSY(f, 1);
 	OPSTAT_INCR("ptrunc-apply");
 	return (rc);
 }

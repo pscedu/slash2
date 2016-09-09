@@ -164,7 +164,7 @@ struct fidc_membh {
 		(_got);							\
 	} _PFL_RVEND
 
-#define FCMH_WAIT_BUSY(f)						\
+#define FCMH_WAIT_BUSY(f, unlock)					\
 	do {								\
 		pthread_t _pthr = pthread_self();			\
 		FCMH_LOCK_ENSURE((f));					\
@@ -175,11 +175,16 @@ struct fidc_membh {
 		(f)->fcmh_lineno = __LINE__;				\
 		(f)->fcmh_fn = __FILE__;				\
 		DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");			\
+		if (unlock)						\
+			 FCMH_ULOCK((f));				\
 	} while (0)
 
-#define FCMH_UNBUSY(f)							\
+#define FCMH_UNBUSY(f, lock)						\
 	do {								\
-		FCMH_LOCK_ENSURE((f));					\
+		if (lock)						\
+			FCMH_LOCK((f));					\
+		else							\
+			FCMH_LOCK_ENSURE((f));				\
 		psc_assert(FCMH_HAS_BUSY(f));				\
 		(f)->fcmh_owner = 0;					\
 		(f)->fcmh_flags &= ~FCMH_BUSY;				\

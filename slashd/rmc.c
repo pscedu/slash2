@@ -1293,7 +1293,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	BMAP_ULOCK(b);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags &BMAPF_REPLMODWR);
@@ -1304,7 +1305,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	/* XXX upd_enqueue */
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
  out:
 	if (b)

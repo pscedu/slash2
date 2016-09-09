@@ -101,7 +101,7 @@ mds_replay_bmap(void *jent, int op)
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
 			    "table", sjbc->sjbc_iosid);
-			goto unbusy;
+			goto out;
 		}
 		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
@@ -112,7 +112,7 @@ mds_replay_bmap(void *jent, int op)
 			rc = mds_inode_write(current_vfsid, ih, NULL,
 			    NULL);
 		if (rc)
-			goto unbusy;
+			goto out;
 
 		fl = SL_SETATTRF_NBLKS;
 
@@ -145,7 +145,8 @@ mds_replay_bmap(void *jent, int op)
 		 * So we have some changes in the journal, but not
 		 * in the sql table.
 		 */
-		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		FCMH_LOCK(b->bcm_fcmh);
+		FCMH_WAIT_BUSY(b->bcm_fcmh, 0);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -196,23 +197,20 @@ mds_replay_bmap(void *jent, int op)
 				break;
 			}
 
-		FCMH_UNBUSY(b->bcm_fcmh);
+		FCMH_UNBUSY(b->bcm_fcmh, 0);
 		break;
 	}
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
-	FCMH_WAIT_BUSY(b->bcm_fcmh);
+	FCMH_LOCK(b->bcm_fcmh);
+	FCMH_WAIT_BUSY(b->bcm_fcmh, 0);
 
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(b->bcm_fcmh);
-
-	if (0)
- unbusy:
-		FCMH_UNBUSY(f);
+	FCMH_UNBUSY(b->bcm_fcmh, 0);
 
  out:
 	if (b)

@@ -801,7 +801,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 
@@ -871,7 +872,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			break;
 		}
 	}
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 
  out:
 	if (f)
@@ -945,7 +946,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
 	else
@@ -1014,7 +1016,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
  out:
 	if (f) {
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
 	}
 	*nbmaps = nbmaps_processed;

@@ -272,7 +272,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	FCMH_LOCK(f);
 	if (!FCMH_HAS_BUSY(f)) {
 		unbusy = 1;
-		FCMH_WAIT_BUSY(f);
+		FCMH_WAIT_BUSY(f, 1);
 	} else
 		FCMH_ULOCK(f);
 	BMAP_LOCK(b);
@@ -297,7 +297,7 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	BMAP_ULOCK(b);
 	if (unbusy)
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 	return (0);
 }
 
@@ -412,10 +412,11 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (vfsid != current_vfsid)
 		return (-EINVAL);
 
-	FCMH_WAIT_BUSY(f);
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0) {
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		psclog_warnx("CRC update: invalid IOS %x", iosid);
 		return (idx);
 	}
@@ -430,7 +431,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	    &idx, 1, NULL, NULL);
 	if (!rc) {
 		BMAP_ULOCK(bmap);
-		FCMH_UNBUSY(f);
+		FCMH_UNBUSY(f, 1);
 		OPSTAT_INCR("crcup-invalid");
 		return (-EINVAL);
 	}
@@ -454,8 +455,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		if (rc)
 			psclog_error("unable to setattr: rc=%d", rc);
 
-		FCMH_LOCK(f);
-
 		if (idx < SL_DEF_REPLICAS)
 			mds_inode_write(vfsid, ih, NULL, NULL);
 		else
@@ -478,7 +477,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
 
 	BMAP_ULOCK(bmap);
-	FCMH_UNBUSY(f);
+	FCMH_UNBUSY(f, 1);
 	return (rc);
 }
 
