@@ -2098,7 +2098,6 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	rc = msl_setattr(f, to_set, &attr, 0);
 
-	FCMH_LOCK(f);
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
@@ -2867,7 +2866,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
-	FCMH_WAIT_BUSY(c, 1);
+	FCMH_WAIT_BUSY(c, 0);
 
 	slc_getfscreds(pfr, &pcr);
 
@@ -2954,25 +2953,21 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		struct bmap *b;
 
 		if (!stb->st_size) {
-			DEBUG_FCMH(PLL_DIAG, c,
-			    "full truncate, free bmaps");
-
+			DEBUG_FCMH(PLL_DIAG, c, "full truncate, free bmaps");
 			OPSTAT_INCR("msl.truncate-full");
 			bmap_free_all_locked(c);
-			FCMH_ULOCK(c);
-
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
 			/*
 			 * No-op.  Don't send truncate request if the
 			 * sizes match.
 			 */
+			FCMH_ULOCK(c);
 			goto out;
 		} else {
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
 			OPSTAT_INCR("msl.truncate-part");
-
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
 			FCMH_ULOCK(c);
@@ -3015,16 +3010,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
 			psc_dynarray_free(&a);
+			FCMH_LOCK(c);
 		}
 	}
 
-	FCMH_LOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting_attrs = 1;
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
-	FCMH_ULOCK(c);
 
 	/*
 	 * Turn on mtime explicitly if we are going to change the size.
@@ -3038,7 +3032,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		PFL_STB_MTIME_SET(ts.tv_sec, ts.tv_nsec, stb);
 	}
 
-	FCMH_LOCK(c);
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_MTIME) {
 		flush_mtime = 1;
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
