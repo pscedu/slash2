@@ -142,7 +142,6 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	INOH_LOCK_ENSURE(ih);
 
 	f = inoh_2_fcmh(ih);
-
 	if (!FCMH_HAS_BUSY(f)) {
 		wasbusy = 0;
 		FCMH_WAIT_BUSY(f, 0);

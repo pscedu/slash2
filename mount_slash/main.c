@@ -2069,7 +2069,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	memset(&attr, 0, sizeof(attr));
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
+	FCMH_WAIT_BUSY(f, 0);
 
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
@@ -2089,7 +2089,8 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	}
 	if (!to_set) {
 		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
-		FCMH_UNBUSY(f, 1);
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
 		return (0);
 	}
 
@@ -2834,7 +2835,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
 	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
-	int i, busied = 0, rc = 0, unset_trunc = 0, getting_attrs = 0;
+	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
 	struct msl_dc_inv_entry_data mdie;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
@@ -2865,7 +2866,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set == 0)
 		goto out;
 
-	busied = 1;
 	FCMH_LOCK(c);
 	FCMH_WAIT_BUSY(c, 1);
 

@@ -318,6 +318,7 @@ slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 	}
 	rc = mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
 	FCMH_UNBUSY(c, 0);
+	FCMH_ULOCK(c);
 	return (rc);
 }
 

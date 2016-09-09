@@ -166,11 +166,10 @@ struct fidc_membh {
 		psc_assert(FCMH_HAS_BUSY(f));				\
 		(f)->fcmh_owner = 0;					\
 		(f)->fcmh_flags &= ~FCMH_BUSY;				\
-		DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");		\
-		if (lock) {						\
-			fcmh_wake_locked((f));				\
+		DEBUG_FCMH(PLL_DIAG, (f), "clear BUSY");		\
+		fcmh_wake_locked((f));					\
+		if (lock)						\
 			FCMH_ULOCK((f));				\
-		}							\
 	} while (0)
 
 #define FCMH_HAS_BUSY(f)						\
