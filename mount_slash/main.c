@@ -3069,6 +3069,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
  out:
 	if (c) {
 		FCMH_LOCK(c);
+		FCMH_UNBUSY(c, 0);
 		if (unset_trunc) {
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
@@ -3109,8 +3110,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 
 	if (c) {
-		if (busied)
-			FCMH_UNBUSY(c, 0);
 
 #if 0
 		/* 
