@@ -173,7 +173,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (!rc) 
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
-	FCMH_UNBUSY(f, 1);
+	FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 

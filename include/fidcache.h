@@ -190,7 +190,8 @@ struct fidc_membh {
 		(f)->fcmh_flags &= ~FCMH_BUSY;				\
 		DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");		\
 		fcmh_wake_locked((f));					\
-		FCMH_ULOCK((f));					\
+		if (lock)						\
+			FCMH_ULOCK((f));				\
 	} while (0)
 
 #define FCMH_HAS_BUSY(f)						\
