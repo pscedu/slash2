@@ -3020,7 +3020,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
-	(void)FCMH_RLOCK(c);
+	FCMH_LOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting_attrs = 1;
