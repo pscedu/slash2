@@ -456,6 +456,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		if (rc)
 			psclog_error("unable to setattr: rc=%d", rc);
 
+		FCMH_LOCK(f);
 		if (idx < SL_DEF_REPLICAS)
 			mds_inode_write(vfsid, ih, NULL, NULL);
 		else
