@@ -221,7 +221,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
 	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
 
-	FCMH_UNBUSY(f, 1);
+	FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 
