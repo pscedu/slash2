@@ -269,10 +269,12 @@ mds_bmap_read(struct bmap *b, int flags)
  out2:
 
 	unbusy = 0;
+	FCMH_LOCK(f);
 	if (!FCMH_HAS_BUSY(f)) {
 		unbusy = 1;
 		FCMH_WAIT_BUSY(f);
-	}
+	} else
+		FCMH_ULOCK(f);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
