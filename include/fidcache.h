@@ -164,56 +164,29 @@ struct fidc_membh {
 		(_got);							\
 	} _PFL_RVEND
 
-#define FCMH_REQ_BUSY(f)						\
-	_PFL_RVSTART {							\
-		pthread_t _pthr = pthread_self();			\
-		int _wasbusy = 0;					\
-		int _waslocked;						\
-									\
-		_waslocked = FCMH_RLOCK(f);				\
-		if (((f)->fcmh_flags & FCMH_BUSY) &&			\
-		    (f)->fcmh_owner == _pthr) {				\
-			 _wasbusy = 1;					\
-			DEBUG_FCMH(PLL_DEBUG, (f), "require BUSY");	\
-		} else {						\
-			fcmh_wait_locked((f),				\
-			    (f)->fcmh_flags & FCMH_BUSY);		\
-			(f)->fcmh_flags |= FCMH_BUSY;			\
-			(f)->fcmh_owner = _pthr;			\
-			(f)->fcmh_lineno = __LINE__;			\
-			(f)->fcmh_fn = __FILE__;			\
-			DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");		\
-		}							\
-		FCMH_URLOCK(f, _waslocked);				\
-		(_wasbusy);						\
-	} _PFL_RVEND
-
-#define FCMH_UREQ_BUSY(f, wasbusy)					\
-	do {								\
-		int _waslocked;						\
-		_waslocked = FCMH_RLOCK(f);				\
-		if (wasbusy) {						\
-			DEBUG_FCMH(PLL_DEBUG, (f), "unrequire BUSY");	\
-		} else {						\
-			(f)->fcmh_owner = 0;				\
-			(f)->fcmh_flags &= ~FCMH_BUSY;			\
-			DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");	\
-			fcmh_wake_locked(f);				\
-		}							\
-		FCMH_URLOCK((f), _waslocked);				\
-	} while (0)
-
 #define FCMH_WAIT_BUSY(f)						\
 	do {								\
-		int _wb;						\
-									\
+		pthread_t _pthr = pthread_self();			\
 		FCMH_LOCK_ENSURE((f));					\
-		_wb = FCMH_REQ_BUSY((f));				\
-		psc_assert(_wb == 0);					\
+		psc_assert(!FCMH_HAS_BUSY(f));				\
+		fcmh_wait_locked((f), (f)->fcmh_flags & FCMH_BUSY);	\
+		(f)->fcmh_flags |= FCMH_BUSY;				\
+		(f)->fcmh_owner = _pthr;				\
+		(f)->fcmh_lineno = __LINE__;				\
+		(f)->fcmh_fn = __FILE__;				\
+		DEBUG_FCMH(PLL_DIAG, (f), "set BUSY");			\
 		FCMH_ULOCK((f));					\
 	} while (0)
 
-#define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0)
+#define FCMH_UNBUSY(f)							\
+	do {								\
+		FCMH_LOCK_ENSURE((f));					\
+		psc_assert(FCMH_HAS_BUSY(f));				\
+		(f)->fcmh_owner = 0;					\
+		(f)->fcmh_flags &= ~FCMH_BUSY;				\
+		DEBUG_FCMH(PLL_DIAG, (f), "cleared BUSY");		\
+		fcmh_wake_locked(f);					\
+	} while (0)
 
 #define FCMH_HAS_BUSY(f)						\
 	(((f)->fcmh_flags & FCMH_BUSY) &&				\

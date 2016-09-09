@@ -3070,7 +3070,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
  out:
 	if (c) {
-		(void)FCMH_RLOCK(c);
+		FCMH_LOCK(c);
 		if (unset_trunc) {
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
