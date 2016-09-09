@@ -3110,7 +3110,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if (c) {
 		if (busied)
-			FCMH_UNBUSY(c, 1);
+			FCMH_UNBUSY(c, 0);
 
 #if 0
 		/* 
