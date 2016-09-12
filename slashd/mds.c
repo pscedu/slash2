@@ -91,7 +91,8 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 }
 
 /*
- * Calculate the number of valid bytes in the bmap.
+ * Calculate the number of valid bytes in the bmap. We assume
+ * that the file is not sparse.
  */
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
@@ -121,6 +122,10 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 		if (lastsize == 0)
 			lastsize = SLASH_SLVR_SIZE;
 	} else {
+		/*
+		 * XXX can we unlock and return here
+		 * without going through the next loop?
+		 */ 
 		lastslvr = 0;
 		lastsize = 0;
 	}
