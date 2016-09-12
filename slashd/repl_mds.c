@@ -1024,7 +1024,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 }
 
 #define HAS_BW(bwd, amt)						\
-	((bwd)->bwd_queued + (bwd)->bwd_inflight < slm_upsch_bandwidth * 1024)
+	((bwd)->bwd_queued + (bwd)->bwd_inflight < 			\
+	slm_upsch_bandwidth * BW_UNITSZ)				
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\

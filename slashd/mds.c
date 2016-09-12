@@ -91,8 +91,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 }
 
 /*
- * Calculate the number of valid bytes in the bmap. We assume
- * that the file is not sparse.
+ * Calculate the number of valid bytes in the bmap.
  */
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
