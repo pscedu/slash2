@@ -1029,8 +1029,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 #define ADJ_BW(bwd, amt)						\
 	do {								\
-		if ((amt) > 0)						\
-			(bwd)->bwd_inflight += (amt);			\
+		(bwd)->bwd_inflight += (amt);				\
 		(bwd)->bwd_assigned += (amt);				\
 		psc_assert((bwd)->bwd_assigned >= 0);			\
 	} while (0)
@@ -1073,6 +1072,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	     HAS_BW(&is->si_bw_aggr, amt) &&
 	     HAS_BW(&id->si_bw_ingress, amt) &&
 	     HAS_BW(&id->si_bw_aggr, amt))) {
+
 		ADJ_BW(&is->si_bw_egress, amt);
 		ADJ_BW(&is->si_bw_aggr, amt);
 		ADJ_BW(&id->si_bw_ingress, amt);
