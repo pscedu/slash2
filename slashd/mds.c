@@ -117,6 +117,8 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 		bmapsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 		if (bmapsize == 0)
 			bmapsize = SLASH_BMAP_SIZE;
+
+		/* last slvr number within the bmap */
 		lastslvr = (bmapsize - 1) / SLASH_SLVR_SIZE;
 		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
 		if (lastsize == 0)
