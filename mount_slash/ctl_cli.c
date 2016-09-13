@@ -123,7 +123,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 	if (pcr.pcr_uid && !msl_repl_enable)
 		return (psc_ctlsenderr(fd, mh, NULL,
-		    "replication request: %s", strerror(EACCES)));
+		    "replication disabled for non-root users: %s", 
+		    strerror(EACCES)));
 
 	if (mrq->mrq_nios < 1 ||
 	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
