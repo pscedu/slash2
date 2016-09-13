@@ -1149,6 +1149,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
+	FCMH_LOCK(f);
 	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
