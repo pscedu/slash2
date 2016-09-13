@@ -226,7 +226,7 @@ int
 slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
-	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc, moreavail;
+	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct slm_batchscratch_repl *bsr;
 	struct srt_replwk_req q;
@@ -325,11 +325,9 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		goto out;
 
 	/*
-	 * We have successfully scheduled some work; if there is more
-	 * bandwidth available, schedule more work.
+	 * We have successfully scheduled some work, page in more.
 	 */
-	if (moreavail)
-		upschq_resm(dst_resm, UPDT_PAGEIN);
+	upschq_resm(dst_resm, UPDT_PAGEIN);
 
 	return (1);
 
