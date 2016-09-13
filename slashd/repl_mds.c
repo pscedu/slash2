@@ -1052,6 +1052,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	struct rpmi_ios *is, *id;
 	int32_t amt;
 	int rc = 0;
+	int64_t cap = (int64_t)slm_upsch_bandwidth;
 
 	amt = SIGN(amt_bytes) * howmany(labs(amt_bytes), BW_UNITSZ);
 
@@ -1067,32 +1068,24 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	is = res2rpmi_ios(src->resm_res);
 	id = res2rpmi_ios(dst->resm_res);
 
-	if (amt < 0 ||
-	    (HAS_BW(&is->si_bw_egress, amt) &&
-	     HAS_BW(&is->si_bw_aggr, amt) &&
-	     HAS_BW(&id->si_bw_ingress, amt) &&
-	     HAS_BW(&id->si_bw_aggr, amt))) {
-
-		ADJ_BW(&is->si_bw_egress, amt);
-		ADJ_BW(&is->si_bw_aggr, amt);
-		ADJ_BW(&id->si_bw_ingress, amt);
-		ADJ_BW(&id->si_bw_aggr, amt);
+	if (amt > 0) {
+		if ((is->si_repl_pending + amt > cap * BW_UNITSZ) || 
+		    (id->si_repl_pending + amt > cap * BW_UNITSZ)) {
+			return (0);
+		}
+		is->si_repl_pending += amt;
+		id->si_repl_pending += amt;
 
 		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%d",
 		    src->resm_name, dst->resm_name, amt);
-
-		if (moreavail &&
-		    HAS_BW(&is->si_bw_egress, 1) &&
-		    HAS_BW(&is->si_bw_aggr, 1) &&
-		    HAS_BW(&id->si_bw_ingress, 1) &&
-		    HAS_BW(&id->si_bw_aggr, 1))
-			*moreavail = 1;
-
-		rc = 1;
 	}
 
 	/* XXX upsch page in? */
 	if (amt < 0) {
+		is->si_repl_pending -= amt;
+		id->si_repl_pending -= amt;
+		psc_assert(is->si_repl_pending >= 0);
+		psc_assert(id->si_repl_pending >= 0);
 		/*
 		 * We released some bandwidth; wake anyone waiting for
 		 * some.

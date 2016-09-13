@@ -209,13 +209,6 @@ struct rpmi_mds {
 #define res2rpmi_mds(res)	((struct rpmi_mds *)res2rpmi(res)->rpmi_info)
 #define res2mdsinfo(res)	res2rpmi_mds(res)
 
-/* bandwidth and reserved in one direction */
-struct bw_dir {
-	int32_t			 bwd_queued;		/* bandwidth in reserve queue */
-	int32_t			 bwd_inflight;		/* scratchpad until update is recv'd */
-	int32_t			 bwd_assigned;		/* amount MDS has assigned */
-};
-
 /*
  * This structure is attached to the sl_resource for IOS peers.  It
  * tracks the progress of garbage collection on each IOS.
@@ -230,9 +223,12 @@ struct rpmi_ios {
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
 
-	struct bw_dir		  si_bw_ingress;	/* incoming bandwidth */
-	struct bw_dir		  si_bw_egress;		/* outgoing bandwidth */
-	struct bw_dir		  si_bw_aggr;		/* aggregate (incoming + outgoing) */
+	/*
+	 * Aggregate bandwidth for all incoming and outgoing replication traffic.
+	 */
+	int64_t			  si_repl_pending;
+	int64_t			  si_repl_ingress_aggr;
+	int64_t			  si_repl_egress_aggr;
 };
 #define sl_mds_iosinfo rpmi_ios
 

@@ -137,13 +137,6 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 	si = rpmi->rpmi_info;
 	RPMI_LOCK(rpmi);
 	si->si_ssfb = data->f;
-
-	si->si_bw_ingress.bwd_inflight = 0;
-	si->si_bw_egress.bwd_inflight = 0;
-	si->si_bw_aggr.bwd_inflight = 0;
-	si->si_bw_ingress.bwd_queued = data->bwq.sbq_ingress;
-	si->si_bw_egress.bwd_queued = data->bwq.sbq_egress;
-	si->si_bw_aggr.bwd_queued = data->bwq.sbq_aggr;
 	RPMI_ULOCK(rpmi);
 }
 
