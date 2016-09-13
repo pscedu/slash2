@@ -148,6 +148,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	if (tmprc)
 		goto out;
 
+	FCMH_LOCK(f);
 	FCMH_WAIT_BUSY(f, 1);
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
