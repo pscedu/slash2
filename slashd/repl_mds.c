@@ -1076,8 +1076,8 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* unreserve */
 	if (amt < 0) {
-		is->si_repl_pending -= amt;
-		id->si_repl_pending -= amt;
+		is->si_repl_pending += amt;
+		id->si_repl_pending += amt;
 		psc_assert(is->si_repl_pending >= 0);
 		psc_assert(id->si_repl_pending >= 0);
 		if (!rc) {
