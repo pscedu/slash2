@@ -249,11 +249,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		return (1);
 	}
 
-	if (!resmpair_bw_adj(src_resm, dst_resm, amt, &moreavail)) {
-
+	if (!resmpair_bw_adj(src_resm, dst_resm, amt, 0)) {
 		OPSTAT_INCR("repl-throttle");
-
-		/* XXX push batch out immediately */
 		return (0);
 	}
 
@@ -353,7 +350,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		FCMH_UNBUSY(f, 1);
 	}
 
-	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
 
 	PSCFREE(bsr);
 
