@@ -303,9 +303,9 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 		memset(scrq, 0, sizeof(*scrq));
 		strlcpy(scrq->scrq_resname, r->res_name,
 		    sizeof(scrq->scrq_resname));
-		scrq->scrq_aggr_assigned = si->si_repl_pending;
-		scrq->scrq_egress_queued = si->si_repl_egress_aggr;
-		scrq->scrq_ingress_queued = si->si_repl_ingress_aggr;
+		scrq->scrq_repl_pending = si->si_repl_pending;
+		scrq->scrq_repl_egress_aggr = si->si_repl_egress_aggr;
+		scrq->scrq_repl_ingress_aggr = si->si_repl_ingress_aggr;
 		rc = psc_ctlmsg_sendv(fd, mh, scrq, NULL);
 
 		if (!rc)
