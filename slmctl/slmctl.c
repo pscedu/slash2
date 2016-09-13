@@ -100,9 +100,8 @@ int
 slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-32s %7s %7s %7s %7s %7s %7s\n",
-	    "resource", "", "in-bw", "out-q", "out-bw", "aggr-q",
-	    "aggr-bw");
+	printf("%-32s %12s %12s %12s\n",
+	    "resource", "pending", "ingress", "egress");
 	return(PSC_CTL_DISPLAY_WIDTH);
 }
 
