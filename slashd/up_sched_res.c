@@ -211,7 +211,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		fcmh_op_done(f);
 	}
 
-	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, NULL);
+	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
