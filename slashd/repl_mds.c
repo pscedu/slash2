@@ -1080,6 +1080,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 		id->si_repl_pending -= amt;
 		psc_assert(is->si_repl_pending >= 0);
 		psc_assert(id->si_repl_pending >= 0);
+		if (!rc) {
+			is->si_repl_egress_aggr += -amt;
+			id->si_repl_ingress_aggr += -amt;
+		}
 		/*
 		 * We released some bandwidth; wake anyone waiting for
 		 * some.
