@@ -111,7 +111,7 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	printf("%-32s ", scrq->scrq_resname);
 	psc_ctl_prnumber(1, scrq->scrq_repl_pending/1024, 16, " ");
 	psc_ctl_prnumber(1, scrq->scrq_repl_ingress_aggr/1024, 16, " ");
-	psc_ctl_prnumber(1, scrq->scrq_repl_ingress_aggr/1024, 16, " ");
+	psc_ctl_prnumber(1, scrq->scrq_repl_egress_aggr/1024, 16, " ");
 	printf("\n");
 }
 
