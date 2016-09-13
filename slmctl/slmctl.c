@@ -78,9 +78,6 @@ packshow_replqueued(char *res)
 	struct slmctlmsg_replqueued *scrq;
 
 	scrq = psc_ctlmsg_push(SLMCMT_GETREPLQUEUED, sizeof(*scrq));
-	if (res && strcasecmp(res, "busy") == 0)
-		strlcpy(scrq->scrq_resname, SLMC_REPLQ_BUSY,
-		    sizeof(scrq->scrq_resname));
 }
 
 void

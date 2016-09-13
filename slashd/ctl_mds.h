@@ -33,8 +33,6 @@ struct slmctlmsg_replqueued {
 	int64_t			scrq_repl_pending;
 };
 
-#define SLMC_REPLQ_BUSY		":busy"
-
 struct slmctlmsg_statfs {
 	char			scsf_resname[RES_NAME_MAX];
 	int32_t			scsf_flags;

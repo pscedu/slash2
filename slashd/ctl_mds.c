@@ -284,14 +284,11 @@ slmctlcmd_upsch_query(__unusedx int fd,
 int
 slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
-	int busyonly = 0, i, rc = 1;
+	int i, rc = 1;
 	struct slmctlmsg_replqueued *scrq = mb;
 	struct sl_resource *r;
 	struct rpmi_ios *si;
 	struct sl_site *s;
-
-	if (strcasecmp(scrq->scrq_resname, SLMC_REPLQ_BUSY) == 0)
-		busyonly = 1;
 
 	CONF_LOCK();
 	CONF_FOREACH_RES(s, r, i) {
