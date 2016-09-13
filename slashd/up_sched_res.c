@@ -890,6 +890,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
+	FCMH_LOCK(f);
 	FCMH_WAIT_BUSY(f, 1);
 
 	BMAP_LOCK(b);
