@@ -101,7 +101,7 @@ slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-32s %7s %7s %7s %7s %7s %7s\n",
-	    "resource", "in-q", "in-bw", "out-q", "out-bw", "aggr-q",
+	    "resource", "", "in-bw", "out-q", "out-bw", "aggr-q",
 	    "aggr-bw");
 	return(PSC_CTL_DISPLAY_WIDTH);
 }
@@ -113,12 +113,9 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	const struct slmctlmsg_replqueued *scrq = m;
 
 	printf("%-32s ", scrq->scrq_resname);
-	psc_ctl_prnumber(0, scrq->scrq_ingress_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_ingress_assigned * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_egress_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_egress_assigned * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_aggr_queued * BW_UNITSZ, 0, " ");
-	psc_ctl_prnumber(0, scrq->scrq_aggr_assigned * BW_UNITSZ, 0, "\n");
+	psc_ctl_prnumber(0, scrq->scrq_repl_pending, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_repl_ingress_aggr, 0, " ");
+	psc_ctl_prnumber(0, scrq->scrq_repl_ingress_aggr, 0, " ");
 }
 
 int

@@ -28,12 +28,9 @@
 
 struct slmctlmsg_replqueued {
 	char			scrq_resname[RES_NAME_MAX];
-	uint32_t		scrq_ingress_queued;
-	uint32_t		scrq_ingress_assigned;
-	uint32_t		scrq_egress_queued;
-	uint32_t		scrq_egress_assigned;
-	uint32_t		scrq_aggr_queued;
-	uint32_t		scrq_aggr_assigned;
+	int64_t			scrq_repl_egress_aggr;
+	int64_t			scrq_repl_ingress_aggr;
+	int64_t			scrq_repl_pending;
 };
 
 #define SLMC_REPLQ_BUSY		":busy"
