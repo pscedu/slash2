@@ -79,6 +79,7 @@ struct slrpc_batch_req {
 	int				  bq_rcv_ptl:16;	/* bulk RPC portal */
 	int				  bq_flags;		/* see BATCHF_* below */
 	int				  bq_rc;		/* return/processing return code */
+	int				  bq_finish;		/* debug */
 	int32_t			  	  bq_opc;		/* underlying RPC operation code */
 
 	int				  bq_cnt;

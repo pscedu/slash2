@@ -175,14 +175,15 @@ slrpc_batch_req_finish_workcb(void *p)
  * the batch request has come back.
  */
 void
-slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int rc)
+slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int where, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finishing, rc = %d", rc);
+	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finish at = %d, rc = %d", where, rc);
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 
+	bq->bq_finish = where;
 	wk->bq = bq;
 	wk->rc = rc;
 	pfl_workq_putitemq(bq->bq_workq, wk);
@@ -212,7 +213,7 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 	    rc);
 
 	if (rc) {
-		slrpc_batch_req_sched_finish(bq, rc);
+		slrpc_batch_req_sched_finish(bq, 2, rc);
 	} else {
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
@@ -264,7 +265,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * using this API.
 		 */
 		pscrpc_req_finished(bq->bq_rq);
-		slrpc_batch_req_sched_finish(bq, rc);
+		slrpc_batch_req_sched_finish(bq, 1, rc);
 	}
 }
 
@@ -551,7 +552,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				    BULK_GET_SINK, bq->bq_rcv_ptl, &iov,
 				    1);
 			}
-			slrpc_batch_req_sched_finish(bq,
+			slrpc_batch_req_sched_finish(bq, 3,
 			    mp->rc ? mp->rc : mq->rc);
 
 			found = 1;
@@ -761,8 +762,8 @@ slrpc_batches_drop(struct sl_resource *res)
 	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		if (bq->bq_res == res) {
-			/* ECONNRESET = 104  */
-			slrpc_batch_req_sched_finish(bq, -ECONNRESET);
+			/* ECONNRESET = 104 */
+			slrpc_batch_req_sched_finish(bq, 4, -ECONNRESET);
 		}
 	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
