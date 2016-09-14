@@ -677,6 +677,10 @@ retry:
 	newbq->bq_opc = opc;
 	newbq->bq_workq = workq;
 
+	CSVC_LOCK(csvc);
+	sl_csvc_incref(csvc);
+	CSVC_ULOCK(csvc);
+
 	PFLOG_BATCH_REQ(PLL_DIAG, newbq, "created");
 
 	goto retry;
