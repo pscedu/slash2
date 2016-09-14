@@ -355,6 +355,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+ 	/* Signal our caller to continue to try. */
 	return (0);
 }
 
