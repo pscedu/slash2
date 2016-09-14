@@ -549,6 +549,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
  	 * won't be able to be done with a bmap and then move on to clear the
  	 * BMAPF_REPLMODWR flag of other bmaps in the same file.
  	 */
+	FCMH_LOCK(f);
 	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
