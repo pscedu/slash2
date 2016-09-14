@@ -1046,6 +1046,7 @@ int
 resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
     int64_t amt, int rc)
 {
+	int ret = 1;
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
 	int64_t cap = (int64_t)slm_upsch_bandwidth;
@@ -1056,7 +1057,6 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	RPMI_LOCK(r_min);
 	RPMI_LOCK(r_max);
 
-
 	is = res2rpmi_ios(src->resm_res);
 	id = res2rpmi_ios(dst->resm_res);
 
@@ -1065,8 +1065,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	/* reserve */
 	if (amt > 0) {
 		if ((is->si_repl_pending + amt > cap * BW_UNITSZ) || 
-		    (id->si_repl_pending + amt > cap * BW_UNITSZ))
-			return (0);
+		    (id->si_repl_pending + amt > cap * BW_UNITSZ)) {
+			ret = 0;
+			goto out;
+		}
 		is->si_repl_pending += amt;
 		id->si_repl_pending += amt;
 
@@ -1094,8 +1096,9 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 #endif
 	}
 
+ out:
 	RPMI_ULOCK(r_max);
 	RPMI_ULOCK(r_min);
 
-	return (1);
+	return (ret);
 }
