@@ -621,8 +621,7 @@ retry:
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
-		if ((bq->bq_res == dst_res) && 
-		    (opc == bq->bq_opc)) {
+		if ((bq->bq_res == dst_res) && (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
 			 * Tack this request onto the existing pending
@@ -631,6 +630,7 @@ retry:
 			 * The caller must ensure that the destination 
 			 * of the RPC is the same.
 			 */
+			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(bq->bq_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
 			OPSTAT_INCR("batch-req-add");
@@ -677,10 +677,6 @@ retry:
 	newbq->bq_workq = workq;
 
 	PFLOG_BATCH_REQ(PLL_DIAG, newbq, "created");
-
-	CSVC_LOCK(csvc);
-	sl_csvc_incref(csvc);
-	CSVC_ULOCK(csvc);
 
 	goto retry;
 
