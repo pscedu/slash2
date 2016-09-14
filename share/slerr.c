@@ -36,7 +36,7 @@ char *sl_errstrs[] = {
 /*  8 */ "Unknown I/O system",
 /*  9 */ "Unknown I/O node",
 /* 10 */ "I/O node connection could not be established",
-/* 11 */ "Unable to remove last replica",
+/* 11 */ "Unable to remove the last replica",
 /* 12 */ "Transaction could not be started",
 /* 13 */ "Short I/O",
 /* 14 */ "Authorization buffer has bad magic",
