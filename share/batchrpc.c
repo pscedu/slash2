@@ -729,9 +729,6 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 	struct timeval now, stall;
 	struct slrpc_batch_req *bq;
 
-	stall.tv_sec = 0;
-	stall.tv_usec = 0;
-
 	while (pscthr_run(thr)) {
 		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
 
@@ -741,9 +738,9 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			slrpc_batch_req_send(bq);
 			OPSTAT_INCR("batch-send-expire");
 		} else {
+			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
 			OPSTAT_INCR("batch-send-wait");
-			timersub(&bq->bq_expire, &now, &stall);
 			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 		}
 	}
