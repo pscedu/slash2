@@ -555,6 +555,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 			slrpc_batch_req_sched_finish(bq, 3,
 			    mp->rc ? mp->rc : mq->rc);
 
+			OPSTAT_INCR("batch-reply-match");
 			found = 1;
 			goto out;
 		}
