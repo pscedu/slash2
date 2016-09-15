@@ -738,17 +738,14 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 		spinlock(&bq->bq_lock);
 		PFL_GETTIMEVAL(&now);
 		if (bq->bq_cnt && timercmp(&now, &bq->bq_expire, >)) {
-			OPSTAT_INCR("batch-send-expire");
 			slrpc_batch_req_send(bq);
+			OPSTAT_INCR("batch-send-expire");
 		} else {
-			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
+			OPSTAT_INCR("batch-send-wait");
+			timersub(&bq->bq_expire, &now, &stall);
+			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 		}
-
-		usleep(stall.tv_sec * 1000000 + stall.tv_usec);
-
-		stall.tv_sec = 0;
-		stall.tv_usec = 0;
 	}
 }
 
