@@ -437,6 +437,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	OPSTAT_INCR("batch-handle-request");
+
 	mp->opc = mq->opc;	
 	if (mq->opc < 0 || mq->opc >= SRMT_TOTAL)
 		return (mp->rc = -EINVAL);
