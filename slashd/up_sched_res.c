@@ -1226,21 +1226,23 @@ slmupschthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, count;
+	int i, j;
+	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		dbdo(slm_upsch_tally_cb, &count,
-		    " SELECT	count (*)"
-		    " FROM	upsch");
-		if (count && lc_nitems(&slm_upsch_queue) < 32) {
+		if (lc_nitems(&slm_upsch_queue) < 32) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
+				/* schedule a call to upd_proc_pagein() */
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		upd = lc_getwait(&slm_upsch_queue);
-		upd_proc(upd);
+		ts.tv_nsec = 0;
+		ts.tv_sec = time(NULL) + 3;
+		upd = lc_gettimed(&slm_upsch_queue, &ts);
+		if (upd)
+			upd_proc(upd);
 	}
 }
 
