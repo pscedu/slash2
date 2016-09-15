@@ -193,6 +193,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 		retifset[BREPLST_REPL_SCHED] = 1;
 
+		/* ECONNRESET = 104 */
 		/* PFLERR_ALREADY = _PFLERR_START + 3 = 503 */
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
