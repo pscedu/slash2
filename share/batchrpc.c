@@ -737,14 +737,20 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
 
 		spinlock(&bq->bq_lock);
+		if (!bq->bq_cnt) {
+			freelock(&bq->bq_lock);
+			pscthr_yield();
+			continue;
+		}
 		PFL_GETTIMEVAL(&now);
-		if (bq->bq_cnt && timercmp(&now, &bq->bq_expire, >)) {
+		if (timercmp(&now, &bq->bq_expire, >=)) {
 			slrpc_batch_req_send(bq);
 			OPSTAT_INCR("batch-send-expire");
 		} else {
 			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
 			OPSTAT_INCR("batch-send-wait");
+			psc_assert(stall.tv_sec >= 0);
 			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 		}
 	}
