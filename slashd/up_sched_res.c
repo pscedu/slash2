@@ -1007,6 +1007,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
+
+#define UPSCH_PAGEIN_BATCH 128
+
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
@@ -1023,9 +1026,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		us.rnd,"
 	    "		usr_prio DESC,"
 	    "		RANDOM()"
-	    " LIMIT	32",
+	    " LIMIT	?",
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0);
+	    upg->upg_resm ? r->res_id : 0,
+	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 }
 
 #if 0
