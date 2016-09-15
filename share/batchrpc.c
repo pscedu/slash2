@@ -441,19 +441,16 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	mp->opc = mq->opc;	
 	if (mq->opc < 0 || mq->opc >= SRMT_TOTAL)
-		return (mp->rc = -EINVAL);
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	/* See sli_rim_batch_req_handlers set up in sli_rim_init() */
 	h = &handlers[mq->opc];
 	if (h->bqh_cbf == NULL)
-		return (mp->rc = -EINVAL);
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	if (mq->len < h->bqh_qlen || mq->len > LNET_MTU || 
-	    mq->len % h->bqh_qlen) {
-		psclog_warnx("opc = %d, len = %d, qlen = %d", 
-		    mq->opc, mq->len, h->bqh_qlen);
-		return (mp->rc = -EINVAL);
-	}
+	    mq->len % h->bqh_qlen)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	bp = psc_pool_get(slrpc_batch_rep_pool);
 	memset(bp, 0, sizeof(*bp));
@@ -478,9 +475,9 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	bp->bp_replen = mq->len / h->bqh_qlen * h->bqh_plen;
 	bp->bp_opc = mq->opc;
 
-	rc = SL_RSX_NEWREQ(bp->bp_csvc, SRMT_BATCH_RP, bp->bp_rq, mq, mp);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	mp->rc = SL_RSX_NEWREQ(bp->bp_csvc, SRMT_BATCH_RP, bp->bp_rq, mq, mp);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "created");
 
@@ -492,6 +489,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
  out:
 	if (bp) {
+		psclog_warnx("opc = %d, len = %d, qlen = %d", 
+		    mq->opc, mq->len, h ? h->bqh_qlen : 0);
 		slrpc_batch_rep_dtor(bp);
 		psc_pool_return(slrpc_batch_rep_pool, bp);
 	}
