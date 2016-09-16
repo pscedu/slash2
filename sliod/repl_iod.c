@@ -106,7 +106,8 @@ sli_bwqueued_adj(int32_t *p, int amt_bytes)
 }
 
 /*
- * Add a piece of work to the replication scheduling engine.
+ * Add a piece of work to the replication scheduling engine. It is called
+ * from slrpc_batch_handle_request() via a worker thread.
  */
 int
 sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)

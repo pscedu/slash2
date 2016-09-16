@@ -63,6 +63,8 @@ struct slrpc_batch_req_handler sli_rim_batch_req_handlers[SRMT_TOTAL];
  * Handle a piece of PRECLAIM (partial reclaim) work.  If our backend
  * does not support fallocate(2) for punching a hole, we return ENOTSUP
  * so the MDS leaves us alone.
+ *
+ * It is called by slrpc_batch_handle_request() via a worker thread.
  */
 int
 sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,

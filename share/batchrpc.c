@@ -336,7 +336,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 void
 slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
 {
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
+	PFLOG_BATCH_REP(PLL_WARN, bp, "incref");
 	spinlock(&bp->bp_lock);
 	bp->bp_refcnt++;
 	freelock(&bp->bp_lock);
@@ -359,7 +359,7 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 	if (rc && !bp->bp_rc)
 		bp->bp_rc = rc;
 
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
+	PFLOG_BATCH_REP(PLL_WARN, bp, "decref");
 	bp->bp_refcnt--;
 	psc_assert(bp->bp_refcnt >= 0);
 	if (bp->bp_refcnt) {
@@ -433,7 +433,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct iovec iov;
-	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
