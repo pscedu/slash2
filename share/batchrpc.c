@@ -394,7 +394,8 @@ slrpc_batch_handle_req_workcb(void *arg)
 	h = bp->bp_handler;
 	n = bp->bp_reqlen / h->bqh_qlen;
 	psc_assert(n);
-	psclog_warnx("work cb: wk = %p, bp = %p, count = %d", wk, bp, n); 
+	psclog_warnx("work cb: wk = %p, bp = %p, bid = %"PRId64", count = %d", 
+	    wk, bp, bp->bp_bid, n); 
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
 	    i++, q += h->bqh_qlen, p += h->bqh_plen) {
 		/*
