@@ -102,6 +102,8 @@ int	sli_has_enough_space(struct fidc_membh *, uint32_t, uint32_t,
 
 int	bcr_update_inodeinfo(struct bcrcupd *);
 
+#define SLI_NWORKER_THREADS	4
+
 extern struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
 extern struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;

@@ -323,7 +323,7 @@ main(int argc, char *argv[])
 		    "slihealththr");
 
 	pfl_workq_init(128);
-	pfl_wkthr_spawn(SLITHRT_WORKER, 4, "sliwkthr%d");
+	pfl_wkthr_spawn(SLITHRT_WORKER, SLI_NWORKER_THREADS, "sliwkthr%d");
 
 	slrpc_initcli();
 
