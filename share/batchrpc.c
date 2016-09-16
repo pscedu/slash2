@@ -458,6 +458,8 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 
 	iov.iov_len = mq->len;
 	iov.iov_base = bp->bp_reqbuf;
+	INIT_SPINLOCK(&bp->bp_lock);
+	INIT_PSC_LISTENTRY(&bp->bp_lentry);
 
 	/* retrieve buffer sent by slrpc_batch_req_send() */
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, h->bqh_rcv_ptl,
@@ -465,8 +467,6 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	INIT_SPINLOCK(&bp->bp_lock);
-	INIT_PSC_LISTENTRY(&bp->bp_lentry);
 	bp->bp_bid = mq->bid;
 	bp->bp_refcnt = 1;
 	bp->bp_reqlen = mq->len;
