@@ -198,7 +198,9 @@ sli_repl_addwk(struct slrpc_batch_rep *bp, void *req, void *rep)
 
 	/* for slireplpndthr_main() */
 	if (sli_replwk_queue(w))
-		OPSTAT_INCR("repl-queue");
+		OPSTAT_INCR("repl-queue-pending");
+	else
+		OPSTAT_INCR("repl-queue-noop");
 
  out:
 	p->rc = rc;
