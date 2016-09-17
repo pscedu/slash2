@@ -336,7 +336,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 void
 slrpc_batch_rep_incref(struct slrpc_batch_rep *bp)
 {
-	PFLOG_BATCH_REP(PLL_WARN, bp, "incref");
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "incref");
 	spinlock(&bp->bp_lock);
 	bp->bp_refcnt++;
 	freelock(&bp->bp_lock);
@@ -359,7 +359,7 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 	if (rc && !bp->bp_rc)
 		bp->bp_rc = rc;
 
-	PFLOG_BATCH_REP(PLL_WARN, bp, "decref");
+	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
 	bp->bp_refcnt--;
 	psc_assert(bp->bp_refcnt >= 0);
 	if (bp->bp_refcnt) {
@@ -394,7 +394,7 @@ slrpc_batch_handle_req_workcb(void *arg)
 	h = bp->bp_handler;
 	n = bp->bp_reqlen / h->bqh_qlen;
 	psc_assert(n);
-	psclog_warnx("work cb: wk = %p, bp = %p, bid = %"PRId64", count = %d", 
+	psclog_diag("work cb: wk = %p, bp = %p, bid = %"PRId64", count = %d", 
 	    wk, bp, bp->bp_bid, n); 
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
 	    i++, q += h->bqh_qlen, p += h->bqh_plen) {
