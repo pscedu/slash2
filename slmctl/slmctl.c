@@ -106,12 +106,19 @@ void
 slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
+	int base10 = 1;
 	const struct slmctlmsg_replqueued *scrq = m;
 
 	printf("%-32s ", scrq->scrq_resname);
-	psc_ctl_prnumber(1, scrq->scrq_repl_pending, 20, " ");
-	psc_ctl_prnumber(1, scrq->scrq_repl_ingress_aggr, 20, " ");
-	psc_ctl_prnumber(1, scrq->scrq_repl_egress_aggr, 20, " ");
+
+	base10 = (scrq->scrq_repl_pending <= 1024*1024) ? 1 : 0;
+	psc_ctl_prnumber(base10, scrq->scrq_repl_pending, 20, " ");
+
+	base10 = (scrq->scrq_repl_ingress_aggr<= 1024*1024) ? 1 : 0;
+	psc_ctl_prnumber(base10, scrq->scrq_repl_ingress_aggr, 20, " ");
+
+	base10 = (scrq->scrq_repl_egress_aggr <= 1024*1024) ? 1 : 0;
+	psc_ctl_prnumber(base10, scrq->scrq_repl_egress_aggr, 20, " ");
 	printf("\n");
 }
 
