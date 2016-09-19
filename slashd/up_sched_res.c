@@ -739,7 +739,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		if (dst_res == NULL) {
-			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u",
+			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u(0x%x)",
 			    iosid);
 			continue;
 		}
