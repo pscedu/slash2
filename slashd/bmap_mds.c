@@ -165,6 +165,10 @@ slm_bmap_resetnonce(struct bmap *b)
 	/*
  	 * XXX we have to do this each time the bmap is evicted
  	 * from the cache or we reboot.
+ 	 *
+ 	 * Instead of associating a nonce with each bmap, we can
+ 	 * associating it with the whole table.
+ 	 *
  	 */
 	dbdo(slm_bmap_resetnonce_cb, &a,
 	    " SELECT	nonce,"
