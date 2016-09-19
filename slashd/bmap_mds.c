@@ -162,6 +162,10 @@ slm_bmap_resetnonce(struct bmap *b)
 	memset(&a, 0, sizeof(a));
 	a.b = b;
 
+	/*
+ 	 * XXX we have to do this each time the bmap is evicted
+ 	 * from the cache or we reboot.
+ 	 */
 	dbdo(slm_bmap_resetnonce_cb, &a,
 	    " SELECT	nonce,"
 	    "		resid"
