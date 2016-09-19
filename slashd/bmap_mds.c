@@ -216,6 +216,7 @@ mds_bmap_read(struct bmap *b, int flags)
 		mds_bmap_initnew(b);
 		goto out2;
 	}
+	OPSTAT_INCR("bmap-read");
 
 	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
