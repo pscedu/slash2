@@ -2250,7 +2250,6 @@ int
 mds_update_boot_file(void)
 {
 	int rc = 0;
-#if 0
 	void *h;
 	uint32_t boot;
 	uint64_t size;
@@ -2270,7 +2269,5 @@ mds_update_boot_file(void)
 		boot = 1;
 	rc = mds_write_file(h, &boot, sizeof(boot), &size, 0);
 	mds_release_file(h);
-
-#endif
 	return (rc);
 }
