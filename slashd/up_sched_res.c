@@ -882,11 +882,15 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
 	if (rc)
 		goto out;
+
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
 	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
-	BMAP_ULOCK(b);
 
+	BMAP_ULOCK(b);
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
@@ -899,9 +903,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
-
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -912,7 +913,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		rc = 1;
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 
  out:
 	if (rc) {
@@ -931,11 +931,13 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
-	if (b) {
+	if (b)
 		bmap_op_done(b);
-	}
-	if (f)
+
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 }
 
 int
