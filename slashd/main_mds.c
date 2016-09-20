@@ -702,6 +702,8 @@ main(int argc, char *argv[])
 	slmupschthr_spawn();
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
 
+	mds_update_boot_file();
+
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));

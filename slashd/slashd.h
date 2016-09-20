@@ -404,6 +404,8 @@ extern struct psc_hashtbl	 slm_roots;
 
 extern int			 debug_ondisk_inode;
 
+extern int			 mds_update_boot_file(void);
+
 /*
  * List of fault point that will be auto-registered on startup.
  */

@@ -119,6 +119,7 @@ int				 slm_cursor_update_needed;
 
 uint64_t			 slm_reclaim_proc_batchno;
 
+
 static int
 mds_open_file(char *fn, int flags, void **handle)
 {
@@ -133,6 +134,7 @@ mds_open_file(char *fn, int flags, void **handle)
 		    MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL, handle,
 		    NULL, NULL, 0);
 	} else if (!rc) {
+		psc_assert(!(flags & O_CREAT));
 		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds,
 		    flags, 0, NULL, NULL, NULL, handle, NULL, NULL, 0);
 	}
@@ -2242,4 +2244,33 @@ void
 mds_unreserve_slot(int count)
 {
 	pjournal_unreserve_slot(slm_journal, count);
+}
+
+int
+mds_update_boot_file(void)
+{
+	int rc = 0;
+#if 0
+	void *h;
+	uint32_t boot;
+	uint64_t size;
+	char *fn = "boot.log";
+
+	rc = mds_open_file(fn, O_RDWR|O_CREAT, &h);
+	if (rc)
+		return (rc);
+	rc = mds_read_file(h, &boot, sizeof(boot), &size, 0);
+	if (rc) {
+		mds_release_file(h);
+		return (rc);
+	}
+	if (size)
+		boot++;
+	else
+		boot = 1;
+	rc = mds_write_file(h, &boot, sizeof(boot), &size, 0);
+	mds_release_file(h);
+
+#endif
+	return (rc);
 }
