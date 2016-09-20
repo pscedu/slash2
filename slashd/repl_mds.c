@@ -1068,13 +1068,13 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		if ((is->si_repl_pending + amt > cap * BW_UNITSZ) || 
-		    (id->si_repl_pending + amt > cap * BW_UNITSZ)) {
+		if ((is->si_repl_ingress_pending + is->si_repl_egress_pending + amt > cap * BW_UNITSZ) || 
+		     id->si_repl_ingress_pending + id->si_repl_egress_pending + amt > cap * BW_UNITSZ) { 
 			ret = 0;
 			goto out;
 		}
-		is->si_repl_pending += amt;
-		id->si_repl_pending += amt;
+		is->si_repl_egress_pending += amt;
+		id->si_repl_ingress_pending += amt;
 
 		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%"PRId64,
 		    src->resm_name, dst->resm_name, amt);
@@ -1082,10 +1082,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* unreserve */
 	if (amt < 0) {
-		is->si_repl_pending += amt;
-		id->si_repl_pending += amt;
-		psc_assert(is->si_repl_pending >= 0);
-		psc_assert(id->si_repl_pending >= 0);
+		is->si_repl_egress_pending += amt;
+		id->si_repl_ingress_pending += amt;
+		psc_assert(is->si_repl_egress_pending >= 0);
+		psc_assert(id->si_repl_ingress_pending >= 0);
 		if (!rc) {
 			is->si_repl_egress_aggr += -amt;
 			id->si_repl_ingress_aggr += -amt;

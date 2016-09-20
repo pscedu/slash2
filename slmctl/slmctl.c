@@ -97,9 +97,9 @@ int
 slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-32s %20s %20s %20s\n",
-	    "resource", "pending", "ingress", "egress");
-	return(PSC_CTL_DISPLAY_WIDTH+15);
+	printf("%-32s %20s %20 %20s %20s\n",
+	    "resource", "ingress-pending", "egress-pending", "ingress", "egress");
+	return(PSC_CTL_DISPLAY_WIDTH+35);
 }
 
 void
@@ -111,8 +111,11 @@ slm_replqueued_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	printf("%-32s ", scrq->scrq_resname);
 
-	base10 = (scrq->scrq_repl_pending <= 1024*1024) ? 1 : 0;
-	psc_ctl_prnumber(base10, scrq->scrq_repl_pending, 20, " ");
+	base10 = (scrq->scrq_repl_ingress_pending <= 1024*1024) ? 1 : 0;
+	psc_ctl_prnumber(base10, scrq->scrq_repl_ingress_pending, 20, " ");
+
+	base10 = (scrq->scrq_repl_egress_pending <= 1024*1024) ? 1 : 0;
+	psc_ctl_prnumber(base10, scrq->scrq_repl_egress_pending, 20, " ");
 
 	base10 = (scrq->scrq_repl_ingress_aggr<= 1024*1024) ? 1 : 0;
 	psc_ctl_prnumber(base10, scrq->scrq_repl_ingress_aggr, 20, " ");

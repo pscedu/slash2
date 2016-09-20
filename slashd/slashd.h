@@ -226,7 +226,8 @@ struct rpmi_ios {
 	/*
 	 * Aggregate bandwidth for all incoming and outgoing replication traffic.
 	 */
-	int64_t			  si_repl_pending;
+	int64_t			  si_repl_ingress_pending;
+	int64_t			  si_repl_egress_pending;
 	int64_t			  si_repl_ingress_aggr;
 	int64_t			  si_repl_egress_aggr;
 };

@@ -300,7 +300,8 @@ slmctlrep_getreplqueued(int fd, struct psc_ctlmsghdr *mh, void *mb)
 		memset(scrq, 0, sizeof(*scrq));
 		strlcpy(scrq->scrq_resname, r->res_name,
 		    sizeof(scrq->scrq_resname));
-		scrq->scrq_repl_pending = si->si_repl_pending;
+		scrq->scrq_repl_egress_pending = si->si_repl_egress_pending;
+		scrq->scrq_repl_ingress_pending = si->si_repl_ingress_pending;
 		scrq->scrq_repl_egress_aggr = si->si_repl_egress_aggr;
 		scrq->scrq_repl_ingress_aggr = si->si_repl_ingress_aggr;
 		rc = psc_ctlmsg_sendv(fd, mh, scrq, NULL);
@@ -403,8 +404,8 @@ slmctlparam_reboots_get(char *val)
 	snprintf(val, PCP_VALUE_MAX, "%d", boot);
 }
 
-void
-slmctlparam_reboots_put(char *val)
+int
+slmctlparam_reboots_put(const char *val)
 {
 	int rc;
 	void *h;

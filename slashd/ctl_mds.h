@@ -30,7 +30,8 @@ struct slmctlmsg_replqueued {
 	char			scrq_resname[RES_NAME_MAX];
 	int64_t			scrq_repl_egress_aggr;
 	int64_t			scrq_repl_ingress_aggr;
-	int64_t			scrq_repl_pending;
+	int64_t			scrq_repl_egress_pending;
+	int64_t			scrq_repl_ingress_pending;
 };
 
 struct slmctlmsg_statfs {
