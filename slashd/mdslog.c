@@ -119,8 +119,7 @@ int				 slm_cursor_update_needed;
 
 uint64_t			 slm_reclaim_proc_batchno;
 
-
-static int
+int
 mds_open_file(char *fn, int flags, void **handle)
 {
 	mdsio_fid_t mf;
@@ -141,7 +140,7 @@ mds_open_file(char *fn, int flags, void **handle)
 	return (rc);
 }
 
-static inline int
+int
 mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
@@ -150,7 +149,7 @@ mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 	return (rc);
 }
 
-static inline int
+int
 mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
@@ -160,7 +159,7 @@ mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 	return (rc);
 }
 
-static inline int
+int
 mds_release_file(void *handle)
 {
 	int rc;
@@ -2251,7 +2250,7 @@ mds_update_boot_file(void)
 {
 	int rc = 0;
 	void *h;
-	uint32_t boot;
+	int32_t boot;
 	uint64_t size;
 	char *fn = "boot.log";
 

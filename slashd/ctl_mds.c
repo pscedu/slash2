@@ -385,6 +385,49 @@ slmctlparam_nextfid_set(const char *val)
 	return (rc);
 }
 
+void
+slmctlparam_reboots_get(char *val)
+{
+	int rc;
+	void *h;
+	uint64_t size;
+        int32_t boot = 0;
+        char *fn = "boot.log";
+
+        rc = mds_open_file(fn, O_RDONLY, &h); 
+        if (rc) 
+		goto out;
+        rc = mds_read_file(h, &boot, sizeof(boot), &size, 0);
+        mds_release_file(h);
+ out:
+	snprintf(val, PCP_VALUE_MAX, "%d", boot);
+}
+
+void
+slmctlparam_reboots_put(char *val)
+{
+	int rc;
+	void *h;
+	uint64_t size;
+        int32_t boot = 0;
+        char *fn = "boot.log";
+
+	boot = strtol(val, NULL, 0);
+	if (boot < 0) {
+		rc = -1;
+		goto out;
+	}
+        rc = mds_open_file(fn, O_WRONLY, &h); 
+        if (rc) 
+		goto out;
+
+	rc = mds_write_file(h, &boot, sizeof(boot), &size, 0);
+        mds_release_file(h);
+
+ out:
+	return (rc);
+}
+
 int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
@@ -527,6 +570,10 @@ slmctlthr_main(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &reclaim_prg.cur_batchno);
 	psc_ctlparam_register_var("sys.reclaim_cursor",
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
+
+	psc_ctlparam_register_simple("sys.reboots",
+	    slmctlparam_reboots_get, slmctlparam_reboots_put);
+
 	psc_ctlparam_register_var("sys.rpc_timeout",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
 
