@@ -990,6 +990,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			}
 			PFL_GOTOERR(out, rc);
 		}
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 		/*
 		 * Before blindly doing the transition, we have to check
