@@ -134,7 +134,7 @@ mds_open_file(char *fn, int flags, void **handle)
 		    MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL, handle,
 		    NULL, NULL, 0);
 	} else if (!rc) {
-		psc_assert(!(flags & O_CREAT));
+		flags &= ~O_CREAT;
 		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds,
 		    flags, 0, NULL, NULL, NULL, handle, NULL, NULL, 0);
 	}
