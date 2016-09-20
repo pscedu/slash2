@@ -815,7 +815,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		if (rc) {
 			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-			break;
+			PFL_GOTOERR(out, rc);
 		}
 
 		/*
@@ -984,10 +984,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO) {
+			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-				break;
-			}
 			PFL_GOTOERR(out, rc);
 		}
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
