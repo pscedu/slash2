@@ -597,7 +597,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	union pfl_sockaddr_ptr sa;
 	uint32_t lnet;
 	in_addr_t ip;
-	int rc;
+	int rc, retry = 0;
 
 	psc_assert(m);
 
@@ -621,7 +621,16 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	rc = getaddrinfo(addr, NULL, &hints, &res0);
+	while (retry < 3) {
+		rc = getaddrinfo(addr, NULL, &hints, &res0);
+		if (rc == EAI_AGAIN) {
+			sleep(1);
+			retry++;
+			psclog_warnx("%s: %s", addr, gai_strerror(rc));
+			continue;
+		}
+		break;
+	}
 	if (rc)
 		psc_fatalx("%s: %s", addr, gai_strerror(rc));
 
