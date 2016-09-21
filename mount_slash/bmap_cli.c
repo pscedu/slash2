@@ -194,13 +194,10 @@ msl_bmap_diowait(struct pscfs_req *pfr,
 	if (timespeccmp(diowait_duration, &slc_bmap_diowait_max, >))
 		*diowait_duration = slc_bmap_diowait_max;
 
-	if (pfr) {
-		pflfs_req_sleep_rel(pfr, diowait_duration);
-	} else
-		/*
-		 * The background flusher needs to grab lease too.
-		 */
-		nanosleep(diowait_duration, NULL);
+	/*
+	 * The background flusher needs to grab lease too.
+	 */
+	nanosleep(diowait_duration, NULL);
 	return (1);
 }
 
