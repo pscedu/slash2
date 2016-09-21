@@ -184,8 +184,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 }
 
 __static int
-msl_bmap_diowait(struct pscfs_req *pfr,
-    struct timespec *diowait_duration, int nretries)
+msl_bmap_diowait(struct timespec *diowait_duration, int nretries)
 {
 	if (nretries > BMAP_DIOWAIT_MAX_TRIES)
 		return (0);
@@ -317,7 +316,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
+		if (msl_bmap_diowait(&diowait_duration, nretries))
 			goto retry;
 	}
 
@@ -640,7 +639,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(pfr, &diowait_duration, nretries))
+		if (msl_bmap_diowait(&diowait_duration, nretries))
 			goto retry;
 	}
 
