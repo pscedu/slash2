@@ -322,10 +322,15 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
+	/*
+	 * Don't wait forever. Otherwise, we will tie up all control threads.
+	 */
 	spinlock(&mrsq.mrsq_lock);
-	while (!mrsq.mrsq_rc) {
-		psc_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 30);
-		spinlock(&mrsq.mrsq_lock);
+	rc = psc_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 60);
+	spinlock(&mrsq.mrsq_lock);
+	if (!mrsq.mrsq_rc) {
+		OPSTAT_INCR("getreplst-timeouts");
+		mrsq.mrsq_rc = rc;
 	}
 
 	rc = 1;
