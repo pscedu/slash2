@@ -99,7 +99,7 @@ slm_replqueued_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 {
 	printf("%-32s %15s %15s %15s %15s\n",
 	    "resource", "ingress-pending", "egress-pending", "ingress-aggr", "egress-aggr");
-	return(PSC_CTL_DISPLAY_WIDTH+15);
+	return(PSC_CTL_DISPLAY_WIDTH+16);
 }
 
 void
