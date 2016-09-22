@@ -2875,31 +2875,40 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if ((stb->st_mode & ALLPERMS) !=
 		    (c->fcmh_sstb.sst_mode & ALLPERMS)) {
 			rc = EINVAL;
+			FCMH_ULOCK(c);
 			goto out;
 		}
 #endif
-		if (pcr.pcr_uid != c->fcmh_sstb.sst_uid)
+		if (pcr.pcr_uid != c->fcmh_sstb.sst_uid) {
+			FCMH_ULOCK(c);
 			PFL_GOTOERR(out, rc = EPERM);
+		}
 		if (pcr.pcr_gid != c->fcmh_sstb.sst_gid &&
 		    !inprocgrouplist(c->fcmh_sstb.sst_gid, &pcr))
 			stb->st_mode &= ~S_ISGID;
 	}
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, W_OK);
-		if (rc)
+		if (rc) {
+			FCMH_ULOCK(c);
 			PFL_GOTOERR(out, rc);
+		}
 	}
 
 	if ((to_set & PSCFS_SETATTRF_ATIME_NOW) &&
 	    (to_set & PSCFS_SETATTRF_MTIME_NOW) &&
 	    pcr.pcr_uid && pcr.pcr_uid != c->fcmh_sstb.sst_uid) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, W_OK);
-		if (rc)
+		if (rc) {
+			FCMH_ULOCK(c);
 			PFL_GOTOERR(out, rc);
+		}
 	}
 	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
-	    pcr.pcr_uid && pcr.pcr_uid != c->fcmh_sstb.sst_uid)
+	    pcr.pcr_uid && pcr.pcr_uid != c->fcmh_sstb.sst_uid) {
+		FCMH_ULOCK(c);
 		PFL_GOTOERR(out, rc = EPERM);
+	}
 	if (to_set & PSCFS_SETATTRF_ATIME_NOW)
 		stb->st_pfl_ctim = stb->st_pfl_atim;
 	else if (to_set & PSCFS_SETATTRF_MTIME_NOW)
@@ -2911,8 +2920,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set & PSCFS_SETATTRF_UID) {
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
-		     pcr.pcr_uid != stb->st_uid))
+		     pcr.pcr_uid != stb->st_uid)) {
+			FCMH_ULOCK(c);
 			PFL_GOTOERR(out, rc = EPERM);
+		}
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
@@ -2923,8 +2934,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (to_set & PSCFS_SETATTRF_GID) {
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
-		     !inprocgrouplist(stb->st_gid, &pcr)))
+		     !inprocgrouplist(stb->st_gid, &pcr))) {
+			FCMH_ULOCK(c);
 			PFL_GOTOERR(out, rc = EPERM);
+		}
 		// XXX sysctl fs.posix.setuid
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
