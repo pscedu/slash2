@@ -172,7 +172,6 @@ int	 slm_upsch_revert_cb(struct slm_sth *, void *);
 void	 upd_init(struct slm_update_data *, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
-void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 
 struct slm_sth {
 	struct pfl_hashentry	 sth_hentry;

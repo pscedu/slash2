@@ -90,32 +90,6 @@ void (*upd_proctab[])(struct slm_update_data *);
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
 
-void
-upd_rpmi_add(struct resprof_mds_info *rpmi, struct slm_update_data *upd)
-{
-	int locked;
-
-	locked = RPMI_RLOCK(rpmi);
-	if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
-		UPD_INCREF(upd);
-	RPMI_URLOCK(rpmi, locked);
-}
-
-void
-upd_rpmi_remove(struct resprof_mds_info *rpmi,
-    struct slm_update_data *upd)
-{
-	int locked, idx;
-
-	locked = RPMI_RLOCK(rpmi);
-	idx = psc_dynarray_finditem(&rpmi->rpmi_upschq, upd);
-	if (idx != -1)
-		psc_dynarray_removepos(&rpmi->rpmi_upschq, idx);
-	RPMI_URLOCK(rpmi, locked);
-	if (idx != -1)
-		UPD_DECREF(upd);
-}
-
 /*
  * Handle batch replication finish/error.  If success, we update the
  * bmap to the new residency states.  If error, we revert all changes
