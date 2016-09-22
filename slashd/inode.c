@@ -103,7 +103,8 @@ mds_inode_read(struct slash_inode_handle *ih)
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	/*
  	 * Hit this with v1.15 on bridges. I can't rm a zero-length file.
- 	 * I disable slm_crc_check and things work.
+ 	 * I disable slm_crc_check and things work. This happened after
+ 	 * a power outage.
  	 */
 	if (crc != od_crc && slm_crc_check) {
 		vers = ih->inoh_ino.ino_version;
