@@ -1125,6 +1125,9 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1137,22 +1140,21 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
+
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc)
 		mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 	return (0);
 }
 
