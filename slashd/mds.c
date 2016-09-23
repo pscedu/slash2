@@ -1649,51 +1649,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	return (rc);
 }
 
-/*
- * Load a bmap if disk I/O is successful and the bmap has been
- * initialized (i.e. is not all zeroes).
- * @f: fcmh.
- * @bmapno: bmap index number to load.
- * @bp: value-result bmap pointer.
- * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is
- *	successful.
- */
-int
-mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
-    struct bmap **bp)
-{
-	struct bmap_mds_info *bmi;
-	struct bmap *b;
-	int n, rc;
-
-	*bp = NULL;
-
-	/* BMAP_OP #3 via lookup */
-	rc = bmap_get(f, bmapno, SL_WRITE, &b);
-	if (rc)
-		return (rc);
-
-	bmi = bmap_2_bmi(b);
-	for (n = 0; n < SLASH_SLVRS_PER_BMAP; n++)
-		/*
-		 * XXX need a bitmap to see which CRCs are
-		 * actually uninitialized and not just happen
-		 * to be zero.
-		 */
-		if (bmi->bmi_crcstates[n]) {
-			BMAP_ULOCK(b);
-			*bp = b;
-			return (0);
-		}
-
-	/*
-	 * BMAP_OP #3, unref if bmap is empty.
-	 * NOTE: our callers must drop this ref.
-	 */
-	bmap_op_done(b);
-	return (SLERR_BMAP_ZERO);
-}
-
 void
 slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 {
