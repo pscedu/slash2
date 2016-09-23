@@ -1716,14 +1716,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 		FCMH_ULOCK(f);
 		return (-SLERR_BMAP_IN_PTRUNC);
 	}
-	FCMH_ULOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
 		bflags |= BMAPGETF_NODISKREAD;
 	rc = bmap_getf(f, bmapno, SL_WRITE, bflags, &b);
-	if (rc)
+	if (rc) {
+		FCMH_UNBUSY(f, 1);
 		return (rc);
+	}
+	FCMH_UNBUSY(f, 1);
 
 	bml = mds_bml_new(b, exp,
 	    (rw == SL_WRITE ? BML_WRITE : BML_READ) |
