@@ -213,6 +213,8 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	if (rc)
 		return (rc);
 	if (fcmh_isreg(f)) {
+		FCMH_LOCK(f);
+		FCMH_WAIT_BUSY(f, 1);
 		for (n = 0; rc == 0; n++) {
 			/*
 			 * Client write-ahead can create empty bmaps
@@ -235,6 +237,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			rc = slmrcmthr_walk_brepls(rsw, f, b, n, &rq);
 			bmap_op_done(b);
 		}
+		FCMH_UNBUSY(f, 1);
 		if (rq) {
 			rc2 = slmrmcthr_replst_slave_fin(
 			    rsw->rsw_csvc, rq, f);
