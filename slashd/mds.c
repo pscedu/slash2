@@ -1791,7 +1791,12 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmap *b;
 	int rc;
 
+	FCMH_LOCK(f);
+
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
+	FCMH_UNBUSY(f, 1);
+
 	if (rc)
 		return (rc);
 
