@@ -1436,7 +1436,10 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, bia->bia_bmapno, SL_WRITE, &b);
+	FCMH_UNBUSY(f, 1);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
 		    bia->bia_bmapno, rc);
