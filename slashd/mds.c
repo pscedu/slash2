@@ -2155,6 +2155,8 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
 	 */
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2193,6 +2195,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		}
 		bmap_op_done(b);
 	}
+	FCMH_UNBUSY(f, 1);
 
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
