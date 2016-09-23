@@ -200,7 +200,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, new, unbusy, vfsid, retifset[NBREPLST];
+	int rc, new, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -215,6 +215,8 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	new = 0;
 	f = b->bcm_fcmh;
+	FCMH_BUSY_ENSURE(f);
+
 	if (flags & BMAPGETF_NODISKREAD) {
 		new = 1;
 		mds_bmap_initnew(b);
@@ -277,13 +279,6 @@ mds_bmap_read(struct bmap *b, int flags)
 
  out2:
 
-	unbusy = 0;
-	FCMH_LOCK(f);
-	if (!FCMH_HAS_BUSY(f)) {
-		unbusy = 1;
-		FCMH_WAIT_BUSY(f, 1);
-	} else
-		FCMH_ULOCK(f);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -305,8 +300,6 @@ mds_bmap_read(struct bmap *b, int flags)
 	}
 
 	BMAP_ULOCK(b);
-	if (unbusy)
-		FCMH_UNBUSY(f, 1);
 	return (0);
 }
 
