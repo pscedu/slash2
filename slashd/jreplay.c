@@ -79,6 +79,8 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		goto out;
@@ -215,8 +217,10 @@ mds_replay_bmap(void *jent, int op)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 	return (rc);
 }
 
