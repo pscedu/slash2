@@ -414,11 +414,8 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (vfsid != current_vfsid)
 		return (-EINVAL);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0) {
-		FCMH_UNBUSY(f, 1);
 		psclog_warnx("CRC update: invalid IOS %x", iosid);
 		return (idx);
 	}
@@ -433,7 +430,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	    &idx, 1, NULL, NULL);
 	if (!rc) {
 		BMAP_ULOCK(bmap);
-		FCMH_UNBUSY(f, 1);
 		OPSTAT_INCR("crcup-invalid");
 		return (-EINVAL);
 	}
@@ -482,7 +478,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
 
 	BMAP_ULOCK(bmap);
-	FCMH_UNBUSY(f, 1);
 	return (rc);
 }
 
