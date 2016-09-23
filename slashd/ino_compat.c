@@ -57,15 +57,18 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 
 	for (i = 0; ; i++) {
 		fh->fh = readh;
+
+		FCMH_LOCK(f);
+		FCMH_WAIT_BUSY(f, 1);
 		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
+		FCMH_UNBUSY(f, 1);
+
 		if (sic && !rc)
 			b->bcm_flags |= BMAPF_LOADED;
 		fh->fh = th;
 
-		if (rc == SLERR_BMAP_INVALID) {
-			(void)INOH_RLOCK(ih);
+		if (rc == SLERR_BMAP_INVALID)
 			break;
-		}
 
 		if (rc)
 			return (rc);
@@ -83,19 +86,24 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 
 		rc = mds_bmap_write(b, NULL, NULL);
 		bmap_op_done(b);
-		(void)INOH_RLOCK(ih);
 		if (rc)
 			return (rc);
 	}
 
+	INOH_LOCK(ih);
 	rc = mds_inox_write(vfsid, ih, NULL, NULL);
-	if (rc)
+	if (rc) {
+		INOH_ULOCK(ih);
 		return (rc);
+	}
 
 	rc = mds_inode_write(vfsid, ih, NULL, NULL);
-	if (rc)
+	if (rc) {
+		INOH_ULOCK(ih);
 		return (rc);
+	}
 
+	INOH_ULOCK(ih);
 	mdsio_fsync(vfsid, &rootcreds, 1, th);
 	return (0);
 }
