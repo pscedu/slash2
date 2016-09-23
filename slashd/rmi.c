@@ -85,6 +85,9 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	if (mp->rc) 
 		return (0);
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
 	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (!mp->rc) {
 		DEBUG_BMAP(PLL_DIAG, b, "reply to sliod.");
@@ -94,6 +97,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 		bmap_op_done(b);
 	}
 
+	FCMH_UNBUSY(f, 1);
 	fcmh_op_done(f);
 	return (0);
 }

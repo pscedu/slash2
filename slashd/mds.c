@@ -1538,6 +1538,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * XXX XXX fcmh is not locked here
 	 */
 	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 0);
 	if (fcmh_2_gen(f) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
@@ -1643,6 +1644,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 		/* BMAP_OP #2, drop lookup ref */
 		bmap_op_done(bmap);
 
+	FCMH_UNBUSY(f, 1);
 	fcmh_op_done(f);
 	return (rc);
 }
