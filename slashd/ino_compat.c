@@ -51,6 +51,8 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 	th = inoh_2_mfh(ih);
 	fh = inoh_2_mfh(ih);
 
+	psclog_warnx("Calling obsolete function %s", __func__);
+
 	fl = BMAPGETF_CREATE | BMAPGETF_NOAUTOINST;
 	if (sic)
 		fl |= BMAPGETF_NORETRIEVE;
