@@ -228,6 +228,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
+
+	/* XXX Busy fcmh if we ever want to read the bmap */
 	mp->rc = -bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
