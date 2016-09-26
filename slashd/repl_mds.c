@@ -1053,6 +1053,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	int ret = 1;
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
+	int64_t src_total, dst_total;
 	int64_t cap = (int64_t)slm_upsch_bandwidth;
 
 	/* sort by addr to avoid deadlock */
@@ -1068,8 +1069,13 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		if ((is->si_repl_ingress_pending + is->si_repl_egress_pending + amt > cap * BW_UNITSZ) || 
-		     id->si_repl_ingress_pending + id->si_repl_egress_pending + amt > cap * BW_UNITSZ) { 
+		src_total = is->si_repl_ingress_pending + 
+		    is->si_repl_egress_pending + amt;
+		dst_total = is->si_repl_ingress_pending + 
+		    is->si_repl_egress_pending + amt;
+
+		if ((src_total > cap * BW_UNITSZ) || 
+		     dst_total > cap * BW_UNITSZ) { 
 			ret = 0;
 			goto out;
 		}
