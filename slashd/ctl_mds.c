@@ -518,6 +518,7 @@ slmctlthr_main(const char *fn)
 	pflrpc_register_ctlops(slmctlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
+	psc_ctlparam_register("log.console", psc_ctlparam_log_console);
 
 #ifdef Linux
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);

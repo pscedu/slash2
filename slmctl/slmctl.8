@@ -307,7 +307,7 @@ The default is
 .\"			EOF
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
 .\"		odtables	=> qq{Disk-backed data files.},
-.\"		replpairs	=> qq{Replica endpoint traffic.},
+.\"		repl		=> qq{Replica endpoint traffic statistics.},
 .\"		statfs		=> qq{.Tn I/O\nnode backing file system statistics.},
 .\"	},
 .\"	hashtables => {
@@ -556,8 +556,8 @@ Block map structures
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
-.It Cm replpairs
-Replica endpoint traffic.
+.It Cm repl
+Replica endpoint traffic statistics.
 .It Cm rpcrqs
 Remote procedure calls (RPC).
 .It Cm rpcsvcs
