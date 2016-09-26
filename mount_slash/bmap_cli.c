@@ -1150,7 +1150,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			case -1: /* resident but offline */
 				has_residency = 1;
 				break;
-			case -2: /* not resident */
+			case -2:
+			case -3: /* not resident */
 				break;
 			}
 		}
