@@ -1175,7 +1175,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			pfl_multiwait_leavecritsect(mw);
 			continue;
 		}
-
+		OPSTAT_INCR("msl.bmap-csvc-never");
 		/*
 		 * No connection was immediately available; wait a small
 		 * amount of time for any to finish connection
@@ -1185,6 +1185,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
 		// recheck
 	}
+	OPSTAT_INCR("msl.bmap-csvc-timeout");
 	return (-ETIMEDOUT);
 }
 
