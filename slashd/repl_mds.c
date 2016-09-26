@@ -71,7 +71,7 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
  */
-int slm_upsch_bandwidth = 8 * 32;
+int slm_upsch_bandwidth = 512;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
