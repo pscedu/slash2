@@ -1132,7 +1132,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 */
 	has_residency = 0;
 	for (i = 0; i < 2; i++) {
-
 		/* fci->u.f.inode.nrepls */
 		for (j = 0; j < fci->fci_inode.nrepls; j++) {
 			rc = msl_try_get_replica_res(b,
