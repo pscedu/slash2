@@ -157,7 +157,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
 
-		OPSTAT2_ADD("repl-success", bsr->bsr_amt);
+		OPSTAT_INCR("repl-success");
+		OPSTAT2_ADD("repl-success-aggr", bsr->bsr_amt);
 	} else {
 		if (pp == NULL ||
 		    rc == PFLERR_ALREADY ||
@@ -182,7 +183,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		    dst_resm ? dst_resm->resm_name : NULL,
 		    rc);
 
-		OPSTAT2_ADD("repl-failure", bsr->bsr_amt);
+		OPSTAT_INCR("repl-failure");
+		OPSTAT2_ADD("repl-failure-aggr", bsr->bsr_amt);
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
