@@ -133,6 +133,12 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 	// XXX check fgen
 
+	/*
+	 * This check, if needed, does not have to be in the
+	 * permanent storage. With batch RPC in place, if
+	 * the MDS restarts, the batch RPC request will be
+	 * accepted in the first place.
+	 */
 	BHGEN_GET(b, &bgen);
 	if (!rc && q->bgen != bgen)
 		rc = SLERR_GEN_OLD;
