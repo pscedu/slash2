@@ -1077,9 +1077,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 {
 	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;
-	struct pfl_multiwait *mw;
 	struct sl_resm *m;
-	void *p;
 
 	if (pm)
 		*pm = NULL;
@@ -1109,7 +1107,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	}
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
-	mw = msl_getmw();
 
 	/*
 	 * Occasionally stir the order of replicas to distribute load.
@@ -1135,8 +1132,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 */
 	has_residency = 0;
 	for (i = 0; i < 2; i++) {
-		pfl_multiwait_reset(mw);
-		pfl_multiwait_entercritsect(mw);
 
 		/* fci->u.f.inode.nrepls */
 		for (j = 0; j < fci->fci_inode.nrepls; j++) {
@@ -1145,7 +1140,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			    pm, csvcp);
 			switch (rc) {
 			case 0:
-				pfl_multiwait_leavecritsect(mw);
 				return (0);
 			case -1: /* resident but offline */
 				has_residency = 1;
@@ -1157,35 +1151,14 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
  				 */
 				sleep(3);
 				break;
-			case -2:
-			case -3: /* not resident */
+			case -2: /* not resident */
+			case -3:
 				break;
 			}
 		}
 
 //		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
 //		    SRM_LEASEBMAPF_DATA);
-		if (psc_dynarray_len(&mw->mw_conds)) {
-		} else {
-			/*
-			 * Residency scan revealed no VALID replicas.
-			 * I.e. a hole in the file.  Try the next
-			 * iteration which will return the first IOS
-			 * online since any will suffice.
-			 */
-//			psc_assert(!hasvalid && !hasdataflag);
-			pfl_multiwait_leavecritsect(mw);
-			continue;
-		}
-		OPSTAT_INCR("msl.bmap-csvc-never");
-		/*
-		 * No connection was immediately available; wait a small
-		 * amount of time for any to finish connection
-		 * (re)establishment.
-		 */
-		pfl_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
-		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
-		// recheck
 	}
 	OPSTAT_INCR("msl.bmap-csvc-timeout");
 	return (-ETIMEDOUT);
