@@ -1149,18 +1149,19 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 				return (0);
 			case -1: /* resident but offline */
 				has_residency = 1;
+				/*
+		 		 * A quick fix so that we don't return 
+		 		 * ETIMEDOUT when an IOS is contacted 
+		 		 * first for an operation (e.g.,read 
+		 		 * a file.
+ 				 */
+				sleep(3);
 				break;
 			case -2:
 			case -3: /* not resident */
 				break;
 			}
 		}
-		/*
- 		 * A quick fix so that we don't return ETIMEDOUT when
- 		 * an IOS is contacted first for an operation (e.g.,
- 		 * read a file.  Note that we return earlier if !rc. 
- 		 */
-		sleep(3);
 
 //		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
 //		    SRM_LEASEBMAPF_DATA);
