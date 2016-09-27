@@ -2264,8 +2264,10 @@ mds_update_boot_file(void)
 	}
 	if (size)
 		boot++;
-	else
+	else {
+		psclogs_info(SLMSS_INFO, "File boot.log has been created successfully.");
 		boot = 1;
+	}
 	rc = mds_write_file(h, &boot, sizeof(boot), &size, 0);
 	mds_release_file(h);
 	return (rc);
