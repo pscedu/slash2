@@ -153,7 +153,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	return (0);
 }
 
-/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 */
+/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 (07/13) */
 void
 slm_bmap_resetnonce(struct bmap *b)
 {
