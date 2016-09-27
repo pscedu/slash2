@@ -2319,6 +2319,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 		    BMAPF_LOADED) {
 			bmap_op_done(b);
 			fcmh_op_done(f);
+			/*
+ 			 * XXX spin when this is the last item on the list.
+ 			 */
 			lc_add(&msl_readaheadq, rarq);
 			continue;
 		}
