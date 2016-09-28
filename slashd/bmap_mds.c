@@ -159,6 +159,7 @@ slm_bmap_resetnonce(struct bmap *b)
 {
 	sl_bmapgen_t bgen;
 	int tract[NBREPLST];
+	int rc, retifset[NBREPLST];
 #if 0
 	struct bmap_nonce_cbarg a;
 
@@ -208,7 +209,11 @@ slm_bmap_resetnonce(struct bmap *b)
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-	mds_repl_bmap_walk_all(b, tract, NULL, 0);
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+	psc_assert(rc);
 	mds_bmap_write_logrepls(b);
 
 }
