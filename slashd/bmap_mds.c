@@ -157,6 +157,9 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 void
 slm_bmap_resetnonce(struct bmap *b)
 {
+	sl_bmapgen_t bgen;
+	int tract[NBREPLST];
+#if 0
 	struct bmap_nonce_cbarg a;
 
 	memset(&a, 0, sizeof(a));
@@ -190,6 +193,22 @@ slm_bmap_resetnonce(struct bmap *b)
 		    SQLITE_INTEGER, b->bcm_bmapno);
 		mds_bmap_write_logrepls(b);
 	}
+#endif
+
+	BHGEN_GET(b, &bgen);
+	if (bgen == sl_sys_upnonce)
+		return;
+	
+	OPSTAT_INCR("bmap-gen-update");
+	bgen = sl_sys_upnonce;
+	BHGEN_SET(b, &bgen);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	mds_repl_bmap_walk_all(b, tract, NULL, 0);
+	mds_bmap_write_logrepls(b);
+
 }
 
 /*

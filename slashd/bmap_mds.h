@@ -121,6 +121,11 @@ bmap_2_bmi(struct bmap *b)
 		*(bgen) = bmap_2_bgen(b);				\
 	} while (0)
 
+#define BHGEN_SET(b, bgen)						\
+	do {								\
+		bmap_2_bgen(b) = *(bgen);				\
+	} while (0)
+
 struct bmap_timeo_table {
 	psc_spinlock_t		 btt_lock;
 	/*
