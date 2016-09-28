@@ -196,10 +196,12 @@ slm_bmap_resetnonce(struct bmap *b)
 #endif
 
 	BHGEN_GET(b, &bgen);
-	if (bgen == sl_sys_upnonce)
+	if (bgen == sl_sys_upnonce) {
+		OPSTAT_INCR("bmap-gen-same");
 		return;
+	}
 	
-	OPSTAT_INCR("bmap-gen-update");
+	OPSTAT_INCR("bmap-gen-diff");
 	bgen = sl_sys_upnonce;
 	BHGEN_SET(b, &bgen);
 
