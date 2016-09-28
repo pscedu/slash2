@@ -591,7 +591,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	struct fidc_membh *f;
 	struct sl_resource *r;
 	sl_ios_id_t resid;
-	unsigned n;
+	unsigned n, nrepls;
 
 	bmi = bmap_2_bmi(b);
 	f = b->bcm_fcmh;
@@ -603,8 +603,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	add.nios = 0;
 	del.nios = 0;
 	chg.nios = 0;
-	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
-	    n++, off += SL_BITS_PER_REPLICA) {
+	nrepls = fcmh_2_nrepls(f);
+	for (n = 0, off = 0; n < nrepls; n++, off += SL_BITS_PER_REPLICA) {
 		resid = fcmh_2_repl(f, n);
 		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
