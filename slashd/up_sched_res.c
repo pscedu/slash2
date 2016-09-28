@@ -984,17 +984,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
 
-	upg = upd_getpriv(upd);
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
-		RPMI_LOCK(rpmi);
-		si->si_flags &= ~SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
-	}
-
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1004,6 +993,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
+	upg = upd_getpriv(upd);
+	if (upg->upg_resm)
+		r = upg->upg_resm->resm_res;
 
 #define UPSCH_PAGEIN_BATCH 128
 
@@ -1027,6 +1019,16 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+
+	if (upg->upg_resm) {
+		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+
+		RPMI_LOCK(rpmi);
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
+	}
 }
 
 #if 0
