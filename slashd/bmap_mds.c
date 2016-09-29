@@ -80,6 +80,7 @@ mds_bmap_initnew(struct bmap *b)
 	INOH_ULOCK(fcmh_2_inoh(f));
 
 	bmap_2_replpol(b) = pol;
+	BHGEN_SET(b, &sl_sys_upnonce);
 
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
@@ -397,7 +398,6 @@ mds_bmap_init(struct bmap *b)
 	pll_init(&bmi->bmi_leases, struct bmap_mds_lease,
 	    bml_bmi_lentry, &b->bcm_lock);
 
-	BHGEN_SET(b, &sl_sys_upnonce);
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
 }
