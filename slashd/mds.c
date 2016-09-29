@@ -547,8 +547,9 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	    bia->bia_ios);
 
 	if (iosidx < 0) {
-		psclog_warnx("ios_lookup_add %d: %s", bia->bia_ios,
-		    sl_strerror(iosidx));
+		psclog_warnx("ios_lookup_add: ios=%d, iosidx=%d", 
+		    bia->bia_ios, iosidx);
+		FCMH_UNBUSY(f, 1);
 		return (iosidx);
 	}
 
