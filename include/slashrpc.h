@@ -664,8 +664,8 @@ struct srt_reclaim_entry {
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
-struct srm_connect_req {
-	uint64_t		magic;
+struct srm_connect_req {			/* 40 bytes in all */
+	uint64_t		magic;		/* e.g., SRCM_MAGIC */
 	uint32_t		version;
 	 int32_t		nnids;
 	uint64_t		fsuuid;		/* file system unique ID */
