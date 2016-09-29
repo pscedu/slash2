@@ -279,8 +279,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
 	    pfl_memchk(bmi_2_ondisk(bmi), 0, BMAP_OD_CRCSZ))) {
 		mds_bmap_initnew(b);
-		DEBUG_BMAPOD(PLL_DIAG, b, "initialized new bmap, nb=%d",
-		    nb);
+		DEBUG_BMAPOD(PLL_DIAG, b, "initialized new bmap, nb=%d", nb);
 		return (0);
 	}
 
