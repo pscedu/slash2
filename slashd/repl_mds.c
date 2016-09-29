@@ -147,6 +147,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/*
+	 * 09/29/2016: Hit SLERR_SHORTIO in the function. Need more investigation.
+	 */
+
+	/*
  	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
  	 */
 	rc = -ENOENT;
