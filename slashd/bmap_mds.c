@@ -377,6 +377,9 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	    b->bcm_bmapno, rc);
 
 	if (!rc && logf == (void *)mdslog_bmap_repls) {
+		/*
+		 * Schedule an update of the SQLite database.
+		 */
 		BMAP_LOCK_ENSURE(b);
 		b->bcm_flags |= BMAPF_REPLMODWR;
 		psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
