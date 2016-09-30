@@ -585,6 +585,7 @@ main(int argc, char *argv[])
 	mds_update_boot_file();
 
 	slmctlthr_spawn(sfn);
+	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
 
 	sqlite3_enable_shared_cache(1);
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
@@ -645,7 +646,6 @@ main(int argc, char *argv[])
 
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
@@ -700,7 +700,6 @@ main(int argc, char *argv[])
 	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
-	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
 	slmconnthr_spawn();
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
