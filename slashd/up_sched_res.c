@@ -1128,8 +1128,6 @@ slm_upsch_tally_cb(struct slm_sth *sth, void *p)
  * (e.g. SCHED -> QUEUED).
  */
 
-static long slm_upsch_revert_cb_count;
-
 int
 slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 {
@@ -1139,7 +1137,7 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 	struct sl_fidgen fg;
 	sl_bmapno_t bno;
 
-	slm_upsch_revert_cb_count++;
+	OPSTAT_INCR("revert-cb");
 
 	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	fg.fg_gen = FGEN_ANY;
