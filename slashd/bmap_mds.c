@@ -156,7 +156,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 }
 
 /* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 (07/13) */
-void
+static void
 slm_bmap_resetnonce(struct bmap *b)
 {
 	int tract[NBREPLST];
