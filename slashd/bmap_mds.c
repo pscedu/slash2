@@ -326,14 +326,10 @@ mds_bmap_read(struct bmap *b, int flags)
 		OPSTAT_INCR("bmap-gen-diff");
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
 		/*
- 		 * We were scheduled by a previous incarnation of MDS.
+ 		 * If we were scheduled by a previous incarnation of MDS,
+ 		 * revert SCHED to QUEUED.
  		 */
-		brepls_init(retifset, 0);
-		retifset[BREPLST_REPL_SCHED] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
-		if (mds_repl_bmap_walk_all(b, NULL, retifset,
-		    REPL_WALKF_SCIRCUIT))
-			slm_bmap_resetnonce(b);
+		slm_bmap_resetnonce(b);
 	}
 
  out3:
