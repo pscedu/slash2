@@ -360,7 +360,7 @@ int	 mds_sliod_alive(void *);
 
 void	 slmbkdbthr_main(struct psc_thread *);
 void	 slmbmaptimeothr_spawn(void);
-void	 slmctlthr_main(const char *);
+void	 slmctlthr_spawn(const char *);
 void	 slmrcmthr_main(struct psc_thread *);
 
 slfid_t	 slm_get_curr_slashfid(void);

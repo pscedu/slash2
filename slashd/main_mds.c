@@ -402,6 +402,7 @@ main(int argc, char *argv[])
 	int rc, vfsid, c, found;
 	struct psc_thread *thr;
 	time_t now;
+	struct psc_thread *me;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -580,7 +581,10 @@ main(int argc, char *argv[])
 
 	mds_bmap_timeotbl_init();
 
+	slrpc_initcli();
 	mds_update_boot_file();
+
+	slmctlthr_spawn(sfn);
 
 	sqlite3_enable_shared_cache(1);
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
@@ -641,7 +645,6 @@ main(int argc, char *argv[])
 
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-	slrpc_initcli();
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
@@ -712,6 +715,7 @@ main(int argc, char *argv[])
 
 	pfl_fault_register(RMC_HANDLE_FAULT);
 
-	slmctlthr_main(sfn);
+	me = pscthr_get();
+	psc_ctlthr_mainloop(me);
 	exit(0);
 }

@@ -512,7 +512,7 @@ slmctlparam_upsch_get(char *val)
 }
 
 void
-slmctlthr_main(const char *fn)
+slmctlthr_spawn(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
 	pflrpc_register_ctlops(slmctlops);
