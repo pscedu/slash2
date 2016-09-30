@@ -586,6 +586,8 @@ main(int argc, char *argv[])
 
 	slmctlthr_spawn(sfn);
 	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
+	time(&now);
+	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
 	sqlite3_enable_shared_cache(1);
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
