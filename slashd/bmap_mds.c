@@ -346,6 +346,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	struct slm_wkdata_wr_brepl *wk;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
+	OPSTAT_INCR("bmap-write");
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
@@ -388,6 +389,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		wk->b = b;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 		pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
+		OPSTAT_INCR("bmap-write-log");
 	}
 
 	return (rc);
