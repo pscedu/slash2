@@ -886,6 +886,10 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
+	/*
+ 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
+ 	 * does not really care about them.
+ 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
 	retifset[BREPLST_REPL_SCHED] = 1;
