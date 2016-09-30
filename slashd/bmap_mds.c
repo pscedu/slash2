@@ -216,7 +216,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, new, vfsid, retifset[NBREPLST];
+	int rc, new, vfsid;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
