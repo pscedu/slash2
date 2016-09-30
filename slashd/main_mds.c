@@ -655,14 +655,6 @@ main(int argc, char *argv[])
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
-	/*
-	 * As soon as log replay is over, we should be able to set the
-	 * state to NORMAL.  However, we had issues when trying to write
-	 * new log entries while replaying odtable.  So keep it this way
-	 * for now.
-	 */
-	slm_opstate = SLM_OPSTATE_NORMAL;
-
 	dbdo(slm_upsch_revert_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno"
@@ -673,6 +665,13 @@ main(int argc, char *argv[])
 	    " UPDATE	upsch"
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
+	/*
+	 * As soon as log replay is over, we should be able to set the
+	 * state to NORMAL.  However, we had issues when trying to write
+	 * new log entries while replaying odtable.  So keep it this way
+	 * for now.
+	 */
+	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,

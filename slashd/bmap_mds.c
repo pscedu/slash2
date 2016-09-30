@@ -319,10 +319,12 @@ mds_bmap_read(struct bmap *b, int flags)
 		 */
 		mds_bmap_ensure_valid(b);
 
-#if 0
 	/*
- 	 * We don't need to do this because (1) slm_upsch_revert_cb() can
- 	 * handle these bmaps (2) we can ask users to requeue a request.
+ 	 * During REPLAY stage, we rely on slm_upsch_revert_cb() to do
+ 	 * the work.
+ 	 *
+ 	 * During the NORMAL stage, we rely on the generation number to
+ 	 * do the work.
  	 */
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
 		brepls_init(retifset, 0);
@@ -332,7 +334,6 @@ mds_bmap_read(struct bmap *b, int flags)
 		    REPL_WALKF_SCIRCUIT))
 			slm_bmap_resetnonce(b);
 	}
-#endif
 
 	BMAP_ULOCK(b);
 	return (0);
