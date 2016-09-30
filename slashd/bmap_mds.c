@@ -204,9 +204,8 @@ slm_bmap_resetnonce(struct bmap *b)
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-	psc_assert(rc);
-	mds_bmap_write_logrepls(b);
-
+	if (rc)
+		mds_bmap_write_logrepls(b);
 }
 
 /*
