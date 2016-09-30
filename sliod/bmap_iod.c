@@ -253,7 +253,7 @@ sli_bmap_sync(struct bmap *b)
 			OPSTAT_INCR("sync-sloow");
 		else
 			OPSTAT_INCR("sync-slow");
-		DEBUG_FCMH(PLL_NOTICE, f,
+		DEBUG_FCMH(PLL_WARN, f,
 		    "long sync %"PSCPRI_TIMET, delta.tv_sec);
 	}
 	if (rc) {
