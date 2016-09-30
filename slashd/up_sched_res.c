@@ -853,6 +853,20 @@ upd_proc_bmap(struct slm_update_data *upd)
 			if (rc > 0)
 				goto out;
 			break;
+		case BREPLST_VALID:
+	 		/* 
+			 * I guess it is possible that the state has 
+			 * already been marked as valid (a user requeue 
+			 * a request and the previous request has come 
+			 * back successfully in between.
+			 *
+			 * In fact, there is a window between we update
+			 * the bmap and we update the SQL table. So we
+			 * might want users to requeue. Of course, if
+			 * the SQL table is gone, we have to requeue.
+			 */ 
+			OPSTAT_INCR("upsch-already-valid");
+			break;
 		}
 	}
  out:
