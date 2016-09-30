@@ -153,6 +153,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
  		 * mds_repl_delrq().
  		 */
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
+		/*
+ 		 * Wow, we just don't redo the work.
+ 		 */
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
