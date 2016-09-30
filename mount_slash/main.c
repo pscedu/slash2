@@ -2852,6 +2852,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
 
+	FCMH_LOCK(c);
+	FCMH_WAIT_BUSY(c, 0);
+
 	/*
 	 * pscfs_reply_setattr() needs a fresh statbuf to refresh the
 	 * entry, so we have to defer the short circuit processing till
@@ -2864,9 +2867,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		to_set &= ~PSCFS_SETATTRF_GID;
 	if (to_set == 0)
 		goto out;
-
-	FCMH_LOCK(c);
-	FCMH_WAIT_BUSY(c, 0);
 
 	slc_getfscreds(pfr, &pcr);
 
