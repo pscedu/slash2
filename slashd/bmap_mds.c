@@ -198,6 +198,7 @@ slm_bmap_resetnonce(struct bmap *b)
 	}
 #endif
 
+	/* (gdb) p ((struct bmap_mds_info *)(b+1))->bmi_extrastate.bes_gen */
 	BHGEN_GET(b, &bgen);
 	if (bgen == sl_sys_upnonce) {
 		OPSTAT_INCR("bmap-gen-same");
