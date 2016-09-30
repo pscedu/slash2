@@ -652,17 +652,6 @@ main(int argc, char *argv[])
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
-	dbdo(slm_upsch_revert_cb, NULL,
-	    " SELECT	fid,"
-	    "		bno"
-	    " FROM	upsch"
-	    " WHERE	status = 'S'");
-
-	dbdo(NULL, NULL,
-	    " UPDATE	upsch"
-	    " SET	status = 'Q'"
-	    " WHERE	status = 'S'");
-
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
@@ -673,6 +662,17 @@ main(int argc, char *argv[])
 	 * for now.
 	 */
 	slm_opstate = SLM_OPSTATE_NORMAL;
+
+	dbdo(slm_upsch_revert_cb, NULL,
+	    " SELECT	fid,"
+	    "		bno"
+	    " FROM	upsch"
+	    " WHERE	status = 'S'");
+
+	dbdo(NULL, NULL,
+	    " UPDATE	upsch"
+	    " SET	status = 'Q'"
+	    " WHERE	status = 'S'");
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
