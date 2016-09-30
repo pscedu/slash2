@@ -580,6 +580,8 @@ main(int argc, char *argv[])
 
 	mds_bmap_timeotbl_init();
 
+	mds_update_boot_file();
+
 	sqlite3_enable_shared_cache(1);
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
@@ -701,8 +703,6 @@ main(int argc, char *argv[])
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
-
-	mds_update_boot_file();
 
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",

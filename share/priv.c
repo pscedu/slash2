@@ -50,7 +50,7 @@ sl_drop_privs(__unusedx int allow_root_uid)
 	 * TODO: enable this code once proper privilege separation is
 	 * implemented.
 	 */
-return;
+	return;
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
