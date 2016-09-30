@@ -888,7 +888,8 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	/*
  	 * XXX why do we care about SCHED here?  upd_proc_bmap()
- 	 * does not really care about them.
+ 	 * does not really care about them.  This seems fine
+ 	 * today because we only page in requests in 'Q' state.
  	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
