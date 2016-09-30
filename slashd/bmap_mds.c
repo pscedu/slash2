@@ -326,13 +326,17 @@ mds_bmap_read(struct bmap *b, int flags)
  	 *
  	 * During the NORMAL stage, we rely on the generation number to
  	 * do the work.
+ 	 *
+	 * (gdb) p ((struct bmap_mds_info *)(b+1))->bmi_extrastate.bes_gen
+ 	 *
  	 */
+	BHGEN_GET(b, &bgen);
+	if (bgen == sl_sys_upnonce) {
+		OPSTAT_INCR("bmap-gen-same");
+		goto out3;
+	} else
+		OPSTAT_INCR("bmap-gen-diff");
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
-		BHGEN_GET(b, &bgen);
-		if (bgen == sl_sys_upnonce) {
-			OPSTAT_INCR("bmap-gen-same");
-			goto out3;
-		}
 		/*
  		 * We were scheduled by a previous incarnation of MDS.
  		 */
