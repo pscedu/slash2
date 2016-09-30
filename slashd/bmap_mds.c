@@ -84,6 +84,7 @@ mds_bmap_initnew(struct bmap *b)
 
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
+	OPSTAT_INCR("bmap-init");
 }
 
 void
@@ -301,6 +302,7 @@ mds_bmap_read(struct bmap *b, int flags)
 		return (rc);
 	}
 
+	OPSTAT_INCR("bmap-load");
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
