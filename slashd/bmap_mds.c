@@ -236,6 +236,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	struct iovec iovs[2];
 	uint64_t crc, od_crc = 0;
 	size_t nb;
+	sl_bmapgen_t bgen;
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
@@ -320,13 +321,21 @@ mds_bmap_read(struct bmap *b, int flags)
 		mds_bmap_ensure_valid(b);
 
 	/*
- 	 * During REPLAY stage, we rely on slm_upsch_revert_cb() to do
- 	 * the work.
+ 	 * During the REPLAY stage, we rely on slm_upsch_revert_cb() to 
+ 	 * do the work.
  	 *
  	 * During the NORMAL stage, we rely on the generation number to
  	 * do the work.
  	 */
 	if (slm_opstate != SLM_OPSTATE_REPLAY) {
+		BHGEN_GET(b, &bgen);
+		if (bgen == sl_sys_upnonce) {
+			OPSTAT_INCR("bmap-gen-same");
+			goto out3;
+		}
+		/*
+ 		 * We were scheduled by a previous incarnation of MDS.
+ 		 */
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
@@ -334,6 +343,10 @@ mds_bmap_read(struct bmap *b, int flags)
 		    REPL_WALKF_SCIRCUIT))
 			slm_bmap_resetnonce(b);
 	}
+
+ out3:
+	bgen = sl_sys_upnonce;
+	BHGEN_SET(b, &bgen);
 
 	BMAP_ULOCK(b);
 	return (0);
