@@ -1149,9 +1149,9 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			}
 		}
 		/*
-		 * We only pause when we have a residency.
+		 * We only sleep when we have a residency.
 		 * However, an IOS with residency might be
-		 * done while another IOS is up.
+		 * down while another IOS is up.
 		 *
  		 * A quick fix so that we don't return 
  		 * ETIMEDOUT when an IOS is contacted 
