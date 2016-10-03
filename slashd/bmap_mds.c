@@ -206,7 +206,7 @@ slm_bmap_resetnonce(struct bmap *b)
 
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc) {
-		OPSTAT_INCR("bmap-revert");
+		OPSTAT_INCR("bmap-revert-normal");
 		mds_bmap_write_logrepls(b);
 	}
 }
