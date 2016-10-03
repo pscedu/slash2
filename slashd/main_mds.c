@@ -652,7 +652,7 @@ main(int argc, char *argv[])
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
-	dbdo(slm_upsch_revert_cb, NULL,
+	dbdo(slm_upsch_requeue_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno"
 	    " FROM	upsch"

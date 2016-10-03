@@ -1151,7 +1151,7 @@ slm_upsch_tally_cb(struct slm_sth *sth, void *p)
  */
 
 int
-slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
+slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct fidc_membh *f = NULL;
