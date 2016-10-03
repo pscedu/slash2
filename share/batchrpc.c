@@ -257,8 +257,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		bq->bq_rq->rq_interpret_reply = slrpc_batch_req_send_cb;
 		bq->bq_rq->rq_async_args.pointer_arg[0] = bq;
 		rc = SL_NBRQSET_ADD(bq->bq_csvc, bq->bq_rq);
-	}
-	if (rc) {
+	} else {
 		/*
 		 * If we failed, check again to see if the connection
 		 * has been reestablished since there can be delay in
