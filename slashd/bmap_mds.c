@@ -203,9 +203,12 @@ slm_bmap_resetnonce(struct bmap *b)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-	if (rc)
+	if (rc) {
+		OPSTAT_INCR("bmap-revert");
 		mds_bmap_write_logrepls(b);
+	}
 }
 
 /*
@@ -320,20 +323,17 @@ mds_bmap_read(struct bmap *b, int flags)
 	BHGEN_GET(b, &bgen);
 	if (bgen == sl_sys_upnonce) {
 		OPSTAT_INCR("bmap-gen-same");
-		goto out3;
-	} else
+	} else {
 		OPSTAT_INCR("bmap-gen-diff");
-	if (slm_opstate != SLM_OPSTATE_REPLAY) {
-		/*
- 		 * If we were scheduled by a previous incarnation of MDS,
- 		 * revert SCHED to QUEUED.
- 		 */
-		slm_bmap_resetnonce(b);
+		BHGEN_SET(b, &sl_sys_upnonce);
+		if (slm_opstate != SLM_OPSTATE_REPLAY) {
+			/*
+ 			 * If we were scheduled by a previous incarnation 
+ 			 * of MDS, revert SCHED to QUEUED.
+ 			 */
+			slm_bmap_resetnonce(b);
+		}
 	}
-
- out3:
-	bgen = sl_sys_upnonce;
-	BHGEN_SET(b, &bgen);
 
 	BMAP_ULOCK(b);
 	return (0);

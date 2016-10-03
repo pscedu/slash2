@@ -1187,8 +1187,10 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-	if (rc)
+	if (rc) {
+		OPSTAT_INCR("revert-cb-update");
 		mds_bmap_write(b, NULL, NULL);
+	}
 	BMAP_ULOCK(b);
 
  out:
