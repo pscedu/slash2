@@ -113,6 +113,8 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
  	 * Use to catch any unhandled anomaly.
  	 */
 	psc_assert(!(bq->bq_flags & BATCHF_FREEING));
+	psc_assert((bq->bq_flags & BATCHF_INFL) || 
+		   (bq->bq_flags & BATCHF_REPLY));
 	bq->bq_flags |= BATCHF_FREEING;
 	freelock(&bq->bq_lock);
 
