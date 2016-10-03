@@ -130,4 +130,6 @@ extern struct statvfs		 sli_statvfs_buf;
  */
 #define RIC_HANDLE_FAULT        "sliod/ric_handle"
 
+void	slictlthr_spawn(const char *);
+
 #endif /* _SLIOD_H_ */

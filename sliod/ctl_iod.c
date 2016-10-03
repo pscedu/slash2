@@ -603,7 +603,7 @@ struct psc_ctlop slictlops[] = {
 };
 
 void
-slictlthr_main(const char *fn)
+slictlthr_spawn(const char *fn)
 {
 	pflrpc_register_ctlops(slictlops);
 

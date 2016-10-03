@@ -228,6 +228,7 @@ main(int argc, char *argv[])
 	sigset_t signal_set;
 	time_t now;
 	int c;
+	struct psc_thread *me;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -357,6 +358,8 @@ main(int argc, char *argv[])
 
 	pfl_fault_register(RIC_HANDLE_FAULT);
 
-	slictlthr_main(sfn);
+	slictlthr_spawn(sfn);
+	me = pscthr_get();
+	psc_ctlthr_mainloop(me);
 	exit(0);
 }
