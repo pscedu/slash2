@@ -1075,7 +1075,7 @@ int
 msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
     struct slrpc_cservice **csvcp)
 {
-	int has_residency, pause, i, j, locked, rc;
+	int has_residency, i, j, locked, rc;
 	struct fcmh_cli_info *fci;
 	struct sl_resm *m;
 
@@ -1130,7 +1130,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 	 *	 (multiwait) until one wakes us up, after which we try
 	 *	 again and use that connection.
 	 */
-	pause = 0;
 	has_residency = 0;
 	for (i = 0; i < 2; i++) {
 		/* fci->u.f.inode.nrepls */
@@ -1142,7 +1141,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 			case 0:
 				return (0);
 			case -1: /* resident but offline */
-				pause = 1;
 				has_residency = 1;
 				break;
 			case -2: /* not resident */
@@ -1160,7 +1158,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
  		 * first for an operation (e.g.,read 
  		 * a file.
 		 */
-		if (pause && i == 0)
+		if (has_residency && i == 0)
 			sleep(3);
 
 //		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
