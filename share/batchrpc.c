@@ -123,11 +123,6 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		psclog_warnx("batch request rc = %d", rc);
 	}
 
-	if (bq->bq_flags & (BATCHF_INFL|BATCHF_REPLY))
-		lc_remove(&slrpc_batch_req_waitrep, bq);
-	else
-		lc_remove(&slrpc_batch_req_delayed, bq);
-
 	sl_csvc_decref(bq->bq_csvc);
 
 	/*
@@ -213,6 +208,7 @@ slrpc_batch_req_send_cb(struct pscrpc_request *rq,
 	    rc);
 
 	if (rc) {
+		lc_remove(&slrpc_batch_req_waitrep, bq);
 		slrpc_batch_req_sched_finish(bq, 2, rc);
 	} else {
 		spinlock(&bq->bq_lock);
@@ -237,11 +233,16 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
 	psc_assert(!(bq->bq_flags & BATCHF_INFL));
+
+	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
+
 	bq->bq_flags |= BATCHF_INFL;
 	bq->bq_flags &= ~BATCHF_DELAY;
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
+
+	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 
 	freelock(&bq->bq_lock);
 
@@ -265,6 +266,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 		 * using this API.
 		 */
 		pscrpc_req_finished(bq->bq_rq);
+		lc_remove(&slrpc_batch_req_waitrep, bq);
 		slrpc_batch_req_sched_finish(bq, 1, rc);
 	}
 }
@@ -541,6 +543,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 				goto retry;
 			}
 			freelock(&bq->bq_lock);
+			lc_remove(&slrpc_batch_req_waitrep, bq);
 			LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 			/*
  			 * mq is actually a batch request reply here.
@@ -779,6 +782,7 @@ slrpc_batches_drop(struct sl_resource *res)
 	LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_waitrep) {
 		if (bq->bq_res == res) {
 			/* ECONNRESET = 104 */
+			lc_remove(&slrpc_batch_req_waitrep, bq);
 			slrpc_batch_req_sched_finish(bq, 4, -ECONNRESET);
 		}
 	}
