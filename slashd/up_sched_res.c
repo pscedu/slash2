@@ -983,14 +983,68 @@ upd_pagein_wk(void *p)
 int
 upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
+
+#if 0
 	struct slm_wkdata_upschq *wk;
 
 	OPSTAT_INCR("upsch-db-pagein");
-
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
 	pfl_workq_putitem(wk);
+#endif
+
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
+	int rc, retifset[NBREPLST];
+	struct sl_fidgen fg;
+	sl_bmapno_t bno;
+
+	OPSTAT_INCR("upsch-db-pagein");
+
+	fg.fg_gen = 0;
+	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	bno = sqlite3_column_int(sth->sth_sth, 1);
+
+	rc = slm_fcmh_get(&fg, &f);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
+	rc = bmap_get(f, bno, SL_WRITE, &b);
+	if (rc)
+		goto out;
+
+	BMAP_ULOCK(b);
+	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
+	/*
+ 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
+ 	 * does not really care about them.  This seems fine
+ 	 * today because we only page in requests in 'Q' state.
+ 	 */
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	if (slm_preclaim_enabled) {
+		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+	}
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT))
+		upsch_enqueue(bmap_2_upd(b));
+
+	BMAP_ULOCK(b);
+
+ out:
 	return (0);
 }
 
@@ -1246,7 +1300,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
-	// upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
@@ -1267,7 +1321,7 @@ slmupschthr_main(struct psc_thread *thr)
 	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		if (lc_nitems(&slm_upsch_queue) < 256) {
+		if (!lc_nitems(&slm_upsch_queue)) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1275,9 +1329,7 @@ slmupschthr_main(struct psc_thread *thr)
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		ts.tv_nsec = 0;
-		ts.tv_sec = time(NULL) + 3;
-		upd = lc_gettimed(&slm_upsch_queue, &ts);
+		upd = lc_getwait(&slm_upsch_queue);
 		if (upd)
 			upd_proc(upd);
 	}
