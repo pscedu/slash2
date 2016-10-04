@@ -79,6 +79,8 @@ psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
 struct psc_listcache     slm_upsch_queue;
 
+psc_atomic32_t		 slm_sql_update;
+
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
@@ -208,7 +210,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
-	upschq_resm(dst_resm, UPDT_PAGEIN);
+
+	// upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -241,7 +244,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
-		upschq_resm(dst_resm, UPDT_PAGEIN);
+		// upschq_resm(dst_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
@@ -323,7 +326,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	/*
 	 * We have successfully scheduled some work, page in more.
 	 */
-	upschq_resm(dst_resm, UPDT_PAGEIN);
+	// upschq_resm(dst_resm, UPDT_PAGEIN);
 
 	return (1);
 
@@ -1243,11 +1246,13 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
-	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+	// upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
 		OPSTAT_INCR("upsch-insert-err");
+
+	psc_atomic32_inc(&slm_sql_update);
 	return (rc);
 }
 
@@ -1262,7 +1267,7 @@ slmupschthr_main(struct psc_thread *thr)
 	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		if (lc_nitems(&slm_upsch_queue) < 32) {
+		if (lc_nitems(&slm_upsch_queue) < 256) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1281,6 +1286,8 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slm_upsch_init(void)
 {
+	psc_atomic32_set(&slm_sql_update, 0);
+
 	psc_poolmaster_init(&slm_upgen_poolmaster,
 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "upgen");
@@ -1420,9 +1427,9 @@ upsch_enqueue(struct slm_update_data *upd)
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP)
-			lc_addhead(&slm_upsch_queue, upd);
-		else
 			lc_addtail(&slm_upsch_queue, upd);
+		else
+			lc_addhead(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);
