@@ -1045,6 +1045,13 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 	BMAP_ULOCK(b);
 
  out:
+	if (b)
+		bmap_op_done(b);
+
+	if (f) {
+		FCMH_UNBUSY(f, 1);
+		fcmh_op_done(f);
+	}
 	return (0);
 }
 
