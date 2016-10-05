@@ -981,6 +981,10 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_wkdata_upschq *wk;
 
+	/*
+ 	 * Accumulate work items here and submit them in a batch later
+ 	 * so that we know when the paging is really done.
+ 	 */
 	OPSTAT_INCR("upsch-db-pagein");
 
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
