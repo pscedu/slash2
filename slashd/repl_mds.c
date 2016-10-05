@@ -748,9 +748,12 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 }
 
 /*
- * Handle a request to do replication from a client.  May also
- * reinitialize some parameters of the replication, such as priority, if
- * the request already exists in the system.
+ * Handle a request to do replication from a client.  We may also
+ * reinitialize some parameters of the replication, such as priority, 
+ * if the request already exists in the system.
+ *
+ * This is at least one of the reasons that the client and MDS must
+ * share the same configuration fle.
  */
 int
 mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
