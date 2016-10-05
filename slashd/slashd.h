@@ -340,8 +340,8 @@ struct mio_rootnames {
 	struct pfl_hashentry	 rn_hentry;
 };
 
-#define SLM_NWORKER_THREADS	4
-#define SLM_NUPSCHED_THREADS	2
+#define SLM_NWORKER_THREADS	6
+#define SLM_NUPSCHED_THREADS	4
 
 enum {
 	SLM_OPSTATE_INIT = 0,
