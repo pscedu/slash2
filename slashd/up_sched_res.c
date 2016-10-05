@@ -79,8 +79,6 @@ psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
 struct psc_listcache     slm_upsch_queue;
 
-psc_atomic32_t		 slm_sql_update;
-
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
@@ -210,8 +208,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
-
-	// upschq_resm(dst_resm, UPDT_PAGEIN);
+	upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -244,7 +241,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
-		// upschq_resm(dst_resm, UPDT_PAGEIN);
+		upschq_resm(dst_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
@@ -326,7 +323,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	/*
 	 * We have successfully scheduled some work, page in more.
 	 */
-	// upschq_resm(dst_resm, UPDT_PAGEIN);
+	upschq_resm(dst_resm, UPDT_PAGEIN);
 
 	return (1);
 
@@ -983,75 +980,14 @@ upd_pagein_wk(void *p)
 int
 upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
-
-#if 0
 	struct slm_wkdata_upschq *wk;
 
 	OPSTAT_INCR("upsch-db-pagein");
+
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
 	pfl_workq_putitem(wk);
-#endif
-
-	struct fidc_membh *f = NULL;
-	struct bmap *b = NULL;
-	int rc, retifset[NBREPLST];
-	struct sl_fidgen fg;
-	sl_bmapno_t bno;
-
-	OPSTAT_INCR("upsch-db-pagein");
-
-	fg.fg_gen = 0;
-	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
-	bno = sqlite3_column_int(sth->sth_sth, 1);
-
-	rc = slm_fcmh_get(&fg, &f);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
-
-	rc = bmap_get(f, bno, SL_WRITE, &b);
-	if (rc)
-		goto out;
-
-	BMAP_ULOCK(b);
-	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-		mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-	/*
- 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
- 	 * does not really care about them.  This seems fine
- 	 * today because we only page in requests in 'Q' state.
- 	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	if (slm_preclaim_enabled) {
-		retifset[BREPLST_GARBAGE] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
-	}
-
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		upsch_enqueue(bmap_2_upd(b));
-
-	BMAP_ULOCK(b);
-
- out:
-	if (b)
-		bmap_op_done(b);
-
-	if (f) {
-		FCMH_UNBUSY(f, 1);
-		fcmh_op_done(f);
-	}
 	return (0);
 }
 
@@ -1312,8 +1248,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 		OPSTAT_INCR("upsch-insert-ok");
 	else
 		OPSTAT_INCR("upsch-insert-err");
-
-	psc_atomic32_inc(&slm_sql_update);
 	return (rc);
 }
 
@@ -1328,7 +1262,7 @@ slmupschthr_main(struct psc_thread *thr)
 	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		if (!lc_nitems(&slm_upsch_queue)) {
+		if (lc_nitems(&slm_upsch_queue) < 32) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1336,7 +1270,9 @@ slmupschthr_main(struct psc_thread *thr)
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		upd = lc_getwait(&slm_upsch_queue);
+		ts.tv_nsec = 0;
+		ts.tv_sec = time(NULL) + 3;
+		upd = lc_gettimed(&slm_upsch_queue, &ts);
 		if (upd)
 			upd_proc(upd);
 	}
@@ -1345,8 +1281,6 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slm_upsch_init(void)
 {
-	psc_atomic32_set(&slm_sql_update, 0);
-
 	psc_poolmaster_init(&slm_upgen_poolmaster,
 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "upgen");
@@ -1486,9 +1420,9 @@ upsch_enqueue(struct slm_update_data *upd)
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP)
-			lc_addtail(&slm_upsch_queue, upd);
-		else
 			lc_addhead(&slm_upsch_queue, upd);
+		else
+			lc_addtail(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);
