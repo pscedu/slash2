@@ -77,6 +77,8 @@
 
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
+
+/* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
 struct psc_poolmaster	 slm_upgen_poolmaster;
