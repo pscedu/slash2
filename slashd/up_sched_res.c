@@ -1100,8 +1100,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 #define UPSCH_PAGEIN_BATCH 128
 
-	spinlock(&slm_upsch_lock);
-
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
@@ -1122,8 +1120,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
-
-	freelock(&slm_upsch_lock);
 
 	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
@@ -1296,7 +1292,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
-	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1327,7 +1322,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
-	freelock(&slm_upsch_lock);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
