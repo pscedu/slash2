@@ -957,6 +957,7 @@ int
 upd_pagein_wk(void *p)
 {
 	struct slm_wkdata_upschq *wk = p;
+#if 0
 	struct slm_update_generic *upg;
 
 	upg = psc_pool_get(slm_upgen_pool);
@@ -973,6 +974,79 @@ upd_pagein_wk(void *p)
 	
 	spinlock(&upg->upg_upd.upd_lock);
 	UPD_UNBUSY(&upg->upg_upd);
+#endif
+
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
+	int rc, retifset[NBREPLST];
+	struct sl_fidgen fg;
+
+	fg.fg_fid = wk->fg.fg_fid;
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
+	rc = bmap_get(f, wk->bno, SL_WRITE, &b);
+	if (rc)
+		goto out;
+
+	BMAP_ULOCK(b);
+	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
+	/*
+ 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
+ 	 * does not really care about them.  This seems fine
+ 	 * today because we only page in requests in 'Q' state.
+ 	 */
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	if (slm_preclaim_enabled) {
+		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+	}
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT))
+		upsch_enqueue(bmap_2_upd(b));
+	else
+		rc = 1;
+
+	BMAP_ULOCK(b);
+
+ out:
+	if (rc) {
+		/*
+		 * XXX Do we need to do any work if rc is an error code
+		 * instead 1 here?
+		 */
+		struct slm_wkdata_upsch_purge *purge_wk;
+
+		purge_wk = pfl_workq_getitem(slm_wk_upsch_purge,
+		    struct slm_wkdata_upsch_purge);
+		purge_wk->fid = fg.fg_fid;
+		if (b)
+			purge_wk->bno = b->bcm_bmapno;
+		else
+			purge_wk->bno = BMAPNO_ANY;
+		pfl_workq_putitemq(&slm_db_lopri_workq, purge_wk);
+	}
+	if (b)
+		bmap_op_done(b);
+
+	if (f) {
+		FCMH_UNBUSY(f, 1);
+		fcmh_op_done(f);
+	}
 	return (0);
 }
 
@@ -1024,6 +1098,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 #define UPSCH_PAGEIN_BATCH 128
 
+	spinlock(&slm_upsch_lock);
+
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
@@ -1044,6 +1120,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+
+	freelock(&slm_upsch_lock);
 
 	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
@@ -1216,6 +1294,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
+	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1246,6 +1325,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
+	freelock(&slm_upsch_lock);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
@@ -1264,7 +1344,7 @@ slmupschthr_main(struct psc_thread *thr)
 	int i, j;
 
 	while (pscthr_run(thr)) {
-		if (!lc_nitems(&slm_upsch_queue)) {
+		if (lc_nitems(&slm_upsch_queue) < 128) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1420,9 +1500,9 @@ upsch_enqueue(struct slm_update_data *upd)
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP)
-			lc_addhead(&slm_upsch_queue, upd);
-		else
 			lc_addtail(&slm_upsch_queue, upd);
+		else
+			lc_addhead(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);

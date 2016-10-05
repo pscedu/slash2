@@ -673,6 +673,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    add.iosv[n].bs_id, rc);
 	}
 
+	spinlock(&slm_upsch_lock);
 	for (n = 0; n < del.nios; n++)
 		dbdo(NULL, NULL,
 		    " DELETE FROM upsch"
@@ -701,6 +702,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    SQLITE_INTEGER, chg.iosv[n].bs_id,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
+	freelock(&slm_upsch_lock);
 
 	bmap_2_bmi(b)->bmi_sys_prio = -1;
 	bmap_2_bmi(b)->bmi_usr_prio = -1;
@@ -748,12 +750,9 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 }
 
 /*
- * Handle a request to do replication from a client.  We may also
- * reinitialize some parameters of the replication, such as priority, 
- * if the request already exists in the system.
- *
- * This is at least one of the reasons that the client and MDS must
- * share the same configuration fle.
+ * Handle a request to do replication from a client.  May also
+ * reinitialize some parameters of the replication, such as priority, if
+ * the request already exists in the system.
  */
 int
 mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,

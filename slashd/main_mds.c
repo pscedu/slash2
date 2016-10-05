@@ -681,7 +681,6 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-lopri-workq");
-	LIST_CACHE_LOCK(&slm_db_lopri_workq);
 	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
 	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
@@ -689,7 +688,6 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-hipri-workq");
-	LIST_CACHE_LOCK(&slm_db_hipri_workq);
 	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 	    sizeof(struct slmdbwk_thread), "slmdbhiwkthr");
 	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
