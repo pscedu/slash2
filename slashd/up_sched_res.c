@@ -241,7 +241,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
-		upschq_resm(dst_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
@@ -1259,10 +1258,9 @@ slmupschthr_main(struct psc_thread *thr)
 	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j;
-	struct timespec ts;
 
 	while (pscthr_run(thr)) {
-		if (lc_nitems(&slm_upsch_queue) < 32) {
+		if (!lc_nitems(&slm_upsch_queue)) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1270,9 +1268,7 @@ slmupschthr_main(struct psc_thread *thr)
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		ts.tv_nsec = 0;
-		ts.tv_sec = time(NULL) + 3;
-		upd = lc_gettimed(&slm_upsch_queue, &ts);
+		upd = lc_getwait(&slm_upsch_queue);
 		if (upd)
 			upd_proc(upd);
 	}
