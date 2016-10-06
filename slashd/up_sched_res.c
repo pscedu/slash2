@@ -1005,14 +1005,11 @@ upd_pagein_wk(void *p)
 	}
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		upsch_enqueue(bmap_2_upd(b));
 	else
 		rc = 1;
-
 	BMAP_ULOCK(b);
 
  out:
@@ -1020,6 +1017,9 @@ upd_pagein_wk(void *p)
 		/*
 		 * XXX Do we need to do any work if rc is an error code
 		 * instead 1 here?
+		 *
+		 * We only try once because an IOS might down. So it is
+		 * up to the user to requeue his request.
 		 */
 		struct slm_wkdata_upsch_purge *purge_wk;
 
@@ -1101,7 +1101,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si = res2iosinfo(r);
 	}
 
-#define UPSCH_PAGEIN_BATCH 128
+#define UPSCH_PAGEIN_BATCH 1024
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
