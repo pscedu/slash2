@@ -137,8 +137,7 @@ int
 mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, level, wasbusy = 1;
-	struct fidc_membh *f;
+	int rc, level;
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
@@ -146,11 +145,6 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	INOH_LOCK_ENSURE(ih);
 
-	f = inoh_2_fcmh(ih);
-	if (!FCMH_HAS_BUSY(f)) {
-		wasbusy = 0;
-		FCMH_WAIT_BUSY(f, 0);
-	}
 	INOH_ULOCK(ih);
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
@@ -182,8 +176,6 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (!rc) 
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
-	if (!wasbusy)
-		FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 
@@ -191,8 +183,7 @@ int
 mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
     void *arg)
 {
-	int rc, level, wasbusy = 1;
-	struct fidc_membh *f;
+	int rc, level;
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
@@ -202,11 +193,6 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	psc_assert(ih->inoh_extras);
 
-	f = inoh_2_fcmh(ih);
-	if (!FCMH_HAS_BUSY(f)) {
-		wasbusy = 0;
-		FCMH_WAIT_BUSY(f, 0);
-	}
 	INOH_ULOCK(ih);
 
 	psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
@@ -235,8 +221,6 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	    "flags=%x size=%"PRIu64" data=%p, nb = %zd, rc = %d",
 	    ih->inoh_flags, inoh_2_fsz(ih), inoh_2_mfh(ih), nb, rc);
 
-	if (!wasbusy)
-		FCMH_UNBUSY(f, 0);
 	return (rc);
 }
 

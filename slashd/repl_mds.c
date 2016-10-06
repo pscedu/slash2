@@ -355,9 +355,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 {
 	int val, rc = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	struct fidc_membh *f = b->bcm_fcmh;
 
-	FCMH_BUSY_ENSURE(f);
 	BMAP_LOCK_ENSURE(b);
 	psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
 	if (tract) {
@@ -772,7 +770,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		return (-rc);
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 
 	if (!fcmh_isdir(f) && !fcmh_isreg(f))
 		PFL_GOTOERR(out, rc = -PFLERR_NOTSUP);
@@ -883,10 +880,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	}
 
  out:
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	*nbmaps = nbmaps_processed;
 	return (rc);
 }
@@ -957,7 +952,6 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		return (-rc);
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	if (fcmh_isdir(f))
 		flags = IOSV_LOOKUPF_DEL;
 	else
@@ -1024,10 +1018,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	}
 
  out:
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	*nbmaps = nbmaps_processed;
 	return (rc);
 }

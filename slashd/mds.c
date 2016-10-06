@@ -542,14 +542,13 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
 	    bia->bia_ios);
+	FCMH_ULOCK(f);
 
 	if (iosidx < 0) {
 		psclog_warnx("ios_lookup_add: ios=%d, iosidx=%d", 
 		    bia->bia_ios, iosidx);
-		FCMH_UNBUSY(f, 1);
 		return (iosidx);
 	}
 
@@ -564,7 +563,6 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
 		return (rc);
 	}
 	mds_reserve_slot(1);
@@ -579,7 +577,6 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	mdslogfill_bmap_repls(b, &sjar->sjar_rep);
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
@@ -1262,11 +1259,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_TRUNCPNDG] = 1;
 
-		BMAP_ULOCK(b);
-		FCMH_LOCK(f);
-		FCMH_WAIT_BUSY(f, 1);
-	
-		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
@@ -1284,10 +1276,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
 		}
-
-		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
-		BMAP_LOCK(b);
 	}
 
  out:
@@ -1437,10 +1425,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, bia->bia_bmapno, SL_WRITE, &b);
-	FCMH_UNBUSY(f, 1);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
 		    bia->bia_bmapno, rc);
@@ -1542,7 +1527,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * XXX XXX fcmh is not locked here
 	 */
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 0);
 	if (fcmh_2_gen(f) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
@@ -1648,7 +1632,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 		/* BMAP_OP #2, drop lookup ref */
 		bmap_op_done(bmap);
 
-	FCMH_UNBUSY(f, 1);
 	fcmh_op_done(f);
 	return (rc);
 }
@@ -1720,17 +1703,13 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 		FCMH_ULOCK(f);
 		return (-SLERR_BMAP_IN_PTRUNC);
 	}
-	FCMH_WAIT_BUSY(f, 1);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
 		bflags |= BMAPGETF_NODISKREAD;
 	rc = bmap_getf(f, bmapno, SL_WRITE, bflags, &b);
-	if (rc) {
-		FCMH_UNBUSY(f, 1);
+	if (rc)
 		return (rc);
-	}
-	FCMH_UNBUSY(f, 1);
 
 	bml = mds_bml_new(b, exp,
 	    (rw == SL_WRITE ? BML_WRITE : BML_READ) |
@@ -1797,9 +1776,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	FCMH_LOCK(f);
 
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
-	FCMH_UNBUSY(f, 1);
 
 	if (rc)
 		return (rc);
@@ -1902,9 +1879,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	OPSTAT_INCR("lease-renew");
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f,1);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
-	FCMH_UNBUSY(f,1);
 	if (rc)
 		return (rc);
 
@@ -2035,8 +2010,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	struct fcmh_mds_info *fmi;
 	struct slm_update_data *upd;
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	fmi = fcmh_2_fmi(f);
 
 	/* get the number of replies we expect */
@@ -2123,7 +2096,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc completed.");
 		FCMH_ULOCK(f);
 	}
-	FCMH_UNBUSY(f, 1);
 	OPSTAT_INCR("ptrunc-apply");
 	return (rc);
 }
@@ -2160,7 +2132,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	 * best-effort.
 	 */
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2199,7 +2170,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		}
 		bmap_op_done(b);
 	}
-	FCMH_UNBUSY(f, 1);
 
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;

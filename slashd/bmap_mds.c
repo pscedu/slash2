@@ -235,7 +235,6 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	new = 0;
 	f = b->bcm_fcmh;
-	FCMH_BUSY_ENSURE(f);
 
 	if (flags & BMAPGETF_NODISKREAD) {
 		new = 1;

@@ -1288,7 +1288,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 
 	if (!mds_bmap_exists(f, mq->bmapno))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
@@ -1308,10 +1307,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	return (0);
 }
 

@@ -124,8 +124,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	if (tmprc)
 		goto out;
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
 		goto out;
@@ -204,10 +202,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
@@ -337,12 +333,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
-		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
@@ -381,7 +375,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
 
-		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
@@ -389,7 +382,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
 	}
 
 	if (!rc) {
@@ -538,14 +530,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
-
-	/*
- 	 * XXX Should we drop the lock on the fcmh?  Otherwise the work thread
- 	 * won't be able to be done with a bmap and then move on to clear the
- 	 * BMAPF_REPLMODWR flag of other bmaps in the same file.
- 	 */
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -561,10 +545,8 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 }
 
 int
@@ -677,7 +659,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			psclog_error("iosv_lookup: rc=%d", rc);
 			goto next;
 		}
-		FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
@@ -686,7 +667,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		}
 
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(b->bcm_fcmh, 1);
  next:
 		UPD_DECREF(upd);
 
@@ -718,8 +698,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -873,7 +851,6 @@ upd_proc_bmap(struct slm_update_data *upd)
  out:
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 }
 
 /*
@@ -892,9 +869,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
 	if (rc)
 		goto out;
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 
 	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
@@ -949,10 +923,8 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (b)
 		bmap_op_done(b);
 
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 }
 
 int
@@ -988,9 +960,6 @@ upd_pagein_wk(void *p)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 
 	rc = bmap_get(f, wk->bno, SL_WRITE, &b);
 	if (rc)
@@ -1045,10 +1014,8 @@ upd_pagein_wk(void *p)
 	if (b)
 		bmap_op_done(b);
 
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f) 
 		fcmh_op_done(f);
-	}
 	return (0);
 }
 
@@ -1248,8 +1215,6 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1275,10 +1240,8 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	return (0);
 }
 
