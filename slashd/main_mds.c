@@ -676,7 +676,7 @@ main(int argc, char *argv[])
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
-	    "slmwkthr%d");
+	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,

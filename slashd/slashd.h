@@ -113,7 +113,12 @@ struct slmupsch_thread {
 	struct slmthr_dbh	  sus_dbh;
 };
 
+struct slmwork_thread {
+	struct slmthr_dbh	  work_dbh;
+};
+
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
+PSCTHR_MKCAST(slmworkthr, slmwork_thread, SLMTHRT_WORKER)
 PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
@@ -127,6 +132,12 @@ slmctlthr_getpri(struct psc_thread *thr)
 	return ((void *)(slmctlthr(thr) + 1));
 }
 
+static __inline struct slmwork_thread *
+slmworkthr_getpri(struct psc_thread *thr)
+{
+	return ((void *)(slmworkthr(thr) + 1));
+}
+
 static __inline struct slmthr_dbh *
 slmthr_getdbh(void)
 {
@@ -136,6 +147,8 @@ slmthr_getdbh(void)
 	switch (thr->pscthr_type) {
 	case SLMTHRT_CTL:
 		return (&slmctlthr_getpri(thr)->smct_dbh);
+	case SLMTHRT_WORKER:
+		return (&slmworkthr_getpri(thr)->work_dbh);
 	case SLMTHRT_RCM:
 		return (&slmrcmthr(thr)->srcm_dbh);
 	case SLMTHRT_RMC:
