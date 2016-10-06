@@ -220,6 +220,7 @@ struct rpmi_ios {
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
+	int			  si_paging;
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
 
@@ -318,6 +319,7 @@ struct slm_wkdata_upsch_cb {
 struct slm_wkdata_upschq {
 	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
+	struct sl_resm          *resm;
 };
 
 struct slm_wkdata_rmdir_ino {

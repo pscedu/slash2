@@ -863,7 +863,10 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
-	int rc, retifset[NBREPLST];
+	int rc, sched = 0, retifset[NBREPLST];
+
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
@@ -920,6 +923,19 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
+
+	rpmi = res2rpmi(upg->upg_resm->resm_res);
+	si = res2iosinfo(upg->upg_resm->resm_res);
+	RPMI_LOCK(rpmi);
+	si->si_paging--;
+	if (!si->si_paging) {
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		sched = 1;
+	}
+	RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
+
 	if (b)
 		bmap_op_done(b);
 
@@ -931,6 +947,10 @@ int
 upd_pagein_wk(void *p)
 {
 	struct slm_wkdata_upschq *wk = p;
+
+	int sched = 0;
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
 #if 0
 	struct slm_update_generic *upg;
 
@@ -944,6 +964,7 @@ upd_pagein_wk(void *p)
 	upg->upg_fg.fg_fid = wk->fg.fg_fid;
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = wk->bno;
+	upg->upg_resm = wk->resm;
 	upsch_enqueue(&upg->upg_upd);
 	
 	spinlock(&upg->upg_upd.upd_lock);
@@ -1011,6 +1032,18 @@ upd_pagein_wk(void *p)
 			purge_wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_lopri_workq, purge_wk);
 	}
+	rpmi = res2rpmi(wk->resm->resm_res);
+	si = res2iosinfo(wk->resm->resm_res);
+	RPMI_LOCK(rpmi);
+	si->si_paging--;
+	if (!si->si_paging) {
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		sched = 1;
+	}
+	RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(wk->resm, UPDT_PAGEIN);
+
 	if (b)
 		bmap_op_done(b);
 
@@ -1020,9 +1053,10 @@ upd_pagein_wk(void *p)
 }
 
 int
-upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
+upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 {
 	struct slm_wkdata_upschq *wk;
+	struct psc_dynarray *da = p;
 
 	/*
  	 * Accumulate work items here and submit them in a batch later
@@ -1033,7 +1067,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
-	pfl_workq_putitem(wk);
+	psc_dynarray_add(da, wk);
 	return (0);
 }
 
@@ -1047,10 +1081,13 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
+	int i;
+	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi;
+	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
+	struct psc_dynarray da = DYNARRAY_INIT;
 
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
@@ -1062,12 +1099,17 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	if (upg->upg_resm)
+	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+	}
 
 #define UPSCH_PAGEIN_BATCH 128
 
-	dbdo(upd_proc_pagein_cb, NULL,
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+
+	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
 	    "		bno,"
 	    "		nonce"
@@ -1088,19 +1130,24 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 
-	/*
- 	 * XXXX This can cause the same requests to pile up on work queue.
- 	 */
-
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
+	if (rpmi)
 		RPMI_LOCK(rpmi);
+
+	if (!psc_dynarray_len(&da)) {
 		si->si_flags &= ~SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
+		OPSTAT_INCR("upsch-empty");
+	} else {
+		DYNARRAY_FOREACH(wk, i, &da) {
+			if (rpmi)
+				si->si_paging++;
+			wk->resm = upg->upg_resm;
+			pfl_workq_putitem(wk);
+		}
 	}
+
+	if (rpmi)
+		RPMI_ULOCK(rpmi);
+	psc_dynarray_free(&da);
 }
 
 #if 0
