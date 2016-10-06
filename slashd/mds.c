@@ -1703,6 +1703,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 		FCMH_ULOCK(f);
 		return (-SLERR_BMAP_IN_PTRUNC);
 	}
+	FCMH_ULOCK(f);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
