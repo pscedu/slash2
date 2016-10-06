@@ -57,8 +57,7 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
 	int rc, vfsid;
 
-	FCMH_RLOCK(f);
-	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY));
+	FCMH_LOCK(f);
 
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	psc_assert(rc == 0);
