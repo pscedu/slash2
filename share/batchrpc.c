@@ -203,15 +203,22 @@ int
 slrpc_batch_req_send_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
-	struct slrpc_batch_req *bq = av->pointer_arg[0];
+	struct slrpc_batch_req *tmpbq, *bq_next, *bq = av->pointer_arg[0];
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(bq->bq_csvc, rq, struct srm_batch_rep,
 	    rc);
 
 	if (rc) {
-		lc_remove(&slrpc_batch_req_waitrep, bq);
-		slrpc_batch_req_sched_finish(bq, 2, rc);
+		LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
+		LIST_CACHE_FOREACH_SAFE(tmpbq, bq_next, &slrpc_batch_req_waitrep) {
+			if (tmpbq == bq) {
+				lc_remove(&slrpc_batch_req_waitrep, bq);
+				slrpc_batch_req_sched_finish(bq, 2, rc);
+				break;
+			}
+		}
+		LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
 	} else {
 		spinlock(&bq->bq_lock);
 		bq->bq_flags &= ~BATCHF_INFL;
