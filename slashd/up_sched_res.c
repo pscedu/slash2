@@ -320,11 +320,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc)
 		goto out;
 
-	/*
-	 * We have successfully scheduled some work, page in more.
-	 */
-	upschq_resm(dst_resm, UPDT_PAGEIN);
-
 	return (1);
 
  out:
@@ -954,7 +949,6 @@ upd_pagein_wk(void *p)
 {
 	struct slm_wkdata_upschq *wk = p;
 
-	int sched = 0;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 #if 0
@@ -1042,13 +1036,9 @@ upd_pagein_wk(void *p)
 	si = res2iosinfo(wk->resm->resm_res);
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
-	if (!si->si_paging) {
+	if (!si->si_paging)
 		si->si_flags &= ~SIF_UPSCH_PAGING;
-		sched = 1;
-	}
 	RPMI_ULOCK(rpmi);
-	if (sched)
-		upschq_resm(wk->resm, UPDT_PAGEIN);
 
 	if (b)
 		bmap_op_done(b);
