@@ -341,6 +341,8 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	}
 	if (rc)
 		OPSTAT_INCR("batch-reply-err");
+	else
+		OPSTAT_INCR("batch-reply-ok");
 	return (rc);
 }
 
