@@ -155,6 +155,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		/*
  		 * Wow, we just don't redo the work.
+ 		 *
+ 		 * If the state of the bmap changes in between, we
+ 		 * ignore the work as well.
  		 */
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
