@@ -464,7 +464,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	    mq->len % h->bqh_qlen)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	bp = psc_pool_get(slrpc_batch_rep_pool);
+	bp = psc_pool_get(slrpc_batch_rep_pool);	/* batch-rep */
 	memset(bp, 0, sizeof(*bp));
 	bp->bp_handler = h;
 	slrpc_batch_rep_ctor(bp);
