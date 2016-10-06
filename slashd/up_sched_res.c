@@ -85,7 +85,7 @@ struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
 int	upsch_total;
-int	slm_upsch_delay = 10;
+int	slm_upsch_delay = 5;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -914,6 +914,9 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		/*
 		 * XXX Do we need to do any work if rc is an error code
 		 * instead 1 here?
+		 *
+		 * We only try once because an IOS might down. So it is
+		 * up to the user to requeue his request.
 		 */
 		struct slm_wkdata_upsch_purge *wk;
 
@@ -924,7 +927,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = b->bcm_bmapno;
 		else
 			wk->bno = BMAPNO_ANY;
-		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+		pfl_workq_putitem_head(wk);
 	}
 
 	rpmi = res2rpmi(upg->upg_resm->resm_res);
