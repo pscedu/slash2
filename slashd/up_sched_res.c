@@ -1088,6 +1088,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 
+	/*
+ 	 * XXXX This can cause the same requests to pile up on work queue.
+ 	 */
+
 	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
 		rpmi = res2rpmi(r);
