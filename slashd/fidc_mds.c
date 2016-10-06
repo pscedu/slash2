@@ -305,7 +305,6 @@ slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
  	 * The only information that might be useful is the policy perhaps.
  	 */
 	FCMH_LOCK(c);
-	FCMH_WAIT_BUSY(c, 0);
 	fcmh_2_replpol(c) = pol;
 	fcmh_2_ino(c)->ino_nrepls = nr;
 	memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof(repls[0]) *
@@ -317,7 +316,6 @@ slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c)
 		    SL_INOX_NREPLICAS);
 	}
 	rc = mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
-	FCMH_UNBUSY(c, 0);
 	FCMH_ULOCK(c);
 	return (rc);
 }
