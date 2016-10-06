@@ -302,6 +302,10 @@ mds_replay_ino(void *jent, int op)
 			if (sjir->sjir_repls[0] == 0)
 				psclog_errorx("ino_repls[0] should be set for "
 				    "newly created inode");
+			/*
+ 			 * 10/05/2016: I hit this today. However, a new inode
+ 			 * can inherit the value from its parent.
+ 			 */
 			if (sjir->sjir_nrepls != 1)
 				psclog_errorx("ino_nrepls (%d) in "
 				    "should be 1 for newly created inode",
