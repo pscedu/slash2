@@ -118,7 +118,7 @@ struct slmwork_thread {
 };
 
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
-PSCTHR_MKCAST(slmworkthr, slmwork_thread, SLMTHRT_WORKER)
+PSCTHR_MKCAST(slmworkthr, pfl_wk_thread, SLMTHRT_WORKER)
 PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
