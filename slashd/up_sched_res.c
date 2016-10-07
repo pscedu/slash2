@@ -673,7 +673,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	RPMI_ULOCK(rpmi);
 }
 
-void
+int
 slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 {
 	int off, pass, valid_exists = 0;
@@ -769,8 +769,9 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 		}
 	}
 
+	return 0;
  out:
-	return;
+	return 1;
 
 }
 
@@ -831,7 +832,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 			psclog_debug("trying to arrange repl dst=%s",
 			    dst_res->res_name);
 
-			slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx);
+			if (slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx))
+				goto out;
 			break;
 
 		case BREPLST_TRUNCPNDG:
