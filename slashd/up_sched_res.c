@@ -673,71 +673,26 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	RPMI_ULOCK(rpmi);
 }
 
-/*
- * Process a bmap for upsch work. Called by upd_proc().
- */
 void
-upd_proc_bmap(struct slm_update_data *upd)
+slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource *dst_res)
 {
-	int rc, off, val, pass, valid_exists = 0;
-	struct rnd_iterator dst_res_i, src_res_i;
-	struct sl_resource *dst_res, *src_res;
-	struct slrpc_cservice *csvc;
-	struct sl_mds_iosinfo *si;
-	struct bmap_mds_info *bmi;
-	struct fidc_membh *f;
+	int off, pass, valid_exists = 0;
 	struct sl_resm *m;
+	struct fidc_membh *f;
 	struct bmap *b;
-	sl_ios_id_t iosid;
+	struct sl_mds_iosinfo *si;
+	struct slrpc_cservice *csvc;
+	struct sl_resource *src_res;
+	struct rnd_iterator src_res_i;
 
-	bmi = upd_getpriv(upd);
+
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
-
-	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
-
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
-	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
-
-	/*
-	 * Scan residency states (through file's inode table) of bmap
-	 * for an update.
-	 */
-	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
-		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
-		dst_res = libsl_id2res(iosid);
-		if (dst_res == NULL) {
-			/*
-			 * IOS can be removed during the lifetime of a 
-			 * deployment. So this is not an error.
-			 */
-			DEBUG_BMAP(PLL_WARN, b, "invalid iosid: %u(0x%x)",
-			    iosid, iosid);
-			continue;
-		}
-		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
-		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
-		switch (val) {
-		case BREPLST_REPL_QUEUED:
-			/*
-			 * There is still a lease out; we'll wait for it
-			 * to be relinquished.
-			 */
-			if (bmap_2_bmi(b)->bmi_wr_ion) {
-				psclog_debug("skipping because write "
-				    "lease still active");
-				break;
-			}
-			psclog_debug("trying to arrange repl dst=%s",
-			    dst_res->res_name);
-
 			/* look for a repl source */
 			for (pass = 0; pass < 2; pass++) {
 				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
 					if (src_res_i.ri_rnd_idx ==
-					    dst_res_i.ri_rnd_idx)
+					    dst_idx)
 						continue;
 
 					src_res = libsl_id2res(
@@ -821,6 +776,74 @@ upd_proc_bmap(struct slm_update_data *upd)
 					goto out;
 				}
 			}
+
+ out:
+	return;
+
+}
+
+/*
+ * Process a bmap for upsch work. Called by upd_proc().
+ */
+void
+upd_proc_bmap(struct slm_update_data *upd)
+{
+	int rc, off, val, pass, valid_exists = 0;
+	struct rnd_iterator dst_res_i, src_res_i;
+	struct sl_resource *dst_res, *src_res;
+	struct slrpc_cservice *csvc;
+	struct sl_mds_iosinfo *si;
+	struct bmap_mds_info *bmi;
+	struct fidc_membh *f;
+	struct sl_resm *m;
+	struct bmap *b;
+	sl_ios_id_t iosid;
+
+	bmi = upd_getpriv(upd);
+	b = bmi_2_bmap(bmi);
+	f = b->bcm_fcmh;
+
+	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
+
+	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
+	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
+
+	/*
+	 * Scan residency states (through file's inode table) of bmap
+	 * for an update.
+	 */
+	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
+		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
+		dst_res = libsl_id2res(iosid);
+		if (dst_res == NULL) {
+			/*
+			 * IOS can be removed during the lifetime of a 
+			 * deployment. So this is not an error.
+			 */
+			DEBUG_BMAP(PLL_WARN, b, "invalid iosid: %u(0x%x)",
+			    iosid, iosid);
+			continue;
+		}
+		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
+		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
+		switch (val) {
+		case BREPLST_REPL_QUEUED:
+			/*
+			 * There is still a lease out; we'll wait for it
+			 * to be relinquished.
+			 */
+			if (bmap_2_bmi(b)->bmi_wr_ion) {
+				psclog_debug("skipping because write "
+				    "lease still active");
+				break;
+			}
+			psclog_debug("trying to arrange repl dst=%s",
+			    dst_res->res_name);
+
+			slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx, dst_res);
+
 			break;
 
 		case BREPLST_TRUNCPNDG:
