@@ -856,92 +856,9 @@ upd_proc_bmap(struct slm_update_data *upd)
  * that needs done, such as replication, garbage reclamation, etc.
  */
 void
-upd_proc_pagein_unit(struct slm_update_data *upd)
+upd_proc_pagein_unit(__unusedx struct slm_update_data *upd)
 {
-	struct slm_update_generic *upg;
-	struct fidc_membh *f = NULL;
-	struct bmap *b = NULL;
-	int rc, sched = 0, retifset[NBREPLST];
 
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
-
-	upg = upd_getpriv(upd);
-	rc = slm_fcmh_get(&upg->upg_fg, &f);
-	if (rc)
-		goto out;
-
-	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
-	if (rc)
-		goto out;
-
-	BMAP_ULOCK(b);
-	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-		mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-	/*
- 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
- 	 * does not really care about them.  This seems fine
- 	 * today because we only page in requests in 'Q' state.
- 	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	if (slm_preclaim_enabled) {
-		retifset[BREPLST_GARBAGE] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
-	}
-
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		upsch_enqueue(bmap_2_upd(b));
-	else
-		rc = 1;
-
-	BMAP_ULOCK(b);
-
- out:
-	if (rc) {
-		/*
-		 * XXX Do we need to do any work if rc is an error code
-		 * instead 1 here?
-		 *
-		 * We only try once because an IOS might down. So it is
-		 * up to the user to requeue his request.
-		 */
-		struct slm_wkdata_upsch_purge *wk;
-
-		wk = pfl_workq_getitem(slm_wk_upsch_purge,
-		    struct slm_wkdata_upsch_purge);
-		wk->fid = upg->upg_fg.fg_fid;
-		if (b)
-			wk->bno = b->bcm_bmapno;
-		else
-			wk->bno = BMAPNO_ANY;
-		pfl_workq_putitem_head(wk);
-	}
-
-	rpmi = res2rpmi(upg->upg_resm->resm_res);
-	si = res2iosinfo(upg->upg_resm->resm_res);
-	RPMI_LOCK(rpmi);
-	si->si_paging--;
-	if (!si->si_paging) {
-		si->si_flags &= ~SIF_UPSCH_PAGING;
-		sched = 1;
-	}
-	RPMI_ULOCK(rpmi);
-	if (sched)
-		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
-
-	if (b)
-		bmap_op_done(b);
-
-	if (f)
-		fcmh_op_done(f);
 }
 
 int
