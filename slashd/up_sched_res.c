@@ -688,94 +688,94 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
-			/* look for a repl source */
-			for (pass = 0; pass < 2; pass++) {
-				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
-					if (src_res_i.ri_rnd_idx ==
-					    dst_idx)
-						continue;
+	/* look for a repl source */
+	for (pass = 0; pass < 2; pass++) {
+		FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
+			if (src_res_i.ri_rnd_idx ==
+			    dst_idx)
+				continue;
 
-					src_res = libsl_id2res(
-					    fcmh_getrepl(f,
-					    src_res_i.ri_rnd_idx).bs_id);
+			src_res = libsl_id2res(
+			    fcmh_getrepl(f,
+			    src_res_i.ri_rnd_idx).bs_id);
 
-					/*
-					 * Skip ourself and old/inactive
-					 * replicas.
-					 */
-					if (src_res == NULL ||
-					    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
-					    SL_BITS_PER_REPLICA *
-					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
-						continue;
+			/*
+			 * Skip ourself and old/inactive
+			 * replicas.
+			 */
+			if (src_res == NULL ||
+			    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
+			    SL_BITS_PER_REPLICA *
+			    src_res_i.ri_rnd_idx) != BREPLST_VALID)
+				continue;
 
-					valid_exists = 1;
+			valid_exists = 1;
 
-					si = res2iosinfo(src_res);
+			si = res2iosinfo(src_res);
 
-					psclog_debug("attempt to "
-					    "arrange repl with %s -> %s? "
-					    "pass=%d siflg=%d",
-					    src_res->res_name,
-					    dst_res->res_name,
-					    pass, !!(si->si_flags &
-					    (SIF_DISABLE_LEASE |
-					     SIF_DISABLE_ADVLEASE)));
+			psclog_debug("attempt to "
+			    "arrange repl with %s -> %s? "
+			    "pass=%d siflg=%d",
+			    src_res->res_name,
+			    dst_res->res_name,
+			    pass, !!(si->si_flags &
+			    (SIF_DISABLE_LEASE |
+			     SIF_DISABLE_ADVLEASE)));
 
-					if (pass ^
-					    (src_res->res_type ==
-					     SLREST_ARCHIVAL_FS ||
-					     !!(si->si_flags &
-					     (SIF_DISABLE_LEASE |
-					      SIF_DISABLE_ADVLEASE))))
-						continue;
+			if (pass ^
+			    (src_res->res_type ==
+			     SLREST_ARCHIVAL_FS ||
+			     !!(si->si_flags &
+			     (SIF_DISABLE_LEASE |
+			      SIF_DISABLE_ADVLEASE))))
+				continue;
 
-					psclog_debug("trying to arrange "
-					    "repl with %s -> %s",
-					    src_res->res_name,
-					    dst_res->res_name);
+			psclog_debug("trying to arrange "
+			    "repl with %s -> %s",
+			    src_res->res_name,
+			    dst_res->res_name);
 
-					/*
-					 * Search source nodes for an
-					 * idle, online connection.
-					 */
-					m = res_getmemb(src_res);
-					csvc = slm_geticsvc(m, NULL,
-					    CSVCF_NONBLOCK |
-					    CSVCF_NORECON,
-					    NULL);
-					if (csvc == NULL)
-						continue;
-					sl_csvc_decref(csvc);
+			/*
+			 * Search source nodes for an
+			 * idle, online connection.
+			 */
+			m = res_getmemb(src_res);
+			csvc = slm_geticsvc(m, NULL,
+			    CSVCF_NONBLOCK |
+			    CSVCF_NORECON,
+			    NULL);
+			if (csvc == NULL)
+				continue;
+			sl_csvc_decref(csvc);
 
-					if (slm_upsch_tryrepl(b, off, m,
-					    dst_res))
-						goto out;
-				}
-			}
-			if (!valid_exists) {
-				int tract[NBREPLST], retifset[NBREPLST];
+			if (slm_upsch_tryrepl(b, off, m,
+			    dst_res))
+				goto out;
+		}
+	}
+	if (!valid_exists) {
+		int tract[NBREPLST], retifset[NBREPLST];
 
-				DEBUG_BMAPOD(PLL_DIAG, b, "no source "
-				    "replicas exist; canceling "
-				    "impossible replication request; "
-				    "dst_ios=%s", dst_res->res_name);
+		DEBUG_BMAPOD(PLL_DIAG, b, "no source "
+		    "replicas exist; canceling "
+		    "impossible replication request; "
+		    "dst_ios=%s", dst_res->res_name);
 
-				OPSTAT_INCR("upsch-impossible");
+		OPSTAT_INCR("upsch-impossible");
 
-				brepls_init(tract, -1);
-				tract[BREPLST_REPL_QUEUED] =
-				    BREPLST_GARBAGE;
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_QUEUED] =
+		    BREPLST_GARBAGE;
 
-				brepls_init(retifset, 0);
-				retifset[BREPLST_REPL_QUEUED] = 1;
+		brepls_init(retifset, 0);
+		retifset[BREPLST_REPL_QUEUED] = 1;
 
-				if (mds_repl_bmap_apply(b, tract,
-				    retifset, off)) {
-					mds_bmap_write_logrepls(b);
-					goto out;
-				}
-			}
+		if (mds_repl_bmap_apply(b, tract,
+		    retifset, off)) {
+			mds_bmap_write_logrepls(b);
+			goto out;
+		}
+	}
 
  out:
 	return;
