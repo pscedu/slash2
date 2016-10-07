@@ -1879,7 +1879,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	int rc, rw;
 
 	OPSTAT_INCR("lease-renew");
-	FCMH_LOCK(f);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
