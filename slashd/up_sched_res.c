@@ -869,25 +869,6 @@ upd_pagein_wk(void *p)
 
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
-#if 0
-	struct slm_update_generic *upg;
-
-	upg = psc_pool_get(slm_upgen_pool);
-	memset(upg, 0, sizeof(*upg));
-	INIT_PSC_LISTENTRY(&upg->upg_lentry);
-
-	/* Schedule a call to upd_proc_pagein_unit() */
-	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT); 
-
-	upg->upg_fg.fg_fid = wk->fg.fg_fid;
-	upg->upg_fg.fg_gen = FGEN_ANY;
-	upg->upg_bno = wk->bno;
-	upg->upg_resm = wk->resm;
-	upsch_enqueue(&upg->upg_upd);
-	
-	spinlock(&upg->upg_upd.upd_lock);
-	UPD_UNBUSY(&upg->upg_upd);
-#endif
 
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
