@@ -1007,7 +1007,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_resource *r;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
-	while (lc_nitems(&slm_db_hipri_workq) || lc_nitems(&slm_db_lopri_workq))
+	while (lc_nitems(&slm_db_hipri_workq)
 		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
