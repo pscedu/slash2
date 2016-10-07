@@ -880,7 +880,6 @@ upd_pagein_wk(void *p)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
-
 	rc = bmap_get(f, wk->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -963,6 +962,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  	 */
 	OPSTAT_INCR("upsch-db-pagein");
 
+	/* pfl_workrq_pool */
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
@@ -1008,6 +1008,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
+	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
 	    "		bno,"
