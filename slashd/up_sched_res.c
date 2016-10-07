@@ -1106,7 +1106,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si = res2iosinfo(r);
 	}
 
-#define UPSCH_PAGEIN_BATCH 1024
+#define UPSCH_PAGEIN_BATCH	128
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
