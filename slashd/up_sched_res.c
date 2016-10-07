@@ -845,6 +845,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			if (rc > 0)
 				goto out;
 			break;
+#if 0
 		case BREPLST_VALID:
 	 		/* 
 			 * I guess it is possible that the state has 
@@ -859,6 +860,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 */ 
 			OPSTAT_INCR("upsch-already-valid");
 			break;
+#endif
 		}
 	}
  out:
