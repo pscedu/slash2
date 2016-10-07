@@ -600,6 +600,9 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
 
+	while (lc_nitems(&slm_db_lopri_workq))
+		usleep(1000000/2);
+
 	memset(&chg, 0, sizeof(chg));
 
 	add.nios = 0;
