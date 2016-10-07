@@ -674,9 +674,10 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 }
 
 void
-slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource *dst_res)
+slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 {
 	int off, pass, valid_exists = 0;
+	struct sl_resource *dst_res;
 	struct sl_resm *m;
 	struct fidc_membh *f;
 	struct bmap *b;
@@ -684,10 +685,14 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 	struct slrpc_cservice *csvc;
 	struct sl_resource *src_res;
 	struct rnd_iterator src_res_i;
+	sl_ios_id_t iosid;
 
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 	off = SL_BITS_PER_REPLICA * dst_idx;
+
+	iosid = fcmh_2_repl(f, dst_idx);
+	dst_res = libsl_id2res(iosid);
 
 	/* look for a repl source */
 	for (pass = 0; pass < 2; pass++) {
@@ -826,8 +831,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			psclog_debug("trying to arrange repl dst=%s",
 			    dst_res->res_name);
 
-			slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx, dst_res);
-
+			slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx);
 			break;
 
 		case BREPLST_TRUNCPNDG:
