@@ -806,6 +806,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 				    "impossible replication request; "
 				    "dst_ios=%s", dst_res->res_name);
 
+				OPSTAT_INCR("upsch-impossible");
+
 				brepls_init(tract, -1);
 				tract[BREPLST_REPL_QUEUED] =
 				    BREPLST_GARBAGE;
