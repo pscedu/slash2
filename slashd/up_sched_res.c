@@ -209,7 +209,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		fcmh_op_done(f);
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
-	upschq_resm(dst_resm, UPDT_PAGEIN);
+	//upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -947,6 +947,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 int
 upd_pagein_wk(void *p)
 {
+	int sched = 0;
 	struct slm_wkdata_upschq *wk = p;
 
 	struct resprof_mds_info *rpmi;
@@ -1036,9 +1037,13 @@ upd_pagein_wk(void *p)
 	si = res2iosinfo(wk->resm->resm_res);
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
-	if (!si->si_paging)
+	if (!si->si_paging) {
 		si->si_flags &= ~SIF_UPSCH_PAGING;
+		sched = 1;
+	}
 	RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(wk->resm, UPDT_PAGEIN);
 
 	if (b)
 		bmap_op_done(b);
@@ -1344,23 +1349,26 @@ void
 slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
+#if 0
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j;
+#endif
 
 	while (pscthr_run(thr)) {
-//		if (lc_nitems(&slm_upsch_queue) < 128) {
+#if 0
+		if (lc_nitems(&slm_upsch_queue) < 128) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
 				/* schedule a call to upd_proc_pagein() */
 				upschq_resm(m, UPDT_PAGEIN);
 			}
-//		}
+		}
+#endif
 		upd = lc_getwait(&slm_upsch_queue);
-		if (upd)
-			upd_proc(upd);
+		upd_proc(upd);
 	}
 }
 
@@ -1382,12 +1390,22 @@ void
 slmupschthr_spawn(void)
 {
 	struct psc_thread *thr;
-	int i;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j;
 
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
+	}
+	/* jump start */
+	CONF_FOREACH_RESM(s, r, i, m, j) {
+		if (!RES_ISFS(r))
+			continue;
+			/* schedule a call to upd_proc_pagein() */
+			upschq_resm(m, UPDT_PAGEIN);
 	}
 }
 
