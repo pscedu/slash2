@@ -692,7 +692,7 @@ main(int argc, char *argv[])
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-hipri-workq");
 
-	for (i = 0; i < 1; i++) {
+	for (i = 0; i < 2; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
