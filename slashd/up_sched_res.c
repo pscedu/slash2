@@ -687,12 +687,12 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
+	off = SL_BITS_PER_REPLICA * dst_idx;
 
 	/* look for a repl source */
 	for (pass = 0; pass < 2; pass++) {
 		FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
-			if (src_res_i.ri_rnd_idx ==
-			    dst_idx)
+			if (src_res_i.ri_rnd_idx == dst_idx)
 				continue;
 
 			src_res = libsl_id2res(
@@ -778,11 +778,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	int rc, off, val;
 	struct rnd_iterator dst_res_i;
 	struct sl_resource *dst_res;
-	struct slrpc_cservice *csvc;
-	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
-	struct sl_resm *m;
 	struct bmap *b;
 	sl_ios_id_t iosid;
 
