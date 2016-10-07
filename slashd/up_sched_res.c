@@ -923,8 +923,10 @@ upd_pagein_wk(void *p)
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		upsch_enqueue(bmap_2_upd(b));
-	else
+	else {
+		OPSTAT_INCR("upsch-no-work");
 		rc = 1;
+	}
 	BMAP_ULOCK(b);
 
  out:
