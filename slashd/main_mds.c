@@ -682,10 +682,12 @@ main(int argc, char *argv[])
 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-lopri-workq");
 
-	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
-	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
-	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
-	pscthr_setready(thr);
+	for (i = 0; i < 2; i++) {
+		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
+		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
+		pscthr_setready(thr);
+	}
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-hipri-workq");
