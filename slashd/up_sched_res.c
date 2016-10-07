@@ -685,9 +685,9 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 	struct sl_resource *src_res;
 	struct rnd_iterator src_res_i;
 
-
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
+
 	/* look for a repl source */
 	for (pass = 0; pass < 2; pass++) {
 		FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
@@ -696,12 +696,10 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 				continue;
 
 			src_res = libsl_id2res(
-			    fcmh_getrepl(f,
-			    src_res_i.ri_rnd_idx).bs_id);
+			    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
 
 			/*
-			 * Skip ourself and old/inactive
-			 * replicas.
+			 * Skip ourself and old/inactive * replicas.
 			 */
 			if (src_res == NULL ||
 			    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
@@ -722,34 +720,25 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 			    (SIF_DISABLE_LEASE |
 			     SIF_DISABLE_ADVLEASE)));
 
-			if (pass ^
-			    (src_res->res_type ==
-			     SLREST_ARCHIVAL_FS ||
-			     !!(si->si_flags &
-			     (SIF_DISABLE_LEASE |
+			if (pass ^ (src_res->res_type == SLREST_ARCHIVAL_FS ||
+			     !!(si->si_flags & (SIF_DISABLE_LEASE |
 			      SIF_DISABLE_ADVLEASE))))
 				continue;
 
-			psclog_debug("trying to arrange "
-			    "repl with %s -> %s",
-			    src_res->res_name,
-			    dst_res->res_name);
+			psclog_debug("trying to arrange " "repl with %s -> %s", 
+			    src_res->res_name, dst_res->res_name);
 
 			/*
-			 * Search source nodes for an
-			 * idle, online connection.
+			 * Search source nodes for an idle, online connection.
 			 */
 			m = res_getmemb(src_res);
 			csvc = slm_geticsvc(m, NULL,
-			    CSVCF_NONBLOCK |
-			    CSVCF_NORECON,
-			    NULL);
+			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
 			if (csvc == NULL)
 				continue;
 			sl_csvc_decref(csvc);
 
-			if (slm_upsch_tryrepl(b, off, m,
-			    dst_res))
+			if (slm_upsch_tryrepl(b, off, m, dst_res))
 				goto out;
 		}
 	}
@@ -764,14 +753,12 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 		OPSTAT_INCR("upsch-impossible");
 
 		brepls_init(tract, -1);
-		tract[BREPLST_REPL_QUEUED] =
-		    BREPLST_GARBAGE;
+		tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
 
-		if (mds_repl_bmap_apply(b, tract,
-		    retifset, off)) {
+		if (mds_repl_bmap_apply(b, tract, retifset, off)) {
 			mds_bmap_write_logrepls(b);
 			goto out;
 		}
@@ -788,9 +775,9 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx, struct sl_resource
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, pass, valid_exists = 0;
-	struct rnd_iterator dst_res_i, src_res_i;
-	struct sl_resource *dst_res, *src_res;
+	int rc, off, val;
+	struct rnd_iterator dst_res_i;
+	struct sl_resource *dst_res;
 	struct slrpc_cservice *csvc;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
