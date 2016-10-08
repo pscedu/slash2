@@ -1815,6 +1815,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+	if (slm_quiesce)
+		return (-EAGAIN);
 
 	pfl_fault_here(NULL, RMC_HANDLE_FAULT);
 

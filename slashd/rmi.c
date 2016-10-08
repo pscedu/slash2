@@ -357,6 +357,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
+	if (slm_quiesce)
+		return (-EAGAIN);
+
 	/* (gdb) call libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) */
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export, 
 	    slm_geticsvcx(_resm, rq->rq_export));
