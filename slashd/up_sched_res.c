@@ -1226,6 +1226,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
     int usr_prio)
 {
 	struct sl_resource *r;
+	struct sl_resm *m;
 	int rc;
 
 	r = libsl_id2res(resid);
@@ -1263,7 +1264,9 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	freelock(&slm_upsch_lock);
-	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+
+	m = res_getmemb(r);
+	upschq_resm(m, UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
