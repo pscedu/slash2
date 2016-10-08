@@ -1007,7 +1007,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_resource *r;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
-	while (lc_nitems(&slm_db_hipri_workq) || lc_nitems(&slm_db_lopri_workq))
+	while (lc_nitems(&slm_db_hipri_workq))
 		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
@@ -1028,6 +1028,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 #define UPSCH_PAGEIN_BATCH	128
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+
+	spinlock(&slm_upsch_lock);
 
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
@@ -1050,6 +1052,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+
+	freelock(&slm_upsch_lock);
 
 	if (rpmi)
 		RPMI_LOCK(rpmi);
@@ -1227,6 +1231,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
+	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1257,6 +1262,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
+	freelock(&slm_upsch_lock);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");

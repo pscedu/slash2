@@ -649,6 +649,12 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
+
+	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
+	    "db-hipri-workq");
+	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
+	    "db-lopri-workq");
+
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
@@ -679,23 +685,16 @@ main(int argc, char *argv[])
 	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
-	    "db-lopri-workq");
-
-	for (i = 0; i < 2; i++) {
-		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
-		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
-		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
-		pscthr_setready(thr);
-	}
-
-	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
-	    "db-hipri-workq");
-
 	for (i = 0; i < 2; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
+		pscthr_setready(thr);
+	}
+	for (i = 0; i < 2; i++) {
+		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
+		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
 		pscthr_setready(thr);
 	}
 
