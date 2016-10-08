@@ -409,6 +409,7 @@ extern int			 slm_opstate;
 
 extern struct pfl_odt_ops	 slm_odtops;
 
+extern int			 slm_quiesce;
 extern int			 slm_force_dio;
 extern int			 slm_crc_check;
 extern int			 slm_conn_debug;

@@ -67,6 +67,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			slm_quiesce;
 int			slm_force_dio;
 int			slm_global_mount;
 int			slm_crc_check = 1;
