@@ -999,7 +999,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
-	int i;
+	int i, offset = 0;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
@@ -1025,11 +1025,13 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si = res2iosinfo(r);
 	}
 
+	spinlock(&slm_upsch_lock);
+
+#if 1
+
 #define UPSCH_PAGEIN_BATCH	128
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
-
-	spinlock(&slm_upsch_lock);
 
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
@@ -1052,6 +1054,32 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+#else
+
+#define UPSCH_PAGEIN_BATCH	128
+
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+
+	/* DESC means sorted by descending order */
+	dbdo(upd_proc_pagein_cb, &da,
+	    " SELECT	fid,"
+	    "		bno,"
+	    "		nonce"
+	    " FROM	upsch"
+	    " WHERE	resid = IFNULL(?, resid)"
+	    "   AND	status = 'Q'"
+	    " LIMIT	?"
+	    " OFFSET	?",
+	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+	    upg->upg_resm ? r->res_id : 0,
+	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+	    SQLITE_INTEGER, offset);
+
+	if (!psc_dynarray_len(&da))
+		offset = 0;
+	else
+		offset += UPSCH_PAGEIN_BATCH;
+#endif
 
 	freelock(&slm_upsch_lock);
 
