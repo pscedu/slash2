@@ -168,10 +168,13 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatal("failed to execute command to mount %s",
 		    zpoolname);
 
+#if 0
 	/* mount the other MDS file systems from the pool */
 	rc = system("zfs mount -a");
 	if (rc == -1)
 		psc_fatal("failed to execute command to mount file systems");
+#endif
+
 }
 
 void
