@@ -1330,8 +1330,8 @@ slmupschthr_spawn(void)
 	CONF_FOREACH_RESM(s, r, i, m, j) {
 		if (!RES_ISFS(r))
 			continue;
-			/* schedule a call to upd_proc_pagein() */
-			upschq_resm(m, UPDT_PAGEIN);
+		/* schedule a call to upd_proc_pagein() */
+		upschq_resm(m, UPDT_PAGEIN);
 	}
 }
 
