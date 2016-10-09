@@ -119,7 +119,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
-	char cmdbuf[BUFSIZ], mountpoint[BUFSIZ];
+	char mountpoint[BUFSIZ];
 	struct dirent *d;
 	int i, rc;
 	DIR *dir;
@@ -631,7 +631,6 @@ main(int argc, char *argv[])
 		    "	status		CHAR(1),"
 		    "	sys_prio	INT,"
 		    "	usr_prio	INT,"
-		    "	nonce		UNSIGNED INT,"
 		    "	UNIQUE(resid, fid, bno)"
 		    ")");
 
@@ -716,8 +715,6 @@ main(int argc, char *argv[])
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
 		pscthr_setready(thr);
 	}
-
-	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
 	slmconnthr_spawn();

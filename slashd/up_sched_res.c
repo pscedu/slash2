@@ -1055,7 +1055,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
 	    "		bno,"
-	    "		nonce"
 	    " FROM	upsch u,"
 	    "		gsort gs,"
 	    "		usort us"
@@ -1078,7 +1077,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
 	    "		bno,"
-	    "		nonce"
 	    " FROM	upsch"
 	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
@@ -1130,7 +1128,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
-	    "		nonce"
 	    " FROM	upsch,"
 	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
@@ -1291,7 +1288,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    "	status,"
 	    "	sys_prio,"					/* 6 */
 	    "	usr_prio,"					/* 7 */
-	    "	nonce"						/* 8 */
 	    ") VALUES ("
 	    "	?,"						/* 1 */
 	    "	?,"						/* 2 */
@@ -1309,8 +1305,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,	/* 4 */
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,	/* 5 */
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
-	    SQLITE_INTEGER, usr_prio,				/* 7 */
-	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
+	    SQLITE_INTEGER, usr_prio);				/* 7 */
 	freelock(&slm_upsch_lock);
 
 	m = res_getmemb(r);

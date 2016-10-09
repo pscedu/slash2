@@ -395,7 +395,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		    struct slm_wkdata_wr_brepl);
 		wk->b = b;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
-		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+		pfl_workq_putitemq(&slm_db_hipri_workq, wk);
 		OPSTAT_INCR("bmap-write-log");
 	}
 
