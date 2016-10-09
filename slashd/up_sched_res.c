@@ -1031,8 +1031,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 #define UPSCH_PAGEIN_BATCH	128
 
-	spinlock(&slm_upsch_lock);
-
 	for (i = 0; i < UPSCH_PAGEIN_BATCH; i++) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		psc_dynarray_add(&arg.da, wk);
@@ -1084,8 +1082,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 		r->res_offset += UPSCH_PAGEIN_BATCH;
 
 #endif
-
-	freelock(&slm_upsch_lock);
 
 	RPMI_LOCK(rpmi);
 
