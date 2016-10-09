@@ -147,21 +147,25 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	}
 
 #if 0
-	/*
- 	 *  The following message during start up should be harmless:
- 	 *
-	 * cannot import XXX: a pool with that name is already created/imported,
-	 * and no additional pools with that name were found
-	 * cannot mount XXX: mountpoint or dataset is busy
-	 */
-	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
-	    zfspoolcf ? "-c '" : "",
-	    zfspoolcf ? zfspoolcf : "",
-	    zfspoolcf ? "'" : "",
-	    zpoolname);
-	if (rc == -1)
-		psc_fatal("failed to execute command to import zpool "
-		    "%s: %s", zpoolname, cmdbuf);
+	{
+		char cmdbuf[BUFSIZ];
+		/*
+ 		 *  The following message during start up should be harmless:
+ 		 *
+		 * cannot import XXX: a pool with that name is already 
+		 * created/imported,
+		 * and no additional pools with that name were found
+		 * cannot mount XXX: mountpoint or dataset is busy
+		 */
+		rc = pfl_systemf("zpool import -f %s%s%s '%s'",
+		    zfspoolcf ? "-c '" : "",
+		    zfspoolcf ? zfspoolcf : "",
+		    zfspoolcf ? "'" : "",
+		    zpoolname);
+		if (rc == -1)
+			psc_fatal("failed to execute command to import zpool "
+			    "%s: %s", zpoolname, cmdbuf);
+	}
 #endif
 
 #if 0
@@ -406,6 +410,7 @@ main(int argc, char *argv[])
 {
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
+	unsigned int size;
 	int i, c, rc, vfsid, found;
 	struct psc_thread *thr;
 	time_t now;
@@ -567,7 +572,14 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-	pfl_workq_init(128);
+
+	size = sizeof(struct slm_wkdata_wr_brepl);
+	if (size < sizeof(struct slm_wkdata_upsch_purge))
+		size = sizeof(struct slm_wkdata_upsch_purge);
+	if (size < sizeof(struct slm_wkdata_wr_brepl))
+		size = sizeof(struct slm_wkdata_wr_brepl);
+	pfl_workq_init(size);
+
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,

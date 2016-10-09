@@ -973,19 +973,19 @@ int
 upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 {
 	struct slm_wkdata_upschq *wk;
-	struct psc_dynarray *da = p;
+	struct {
+		int count;
+		struct psc_dynarray da;
+	} *arg = p;;
 
 	/*
  	 * Accumulate work items here and submit them in a batch later
  	 * so that we know when the paging is really done.
  	 */
-	OPSTAT_INCR("upsch-db-pagein");
 
-	/* pfl_workrq_pool */
-	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+	wk = psc_dynarray_getpos(&arg->da, arg->count++);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
-	psc_dynarray_add(da, wk);
 	return (0);
 }
 
@@ -1005,7 +1005,13 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
-	struct psc_dynarray da = DYNARRAY_INIT;
+	struct {
+		int count;
+		struct psc_dynarray da;
+	} arg;
+
+	arg.count = 0;
+	psc_dynarray_init(&arg.da);
 
 	while (lc_nitems(&slm_db_hipri_workq))
 		usleep(1000000/4);
@@ -1025,16 +1031,18 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si = res2iosinfo(r);
 	}
 
-	spinlock(&slm_upsch_lock);
-
-#if 1
-
 #define UPSCH_PAGEIN_BATCH	128
 
-	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+	spinlock(&slm_upsch_lock);
+
+	for (i = 0; i < UPSCH_PAGEIN_BATCH; i++) {
+		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+		psc_dynarray_add(&arg.da, wk);
+	}
+#if 1
 
 	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &da,
+	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
 	    "		bno,"
 	    "		nonce"
@@ -1055,10 +1063,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 #else
-
-#define UPSCH_PAGEIN_BATCH	128
-
-	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
@@ -1086,21 +1090,29 @@ upd_proc_pagein(struct slm_update_data *upd)
 	if (rpmi)
 		RPMI_LOCK(rpmi);
 
-	if (!psc_dynarray_len(&da)) {
+	if (!arg.count) {
+		i = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		OPSTAT_INCR("upsch-empty");
 	} else {
-		DYNARRAY_FOREACH(wk, i, &da) {
+		for (i = 0; i < arg.count; i++) {
+			wk = psc_dynarray_getpos(&arg.da, i);
 			if (rpmi)
 				si->si_paging++;
 			wk->resm = upg->upg_resm;
 			pfl_workq_putitem(wk);
 		}
 	}
+	while (i < UPSCH_PAGEIN_BATCH) {
+		struct pfl_workrq *wkrq;
+		wk = psc_dynarray_getpos(&arg.da, i++);
+		wkrq = PSC_AGP(wk, -sizeof(*wkrq));
+		psc_pool_return(pfl_workrq_pool, wkrq);
+	}
 
 	if (rpmi)
 		RPMI_ULOCK(rpmi);
-	psc_dynarray_free(&da);
+	psc_dynarray_free(&arg.da);
 }
 
 #if 0
