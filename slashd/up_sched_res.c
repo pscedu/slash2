@@ -929,6 +929,20 @@ upd_pagein_wk(void *p)
 	}
 	BMAP_ULOCK(b);
 
+#if 0
+	if (!rc) {
+		static int pagein = 0;
+
+		spinlock(&slm_upsch_lock);
+		if ((pagein % 512) == 0) {
+			dbdo(NULL, NULL, "END  TRANSACTION");
+			dbdo(NULL, NULL, "BEGIN  TRANSACTION");
+		}
+		pagein++;
+		freelock(&slm_upsch_lock);
+	}
+#endif
+
  out:
 	if (rc) {
 		/*
