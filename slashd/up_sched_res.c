@@ -1002,7 +1002,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	int i, offset = 0;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi = NULL;
+	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
 	struct {
@@ -1025,11 +1025,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-	}
+	r = upg->upg_resm->resm_res;
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
 #define UPSCH_PAGEIN_BATCH	128
 
@@ -1087,8 +1085,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	freelock(&slm_upsch_lock);
 
-	if (rpmi)
-		RPMI_LOCK(rpmi);
+	RPMI_LOCK(rpmi);
 
 	if (!arg.count) {
 		i = 0;
@@ -1110,8 +1107,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		psc_pool_return(pfl_workrq_pool, wkrq);
 	}
 
-	if (rpmi)
-		RPMI_ULOCK(rpmi);
+	RPMI_ULOCK(rpmi);
 	psc_dynarray_free(&arg.da);
 }
 
