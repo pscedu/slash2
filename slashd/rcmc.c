@@ -285,10 +285,8 @@ slmrcmthr_main(struct psc_thread *thr)
 			OPSTAT_INCR("replst-all");
 			
 			/* XXX lock to be removed after extensive testing */
-			spinlock(&slm_upsch_lock);
 			dbdo(slmrcmthr_walk, &da,
 			    "SELECT DISTINCT fid FROM upsch");
-			freelock(&slm_upsch_lock);
 
 			DYNARRAY_FOREACH(p, n, &da) {
 				fg.fg_fid = (slfid_t)p;

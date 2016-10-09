@@ -78,6 +78,8 @@
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
 
+struct timespec		 lastcommit;
+
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
@@ -933,13 +935,11 @@ upd_pagein_wk(void *p)
 	if (!rc) {
 		static int pagein = 0;
 
-		spinlock(&slm_upsch_lock);
 		if ((pagein % 512) == 0) {
 			dbdo(NULL, NULL, "END  TRANSACTION");
 			dbdo(NULL, NULL, "BEGIN  TRANSACTION");
 		}
 		pagein++;
-		freelock(&slm_upsch_lock);
 	}
 #endif
 
@@ -1028,7 +1028,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	psc_dynarray_init(&arg.da);
 
 	while (lc_nitems(&slm_db_hipri_workq))
-		usleep(1000000/4);
+		usleep(1000000/16);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1277,7 +1277,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
-	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1305,7 +1304,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,	/* 5 */
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio);				/* 7 */
-	freelock(&slm_upsch_lock);
 
 	m = res_getmemb(r);
 	upschq_resm(m, UPDT_PAGEIN);
@@ -1319,6 +1317,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 void
 slmupschthr_main(struct psc_thread *thr)
 {
+	struct timespec ts;
 	struct slm_update_data *upd;
 #if 0
 	struct sl_resource *r;
@@ -1327,6 +1326,7 @@ slmupschthr_main(struct psc_thread *thr)
 	int i, j;
 #endif
 
+	ts.tv_nsec = 0;
 	while (pscthr_run(thr)) {
 #if 0
 		if (lc_nitems(&slm_upsch_queue) < 128) {
@@ -1338,8 +1338,17 @@ slmupschthr_main(struct psc_thread *thr)
 			}
 		}
 #endif
-		upd = lc_getwait(&slm_upsch_queue);
-		upd_proc(upd);
+		ts.tv_sec = time(NULL) + 30;
+		upd = lc_gettimed(&slm_upsch_queue, &ts);
+		if (upd)
+			upd_proc(upd);
+	
+		ts.tv_sec = time(NULL);
+		if (ts.tv_sec > lastcommit.tv_sec + 60) {
+			dbdo(NULL, NULL, "COMMIT");
+			dbdo(NULL, NULL, "BEGIN TRANSACTION");
+			lastcommit.tv_sec = ts.tv_sec;
+		}
 	}
 }
 
@@ -1366,6 +1375,8 @@ slmupschthr_spawn(void)
 	struct sl_site *s;
 	int i, j;
 
+	lastcommit.tv_sec = time(NULL);
+	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);

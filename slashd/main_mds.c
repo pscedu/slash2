@@ -69,6 +69,8 @@ extern const char *__progname;
 
 int			 current_vfsid;
 
+sqlite3                  *db_handle;
+
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
@@ -415,6 +417,7 @@ main(int argc, char *argv[])
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
+	char dbfn[PATH_MAX];
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -610,8 +613,13 @@ main(int argc, char *argv[])
 
 	sqlite3_enable_shared_cache(1);
 
+	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+	rc = sqlite3_open(dbfn, &db_handle);
+	if (rc != SQLITE_OK)
+		psc_fatalx("Fail to open SQLite data base %s", dbfn);
+
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
-	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+	dbdo(NULL, NULL, "PRAGMA journal_mode=OFF");
 
 	/* no-op to test integrity */
 	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
@@ -701,7 +709,7 @@ main(int argc, char *argv[])
 	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 4; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;

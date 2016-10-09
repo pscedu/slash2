@@ -2238,6 +2238,18 @@ _dbdo(const struct pfl_callerinfo *pci,
 	uint64_t key;
 	va_list ap;
 
+	spinlock(&slm_upsch_lock);
+#if 1
+	dbh = slmthr_getdbh();
+	if (dbh->dbh == NULL) {
+		dbh->dbh = db_handle;
+		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
+		    struct slm_sth, sth_fmt, sth_hentry,
+		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
+		    NULL, "sth-%s", pscthr_get()->pscthr_name);
+	}
+
+#else
 	dbh = slmthr_getdbh();
 
 	if (dbh->dbh == NULL) {
@@ -2258,11 +2270,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 				psc_fatalx("Corrupt SQLite database %s", dbfn);
 		}
 
-		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
-		    struct slm_sth, sth_fmt, sth_hentry,
-		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
-		    NULL, "sth-%s", pscthr_get()->pscthr_name);
 	}
+#endif
 
 	key = (uint64_t)fmt;
 	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
@@ -2363,6 +2372,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 	sqlite3_reset(sth->sth_sth);
+
+	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
 
