@@ -1037,7 +1037,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		psc_dynarray_add(&arg.da, wk);
 	}
-#if 1
+#if 0
 
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &arg,
@@ -1063,7 +1063,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 #else
 
 	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &da,
+	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
 	    "		bno,"
 	    "		nonce"
@@ -1077,9 +1077,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
 	    SQLITE_INTEGER, offset);
 
-	if (!psc_dynarray_len(&da))
+	if (!arg.count) {
 		offset = 0;
-	else
+		sleep(1);
+	} else
 		offset += UPSCH_PAGEIN_BATCH;
 #endif
 
