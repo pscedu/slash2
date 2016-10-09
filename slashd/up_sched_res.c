@@ -1054,7 +1054,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
-	    "		bno,"
+	    "		bno"
 	    " FROM	upsch u,"
 	    "		gsort gs,"
 	    "		usort us"
@@ -1076,7 +1076,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &arg,
 	    " SELECT	fid,"
-	    "		bno,"
+	    "		bno"
 	    " FROM	upsch"
 	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
@@ -1287,7 +1287,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    "	gid,"						/* 5 */
 	    "	status,"
 	    "	sys_prio,"					/* 6 */
-	    "	usr_prio,"					/* 7 */
+	    "	usr_prio"					/* 7 */
 	    ") VALUES ("
 	    "	?,"						/* 1 */
 	    "	?,"						/* 2 */
@@ -1296,7 +1296,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    "	?,"						/* 5 */
 	    "	'Q',"
 	    "	?,"						/* 6 */
-	    "	?,"						/* 7 */
 	    "	?"						/* 8 */
 	    ")",
 	    SQLITE_INTEGER, resid,				/* 1 */
