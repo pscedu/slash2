@@ -999,7 +999,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
-	int i, offset = 0;
+	int i;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi;
@@ -1062,26 +1062,30 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 #else
 
-	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &arg,
-	    " SELECT	fid,"
-	    "		bno,"
-	    "		nonce"
-	    " FROM	upsch"
-	    " WHERE	resid = IFNULL(?, resid)"
-	    "   AND	status = 'Q'"
-	    " LIMIT	?"
-	    " OFFSET	?",
-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0,
-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
-	    SQLITE_INTEGER, offset);
+	{
+		static int offset = 0;
 
-	if (!arg.count) {
-		offset = 0;
-		sleep(1);
-	} else
-		offset += UPSCH_PAGEIN_BATCH;
+		/* DESC means sorted by descending order */
+		dbdo(upd_proc_pagein_cb, &arg,
+		    " SELECT	fid,"
+		    "		bno,"
+		    "		nonce"
+		    " FROM	upsch"
+		    " WHERE	resid = IFNULL(?, resid)"
+		    "   AND	status = 'Q'"
+		    " LIMIT	?"
+		    " OFFSET	?",
+		    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+		    upg->upg_resm ? r->res_id : 0,
+		    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+		    SQLITE_INTEGER, offset);
+
+		if (!arg.count)
+			offset = 0;
+		else
+			offset += UPSCH_PAGEIN_BATCH;
+	}
+
 #endif
 
 	freelock(&slm_upsch_lock);
