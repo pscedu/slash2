@@ -609,7 +609,7 @@ main(int argc, char *argv[])
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
 	sqlite3_enable_shared_cache(1);
-	//dbdo(NULL, NULL, "PRAGMA page_size=");
+
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
@@ -663,8 +663,6 @@ main(int argc, char *argv[])
 		    " FROM	upsch"
 		    " GROUP BY uid");
 	}
-
-	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 
