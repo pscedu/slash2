@@ -119,7 +119,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
-	char cmdbuf[BUFSIZ], scratchbuf[BUFSIZ];
+	char scratchbuf[BUFSIZ];
 	struct dirent *d;
 	int i, rc;
 	DIR *dir;
@@ -161,7 +161,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	    zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to import zpool "
-		    "%s: %s", zpoolname, cmdbuf);
+		    "%s: %s", zpoolname, scratchbuf);
 #endif
 
 #if 0
