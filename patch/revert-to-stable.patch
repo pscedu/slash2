@@ -1,0 +1,1423 @@
+diff --git a/include/slconfig.h b/include/slconfig.h
+index b23a94a..085e70c 100644
+--- a/include/slconfig.h
++++ b/include/slconfig.h
+@@ -59,41 +59,40 @@ enum sl_res_type {
+ 	SLREST_PARALLEL_LFS,			/* Logical parallel fs */
+ 	SLREST_STANDALONE_FS			/* 6 */
+ };
+ 
+ /* XXX rename to RES_ISNODE() */
+ #define RES_ISFS(res)							\
+ 	((res)->res_type == SLREST_ARCHIVAL_FS		||		\
+ 	 (res)->res_type == SLREST_PARALLEL_COMPNT	||		\
+ 	 (res)->res_type == SLREST_STANDALONE_FS)
+ 
+ #define RES_ISCLUSTER(res)						\
+ 	((res)->res_type == SLREST_CLUSTER_NOSHARE_LFS	||		\
+ 	 (res)->res_type == SLREST_PARALLEL_LFS)
+ 
+ /* Resource (I/O system, MDS) */
+ struct sl_resource {
+ 	uint64_t		 res_hashkey;
+ 	struct pfl_hashentry	 res_hentry;
+ 
+ 	sl_ios_id_t		 res_id;
+-	int			 res_offset;
+ 	int			 res_flags;	/* see RESF_* below */
+ 	enum sl_res_type	 res_type;
+ 	uint32_t		 res_stkvers;	/* peer SLASH2 stack version */
+ 	uint64_t		 res_uptime;	/* peer uptime in secs */
+ 	struct sl_site		*res_site;	/* backpointer to site */
+ 	struct psc_dynarray	 res_peers;
+ 	struct psc_dynarray	 res_members;	/* for cluster types */
+ 	char			 res_name[RES_NAME_MAX];
+ 	char			*res_desc;	/* human description */
+ 	struct slcfg_local	*res_localcfg;
+ };
+ 
+ /* res_flags */
+ #define RESF_DISABLE_BIA	(1 << 0)	/* disable write assignments */
+ #define RESF_PREFIOS		(1 << 1)	/* is in pref_ios (CLI) */
+ 
+ #define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
+ 				    NBBY - SLASH_FID_MDSID_BITS)) - 1)
+ 
+ #define res_getmemb(r)		psc_dynarray_getpos(&(r)->res_members, 0)
+diff --git a/slashd/bmap_mds.c b/slashd/bmap_mds.c
+index 38b50fa..14963ea 100644
+--- a/slashd/bmap_mds.c
++++ b/slashd/bmap_mds.c
+@@ -378,41 +378,41 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
+ 		mds_unreserve_slot(1);
+ 
+ 	if (rc == 0 && nb != BMAP_OD_SZ)
+ 		rc = SLERR_SHORTIO;
+ 
+ 	level = debug_ondisk_inode ? PLL_MAX : (rc ? PLL_ERROR : PLL_DIAG);
+ 	DEBUG_BMAP(level, b, "mdsio_pwritev: bno = %d, rc=%d", 
+ 	    b->bcm_bmapno, rc);
+ 
+ 	if (!rc && logf == (void *)mdslog_bmap_repls) {
+ 		/*
+ 		 * Schedule an update of the SQLite database.
+ 		 */
+ 		BMAP_LOCK_ENSURE(b);
+ 		b->bcm_flags |= BMAPF_REPLMODWR;
+ 		psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
+ 		wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
+ 		    struct slm_wkdata_wr_brepl);
+ 		wk->b = b;
+ 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+-		pfl_workq_putitemq(&slm_db_hipri_workq, wk);
++		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+ 		OPSTAT_INCR("bmap-write-log");
+ 	}
+ 
+ 	return (rc);
+ }
+ 
+ void
+ mds_bmap_init(struct bmap *b)
+ {
+ 	struct bmap_mds_info *bmi;
+ 
+ 	bmi = bmap_2_bmi(b);
+ 	pll_init(&bmi->bmi_leases, struct bmap_mds_lease,
+ 	    bml_bmi_lentry, &b->bcm_lock);
+ 
+ 	bmi->bmi_sys_prio = -1;
+ 	bmi->bmi_usr_prio = -1;
+ }
+ 
+ void
+diff --git a/slashd/main_mds.c b/slashd/main_mds.c
+index a9dfc56..00e8bf8 100644
+--- a/slashd/main_mds.c
++++ b/slashd/main_mds.c
+@@ -52,42 +52,40 @@
+ #include "fidcache.h"
+ #include "mdsio.h"
+ #include "pathnames.h"
+ #include "repl_mds.h"
+ #include "rpc_mds.h"
+ #include "slashd.h"
+ #include "slconfig.h"
+ #include "slerr.h"
+ #include "slsubsys.h"
+ #include "subsys_mds.h"
+ #include "up_sched_res.h"
+ 
+ #include "zfs-fuse/zfs_slashlib.h"
+ 
+ GCRY_THREAD_OPTION_PTHREAD_IMPL;
+ 
+ extern const char *__progname;
+ 
+ int			 current_vfsid;
+ 
+-sqlite3                  *db_handle;
+-
+ struct slash_creds	 rootcreds = { 0, 0 };
+ struct pscfs		 pscfs;
+ struct psc_thread	*slmconnthr;
+ uint32_t		 sl_sys_upnonce;
+ 
+ struct pfl_odt		*slm_ptrunc_odt;
+ 
+ /* this table is immutable, at least for now */
+ struct psc_hashtbl	 slm_roots;
+ 
+ struct psc_listcache	 slm_db_lopri_workq;
+ struct psc_listcache	 slm_db_hipri_workq;
+ int			 slm_opstate;
+ 
+ struct psc_poolmaster	 slm_bml_poolmaster;
+ struct psc_poolmgr	*slm_bml_pool;
+ 
+ struct psc_poolmaster	 slm_repl_status_poolmaster;
+ 
+ int
+@@ -104,98 +102,90 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
+ {
+ 	size_t n;
+ 
+ 	n = strlcpy(buf, "slm", PSC_THRNAME_MAX);
+ 	if (n < PSC_THRNAME_MAX)
+ 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
+ }
+ 
+ /*
+  * Use system() calls to import pool and mount file systems.  Note that
+  * the paths needed by the system() are compiled in to potentially avoid
+  * system binaries (e.g. ZFSOnLinux).
+  *
+  * We don't check WEXITSTATUS(rc) after a system() call because
+  * sometimes the ZFS tool can return an error (e.g. EEXIST) even if the
+  * pool is otherwise healthy.
+  */
+ void
+ import_zpool(const char *zpoolname, const char *zfspoolcf)
+ {
+-	char mountpoint[BUFSIZ];
++	char cmdbuf[BUFSIZ], mountpoint[BUFSIZ];
+ 	struct dirent *d;
+ 	int i, rc;
+ 	DIR *dir;
+ 
+ 	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
+ 	psc_assert(rc < (int)sizeof(mountpoint) && rc >= 0);
+ 
+ 	/*
+ 	 * ZFS fuse can create the mount point automatically if it does
+ 	 * not exist.  However, if the mount point exists and is not
+ 	 * empty, it does not mount the default file system in the pool
+ 	 * for some reason.
+ 	 */
+ 	dir = opendir(mountpoint);
+ 	if (dir) {
+ 		i = 0;
+ 		while ((d = readdir(dir)) != NULL) {
+ 			if (i++ < 2)
+ 				continue;
+ 			errno = ENOTEMPTY;
+ 			psc_fatal("Please clean up directory %s before mount",
+ 			    mountpoint);
+ 		}
+ 		closedir(dir);
+ 	}
+ 
+-#if 0
+-	{
+-		char cmdbuf[BUFSIZ];
+-		/*
+- 		 *  The following message during start up should be harmless:
+- 		 *
+-		 * cannot import XXX: a pool with that name is already 
+-		 * created/imported,
+-		 * and no additional pools with that name were found
+-		 * cannot mount XXX: mountpoint or dataset is busy
+-		 */
+-		rc = pfl_systemf("zpool import -f %s%s%s '%s'",
+-		    zfspoolcf ? "-c '" : "",
+-		    zfspoolcf ? zfspoolcf : "",
+-		    zfspoolcf ? "'" : "",
+-		    zpoolname);
+-		if (rc == -1)
+-			psc_fatal("failed to execute command to import zpool "
+-			    "%s: %s", zpoolname, cmdbuf);
+-	}
+-#endif
++	/*
++ 	 *  The following message during start up should be harmless:
++ 	 *
++	 * cannot import XXX: a pool with that name is already created/imported,
++	 * and no additional pools with that name were found
++	 * cannot mount XXX: mountpoint or dataset is busy
++	 */
++	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
++	    zfspoolcf ? "-c '" : "",
++	    zfspoolcf ? zfspoolcf : "",
++	    zfspoolcf ? "'" : "",
++	    zpoolname);
++	if (rc == -1)
++		psc_fatal("failed to execute command to import zpool "
++		    "%s: %s", zpoolname, cmdbuf);
+ 
+-#if 0
+ 	/* mount the default file system in the pool */
+ 	rc = pfl_systemf("zfs mount %s", zpoolname);
+ 	if (rc == -1)
+ 		psc_fatal("failed to execute command to mount %s",
+ 		    zpoolname);
+-#endif
+ 
+-#if 1
++#if 0
+ 	/* mount the other MDS file systems from the pool */
+ 	rc = system("zfs mount -a");
+ 	if (rc == -1)
+ 		psc_fatal("failed to execute command to mount file systems");
+ #endif
+ 
+ }
+ 
+ void
+ slmconnthr_spawn(void)
+ {
+ 	struct sl_resource *r;
+ 	struct sl_site *s;
+ 	struct sl_resm *m;
+ 	int i, j;
+ 
+ 	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
+ 	CONF_FOREACH_RESM(s, r, i, m, j)
+ 		if (r->res_type == SLREST_MDS)
+ 			; // slm_getmcsvcf(m, CSVCF_NORECON);
+@@ -395,46 +385,44 @@ slm_mdfs_scan(void)
+ 		if (!(zfs_mounts[i].zm_flags & ZFS_SLASH2_READY))
+ 			slm_mdfs_register(i);
+ 	freelock(&scan_lock);
+ }
+ 
+ __dead void
+ usage(void)
+ {
+ 	fprintf(stderr,
+ 	    "usage: %s [-V] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
+ 	    "\t[zpoolname]\n",
+ 	    __progname);
+ 	exit(1);
+ }
+ 
+ int
+ main(int argc, char *argv[])
+ {
+ 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
+ 	const char *cfn, *sfn, *p;
+-	unsigned int size;
+ 	int i, c, rc, vfsid, found;
+ 	struct psc_thread *thr;
+ 	time_t now;
+ 	struct psc_thread *me;
+-	char dbfn[PATH_MAX];
+ 
+ 	/* gcrypt must be initialized very early on */
+ 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+ 	if (!gcry_check_version(GCRYPT_VERSION))
+ 		errx(1, "libgcrypt version mismatch");
+ 
+ 	pfl_init();
+ 	sl_subsys_register();
+ 	pfl_subsys_register(SLMSS_ZFS, "zfs");
+ 	pfl_subsys_register(SLMSS_JOURNAL, "log");
+ 	pfl_subsys_register(SLMSS_UPSCH, "upsch");
+ 	pfl_subsys_register(SLMSS_INFO, "info");
+ 
+ 	rc = pfl_asprintf(&path_env, "%s:%s:%s", ZFS_BIN_PATH,
+ 	    ZPOOL_PATH, getenv("PATH"));
+ 	psc_assert(rc != -1);
+ 	setenv("PATH", path_env, 1);
+ 
+ 	sfn = SL_PATH_SLMCTLSOCK;
+ 	p = getenv("CTL_SOCK_FILE");
+@@ -558,186 +546,179 @@ main(int argc, char *argv[])
+ 			    zfs_mounts[vfsid].zm_siteid);
+ 		errx(1, "site id=%d doesn't match any file system",
+ 		    nodeSite->site_id);
+ 	}
+ 
+ 	if (zfs_mounts[current_vfsid].zm_uuid !=
+ 	    globalConfig.gconf_fsuuid)
+ 		psc_fatalx("FSUUID do not match; "
+ 		    "ZFS=%"PRIx64" slcfg=%"PRIx64,
+ 		    zfs_mounts[current_vfsid].zm_uuid,
+ 		    globalConfig.gconf_fsuuid);
+ 
+ 	psc_poolmaster_init(&slm_repl_status_poolmaster,
+ 	    struct slm_replst_workreq, rsw_lentry, PPMF_AUTO, 64,
+ 	    64, 0, NULL, "replst");
+ 	slm_repl_status_pool = psc_poolmaster_getmgr(
+ 	    &slm_repl_status_poolmaster);
+ 
+ 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
+ 	    rsw_lentry, "replstwkq");
+-
+-	size = sizeof(struct slm_wkdata_wr_brepl);
+-	if (size < sizeof(struct slm_wkdata_upsch_purge))
+-		size = sizeof(struct slm_wkdata_upsch_purge);
+-	if (size < sizeof(struct slm_wkdata_wr_brepl))
+-		size = sizeof(struct slm_wkdata_wr_brepl);
+-	pfl_workq_init(size);
+-
++	pfl_workq_init(128);
+ 	slm_upsch_init();
+ 
+ 	psc_poolmaster_init(&slm_bml_poolmaster,
+ 	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
+ 	    2048, 0, NULL, "bmplease");
+ 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
+ 
+ 	sl_nbrqset = pscrpc_prep_set();
+ 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,
+ 	    "slmnbrqthr");
+ 
+ 	slm_opstate = SLM_OPSTATE_REPLAY;
+ 
+ 	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0, SL_FN_BMAP_ODTAB,
+ 	    "bmapassign");
+ 	pfl_odt_load(&slm_ptrunc_odt, &slm_odtops, 0,
+ 	    SL_FN_PTRUNC_ODTAB, "ptrunc");
+ 
+ 	mds_bmap_timeotbl_init();
+ 
+ 	slrpc_initcli();
+ 	mds_update_boot_file();
+ 
+ 	slmctlthr_spawn(sfn);
+ 	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
+ 	time(&now);
+ 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
+ 
+ 	sqlite3_enable_shared_cache(1);
+-
+-	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+-	rc = sqlite3_open(dbfn, &db_handle);
+-	if (rc != SQLITE_OK)
+-		psc_fatalx("Fail to open SQLite data base %s", dbfn);
+-
++	//dbdo(NULL, NULL, "PRAGMA page_size=");
+ 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
+-	dbdo(NULL, NULL, "PRAGMA journal_mode=OFF");
++	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+ 
+ 	/* no-op to test integrity */
+ 	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
+ 	    " UPDATE	upsch"
+ 	    "	SET	id=0"
+ 	    " WHERE	id=0", NULL,
+ 	    NULL, &estr);
+ 	if (rc == SQLITE_ERROR) {
+ 		dbdo(NULL, NULL,
+ 		    "CREATE TABLE upsch ("
+ 		    "	id		INT PRIMARY KEY,"
+ 		    "	resid		UNSIGNED INT,"
+ 		    "	fid		UNSIGNED BIGINT,"
+ 		    "	uid		UNSIGNED INT,"
+ 		    "	gid		UNSIGNED INT,"
+ 		    "	bno		UNSIGNED INT,"
+ 		    "	status		CHAR(1),"
+ 		    "	sys_prio	INT,"
+ 		    "	usr_prio	INT,"
++		    "	nonce		UNSIGNED INT,"
+ 		    "	UNIQUE(resid, fid, bno)"
+ 		    ")");
+ 
+ 		dbdo(NULL, NULL,
+ 		    "CREATE INDEX 'upsch_resid_idx'"
+ 		    " ON 'upsch' ('resid')");
+ 		dbdo(NULL, NULL,
+ 		    "CREATE INDEX 'upsch_fid_idx'"
+ 		    " ON 'upsch' ('fid')");
+ 		dbdo(NULL, NULL,
+ 		    "CREATE INDEX 'upsch_bno_idx'"
+ 		    " ON 'upsch' ('bno')");
+ 		dbdo(NULL, NULL,
+ 		    "CREATE INDEX 'upsch_uid_idx'"
+ 		    " ON 'upsch' ('uid')");
+ 		dbdo(NULL, NULL,
+ 		    "CREATE INDEX 'upsch_gid_idx'"
+ 		    " ON 'upsch' ('gid')");
+ 
+ 		dbdo(NULL, NULL,
+ 		    "CREATE VIEW gsort AS"
+ 		    " SELECT	gid,"
+ 		    "		RANDOM() AS rnd"
+ 		    " FROM	upsch"
+ 		    " GROUP BY	gid");
+ 		dbdo(NULL, NULL,
+ 		    "CREATE VIEW usort AS"
+ 		    " SELECT	uid,"
+ 		    "		RANDOM() AS rnd"
+ 		    " FROM	upsch"
+ 		    " GROUP BY uid");
+ 	}
+ 
++	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
++
+ 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
+ 
+ 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
+ 	    "db-hipri-workq");
+ 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
+ 	    "db-lopri-workq");
+ 
+ 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
+ 	dbdo(NULL, NULL, "COMMIT");
+ 
+ 	dbdo(slm_upsch_requeue_cb, NULL,
+ 	    " SELECT	fid,"
+ 	    "		bno"
+ 	    " FROM	upsch"
+ 	    " WHERE	status = 'S'");
+ 
+ 	dbdo(NULL, NULL,
+ 	    " UPDATE	upsch"
+ 	    " SET	status = 'Q'"
+ 	    " WHERE	status = 'S'");
+ 
+ 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
+ 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
+ 
+ 	/*
+ 	 * As soon as log replay is over, we should be able to set the
+ 	 * state to NORMAL.  However, we had issues when trying to write
+ 	 * new log entries while replaying odtable.  So keep it this way
+ 	 * for now.
+ 	 */
+ 	slm_opstate = SLM_OPSTATE_NORMAL;
+ 
+ 	pfl_workq_lock();
+ 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
+ 	    sizeof(struct slmwork_thread), "slmwkthr%d");
+ 	pfl_workq_waitempty();
+ 
+-	for (i = 0; i < 4; i++) {
++	for (i = 0; i < 2; i++) {
+ 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+ 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
+ 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
+ 		pscthr_setready(thr);
+ 	}
+ 	for (i = 0; i < 2; i++) {
+ 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+ 		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
+ 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
+ 		pscthr_setready(thr);
+ 	}
+ 
++	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
++
+ 	slmbmaptimeothr_spawn();
+ 	slmconnthr_spawn();
+ 	slm_rpc_initsvc();
+ 	slmbchrqthr_spawn();
+ 	slmupschthr_spawn();
+ 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
+ 
+ 	time(&now);
+ 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
+ 	    __progname, sl_stk_version, ctime(&now));
+ 	psclogs_info(SLMSS_INFO, "Max ARC caching size is %"PRIu64" bytes",
+ 	    arc_get_maxsize());
+ 
+ 	pfl_fault_register(RMC_HANDLE_FAULT);
+ 
+ 	me = pscthr_get();
+ 	psc_ctlthr_mainloop(me);
+ 	exit(0);
+ }
+diff --git a/slashd/mds.c b/slashd/mds.c
+index 76c9c2d..e41f4b4 100644
+--- a/slashd/mds.c
++++ b/slashd/mds.c
+@@ -2198,97 +2198,153 @@ slm_ptrunc_prepare(struct fidc_membh *f)
+ 	}
+ 
+ 	return (rc);
+ }
+ 
+ int
+ str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
+ {
+ 	const char *i;
+ 	char *o;
+ 
+ 	for (i = in, o = out; *i && o < out + PATH_MAX - 1; i++, o++) {
+ 		if (*i == '\\' || *i == '\'')
+ 			*o++ = '\\';
+ 		*o = *i;
+ 	}
+ 	out[PATH_MAX - 1] = '\0';
+ 	return (0);
+ }
+ 
++void
++slmbkdbthr_main(struct psc_thread *thr)
++{
++	char dbfn[PATH_MAX], qdbfn[PATH_MAX],
++	     bkfn[PATH_MAX], qbkfn[PATH_MAX],
++	     cmd[LINE_MAX];
++
++	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
++	str_escmeta(dbfn, qdbfn);
++
++	xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
++	str_escmeta(bkfn, qbkfn);
++
++	snprintf(cmd, sizeof(cmd),
++	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
++	while (pscthr_run(thr)) {
++		// XXX sqlite3_backup_init()
++		thr->pscthr_waitq = "sleep 120";
++		sleep(120);
++		thr->pscthr_waitq = NULL;
++		(void)system(cmd);
++	}
++}
+ 
+ /*
+  * Execute an SQL query on the SQLite database.
+  *
+  * @cb: optional; callback to retrieve fields for a SELECT.
+  * @cbarg: optional; argument to provide to callback.
+  * @fmt: printf(3)-like format string to properly escape any
+  * interpolated values in the SQL query.
+  */
+ int
+ _dbdo(const struct pfl_callerinfo *pci,
+     int (*cb)(struct slm_sth *, void *), void *cbarg,
+     const char *fmt, ...)
+ {
+ 	static int check;
+ 	int type, log = 0, dbuf_off = 0, rc, n, j;
+ 	char *p, dbuf[LINE_MAX] = "";
+ 	struct timeval tv, tv0, tvd;
+ 	struct slmthr_dbh *dbh;
+ 	struct slm_sth *sth;
+ 	uint64_t key;
+ 	va_list ap;
+ 
+-	spinlock(&slm_upsch_lock);
+-#if 1
+-	dbh = slmthr_getdbh();
+-	if (dbh->dbh == NULL) {
+-		dbh->dbh = db_handle;
+-		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
+-		    struct slm_sth, sth_fmt, sth_hentry,
+-		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
+-		    NULL, "sth-%s", pscthr_get()->pscthr_name);
+-	}
+-
+-#else
+ 	dbh = slmthr_getdbh();
+ 
+ 	if (dbh->dbh == NULL) {
+-		char *estr;
+-		char dbfn[PATH_MAX];
++		char dbfn[PATH_MAX], qdbfn[PATH_MAX],
++		     bkfn[PATH_MAX], qbkfn[PATH_MAX],
++		     tmpfn[PATH_MAX], qtmpfn[PATH_MAX],
++		     cmd[LINE_MAX], *estr;
++		const char *tdir;
++		struct stat stb;
+ 
+ 		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+ 		rc = sqlite3_open(dbfn, &dbh->dbh);
+-		if (rc != SQLITE_OK)
+-			psc_fatalx("Fail to open SQLite data base %s", dbfn);
+-
+-		if (!check) {
++		if (rc == SQLITE_OK && !check) {
+ 			rc = sqlite3_exec(dbh->dbh,
+ 			    "PRAGMA integrity_check", NULL, NULL,
+ 			    &estr);
+ 			check = 1;
+-			if (rc != SQLITE_OK)
+-				psc_fatalx("Corrupt SQLite database %s", dbfn);
+ 		}
+ 
++		/* see slmbkdbthr_main() on how we back the database */
++		if (rc != SQLITE_OK) {
++			psc_assert(slm_opstate == SLM_OPSTATE_REPLAY);
++
++			psclog_errorx("upsch database not found or "
++			    "corrupted; rebuilding");
++
++			tdir = getenv("TMPDIR");
++			if (tdir == NULL)
++				tdir = _PATH_TMP;
++			snprintf(tmpfn, sizeof(tmpfn),
++			    "%s/upsch.tmp.XXXXXXXX", tdir);
++			mkstemp(tmpfn);
++
++			xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
++
++			str_escmeta(dbfn, qdbfn);
++			str_escmeta(bkfn, qbkfn);
++			str_escmeta(tmpfn, qtmpfn);
++
++			unlink(tmpfn);
++
++			if (stat(dbfn, &stb) == 0) {
++				/* salvage anything from current db */
++				snprintf(cmd, sizeof(cmd),
++				    "echo .dump | sqlite3 '%s' > '%s'",
++				    qdbfn, qtmpfn);
++				(void)system(cmd);
++
++				unlink(dbfn);
++			}
++
++			/* rollback to backup */
++			snprintf(cmd, sizeof(cmd),
++			    "sqlite3 '%s' < '%s'", qdbfn, qbkfn);
++			(void)system(cmd);
++
++			rc = sqlite3_open(dbfn, &dbh->dbh);
++			if (rc)
++				psc_fatal("%s: %s", dbfn,
++				    sqlite3_errmsg(dbh->dbh));
++		}
++
++		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
++		    struct slm_sth, sth_fmt, sth_hentry,
++		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
++		    NULL, "sth-%s", pscthr_get()->pscthr_name);
+ 	}
+-#endif
+ 
+ 	key = (uint64_t)fmt;
+ 	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
+ 	if (sth == NULL) {
+ 		sth = PSCALLOC(sizeof(*sth));
+ 		psc_hashent_init(&dbh->dbh_sth_hashtbl, sth);
+ 		sth->sth_fmt = fmt;
+ 
+ 		do {
+ 			rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
+ 			    &sth->sth_sth, NULL);
+ 			if (rc == SQLITE_BUSY)
+ 				pscthr_yield();
+ 		} while (rc == SQLITE_BUSY);
+ 		psc_assert(rc == SQLITE_OK);
+ 
+ 		psc_hashtbl_add_item(&dbh->dbh_sth_hashtbl, sth);
+ 	}
+ 
+ 	n = sqlite3_bind_parameter_count(sth->sth_sth);
+@@ -2355,42 +2411,40 @@ _dbdo(const struct pfl_callerinfo *pci,
+ 			cb(sth, cbarg);
+ 		if (rc != SQLITE_DONE)
+ 			pscthr_yield();
+ 		if (rc == SQLITE_LOCKED)
+ 			sqlite3_reset(sth->sth_sth);
+ 	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
+ 	    rc == SQLITE_LOCKED);
+ 
+ 	PFL_GETTIMEVAL(&tv);
+ 	timersub(&tv, &tv0, &tvd);
+ 	OPSTAT_ADD("sql-wait-usecs",
+ 	    tvd.tv_sec * 1000000 + tvd.tv_usec);
+ 	if (log)
+ 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
+ 		    tvd.tv_usec / 1000000.0, dbuf);
+ 
+ 	if (rc != SQLITE_DONE)
+ 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
+ 		    fmt, sqlite3_errmsg(dbh->dbh));
+ 	sqlite3_reset(sth->sth_sth);
+-
+-	freelock(&slm_upsch_lock);
+ 	return (rc == SQLITE_DONE ? 0 : rc);
+ }
+ 
+ void
+ slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
+     __unusedx void *arg)
+ {
+ 	struct {
+ 		struct sl_fidgen fg;
+ 	} *pt = data;
+ 	struct fidc_membh *f;
+ //	sl_bmapno_t bno;
+ 	int rc;
+ 
+ 	rc = slm_fcmh_get(&pt->fg, &f);
+ 	if (rc == 0) {
+ //		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
+ 		/* XXX do something */
+ 		fcmh_op_done(f);
+ 	}
+diff --git a/slashd/rcmc.c b/slashd/rcmc.c
+index ebdfa07..84a344f 100644
+--- a/slashd/rcmc.c
++++ b/slashd/rcmc.c
+@@ -268,42 +268,44 @@ slmrcmthr_main(struct psc_thread *thr)
+ 	struct fidc_membh *f;
+ 	struct sl_fidgen fg;
+ 	int n, rc;
+ 	void *p;
+ 
+ 	psc_dynarray_init(&da);
+ 
+ 	srcm = slmrcmthr(thr);
+ 	while (pscthr_run(thr)) {
+ 		/* handle requests for SRMT_REPL_GETST */
+ 		rsw = lc_getwait(&slm_replst_workq);
+ 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
+ 
+ 		/*
+  		 * Hit hang waiting on LOADING bit for a bmap.
+  		 */
+ 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
+ 			OPSTAT_INCR("replst-all");
+ 			
+ 			/* XXX lock to be removed after extensive testing */
++			spinlock(&slm_upsch_lock);
+ 			dbdo(slmrcmthr_walk, &da,
+ 			    "SELECT DISTINCT fid FROM upsch");
++			freelock(&slm_upsch_lock);
+ 
+ 			DYNARRAY_FOREACH(p, n, &da) {
+ 				fg.fg_fid = (slfid_t)p;
+ 				fg.fg_gen = FGEN_ANY;
+ 				rc = slm_fcmh_get(&fg, &f);
+ 				if (rc)
+ 					break;
+ 				rc = slmrcmthr_walk_bmaps(rsw, f);
+ 				fcmh_op_done(f);
+ 			}
+ 
+ 		} else if (slm_fcmh_get(&rsw->rsw_fg, &f) == 0) {
+ 			slmrcmthr_walk_bmaps(rsw, f);
+ 			fcmh_op_done(f);
+ 		}
+ 
+ 		/* signal EOF */
+ 		slm_rcm_issue_getreplst(rsw, NULL);
+ 
+ 		/* XXX if we failed above, client will never know */
+diff --git a/slashd/repl_mds.c b/slashd/repl_mds.c
+index c59c163..da9b88f 100644
+--- a/slashd/repl_mds.c
++++ b/slashd/repl_mds.c
+@@ -583,44 +583,42 @@ slm_repl_upd_write(struct bmap *b, int rel)
+ {
+ 	struct {
+ 		sl_replica_t	 iosv[SL_MAX_REPLICAS];
+ 		char		*stat[SL_MAX_REPLICAS];
+ 		unsigned	 nios;
+ 	} add, del, chg;
+ 
+ 	int off, vold, vnew, sprio, uprio, rc;
+ 	struct sl_mds_iosinfo *si;
+ 	struct bmap_mds_info *bmi;
+ 	struct fidc_membh *f;
+ 	struct sl_resource *r;
+ 	sl_ios_id_t resid;
+ 	unsigned n, nrepls;
+ 
+ 	bmi = bmap_2_bmi(b);
+ 	f = b->bcm_fcmh;
+ 	sprio = bmi->bmi_sys_prio;
+ 	uprio = bmi->bmi_usr_prio;
+ 
+-#if 0
+ 	while (lc_nitems(&slm_db_hipri_workq))
+ 		usleep(1000000/4);
+-#endif
+ 
+ 	memset(&chg, 0, sizeof(chg));
+ 
+ 	add.nios = 0;
+ 	del.nios = 0;
+ 	chg.nios = 0;
+ 	nrepls = fcmh_2_nrepls(f);
+ 	for (n = 0, off = 0; n < nrepls; n++, off += SL_BITS_PER_REPLICA) {
+ 		resid = fcmh_2_repl(f, n);
+ 		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
+ 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
+ 
+ 		r = libsl_id2res(resid);
+ 		si = r ? res2iosinfo(r) : &slm_null_iosinfo;
+ 
+ 		if (vold == vnew)
+ 			;
+ 
+ 		/* Work was added. */
+ 		else if ((vold != BREPLST_REPL_SCHED &&
+@@ -660,68 +658,72 @@ slm_repl_upd_write(struct bmap *b, int rel)
+ 		    vnew == BREPLST_TRUNCPNDG_SCHED)
+ 			PUSH_IOS(b, &chg, resid, "S");
+ 
+ 		/* Work was reprioritized. */
+ 		else if (sprio != -1 || uprio != -1)
+ 			PUSH_IOS(b, &chg, resid, NULL);
+ 	}
+ 
+ 	for (n = 0; n < add.nios; n++) {
+ 		rc = slm_upsch_insert(b, add.iosv[n].bs_id, sprio,
+ 		    uprio);
+ 		if (!rc)
+ 			continue;
+ 		psclog_warnx("upsch insert failed: bno = %d, "
+ 		    "fid=%"PRId64", ios= %d, rc = %d",
+ 		    b->bcm_bmapno, bmap_2_fid(b), 
+ 		    add.iosv[n].bs_id, rc);
+ 	}
+ 
+ 	for (n = 0; n < del.nios; n++) {
++		spinlock(&slm_upsch_lock);
+ 		dbdo(NULL, NULL,
+ 		    " DELETE FROM upsch"
+ 		    " WHERE	resid = ?"
+ 		    "   AND	fid = ?"
+ 		    "   AND	bno = ?",
+ 		    SQLITE_INTEGER, del.iosv[n].bs_id,
+ 		    SQLITE_INTEGER64, bmap_2_fid(b),
+ 		    SQLITE_INTEGER, b->bcm_bmapno);
++		freelock(&slm_upsch_lock);
+ 	}
+ 
+ 	for (n = 0; n < chg.nios; n++) {
++		spinlock(&slm_upsch_lock);
+ 		dbdo(NULL, NULL,
+ 		    " UPDATE	upsch"
+ 		    " SET	status = IFNULL(?, status),"
+ 		    "		sys_prio = IFNULL(?, sys_prio),"
+ 		    "		usr_prio = IFNULL(?, usr_prio)"
+ 		    " WHERE	resid = ?"
+ 		    "	AND	fid = ?"
+ 		    "	AND	bno = ?",
+ 		    chg.stat[n] ? SQLITE_TEXT : SQLITE_NULL,
+ 		    chg.stat[n] ? chg.stat[n] : 0,
+ 		    sprio == -1 ? SQLITE_NULL : SQLITE_INTEGER,
+ 		    sprio == -1 ? 0 : sprio,
+ 		    uprio == -1 ? SQLITE_NULL : SQLITE_INTEGER,
+ 		    uprio == -1 ? 0 : uprio,
+ 		    SQLITE_INTEGER, chg.iosv[n].bs_id,
+ 		    SQLITE_INTEGER64, bmap_2_fid(b),
+ 		    SQLITE_INTEGER, b->bcm_bmapno);
++		freelock(&slm_upsch_lock);
+ 	}
+ 
+ 	bmap_2_bmi(b)->bmi_sys_prio = -1;
+ 	bmap_2_bmi(b)->bmi_usr_prio = -1;
+ 
+ 	if (rel) {
+ 		BMAP_LOCK(b);
+ 		b->bcm_flags &= ~BMAPF_REPLMODWR;
+ 		bmap_wake_locked(b);
+ 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
+ 	}
+ }
+ 
+ #define FLAG_DIRTY			(1 << 0)	/* bmap was modified and must be saved */
+ #define FLAG_REPLICA_STATE_INVALID	(1 << 1)	/* return SLERR_REPLICA_STATE_INVALID */
+ 
+ /*
+  * Change operation state depending on replica state.
+  *
+  * Flag dirty if replicas get enqueued for replication so the bmap can
+diff --git a/slashd/slashd.h b/slashd/slashd.h
+index cb873f5..6ed558a 100644
+--- a/slashd/slashd.h
++++ b/slashd/slashd.h
+@@ -31,42 +31,40 @@
+ #include "pfl/multiwait.h"
+ #include "pfl/odtable.h"
+ #include "pfl/rpc.h"
+ #include "pfl/service.h"
+ #include "pfl/vbitmap.h"
+ #include "pfl/workthr.h"
+ 
+ #include "inode.h"
+ #include "namespace.h"
+ #include "slashrpc.h"
+ #include "slconfig.h"
+ #include "slconn.h"
+ #include "sltypes.h"
+ 
+ struct fidc_membh;
+ struct srt_stat;
+ 
+ struct slm_sth;
+ struct bmap_mds_lease;
+ 
+-sqlite3                  *db_handle;
+-
+ /* MDS thread types. */
+ enum {
+ 	SLMTHRT_BATCHRPC = _PFL_NTHRT,	/* batch RPC reaper */
+ 	SLMTHRT_FREAP,			/* file reaper */
+ 	SLMTHRT_BKDB,			/* upsch database backup */
+ 	SLMTHRT_BMAPTIMEO,		/* bmap timeout thread */
+ 	SLMTHRT_CONN,			/* peer resource connection monitor */
+ 	SLMTHRT_CTL,			/* control processor */
+ 	SLMTHRT_CTLAC,			/* control acceptor */
+ 	SLMTHRT_CURSOR,			/* cursor update thread */
+ 	SLMTHRT_DBWORKER,		/* database worker */
+ 	SLMTHRT_JNAMESPACE,		/* namespace propagating thread */
+ 	SLMTHRT_JRECLAIM,		/* garbage reclamation thread */
+ 	SLMTHRT_JRNL,			/* journal distill thread */
+ 	SLMTHRT_LNETAC,			/* lustre net accept thr */
+ 	SLMTHRT_NBRQ,			/* non-blocking RPC reply handler */
+ 	SLMTHRT_RCM,			/* CLI <- MDS msg issuer */
+ 	SLMTHRT_RMC,			/* MDS <- CLI msg svc handler */
+ 	SLMTHRT_RMI,			/* MDS <- I/O msg svc handler */
+ 	SLMTHRT_RMM,			/* MDS <- MDS msg svc handler */
+diff --git a/slashd/up_sched_res.c b/slashd/up_sched_res.c
+index ec41480..7415b25 100644
+--- a/slashd/up_sched_res.c
++++ b/slashd/up_sched_res.c
+@@ -61,42 +61,40 @@
+ #include "slconfig.h"
+ #include "slerr.h"
+ #include "slutil.h"
+ #include "up_sched_res.h"
+ 
+ #include "zfs-fuse/zfs_slashlib.h"
+ 
+ /* RPC callback numeric arg indexes */
+ #define IN_OFF		0
+ #define IN_AMT		1
+ 
+ /* RPC callback pointer arg indexes */
+ #define IP_CSVC		0
+ #define IP_DSTRESM	1
+ #define IP_SRCRESM	2
+ #define IP_BMAP		3
+ 
+ psc_spinlock_t           slm_upsch_lock;
+ struct psc_waitq	 slm_upsch_waitq;
+ 
+-struct timespec		 lastcommit;
+-
+ /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
+ struct psc_listcache     slm_upsch_queue;
+ 
+ struct psc_poolmaster	 slm_upgen_poolmaster;
+ struct psc_poolmgr	*slm_upgen_pool;
+ 
+ int	upsch_total;
+ int	slm_upsch_delay = 5;
+ 
+ void (*upd_proctab[])(struct slm_update_data *);
+ 
+ extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
+ extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
+ 
+ /*
+  * Handle batch replication finish/error.  If success, we update the
+  * bmap to the new residency states.  If error, we revert all changes
+  * and set things back to a virgin state for future processing.
+  */
+ void
+@@ -914,52 +912,40 @@ upd_pagein_wk(void *p)
+  	 */
+ 	brepls_init(retifset, 0);
+ 	retifset[BREPLST_REPL_QUEUED] = 1;
+ 	retifset[BREPLST_REPL_SCHED] = 1;
+ 	retifset[BREPLST_TRUNCPNDG] = 1;
+ 	if (slm_preclaim_enabled) {
+ 		retifset[BREPLST_GARBAGE] = 1;
+ 		retifset[BREPLST_GARBAGE_SCHED] = 1;
+ 	}
+ 
+ 	BMAP_LOCK(b);
+ 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+ 	    REPL_WALKF_SCIRCUIT))
+ 		upsch_enqueue(bmap_2_upd(b));
+ 	else {
+ 		OPSTAT_INCR("upsch-no-work");
+ 		rc = 1;
+ 	}
+ 	BMAP_ULOCK(b);
+ 
+-#if 0
+-	if (!rc) {
+-		static int pagein = 0;
+-
+-		if ((pagein % 512) == 0) {
+-			dbdo(NULL, NULL, "END  TRANSACTION");
+-			dbdo(NULL, NULL, "BEGIN  TRANSACTION");
+-		}
+-		pagein++;
+-	}
+-#endif
+-
+  out:
+ 	if (rc) {
+ 		/*
+ 		 * XXX Do we need to do any work if rc is an error code
+ 		 * instead 1 here?
+ 		 *
+ 		 * We only try once because an IOS might down. So it is
+ 		 * up to the user to requeue his request.
+ 		 */
+ 		struct slm_wkdata_upsch_purge *purge_wk;
+ 
+ 		purge_wk = pfl_workq_getitem(slm_wk_upsch_purge,
+ 		    struct slm_wkdata_upsch_purge);
+ 		purge_wk->fid = fg.fg_fid;
+ 		if (b)
+ 			purge_wk->bno = b->bcm_bmapno;
+ 		else
+ 			purge_wk->bno = BMAPNO_ANY;
+ 		pfl_workq_putitemq(&slm_db_lopri_workq, purge_wk);
+ 	}
+@@ -970,185 +956,150 @@ upd_pagein_wk(void *p)
+ 	if (!si->si_paging) {
+ 		si->si_flags &= ~SIF_UPSCH_PAGING;
+ 		sched = 1;
+ 	}
+ 	RPMI_ULOCK(rpmi);
+ 	if (sched)
+ 		upschq_resm(wk->resm, UPDT_PAGEIN);
+ 
+ 	if (b)
+ 		bmap_op_done(b);
+ 
+ 	if (f) 
+ 		fcmh_op_done(f);
+ 	return (0);
+ }
+ 
+ int
+ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
+ {
+ 	struct slm_wkdata_upschq *wk;
+-	struct {
+-		int count;
+-		struct psc_dynarray da;
+-	} *arg = p;;
++	struct psc_dynarray *da = p;
+ 
+ 	/*
+  	 * Accumulate work items here and submit them in a batch later
+  	 * so that we know when the paging is really done.
+  	 */
++	OPSTAT_INCR("upsch-db-pagein");
+ 
+-	wk = psc_dynarray_getpos(&arg->da, arg->count++);
++	/* pfl_workrq_pool */
++	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+ 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+ 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
++	psc_dynarray_add(da, wk);
+ 	return (0);
+ }
+ 
+ /*
+  * Handle UPDT_PAGEIN.
+  *
+  * Page in some work for the update scheduler to do.  This consults the
+  * upsch database, potentially restricting to a single resource for work
+  * to schedule.
+  */
+ void
+ upd_proc_pagein(struct slm_update_data *upd)
+ {
+ 	int i;
+ 	struct slm_wkdata_upschq *wk;
+ 	struct slm_update_generic *upg;
+-	struct resprof_mds_info *rpmi;
++	struct resprof_mds_info *rpmi = NULL;
+ 	struct sl_mds_iosinfo *si;
+ 	struct sl_resource *r;
+-	struct {
+-		int count;
+-		struct psc_dynarray da;
+-	} arg;
+-
+-	arg.count = 0;
+-	psc_dynarray_init(&arg.da);
++	struct psc_dynarray da = DYNARRAY_INIT;
+ 
+ 	while (lc_nitems(&slm_db_hipri_workq))
+-		usleep(1000000/16);
++		usleep(1000000/4);
+ 	/*
+ 	 * Page some work in.  We make a heuristic here to avoid a large
+ 	 * number of operations inside the database callback.
+ 	 *
+ 	 * This algorithm suffers because each piece of work pulled in
+ 	 * is not technically fair.  But each invocation of this routine
+ 	 * selects a different user at random, so over time, no users
+ 	 * will starve.
+ 	 */
+ 	upg = upd_getpriv(upd);
+-	r = upg->upg_resm->resm_res;
+-	rpmi = res2rpmi(r);
+-	si = res2iosinfo(r);
++	if (upg->upg_resm) {
++		r = upg->upg_resm->resm_res;
++		rpmi = res2rpmi(r);
++		si = res2iosinfo(r);
++	}
+ 
+ #define UPSCH_PAGEIN_BATCH	128
+ 
+-	for (i = 0; i < UPSCH_PAGEIN_BATCH; i++) {
+-		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+-		psc_dynarray_add(&arg.da, wk);
+-	}
+-#if 0
++	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
++
++	spinlock(&slm_upsch_lock);
+ 
+ 	/* DESC means sorted by descending order */
+-	dbdo(upd_proc_pagein_cb, &arg,
++	dbdo(upd_proc_pagein_cb, &da,
+ 	    " SELECT	fid,"
+-	    "		bno"
++	    "		bno,"
++	    "		nonce"
+ 	    " FROM	upsch u,"
+ 	    "		gsort gs,"
+ 	    "		usort us"
+ 	    " WHERE	resid = IFNULL(?, resid)"
+-#if 0
+ 	    "   AND	status = 'Q'"
+-#endif
+ 	    "	AND	gs.gid = u.gid"
+ 	    "	AND	us.uid = u.uid"
+ 	    " ORDER BY	sys_prio DESC,"
+ 	    "		gs.rnd,"
+ 	    "		us.rnd,"
+ 	    "		usr_prio DESC,"
+ 	    "		RANDOM()"
+ 	    " LIMIT	?",
+ 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+ 	    upg->upg_resm ? r->res_id : 0,
+ 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+-#else
+ 
+-	/* DESC means sorted by descending order */
+-	dbdo(upd_proc_pagein_cb, &arg,
+-	    " SELECT	fid,"
+-	    "		bno"
+-	    " FROM	upsch"
+-	    " WHERE	resid = IFNULL(?, resid)"
+-#if 0
+-	    "   AND	status = 'Q'"
+-#endif
+-	    " LIMIT	?"
+-	    " OFFSET	?",
+-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+-	    upg->upg_resm ? r->res_id : 0,
+-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+-	    SQLITE_INTEGER, 
+-	    upg->upg_resm ? r->res_offset : 0);
+-
+-	if (!arg.count)
+-		r->res_offset = 0;
+-	else
+-		r->res_offset += UPSCH_PAGEIN_BATCH;
+-
+-#endif
++	freelock(&slm_upsch_lock);
+ 
+-	RPMI_LOCK(rpmi);
++	if (rpmi)
++		RPMI_LOCK(rpmi);
+ 
+-	if (!arg.count) {
+-		i = 0;
++	if (!psc_dynarray_len(&da)) {
+ 		si->si_flags &= ~SIF_UPSCH_PAGING;
+ 		OPSTAT_INCR("upsch-empty");
+ 	} else {
+-		for (i = 0; i < arg.count; i++) {
+-			wk = psc_dynarray_getpos(&arg.da, i);
++		DYNARRAY_FOREACH(wk, i, &da) {
+ 			if (rpmi)
+ 				si->si_paging++;
+ 			wk->resm = upg->upg_resm;
+ 			pfl_workq_putitem(wk);
+ 		}
+ 	}
+-	while (i < UPSCH_PAGEIN_BATCH) {
+-		struct pfl_workrq *wkrq;
+-		wk = psc_dynarray_getpos(&arg.da, i++);
+-		wkrq = PSC_AGP(wk, -sizeof(*wkrq));
+-		psc_pool_return(pfl_workrq_pool, wkrq);
+-	}
+ 
+-	RPMI_ULOCK(rpmi);
+-	psc_dynarray_free(&arg.da);
++	if (rpmi)
++		RPMI_ULOCK(rpmi);
++	psc_dynarray_free(&da);
+ }
+ 
+ #if 0
+ 
+ #define UPSCH_MAX_ITEMS_RES 32
+ 
+ 	dbdo(upd_proc_pagein_cb, NULL,
+ 	    " SELECT	fid,"
+ 	    "		bno,"
++	    "		nonce"
+ 	    " FROM	upsch,"
+ 	    " WHERE	resid = IFNULL(?, resid)"
+ 	    "   AND	status = 'Q'"
+ 	    "   AND	gid = (SELECT gid FROM gsort ORDER BY RANDOM())"
+ 	    " ORDER BY	sys_pri DESC,"
+ 	    "		usr_pri DESC,"
+ 	    "		RANDOM()"
+ 	    " LIMIT	?",
+ 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+ 	    upg->upg_resm ? r->res_id : 0,
+ 	    SQLITE_INTEGER, UPSCH_MAX_ITEMS_RES);
+ 
+ #endif
+ 
+ void
+ upd_proc(struct slm_update_data *upd)
+ {
+ 	struct slm_update_generic *upg;
+ 
+ 	DPRINTF_UPD(PLL_DIAG, upd, "start");
+@@ -1258,157 +1209,146 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
+ 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+ 	if (rc) {
+ 		OPSTAT_INCR("bmap-requeue-replay");
+ 		mds_bmap_write(b, NULL, NULL);
+ 	}
+ 	BMAP_ULOCK(b);
+ 
+  out:
+ 	if (b)
+ 		bmap_op_done(b);
+ 	if (f)
+ 		fcmh_op_done(f);
+ 	return (0);
+ }
+ 
+ int
+ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
+     int usr_prio)
+ {
+ 	struct sl_resource *r;
+-	struct sl_resm *m;
+ 	int rc;
+ 
+ 	r = libsl_id2res(resid);
+ 	if (r == NULL)
+ 		return (ESRCH);
++	spinlock(&slm_upsch_lock);
+ 	rc = dbdo(NULL, NULL,
+ 	    " INSERT INTO upsch ("
+ 	    "	resid,"						/* 1 */
+ 	    "	fid,"						/* 2 */
+ 	    "	bno,"						/* 3 */
+ 	    "	uid,"						/* 4 */
+ 	    "	gid,"						/* 5 */
+ 	    "	status,"
+ 	    "	sys_prio,"					/* 6 */
+-	    "	usr_prio"					/* 7 */
++	    "	usr_prio,"					/* 7 */
++	    "	nonce"						/* 8 */
+ 	    ") VALUES ("
+ 	    "	?,"						/* 1 */
+ 	    "	?,"						/* 2 */
+ 	    "	?,"						/* 3 */
+ 	    "	?,"						/* 4 */
+ 	    "	?,"						/* 5 */
+ 	    "	'Q',"
+ 	    "	?,"						/* 6 */
++	    "	?,"						/* 7 */
+ 	    "	?"						/* 8 */
+ 	    ")",
+ 	    SQLITE_INTEGER, resid,				/* 1 */
+ 	    SQLITE_INTEGER64, bmap_2_fid(b),			/* 2 */
+ 	    SQLITE_INTEGER, b->bcm_bmapno,			/* 3 */
+ 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,	/* 4 */
+ 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,	/* 5 */
+ 	    SQLITE_INTEGER, sys_prio,				/* 6 */
+-	    SQLITE_INTEGER, usr_prio);				/* 7 */
+-
+-	m = res_getmemb(r);
+-	upschq_resm(m, UPDT_PAGEIN);
++	    SQLITE_INTEGER, usr_prio,				/* 7 */
++	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
++	freelock(&slm_upsch_lock);
++	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+ 	if (!rc)
+ 		OPSTAT_INCR("upsch-insert-ok");
+ 	else
+ 		OPSTAT_INCR("upsch-insert-err");
+ 	return (rc);
+ }
+ 
+ void
+ slmupschthr_main(struct psc_thread *thr)
+ {
+-	struct timespec ts;
+ 	struct slm_update_data *upd;
+ #if 0
+ 	struct sl_resource *r;
+ 	struct sl_resm *m;
+ 	struct sl_site *s;
+ 	int i, j;
+ #endif
+ 
+-	ts.tv_nsec = 0;
+ 	while (pscthr_run(thr)) {
+ #if 0
+ 		if (lc_nitems(&slm_upsch_queue) < 128) {
+ 			CONF_FOREACH_RESM(s, r, i, m, j) {
+ 				if (!RES_ISFS(r))
+ 					continue;
+ 				/* schedule a call to upd_proc_pagein() */
+ 				upschq_resm(m, UPDT_PAGEIN);
+ 			}
+ 		}
+ #endif
+-		ts.tv_sec = time(NULL) + 30;
+-		upd = lc_gettimed(&slm_upsch_queue, &ts);
+-		if (upd)
+-			upd_proc(upd);
+-	
+-		ts.tv_sec = time(NULL);
+-		if (ts.tv_sec > lastcommit.tv_sec + 60) {
+-			dbdo(NULL, NULL, "COMMIT");
+-			dbdo(NULL, NULL, "BEGIN TRANSACTION");
+-			lastcommit.tv_sec = ts.tv_sec;
+-		}
++		upd = lc_getwait(&slm_upsch_queue);
++		upd_proc(upd);
+ 	}
+ }
+ 
+ void
+ slm_upsch_init(void)
+ {
+ 	psc_poolmaster_init(&slm_upgen_poolmaster,
+ 	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
+ 	    NULL, "upgen");
+ 	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
+ 
+ 	INIT_SPINLOCK(&slm_upsch_lock);
+ 	psc_waitq_init(&slm_upsch_waitq, "upsch");
+ 	lc_reginit(&slm_upsch_queue, struct slm_update_data,
+ 	    upd_lentry, "upschq");
+ }
+ 
+ void
+ slmupschthr_spawn(void)
+ {
+ 	struct psc_thread *thr;
+ 	struct sl_resource *r;
+ 	struct sl_resm *m;
+ 	struct sl_site *s;
+ 	int i, j;
+ 
+-	lastcommit.tv_sec = time(NULL);
+-	dbdo(NULL, NULL, "BEGIN TRANSACTION");
+ 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
+ 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
+ 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+ 		pscthr_setready(thr);
+ 	}
+ 	/* jump start */
+ 	CONF_FOREACH_RESM(s, r, i, m, j) {
+ 		if (!RES_ISFS(r))
+ 			continue;
+-		/* schedule a call to upd_proc_pagein() */
+-		upschq_resm(m, UPDT_PAGEIN);
++			/* schedule a call to upd_proc_pagein() */
++			upschq_resm(m, UPDT_PAGEIN);
+ 	}
+ }
+ 
+ /*
+  * Schedule a PAGEIN for a resm.
+  */
+ void
+ upschq_resm(struct sl_resm *m, int type)
+ {
+ 	struct slm_update_generic *upg;
+ 	struct resprof_mds_info *rpmi;
+ 	struct slm_update_data *upd;
+ 	struct sl_mds_iosinfo *si;
+ 	struct slrpc_cservice *csvc;
+ 
+ 	if (type == UPDT_PAGEIN) {
+ 		csvc = slm_geticsvc(m, NULL, 
+ 		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+ 		if (!csvc)
+ 			return;
