@@ -600,10 +600,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
 
-#if 0
 	while (lc_nitems(&slm_db_hipri_workq))
 		usleep(1000000/4);
-#endif
 
 	memset(&chg, 0, sizeof(chg));
 
@@ -677,6 +675,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 
 	for (n = 0; n < del.nios; n++) {
+		spinlock(&slm_upsch_lock);
 		dbdo(NULL, NULL,
 		    " DELETE FROM upsch"
 		    " WHERE	resid = ?"
@@ -685,9 +684,11 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    SQLITE_INTEGER, del.iosv[n].bs_id,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
+		freelock(&slm_upsch_lock);
 	}
 
 	for (n = 0; n < chg.nios; n++) {
+		spinlock(&slm_upsch_lock);
 		dbdo(NULL, NULL,
 		    " UPDATE	upsch"
 		    " SET	status = IFNULL(?, status),"
@@ -705,6 +706,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    SQLITE_INTEGER, chg.iosv[n].bs_id,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
+		freelock(&slm_upsch_lock);
 	}
 
 	bmap_2_bmi(b)->bmi_sys_prio = -1;

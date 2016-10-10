@@ -2215,6 +2215,29 @@ str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
 	return (0);
 }
 
+void
+slmbkdbthr_main(struct psc_thread *thr)
+{
+	char dbfn[PATH_MAX], qdbfn[PATH_MAX],
+	     bkfn[PATH_MAX], qbkfn[PATH_MAX],
+	     cmd[LINE_MAX];
+
+	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+	str_escmeta(dbfn, qdbfn);
+
+	xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+	str_escmeta(bkfn, qbkfn);
+
+	snprintf(cmd, sizeof(cmd),
+	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
+	while (pscthr_run(thr)) {
+		// XXX sqlite3_backup_init()
+		thr->pscthr_waitq = "sleep 120";
+		sleep(120);
+		thr->pscthr_waitq = NULL;
+		(void)system(cmd);
+	}
+}
 
 /*
  * Execute an SQL query on the SQLite database.
@@ -2238,40 +2261,73 @@ _dbdo(const struct pfl_callerinfo *pci,
 	uint64_t key;
 	va_list ap;
 
-	spinlock(&slm_upsch_lock);
-#if 1
 	dbh = slmthr_getdbh();
+
 	if (dbh->dbh == NULL) {
-		dbh->dbh = db_handle;
+		char dbfn[PATH_MAX], qdbfn[PATH_MAX],
+		     bkfn[PATH_MAX], qbkfn[PATH_MAX],
+		     tmpfn[PATH_MAX], qtmpfn[PATH_MAX],
+		     cmd[LINE_MAX], *estr;
+		const char *tdir;
+		struct stat stb;
+
+		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+		rc = sqlite3_open(dbfn, &dbh->dbh);
+		if (rc == SQLITE_OK && !check) {
+			rc = sqlite3_exec(dbh->dbh,
+			    "PRAGMA integrity_check", NULL, NULL,
+			    &estr);
+			check = 1;
+		}
+
+		/* see slmbkdbthr_main() on how we back the database */
+		if (rc != SQLITE_OK) {
+			psc_assert(slm_opstate == SLM_OPSTATE_REPLAY);
+
+			psclog_errorx("upsch database not found or "
+			    "corrupted; rebuilding");
+
+			tdir = getenv("TMPDIR");
+			if (tdir == NULL)
+				tdir = _PATH_TMP;
+			snprintf(tmpfn, sizeof(tmpfn),
+			    "%s/upsch.tmp.XXXXXXXX", tdir);
+			mkstemp(tmpfn);
+
+			xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+
+			str_escmeta(dbfn, qdbfn);
+			str_escmeta(bkfn, qbkfn);
+			str_escmeta(tmpfn, qtmpfn);
+
+			unlink(tmpfn);
+
+			if (stat(dbfn, &stb) == 0) {
+				/* salvage anything from current db */
+				snprintf(cmd, sizeof(cmd),
+				    "echo .dump | sqlite3 '%s' > '%s'",
+				    qdbfn, qtmpfn);
+				(void)system(cmd);
+
+				unlink(dbfn);
+			}
+
+			/* rollback to backup */
+			snprintf(cmd, sizeof(cmd),
+			    "sqlite3 '%s' < '%s'", qdbfn, qbkfn);
+			(void)system(cmd);
+
+			rc = sqlite3_open(dbfn, &dbh->dbh);
+			if (rc)
+				psc_fatal("%s: %s", dbfn,
+				    sqlite3_errmsg(dbh->dbh));
+		}
+
 		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
 		    struct slm_sth, sth_fmt, sth_hentry,
 		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
 		    NULL, "sth-%s", pscthr_get()->pscthr_name);
 	}
-
-#else
-	dbh = slmthr_getdbh();
-
-	if (dbh->dbh == NULL) {
-		char *estr;
-		char dbfn[PATH_MAX];
-
-		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
-		rc = sqlite3_open(dbfn, &dbh->dbh);
-		if (rc != SQLITE_OK)
-			psc_fatalx("Fail to open SQLite data base %s", dbfn);
-
-		if (!check) {
-			rc = sqlite3_exec(dbh->dbh,
-			    "PRAGMA integrity_check", NULL, NULL,
-			    &estr);
-			check = 1;
-			if (rc != SQLITE_OK)
-				psc_fatalx("Corrupt SQLite database %s", dbfn);
-		}
-
-	}
-#endif
 
 	key = (uint64_t)fmt;
 	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
@@ -2372,8 +2428,6 @@ _dbdo(const struct pfl_callerinfo *pci,
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 	sqlite3_reset(sth->sth_sth);
-
-	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
 

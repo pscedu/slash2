@@ -78,8 +78,6 @@
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
 
-struct timespec		 lastcommit;
-
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
@@ -931,18 +929,6 @@ upd_pagein_wk(void *p)
 	}
 	BMAP_ULOCK(b);
 
-#if 0
-	if (!rc) {
-		static int pagein = 0;
-
-		if ((pagein % 512) == 0) {
-			dbdo(NULL, NULL, "END  TRANSACTION");
-			dbdo(NULL, NULL, "BEGIN  TRANSACTION");
-		}
-		pagein++;
-	}
-#endif
-
  out:
 	if (rc) {
 		/*
@@ -987,19 +973,19 @@ int
 upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 {
 	struct slm_wkdata_upschq *wk;
-	struct {
-		int count;
-		struct psc_dynarray da;
-	} *arg = p;;
+	struct psc_dynarray *da = p;
 
 	/*
  	 * Accumulate work items here and submit them in a batch later
  	 * so that we know when the paging is really done.
  	 */
+	OPSTAT_INCR("upsch-db-pagein");
 
-	wk = psc_dynarray_getpos(&arg->da, arg->count++);
+	/* pfl_workrq_pool */
+	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
+	psc_dynarray_add(da, wk);
 	return (0);
 }
 
@@ -1016,19 +1002,13 @@ upd_proc_pagein(struct slm_update_data *upd)
 	int i;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi;
+	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
-	struct {
-		int count;
-		struct psc_dynarray da;
-	} arg;
-
-	arg.count = 0;
-	psc_dynarray_init(&arg.da);
+	struct psc_dynarray da = DYNARRAY_INIT;
 
 	while (lc_nitems(&slm_db_hipri_workq))
-		usleep(1000000/16);
+		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1039,29 +1019,28 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	r = upg->upg_resm->resm_res;
-	rpmi = res2rpmi(r);
-	si = res2iosinfo(r);
+	if (upg->upg_resm) {
+		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+	}
 
 #define UPSCH_PAGEIN_BATCH	128
 
-	for (i = 0; i < UPSCH_PAGEIN_BATCH; i++) {
-		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
-		psc_dynarray_add(&arg.da, wk);
-	}
-#if 0
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+
+	spinlock(&slm_upsch_lock);
 
 	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &arg,
+	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
-	    "		bno"
+	    "		bno,"
+	    "		nonce"
 	    " FROM	upsch u,"
 	    "		gsort gs,"
 	    "		usort us"
 	    " WHERE	resid = IFNULL(?, resid)"
-#if 0
 	    "   AND	status = 'Q'"
-#endif
 	    "	AND	gs.gid = u.gid"
 	    "	AND	us.uid = u.uid"
 	    " ORDER BY	sys_prio DESC,"
@@ -1073,56 +1052,27 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
-#else
 
-	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &arg,
-	    " SELECT	fid,"
-	    "		bno"
-	    " FROM	upsch"
-	    " WHERE	resid = IFNULL(?, resid)"
-#if 0
-	    "   AND	status = 'Q'"
-#endif
-	    " LIMIT	?"
-	    " OFFSET	?",
-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0,
-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
-	    SQLITE_INTEGER, 
-	    upg->upg_resm ? r->res_offset : 0);
+	freelock(&slm_upsch_lock);
 
-	if (!arg.count)
-		r->res_offset = 0;
-	else
-		r->res_offset += UPSCH_PAGEIN_BATCH;
+	if (rpmi)
+		RPMI_LOCK(rpmi);
 
-#endif
-
-	RPMI_LOCK(rpmi);
-
-	if (!arg.count) {
-		i = 0;
+	if (!psc_dynarray_len(&da)) {
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		OPSTAT_INCR("upsch-empty");
 	} else {
-		for (i = 0; i < arg.count; i++) {
-			wk = psc_dynarray_getpos(&arg.da, i);
+		DYNARRAY_FOREACH(wk, i, &da) {
 			if (rpmi)
 				si->si_paging++;
 			wk->resm = upg->upg_resm;
 			pfl_workq_putitem(wk);
 		}
 	}
-	while (i < UPSCH_PAGEIN_BATCH) {
-		struct pfl_workrq *wkrq;
-		wk = psc_dynarray_getpos(&arg.da, i++);
-		wkrq = PSC_AGP(wk, -sizeof(*wkrq));
-		psc_pool_return(pfl_workrq_pool, wkrq);
-	}
 
-	RPMI_ULOCK(rpmi);
-	psc_dynarray_free(&arg.da);
+	if (rpmi)
+		RPMI_ULOCK(rpmi);
+	psc_dynarray_free(&da);
 }
 
 #if 0
@@ -1132,6 +1082,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
+	    "		nonce"
 	    " FROM	upsch,"
 	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
@@ -1275,12 +1226,12 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
     int usr_prio)
 {
 	struct sl_resource *r;
-	struct sl_resm *m;
 	int rc;
 
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
+	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1290,7 +1241,8 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    "	gid,"						/* 5 */
 	    "	status,"
 	    "	sys_prio,"					/* 6 */
-	    "	usr_prio"					/* 7 */
+	    "	usr_prio,"					/* 7 */
+	    "	nonce"						/* 8 */
 	    ") VALUES ("
 	    "	?,"						/* 1 */
 	    "	?,"						/* 2 */
@@ -1299,6 +1251,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    "	?,"						/* 5 */
 	    "	'Q',"
 	    "	?,"						/* 6 */
+	    "	?,"						/* 7 */
 	    "	?"						/* 8 */
 	    ")",
 	    SQLITE_INTEGER, resid,				/* 1 */
@@ -1307,10 +1260,10 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,	/* 4 */
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,	/* 5 */
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
-	    SQLITE_INTEGER, usr_prio);				/* 7 */
-
-	m = res_getmemb(r);
-	upschq_resm(m, UPDT_PAGEIN);
+	    SQLITE_INTEGER, usr_prio,				/* 7 */
+	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
+	freelock(&slm_upsch_lock);
+	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
@@ -1321,7 +1274,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 void
 slmupschthr_main(struct psc_thread *thr)
 {
-	struct timespec ts;
 	struct slm_update_data *upd;
 #if 0
 	struct sl_resource *r;
@@ -1330,7 +1282,6 @@ slmupschthr_main(struct psc_thread *thr)
 	int i, j;
 #endif
 
-	ts.tv_nsec = 0;
 	while (pscthr_run(thr)) {
 #if 0
 		if (lc_nitems(&slm_upsch_queue) < 128) {
@@ -1342,17 +1293,8 @@ slmupschthr_main(struct psc_thread *thr)
 			}
 		}
 #endif
-		ts.tv_sec = time(NULL) + 30;
-		upd = lc_gettimed(&slm_upsch_queue, &ts);
-		if (upd)
-			upd_proc(upd);
-	
-		ts.tv_sec = time(NULL);
-		if (ts.tv_sec > lastcommit.tv_sec + 60) {
-			dbdo(NULL, NULL, "COMMIT");
-			dbdo(NULL, NULL, "BEGIN TRANSACTION");
-			lastcommit.tv_sec = ts.tv_sec;
-		}
+		upd = lc_getwait(&slm_upsch_queue);
+		upd_proc(upd);
 	}
 }
 
@@ -1379,8 +1321,6 @@ slmupschthr_spawn(void)
 	struct sl_site *s;
 	int i, j;
 
-	lastcommit.tv_sec = time(NULL);
-	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
@@ -1390,8 +1330,8 @@ slmupschthr_spawn(void)
 	CONF_FOREACH_RESM(s, r, i, m, j) {
 		if (!RES_ISFS(r))
 			continue;
-		/* schedule a call to upd_proc_pagein() */
-		upschq_resm(m, UPDT_PAGEIN);
+			/* schedule a call to upd_proc_pagein() */
+			upschq_resm(m, UPDT_PAGEIN);
 	}
 }
 

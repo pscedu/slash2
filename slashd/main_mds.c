@@ -69,8 +69,6 @@ extern const char *__progname;
 
 int			 current_vfsid;
 
-sqlite3                  *db_handle;
-
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
@@ -121,7 +119,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
-	char mountpoint[BUFSIZ];
+	char cmdbuf[BUFSIZ], mountpoint[BUFSIZ];
 	struct dirent *d;
 	int i, rc;
 	DIR *dir;
@@ -148,37 +146,29 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
-#if 0
-	{
-		char cmdbuf[BUFSIZ];
-		/*
- 		 *  The following message during start up should be harmless:
- 		 *
-		 * cannot import XXX: a pool with that name is already 
-		 * created/imported,
-		 * and no additional pools with that name were found
-		 * cannot mount XXX: mountpoint or dataset is busy
-		 */
-		rc = pfl_systemf("zpool import -f %s%s%s '%s'",
-		    zfspoolcf ? "-c '" : "",
-		    zfspoolcf ? zfspoolcf : "",
-		    zfspoolcf ? "'" : "",
-		    zpoolname);
-		if (rc == -1)
-			psc_fatal("failed to execute command to import zpool "
-			    "%s: %s", zpoolname, cmdbuf);
-	}
-#endif
+	/*
+ 	 *  The following message during start up should be harmless:
+ 	 *
+	 * cannot import XXX: a pool with that name is already created/imported,
+	 * and no additional pools with that name were found
+	 * cannot mount XXX: mountpoint or dataset is busy
+	 */
+	rc = pfl_systemf("zpool import -f %s%s%s '%s'",
+	    zfspoolcf ? "-c '" : "",
+	    zfspoolcf ? zfspoolcf : "",
+	    zfspoolcf ? "'" : "",
+	    zpoolname);
+	if (rc == -1)
+		psc_fatal("failed to execute command to import zpool "
+		    "%s: %s", zpoolname, cmdbuf);
 
-#if 0
 	/* mount the default file system in the pool */
 	rc = pfl_systemf("zfs mount %s", zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to mount %s",
 		    zpoolname);
-#endif
 
-#if 1
+#if 0
 	/* mount the other MDS file systems from the pool */
 	rc = system("zfs mount -a");
 	if (rc == -1)
@@ -412,12 +402,10 @@ main(int argc, char *argv[])
 {
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	unsigned int size;
 	int i, c, rc, vfsid, found;
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
-	char dbfn[PATH_MAX];
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -575,14 +563,7 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-
-	size = sizeof(struct slm_wkdata_wr_brepl);
-	if (size < sizeof(struct slm_wkdata_upsch_purge))
-		size = sizeof(struct slm_wkdata_upsch_purge);
-	if (size < sizeof(struct slm_wkdata_wr_brepl))
-		size = sizeof(struct slm_wkdata_wr_brepl);
-	pfl_workq_init(size);
-
+	pfl_workq_init(128);
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
@@ -612,14 +593,9 @@ main(int argc, char *argv[])
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
 	sqlite3_enable_shared_cache(1);
-
-	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
-	rc = sqlite3_open(dbfn, &db_handle);
-	if (rc != SQLITE_OK)
-		psc_fatalx("Fail to open SQLite data base %s", dbfn);
-
+	//dbdo(NULL, NULL, "PRAGMA page_size=");
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
-	dbdo(NULL, NULL, "PRAGMA journal_mode=OFF");
+	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
 	/* no-op to test integrity */
 	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
@@ -639,6 +615,7 @@ main(int argc, char *argv[])
 		    "	status		CHAR(1),"
 		    "	sys_prio	INT,"
 		    "	usr_prio	INT,"
+		    "	nonce		UNSIGNED INT,"
 		    "	UNIQUE(resid, fid, bno)"
 		    ")");
 
@@ -671,6 +648,8 @@ main(int argc, char *argv[])
 		    " FROM	upsch"
 		    " GROUP BY uid");
 	}
+
+	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 
@@ -709,7 +688,7 @@ main(int argc, char *argv[])
 	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < 2; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
@@ -721,6 +700,8 @@ main(int argc, char *argv[])
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
 		pscthr_setready(thr);
 	}
+
+	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
 	slmconnthr_spawn();
