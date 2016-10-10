@@ -312,6 +312,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	OPSTAT2_ADD("repl-sched", amt);
 
+#if 0
 	/*
 	 * Write it out. This is needed because we can't expect the bmap
 	 * to be cached until it is replicated.
@@ -319,6 +320,11 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = mds_bmap_write_logrepls(b);
 	if (rc)
 		goto out;
+#else
+	rc = mds_bmap_write(b, NULL, NULL);
+	if (rc)
+		goto out;
+#endif
 
 	return (1);
 
@@ -998,7 +1004,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
-	int i;
+	int i, len;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
@@ -1030,6 +1036,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	spinlock(&slm_upsch_lock);
 
+#if 0
 	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
@@ -1052,16 +1059,36 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 
+#else
+
+	dbdo(upd_proc_pagein_cb, &da,
+	    " SELECT    fid,"
+	    "           bno"
+	    "		nonce"
+	    " FROM      upsch"
+	    " WHERE     resid = IFNULL(?, resid)"
+	    "   AND     status = 'Q'" 
+	    " LIMIT     ?"   
+	    " OFFSET    ?",  
+	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+	    upg->upg_resm ? r->res_id : 0, 
+	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+	    SQLITE_INTEGER, 
+	    upg->upg_resm ? r->res_offset : 0);
+#endif
 	freelock(&slm_upsch_lock);
 
 	if (rpmi)
 		RPMI_LOCK(rpmi);
 
-	if (!psc_dynarray_len(&da)) {
+	len = psc_dynarray_len(&da);
+	if (!len) {
+		r->res_offset = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		OPSTAT_INCR("upsch-empty");
 	} else {
-		OPSTAT_ADD("upsch-db-pagein", psc_dynarray_len(&da));
+		r->res_offset += len;
+		OPSTAT_ADD("upsch-db-pagein", len);
 		DYNARRAY_FOREACH(wk, i, &da) {
 			if (rpmi)
 				si->si_paging++;
@@ -1450,9 +1477,10 @@ upsch_enqueue(struct slm_update_data *upd)
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP)
-			lc_addtail(&slm_upsch_queue, upd);
-		else
-			lc_addhead(&slm_upsch_queue, upd);
+			OPSTAT_INCR("repl-add-bmap");
+		else 
+			OPSTAT_INCR("repl-add-other");
+		lc_add(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);
