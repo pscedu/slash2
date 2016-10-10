@@ -1326,7 +1326,7 @@ slmupschthr_spawn(void)
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
 	}
-	/* jump start */
+	/* Jump start the process */
 	CONF_FOREACH_RESM(s, r, i, m, j) {
 		if (!RES_ISFS(r))
 			continue;
