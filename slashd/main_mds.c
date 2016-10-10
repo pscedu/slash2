@@ -705,8 +705,6 @@ main(int argc, char *argv[])
 		pscthr_setready(thr);
 	}
 
-	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
-
 	slmbmaptimeothr_spawn();
 	slmconnthr_spawn();
 	slm_rpc_initsvc();
