@@ -979,7 +979,6 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  	 * Accumulate work items here and submit them in a batch later
  	 * so that we know when the paging is really done.
  	 */
-	OPSTAT_INCR("upsch-db-pagein");
 
 	/* pfl_workrq_pool */
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
@@ -1062,6 +1061,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		OPSTAT_INCR("upsch-empty");
 	} else {
+		OPSTAT_ADD("upsch-db-pagein", psc_dynarray_len(&da));
 		DYNARRAY_FOREACH(wk, i, &da) {
 			if (rpmi)
 				si->si_paging++;
