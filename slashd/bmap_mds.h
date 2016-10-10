@@ -88,7 +88,8 @@ struct bmap_mds_info {
 #define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
 #define bmi_2_ondisk(bmi)	((struct bmap_ondisk *)&(bmi)->bmi_corestate)
 
-/* MDS-specific bcm_flags */
+/* MDS-specific bcm_flags, _BMAPF_SHIFT	 = (1 <<  9) */
+
 #define BMAPF_CRC_UP		(_BMAPF_SHIFT << 0)	/* CRC update in progress */
 #define BMAPF_NOION		(_BMAPF_SHIFT << 1)	/* IOS could not be contacted for lease request */
 #define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 2)	/* res state changes have been written */
