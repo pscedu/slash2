@@ -1,0 +1,70 @@
+diff --git a/slashd/up_sched_res.c b/slashd/up_sched_res.c
+index a1baaf3..ec41480 100644
+--- a/slashd/up_sched_res.c
++++ b/slashd/up_sched_res.c
+@@ -1042,61 +1042,65 @@ upd_proc_pagein(struct slm_update_data *upd)
+ 	r = upg->upg_resm->resm_res;
+ 	rpmi = res2rpmi(r);
+ 	si = res2iosinfo(r);
+ 
+ #define UPSCH_PAGEIN_BATCH	128
+ 
+ 	for (i = 0; i < UPSCH_PAGEIN_BATCH; i++) {
+ 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+ 		psc_dynarray_add(&arg.da, wk);
+ 	}
+ #if 0
+ 
+ 	/* DESC means sorted by descending order */
+ 	dbdo(upd_proc_pagein_cb, &arg,
+ 	    " SELECT	fid,"
+ 	    "		bno"
+ 	    " FROM	upsch u,"
+ 	    "		gsort gs,"
+ 	    "		usort us"
+ 	    " WHERE	resid = IFNULL(?, resid)"
++#if 0
+ 	    "   AND	status = 'Q'"
++#endif
+ 	    "	AND	gs.gid = u.gid"
+ 	    "	AND	us.uid = u.uid"
+ 	    " ORDER BY	sys_prio DESC,"
+ 	    "		gs.rnd,"
+ 	    "		us.rnd,"
+ 	    "		usr_prio DESC,"
+ 	    "		RANDOM()"
+ 	    " LIMIT	?",
+ 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+ 	    upg->upg_resm ? r->res_id : 0,
+ 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+ #else
+ 
+ 	/* DESC means sorted by descending order */
+ 	dbdo(upd_proc_pagein_cb, &arg,
+ 	    " SELECT	fid,"
+ 	    "		bno"
+ 	    " FROM	upsch"
+ 	    " WHERE	resid = IFNULL(?, resid)"
++#if 0
+ 	    "   AND	status = 'Q'"
++#endif
+ 	    " LIMIT	?"
+ 	    " OFFSET	?",
+ 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+ 	    upg->upg_resm ? r->res_id : 0,
+ 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+ 	    SQLITE_INTEGER, 
+ 	    upg->upg_resm ? r->res_offset : 0);
+ 
+ 	if (!arg.count)
+ 		r->res_offset = 0;
+ 	else
+ 		r->res_offset += UPSCH_PAGEIN_BATCH;
+ 
+ #endif
+ 
+ 	RPMI_LOCK(rpmi);
+ 
+ 	if (!arg.count) {
+ 		i = 0;
+ 		si->si_flags &= ~SIF_UPSCH_PAGING;

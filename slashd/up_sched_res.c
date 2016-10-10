@@ -1059,7 +1059,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		gsort gs,"
 	    "		usort us"
 	    " WHERE	resid = IFNULL(?, resid)"
+#if 0
 	    "   AND	status = 'Q'"
+#endif
 	    "	AND	gs.gid = u.gid"
 	    "	AND	us.uid = u.uid"
 	    " ORDER BY	sys_prio DESC,"
@@ -1079,7 +1081,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		bno"
 	    " FROM	upsch"
 	    " WHERE	resid = IFNULL(?, resid)"
+#if 0
 	    "   AND	status = 'Q'"
+#endif
 	    " LIMIT	?"
 	    " OFFSET	?",
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
