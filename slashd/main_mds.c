@@ -146,6 +146,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		closedir(dir);
 	}
 
+#if 0
 	/*
  	 *  The following message during start up should be harmless:
  	 *
@@ -161,14 +162,17 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	if (rc == -1)
 		psc_fatal("failed to execute command to import zpool "
 		    "%s: %s", zpoolname, cmdbuf);
+#endif
 
+#if 0
 	/* mount the default file system in the pool */
 	rc = pfl_systemf("zfs mount %s", zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to mount %s",
 		    zpoolname);
+#endif
 
-#if 0
+#if 1
 	/* mount the other MDS file systems from the pool */
 	rc = system("zfs mount -a");
 	if (rc == -1)
