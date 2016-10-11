@@ -1056,9 +1056,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	RPMI_LOCK(rpmi);
 	len = psc_dynarray_len(&da);
 	if (!len) {
-		if (r->res_offset)
+		if (r->res_offset) {
 			sched = 1;
-		r->res_offset = 0;
+			r->res_offset = 0;
+		}
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 	} else {
 		r->res_offset += len;
