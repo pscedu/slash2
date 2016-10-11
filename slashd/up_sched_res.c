@@ -1036,31 +1036,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	spinlock(&slm_upsch_lock);
 
-#if 0
-	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &da,
-	    " SELECT	fid,"
-	    "		bno,"
-	    "		nonce"
-	    " FROM	upsch u,"
-	    "		gsort gs,"
-	    "		usort us"
-	    " WHERE	resid = IFNULL(?, resid)"
-	    "   AND	status = 'Q'"
-	    "	AND	gs.gid = u.gid"
-	    "	AND	us.uid = u.uid"
-	    " ORDER BY	sys_prio DESC,"
-	    "		gs.rnd,"
-	    "		us.rnd,"
-	    "		usr_prio DESC,"
-	    "		RANDOM()"
-	    " LIMIT	?",
-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0,
-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
-
-#else
-
 	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT    fid,"
 	    "           bno"
@@ -1075,13 +1050,14 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
 	    SQLITE_INTEGER, 
 	    upg->upg_resm ? r->res_offset : 0);
-#endif
+
 	freelock(&slm_upsch_lock);
 
 	RPMI_LOCK(rpmi);
 	len = psc_dynarray_len(&da);
 	if (!len) {
-		sched = 1;
+		if (r->res_offset)
+			sched = 1;
 		r->res_offset = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 	} else {
@@ -1096,7 +1072,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	RPMI_ULOCK(rpmi);
 
 	if (sched) {
-		OPSTAT_INCR("upsch-pagein-empty");
+		OPSTAT_INCR("upsch-pagein-wrap");
 		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
 	}
 	psc_dynarray_free(&da);
