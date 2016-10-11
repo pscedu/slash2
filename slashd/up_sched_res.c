@@ -960,12 +960,14 @@ upd_pagein_wk(void *p)
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
 	if (!si->si_paging) {
-		si->si_flags &= ~SIF_UPSCH_PAGING;
+		si->si_flags &= ~SIF_UPSCH_PAGING; 
 		sched = 1;
 	}
 	RPMI_ULOCK(rpmi);
-	if (sched)
+	if (sched) {
+		OPSTAT_INCR("upsch-pagein-batch");
 		upschq_resm(wk->resm, UPDT_PAGEIN);
+	}
 
 	if (b)
 		bmap_op_done(b);
@@ -1082,7 +1084,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 		sched = 1;
 		r->res_offset = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
-		OPSTAT_INCR("upsch-empty");
 	} else {
 		r->res_offset += len;
 		OPSTAT_ADD("upsch-db-pagein", len);
@@ -1094,8 +1095,10 @@ upd_proc_pagein(struct slm_update_data *upd)
 	}
 	RPMI_ULOCK(rpmi);
 
-	if (sched)
+	if (sched) {
+		OPSTAT_INCR("upsch-pagein-empty");
 		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
+	}
 	psc_dynarray_free(&da);
 }
 
