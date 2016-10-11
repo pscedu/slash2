@@ -1024,11 +1024,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-	}
+	r = upg->upg_resm->resm_res;
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
 #define UPSCH_PAGEIN_BATCH	128
 
@@ -1078,9 +1076,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 #endif
 	freelock(&slm_upsch_lock);
 
-	if (rpmi)
-		RPMI_LOCK(rpmi);
-
+	RPMI_LOCK(rpmi);
 	len = psc_dynarray_len(&da);
 	if (!len) {
 		sched = 1;
@@ -1091,15 +1087,13 @@ upd_proc_pagein(struct slm_update_data *upd)
 		r->res_offset += len;
 		OPSTAT_ADD("upsch-db-pagein", len);
 		DYNARRAY_FOREACH(wk, i, &da) {
-			if (rpmi)
-				si->si_paging++;
+			si->si_paging++;
 			wk->resm = upg->upg_resm;
 			pfl_workq_putitem(wk);
 		}
 	}
+	RPMI_ULOCK(rpmi);
 
-	if (rpmi)
-		RPMI_ULOCK(rpmi);
 	if (sched)
 		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
 	psc_dynarray_free(&da);
