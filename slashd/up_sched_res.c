@@ -1004,7 +1004,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
-	int i, len;
+	int i, len, sched = 0;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
@@ -1083,6 +1083,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	len = psc_dynarray_len(&da);
 	if (!len) {
+		sched = 1;
 		r->res_offset = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		OPSTAT_INCR("upsch-empty");
@@ -1099,6 +1100,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	if (rpmi)
 		RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
 	psc_dynarray_free(&da);
 }
 
