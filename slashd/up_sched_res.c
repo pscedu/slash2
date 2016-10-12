@@ -602,7 +602,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	}
 
 	rc = slrpc_batch_req_add(r,
-	    &slm_db_lopri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
+	    &slm_db_hipri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
 	    &slm_batch_rep_preclaim, 30);
 	if (rc)
