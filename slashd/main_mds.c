@@ -689,7 +689,7 @@ main(int argc, char *argv[])
 	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 4; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;

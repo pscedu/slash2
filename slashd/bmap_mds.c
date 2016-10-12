@@ -399,7 +399,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
  		 * Under massive deletion workload, we might be
  		 * starved, which causes delay on replication work.
  		 */
-		pfl_workq_putitemq_head(&slm_db_lopri_workq, wk);
+		pfl_workq_putitemq(&slm_db_hipri_workq, wk);
 		OPSTAT_INCR("bmap-write-log");
 	}
 
