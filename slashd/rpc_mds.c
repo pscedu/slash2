@@ -48,6 +48,7 @@ struct pscrpc_svc_handle slm_rmc_svc;
 void
 slm_rpc_initsvc(void)
 {
+	int i;
 	struct pscrpc_svc_handle *svh;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
@@ -97,11 +98,13 @@ slm_rpc_initsvc(void)
 	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 
-	thr = pscthr_init(SLMTHRT_RCM, slmrcmthr_main,
-	    sizeof(*srcm), "slmrcmthr");
-	srcm = thr->pscthr_private;
-	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
-	pscthr_setready(thr);
+	for (i = 0; i < 2; i++) {
+		thr = pscthr_init(SLMTHRT_RCM, slmrcmthr_main,
+		    sizeof(*srcm), "slmrcmthr%d", i);
+		srcm = thr->pscthr_private;
+		srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
+		pscthr_setready(thr);
+	}
 }
 
 void

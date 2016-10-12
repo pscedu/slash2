@@ -132,6 +132,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	    SL_NBITS_REPLST_BHDR;
 	if (howmany(srcm->srcm_page_bitpos + nbits,
 	    NBBY) > SRM_REPLST_PAGESIZ || *rqp == NULL) {
+		/* finish previous RPC if any */
 		if (*rqp) {
 			rc = slmrmcthr_replst_slave_fin(
 			    rsw->rsw_csvc, *rqp, f);
@@ -242,6 +243,9 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 				rc = rc2;
 		}
 	}
+	/*
+ 	 * This appears to be a separate RPC to indicate EOF.
+ 	 */
 	rc2 = slmrmcthr_replst_slave_eof(rsw, f);
 	if (rc == 0)
 		rc = rc2;
@@ -301,6 +305,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			}
 
 		} else if (slm_fcmh_get(&rsw->rsw_fg, &f) == 0) {
+			OPSTAT_INCR("replst-file");
 			slmrcmthr_walk_bmaps(rsw, f);
 			fcmh_op_done(f);
 		}
