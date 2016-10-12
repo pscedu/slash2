@@ -1042,7 +1042,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		nonce"
 	    " FROM      upsch"
 	    " WHERE     resid = IFNULL(?, resid)"
-	    "   AND     status = 'Q'" 
 	    " LIMIT     ?"   
 	    " OFFSET    ?",  
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
@@ -1059,7 +1058,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 		if (r->res_offset) {
 			sched = 1;
 			r->res_offset = 0;
-		}
+		} else
+			OPSTAT_INCR("upsch-pagein-empty");
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 	} else {
 		r->res_offset += len;
