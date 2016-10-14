@@ -257,7 +257,7 @@ slm_rpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen0,
 void
 slmbchrqthr_spawn(void)
 {
-	slrpc_batches_init(SLMTHRT_BATCHRPC, "slm");
+	slrpc_batches_init(SLMTHRT_BATCHRPC, SL_SLMDS, "slm");
 }
 
 void

@@ -769,11 +769,15 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			slrpc_batch_req_send(bq);
 			OPSTAT_INCR("batch-send-expire");
 		} else {
+			char wait[16];
 			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
 			OPSTAT_INCR("batch-send-wait");
 			psc_assert(stall.tv_sec >= 0);
+			snprintf(wait, 16, "sleep %d", stall.tv_sec);
+			thr->pscthr_waitq = wait;
 			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
+			thr->pscthr_waitq = NULL;
 		}
 	}
 }
@@ -807,19 +811,23 @@ slrpc_batches_drop(struct sl_resource *res)
  * @thrprefix: prefix for batch RPC transmitter threads.
  */
 void
-slrpc_batches_init(int thrtype, const char *thrprefix)
+slrpc_batches_init(int thrtype, int service, const char *thrprefix)
 {
-	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
-	    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 16, 16,
-	    0, NULL, "batch-req");
-	slrpc_batch_req_pool = psc_poolmaster_getmgr(
-	    &slrpc_batch_req_poolmaster);
+	if (service == SL_SLMDS) {
+		psc_poolmaster_init(&slrpc_batch_req_poolmaster,
+		    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 16, 16,
+		    0, NULL, "batch-req");
+		slrpc_batch_req_pool = psc_poolmaster_getmgr(
+		    &slrpc_batch_req_poolmaster);
+	}
 
-	psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
-	    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 16, 16, 
-	    0, NULL, "batch-rep");
-	slrpc_batch_rep_pool = psc_poolmaster_getmgr(
-	    &slrpc_batch_rep_poolmaster);
+	if (service == SL_SLIOD) {
+		psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
+		    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 16, 16, 
+		    0, NULL, "batch-rep");
+		slrpc_batch_rep_pool = psc_poolmaster_getmgr(
+		    &slrpc_batch_rep_poolmaster);
+	}
 
 	lc_reginit(&slrpc_batch_req_delayed, struct slrpc_batch_req,
 	    bq_lentry, "batchrpc-delay");

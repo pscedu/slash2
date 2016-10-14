@@ -34,6 +34,10 @@
 
 #include "cache_params.h"
 
+#define	SL_SLMDS		1
+#define	SL_SLIOD		2
+#define	SL_MOUNT		3
+
 typedef uint32_t sl_bmapno_t;			/* file block map index */
 typedef uint32_t sl_bmapgen_t;			/* file block map generation */
 

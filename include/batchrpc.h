@@ -138,7 +138,7 @@ int	slrpc_batch_req_add(struct sl_resource *,
 	    int32_t, int, int, void *, int, void *,
 	    struct slrpc_batch_rep_handler *, int);
 
-void	slrpc_batches_init(int, const char *);
+void	slrpc_batches_init(int, int, const char *);
 void	slrpc_batches_destroy(void);
 void	slrpc_batches_drop(struct sl_resource *res);
 

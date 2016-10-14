@@ -350,7 +350,7 @@ main(int argc, char *argv[])
 	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
-	slrpc_batches_init(SLITHRT_BATCHRPC, "sli");
+	slrpc_batches_init(SLITHRT_BATCHRPC, SL_SLIOD, "sli");
 
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
