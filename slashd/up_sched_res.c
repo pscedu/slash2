@@ -1480,14 +1480,6 @@ upd_getpriv(struct slm_update_data *upd)
 	}
 }
 
-#if PFL_DEBUG > 0
-void
-dump_upd(struct slm_update_data *upd)
-{
-	DPRINTF_UPD(PLL_MAX, upd, "");
-}
-#endif
-
 /* see upd_type_enum, called by upd_proc() */
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
