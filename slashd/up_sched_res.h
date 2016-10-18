@@ -60,7 +60,6 @@ enum upd_type_enum {
 	UPDT_BMAP,			/* upd_proc_bmap() */
 	UPDT_HLDROP,			/* upd_proc_hldrop() */
 	UPDT_PAGEIN,			/* upd_proc_pagein() */
-	UPDT_PAGEIN_UNIT		/* upd_proc_pagein_unit() */
 };
 
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
