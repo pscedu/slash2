@@ -808,7 +808,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		    struct slm_wkdata_upsch_purge);
 		wk->fid = sstb->sst_fid;
 		wk->bno = BMAPNO_ANY;
-		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+		pfl_workq_putitemq(&slm_unlink_workq, wk);
 	}
 
 	if (op == NS_OP_RMDIR) {

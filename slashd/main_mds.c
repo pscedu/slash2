@@ -79,7 +79,7 @@ struct pfl_odt		*slm_ptrunc_odt;
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 slm_roots;
 
-struct psc_listcache	 slm_db_lopri_workq;
+struct psc_listcache	 slm_unlink_workq;
 struct psc_listcache	 slm_db_hipri_workq;
 int			 slm_opstate;
 
@@ -656,8 +656,8 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-hipri-workq");
-	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
-	    "db-lopri-workq");
+	lc_reginit(&slm_unlink_workq, struct pfl_workrq, wkrq_lentry,
+	    "unlink-workq");
 
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
@@ -696,9 +696,10 @@ main(int argc, char *argv[])
 		pscthr_setready(thr);
 	}
 	for (i = 0; i < 2; i++) {
+		/* XXX the name SLMTHRT_DBWORKER is not longer true */
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
-		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
+		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_unlink_workq;
 		pscthr_setready(thr);
 	}
 
