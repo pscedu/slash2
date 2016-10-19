@@ -51,6 +51,8 @@ static struct psc_poolmgr	*slrpc_batch_rep_pool;
 static struct psc_listcache	 slrpc_batch_req_delayed;	/* to be filled/expired */
 static struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
+static struct psc_waitq		 slrpc_expire_waitq = PSC_WAITQ_INIT("expire");
+
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
 	int			 rc;
@@ -674,7 +676,9 @@ retry:
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
 		lc_add_sorted(&slrpc_batch_req_delayed, bq, bq_cmp);
+		psc_waitq_wakeone(&slrpc_expire_waitq);
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+		OPSTAT_INCR("batch-req-new");
 		goto retry;
 	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
@@ -777,15 +781,12 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			slrpc_batch_req_send(bq);
 			OPSTAT_INCR("batch-send-expire");
 		} else {
-			char wait[16];
 			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
+
 			OPSTAT_INCR("batch-send-wait");
-			psc_assert(stall.tv_sec >= 0);
-			snprintf(wait, 16, "sleep %ld", stall.tv_sec);
-			thr->pscthr_waitq = wait;
-			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
-			thr->pscthr_waitq = NULL;
+			OPSTAT2_ADD("batch-send-wait-total", stall.tv_sec);
+			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
 		}
 	}
 }
