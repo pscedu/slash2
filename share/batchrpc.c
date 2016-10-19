@@ -782,7 +782,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			freelock(&bq->bq_lock);
 			OPSTAT_INCR("batch-send-wait");
 			psc_assert(stall.tv_sec >= 0);
-			snprintf(wait, 16, "sleep %d", stall.tv_sec);
+			snprintf(wait, 16, "sleep %ld", stall.tv_sec);
 			thr->pscthr_waitq = wait;
 			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
 			thr->pscthr_waitq = NULL;
