@@ -34,8 +34,6 @@
 
 #include <sqlite3.h>
 
-#define	SLM_UPSCH_PAUSE			30
-
 extern int slm_upsch_repl_delay;
 
 extern psc_spinlock_t           slm_upsch_lock;
