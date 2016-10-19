@@ -160,7 +160,7 @@ slmthr_getdbh(void)
 	case SLMTHRT_DBWORKER:
 		return (&slmdbwkthr(thr)->smdw_dbh);
 	}
-	psc_fatalx("unknown thread type");
+	psc_fatalx("unknown thread type %d", thr->pscthr_type);
 }
 
 struct site_mds_info {
