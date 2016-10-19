@@ -596,6 +596,14 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
+int
+bq_cmp(const void *a, const void *b)
+{
+	struct slrpc_batch_req const *bq1 = a, *bq2 = b;
+
+	return (CMP(bq1->bq_expire.tv_sec, bq2->bq_expire.tv_sec));
+}
+
 /*
  * Add an item to a batch RPC request.  If doing so fills the batch, it
  * will be sent out immediately; otherwise it will sit around until
@@ -665,7 +673,7 @@ retry:
 		bq->bq_flags |= BATCHF_DELAY;
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
-		lc_addtail(&slrpc_batch_req_delayed, bq);
+		lc_add_sorted(&slrpc_batch_req_delayed, bq, bq_cmp);
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 		goto retry;
 	}
