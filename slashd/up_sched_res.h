@@ -36,7 +36,7 @@
 
 #define	SLM_UPSCH_PAUSE			30
 
-extern int slm_upsch_delay;
+extern int slm_upsch_repl_delay;
 
 extern psc_spinlock_t           slm_upsch_lock;
 extern struct psc_waitq		slm_upsch_waitq;

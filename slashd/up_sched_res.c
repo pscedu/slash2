@@ -84,7 +84,7 @@ struct psc_listcache     slm_upsch_queue;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
-int	slm_upsch_delay = 4;
+int	slm_upsch_repl_delay = 4;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -305,7 +305,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_hipri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
-	    &slm_batch_rep_repl, slm_upsch_delay);
+	    &slm_batch_rep_repl, slm_upsch_repl_delay);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
