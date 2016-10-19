@@ -34,6 +34,8 @@
 
 #include <sqlite3.h>
 
+#define UPSCH_PAGEIN_BATCH	128
+
 extern int slm_upsch_repl_delay;
 extern int slm_upsch_preclaim_delay;
 
