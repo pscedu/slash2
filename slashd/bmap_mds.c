@@ -468,7 +468,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	retifset[BREPLST_VALID] = 1;
 
 	BMAP_LOCK(bmap);
-	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
 
 	rc = _mds_repl_bmap_walk(bmap, NULL, retifset, 0,
 	    &idx, 1, NULL, NULL);
