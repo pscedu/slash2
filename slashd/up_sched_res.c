@@ -84,7 +84,6 @@ struct psc_listcache     slm_upsch_queue;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
-int	upsch_total;
 int	slm_upsch_delay = 4;
 
 void (*upd_proctab[])(struct slm_update_data *);
