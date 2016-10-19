@@ -787,7 +787,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val;
+	int rc, off, val, valid = 0;
 	struct rnd_iterator dst_res_i;
 	struct sl_resource *dst_res;
 	struct bmap_mds_info *bmi;
@@ -822,6 +822,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			    iosid, iosid);
 			continue;
 		}
+		valid = 1;
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		switch (val) {
@@ -869,6 +870,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 #endif
 		}
 	}
+
+	if (!valid)
+		DEBUG_FCMH(PLL_WARN, f, "No valid IOS for bmap %d", 
+		    b->bcm_bmapno);
  out:
 
 	BMAP_ULOCK(b);
