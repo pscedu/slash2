@@ -785,7 +785,8 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			freelock(&bq->bq_lock);
 
 			OPSTAT_INCR("batch-send-wait");
-			OPSTAT2_ADD("batch-send-wait-total", stall.tv_sec);
+			OPSTAT_ADD("batch-send-wait-usec", 
+			    stall.tv_sec * 1000 * 1000L + stall.tv_usec);
 			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
 		}
 	}
