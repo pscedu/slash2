@@ -1069,6 +1069,11 @@ upd_proc_pagein(struct slm_update_data *upd)
 			r->res_offset = 0;
 		} else
 			OPSTAT_INCR("upsch-pagein-empty");
+		/*
+ 		 * XXX An insert comes in, and beat us
+ 		 * in checking this flag.  If so, we 
+ 		 * could be stuck.
+ 		 */
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 	} else {
 		r->res_offset += len;
