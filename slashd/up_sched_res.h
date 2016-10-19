@@ -35,6 +35,7 @@
 #include <sqlite3.h>
 
 extern int slm_upsch_repl_delay;
+extern int slm_upsch_preclaim_delay;
 
 extern psc_spinlock_t           slm_upsch_lock;
 extern struct psc_waitq		slm_upsch_waitq;
