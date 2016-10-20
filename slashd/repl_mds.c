@@ -764,7 +764,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	int tract[NBREPLST], ret_hasvalid[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc, flags;
 	sl_bmapno_t nbmaps_processed = 0;
-	struct fidc_membh *f;
+	struct fidc_membh *f = NULL;
 	struct bmap *b;
 
 	/* Perform sanity checks on request. */
@@ -774,8 +774,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
 		return (-rc);
-
-	FCMH_LOCK(f);
 
 	if (!fcmh_isdir(f) && !fcmh_isreg(f))
 		PFL_GOTOERR(out, rc = -PFLERR_NOTSUP);
