@@ -2346,7 +2346,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	PFL_GETTIMEVAL(&tv);
 	timersub(&tv, &tv0, &tvd);
-	OPSTAT_ADD("sql-wait-usecs",
+	OPSTAT_INCR("sql-query-wait");
+	OPSTAT_ADD("sql-query-wait-usecs",
 	    tvd.tv_sec * 1000000 + tvd.tv_usec);
 	if (log)
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
