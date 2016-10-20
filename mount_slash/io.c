@@ -2033,8 +2033,6 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fci->fci_etime.tv_sec = ts.tv_sec + FCMH_ATTR_TIMEO;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-
-		/* 10/20/2016: possible crash site below */
 		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	}

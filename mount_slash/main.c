@@ -2122,7 +2122,6 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 		FCMH_UNBUSY(f, 0);
 
-		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	} else {
