@@ -2095,15 +2095,16 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	}
 
 	FCMH_ULOCK(f);
-
 	rc = msl_setattr(f, to_set, &attr, 0);
+	FCMH_LOCK(f);
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-		FCMH_UNBUSY(f, 1);
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -2119,13 +2120,15 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-		FCMH_UNBUSY(f, 1);
+		FCMH_UNBUSY(f, 0);
 
 		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-	} else
-		FCMH_UNBUSY(f, 1);
+	} else {
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
+	}
 
 	return (rc);
 }
