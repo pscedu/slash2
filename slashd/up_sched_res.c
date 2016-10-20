@@ -787,7 +787,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, valid = 0;
+	int rc, off, val, invalid = 0;
 	struct rnd_iterator dst_res_i;
 	struct sl_resource *dst_res;
 	struct bmap_mds_info *bmi;
@@ -818,11 +818,12 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 * IOS can be removed during the lifetime of a 
 			 * deployment. So this is not an error.
 			 */
-			DEBUG_BMAP(PLL_WARN, b, "invalid iosid: %u(0x%x)",
+			DEBUG_BMAP(PLL_DIAG, b, "invalid iosid: %u (0x%x)",
 			    iosid, iosid);
+			invalid = 1;
+			OPSTAT_INCR("upsch-invalid-ios");
 			continue;
 		}
-		valid = 1;
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		switch (val) {
@@ -871,9 +872,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 		}
 	}
 
-	if (!valid)
-		DEBUG_FCMH(PLL_WARN, f, "No valid IOS for bmap %d", 
-		    b->bcm_bmapno);
+	if (!invalid)
+		goto out;
+
+	DEBUG_FCMH(PLL_WARN, f, "bmap %d has invalid IOS", b->bcm_bmapno);
  out:
 
 	BMAP_ULOCK(b);
