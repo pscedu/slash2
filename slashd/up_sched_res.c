@@ -665,10 +665,8 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		}
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
-		    1)) {
+		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1))
 			mds_bmap_write_logrepls(b);
-		}
 
 		BMAP_ULOCK(b);
  next:
