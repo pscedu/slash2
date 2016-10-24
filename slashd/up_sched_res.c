@@ -1087,8 +1087,7 @@ slm_page_work(struct sl_resource *r)
 
 #if 0
 
-#define UPSCH_MAX_ITEMS_RES 32
-
+	/* Keep this so I don't have to re-learn some SQL syntax */
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
@@ -1103,7 +1102,7 @@ slm_page_work(struct sl_resource *r)
 	    " LIMIT	?",
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
-	    SQLITE_INTEGER, UPSCH_MAX_ITEMS_RES);
+	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 
 #endif
 
