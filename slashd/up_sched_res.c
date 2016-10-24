@@ -1051,11 +1051,9 @@ slm_page_work(struct sl_resource *r)
 	    " WHERE     resid = IFNULL(?, resid)"
 	    " LIMIT     ?"   
 	    " OFFSET    ?",  
-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0, 
+	    SQLITE_INTEGER, r->res_id, 
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
-	    SQLITE_INTEGER, 
-	    upg->upg_resm ? r->res_offset : 0);
+	    SQLITE_INTEGER, r->res_offset);
 
 	freelock(&slm_upsch_lock);
 
