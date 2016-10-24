@@ -1308,8 +1308,11 @@ slmpagerthr_main(struct psc_thread *thr)
 			}
 			if (si->si_flags & SIF_UPSCH_WRAP) {
 				si->si_flags &= ~SIF_UPSCH_WRAP;
+				RPMI_ULOCK(rpmi);
 				continue;
 			}
+			si->si_flags |= SIF_UPSCH_PAGING;
+			RPMI_ULOCK(rpmi);
 			slm_page_work(r);
 		}
 		stall.tv_sec = slm_upsch_page_interval;
