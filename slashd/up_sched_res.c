@@ -77,6 +77,8 @@
 
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
+
+int			 slm_upsch_inserts;
 struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
 
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
@@ -1266,6 +1268,8 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, sys_prio,				/* 6 */
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
+
+	slm_upsch_inserts++;
 	freelock(&slm_upsch_lock);
 	psc_waitq_wakeone(&slm_pager_workq);
 	if (!rc)
@@ -1291,14 +1295,18 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, len;
+	int i, j, len, inserts;
 	struct timeval stall;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
 
+	len = 0;
+	inserts = 0;
 	stall.tv_usec = 0;
 	while (pscthr_run(thr)) {
-		len = 0;
+		spinlock(&slm_upsch_lock);
+		inserts = slm_upsch_inserts;
+		freelock(&slm_upsch_lock);
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
@@ -1318,12 +1326,19 @@ slmpagerthr_main(struct psc_thread *thr)
 #endif
 			si->si_flags |= SIF_UPSCH_PAGING;
 			RPMI_ULOCK(rpmi);
-			len +=slm_page_work(r);
+			len += slm_page_work(r);
 		}
-		if (len)
+		if (len) {
+			len = 0;
 			continue;
-		stall.tv_sec = slm_upsch_page_interval;
-		psc_waitq_waitrel_tv(&slm_pager_workq, NULL, &stall);
+		}
+		spinlock(&slm_upsch_lock);
+		if (inserts == slm_upsch_inserts) {
+			stall.tv_sec = slm_upsch_page_interval;
+			psc_waitq_waitrel_tv(&slm_pager_workq, 
+			    &slm_upsch_lock, &stall);
+		} else
+			freelock(&slm_upsch_lock);
 	}
 }
 
