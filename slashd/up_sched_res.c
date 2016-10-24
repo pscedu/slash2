@@ -886,9 +886,10 @@ int
 upd_pagein_wk(void *p)
 {
 	uint32_t i;
-	int sched = 0, valid = 0;
+	int valid = 0;
 	struct slm_wkdata_upschq *wk = p;
 
+	struct sl_resource *r;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 
@@ -969,19 +970,14 @@ upd_pagein_wk(void *p)
 			purge_wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_hipri_workq, purge_wk);
 	}
-	rpmi = res2rpmi(wk->resm->resm_res);
-	si = res2iosinfo(wk->resm->resm_res);
+	r = wk->r;
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
-	if (!si->si_paging) {
+	if (!si->si_paging)
 		si->si_flags &= ~SIF_UPSCH_PAGING; 
-		sched = 1;
-	}
 	RPMI_ULOCK(rpmi);
-	if (sched) {
-		OPSTAT_INCR("upsch-pagein-batch");
-		upschq_resm(wk->resm, UPDT_PAGEIN);
-	}
 
 	if (b)
 		bmap_op_done(b);
@@ -1018,9 +1014,8 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 slm_page_work(struct sl_resource *r)
 {
-	int i, len, sched = 0;
+	int i, len;
 	struct slm_wkdata_upschq *wk;
-	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 	struct psc_dynarray da = DYNARRAY_INIT;
@@ -1061,7 +1056,6 @@ slm_page_work(struct sl_resource *r)
 	len = psc_dynarray_len(&da);
 	if (!len) {
 		if (r->res_offset) {
-			sched = 1;
 			r->res_offset = 0;
 		} else
 			OPSTAT_INCR("upsch-pagein-empty");
@@ -1076,16 +1070,12 @@ slm_page_work(struct sl_resource *r)
 		OPSTAT_ADD("upsch-db-pagein", len);
 		DYNARRAY_FOREACH(wk, i, &da) {
 			si->si_paging++;
-			wk->resm = upg->upg_resm;
+			wk->r = r;
 			pfl_workq_putitem(wk);
 		}
 	}
 	RPMI_ULOCK(rpmi);
 
-	if (sched) {
-		OPSTAT_INCR("upsch-pagein-wrap");
-		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
-	}
 	psc_dynarray_free(&da);
 }
 
