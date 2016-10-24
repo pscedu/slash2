@@ -591,11 +591,11 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register_simple("sys.upsch",
 	    slmctlparam_upsch_get, NULL);
 
-	psc_ctlparam_register_var("sys.upsch_repl_delay",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_repl_delay);
+	psc_ctlparam_register_var("sys.upsch_repl_expire",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_repl_expire);
 
-	psc_ctlparam_register_var("sys.upsch_preclaim_delay",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_preclaim_delay);
+	psc_ctlparam_register_var("sys.upsch_preclaim_expire",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_preclaim_expire);
 
 	psc_ctlparam_register_var("sys.upsch_bandwidth",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_bandwidth);

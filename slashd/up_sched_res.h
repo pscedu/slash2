@@ -36,8 +36,8 @@
 
 #define UPSCH_PAGEIN_BATCH	128
 
-extern int slm_upsch_repl_delay;
-extern int slm_upsch_preclaim_delay;
+extern int slm_upsch_repl_expire;
+extern int slm_upsch_preclaim_expire;
 
 extern psc_spinlock_t           slm_upsch_lock;
 extern struct psc_waitq		slm_upsch_waitq;
