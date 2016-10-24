@@ -87,7 +87,7 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
-int	slm_pager_pause = 2;
+int	slm_upsch_page_interval = 2;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -1326,7 +1326,7 @@ slmpagerthr_main(struct psc_thread *thr)
 			}
 			slm_page_work(r);
 		}
-		stall.tv_sec = slm_pager_pause;
+		stall.tv_sec = slm_upsch_page_interval;
 		psc_waitq_waitrel_tv(&slm_pager_workq, NULL, &stall);
 	}
 }
