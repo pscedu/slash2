@@ -89,7 +89,7 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
-int	slm_upsch_page_interval = 1;
+int	slm_upsch_page_interval = 3;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
