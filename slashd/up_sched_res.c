@@ -1013,15 +1013,15 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  * to schedule.
  */
 int
-slm_page_work(struct sl_resource *r)
+slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 {
 	int i, len;
 	struct slm_wkdata_upschq *wk;
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
-	struct psc_dynarray da;
 
-	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+	while (lc_nitems(&slm_db_hipri_workq))
+		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1036,7 +1036,7 @@ slm_page_work(struct sl_resource *r)
 
 	spinlock(&slm_upsch_lock);
 
-	dbdo(upd_proc_pagein_cb, &da,
+	dbdo(upd_proc_pagein_cb, da,
 	    " SELECT    fid,"
 	    "           bno"
 	    "		nonce"
@@ -1051,7 +1051,7 @@ slm_page_work(struct sl_resource *r)
 	freelock(&slm_upsch_lock);
 
 	RPMI_LOCK(rpmi);
-	len = psc_dynarray_len(&da);
+	len = psc_dynarray_len(da);
 	if (!len) {
 		/*
  		 * XXX An insert comes in, and beat us
@@ -1062,7 +1062,7 @@ slm_page_work(struct sl_resource *r)
 	} else {
 		r->res_offset += len;
 		OPSTAT_ADD("upsch-db-pagein", len);
-		DYNARRAY_FOREACH(wk, i, &da) {
+		DYNARRAY_FOREACH(wk, i, da) {
 			si->si_paging++;
 			wk->r = r;
 			pfl_workq_putitem(wk);
@@ -1073,7 +1073,6 @@ slm_page_work(struct sl_resource *r)
 		si->si_flags |= SIF_UPSCH_WRAP;
 	}
 	RPMI_ULOCK(rpmi);
-	psc_dynarray_free(&da);
 	return (len);
 }
 
@@ -1289,10 +1288,12 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct timeval stall;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
+	struct psc_dynarray da;
 
 	len = 0;
 	inserts = 0;
 	stall.tv_usec = 0;
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 	while (pscthr_run(thr)) {
 		spinlock(&slm_upsch_lock);
 		inserts = slm_upsch_inserts;
@@ -1311,7 +1312,7 @@ slmpagerthr_main(struct psc_thread *thr)
 			si->si_flags |= SIF_UPSCH_PAGING;
 			RPMI_ULOCK(rpmi);
 
-			len += slm_page_work(r);
+			len += slm_page_work(r, &da);
 
 			RPMI_LOCK(rpmi);
 			si->si_flags &= ~SIF_UPSCH_PAGING;
@@ -1328,7 +1329,9 @@ slmpagerthr_main(struct psc_thread *thr)
 			    &slm_upsch_lock, &stall);
 		} else
 			freelock(&slm_upsch_lock);
+		psc_dynarray_reset(&da);
 	}
+	psc_dynarray_free(&da);
 }
 
 void
