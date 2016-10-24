@@ -70,6 +70,7 @@ enum {
 	SLMTHRT_RMM,			/* MDS <- MDS msg svc handler */
 	SLMTHRT_OPSTIMER,		/* opstats updater */
 	SLMTHRT_UPSCHED,		/* update scheduler for site resources */
+	SLMTHRT_PAGER,			/* read SQL table */
 	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	SLMTHRT_WORKER,			/* miscellaneous work */
 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
@@ -113,6 +114,10 @@ struct slmupsch_thread {
 	struct slmthr_dbh	  sus_dbh;
 };
 
+struct slmpager_thread {
+	struct slmthr_dbh	  pager_dbh;
+};
+
 struct slmwork_thread {
 	struct slmthr_dbh	  work_dbh;
 };
@@ -125,6 +130,7 @@ PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
+PSCTHR_MKCAST(slmpagerthr, slmpager_thread, SLMTHRT_PAGER)
 
 static __inline struct slmctl_thread *
 slmctlthr_getpri(struct psc_thread *thr)
@@ -157,6 +163,8 @@ slmthr_getdbh(void)
 		return (&slmrmithr(thr)->smrit_dbh);
 	case SLMTHRT_UPSCHED:
 		return (&slmupschthr(thr)->sus_dbh);
+	case SLMTHRT_PAGER:
+		return (&slmpagerthr(thr)->pager_dbh);
 	case SLMTHRT_DBWORKER:
 		return (&slmdbwkthr(thr)->smdw_dbh);
 	}
