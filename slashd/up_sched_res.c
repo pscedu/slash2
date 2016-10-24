@@ -1313,6 +1313,16 @@ slmupschthr_main(struct psc_thread *thr)
 }
 
 void
+slmpagerthr_main(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+
+
+
+	}
+}
+
+void
 slm_upsch_init(void)
 {
 	psc_poolmaster_init(&slm_upgen_poolmaster,
@@ -1340,6 +1350,10 @@ slmupschthr_spawn(void)
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
 	}
+	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
+	    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+	pscthr_setready(thr);
+
 	/* Jump start the process */
 	CONF_FOREACH_RESM(s, r, i, m, j) {
 		if (!RES_ISFS(r))
