@@ -77,6 +77,7 @@
 
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
+struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
 
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
@@ -86,6 +87,7 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 int	slm_upsch_repl_delay = 5;
 int	slm_upsch_preclaim_delay = 30;
+int	slm_pager_pause = 2;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -1009,21 +1011,18 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 }
 
 /*
- * Handle UPDT_PAGEIN.
- *
  * Page in some work for the update scheduler to do.  This consults the
  * upsch database, potentially restricting to a single resource for work
  * to schedule.
  */
 void
-upd_proc_pagein(struct slm_update_data *upd)
+slm_page_work(struct sl_resource *r)
 {
 	int i, len, sched = 0;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
-	struct sl_resource *r;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
 	while (lc_nitems(&slm_db_hipri_workq))
@@ -1037,8 +1036,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
-	upg = upd_getpriv(upd);
-	r = upg->upg_resm->resm_res;
 	rpmi = res2rpmi(r);
 	si = res2iosinfo(r);
 
@@ -1319,14 +1316,30 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j;
+	struct timeval stall;
+	struct sl_mds_iosinfo *si;
+	struct resprof_mds_info *rpmi;
 
+	stall.tv_usec = 0;
 	while (pscthr_run(thr)) {
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
-			/* schedule a call to upd_proc_pagein() */
-			upschq_resm(m, UPDT_PAGEIN);
+			rpmi = res2rpmi(m->resm_res);
+			si = res2iosinfo(m->resm_res);
+			RPMI_LOCK(rpmi);
+			if (si->si_flags & SIF_UPSCH_PAGING) {
+				RPMI_ULOCK(rpmi);
+				continue;
+			}
+			if (si->si_flags & SIF_UPSCH_WRAP) {
+				si->si_flags &= ~SIF_UPSCH_WRAP;
+				continue;
+			}
+			slm_page_work(r);
 		}
+		stall.tv_sec = slm_pager_pause;
+		psc_waitq_waitrel_tv(&slm_pager_workq, NULL, &stall);
 	}
 }
 
@@ -1504,7 +1517,7 @@ upd_getpriv(struct slm_update_data *upd)
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_hldrop,
-	upd_proc_pagein
+	NULL
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {

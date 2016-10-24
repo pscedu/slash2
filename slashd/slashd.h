@@ -242,6 +242,7 @@ struct rpmi_ios {
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
 	int			  si_paging;
+	struct timespec		  si_lastpage;
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
 
@@ -260,8 +261,9 @@ struct rpmi_ios {
 #define SIF_DISABLE_ADVLEASE	(1 << 2)		/* advisory (from sliod) control */
 #define SIF_DISABLE_GC		(1 << 3)		/* disable garbage collection temporarily */
 #define SIF_UPSCH_PAGING	(1 << 4)		/* upsch will page more work in destined for this IOS */
-#define SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
-#define SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
+#define SIF_UPSCH_WRAP		(1 << 5)		/* wrap around */
+#define SIF_NEW_PROG_ENTRY	(1 << 6)		/* new entry in the reclaim prog file */
+#define SIF_PRECLAIM_NOTSUP	(1 << 7)		/* can punch holes for replica ejection */
 
 #define res2rpmi_ios(r)		((struct rpmi_ios *)res2rpmi(r)->rpmi_info)
 #define res2iosinfo(res)	res2rpmi_ios(res)
