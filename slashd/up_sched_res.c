@@ -1352,7 +1352,7 @@ slmupschthr_spawn(void)
 		pscthr_setready(thr);
 	}
 	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
-	    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+	    sizeof(struct slmupsch_thread), "slmpagerhr");
 	pscthr_setready(thr);
 }
 
