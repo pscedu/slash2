@@ -87,7 +87,7 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
-int	slm_upsch_page_interval = 2;
+int	slm_upsch_page_interval = 1;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -1010,7 +1010,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  * upsch database, potentially restricting to a single resource for work
  * to schedule.
  */
-void
+int
 slm_page_work(struct sl_resource *r)
 {
 	int i, len;
@@ -1082,6 +1082,7 @@ slm_page_work(struct sl_resource *r)
 	RPMI_ULOCK(rpmi);
 
 	psc_dynarray_free(&da);
+	return (len);
 }
 
 #if 0
@@ -1289,13 +1290,14 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j;
+	int i, j, len;
 	struct timeval stall;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
 
 	stall.tv_usec = 0;
 	while (pscthr_run(thr)) {
+		len = 0;
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
@@ -1306,15 +1308,19 @@ slmpagerthr_main(struct psc_thread *thr)
 				RPMI_ULOCK(rpmi);
 				continue;
 			}
+#if 0
 			if (si->si_flags & SIF_UPSCH_WRAP) {
 				si->si_flags &= ~SIF_UPSCH_WRAP;
 				RPMI_ULOCK(rpmi);
 				continue;
 			}
+#endif
 			si->si_flags |= SIF_UPSCH_PAGING;
 			RPMI_ULOCK(rpmi);
-			slm_page_work(r);
+			len +=slm_page_work(r);
 		}
+		if (len)
+			continue;
 		stall.tv_sec = slm_upsch_page_interval;
 		psc_waitq_waitrel_tv(&slm_pager_workq, NULL, &stall);
 	}
