@@ -1288,12 +1288,11 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct timeval stall;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
-	struct psc_dynarray da;
+	struct psc_dynarray da = DYNARRAY_INIT;
 
 	len = 0;
 	inserts = 0;
 	stall.tv_usec = 0;
-	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 	while (pscthr_run(thr)) {
 		spinlock(&slm_upsch_lock);
 		inserts = slm_upsch_inserts;
@@ -1312,7 +1311,9 @@ slmpagerthr_main(struct psc_thread *thr)
 			si->si_flags |= SIF_UPSCH_PAGING;
 			RPMI_ULOCK(rpmi);
 
+			psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 			len += slm_page_work(r, &da);
+			psc_dynarray_reset(&da);
 
 			RPMI_LOCK(rpmi);
 			si->si_flags &= ~SIF_UPSCH_PAGING;
@@ -1329,7 +1330,6 @@ slmpagerthr_main(struct psc_thread *thr)
 			    &slm_upsch_lock, &stall);
 		} else
 			freelock(&slm_upsch_lock);
-		psc_dynarray_reset(&da);
 	}
 	psc_dynarray_free(&da);
 }
