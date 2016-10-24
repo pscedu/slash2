@@ -1020,8 +1020,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 
-	while (lc_nitems(&slm_db_hipri_workq))
-		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
