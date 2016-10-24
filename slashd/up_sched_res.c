@@ -1267,6 +1267,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	freelock(&slm_upsch_lock);
+	psc_waitq_wakeone(&slm_pager_workq);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
@@ -1352,7 +1353,7 @@ slmupschthr_spawn(void)
 		pscthr_setready(thr);
 	}
 	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
-	    sizeof(struct slmupsch_thread), "slmpagerhr");
+	    sizeof(struct slmupsch_thread), "slmpagerthr");
 	pscthr_setready(thr);
 }
 
