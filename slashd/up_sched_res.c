@@ -1036,6 +1036,7 @@ slm_page_work(struct sl_resource *r)
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
+ again:
 	spinlock(&slm_upsch_lock);
 
 	dbdo(upd_proc_pagein_cb, &da,
@@ -1057,8 +1058,9 @@ slm_page_work(struct sl_resource *r)
 	if (!len) {
 		if (r->res_offset) {
 			r->res_offset = 0;
-		} else
-			OPSTAT_INCR("upsch-pagein-empty");
+			RPMI_ULOCK(rpmi);
+			goto again;
+		}
 		/*
  		 * XXX An insert comes in, and beat us
  		 * in checking this flag.  If so, we 
@@ -1073,6 +1075,10 @@ slm_page_work(struct sl_resource *r)
 			wk->r = r;
 			pfl_workq_putitem(wk);
 		}
+	}
+	if (len < UPSCH_PAGEIN_BATCH) {
+		r->res_offset = 0;
+		si->si_flags |= SIF_UPSCH_WRAP;
 	}
 	RPMI_ULOCK(rpmi);
 
