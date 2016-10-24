@@ -1315,10 +1315,18 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slmpagerthr_main(struct psc_thread *thr)
 {
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j;
+
 	while (pscthr_run(thr)) {
-
-
-
+		CONF_FOREACH_RESM(s, r, i, m, j) {
+			if (!RES_ISFS(r))
+				continue;
+			/* schedule a call to upd_proc_pagein() */
+			upschq_resm(m, UPDT_PAGEIN);
+		}
 	}
 }
 
@@ -1339,11 +1347,8 @@ slm_upsch_init(void)
 void
 slmupschthr_spawn(void)
 {
+	int i;
 	struct psc_thread *thr;
-	struct sl_resource *r;
-	struct sl_resm *m;
-	struct sl_site *s;
-	int i, j;
 
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
@@ -1353,14 +1358,6 @@ slmupschthr_spawn(void)
 	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
 	    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 	pscthr_setready(thr);
-
-	/* Jump start the process */
-	CONF_FOREACH_RESM(s, r, i, m, j) {
-		if (!RES_ISFS(r))
-			continue;
-			/* schedule a call to upd_proc_pagein() */
-			upschq_resm(m, UPDT_PAGEIN);
-	}
 }
 
 /*
