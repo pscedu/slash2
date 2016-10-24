@@ -211,7 +211,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		fcmh_op_done(f);
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
-	//upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -1267,7 +1266,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 	freelock(&slm_upsch_lock);
-	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 	if (!rc)
 		OPSTAT_INCR("upsch-insert-ok");
 	else
@@ -1279,24 +1277,7 @@ void
 slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
-#if 0
-	struct sl_resource *r;
-	struct sl_resm *m;
-	struct sl_site *s;
-	int i, j;
-#endif
-
 	while (pscthr_run(thr)) {
-#if 0
-		if (lc_nitems(&slm_upsch_queue) < 128) {
-			CONF_FOREACH_RESM(s, r, i, m, j) {
-				if (!RES_ISFS(r))
-					continue;
-				/* schedule a call to upd_proc_pagein() */
-				upschq_resm(m, UPDT_PAGEIN);
-			}
-		}
-#endif
 		upd = lc_getwait(&slm_upsch_queue);
 		upd_proc(upd);
 	}
