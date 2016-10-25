@@ -1323,6 +1323,7 @@ slmpagerthr_main(struct psc_thread *thr)
 			stall.tv_sec = slm_upsch_page_interval;
 			psc_waitq_waitrel_tv(&slm_pager_workq, 
 			    &slm_upsch_lock, &stall);
+			usleep(1000000/4);
 		} else
 			freelock(&slm_upsch_lock);
 	}
