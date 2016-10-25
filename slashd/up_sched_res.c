@@ -914,14 +914,8 @@ upd_pagein_wk(void *p)
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
-	/*
- 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
- 	 * does not really care about them.  This seems fine
- 	 * today because we only page in requests in 'Q' state.
- 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
 	if (slm_preclaim_enabled) {
 		retifset[BREPLST_GARBAGE] = 1;
@@ -1020,7 +1014,7 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 
-	while (lc_nitems(&slm_db_hipri_workq))
+	if (lc_nitems(&slm_db_hipri_workq))
 		usleep(1000000/4);
 
 	/*
@@ -1456,7 +1450,6 @@ slm_wk_upsch_purge(void *p)
 {
 	struct slm_wkdata_upsch_purge *wk = p;
 
-	spinlock(&slm_upsch_lock);
 	if (wk->bno == BMAPNO_ANY)
 		dbdo(NULL, NULL,
 		    " DELETE FROM	upsch"
@@ -1469,7 +1462,6 @@ slm_wk_upsch_purge(void *p)
 		    "	AND		bno = ?",
 		    SQLITE_INTEGER64, wk->fid,
 		    SQLITE_INTEGER, wk->bno);
-	freelock(&slm_upsch_lock);
 	return (0);
 }
 
