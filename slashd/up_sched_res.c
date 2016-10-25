@@ -1020,6 +1020,9 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 
+	while (lc_nitems(&slm_db_hipri_workq))
+		usleep(1000000/4);
+
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1453,6 +1456,7 @@ slm_wk_upsch_purge(void *p)
 {
 	struct slm_wkdata_upsch_purge *wk = p;
 
+	spinlock(&slm_upsch_lock);
 	if (wk->bno == BMAPNO_ANY)
 		dbdo(NULL, NULL,
 		    " DELETE FROM	upsch"
@@ -1465,6 +1469,7 @@ slm_wk_upsch_purge(void *p)
 		    "	AND		bno = ?",
 		    SQLITE_INTEGER64, wk->fid,
 		    SQLITE_INTEGER, wk->bno);
+	freelock(&slm_upsch_lock);
 	return (0);
 }
 
