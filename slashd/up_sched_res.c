@@ -89,7 +89,7 @@ struct psc_poolmgr	*slm_upgen_pool;
 
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
-int	slm_upsch_page_interval = 3;
+int	slm_upsch_page_interval = 600;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -1014,9 +1014,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 
-	if (lc_nitems(&slm_db_hipri_workq))
-		usleep(1000000/4);
-
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1031,42 +1028,32 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 
 	spinlock(&slm_upsch_lock);
 
-	dbdo(upd_proc_pagein_cb, da,
-	    " SELECT    fid,"
-	    "           bno"
-	    "		nonce"
-	    " FROM      upsch"
-	    " WHERE     resid = IFNULL(?, resid)"
-	    " LIMIT     ?"   
-	    " OFFSET    ?",  
-	    SQLITE_INTEGER, r->res_id, 
-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
-	    SQLITE_INTEGER, r->res_offset);
-
-	freelock(&slm_upsch_lock);
-
-	RPMI_LOCK(rpmi);
-	len = psc_dynarray_len(da);
-	if (!len) {
-		/*
- 		 * XXX An insert comes in, and beat us
- 		 * in checking this flag.  If so, we 
- 		 * could be stuck.
- 		 */
-		si->si_flags &= ~SIF_UPSCH_PAGING;
-	} else {
-		r->res_offset += len;
-		OPSTAT_ADD("upsch-db-pagein", len);
+	while (1) {
+		dbdo(upd_proc_pagein_cb, da,
+		    " SELECT    fid,"
+		    "           bno"
+		    "		nonce"
+		    " FROM      upsch"
+		    " WHERE     resid = IFNULL(?, resid)"
+		    " LIMIT     ?"   
+		    " OFFSET    ?",  
+		    SQLITE_INTEGER, r->res_id, 
+		    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
+		    SQLITE_INTEGER, r->res_offset);
+		len = psc_dynarray_len(da);
 		DYNARRAY_FOREACH(wk, i, da) {
 			si->si_paging++;
 			wk->r = r;
 			pfl_workq_putitem(wk);
 		}
+		if (len) {
+			psc_dynarray_reset(da);
+			continue;
+		}
+		break;
 	}
-	if (len < UPSCH_PAGEIN_BATCH) {
-		r->res_offset = 0;
-		si->si_flags |= SIF_UPSCH_WRAP;
-	}
+
+	freelock(&slm_upsch_lock);
 	RPMI_ULOCK(rpmi);
 	return (len);
 }
@@ -1292,44 +1279,29 @@ slmpagerthr_main(struct psc_thread *thr)
 	len = 0;
 	inserts = 0;
 	stall.tv_usec = 0;
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 	while (pscthr_run(thr)) {
-		spinlock(&slm_upsch_lock);
-		inserts = slm_upsch_inserts;
-		freelock(&slm_upsch_lock);
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
 			rpmi = res2rpmi(m->resm_res);
 			si = res2iosinfo(m->resm_res);
 
-			RPMI_LOCK(rpmi);
-			if (si->si_flags & SIF_UPSCH_PAGING) {
-				RPMI_ULOCK(rpmi);
-				continue;
-			}
-			si->si_flags |= SIF_UPSCH_PAGING;
-			RPMI_ULOCK(rpmi);
-
-			psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
-			len += slm_page_work(r, &da);
+			/*
+ 			 * Page work happens in the following cases: 
+ 			 *
+ 			 * (1) start up
+ 			 * (2) when an IOS comes online
+ 			 * (3) every 10 minutes;
+ 			 * (4) explicit user request
+ 			 *
+ 			 */
+			slm_page_work(r, &da);
 			psc_dynarray_reset(&da);
-
-			RPMI_LOCK(rpmi);
-			si->si_flags &= ~SIF_UPSCH_PAGING;
-			RPMI_ULOCK(rpmi);
-		}
-		if (len) {
-			len = 0;
-			continue;
 		}
 		spinlock(&slm_upsch_lock);
-		if (inserts == slm_upsch_inserts) {
-			stall.tv_sec = slm_upsch_page_interval;
-			psc_waitq_waitrel_tv(&slm_pager_workq, 
-			    &slm_upsch_lock, &stall);
-			usleep(1000000/4);
-		} else
-			freelock(&slm_upsch_lock);
+		stall.tv_sec = slm_upsch_page_interval;
+		psc_waitq_waitrel_tv(&slm_pager_workq, &slm_upsch_lock, &stall);
 	}
 	psc_dynarray_free(&da);
 }
