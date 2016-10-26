@@ -632,6 +632,7 @@ main(int argc, char *argv[])
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_bno_idx'"
 		    " ON 'upsch' ('bno')");
+#if 0
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_uid_idx'"
 		    " ON 'upsch' ('uid')");
@@ -651,6 +652,7 @@ main(int argc, char *argv[])
 		    "		RANDOM() AS rnd"
 		    " FROM	upsch"
 		    " GROUP BY uid");
+#endif
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
