@@ -970,8 +970,6 @@ upd_pagein_wk(void *p)
 	si = res2iosinfo(r);
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
-	if (!si->si_paging)
-		si->si_flags &= ~SIF_UPSCH_PAGING; 
 	RPMI_ULOCK(rpmi);
 
 	if (b)
@@ -1286,6 +1284,13 @@ slmpagerthr_main(struct psc_thread *thr)
 				continue;
 			rpmi = res2rpmi(m->resm_res);
 			si = res2iosinfo(m->resm_res);
+			RPMI_LOCK(rpmi);
+			if (!(si->si_flags & SIF_UPSCH_NEED_PAGE)) { 
+				RPMI_ULOCK(rpmi);
+				continue;
+			}
+			si->si_flags &= ~SIF_UPSCH_NEED_PAGE;
+			RPMI_ULOCK(rpmi);
 
 			/*
  			 * Page work happens in the following cases: 
@@ -1356,13 +1361,6 @@ upschq_resm(struct sl_resm *m, int type)
 		sl_csvc_decref(csvc);
 		rpmi = res2rpmi(m->resm_res);
 		si = res2iosinfo(m->resm_res);
-		RPMI_LOCK(rpmi);
-		if (si->si_flags & SIF_UPSCH_PAGING) {
-			RPMI_ULOCK(rpmi);
-			return;
-		}
-		si->si_flags |= SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
 	}
 
 	upg = psc_pool_get(slm_upgen_pool);
