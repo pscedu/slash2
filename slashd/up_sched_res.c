@@ -1216,6 +1216,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
     int usr_prio)
 {
 	struct sl_resource *r;
+	struct slm_wkdata_upschq *wk;
 	int rc;
 
 	r = libsl_id2res(resid);
@@ -1255,10 +1256,13 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 
 	slm_upsch_inserts++;
 	freelock(&slm_upsch_lock);
-	psc_waitq_wakeone(&slm_pager_workq);
-	if (!rc)
+	if (!rc) {
+		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+		wk->fg.fg_fid = bmap_2_fid(b);
+		wk->r = r;
+		pfl_workq_putitem(wk);
 		OPSTAT_INCR("upsch-insert-ok");
-	else
+	} else
 		OPSTAT_INCR("upsch-insert-err");
 	return (rc);
 }
