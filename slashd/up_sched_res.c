@@ -1025,7 +1025,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	si = res2iosinfo(r);
 
 	spinlock(&slm_upsch_lock);
-
 	while (1) {
 		dbdo(upd_proc_pagein_cb, da,
 		    " SELECT    fid,"
@@ -1040,6 +1039,7 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		    SQLITE_INTEGER, r->res_offset);
 		len = psc_dynarray_len(da);
 		DYNARRAY_FOREACH(wk, i, da) {
+			OPSTAT_INCR("upsch-pagein-work");
 			si->si_paging++;
 			wk->r = r;
 			pfl_workq_putitem(wk);
@@ -1050,9 +1050,8 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		}
 		break;
 	}
-
 	freelock(&slm_upsch_lock);
-	RPMI_ULOCK(rpmi);
+
 	return (len);
 }
 
