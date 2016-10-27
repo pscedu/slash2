@@ -402,10 +402,11 @@ slmctlparam_execute_get(char *val)
 
 }
 
-void
+int
 slmctlparam_execute_set(const char *val)
 {
 	strlcpy(cmdbuf, val, PCP_VALUE_MAX);
+	return (0);
 }
 
 void
