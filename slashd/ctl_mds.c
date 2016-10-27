@@ -391,22 +391,21 @@ static char cmdbuf[PCP_VALUE_MAX];
 void
 slmctlparam_execute_get(char *val)
 {
-	int rc;
 	snprintf(val, PCP_VALUE_MAX, "%s", cmdbuf);
+}
+
+int
+slmctlparam_execute_set(const char *val)
+{
+	int rc;
+	strlcpy(cmdbuf, val, PCP_VALUE_MAX);
 	rc = system(cmdbuf);
 	if (rc == -1)
 		rc = -errno;
 	else if (WIFEXITED(rc))
 		rc = WEXITSTATUS(rc);
 	psclog(PLL_WARN, "Executed command %s, rc = %d", cmdbuf, rc);
-
-}
-
-int
-slmctlparam_execute_set(const char *val)
-{
-	strlcpy(cmdbuf, val, PCP_VALUE_MAX);
-	return (0);
+	return (rc);
 }
 
 void
