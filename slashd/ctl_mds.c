@@ -386,7 +386,7 @@ slmctlparam_nextfid_set(const char *val)
 	return (rc);
 }
 
-static char cmdbuf[PCP_VALUE_MAX];
+static char cmdbuf[PCP_VALUE_MAX] = "N/A";
 
 void
 slmctlparam_execute_get(char *val)
@@ -405,6 +405,12 @@ slmctlparam_execute_set(const char *val)
 	else if (WIFEXITED(rc))
 		rc = WEXITSTATUS(rc);
 	psclog(PLL_WARN, "Executed command %s, rc = %d", cmdbuf, rc);
+	if (rc) {
+		cmdbuf[0] = 'N';
+		cmdbuf[1] = '/';
+		cmdbuf[2] = 'A';
+		cmdbuf[3] = '\0';
+	}
 	return (rc);
 }
 
