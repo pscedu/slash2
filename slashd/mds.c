@@ -1620,7 +1620,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 		FCMH_LOCK(f);
 		sstb.sst_mode = f->fcmh_sstb.sst_mode & ~(S_ISGID | S_ISUID);
 		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE, &sstb);
-		FCMH_ULOCK(f);
 	}
 
  out:
