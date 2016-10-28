@@ -1009,7 +1009,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 {
 	int i, len;
 	struct slm_wkdata_upschq *wk;
-	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 
 	/*
@@ -1021,7 +1020,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
-	rpmi = res2rpmi(r);
 	si = res2iosinfo(r);
 
 	spinlock(&slm_upsch_lock);
