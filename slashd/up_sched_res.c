@@ -78,7 +78,6 @@
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
 
-int			 slm_upsch_inserts;
 struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
 
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
@@ -1236,7 +1235,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 
-	slm_upsch_inserts++;
 	freelock(&slm_upsch_lock);
 	if (!rc) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
@@ -1262,17 +1260,15 @@ slmupschthr_main(struct psc_thread *thr)
 void
 slmpagerthr_main(struct psc_thread *thr)
 {
+	int i, j;
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, len, inserts;
 	struct timeval stall;
 	struct sl_mds_iosinfo *si;
 	struct resprof_mds_info *rpmi;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
-	len = 0;
-	inserts = 0;
 	stall.tv_usec = 0;
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 	while (pscthr_run(thr)) {
