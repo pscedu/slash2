@@ -1341,9 +1341,7 @@ void
 upschq_resm(struct sl_resm *m, int type)
 {
 	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
-	struct sl_mds_iosinfo *si;
 	struct slrpc_cservice *csvc;
 
 	if (type == UPDT_PAGEIN) {
@@ -1352,8 +1350,6 @@ upschq_resm(struct sl_resm *m, int type)
 		if (!csvc)
 			return;
 		sl_csvc_decref(csvc);
-		rpmi = res2rpmi(m->resm_res);
-		si = res2iosinfo(m->resm_res);
 	}
 
 	upg = psc_pool_get(slm_upgen_pool);
