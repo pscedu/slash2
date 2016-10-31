@@ -1250,8 +1250,6 @@ slmpagerthr_main(struct psc_thread *thr)
 	struct sl_resm *m;
 	struct sl_site *s;
 	struct timeval stall;
-	struct sl_mds_iosinfo *si;
-	struct resprof_mds_info *rpmi;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
 	stall.tv_usec = 0;
@@ -1260,16 +1258,6 @@ slmpagerthr_main(struct psc_thread *thr)
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
-			rpmi = res2rpmi(m->resm_res);
-			si = res2iosinfo(m->resm_res);
-			RPMI_LOCK(rpmi);
-			if (!(si->si_flags & SIF_UPSCH_NEED_PAGE)) { 
-				RPMI_ULOCK(rpmi);
-				continue;
-			}
-			si->si_flags &= ~SIF_UPSCH_NEED_PAGE;
-			RPMI_ULOCK(rpmi);
-
 			/*
  			 * Page work happens in the following cases: 
  			 *
