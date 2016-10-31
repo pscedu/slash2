@@ -1241,29 +1241,6 @@ slmupschthr_spawn(void)
 }
 
 /*
- * Schedule a PAGEIN for a resm.
- */
-void
-upschq_resm(struct sl_resm *m, int type)
-{
-	struct slm_update_generic *upg;
-	struct slm_update_data *upd;
-
-	psc_assert(type == UPDT_BMAP);
-
-	upg = psc_pool_get(slm_upgen_pool);
-	memset(upg, 0, sizeof(*upg));
-	INIT_PSC_LISTENTRY(&upg->upg_lentry);
-	upg->upg_resm = m;
-	upd = &upg->upg_upd;
-	upd_init(upd, type);
-	upsch_enqueue(upd);
-
-	spinlock(&upd->upd_lock);
-	UPD_UNBUSY(upd);
-}
-
-/*
  * Initialize a peer resource update.
  * @upd: peer update structure.
  * @type: type of update.
