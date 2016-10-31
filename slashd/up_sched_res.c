@@ -83,9 +83,6 @@ struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
-struct psc_poolmaster	 slm_upgen_poolmaster;
-struct psc_poolmgr	*slm_upgen_pool;
-
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
 int	slm_upsch_page_interval = 600;
@@ -1213,11 +1210,6 @@ slmpagerthr_main(struct psc_thread *thr)
 void
 slm_upsch_init(void)
 {
-	psc_poolmaster_init(&slm_upgen_poolmaster,
-	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, "upgen");
-	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
-
 	INIT_SPINLOCK(&slm_upsch_lock);
 	psc_waitq_init(&slm_upsch_waitq, "upsch");
 	lc_reginit(&slm_upsch_queue, struct slm_update_data,
