@@ -1246,10 +1246,11 @@ void
 slmpagerthr_main(struct psc_thread *thr)
 {
 	int i, j;
-	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
 	struct timeval stall;
+	struct sl_resource *r;
+	struct slrpc_cservice *csvc;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
 	stall.tv_usec = 0;
@@ -1258,6 +1259,11 @@ slmpagerthr_main(struct psc_thread *thr)
 		CONF_FOREACH_RESM(s, r, i, m, j) {
 			if (!RES_ISFS(r))
 				continue;
+			csvc = slm_geticsvc(m, NULL, 
+			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+			if (!csvc)
+				continue;
+			sl_csvc_decref(csvc);
 			/*
  			 * Page work happens in the following cases: 
  			 *
