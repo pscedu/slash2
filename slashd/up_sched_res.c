@@ -966,16 +966,9 @@ upd_pagein_wk(void *p)
 			purge_wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_hipri_workq, purge_wk);
 	}
-	r = wk->r;
-	rpmi = res2rpmi(r);
-	si = res2iosinfo(r);
-	RPMI_LOCK(rpmi);
-	si->si_paging--;
-	RPMI_ULOCK(rpmi);
 
 	if (b)
 		bmap_op_done(b);
-
 	if (f) 
 		fcmh_op_done(f);
 	return (0);
@@ -1039,8 +1032,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		len = psc_dynarray_len(da);
 		DYNARRAY_FOREACH(wk, i, da) {
 			OPSTAT_INCR("upsch-pagein-work");
-			si->si_paging++;
-			wk->r = r;
 			pfl_workq_putitem(wk);
 		}
 		if (len) {

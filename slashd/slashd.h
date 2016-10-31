@@ -241,7 +241,6 @@ struct rpmi_ios {
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
-	int			  si_paging;
 	struct timespec		  si_lastpage;
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
