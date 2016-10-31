@@ -1004,8 +1004,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 void
 upd_proc(struct slm_update_data *upd)
 {
-	struct slm_update_generic *upg;
-
 	DPRINTF_UPD(PLL_DIAG, upd, "start");
 
 	UPD_LOCK(upd);
@@ -1250,7 +1248,6 @@ upschq_resm(struct sl_resm *m, int type)
 {
 	struct slm_update_generic *upg;
 	struct slm_update_data *upd;
-	struct slrpc_cservice *csvc;
 
 	psc_assert(type == UPDT_BMAP);
 
