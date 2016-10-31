@@ -889,11 +889,8 @@ upd_pagein_wk(void *p)
 {
 	uint32_t i;
 	int valid = 0;
-	struct slm_wkdata_upschq *wk = p;
-
 	struct sl_resource *r;
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
+	struct slm_wkdata_upschq *wk = p;
 
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
@@ -1232,7 +1229,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	if (!rc) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		wk->fg.fg_fid = bmap_2_fid(b);
-		wk->r = r;
 		pfl_workq_putitem(wk);
 		OPSTAT_INCR("upsch-insert-ok");
 	} else
