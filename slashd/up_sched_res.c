@@ -1019,14 +1019,10 @@ upd_proc(struct slm_update_data *upd)
  	 * Call the one of the following handlers:
  	 *
  	 * UPDT_BMAP: upd_proc_bmap()
- 	 * UPDT_HLDROP: upd_proc_hldrop()
  	 */
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
 		OPSTAT_INCR("upsch-bmap");
-		break;
-	case UPDT_HLDROP:
-		OPSTAT_INCR("upsch-hldrop");
 		break;
 	default:
 		psc_fatalx("Unknown type %d", upd->upd_type);
@@ -1043,10 +1039,6 @@ upd_proc(struct slm_update_data *upd)
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
 		UPD_DECREF(upd);
-		break;
-	case UPDT_HLDROP:
-		upg = upd_getpriv(upd);
-		psc_pool_return(slm_upgen_pool, upg);
 		break;
 	}
 }
@@ -1260,7 +1252,7 @@ upschq_resm(struct sl_resm *m, int type)
 	struct slm_update_data *upd;
 	struct slrpc_cservice *csvc;
 
-	psc_assert(type == UPDT_BMAP || type == UPDT_HLDROP);
+	psc_assert(type == UPDT_BMAP);
 
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
@@ -1282,7 +1274,7 @@ upschq_resm(struct sl_resm *m, int type)
 void
 upd_init(struct slm_update_data *upd, int type)
 {
-	psc_assert(type == UPDT_BMAP || type == UPDT_HLDROP);
+	psc_assert(type == UPDT_BMAP);
 
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);

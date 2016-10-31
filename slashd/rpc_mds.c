@@ -263,12 +263,10 @@ slmbchrqthr_spawn(void)
 void
 sl_resm_hldrop(struct sl_resm *resm)
 {
-	if (resm->resm_type == SLREST_MDS) {
+	if (resm->resm_type == SLREST_MDS)
 		psclog_warnx("Unexpected resource type, resm = %p", resm);
-	} else {
-		upschq_resm(resm, UPDT_HLDROP);
+	else
 		slrpc_batches_drop(resm->resm_res);
-	}
 	sl_csvc_decref(resm->resm_csvc);
 }
 
