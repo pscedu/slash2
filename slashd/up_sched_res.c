@@ -889,7 +889,6 @@ upd_pagein_wk(void *p)
 {
 	uint32_t i;
 	int valid = 0;
-	struct sl_resource *r;
 	struct slm_wkdata_upschq *wk = p;
 
 	struct fidc_membh *f = NULL;
@@ -1000,7 +999,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 {
 	int i, len;
 	struct slm_wkdata_upschq *wk;
-	struct sl_mds_iosinfo *si;
 
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
@@ -1011,8 +1009,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
-	si = res2iosinfo(r);
-
 	spinlock(&slm_upsch_lock);
 	while (1) {
 		dbdo(upd_proc_pagein_cb, da,
