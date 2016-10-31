@@ -60,8 +60,7 @@ struct slm_update_data {
 /* upd_type, which is used, among other things, to index *upd_proctab[] */
 enum upd_type_enum {
 	UPDT_BMAP,			/* upd_proc_bmap() */
-	UPDT_HLDROP,			/* upd_proc_hldrop() */
-	UPDT_PAGEIN,			/* upd_proc_pagein() */
+	UPDT_HLDROP			/* upd_proc_hldrop() */
 };
 
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
@@ -109,7 +108,6 @@ struct slm_update_generic {
 									\
 		_p = upd_getpriv(upd);					\
 		switch ((upd)->upd_type) {				\
-		case UPDT_PAGEIN:					\
 		case UPDT_HLDROP:					\
 			break;						\
 		case UPDT_BMAP: {					\
@@ -130,7 +128,6 @@ struct slm_update_generic {
 									\
 		_p = upd_getpriv(upd);					\
 		switch ((upd)->upd_type) {				\
-		case UPDT_PAGEIN:					\
 		case UPDT_HLDROP:					\
 			break;						\
 		case UPDT_BMAP: {					\
