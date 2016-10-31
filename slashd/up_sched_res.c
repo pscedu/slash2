@@ -1017,11 +1017,9 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		    "		nonce"
 		    " FROM      upsch"
 		    " WHERE     resid = IFNULL(?, resid)"
-		    " LIMIT     ?"   
-		    " OFFSET    ?",  
+		    " LIMIT     ?",   
 		    SQLITE_INTEGER, r->res_id, 
-		    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
-		    SQLITE_INTEGER, r->res_offset);
+		    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 		len = psc_dynarray_len(da);
 		DYNARRAY_FOREACH(wk, i, da) {
 			OPSTAT_INCR("upsch-pagein-work");
