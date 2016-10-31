@@ -623,64 +623,6 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	return (0);
 }
 
-/*
- * Process a HLDROP from LNet/PFLRPC, meaning that a connection to an
- * IOS has been lost.  Since replication is idempotent, we take the easy
- * route and just revert in progress work and will reissue later.
- */
-void
-upd_proc_hldrop(struct slm_update_data *tupd)
-{
-	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
-	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi;
-	struct slm_update_data *upd;
-	struct bmap_mds_info *bmi;
-	struct bmap *b;
-	sl_replica_t repl;
-
-	upg = upd_getpriv(tupd);
-	repl.bs_id = upg->upg_resm->resm_res_id;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-
-	rpmi = res2rpmi(upg->upg_resm->resm_res);
-	RPMI_LOCK(rpmi);
-	while (psc_dynarray_len(&rpmi->rpmi_upschq)) {
-		upd = psc_dynarray_getpos(&rpmi->rpmi_upschq, 0);
-		psc_dynarray_removepos(&rpmi->rpmi_upschq, 0);
-		RPMI_ULOCK(rpmi);
-
-		bmi = upd_getpriv(upd);
-		b = bmi_2_bmap(bmi);
-		rc = mds_repl_iosv_lookup(current_vfsid,
-		    upd_2_inoh(upd), &repl, &iosidx, 1);
-		if (rc) {
-			psclog_error("iosv_lookup: rc=%d", rc);
-			goto next;
-		}
-		BMAP_LOCK(b);
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1))
-			mds_bmap_write_logrepls(b);
-
-		BMAP_ULOCK(b);
- next:
-		UPD_DECREF(upd);
-
-		RPMI_LOCK(rpmi);
-	}
-	RPMI_ULOCK(rpmi);
-}
-
 int
 slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 {
@@ -1422,7 +1364,6 @@ upd_getpriv(struct slm_update_data *upd)
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
 		return (p - offsetof(struct bmap_mds_info, bmi_upd));
-	case UPDT_HLDROP:
 	default:
 		psc_fatal("type");
 	}
@@ -1430,8 +1371,7 @@ upd_getpriv(struct slm_update_data *upd)
 
 /* see upd_type_enum, called by upd_proc() */
 void (*upd_proctab[])(struct slm_update_data *) = {
-	upd_proc_bmap,
-	upd_proc_hldrop
+	upd_proc_bmap
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {
