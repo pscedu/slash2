@@ -994,7 +994,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  * upsch database, potentially restricting to a single resource for work
  * to schedule.
  */
-int
+void
 slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 {
 	int i, len;
@@ -1010,6 +1010,7 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	 * will starve.
 	 */
 	spinlock(&slm_upsch_lock);
+    	r->res_offset = 0;
 	while (1) {
 		dbdo(upd_proc_pagein_cb, da,
 		    " SELECT    fid,"
@@ -1022,20 +1023,19 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		    SQLITE_INTEGER, r->res_id, 
 		    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
 		    SQLITE_INTEGER, r->res_offset);
-		len = psc_dynarray_len(da);
 		DYNARRAY_FOREACH(wk, i, da) {
 			OPSTAT_INCR("upsch-pagein-work");
 			pfl_workq_putitem(wk);
 		}
+		len = psc_dynarray_len(da);
 		if (len) {
+		    	r->res_offset += len;
 			psc_dynarray_reset(da);
 			continue;
 		}
 		break;
 	}
 	freelock(&slm_upsch_lock);
-
-	return (len);
 }
 
 #if 0
