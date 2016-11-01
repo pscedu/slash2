@@ -1001,41 +1001,8 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 void
 upd_proc(struct slm_update_data *upd)
 {
-	DPRINTF_UPD(PLL_DIAG, upd, "start");
-
-	UPD_LOCK(upd);
-	upd->upd_flags &= ~UPDF_LIST;
-	UPD_WAIT(upd);
-	upd->upd_flags |= UPDF_BUSY;
-	upd->upd_owner = pthread_self();
-	UPD_ULOCK(upd);
-
-	/*
- 	 * Call the one of the following handlers:
- 	 *
- 	 * UPDT_BMAP: upd_proc_bmap()
- 	 */
-	switch (upd->upd_type) {
-	case UPDT_BMAP:
-		OPSTAT_INCR("upsch-bmap");
-		break;
-	default:
-		psc_fatalx("Unknown type %d", upd->upd_type);
-	}
-
-	upd_proctab[upd->upd_type](upd);
-
-	UPD_LOCK(upd);
-	upd->upd_flags &= ~UPDF_BUSY;
-	upd->upd_owner = 0;
-	UPD_WAKE(upd);
-	UPD_ULOCK(upd);
-
-	switch (upd->upd_type) {
-	case UPDT_BMAP:
-		UPD_DECREF(upd);
-		break;
-	}
+	upd_proc_bmap(upd);
+	UPD_DECREF(upd);
 }
 
 int
@@ -1238,39 +1205,16 @@ slmupschthr_spawn(void)
  * @type: type of update.
  */
 void
-upd_init(struct slm_update_data *upd, int type)
+upd_init(struct slm_update_data *upd)
 {
-	psc_assert(type == UPDT_BMAP);
-
-	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
+	upd->upd_flags = 0;
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
-	upd->upd_type = type;
-	upd->upd_flags |= UPDF_BUSY;
-	upd->upd_owner = pthread_self();
-
 	INIT_SPINLOCK(&upd->upd_lock);
-	psc_waitq_init(&upd->upd_waitq, "upd");
-
-	switch (type) {
-	case UPDT_BMAP: {
-		struct bmap_mds_info *bmi;
-		struct bmap *b;
-
-		bmi = upd_getpriv(upd);
-		b = bmi_2_bmap(bmi);
-		DPRINTF_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
-		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
-		break;
-	    }
-	default:
-		DPRINTF_UPD(PLL_DIAG, upd, "init");
-	}
 }
 
 void
 upd_destroy(struct slm_update_data *upd)
 {
-	DPRINTF_UPD(PLL_DIAG, upd, "destroy");
 	psc_assert(psclist_disjoint(&upd->upd_lentry));
 	psc_assert(!(upd->upd_flags & UPDF_BUSY));
 	memset(upd, 0, sizeof(*upd));
@@ -1299,32 +1243,21 @@ slm_wk_upsch_purge(void *p)
 void
 upsch_enqueue(struct slm_update_data *upd)
 {
-	spinlock(&upd->upd_lock);
-
-	/* enqueue work for slmupschthr_main() */
-	if (!(upd->upd_flags & UPDF_LIST)) {
-		upd->upd_flags |= UPDF_LIST;
-		if (upd->upd_type == UPDT_BMAP)
-			OPSTAT_INCR("repl-add-bmap");
-		else 
-			OPSTAT_INCR("repl-add-other");
-		lc_add(&slm_upsch_queue, upd);
-		UPD_INCREF(upd);
-	}
-	freelock(&upd->upd_lock);
+        /* enqueue work for slmupschthr_main() */
+        spinlock(&upd->upd_lock);
+        if (!(upd->upd_flags & UPDF_LIST)) {
+                upd->upd_flags |= UPDF_LIST;
+                lc_add(&slm_upsch_queue, upd);
+                UPD_INCREF(upd);
+        }
+        freelock(&upd->upd_lock);
 }
 
 void *
 upd_getpriv(struct slm_update_data *upd)
 {
 	char *p = (void *)upd;
-
-	switch (upd->upd_type) {
-	case UPDT_BMAP:
-		return (p - offsetof(struct bmap_mds_info, bmi_upd));
-	default:
-		psc_fatal("type");
-	}
+	return (p - offsetof(struct bmap_mds_info, bmi_upd));
 }
 
 /* see upd_type_enum, called by upd_proc() */

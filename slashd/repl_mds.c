@@ -851,28 +851,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
-		if (flags & FLAG_DIRTY) {
-			struct slm_update_data *upd;
-
-			upd = &bmap_2_bmi(b)->bmi_upd;
-			if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
-				/*
- 				 * This should not happen, because
- 				 * we init it when the bmap was read
- 				 * for the first time.
- 				 */
-				upd_init(upd, UPDT_BMAP);
-			} else {
-				spinlock(&upd->upd_lock);
-				upd->upd_flags |= UPDF_BUSY;
-				upd->upd_owner = pthread_self();
-				psc_waitq_wakeall(&upd->upd_waitq);
-				freelock(&upd->upd_lock);
-			}
+		if (flags & FLAG_DIRTY)
 			mds_bmap_write_logrepls(b);
-			spinlock(&upd->upd_lock);
-			UPD_UNBUSY(upd);
-		} else if (sys_prio != -1 || usr_prio != -1)
+		else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
 
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);

@@ -229,9 +229,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	sl_bmapgen_t bgen;
 
 	upd = bmap_2_upd(b);
-	upd_init(upd, UPDT_BMAP);
-	UPD_LOCK(upd);
-	UPD_UNBUSY(upd);
+	upd_init(upd);
 
 	new = 0;
 	f = b->bcm_fcmh;
