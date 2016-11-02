@@ -54,7 +54,6 @@ struct slm_update_data {
 #define UPDF_BUSY			(1 << 0)	/* item is being modified */
 #define UPDF_LIST			(1 << 1)	/* item is on list */
 
-
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
 #define upd_2_bmap(upd)			bmi_2_bmap(upd_2_bmi(upd))
 #define upd_2_fcmh(upd)			upd_2_bmap(upd)->bcm_fcmh
@@ -75,10 +74,10 @@ struct slm_update_generic {
 
 #define UPD_INCREF(upd)							\
 	do {								\
-		char * _p;						\
-		struct bmap_mds_info *_bmi;				\
+		void * _p;						\
 		struct bmapc_memb *_b;					\
-		_p = (char *)upd;					\
+		struct bmap_mds_info *_bmi;				\
+		_p = (void *)upd;					\
 		_p = _p - offsetof(struct bmap_mds_info, bmi_upd);	\
 		_bmi = (struct bmap_mds_info *)_p;			\
 		_b = bmi_2_bmap(_bmi);					\
@@ -87,10 +86,10 @@ struct slm_update_generic {
 
 #define UPD_DECREF(upd)							\
 	do {								\
-		char *_p;						\
-		struct bmap_mds_info *_bmi;				\
+		void *_p;						\
 		struct bmapc_memb *_b;					\
-		_p = (char *)upd;					\
+		struct bmap_mds_info *_bmi;				\
+		_p = (void *)upd;					\
 		_p = _p - offsetof(struct bmap_mds_info, bmi_upd);	\
 		_bmi = (struct bmap_mds_info *)_p;			\
 		_b = bmi_2_bmap(_bmi);					\
