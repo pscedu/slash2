@@ -101,8 +101,6 @@ struct bmap_mds_info {
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 #define bmap_2_upd(b)		(&bmap_2_bmi(b)->bmi_upd)
-#define bmap_2_ino(b)		fcmh_2_ino((b)->bcm_fcmh)
-#define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
 
