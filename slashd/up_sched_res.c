@@ -1124,6 +1124,9 @@ slmupschthr_main(struct psc_thread *thr)
 	struct slm_update_data *upd;
 	while (pscthr_run(thr)) {
 		upd = lc_getwait(&slm_upsch_queue);
+        	spinlock(&upd->upd_lock);
+		upd->upd_flags &= ~UPDF_LIST;
+        	freelock(&upd->upd_lock);
 		upd_proc(upd);
 	}
 }
