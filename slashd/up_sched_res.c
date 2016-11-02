@@ -1253,7 +1253,7 @@ upsch_enqueue(struct slm_update_data *upd)
 void *
 upd_getpriv(struct slm_update_data *upd)
 {
-	char *p = (void *)upd;
+	void *p = (void *)upd;
 	return (p - offsetof(struct bmap_mds_info, bmi_upd));
 }
 
