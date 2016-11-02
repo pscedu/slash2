@@ -564,7 +564,7 @@ msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 	if (r)
 		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
 	else
-		strlcpy(buf, "(null)", PCP_VALUE_MAX);
+		strlcpy(buf, "N/A", PCP_VALUE_MAX);
 }
 
 int
