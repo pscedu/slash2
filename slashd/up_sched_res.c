@@ -433,13 +433,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct srt_ptrunc_req *mq;
 	struct srt_ptrunc_rep *mp;
 	struct pscrpc_async_args av;
-	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
-	upd = bmap_2_upd(b);
-	f = upd_2_fcmh(upd);
-
+	f = b->bcm_fcmh;
 	if (!slm_ptrunc_enabled) {
 		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
 		return (0);
