@@ -87,8 +87,6 @@ int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
 int	slm_upsch_page_interval = 600;
 
-void (*upd_proctab[])(struct slm_update_data *);
-
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
 
@@ -1256,11 +1254,6 @@ upd_getpriv(struct slm_update_data *upd)
 	void *p = (void *)upd;
 	return (p - offsetof(struct bmap_mds_info, bmi_upd));
 }
-
-/* see upd_type_enum, called by upd_proc() */
-void (*upd_proctab[])(struct slm_update_data *) = {
-	upd_proc_bmap
-};
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {
 	slm_batch_repl_cb,				/* bph_cbf */
