@@ -129,6 +129,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_lookup_slfid failed; "
 		    "fid="SLPRI_FID" rc=%d",
 		    fcmh_2_fid(f), rc);
+		OPSTAT_INCR("lookup-slfid-err");
 		return (rc);
 	}
 
