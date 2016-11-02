@@ -1151,9 +1151,9 @@ slmpagerthr_main(struct psc_thread *thr)
 				continue;
 			sl_csvc_decref(csvc);
 			/*
- 			 * Page work happens in the following cases: 
+ 			 * Page work can happen in the following cases: 
  			 *
- 			 * (1) start up
+ 			 * (1) definitely at start up
  			 * (2) when an IOS comes online
  			 * (3) every 10 minutes;
  			 * (4) explicit user request
