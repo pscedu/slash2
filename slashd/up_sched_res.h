@@ -57,7 +57,6 @@ struct slm_update_data {
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
 #define upd_2_bmap(upd)			bmi_2_bmap(upd_2_bmi(upd))
 #define upd_2_fcmh(upd)			upd_2_bmap(upd)->bcm_fcmh
-#define upd_2_inoh(upd)			fcmh_2_inoh(upd_2_fcmh(upd))
 
 struct slm_update_generic {
 	struct sl_resm			*upg_resm;
