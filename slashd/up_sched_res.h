@@ -54,8 +54,6 @@ struct slm_update_data {
 #define UPDF_BUSY			(1 << 0)	/* item is being modified */
 #define UPDF_LIST			(1 << 1)	/* item is on list */
 
-#define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
-
 struct slm_update_generic {
 	struct sl_resm			*upg_resm;
 	struct sl_fidgen		 upg_fg;
