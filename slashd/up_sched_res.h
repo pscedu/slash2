@@ -55,7 +55,6 @@ struct slm_update_data {
 #define UPDF_LIST			(1 << 1)	/* item is on list */
 
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
-#define upd_2_bmap(upd)			bmi_2_bmap(upd_2_bmi(upd))
 
 struct slm_update_generic {
 	struct sl_resm			*upg_resm;
