@@ -42,7 +42,8 @@ umount -l -f $mp 2>/dev/null
 
 # Initialization/configuration
 
-# Checkout sysctl fs.file-max if the following fails.
+# Checkout sysctl fs.file-max and/or /etc/security/limits.conf 
+# if the following fails.
 
 ulimit -n 1000000
 ulimit -c $((1024 * 1024 * 1024 * 100))
