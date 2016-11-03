@@ -58,6 +58,9 @@ ifneq ($(filter mds,${SLASH_MODULES}),)
  SLASH_MODULES+=	zfs
 endif
 
+# To support ACL, add the following line in file local.mk
+# SLASH_OPTIONS+=acl
+
 ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
  ifneq ($(filter acl,${SLASH_OPTIONS}),)
   SRCS+=		${SLASH_BASE}/mount_slash/acl_cli.c
