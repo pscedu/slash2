@@ -244,7 +244,6 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 	case ECONNABORTED:
 	case ECONNREFUSED:
 	case ECONNRESET:
-	case EHOSTDOWN:
 	case EHOSTUNREACH:
 	case ENETDOWN:
 	case ENETRESET:
@@ -268,6 +267,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 		*rc = ENOTSUP;
 	case EIO:
 	case ENOTCONN:
+	case EHOSTDOWN:
 #ifdef ENONET
 	case ENONET:
 #endif
