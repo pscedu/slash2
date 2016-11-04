@@ -1151,8 +1151,10 @@ slmpagerthr_main(struct psc_thread *thr)
 				continue;
 			csvc = slm_geticsvc(m, NULL, 
 			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
-			if (!csvc)
+			if (!csvc) {
+				OPSTAT_INCR("upsch-page-skip");
 				continue;
+			}
 			sl_csvc_decref(csvc);
 			/*
  			 * Page work can happen in the following cases: 
@@ -1163,6 +1165,7 @@ slmpagerthr_main(struct psc_thread *thr)
  			 * (4) explicit user request
  			 *
  			 */
+			OPSTAT_INCR("upsch-page-work");
 			slm_page_work(r, &da);
 			psc_dynarray_reset(&da);
 		}
