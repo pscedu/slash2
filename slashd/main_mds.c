@@ -573,8 +573,8 @@ main(int argc, char *argv[])
 	size = sizeof(struct slm_wkdata_wr_brepl);
 	if (size < sizeof(struct slm_wkdata_upsch_purge))
 		size = sizeof(struct slm_wkdata_upsch_purge);
-	if (size < sizeof(struct slm_wkdata_wr_brepl))
-		size = sizeof(struct slm_wkdata_wr_brepl);
+	if (size < sizeof(struct slm_wkdata_upschq))
+		size = sizeof(struct slm_wkdata_upschq);
 	pfl_workq_init(size);
 
 	slm_upsch_init();
