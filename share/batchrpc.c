@@ -324,6 +324,10 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
+	/*
+	 * 11/04/2016: Hit mq = NULL crash probably because rq->rq_reqmsg.buflens[0] 
+	 * is 0. opc is 50, flags is 4.
+	 */
 	mq->len = bp->bp_replen;
 	mq->bid = bp->bp_bid;
 	mq->opc = bp->bp_opc;
