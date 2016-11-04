@@ -739,6 +739,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
 	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
