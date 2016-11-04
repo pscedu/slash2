@@ -340,6 +340,7 @@ struct slm_wkdata_upsch_cb {
 struct slm_wkdata_upschq {
 	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
+	int			 flag;
 };
 
 struct slm_wkdata_rmdir_ino {

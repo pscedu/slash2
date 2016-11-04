@@ -405,6 +405,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int i, c, rc, vfsid, found;
@@ -568,7 +569,14 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-	pfl_workq_init(128);
+
+	size = sizeof(struct slm_wkdata_wr_brepl);
+	if (size < sizeof(struct slm_wkdata_upsch_purge))
+		size = sizeof(struct slm_wkdata_upsch_purge);
+	if (size < sizeof(struct slm_wkdata_wr_brepl))
+		size = sizeof(struct slm_wkdata_wr_brepl);
+	pfl_workq_init(size);
+
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
