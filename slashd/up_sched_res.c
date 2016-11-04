@@ -895,6 +895,7 @@ upd_pagein_wk(void *p)
 			purge_wk->bno = b->bcm_bmapno;
 		else
 			purge_wk->bno = BMAPNO_ANY;
+		OPSTAT_INCR("upsch-purge-work");
 		pfl_workq_putitemq(&slm_db_hipri_workq, purge_wk);
 	}
 
