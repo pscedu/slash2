@@ -855,6 +855,8 @@ upd_pagein_wk(void *p)
 	}
 
 	BMAP_LOCK(b);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+
 	for (i = 0; i < fcmh_2_nrepls(f); i++) {
 		iosid = fcmh_2_repl(f, i);
 		res = libsl_id2res(iosid);
@@ -878,7 +880,7 @@ upd_pagein_wk(void *p)
 	BMAP_ULOCK(b);
 
  out:
-	if (rc && wk->purge) {
+	if (rc) {
 		/*
 		 * XXX Do we need to do any work if rc is an error code
 		 * instead 1 here?
@@ -921,7 +923,6 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
-	wk->purge = 1;
 	psc_dynarray_add(da, wk);
 	return (0);
 }
@@ -1114,7 +1115,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	if (!rc) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		wk->fg.fg_fid = bmap_2_fid(b);
-		wk->purge = 0;
 		pfl_workq_putitem(wk);
 		OPSTAT_INCR("upsch-insert-ok");
 	} else
