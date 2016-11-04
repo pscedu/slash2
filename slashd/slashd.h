@@ -327,16 +327,6 @@ struct slm_wkdata_upsch_purge {
 	sl_bmapno_t		 bno;
 };
 
-struct slm_wkdata_upsch_cb {
-	struct slrpc_cservice	*csvc;
-	struct sl_resm		*src_resm;
-	struct sl_resm		*dst_resm;
-	struct bmap		*b;
-	int			 rc;
-	int			 off;
-	int64_t			 amt;
-};
-
 struct slm_wkdata_upschq {
 	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
