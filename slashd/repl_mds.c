@@ -805,6 +805,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
 	/*
 	 * Is this Okay because we have not sent an RPC out?
+	 *
+	 * If a replication request comes back, this will
+	 * nullify its effort.
 	 */
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
