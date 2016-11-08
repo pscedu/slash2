@@ -2378,9 +2378,9 @@ slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
 	}
 
 //	brepls_init(tract, -1);
-//	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNCPNDG;
 
 //	brepls_init(retifset, 0);
-//	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+//	retifset[BREPLST_TRUNC_SCHED] = 1;
 //	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 }

@@ -325,7 +325,7 @@ mds_brepls_check(uint8_t *repls, int nr)
 		case BREPLST_GARBAGE:
 		case BREPLST_GARBAGE_SCHED:
 		case BREPLST_TRUNCPNDG:
-		case BREPLST_TRUNCPNDG_SCHED:
+		case BREPLST_TRUNC_SCHED:
 			return;
 		}
 	}
@@ -630,7 +630,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		/* Work has finished. */
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
-		     vold == BREPLST_TRUNCPNDG_SCHED ||
+		     vold == BREPLST_TRUNC_SCHED ||
 		     vold == BREPLST_TRUNCPNDG ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
@@ -646,13 +646,13 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
 		    vold == BREPLST_GARBAGE_SCHED ||
-		    vold == BREPLST_TRUNCPNDG_SCHED)
+		    vold == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 
 		/* Work was scheduled. */
 		else if (vnew == BREPLST_REPL_SCHED ||
 		    vnew == BREPLST_GARBAGE_SCHED ||
-		    vnew == BREPLST_TRUNCPNDG_SCHED)
+		    vnew == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
 
 		/* Work was reprioritized. */
