@@ -699,7 +699,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[BREPLST_REPL_SCHED] = 's';
 	map[BREPLST_REPL_QUEUED] = 'q';
 	map[BREPLST_VALID] = '+';
-	map[BREPLST_TRUNCPNDG] = 't';
+	map[BREPLST_TRUNC_QUEUED] = 't';
 	map[BREPLST_TRUNC_SCHED] = 'p';
 	map[BREPLST_GARBAGE] = 'g';
 	map[BREPLST_GARBAGE_SCHED] = 'x';
@@ -708,7 +708,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_REPL_SCHED] = 'S';
 	pmap[BREPLST_REPL_QUEUED] = 'Q';
 	pmap[BREPLST_VALID] = '*';
-	pmap[BREPLST_TRUNCPNDG] = 'T';
+	pmap[BREPLST_TRUNC_QUEUED] = 'T';
 	pmap[BREPLST_TRUNC_SCHED] = 'P';
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
@@ -717,7 +717,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	cmap[BREPLST_REPL_QUEUED] = COLOR_MAGENTA;
 	cmap[BREPLST_REPL_SCHED] = COLOR_YELLOW;
 	cmap[BREPLST_VALID] = COLOR_GREEN;
-	cmap[BREPLST_TRUNCPNDG] = COLOR_MAGENTA;
+	cmap[BREPLST_TRUNC_QUEUED] = COLOR_MAGENTA;
 	cmap[BREPLST_TRUNC_SCHED] = COLOR_YELLOW;
 
 	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));

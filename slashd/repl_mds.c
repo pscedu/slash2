@@ -324,7 +324,7 @@ mds_brepls_check(uint8_t *repls, int nr)
 		case BREPLST_VALID:
 		case BREPLST_GARBAGE:
 		case BREPLST_GARBAGE_SCHED:
-		case BREPLST_TRUNCPNDG:
+		case BREPLST_TRUNC_QUEUED:
 		case BREPLST_TRUNC_SCHED:
 			return;
 		}
@@ -631,7 +631,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
 		     vold == BREPLST_TRUNC_SCHED ||
-		     vold == BREPLST_TRUNCPNDG ||
+		     vold == BREPLST_TRUNC_QUEUED ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
 		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&

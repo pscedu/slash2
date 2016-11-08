@@ -1257,7 +1257,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		 */
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
-		retifset[BREPLST_TRUNCPNDG] = 1;
+		retifset[BREPLST_TRUNC_QUEUED] = 1;
 
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
@@ -1269,7 +1269,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
 			brepls_init(qifset, 0);
 			qifset[BREPLST_REPL_QUEUED] = 1;
-			qifset[BREPLST_TRUNCPNDG] = 1;
+			qifset[BREPLST_TRUNC_QUEUED] = 1;
 
 			upd = &bmi->bmi_upd;
 			if (mds_repl_bmap_walk_all(b, NULL, qifset,
@@ -2030,7 +2030,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */
 	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_VALID] = BREPLST_TRUNC_QUEUED;
 
 	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
@@ -2378,7 +2378,7 @@ slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
 	}
 
 //	brepls_init(tract, -1);
-//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNCPNDG;
+//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
 
 //	brepls_init(retifset, 0);
 //	retifset[BREPLST_TRUNC_SCHED] = 1;

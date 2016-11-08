@@ -266,7 +266,7 @@ struct bmap {
 #define BREPLST_REPL_SCHED	1	/* replica is being made */
 #define BREPLST_REPL_QUEUED	2	/* replica needs to be made */
 #define BREPLST_VALID		3	/* replica is active */
-#define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
+#define BREPLST_TRUNC_QUEUED	4	/* partial truncation in bmap */
 #define BREPLST_TRUNC_SCHED	5	/* ptrunc resolving CRCs recomp */
 #define BREPLST_GARBAGE		6	/* marked for reclamation */
 #define BREPLST_GARBAGE_SCHED	7	/* being reclaimed */

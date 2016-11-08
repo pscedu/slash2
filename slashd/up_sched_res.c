@@ -376,7 +376,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		 */
 		brepls_init(tract, -1);
 		tract[BREPLST_TRUNC_SCHED] = rc ?
-		    BREPLST_TRUNCPNDG : BREPLST_VALID;
+		    BREPLST_TRUNC_QUEUED : BREPLST_VALID;
 		brepls_init_idx(retifset);
 
 		BMAP_LOCK(b);
@@ -475,10 +475,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	mq->offset = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 
 	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNC_SCHED;
-	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_SCHED;
+	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-	if (rc != BREPLST_TRUNCPNDG)
+	if (rc != BREPLST_TRUNC_QUEUED)
 		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 
 	sched = 1;
@@ -782,7 +782,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				goto out;
 			break;
 
-		case BREPLST_TRUNCPNDG:
+		case BREPLST_TRUNC_QUEUED:
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
 			break;
 
@@ -848,7 +848,7 @@ upd_pagein_wk(void *p)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_TRUNC_QUEUED] = 1;
 	if (slm_preclaim_enabled) {
 		retifset[BREPLST_GARBAGE] = 1;
 		retifset[BREPLST_GARBAGE_SCHED] = 1;

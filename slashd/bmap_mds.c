@@ -96,7 +96,7 @@ mds_bmap_ensure_valid(struct bmap *b)
 	retifset[BREPLST_VALID] = 1;
 	retifset[BREPLST_GARBAGE] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_TRUNC_QUEUED] = 1;
 	retifset[BREPLST_TRUNC_SCHED] = 1;
 
 	/* Caller should busy fcmh and bmap. */
@@ -547,8 +547,8 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 		ch[BREPLST_REPL_SCHED] = 's';				\
 		ch[BREPLST_REPL_QUEUED] = 'q';				\
 		ch[BREPLST_VALID] = '+';				\
-		ch[BREPLST_TRUNCPNDG] = 't';				\
-		ch[BREPLST_TRUNC_SCHED] = 'p';			\
+		ch[BREPLST_TRUNC_QUEUED] = 't';				\
+		ch[BREPLST_TRUNC_SCHED] = 'p';				\
 		ch[BREPLST_GARBAGE] = 'g';				\
 		ch[BREPLST_GARBAGE_SCHED] = 'x';			\
 									\
