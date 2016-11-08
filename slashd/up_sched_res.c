@@ -172,7 +172,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 			OPSTAT_INCR("repl-fail-soft");
 		} else {
 			/* Fatal error: cancel replication. */
-			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
+			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
 			OPSTAT_INCR("repl-fail-hard");
 		}
 
@@ -526,7 +526,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = error ?
-	    BREPLST_GARBAGE : BREPLST_INVALID;
+	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
 
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
@@ -589,10 +589,10 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	bsp->bsp_res = r;
 
 	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+	tract[BREPLST_GARBAGE_QUEUED] = BREPLST_GARBAGE_SCHED;
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-	if (rc != BREPLST_GARBAGE) {
+	if (rc != BREPLST_GARBAGE_QUEUED) {
 		DEBUG_BMAPOD(PLL_DEBUG, b, "consistency error; expected "
 		    "state=GARBAGE at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -701,7 +701,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 		OPSTAT_INCR("upsch-impossible");
 
 		brepls_init(tract, -1);
-		tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
+		tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE_QUEUED;
 
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
@@ -786,7 +786,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			rc = slm_upsch_tryptrunc(b, off, dst_res);
 			break;
 
-		case BREPLST_GARBAGE:
+		case BREPLST_GARBAGE_QUEUED:
 			rc = slm_upsch_trypreclaim(dst_res, b, off);
 			if (rc > 0)
 				goto out;
@@ -850,7 +850,7 @@ upd_pagein_wk(void *p)
 	retifset[BREPLST_REPL_QUEUED] = 1;
 	retifset[BREPLST_TRUNC_QUEUED] = 1;
 	if (slm_preclaim_enabled) {
-		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_QUEUED] = 1;
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
@@ -1045,7 +1045,7 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 	BMAP_ULOCK(b);
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;

@@ -268,7 +268,7 @@ struct bmap {
 #define BREPLST_VALID		3	/* replica is active */
 #define BREPLST_TRUNC_QUEUED	4	/* partial truncation in bmap */
 #define BREPLST_TRUNC_SCHED	5	/* ptrunc resolving CRCs recomp */
-#define BREPLST_GARBAGE		6	/* marked for reclamation */
+#define BREPLST_GARBAGE_QUEUED	6	/* marked for reclamation */
 #define BREPLST_GARBAGE_SCHED	7	/* being reclaimed */
 #define NBREPLST		8
 

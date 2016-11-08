@@ -94,7 +94,7 @@ mds_bmap_ensure_valid(struct bmap *b)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
-	retifset[BREPLST_GARBAGE] = 1;
+	retifset[BREPLST_GARBAGE_QUEUED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	retifset[BREPLST_TRUNC_QUEUED] = 1;
 	retifset[BREPLST_TRUNC_SCHED] = 1;
@@ -149,7 +149,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 	mds_repl_bmap_walk(a->b, tract, NULL, 0, &idx, 1);
 
 	return (0);
@@ -199,7 +199,7 @@ slm_bmap_resetnonce(struct bmap *b)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
@@ -549,7 +549,7 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 		ch[BREPLST_VALID] = '+';				\
 		ch[BREPLST_TRUNC_QUEUED] = 't';				\
 		ch[BREPLST_TRUNC_SCHED] = 'p';				\
-		ch[BREPLST_GARBAGE] = 'g';				\
+		ch[BREPLST_GARBAGE_QUEUED] = 'g';			\
 		ch[BREPLST_GARBAGE_SCHED] = 'x';			\
 									\
 		for (_k = 0, off = 0; _k < SL_MAX_REPLICAS;		\

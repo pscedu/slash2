@@ -701,7 +701,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[BREPLST_VALID] = '+';
 	map[BREPLST_TRUNC_QUEUED] = 't';
 	map[BREPLST_TRUNC_SCHED] = 'p';
-	map[BREPLST_GARBAGE] = 'g';
+	map[BREPLST_GARBAGE_QUEUED] = 'g';
 	map[BREPLST_GARBAGE_SCHED] = 'x';
 
 	pmap[BREPLST_INVALID] = '/';
@@ -710,7 +710,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_VALID] = '*';
 	pmap[BREPLST_TRUNC_QUEUED] = 'T';
 	pmap[BREPLST_TRUNC_SCHED] = 'P';
-	pmap[BREPLST_GARBAGE] = 'G';
+	pmap[BREPLST_GARBAGE_QUEUED] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
 	brepls_init(cmap, -1);
