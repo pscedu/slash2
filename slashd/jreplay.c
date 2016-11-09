@@ -158,7 +158,7 @@ mds_replay_bmap(void *jent, int op)
 		/* revert inflight to reissue */
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		b->bcm_flags |= BMAPF_REPLMODWR;
@@ -182,7 +182,7 @@ mds_replay_bmap(void *jent, int op)
 			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 			    off)) {
 			case BREPLST_REPL_QUEUED:
-			case BREPLST_GARBAGE:
+			case BREPLST_GARBAGE_QUEUED:
 				resid = fcmh_2_repl(f, n);
 
 				rc = slm_upsch_insert(b, resid, 

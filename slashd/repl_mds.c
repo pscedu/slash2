@@ -322,10 +322,10 @@ mds_brepls_check(uint8_t *repls, int nr)
 		val = SL_REPL_GET_BMAP_IOS_STAT(repls, off);
 		switch (val) {
 		case BREPLST_VALID:
-		case BREPLST_GARBAGE:
+		case BREPLST_GARBAGE_QUEUED:
 		case BREPLST_GARBAGE_SCHED:
-		case BREPLST_TRUNCPNDG:
-		case BREPLST_TRUNCPNDG_SCHED:
+		case BREPLST_TRUNC_QUEUED:
+		case BREPLST_TRUNC_SCHED:
 			return;
 		}
 	}
@@ -507,7 +507,8 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_VALID;
-	tract[BREPLST_GARBAGE] = BREPLST_VALID;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_VALID;
+	tract[BREPLST_GARBAGE_QUEUED] = BREPLST_VALID;
 
 	/*
 	 * The old state for this bmap on the given IOS is
@@ -541,7 +542,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = policy == BRPOL_PERSIST ?
-	    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+	    BREPLST_REPL_QUEUED : BREPLST_GARBAGE_QUEUED;
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
 	brepls_init(retifset, 0);
@@ -619,23 +620,23 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
-		    vold != BREPLST_GARBAGE &&
+		    vold != BREPLST_GARBAGE_QUEUED &&
 		    vold != BREPLST_GARBAGE_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vold != BREPLST_GARBAGE_SCHED &&
-		     vnew == BREPLST_GARBAGE &&
+		     vnew == BREPLST_GARBAGE_QUEUED &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid, NULL);
 
 		/* Work has finished. */
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
-		     vold == BREPLST_TRUNCPNDG_SCHED ||
-		     vold == BREPLST_TRUNCPNDG ||
+		     vold == BREPLST_TRUNC_SCHED ||
+		     vold == BREPLST_TRUNC_QUEUED ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
 		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&
-		      vnew == BREPLST_GARBAGE) ||
+		      vnew == BREPLST_GARBAGE_QUEUED) ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
 			PUSH_IOS(b, &del, resid, NULL);
@@ -646,13 +647,13 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
 		    vold == BREPLST_GARBAGE_SCHED ||
-		    vold == BREPLST_TRUNCPNDG_SCHED)
+		    vold == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 
 		/* Work was scheduled. */
 		else if (vnew == BREPLST_REPL_SCHED ||
 		    vnew == BREPLST_GARBAGE_SCHED ||
-		    vnew == BREPLST_TRUNCPNDG_SCHED)
+		    vnew == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
 
 		/* Work was reprioritized. */
@@ -738,7 +739,7 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_VALID:
 		break;
 
-	case BREPLST_GARBAGE:
+	case BREPLST_GARBAGE_QUEUED:
 	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_INVALID:
 		 *flags |= FLAG_DIRTY;
@@ -802,12 +803,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
-	/*
-	 * Is this Okay because we have not sent an RPC out?
-	 */
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_QUEUED] = BREPLST_REPL_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
@@ -953,9 +950,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	replv.idx = iosidx;
 
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_VALID] = BREPLST_GARBAGE_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)

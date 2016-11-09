@@ -109,7 +109,8 @@ sli_open_backing_file(struct fidc_membh *f)
 
 	/*
  	 * XXX hit setrlimit: operation not permitted, but no open-fail.
- 	 * This per open system call should go!
+ 	 * This per open system call should go!  Hit again due to fs.nr_open
+ 	 * sysctl limit.
  	 */
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 	sli_fg_makepath(&f->fcmh_fg, fidfn);
