@@ -5246,3 +5246,7 @@ sys.uptime                                              2d2h40m
 sys.version                                             42141
 [root@br011 zhihui]# 
 
+11/10/2016
+----------
+
+The CRC check fails in mds_inox_load_locked().  Need to investigate why and if CRC is really needed at all.
