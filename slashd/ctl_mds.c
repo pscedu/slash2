@@ -540,6 +540,12 @@ slmctlparam_upsch_get(char *val)
 }
 
 void
+slmctlparam_commit_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%lu", mds_cursor.pjc_commit_txg);
+}
+
+void
 slmctlthr_spawn(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
@@ -572,6 +578,8 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register_var("sys.conn_debug",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &sl_conn_debug);
 
+	psc_ctlparam_register_simple("sys.commit_txg",
+	    slmctlparam_commit_get, NULL);
 	psc_ctlparam_register_simple("sys.next_fid",
 	    slmctlparam_nextfid_get, slmctlparam_nextfid_set);
 
