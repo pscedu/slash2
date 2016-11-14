@@ -5253,3 +5253,9 @@ The CRC check fails in mds_inox_load_locked().  Need to investigate why and if C
 
 The problematic file is small (less than 3000 bytes), and yet its number of replicas is 24. As far as I know, 
 no one is using replication on the particular file system.
+
+11/14/2016
+----------
+
+Remove BMAPF_REPLMODWR logic in replication code, it causes stalls for worker threads. Instead, we should
+just make a copy of the bmap states.
