@@ -5259,3 +5259,18 @@ no one is using replication on the particular file system.
 
 Remove BMAPF_REPLMODWR logic in replication code, it causes stalls for worker threads. Instead, we should
 just make a copy of the bmap states.
+
+11/14/2016
+----------
+
+Possible I/O performance regression, especially on read size:
+
+
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=mybig2.dat of=/dev/null bs=1M
+10240+0 records in
+10240+0 records out
+10737418240 bytes (11 GB) copied, 270.434 s, 39.7 MB/s
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=mybig.dat of=/dev/null bs=16M
+640+0 records in
+640+0 records out
+10737418240 bytes (11 GB) copied, 236.226 s, 45.5 MB/s
