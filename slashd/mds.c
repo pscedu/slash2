@@ -446,7 +446,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	nr = fcmh_2_nrepls(f);
 	FCMH_ULOCK(f);
 
-	if (nr > SL_DEF_REPLICAS)
+	if (nr >= SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {

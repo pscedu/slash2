@@ -608,6 +608,10 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	chg.nios = 0;
 	nrepls = fcmh_2_nrepls(f);
 	for (n = 0, off = 0; n < nrepls; n++, off += SL_BITS_PER_REPLICA) {
+
+		if (n == SL_DEF_REPLICAS)
+			mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
 		resid = fcmh_2_repl(f, n);
 		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
