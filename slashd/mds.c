@@ -620,12 +620,14 @@ __static int
 mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 {
 	int rc;
+	size_t item;
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
 	struct bmap_ios_assign *bia;
 	struct sl_resm *resm;
-	size_t item;
+	struct sl_resource *r;
+	struct fidc_membh *f = b->bcm_fcmh;
 
 	psc_assert(!bmi->bmi_wr_ion);
 	psc_assert(!bmi->bmi_assign);
@@ -635,9 +637,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	if (!resm) {
-		struct sl_resource *r;
-		struct fidc_membh *f = b->bcm_fcmh;
-
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
