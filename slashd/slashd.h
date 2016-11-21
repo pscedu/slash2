@@ -269,7 +269,6 @@ struct rpmi_ios {
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
-	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
 
 	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
