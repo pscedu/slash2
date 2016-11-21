@@ -339,7 +339,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 
 	ok = mds_sliod_alive(si);
 	if (!ok) {
-		OPSTAT_INCR("sliod-ping-fail");
+		OPSTAT_INCR("sliod-ping-awol");
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_name);
 	}
