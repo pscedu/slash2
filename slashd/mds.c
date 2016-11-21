@@ -315,8 +315,15 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * lease should be okay because it does not increase disk usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
-	if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
+	if (si->si_flags & SIF_DISABLE_LEASE) {
+		OPSTAT_INCR("sliod-disable-lease");
 		psclog_diag("res=%s skipped due to DISABLE_LEASE",
+		    resm->resm_name);
+		return (0);
+	}
+	if (si->si_flags & SIF_DISABLE_ADVLEASE) {
+		OPSTAT_INCR("sliod-disable-advlease");
+		psclog_diag("res=%s skipped due to DISABLE_ADVLEASE",
 		    resm->resm_name);
 		return (0);
 	}
