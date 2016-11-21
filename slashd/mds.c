@@ -1784,19 +1784,17 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	FCMH_LOCK(f);
 
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
-
 	if (rc)
 		return (rc);
 
 	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 
-	if (!obml) {
+	if (!obml)
 		PFL_GOTOERR(out2, rc = -ENOENT);
 
-	} else if (!(obml->bml_flags & BML_WRITE)) {
+	if (!(obml->bml_flags & BML_WRITE)) 
 		PFL_GOTOERR(out2, rc = -EINVAL);
-	}
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 
