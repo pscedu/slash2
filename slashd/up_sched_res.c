@@ -978,7 +978,7 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 
 #if 0
 
-	/* Keep this so I don't have to re-learn some SQL syntax */
+	/* Keep this so I don't have to re-learn cryptic SQL syntax */
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno,"
