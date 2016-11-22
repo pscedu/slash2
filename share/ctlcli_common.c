@@ -44,6 +44,7 @@
 
 #include "slashd/bmap_mds.h"
 
+/* based on enum sl_res_type */
 __static const char *slconn_restypes[] = {
 	"client",
 	"archival",
@@ -51,7 +52,7 @@ __static const char *slconn_restypes[] = {
 	"mds",
 	"parallel",
 	NULL,
-	"serial"
+	"local"
 };
 
 int
