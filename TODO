@@ -5274,3 +5274,11 @@ zhihui@yuzu: /zzh-slash2/zhihui$ dd if=mybig.dat of=/dev/null bs=16M
 640+0 records in
 640+0 records out
 10737418240 bytes (11 GB) copied, 236.226 s, 45.5 MB/s
+
+11/22/2016
+----------
+
+Two new features:
+
+ * sliod can request to push its replica of all files for decommision purpose (no client involvement).
+ * subtree mount (this allows a VM to have root permission) - From Bob (an upcoming lustre feature).
