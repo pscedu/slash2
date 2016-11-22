@@ -354,11 +354,17 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     brepl_walkcb_t cbf, void *cbarg)
 {
 	int val, rc = 0;
+	struct timeval tv1, tv2, tvd;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK_ENSURE(b);
 	if (tract) {
+		PFL_GETTIMEVAL(&tv1);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+		PFL_GETTIMEVAL(&tv2);
+		timersub(&tv2, &tv1, &tvd);
+		OPSTAT_ADD("bmap-wait-usecs", tvd.tv_sec * 1000000 + tvd.tv_usec);
+
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
