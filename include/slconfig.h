@@ -57,7 +57,7 @@ enum sl_res_type {
 	SLREST_MDS,
 	SLREST_PARALLEL_COMPNT,			/* A member of a parallel fs */
 	SLREST_PARALLEL_LFS,			/* Logical parallel fs */
-	SLREST_STANDALONE_FS			/* 6 */
+	SLREST_STANDALONE_FS			/* 6: local file system */
 };
 
 /* XXX rename to RES_ISNODE() */
