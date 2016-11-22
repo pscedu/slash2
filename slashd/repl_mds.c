@@ -358,7 +358,7 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 
 	BMAP_LOCK_ENSURE(b);
 	if (tract) {
-		psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
@@ -833,7 +833,6 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
 			bmap_op_done(b);
@@ -978,8 +977,6 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 				rc = 0;
 			PFL_GOTOERR(out, rc);
 		}
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 		/*
 		 * Before blindly doing the transition, we have to check
 		 * to ensure this operation would retain at least one

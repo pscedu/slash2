@@ -1303,8 +1303,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	bmap_2_replpol(b) = mq->pol;
 
 	mds_bmap_write_logrepls(b);

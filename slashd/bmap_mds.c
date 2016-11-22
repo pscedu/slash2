@@ -297,8 +297,6 @@ mds_bmap_read(struct bmap *b, int flags)
  out2:
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	if (!new)
 		/* 
 		 * gdb help:

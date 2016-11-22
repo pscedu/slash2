@@ -146,8 +146,6 @@ mds_replay_bmap(void *jent, int op)
 		 * in the sql table.
 		 */
 		BMAP_LOCK(b);
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 		memcpy(bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 
@@ -161,7 +159,6 @@ mds_replay_bmap(void *jent, int op)
 		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
-		b->bcm_flags |= BMAPF_REPLMODWR;
 		BMAP_ULOCK(b);
 
 		memcpy(bmi->bmi_orepls, bmi_orepls,
@@ -201,7 +198,6 @@ mds_replay_bmap(void *jent, int op)
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
 

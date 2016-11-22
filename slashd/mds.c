@@ -561,8 +561,6 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	}
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
@@ -1266,7 +1264,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_TRUNC_QUEUED] = 1;
 
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
@@ -2028,7 +2025,6 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	/*
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */

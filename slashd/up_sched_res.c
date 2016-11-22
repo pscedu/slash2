@@ -125,8 +125,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
 		goto out;
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	// XXX grab bmap write lock before checking bgen!!!
 
 	// XXX check fgen
@@ -338,7 +336,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
 		BMAP_LOCK(b);
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		BMAP_ULOCK(b);
 	}
@@ -380,7 +377,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		brepls_init_idx(retifset);
 
 		BMAP_LOCK(b);
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
 		if (ret != BREPLST_TRUNC_SCHED)
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
@@ -535,7 +531,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
 	if (rc >= 0) {
@@ -739,8 +734,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
 	/*
@@ -855,8 +848,6 @@ upd_pagein_wk(void *p)
 	}
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	for (i = 0; i < fcmh_2_nrepls(f); i++) {
 		iosid = fcmh_2_repl(f, i);
 		res = libsl_id2res(iosid);
@@ -1052,7 +1043,6 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	BMAP_LOCK(b);
 
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 	if (rc) {
 		OPSTAT_INCR("bmap-requeue-replay");
