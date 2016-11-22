@@ -133,7 +133,7 @@ slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slmctl_resfieldi_disable_lease(int fd, struct psc_ctlmsghdr *mh,
+slmctl_resfieldi_disable_write(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -215,8 +215,7 @@ const struct slctl_res_field slctl_resmds_fields[] = {
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "batchno",		slmctl_resfieldi_batchno },
-	{ "disable_lease",	slmctl_resfieldi_disable_lease },
-	{ "disable_bia",	slmctl_resfieldi_disable_lease },
+	{ "disable_write",	slmctl_resfieldi_disable_write },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
 	{ "preclaim",		slmctl_resfieldi_preclaim },
 	{ "xid",		slmctl_resfieldi_xid },
