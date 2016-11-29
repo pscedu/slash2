@@ -76,6 +76,14 @@ int			slm_conn_debug = 1;
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 
+#define			MIN_SPACE_RESERVE_PCT	10
+
+psc_spinlock_t		slm_min_space_spinlock = SPINLOCK_INIT;
+int			slm_min_space_lastcode;
+struct timespec		slm_min_space_lastcheck;
+int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
+	
+
 static void
 slm_root_attributes(struct srt_stat *attr)
 {
@@ -160,6 +168,35 @@ slm_get_next_slashfid(slfid_t *fidp)
 	psclog_diag("most recently allocated FID: "SLPRI_FID, fid);
 	*fidp = fid;
 	return (0);
+}
+
+int
+slm_rmc_check_capacity(int vfsid)
+{
+	int rc, percentage;
+	struct statvfs sfb;
+	struct timespec now;
+
+	spinlock(&slm_min_space_spinlock);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (now.tv_sec - slm_min_space_lastcheck.tv_sec < 600)
+		goto out;
+	rc = -mdsio_statfs(vfsid, &sfb);
+	if (rc) {
+		freelock(&slm_min_space_spinlock);
+		return (rc);
+	}
+
+	slm_min_space_lastcheck.tv_sec = now.tv_sec;
+	percentage = sfb.f_bavail * 100 / sfb.f_blocks;
+	if (percentage < slm_min_space_reserve_pct)
+		slm_min_space_lastcode = -ENOSPC;
+	else
+		slm_min_space_lastcode = 0;
+ out:
+	rc = slm_min_space_lastcode;
+	freelock(&slm_min_space_spinlock);
+	return (rc);
 }
 
 int
@@ -586,6 +623,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		return (0);
+
+	mp->rc = slm_rmc_check_capacity(vfsid);
+	if (mp->rc)
+		return (0);
+
 	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
 }
 
@@ -657,6 +699,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+
+	mp->rc = slm_rmc_check_capacity(vfsid);
+	if (mp->rc)
+		return (0);
 
 #if 0
 	if (strcmp(mq->name, ".sconsign.dblite") == 0)
