@@ -413,6 +413,8 @@ extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;
 
+extern int			 slm_min_space_reserve_pct;
+
 extern struct psc_hashtbl	 slm_roots;
 
 extern int			 debug_ondisk_inode;
