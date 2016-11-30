@@ -3534,7 +3534,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3720,7 +3720,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
