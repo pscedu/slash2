@@ -5282,3 +5282,43 @@ Two new features:
 
  * sliod can request to push its replica of all files for decommision purpose (no client involvement).
  * subtree mount (this allows a VM to have root permission) - From Bob (an upcoming lustre feature).
+
+12/01/2016
+----------
+
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=/dev/zero of=bigfile1.data bs=1M count=20480
+20480+0 records in
+20480+0 records out
+21474836480 bytes (21 GB) copied, 228.453 s, 94.0 MB/s
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=/dev/zero of=bigfile2.data bs=1M count=20480
+20480+0 records in
+20480+0 records out
+21474836480 bytes (21 GB) copied, 182.847 s, 117 MB/s
+
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=bigfile1.data of=/dev/zero bs=1M
+20480+0 records in
+20480+0 records out
+21474836480 bytes (21 GB) copied, 432.704 s, 49.6 MB/s
+zhihui@yuzu: /zzh-slash2/zhihui$ dd if=bigfile2.data of=/dev/zero bs=1M
+20480+0 records in
+20480+0 records out
+21474836480 bytes (21 GB) copied, 424.495 s, 50.6 MB/s
+
+A read performance regression.
+
+zhihui@yuzu: ~/projects-yuzu/slash2/msctl$ ./msctl -r /zzh-slash2/zhihui/bigfile1.data 
+file-replication-status                                     #valid  #bmap   %res
+================================================================================
+/zzh-slash2/zhihui/bigfile1.data                  new-bmap-repl-policy: one-time
+  lime@PSC                                                     160    160   100%
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+zhihui@yuzu: ~/projects-yuzu/slash2/msctl$ ./msctl -r /zzh-slash2/zhihui/bigfile2.data 
+file-replication-status                                     #valid  #bmap   %res
+================================================================================
+/zzh-slash2/zhihui/bigfile2.data                  new-bmap-repl-policy: one-time
+  lemon@PSC                                                     90    160 56.25%
+    ++----++++---++-++-+++-+++++++---+-++++-++++-+--+++++--+++----+-+--+-+-+++--++-+--++-+-+--++-++-+-+-++--+++-+-+++-+-+++-+--+----++-+--+++--+--++-----++++-+-+-++
+  lime@PSC                                                      70    160 43.75%
+    --++++----+++--+--+---+-------+++-+----+----+-++-----++---++++-+-++-+-+---++--+-++--+-+-++--+--+-+-+--++---+-+---+-+---+-++-++++--+-++---++-++--+++++----+-+-+--
+
+
