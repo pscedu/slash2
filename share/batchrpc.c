@@ -768,7 +768,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		/*
  		 * XXX only works for single thread, Otherwise, two
- 		 * threads might try to send the send batch request.
+ 		 * threads might try to send the same batch request.
  		 */
 		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
 		if (!trylock(&bq->bq_lock)) {
