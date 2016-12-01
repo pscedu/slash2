@@ -12,10 +12,10 @@ set pref_mds="orange@PSC";
 
 site @PSC {
 	site_id		= 0x123;
-	site_desc	= "PSC MDS";
+	site_desc	= "PSC Test MDS";
    	fsuuid		= 0x1234567812345678;
 	resource orange {
-		desc	= "PSC TestMDS orange";
+		desc	= "PSC Test MDS orange";
 		type	= mds;
 		id	= 0x11;
   		nids	= 128.182.99.28;
