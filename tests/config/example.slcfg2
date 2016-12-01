@@ -1,0 +1,44 @@
+# See slash.conf(5) for more information.
+
+# Global network config
+set port=1000;
+set net=tcp10;
+
+set pref_mds="orange@PSC";
+
+#
+#  You must specify the right MDS when you start an IOS!
+#
+
+site @PSC {
+	site_id		= 0x123;
+	site_desc	= "PSC Test MDS";
+   	fsuuid		= 0x1234567812345678;
+	resource orange {
+		desc	= "PSC Test MDS orange";
+		type	= mds;
+		id	= 0x11;
+  		nids	= 128.182.99.28;
+		journal = /dev/disk/by-id/ata-ST3750640AS_3QD06Q3E;
+	}
+	resource lime {
+		desc	= "PSC Test I/O node";
+		type	= standalone_fs;
+		id	= 0x26;
+ 		nids	= 128.182.99.27;
+		fsroot  = /local/lime/zhihui-s2;
+	}
+	resource lemon {
+		desc	= "PSC Test I/O node";
+		type	= standalone_fs;
+		id	= 0x25;
+ 		nids	= 128.182.99.26;
+		fsroot  = /local/lemon/zhihui-s2;
+	}
+	resource allios {
+		desc	= "all I/O Servers";
+		type	= cluster_noshare_lfs;
+		id	= 0x1fff;
+		ios	= lime, lemon;
+	}
+}
