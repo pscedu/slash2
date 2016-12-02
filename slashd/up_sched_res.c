@@ -865,9 +865,10 @@ upd_pagein_wk(void *p)
 		OPSTAT_INCR("upsch-no-invalid");
 	}
 	if (valid && mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
+	    REPL_WALKF_SCIRCUIT)) {
+		OPSTAT_INCR("upsch-enqueue-work");
 		upsch_enqueue(bmap_2_upd(b));
-	else {
+	} else {
 		OPSTAT_INCR("upsch-no-work");
 		rc = 1;
 	}
