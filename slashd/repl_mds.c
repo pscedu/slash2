@@ -1055,15 +1055,16 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		src_total = is->si_repl_ingress_pending + 
-		    is->si_repl_egress_pending + amt;
-		dst_total = is->si_repl_ingress_pending + 
-		    is->si_repl_egress_pending + amt;
-
-		if ((src_total > cap * BW_UNITSZ) || 
-		     dst_total > cap * BW_UNITSZ) { 
-			ret = 0;
-			goto out;
+		if (cap) {
+			src_total = is->si_repl_ingress_pending + 
+			    is->si_repl_egress_pending + amt;
+			dst_total = is->si_repl_ingress_pending + 
+			    is->si_repl_egress_pending + amt;
+			if ((src_total > cap * BW_UNITSZ) || 
+			     dst_total > cap * BW_UNITSZ) { 
+				ret = 0;
+				goto out;
+			}
 		}
 		is->si_repl_egress_pending += amt;
 		id->si_repl_ingress_pending += amt;
