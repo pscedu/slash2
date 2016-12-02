@@ -1109,6 +1109,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	freelock(&slm_upsch_lock);
 	if (!rc) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
+		wk->bno = b->bcm_bmapno;
 		wk->fg.fg_fid = bmap_2_fid(b);
 		pfl_workq_putitem(wk);
 		OPSTAT_INCR("upsch-insert-ok");
