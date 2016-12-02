@@ -86,7 +86,7 @@ struct psc_listcache     slm_upsch_queue;
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
 int	slm_upsch_page_interval = 600;
-int	slm_upsch_batch_size = 128;
+int	slm_upsch_batch_size = 512;
 
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
