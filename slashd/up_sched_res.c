@@ -233,6 +233,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	dst_resm = res_getmemb(dst_res);
 	f = b->bcm_fcmh;
 
+	OPSTAT_INCR("repl");
 	amt = slm_bmap_calc_repltraffic(b);
 	if (amt == 0) {
 		/* No data in this bmap; simply mark as replicated. */
