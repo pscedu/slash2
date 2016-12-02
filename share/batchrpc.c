@@ -67,8 +67,8 @@ void
 slrpc_batch_req_ctor(struct slrpc_batch_req *bq)
 {
     	struct slrpc_batch_rep_handler *h = bq->bq_handler;
-	bq->bq_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_qlen);
-	bq->bq_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_plen);
+	bq->bq_reqbuf = PSCALLOC(bq->bq_size * h->bph_qlen);
+	bq->bq_repbuf = PSCALLOC(bq->bq_size * h->bph_plen);
 }
 
 void
@@ -82,8 +82,8 @@ void
 slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
 {
     	struct slrpc_batch_req_handler *h = bp->bp_handler;
-	bp->bp_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_qlen);
-	bp->bp_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_plen);
+	bp->bp_reqbuf = PSCALLOC(bp->bp_cnt * h->bqh_qlen);
+	bp->bp_repbuf = PSCALLOC(bp->bp_cnt * h->bqh_plen);
 }
 
 void
@@ -475,6 +475,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	bp = psc_pool_get(slrpc_batch_rep_pool);	/* batch-rep */
 	memset(bp, 0, sizeof(*bp));
 	bp->bp_handler = h;
+	bp->bp_cnt = mq->cnt;
 	slrpc_batch_rep_ctor(bp);
 
 	iov.iov_len = mq->len;
@@ -635,7 +636,7 @@ int
 slrpc_batch_req_add(struct sl_resource *dst_res,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
     int32_t opc, int rcvptl, int sndptl, void *buf, int len,
-    void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
+    void *scratch, struct slrpc_batch_rep_handler *handler, int expire, int size)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 
@@ -644,6 +645,9 @@ slrpc_batch_req_add(struct sl_resource *dst_res,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	int rc = 0;
+
+	if (size > SLRPC_BATCH_MAX_COUNT)
+		size = SLRPC_BATCH_MAX_COUNT;
 
 	psc_assert(handler->bph_qlen == len);
 
@@ -699,6 +703,7 @@ retry:
 
 	newbq = psc_pool_get(slrpc_batch_req_pool);
 	memset(newbq, 0, sizeof(*newbq));
+	newbq->bq_size = size;
 	newbq->bq_handler = handler;
 	slrpc_batch_req_ctor(newbq);
 
@@ -725,6 +730,7 @@ retry:
 
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
 	bq->bq_reqlen += len;
+	mq->cnt++;
 	mq->len += len;
 	psc_dynarray_add(&bq->bq_scratch, scratch);
 
@@ -736,8 +742,8 @@ retry:
 	 * of the same size.
 	 */
 	bq->bq_cnt++;
-	psc_assert(bq->bq_cnt <= SLRPC_BATCH_MAX_COUNT);
-	if (bq->bq_cnt == SLRPC_BATCH_MAX_COUNT) {
+	psc_assert(bq->bq_cnt <= bq->bq_size);
+	if (bq->bq_cnt == bq->bq_size) {
 		OPSTAT_INCR("batch-send-full");
 		slrpc_batch_req_send(bq);
 	} else

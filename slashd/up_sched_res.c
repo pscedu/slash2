@@ -86,6 +86,7 @@ struct psc_listcache     slm_upsch_queue;
 int	slm_upsch_repl_expire = 5;
 int	slm_upsch_preclaim_expire = 30;
 int	slm_upsch_page_interval = 600;
+int	slm_upsch_batch_size = 128;
 
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
@@ -304,7 +305,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_hipri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
-	    &slm_batch_rep_repl, slm_upsch_repl_expire);
+	    &slm_batch_rep_repl, slm_upsch_repl_expire, 
+	    slm_upsch_batch_size);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -596,7 +598,8 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	rc = slrpc_batch_req_add(r,
 	    &slm_db_hipri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
-	    &slm_batch_rep_preclaim, slm_upsch_preclaim_expire);
+	    &slm_batch_rep_preclaim, slm_upsch_preclaim_expire, 
+	    slm_upsch_batch_size);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = mds_bmap_write_logrepls(b);

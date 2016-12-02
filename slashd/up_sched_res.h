@@ -36,6 +36,7 @@
 
 #define UPSCH_PAGEIN_BATCH	128
 
+extern int slm_upsch_batch_size;
 extern int slm_upsch_repl_expire;
 extern int slm_upsch_preclaim_expire;
 extern int slm_upsch_page_interval;

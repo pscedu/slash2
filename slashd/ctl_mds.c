@@ -610,6 +610,9 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register_simple("sys.upsch",
 	    slmctlparam_upsch_get, NULL);
 
+	psc_ctlparam_register_var("sys.upsch_batch_size",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
+
 	psc_ctlparam_register_var("sys.upsch_page_interval",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_page_interval);
 

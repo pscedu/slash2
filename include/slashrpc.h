@@ -211,7 +211,7 @@ struct srm_batch_req {
 	 int32_t		opc;
 	 int32_t		rc;		/* for BATCH_RP */
 	 int32_t		len;
-	 int32_t		_pad;
+	 int32_t		cnt;
 /* bulk data is array of user-defined entries */
 };
 
