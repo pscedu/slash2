@@ -50,7 +50,7 @@ ulimit -c $((1024 * 1024 * 1024 * 100))
 
 # For mmap-based page cache buffers
 
-sysctl vm.max_map_count=655300 > /dev/null
+/usr/sbin/sysctl vm.max_map_count=655300 > /dev/null
 
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG_info=1
