@@ -44,6 +44,7 @@
  * A single failure will doom the entire batch. So a larger number
  * may not be always good.
  */
+#define	SLRPC_BATCH_MIN_COUNT		4
 #define	SLRPC_BATCH_MAX_COUNT		4096
 
 struct psc_listcache;
