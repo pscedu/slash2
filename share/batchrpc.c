@@ -662,6 +662,11 @@ retry:
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
 		}
+		if (bq->bq_cnt == bq->bq_size) {
+			OPSTAT_INCR("batch-req-full");
+			freelock(&bq->bq_lock);
+			continue;
+		}
 		if ((bq->bq_res == dst_res) && (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*
@@ -745,11 +750,7 @@ retry:
 	 */
 	bq->bq_cnt++;
 	psc_assert(bq->bq_cnt <= bq->bq_size);
-	if (bq->bq_cnt == bq->bq_size) {
-		OPSTAT_INCR("batch-send-full");
-		slrpc_batch_req_send(bq);
-	} else
-		freelock(&bq->bq_lock);
+	freelock(&bq->bq_lock);
 
 	if (newbq) {
 		OPSTAT_INCR("batch-req-free");
@@ -770,6 +771,7 @@ retry:
 void
 slrpc_batch_thr_main(struct psc_thread *thr)
 {
+	int sendit;
 	struct timeval now, stall;
 	struct slrpc_batch_req *bq;
 
@@ -778,6 +780,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  		 * XXX only works for single thread, Otherwise, two
  		 * threads might try to send the same batch request.
  		 */
+		sendit = 0;
 		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
 		if (!trylock(&bq->bq_lock)) {
 			pscthr_yield();
@@ -788,11 +791,19 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			pscthr_yield();
 			continue;
 		}
+		if (bq->bq_cnt == bq->bq_size) {
+			sendit = 1;
+			OPSTAT_INCR("batch-send-full");
+		}
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &bq->bq_expire, >=)) {
-			slrpc_batch_req_send(bq);
+			sendit = 1;
 			OPSTAT_INCR("batch-send-expire");
-		} else {
+		}
+
+		if (sendit)
+			slrpc_batch_req_send(bq);
+		else {
 			timersub(&bq->bq_expire, &now, &stall);
 			freelock(&bq->bq_lock);
 
