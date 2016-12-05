@@ -772,47 +772,54 @@ retry:
 void
 slrpc_batch_thr_main(struct psc_thread *thr)
 {
-	int sendit;
+	int sendit, first;
 	struct timeval now, stall;
-	struct slrpc_batch_req *bq;
+	struct slrpc_batch_req *bq, *bq_next;
 
 	while (pscthr_run(thr)) {
 		/*
  		 * XXX only works for single thread, Otherwise, two
  		 * threads might try to send the same batch request.
  		 */
+		first = 1;
 		sendit = 0;
-		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
-		if (!trylock(&bq->bq_lock)) {
-			pscthr_yield();
-			continue;
-		}
-		if (!bq->bq_cnt) {
-			freelock(&bq->bq_lock);
-			pscthr_yield();
-			continue;
-		}
-		if (bq->bq_cnt == bq->bq_size) {
-			sendit = 1;
-			OPSTAT_INCR("batch-send-full");
-		}
-		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &bq->bq_expire, >=)) {
-			sendit = 1;
-			OPSTAT_INCR("batch-send-expire");
-		}
+		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
+		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
+			if (!trylock(&bq->bq_lock)) {
+				pscthr_yield();
+				continue;
+			}
+			if (!bq->bq_cnt) {
+				freelock(&bq->bq_lock);
+				pscthr_yield();
+				continue;
+			}
+			if (bq->bq_cnt == bq->bq_size) {
+				sendit = 1;
+				OPSTAT_INCR("batch-send-full");
+			}
+			PFL_GETTIMEVAL(&now);
+			if (timercmp(&now, &bq->bq_expire, >=)) {
+				sendit = 1;
+				OPSTAT_INCR("batch-send-expire");
+			}
 
-		if (sendit)
-			slrpc_batch_req_send(bq);
-		else {
-			timersub(&bq->bq_expire, &now, &stall);
+			if (sendit) {
+				slrpc_batch_req_send(bq);
+				continue;
+			}
+			if (first) {
+				first = 0;
+				timersub(&bq->bq_expire, &now, &stall);
+			}
 			freelock(&bq->bq_lock);
 
-			OPSTAT_INCR("batch-send-wait");
-			OPSTAT_ADD("batch-send-wait-usec", 
-			    stall.tv_sec * 1000 * 1000L + stall.tv_usec);
-			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
 		}
+		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+		OPSTAT_INCR("batch-send-wait");
+		OPSTAT_ADD("batch-send-wait-usec", 
+		    stall.tv_sec * 1000 * 1000L + stall.tv_usec);
+		psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
 	}
 }
 

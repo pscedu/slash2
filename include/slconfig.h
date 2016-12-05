@@ -76,6 +76,7 @@ struct sl_resource {
 	struct pfl_hashentry	 res_hentry;
 
 	sl_ios_id_t		 res_id;
+	int			 res_batchcnt;
 	int			 res_offset;
 	int			 res_flags;	/* see RESF_* below */
 	enum sl_res_type	 res_type;
