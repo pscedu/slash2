@@ -646,6 +646,8 @@ slrpc_batch_req_add(struct sl_resource *dst_res,
 	struct srm_batch_rep *mp;
 	int rc = 0;
 
+	if (size < SLRPC_BATCH_MIN_COUNT)
+		size = SLRPC_BATCH_MIN_COUNT;
 	if (size > SLRPC_BATCH_MAX_COUNT)
 		size = SLRPC_BATCH_MAX_COUNT;
 
