@@ -776,7 +776,7 @@ retry:
 void
 slrpc_batch_thr_main(struct psc_thread *thr)
 {
-	int sendit, first;
+	int sendit, skip;
 	struct timeval now, stall;
 	struct sl_resource *res;
 	struct slrpc_batch_req *bq, *bq_next;
@@ -786,13 +786,16 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  		 * XXX only works for single thread, Otherwise, two
  		 * threads might try to send the same batch request.
  		 */
-		first = 1;
+		skip = 0;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
-			if (!trylock(&bq->bq_lock))
+			if (!trylock(&bq->bq_lock)) {
+				skip++;
 				continue;
+			}
 			if (!bq->bq_cnt) {
 				freelock(&bq->bq_lock);
+				skip++;
 				continue;
 			}
 			sendit = 0;
@@ -806,27 +809,29 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				OPSTAT_INCR("batch-send-expire");
 			}
 			if (!sendit) {
-				if (first) {
-					first = 0;
-					timersub(&bq->bq_expire, &now, &stall);
-				}
 				freelock(&bq->bq_lock);
+				skip++;
 				continue;
 			}
 			res = bq->bq_res;
 			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
 				freelock(&bq->bq_lock);
-				OPSTAT_INCR("batch-send-throttl");
+				OPSTAT_INCR("batch-send-throttle");
+				skip++;
 				continue;
 			}
 			psc_atomic32_inc(&res->res_batchcnt);
 			slrpc_batch_req_send(bq);
 		}
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
-		OPSTAT_INCR("batch-send-wait");
-		OPSTAT_ADD("batch-send-wait-usec", 
-		    stall.tv_sec * 1000 * 1000L + stall.tv_usec);
-		psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
+		if (skip) {
+			OPSTAT_INCR("batch-send-wait");
+			stall.tv_sec = 1; 
+			stall.tv_usec = 0; 
+			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
+			continue;
+		} 
+		lc_peekheadwait(&slrpc_batch_req_delayed);
 	}
 }
 
