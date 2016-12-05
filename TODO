@@ -5322,3 +5322,4 @@ file-replication-status                                     #valid  #bmap   %res
     --++++----+++--+--+---+-------+++-+----+----+-++-----++---++++-+-++-+-+---++--+-++--+-+-++--+--+-+-+--++---+-+---+-+---+-++-++++--+-++---++-++--+++++----+-+-+--
 
 
+This might have something to do with vm.max_map_count setting.
