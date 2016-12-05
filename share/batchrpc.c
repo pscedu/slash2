@@ -782,7 +782,6 @@ slrpc_batch_thr_main(struct psc_thread *thr)
  		 * threads might try to send the same batch request.
  		 */
 		first = 1;
-		sendit = 0;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
 			if (!trylock(&bq->bq_lock)) {
@@ -794,6 +793,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				pscthr_yield();
 				continue;
 			}
+			sendit = 0;
 			if (bq->bq_cnt == bq->bq_size) {
 				sendit = 1;
 				OPSTAT_INCR("batch-send-full");
