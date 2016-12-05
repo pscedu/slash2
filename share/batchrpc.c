@@ -105,6 +105,7 @@ void
 slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_batch_rep_handler *h;
+	struct sl_resource *res;
 	char *q, *p, *scratch;
 	int i, n;
 
@@ -146,6 +147,9 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		    scratch, -bq->bq_rc);
 		PSCFREE(scratch);
 	}
+	res = bq->bq_res;
+	psc_assert(psc_atomic32_read(&res->res_batchcnt) >= 1);
+	psc_atomic32_dec(&res->res_batchcnt);
 
 	psc_dynarray_free(&bq->bq_scratch);
 	slrpc_batch_req_dtor(bq);
@@ -774,6 +778,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 {
 	int sendit, first;
 	struct timeval now, stall;
+	struct sl_resource *res;
 	struct slrpc_batch_req *bq, *bq_next;
 
 	while (pscthr_run(thr)) {
@@ -784,13 +789,15 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 		first = 1;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
-			if (!trylock(&bq->bq_lock)) {
-				pscthr_yield();
+			if (!trylock(&bq->bq_lock))
 				continue;
-			}
 			if (!bq->bq_cnt) {
 				freelock(&bq->bq_lock);
-				pscthr_yield();
+				continue;
+			}
+			res = bq->bq_res;
+			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
+				freelock(&bq->bq_lock);
 				continue;
 			}
 			sendit = 0;
