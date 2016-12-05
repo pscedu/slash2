@@ -782,10 +782,6 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 	struct slrpc_batch_req *bq, *bq_next;
 
 	while (pscthr_run(thr)) {
-		/*
- 		 * XXX only works for single thread, Otherwise, two
- 		 * threads might try to send the same batch request.
- 		 */
 		skip = 0;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
