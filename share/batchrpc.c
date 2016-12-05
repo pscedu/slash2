@@ -795,11 +795,6 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				freelock(&bq->bq_lock);
 				continue;
 			}
-			res = bq->bq_res;
-			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
-				freelock(&bq->bq_lock);
-				continue;
-			}
 			sendit = 0;
 			if (bq->bq_cnt == bq->bq_size) {
 				sendit = 1;
@@ -810,17 +805,21 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				sendit = 1;
 				OPSTAT_INCR("batch-send-expire");
 			}
-
-			if (sendit) {
-				slrpc_batch_req_send(bq);
+			if (!sendit) {
+				if (first) {
+					first = 0;
+					timersub(&bq->bq_expire, &now, &stall);
+				}
+				freelock(&bq->bq_lock);
 				continue;
 			}
-			if (first) {
-				first = 0;
-				timersub(&bq->bq_expire, &now, &stall);
+			res = bq->bq_res;
+			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
+				freelock(&bq->bq_lock);
+				continue;
 			}
-			freelock(&bq->bq_lock);
-
+			psc_atomic32_inc(&res->res_batchcnt);
+			slrpc_batch_req_send(bq);
 		}
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 		OPSTAT_INCR("batch-send-wait");
