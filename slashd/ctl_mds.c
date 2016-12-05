@@ -384,6 +384,10 @@ slmctlparam_execute_set(const char *val)
 		rc = -errno;
 	else if (WIFEXITED(rc))
 		rc = WEXITSTATUS(rc);
+	/*
+ 	 * rc = 127 means "command not found", which means possible 
+ 	 * problem with $PATH or a typo.
+ 	 */
 	psclog(PLL_WARN, "Executed command %s, rc = %d", cmdbuf, rc);
 	if (rc) {
 		cmdbuf[0] = 'N';
