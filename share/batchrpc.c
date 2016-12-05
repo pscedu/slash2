@@ -691,7 +691,6 @@ retry:
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
 		lc_add_sorted(&slrpc_batch_req_delayed, bq, bq_cmp);
-		psc_waitq_wakeone(&slrpc_expire_waitq);
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 		OPSTAT_INCR("batch-req-new");
 		goto retry;
@@ -750,6 +749,8 @@ retry:
 	 */
 	bq->bq_cnt++;
 	psc_assert(bq->bq_cnt <= bq->bq_size);
+	if (bq->bq_cnt == bq->bq_size)
+		psc_waitq_wakeone(&slrpc_expire_waitq);
 	freelock(&bq->bq_lock);
 
 	if (newbq) {
