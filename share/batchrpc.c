@@ -816,6 +816,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			res = bq->bq_res;
 			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
 				freelock(&bq->bq_lock);
+				OPSTAT_INCR("batch-send-throttl");
 				continue;
 			}
 			psc_atomic32_inc(&res->res_batchcnt);
