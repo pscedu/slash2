@@ -684,7 +684,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_exp_cli *expc;
 	struct sl_resm_nid *nr;
 	lnet_process_id_t *pp;
-	int i, j;
+	int i, j, new = 0;
 	uint64_t delta;
 
 	if (peertype != SLCONNT_CLI && 
@@ -765,11 +765,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_magic = magic;
 
 	/* publish new csvc */
+	new = 1;
 	*csvcp = csvc;
-	psclog_diag("new csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
+
+	psclog_diag("%s csvc = %p, refcnt = %d", 
+	    new ? "create" : "reuse",  csvc, csvc->csvc_refcnt);
 
 	CSVC_LOCK(csvc);
 	psc_assert(csvc->csvc_peertype == peertype);
