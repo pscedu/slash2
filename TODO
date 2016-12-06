@@ -5323,3 +5323,56 @@ file-replication-status                                     #valid  #bmap   %res
 
 
 This might have something to do with vm.max_map_count setting.
+
+
+12/06/2016
+----------
+
+[zhihui@br011 ~]$ slmctl -p sys.version
+parameter                                               value
+================================================================================
+sys.version                                             42677
+
+(gdb) p peertype
+$5 = SLCONNT_CLI
+(gdb) p *exp
+$6 = {exp_lock = {psl_value = {value32 = 2}, psl_flags = 0, psl_owner_lineno = 1191, 
+    psl_owner_file = 0x78b380 "/opt/packages/slash2/mds/p/slash2/share/rpc_common.c", psl_owner = 0}, exp_handle = {cookie = 0}, 
+  exp_refcount = {value32 = 1}, exp_rpc_count = {value32 = 0}, exp_connection = 0x2ae6480051a0, exp_failed = 0, 
+  exp_hldropf = 0x5ad035 <sl_exp_hldrop_cli>, exp_private = 0x2ae6480052a0, exp_lentry = {plh_next = 0x0, plh_prev = 0x0, 
+    plh_magic = 1311693406324658740, plh_owner = 0x0}}
+(gdb) bt
+#0  0x00002ae2a94305f7 in raise () from /lib64/libc.so.6
+#1  0x00002ae2a9431ce8 in abort () from /lib64/libc.so.6
+#2  0x0000000000622a0c in pfl_abort () at /opt/packages/slash2/mds/p/pfl/init.c:106
+#3  0x0000000000639d71 in _psclogv (pci=0x2ae620000920, level=0, options=0, fmt=0x79711b "[assert] %s", ap=0x2ae60d402e90)
+    at /opt/packages/slash2/mds/p/pfl/log.c:492
+#4  0x0000000000639f40 in _psc_fatal (pci=0x2ae620000920, level=0, options=0, fmt=0x79711b "[assert] %s")
+    at /opt/packages/slash2/mds/p/pfl/log.c:522
+#5  0x000000000062de3f in _psclist_add (e=0x2ae5f8006b38, prev=0x2ae5f8006b38, next=0x2ae5f80069e8)
+    at /opt/packages/slash2/mds/p/pfl/list.h:148
+#6  0x000000000062eb18 in psclist_add_sorted (hd=0xa50de0 <sl_clients>, e=0x2ae5f8006b38, cmpf=0x5a6f23 <csvc_cli_cmp>, offset=120)
+    at /opt/packages/slash2/mds/p/pfl/list.h:528
+#7  0x00000000006340a4 in pll_add_sorted (pll=0xa50de0 <sl_clients>, p=0x2ae5f8006ac0, cmpf=0x5a6f23 <csvc_cli_cmp>)
+    at /opt/packages/slash2/mds/p/pfl/lockedlist.c:148
+#8  0x00000000005a9e5a in _sl_csvc_get (pci=0x2ae620000920, csvcp=0x2ae6480052a0, flags=0, exp=0x2ae648005590, peernids=0x0, 
+    rqptl=25, rpptl=26, magic=12302652060662169685, version=1, peertype=SLCONNT_CLI, mw=0x0)
+    at /opt/packages/slash2/mds/p/slash2/share/rpc_common.c:928
+#9  0x00000000004606bf in _slm_getclcsvc (pci=0x2ae620000920, exp=0x2ae648005590) at rpc_mds.h:125
+#10 0x0000000000462272 in mdscoh_req (bml=0x7ef9ce0) at /opt/packages/slash2/mds/p/slash2/slashd/coh.c:146
+#11 0x0000000000507baf in mds_bmap_directio (b=0x788fd80, rw=SL_READ, want_dio=0, np=0x7f025c0)
+    at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:220
+#12 0x000000000051261f in mds_bmap_bml_add (bml=0x7f025b0, rw=SL_READ, prefios=270335)
+    at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:938
+#13 0x0000000000521a2b in mds_bmap_load_cli (f=0x2673ef0, bmapno=0, lflags=2, rw=SL_READ, prefios=270335, sbd=0x2ae620005978, 
+    exp=0x2ae5e0003090, repls=0x2ae6200059b0 "", new=0) at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:1719
+#14 0x0000000000586985 in slm_rmc_handle_getbmap (rq=0x8530280) at /opt/packages/slash2/mds/p/slash2/slashd/rmc.c:376
+#15 0x0000000000592b5b in slm_rmc_handler (rq=0x8530280) at /opt/packages/slash2/mds/p/slash2/slashd/rmc.c:1842
+#16 0x00000000005e3b09 in pscrpc_server_handle_request (svc=0x845a840, thread=0x8662210)
+    at /opt/packages/slash2/mds/p/pfl/service.c:394
+#17 0x00000000005e6f8c in pscrpcthr_main (thr=0x8662210) at /opt/packages/slash2/mds/p/pfl/service.c:750
+#18 0x00000000006597e9 in _pscthr_begin (arg=0x7ffeada664c0) at /opt/packages/slash2/mds/p/pfl/thread.c:332
+#19 0x00002ae2a91e6dc5 in start_thread () from /lib64/libpthread.so.0
+#20 0x00002ae2a94f128d in clone () from /lib64/libc.so.6
+(gdb) 
+
