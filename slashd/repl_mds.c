@@ -70,6 +70,9 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
 /*
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
+ *
+ * We have the ability to throttle at batch RPC layer. So disable this
+ * for now.
  */
 int slm_upsch_bandwidth = 0;		/* used to be 1024 */
 
