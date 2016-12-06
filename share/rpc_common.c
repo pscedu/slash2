@@ -521,12 +521,11 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 
 	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
 
-	CSVC_ULOCK(csvc);
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
-		CONF_LOCK();
+		csvc->csvc_flags &= ~CSVCF_ONLIST;
 		pll_remove(&sl_clients, csvc);
-		CONF_ULOCK();
 	}
+	CSVC_ULOCK(csvc);
 
 	/*
 	 * Due to the nature of non-blocking CONNECT,
@@ -927,8 +926,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	sl_csvc_online(csvc);
 
-	if (peertype == SLCONNT_CLI)
+	if (peertype == SLCONNT_CLI) {
+		csvc->csvc_flags |= CSVCF_ONLIST;
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
+	}
  out2:
 
 	if (!success) {
