@@ -879,17 +879,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	 */
 	rc = ENETUNREACH;
 	DYNARRAY_FOREACH(nr, i, peernids) {
-		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
-			if (LNET_NIDNET(nr->resmnid_nid) ==
-			    LNET_NIDNET(pp->nid)) {
-				rc = slrpc_issue_connect(
-				    pp->nid, nr->resmnid_nid,
-				    csvc, flags, mw, stkversp, 
-				    uptimep);
-				if (rc == 0 || rc == EWOULDBLOCK)
-					goto proc_conn;
-			}
+	    DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
+		if (LNET_NIDNET(nr->resmnid_nid) == LNET_NIDNET(pp->nid)) {
+			rc = slrpc_issue_connect( pp->nid, nr->resmnid_nid,
+			    csvc, flags, mw, stkversp, uptimep);
+			if (rc == 0 || rc == EWOULDBLOCK)
+				goto proc_conn;
 		}
+	    }
 	}
 
  proc_conn:
@@ -926,7 +923,12 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	sl_csvc_online(csvc);
 
-	if (peertype == SLCONNT_CLI) {
+	/*
+ 	 * In theory, a client csvc should go away once it is not online.
+ 	 * Apparently, there is a race condition somewhere that has caused
+ 	 * trouble on our production system. Hence CSVCF_ONLIST.
+ 	 */
+	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
 	}
