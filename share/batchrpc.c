@@ -523,7 +523,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 }
 
 /*
- * Handle a BATCHRP (i.e. a reply to a BATCHRQ) that arrives after a
+ * Handle a BATCHRP (i.e., a reply to a BATCHRQ) that arrives after a
  * recipient of a BATCHRQ is done processing the contents and sends us
  * a response indicating success/failure.
  *
