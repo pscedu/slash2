@@ -939,8 +939,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
 	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
-	psc_ctlparam_register_var("pid", PFLCTL_PARAMT_INT, 0,
-	    &pfl_pid);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
