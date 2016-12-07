@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "pfl/alloc.h"
+#include "pfl/ctl.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
 #include "pfl/opstats.h"
@@ -53,6 +54,8 @@ static struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
 static struct psc_waitq		 slrpc_expire_waitq = PSC_WAITQ_INIT("expire");
 
+static int			 slrpc_batch_max_inflight = 1;
+
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
 	int			 rc;
@@ -62,6 +65,25 @@ struct slrpc_wkdata_batch_rep {
 	struct slrpc_batch_rep	*bp;
 	int			 rc;
 };
+
+void
+slrcp_batch_set_max_inflight(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", slrpc_batch_max_inflight);
+}
+
+int
+slrcp_batch_get_max_inflight(char *val)
+{
+	int rc, temp;
+
+	temp = strtol(val, NULL, 0);
+	if (temp < 1)
+		rc = -1;
+	else
+		slrpc_batch_max_inflight = temp;
+	return (rc);
+}
 
 void
 slrpc_batch_req_ctor(struct slrpc_batch_req *bq)
