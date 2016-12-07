@@ -88,7 +88,7 @@ void *
 msl_pgcache_get(int wait)
 {
 	void *p;
-	static int warned = 0;
+	static int warned = 0, failed = 0;
 
 	p = lc_getnb(&page_buffers);
 	if (p)
@@ -105,13 +105,15 @@ msl_pgcache_get(int wait)
 			LIST_CACHE_ULOCK(&page_buffers);
 			return (p);
 		}
-		if (warned < 3) {
-			warned++;
-			psclog_warnx("Please check vm.max_map_count");
-		}
+		failed = 1;
 		OPSTAT_INCR("mmap-failure");
 	}
 	LIST_CACHE_ULOCK(&page_buffers);
+
+	if (failed && warned < 3) {
+		warned++;
+		psclog_warnx("Please raise vm.max_map_count for performance");
+	}
 
 	if (wait)
 		p = lc_getwait(&page_buffers);
