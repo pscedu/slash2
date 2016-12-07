@@ -807,10 +807,8 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 		skip = 0;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
 		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
-			if (!trylock(&bq->bq_lock)) {
-				skip++;
+			if (!trylock(&bq->bq_lock))
 				continue;
-			}
 			if (!bq->bq_cnt) {
 				freelock(&bq->bq_lock);
 				skip++;
