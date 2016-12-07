@@ -362,6 +362,9 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 
 	BMAP_LOCK_ENSURE(b);
 	if (tract) {
+		/*
+		 * The caller must set the flag if modifications are made.
+		 */
 		PFL_GETTIMEVAL(&tv1);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		PFL_GETTIMEVAL(&tv2);
