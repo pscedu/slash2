@@ -54,7 +54,7 @@ static struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
 static struct psc_waitq		 slrpc_expire_waitq = PSC_WAITQ_INIT("expire");
 
-static int			 slrpc_batch_max_inflight = 1;
+static int			 slrpc_batch_max_inflight = 2;
 
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
