@@ -83,10 +83,10 @@ struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
-int	slm_upsch_repl_expire = 5;
-int	slm_upsch_preclaim_expire = 30;
+int	slm_upsch_repl_expire = 3;
+int	slm_upsch_preclaim_expire = 20;
 int	slm_upsch_page_interval = 300;
-int	slm_upsch_batch_size = 256;
+int	slm_upsch_batch_size = 128;
 
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;

@@ -67,15 +67,15 @@ struct slrpc_wkdata_batch_rep {
 };
 
 void
-slrcp_batch_set_max_inflight(char *val)
+slrcp_batch_get_max_inflight(char *val)
 {
 	snprintf(val, PCP_VALUE_MAX, "%d", slrpc_batch_max_inflight);
 }
 
 int
-slrcp_batch_get_max_inflight(char *val)
+slrcp_batch_set_max_inflight(char *val)
 {
-	int rc, temp;
+	int rc = 0, temp;
 
 	temp = strtol(val, NULL, 0);
 	if (temp < 1)
