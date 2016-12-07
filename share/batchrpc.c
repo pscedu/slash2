@@ -832,7 +832,8 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				continue;
 			}
 			res = bq->bq_res;
-			if (psc_atomic32_read(&res->res_batchcnt) >= 1) {
+			if (psc_atomic32_read(&res->res_batchcnt) >=
+			    slrpc_batch_max_inflight) { 
 				freelock(&bq->bq_lock);
 				OPSTAT_INCR("batch-send-throttle");
 				skip++;
