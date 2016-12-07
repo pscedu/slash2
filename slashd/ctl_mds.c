@@ -37,6 +37,7 @@
 #include "mdslog.h"
 #include "pathnames.h"
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 #include "slconn.h"
@@ -616,6 +617,9 @@ slmctlthr_spawn(const char *fn)
 
 	psc_ctlparam_register_var("sys.upsch_batch_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
+
+	psc_ctlparam_register_simple("sys.upsch_batch_inflight",
+	    slrcp_batch_get_max_inflight, slrcp_batch_set_max_inflight);
 
 	psc_ctlparam_register_var("sys.upsch_page_interval",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_page_interval);
