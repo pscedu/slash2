@@ -270,18 +270,12 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
 	psc_assert(!(bq->bq_flags & BATCHF_INFL));
-
-	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
-
 	bq->bq_flags |= BATCHF_INFL;
 	bq->bq_flags &= ~BATCHF_DELAY;
+	freelock(&bq->bq_lock);
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
-
-	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
-
-	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
@@ -690,6 +684,11 @@ retry:
 		}
 		if (bq->bq_cnt == bq->bq_size) {
 			OPSTAT_INCR("batch-req-full");
+			freelock(&bq->bq_lock);
+			continue;
+		}
+		if (bq->bq_flags & BATCHF_INFL) {
+			OPSTAT_INCR("batch-req-inflight");
 			freelock(&bq->bq_lock);
 			continue;
 		}
