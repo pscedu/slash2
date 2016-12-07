@@ -418,7 +418,7 @@ slmctlparam_reboots_get(char *val)
 }
 
 int
-slmctlparam_reboots_put(const char *val)
+slmctlparam_reboots_set(const char *val)
 {
 	int rc;
 	void *h;
@@ -597,7 +597,7 @@ slmctlthr_spawn(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
 
 	psc_ctlparam_register_simple("sys.reboots",
-	    slmctlparam_reboots_get, slmctlparam_reboots_put);
+	    slmctlparam_reboots_get, slmctlparam_reboots_set);
 
 	psc_ctlparam_register_var("sys.rpc_timeout",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
