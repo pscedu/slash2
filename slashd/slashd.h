@@ -327,7 +327,7 @@ struct slm_wkdata_upsch_purge {
 };
 
 struct slm_wkdata_upschq {
-	struct sl_fidgen	 fg;
+	slfid_t			 fid;
 	sl_bmapno_t		 bno;
 };
 

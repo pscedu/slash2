@@ -828,7 +828,7 @@ upd_pagein_wk(void *p)
 	sl_ios_id_t iosid;
 	struct sl_resource *res;
 
-	fg.fg_fid = wk->fg.fg_fid;
+	fg.fg_fid = wk->fid;
 	fg.fg_gen = FGEN_ANY;
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
@@ -915,7 +915,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 
 	/* pfl_workrq_pool */
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
-	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	wk->fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
 	psc_dynarray_add(da, wk);
 	return (0);
@@ -1108,7 +1108,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	if (!rc) {
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		wk->bno = b->bcm_bmapno;
-		wk->fg.fg_fid = bmap_2_fid(b);
+		wk->fid = bmap_2_fid(b);
 		pfl_workq_putitem(wk);
 		OPSTAT_INCR("upsch-insert-ok");
 	} else
