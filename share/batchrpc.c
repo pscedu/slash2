@@ -800,12 +800,13 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 	int sendit, skip;
 	struct timeval now, stall;
 	struct sl_resource *res;
-	struct slrpc_batch_req *bq, *bq_next;
+	struct slrpc_batch_req *bq;
 
 	while (pscthr_run(thr)) {
+ again:
 		skip = 0;
 		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
-		LIST_CACHE_FOREACH_SAFE(bq, bq_next, &slrpc_batch_req_delayed) {
+		LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
 			if (!trylock(&bq->bq_lock))
 				continue;
 			if (!bq->bq_cnt) {
@@ -839,8 +840,10 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				skip++;
 				continue;
 			}
+			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			psc_atomic32_inc(&res->res_batchcnt);
 			slrpc_batch_req_send(bq);
+			goto again;
 		}
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 		if (skip) {
