@@ -192,8 +192,12 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
 		mds_bmap_write_logrepls(b);
-	else
-		OPSTAT_INCR("repl-in-vain");
+	else {
+		if (!rc) {
+			OPSTAT_INCR("repl-drop");
+			OPSTAT2_ADD("repl-drop-aggr", bsr->bsr_amt);
+		}
+	}
 
  out:
 	if (b)
