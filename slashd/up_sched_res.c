@@ -146,20 +146,13 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 	if (rc == 0) {
 		/*
- 		 * If a bmap is already marked as GARBAGE, the
- 		 * replication will be done in vain.  See
- 		 * mds_repl_delrq().
+ 		 * Reject bmap in any other state other than the 
+ 		 * expected one. For example, the bmap could be 
+ 		 * marked as GARBAGE by mds_repl_delrq(). If so, 
+ 		 * replication will be done in vain.
  		 */
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
-		/*
- 		 * Wow, we just don't redo the work.
- 		 *
- 		 * If the state of the bmap changes in between, we
- 		 * ignore the work as well.
- 		 */
-		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
-		retifset[BREPLST_REPL_QUEUED] = 1;
 
 		OPSTAT_INCR("repl-success");
 		OPSTAT2_ADD("repl-success-aggr", bsr->bsr_amt);
