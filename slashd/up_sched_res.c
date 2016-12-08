@@ -868,7 +868,7 @@ upd_pagein_wk(void *p)
 		OPSTAT_INCR("upsch-enqueue-work");
 		upsch_enqueue(bmap_2_upd(b));
 	} else {
-		OPSTAT_INCR("upsch-no-work");
+		OPSTAT_INCR("upsch-enqueue-nowork");
 		rc = 1;
 	}
 	BMAP_ULOCK(b);
