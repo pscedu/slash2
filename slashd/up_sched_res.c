@@ -227,6 +227,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
 	int64_t amt;
+	uint64_t sz;
 
 	dst_resm = res_getmemb(dst_res);
 	f = b->bcm_fcmh;
@@ -269,8 +270,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 	/* shorten length if this is the last bmap */
 	if (b->bcm_bmapno == lastbno) {
-		uint64_t sz;
-
 		sz = fcmh_getsize(f);
 		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
@@ -286,8 +285,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	chg = 1;
 
-	if (rc == BREPLST_VALID ||
-	    rc == BREPLST_REPL_SCHED)
+	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
 		DEBUG_BMAP(PLL_FATAL, b,
 		    "invalid bmap replica state [off %d]: %d", off, rc);
 
