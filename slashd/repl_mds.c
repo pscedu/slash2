@@ -641,8 +641,10 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vold != BREPLST_GARBAGE_SCHED &&
 		     vnew == BREPLST_GARBAGE_QUEUED &&
-		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
+		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0)) {
+			OPSTAT_INCR("repl-work-add");
 			PUSH_IOS(b, &add, resid, NULL);
+		}
 
 		/* Work has finished. */
 		else if ((vold == BREPLST_REPL_QUEUED ||
@@ -654,8 +656,10 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&
 		      vnew == BREPLST_GARBAGE_QUEUED) ||
 		     vnew == BREPLST_VALID ||
-		     vnew == BREPLST_INVALID))
+		     vnew == BREPLST_INVALID)) {
+			OPSTAT_INCR("repl-work-del");
 			PUSH_IOS(b, &del, resid, NULL);
+		}
 
 		/*
 		 * Work that was previously scheduled failed so requeue
