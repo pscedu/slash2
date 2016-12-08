@@ -823,7 +823,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 				sendit = 1;
 				OPSTAT_INCR("batch-send-expire");
 			}
-			if (!sendit) {
+			if (!sendit && psc_atomic32_read(&res->res_batchcnt)) {
 				freelock(&bq->bq_lock);
 				skip++;
 				continue;
