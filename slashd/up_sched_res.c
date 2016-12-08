@@ -126,15 +126,16 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
 		goto out;
-	// XXX grab bmap write lock before checking bgen!!!
-
-	// XXX check fgen
-
 	/*
 	 * This check, if needed, does not have to be in the
 	 * permanent storage. With batch RPC in place, if
 	 * the MDS restarts, the batch RPC request will be
 	 * accepted in the first place.
+	 *
+	 * If the file generation number changes in between, 
+	 * its bmap should not be in the expected state, and 
+	 * the replication effort should be rejected at the 
+	 * bmap level.
 	 */
 	BHGEN_GET(b, &bgen);
 	if (!rc && q->bgen != bgen)
