@@ -5376,3 +5376,7 @@ $6 = {exp_lock = {psl_value = {value32 = 2}, psl_flags = 0, psl_owner_lineno = 1
 #20 0x00002ae2a94f128d in clone () from /lib64/libc.so.6
 (gdb) 
 
+12/09/2016
+----------
+
+Make msctl/slictl/slmctl stop work.
