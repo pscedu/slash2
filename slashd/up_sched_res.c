@@ -681,6 +681,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 				continue;
 			sl_csvc_decref(csvc);
 
+			/* bail if success */
 			if (slm_upsch_tryrepl(b, off, m, dst_res))
 				goto out;
 		}
