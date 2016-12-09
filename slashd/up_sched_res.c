@@ -651,14 +651,13 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 
 		valid_exists = 1;
 
+		si = res2iosinfo(dst_res);
 		psclog_debug("attempt to "
 		    "arrange repl with %s -> %s? siflg=%d",
 		    src_res->res_name,
 		    dst_res->res_name,
-		    !!(si->si_flags &
-		    (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)));
+		    si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE));
 
-		si = res2iosinfo(dst_res);
 		if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
 			OPSTAT_INCR("upsch-skip-lease");
 			continue;
