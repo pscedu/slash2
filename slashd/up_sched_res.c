@@ -614,7 +614,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 int
 slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 {
-	int off, pass, valid_exists = 0;
+	int off, valid_exists = 0;
 	struct sl_resource *dst_res;
 	struct sl_resm *m;
 	struct fidc_membh *f;
@@ -633,59 +633,55 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 	dst_res = libsl_id2res(iosid);
 
 	/* look for a repl source */
-	for (pass = 0; pass < 2; pass++) {
-		FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
-			if (src_res_i.ri_rnd_idx == dst_idx)
-				continue;
+	FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
+		if (src_res_i.ri_rnd_idx == dst_idx)
+			continue;
 
-			src_res = libsl_id2res(
-			    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
+		src_res = libsl_id2res(
+		    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
 
-			/*
-			 * Skip ourself and old/inactive * replicas.
-			 */
-			if (src_res == NULL ||
-			    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
-			    SL_BITS_PER_REPLICA *
-			    src_res_i.ri_rnd_idx) != BREPLST_VALID)
-				continue;
+		/*
+		 * Skip ourself and old/inactive * replicas.
+		 */
+		if (src_res == NULL ||
+		    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
+		    SL_BITS_PER_REPLICA *
+		    src_res_i.ri_rnd_idx) != BREPLST_VALID)
+			continue;
 
-			valid_exists = 1;
+		valid_exists = 1;
 
-			si = res2iosinfo(src_res);
+		psclog_debug("attempt to "
+		    "arrange repl with %s -> %s? siflg=%d",
+		    src_res->res_name,
+		    dst_res->res_name,
+		    !!(si->si_flags &
+		    (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)));
 
-			psclog_debug("attempt to "
-			    "arrange repl with %s -> %s? "
-			    "pass=%d siflg=%d",
-			    src_res->res_name,
-			    dst_res->res_name,
-			    pass, !!(si->si_flags &
-			    (SIF_DISABLE_LEASE |
-			     SIF_DISABLE_ADVLEASE)));
-
-			if (pass ^ (src_res->res_type == SLREST_ARCHIVAL_FS ||
-			     !!(si->si_flags & (SIF_DISABLE_LEASE |
-			      SIF_DISABLE_ADVLEASE))))
-				continue;
-
-			psclog_debug("trying to arrange " "repl with %s -> %s", 
-			    src_res->res_name, dst_res->res_name);
-
-			/*
-			 * Search source nodes for an idle, online connection.
-			 */
-			m = res_getmemb(src_res);
-			csvc = slm_geticsvc(m, NULL,
-			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
-			if (csvc == NULL)
-				continue;
-			sl_csvc_decref(csvc);
-
-			/* bail if success */
-			if (slm_upsch_tryrepl(b, off, m, dst_res))
-				goto out;
+		si = res2iosinfo(dst_res);
+		if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
+			OPSTAT_INCR("upsch-skip-lease");
+			continue;
 		}
+
+		psclog_debug("trying to arrange " "repl with %s -> %s", 
+		    src_res->res_name, dst_res->res_name);
+
+		/*
+		 * Search source nodes for an idle, online connection.
+		 */
+		m = res_getmemb(src_res);
+		csvc = slm_geticsvc(m, NULL,
+		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+		if (csvc == NULL)
+			continue;
+		sl_csvc_decref(csvc);
+
+		/* bail if success */
+		if (slm_upsch_tryrepl(b, off, m, dst_res))
+			goto out;
 	}
+
 	if (!valid_exists) {
 		int tract[NBREPLST], retifset[NBREPLST];
 
