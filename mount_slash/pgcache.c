@@ -110,7 +110,7 @@ msl_pgcache_get(int wait)
 	}
 	LIST_CACHE_ULOCK(&page_buffers);
 
-	if (failed && warned < 3) {
+	if (failed && warned < 5) {
 		warned++;
 		psclog_warnx("Please raise vm.max_map_count for performance");
 	}
