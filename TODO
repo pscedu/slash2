@@ -5399,4 +5399,15 @@ group:testgroup:r-x
 mask::rwx
 other::r-x			<-- does not change
 
+It works for new directory though:
+
+zhihui@yuzu: /zzh-slash2/zhihui$ chmod o-rx newdir
+zhihui@yuzu: /zzh-slash2/zhihui$ getfacl newdir
+# file: newdir
+# owner: zhihui
+# group: root
+user::rwx
+group::rwx
+other::---
+
 
