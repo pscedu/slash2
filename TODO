@@ -5380,3 +5380,23 @@ $6 = {exp_lock = {psl_value = {value32 = 2}, psl_flags = 0, psl_owner_lineno = 1
 ----------
 
 Make msctl/slictl/slmctl stop work.
+
+12/13/2016
+----------
+
+An ACL bug?
+
+zhihui@yuzu: /zzh-slash2/zhihui$ chmod o-rx testgroup
+zhihui@yuzu: /zzh-slash2/zhihui$ getfacl testgroup
+# file: testgroup
+# owner: zhihui
+# group: root
+user::rwx
+user:user1:r-x
+user:user2:r-x
+group::rwx
+group:testgroup:r-x
+mask::rwx
+other::r-x			<-- does not change
+
+
