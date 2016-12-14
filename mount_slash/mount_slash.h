@@ -308,6 +308,13 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 
+int	 slc_getxattr(struct pscfs_req *, const char *, void *, size_t, 
+	     struct fidc_membh *, size_t *);
+int	 slc_setxattr(struct pscfs_req *, const char *, const void *, size_t, 
+	     struct fidc_membh *);
+int	 slc_removexattr(struct pscfs_req *, const char *, struct fidc_membh *);
+
+
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 
 int	 msl_try_get_replica_res(struct bmap *, int, int,

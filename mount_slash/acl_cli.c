@@ -35,7 +35,7 @@
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
  */
 acl_t
-slc_acl_get_fcmh(struct pscfs_req *pfr, const struct pscfs_creds *pcr,
+slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
     struct fidc_membh *f)
 {
 	char trybuf[64] = { 0 };
@@ -44,13 +44,13 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, const struct pscfs_creds *pcr,
 	ssize_t rc;
 	acl_t a;
 
-	rc = slc_getxattr(pfr, pcr, ACL_EA_ACCESS, trybuf,
+	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf,
 	    sizeof(trybuf), f, &retsz);
 	if (rc == 0) {
 		buf = trybuf;
 	} else if (rc == ERANGE) {
 		buf = PSCALLOC(retsz);
-		rc = slc_getxattr(pfr, pcr, ACL_EA_ACCESS, buf, retsz,
+		rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz,
 		    f, &retsz);
 		if (rc) {
 			PSCFREE(buf);
