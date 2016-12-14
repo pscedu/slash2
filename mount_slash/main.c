@@ -3709,28 +3709,17 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	PSCFREE(buf);
 }
 
-void
-mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
-    pscfs_inum_t inum)
+int
+slc_removexattr(struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
+    const char *name, struct fidc_membh *f)
 {
+	int rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	int rc;
 
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	rc = fcmh_checkcreds(f, pfr, pcrp, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -3739,8 +3728,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -3751,18 +3739,39 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+
+ out:
+	return (rc);
+}
+
+void
+mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
+    pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+
+	rc = slc_removexattr(pfr, &pcr, name, f);
  out:
 	if (f)
 		fcmh_op_done(f);
-
 	pscfs_reply_removexattr(pfr, rc);
 
 	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
-
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 /*
