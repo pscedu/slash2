@@ -3595,9 +3595,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    "name='%s' rc=%d", inum, name, rc);
 }
 
-ssize_t
-slc_getxattr(struct pscfs_req *pfr,
-    __unusedx const struct pscfs_creds *pcrp, const char *name, void *buf,
+int
+slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	int rc = 0, locked = 0;
@@ -3610,10 +3609,6 @@ slc_getxattr(struct pscfs_req *pfr,
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
-
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
-//	if (rc)
-//		PFL_GOTOERR(out, rc);
 
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct timeval now;
@@ -3699,7 +3694,11 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_getxattr(pfr, name, buf, size, f, &retsz);
 
  out:
 	if (f)
@@ -3711,18 +3710,13 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 }
 
 int
-slc_removexattr(struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
-    const char *name, struct fidc_membh *f)
+slc_removexattr(struct pscfs_req *pfr, const char *name, struct fidc_membh *f)
 {
 	int rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-
-	rc = fcmh_checkcreds(f, pfr, pcrp, W_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
@@ -3743,8 +3737,6 @@ slc_removexattr(struct pscfs_req *pfr, const struct pscfs_creds *pcrp,
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
- out:
 	return (rc);
 }
 
@@ -3764,8 +3756,11 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	rc = slc_removexattr(pfr, &pcr, name, f);
+	rc = slc_removexattr(pfr, name, f);
  out:
 	if (f)
 		fcmh_op_done(f);
