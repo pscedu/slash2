@@ -3503,50 +3503,23 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	PSCFREE(buf);
 }
 
-
-/*
- * XATTR_REPLACE is not supported.
- */
-void
-mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
-    const void *value, size_t size, pscfs_inum_t inum)
+int
+slc_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, struct fidc_membh *f)
 {
+	int rc;
+	struct iovec iov;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	struct iovec iov;
-	int rc;
-
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	/*
-	 * This prevents a crash in the RPC layer downwards.  So disable
-	 * it for now.
-	 */
-	if (size == 0)
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	mq->valuelen = size;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -3574,6 +3547,44 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		FCMH_ULOCK(f);
 	}
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+/*
+ * XATTR_REPLACE is not supported.
+ */
+void
+mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	/*
+	 * This prevents a crash in the RPC layer downwards.  So disable
+	 * it for now.
+	 */
+	if (size == 0)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_setxattr(pfr, name, value, size, f);
 
  out:
 	pscfs_reply_setxattr(pfr, rc);
@@ -3583,9 +3594,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	if (f)
 		fcmh_op_done(f);
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 ssize_t
