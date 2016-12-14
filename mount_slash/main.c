@@ -3587,13 +3587,12 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	rc = slc_setxattr(pfr, name, value, size, f);
 
  out:
-	pscfs_reply_setxattr(pfr, rc);
-
-	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
-	    "name='%s' rc=%d", inum, name, rc);
-
 	if (f)
 		fcmh_op_done(f);
+
+	pscfs_reply_setxattr(pfr, rc);
+	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
 }
 
 ssize_t
@@ -3707,6 +3706,8 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 		fcmh_op_done(f);
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	PSCFREE(buf);
+	psclogs_diag(SLCSS_FSOP, "GETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
 }
 
 int
@@ -3768,8 +3769,8 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
  out:
 	if (f)
 		fcmh_op_done(f);
-	pscfs_reply_removexattr(pfr, rc);
 
+	pscfs_reply_removexattr(pfr, rc);
 	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
 }
