@@ -1009,8 +1009,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		else {
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
+			psc_assert(!rc);
 			if (flags & FLAG_DIRTY)
-				mds_bmap_write_logrepls(b);
+				rc = mds_bmap_write_logrepls(b);
 		}
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (rc)
