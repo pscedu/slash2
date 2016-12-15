@@ -5410,4 +5410,40 @@ user::rwx
 group::rwx
 other::---
 
+Hi Zhihui,
+
+I found another bug with SLASH2 ACL implementation. This denies access rather than granting it,
+so that is better. :)
+
+In this case I have the /pghbio/data/tcga directory which has ACLs set for individual user
+access, as well as group access by group tcga:
+
+From directory /pghbio/data:
+
+[blood@br006 data]$ getfacl tcga
+# file: tcga
+# owner: blood
+# group: root
+user::rwx
+user:omedvede:r-x
+group::r-x
+group:tcga:r-x
+group:tcgadmin:rwx
+mask::rwx
+other::---                              <-- this is key
+
+If I add two more users with rx permissions using:
+
+setfacl -m u:dsimmel:rx tcga 
+setfacl -m u:susan:rx tcga 
+
+Then the group 'tcga' gets permission denied! If I remove those rx permissions from dsimmel and susan using"
+
+setfacl -x u:dsimmel tcga 
+setfacl -x u: susan tcga 
+
+Then access is restored to group tcga. (Note that the folder is also named tcga and the acl commands above 
+refer to the folder named tcga, not the UNIX group).
+
+Phil
 
