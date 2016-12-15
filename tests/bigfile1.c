@@ -35,7 +35,6 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
-int tweak = 1;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -175,12 +174,10 @@ write_file(int i)
 		if (tmp1 == 0)
 			tmp1 = 1;
 
-		if (tweak) {
-			/* tweak some data on each write */
-			buf = files[i].buf + offset;
-			for (j = 0; j < tmp1; j++) {
-				buf[j] = (char)random();
-			}
+		/* always tweak some data on each write */
+		buf = files[i].buf + offset;
+		for (j = 0; j < tmp1; j++) {
+			buf[j] = (char)random();
 		}
 
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
@@ -201,12 +198,11 @@ main(int argc, char *argv[])
 	int times = 10;
 	unsigned int seed = 1234;
 	size_t i, j, c, fd, nfile;
+	struct timeval t1, t2, t3;
 
-	while ((c = getopt(argc, argv, "ts:n:")) != -1) {
+	gettimeofday(&t1, NULL);
+	while ((c = getopt(argc, argv, "s:n:")) != -1) {
 		switch (c) {
-			case 't':
-				tweak = 1;
-				break;
 			case 's':
 				seed = atoi(optarg);
 				break;
@@ -246,7 +242,7 @@ main(int argc, char *argv[])
 		for (j = 0; j < files[i].size; j++)
 			files[i].buf[j] = (char)random();
 	}
-	printf("\nMemory for %d files have been allocated successfully.\n\n", nfile);
+	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
 
 	for (i = 0; i < nfile; i++) {
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
@@ -281,5 +277,15 @@ main(int argc, char *argv[])
 	for (i = 0; i < nfile; i++) {
 	        close(files[i].fd);
 	}
+	gettimeofday(&t2, NULL);
 
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("Elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }
