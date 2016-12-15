@@ -45,7 +45,9 @@ struct testfile {
 	char   name[BASE_NAME_MAX+BASE_NAME_SUFFIX];
 };
 
-struct testfile files[] = {
+#define	TOTAL_NUM_FILES		9
+
+struct testfile files[TOTAL_NUM_FILES] = {
 	{ 
 		123,
 	},
@@ -84,12 +86,12 @@ create_file(int i)
 
 	while (j < 20) {
 		tmp2 = write(files[i].fd, files[i].buf, tmp1);
-		if (tmp1 == tmp2)
-			return;
-		if (errno) {
-			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
+		if (tmp2 < 0) {
+			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
 			exit (0);
 		}
+		if (tmp1 == tmp2)
+			return;
 		tmp1 = tmp1 - tmp2;	
 		j++;
 	}
@@ -247,10 +249,11 @@ main(int argc, char *argv[])
 	printf("\nMemory for %d files have been allocated successfully.\n\n", nfile);
 
 	for (i = 0; i < nfile; i++) {
-
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
-		assert(files[i].fd > 0);
-	
+		if (files[i].fd < 0) {
+			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
+			exit (0);
+		}
 		create_file(i);
 
 	        close(files[i].fd);
@@ -259,7 +262,10 @@ main(int argc, char *argv[])
 
 	for (i = 0; i < nfile; i++) {
         	files[i].fd = open(files[i].name, O_RDWR);
-		assert(files[i].fd > 0);
+		if (files[i].fd < 0) {
+			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
+			exit (0);
+		}
 	}
 
 	for (j = 0; j < times; j++) {
