@@ -583,6 +583,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	return (rc);
 }
 
+/* b is for debug only */
 #define PUSH_IOS(b, a, id, st)						\
 	do {								\
 		(a)->stat[(a)->nios] = (st);				\
