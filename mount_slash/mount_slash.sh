@@ -5,7 +5,7 @@ prog=mount_wokfs
 mod=slash2client.so
 ctl=msctl
 
-PATH=$(dirname $0):$PATH
+PATH=$(dirname $0):$PATH:/usr/sbin
 . pfl_daemon.sh
 
 usage()
@@ -50,7 +50,6 @@ ulimit -c $((1024 * 1024 * 1024 * 100))
 
 # For mmap-based page cache buffers
 
-export PATH=$PATH:/usr/sbin
 sysctl vm.max_map_count=655300 > /dev/null
 
 export LD_LIBRARY_PATH=/usr/local/lib
