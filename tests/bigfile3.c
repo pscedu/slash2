@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	unsigned char *buf;
 	char rand_statebuf[32];
 	struct timeval t1, t2, t3;
-	int i, j, fd, ret, nthreads, readonly = 0;
+	int i, j, fd, ret, error, nthreads, readonly = 0;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
@@ -183,8 +183,10 @@ int main(int argc, char *argv[])
 		for (j = 0; j < bsize; j++) {
 			random_r(&rand_state, &result);
 			if (buf[j] != (unsigned char)result & 0xff) {
+				error++;
 				printf("File corrupted (%d:%d): %2x vs %2x\n", i, j, buf[j], result & 0xff);
-				exit(0);
+				if (error > 10)
+					exit(0);
 			}
 		}
 	}
@@ -200,5 +202,5 @@ int main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	printf("Total elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }
