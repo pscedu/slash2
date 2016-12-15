@@ -1150,11 +1150,12 @@ slmpagerthr_main(struct psc_thread *thr)
 			/*
  			 * Page work can happen in the following cases: 
  			 *
- 			 * (1) definitely at start up
- 			 * (2) when an IOS comes online
- 			 * (3) every 10 minutes;
- 			 * (4) explicit user request
+ 			 * (1) definitely at start up (done)
+ 			 * (2) when an IOS comes online (to do)
+ 			 * (3) every 5 minutes (tunable)
  			 *
+ 			 * The page interval is chosen so that most likely
+ 			 * the work has already been done by our shortcut.
  			 */
 			OPSTAT_INCR("upsch-page-work");
 			slm_page_work(r, &da);
