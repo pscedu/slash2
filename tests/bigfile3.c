@@ -89,14 +89,17 @@ int main(int argc, char *argv[])
 	int32_t result;
 	unsigned char *buf;
 	char rand_statebuf[32];
+	struct timeval t1, t2, t3;
 	int i, j, fd, ret, nthreads;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
 	bsize = 7178;
 	nthreads = 5;
-	nblocks = 14345;
+	nblocks = 143456;
 	seed = getpid();
+	gettimeofday(&t1, NULL);
+
 	while ((c = getopt(argc, argv, "b:s:n:t:")) != -1) {
 		switch (c) {
 			case 'b':
@@ -177,4 +180,16 @@ int main(int argc, char *argv[])
 		}
 	}
 	close(fd);
+
+	gettimeofday(&t2, NULL);
+
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("Elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }

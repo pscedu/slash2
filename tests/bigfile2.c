@@ -16,7 +16,7 @@
 /*  ---------------------------------------------------------------------
 /*  %END_LICENSE%
 /*
- * 06/21/2016: bigfile2.c, read and write a file with different block sizes.
+ * 06/21/2016: bigfile2.c, read and write a file with an arbitrary block size.
  */
 #include <stdio.h>
 #include <fcntl.h>
