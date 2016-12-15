@@ -90,18 +90,21 @@ int main(int argc, char *argv[])
 	unsigned char *buf;
 	char rand_statebuf[32];
 	struct timeval t1, t2, t3;
-	int i, j, fd, ret, nthreads;
+	int i, j, fd, ret, nthreads, readonly = 0;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
-	bsize = 7178;
+	bsize = 71781;
 	nthreads = 5;
-	nblocks = 143456;
+	nblocks = 243456;
 	seed = getpid();
 	gettimeofday(&t1, NULL);
 
-	while ((c = getopt(argc, argv, "b:s:n:t:")) != -1) {
+	while ((c = getopt(argc, argv, "rb:s:n:t:")) != -1) {
 		switch (c) {
+			case 'r':
+				readonly = 1;
+				break;
 			case 'b':
 				bsize = atoi(optarg);
 				break;
@@ -126,13 +129,17 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 	filename = argv[optind];
+	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
+		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
+
+	if (readonly)
+		goto verify;
+
        	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(0);
 	}
-	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
-		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
 		args[i].fd = open(filename, O_RDWR, 0600);
@@ -159,6 +166,8 @@ int main(int argc, char *argv[])
 	}
         close(fd);
 
+ verify:
+
 	printf("\nAll threads has exited. Now verifying file contents ... \n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
@@ -174,7 +183,7 @@ int main(int argc, char *argv[])
 		for (j = 0; j < bsize; j++) {
 			random_r(&rand_state, &result);
 			if (buf[j] != (unsigned char)result & 0xff) {
-				printf("File corrupted: %2x vs %2x\n", buf[j], result & 0xff);
+				printf("File corrupted (%d:%d): %2x vs %2x\n", i, j, buf[j], result & 0xff);
 				exit(0);
 			}
 		}
