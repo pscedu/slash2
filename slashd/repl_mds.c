@@ -663,8 +663,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		}
 
 		/*
-		 * Work that was previously scheduled failed so requeue
-		 * it.
+		 * Work that was previously scheduled failed so 
+		 * requeue it.
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
 		    vold == BREPLST_GARBAGE_SCHED ||
