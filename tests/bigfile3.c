@@ -45,7 +45,8 @@ pthread_t threads[MAX_THREADS];
 
 static void* thread_worker(void *arg)
 {
-	int i, j, ret;
+	off_t j;
+	int i, ret;
 	int32_t result;
 	unsigned char *buf;
 	char rand_statebuf[32];
@@ -90,10 +91,12 @@ int main(int argc, char *argv[])
 	unsigned char *buf;
 	char rand_statebuf[32];
 	struct timeval t1, t2, t3;
-	int i, j, fd, ret, error, nthreads, readonly = 0;
+	int i, j, fd, ret, error, nthreads, readonly;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
+	error = 0;
+	readonly = 0;
 	bsize = 71781;
 	nthreads = 5;
 	nblocks = 243456;
@@ -185,7 +188,7 @@ int main(int argc, char *argv[])
 			if (buf[j] != (unsigned char)result & 0xff) {
 				error++;
 				printf("File corrupted (%d:%d): %2x vs %2x\n", i, j, buf[j], result & 0xff);
-				if (error > 10)
+				if (error > 20)
 					exit(0);
 			}
 		}

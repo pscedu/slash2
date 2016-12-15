@@ -100,7 +100,8 @@ create_file(int i)
 
 read_file(int i)
 {
-	size_t j, k, size, offset, tmp1, tmp2;
+	off_t offset;
+	size_t j, k, size, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
@@ -145,7 +146,8 @@ read_file(int i)
 write_file(int i)
 {
 	char *buf;
-	size_t j, size, offset, tmp1, tmp2;
+	off_t offset;
+	size_t j, size, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
