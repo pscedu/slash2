@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	bsize = 71781;
 	nthreads = 5;
 	nblocks = 243456;
-	seed = getpid();
+	seed = 35438;
 	gettimeofday(&t1, NULL);
 
 	while ((c = getopt(argc, argv, "rb:s:n:t:")) != -1) {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 
  verify:
 
-	printf("\nAll threads has exited. Now verifying file contents ... \n");
+	printf("\nAll threads has exited. Now verifying file contents ... \n\n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
@@ -187,9 +187,7 @@ int main(int argc, char *argv[])
 			random_r(&rand_state, &result);
 			if (buf[j] != (unsigned char)result & 0xff) {
 				error++;
-				printf("File corrupted (%d:%d): %2x vs %2x\n", i, j, buf[j], result & 0xff);
-				if (error > 20)
-					exit(0);
+				printf("%d: File corrupted (%d:%d): %2x vs %2x\n", error, i, j, buf[j], result & 0xff);
 			}
 		}
 	}
