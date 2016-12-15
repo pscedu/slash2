@@ -840,11 +840,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO)
-				rc = 0;
+		if (rc)
 			PFL_GOTOERR(out, rc);
-		}
 
 		/*
 		 * If no VALID replicas exist, the bmap must be
@@ -989,11 +986,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO)
-				rc = 0;
+		if (rc)
 			PFL_GOTOERR(out, rc);
-		}
 		/*
 		 * Before blindly doing the transition, we have to check
 		 * to ensure this operation would retain at least one
