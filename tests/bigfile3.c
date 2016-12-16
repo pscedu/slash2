@@ -176,6 +176,7 @@ int main(int argc, char *argv[])
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
+	fflush(stdout);
 
        	fd = open(filename, O_RDONLY);
 	for (i = 0; i < nblocks; i++) {
@@ -189,6 +190,7 @@ int main(int argc, char *argv[])
 			if (buf[j] != (unsigned char)result & 0xff) {
 				error++;
 				printf("%d: File corrupted (%d:%d): %2x vs %2x\n", error, i, j, buf[j], result & 0xff);
+				fflush(stdout);
 			}
 		}
 	}
