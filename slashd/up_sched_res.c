@@ -1100,6 +1100,9 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 
 	freelock(&slm_upsch_lock);
 	if (!rc) {
+		/*
+		 * XXX this is an optimization path, use non-blocking.
+		 */
 		wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 		wk->bno = b->bcm_bmapno;
 		wk->fid = bmap_2_fid(b);
