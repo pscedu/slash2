@@ -5447,6 +5447,8 @@ refer to the folder named tcga, not the UNIX group).
 
 Phil
 
+Also, cp -p should copy ACL as well.
+
 12/15/2016
 ----------
 
