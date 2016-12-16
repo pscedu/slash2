@@ -159,6 +159,10 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    scc->scc_flags & CSVCF_WATCH		? 'W' : '-',
 	    scc->scc_flags & CSVCF_PING			? 'P' : '-');
 
+	/*
+ 	 * If you see unexpected color, please double check
+ 	 * your msctl/slictl/slmctl path.
+ 	 */
 	if (scc->scc_flags & CSVCF_CTL_OLDER)
 		col = COLOR_RED;
 	else if (scc->scc_flags & CSVCF_CTL_NEWER)
