@@ -614,8 +614,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	sprio = bmi->bmi_sys_prio;
 	uprio = bmi->bmi_usr_prio;
 
-	memset(&chg, 0, sizeof(chg));
-
 	add.nios = 0;
 	del.nios = 0;
 	chg.nios = 0;
