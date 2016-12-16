@@ -324,8 +324,7 @@ _biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 }
 
 void
-_msl_biorq_release(const struct pfl_callerinfo *pci,
-    struct bmpc_ioreq *r)
+msl_biorq_release(struct bmpc_ioreq *r)
 {
 	BIORQ_LOCK(r);
 	if (r->biorq_ref == 1 &&
