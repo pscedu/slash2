@@ -291,7 +291,7 @@ struct gid_mapping {
 #define msl_read(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_READ)
 #define msl_write(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_WRITE)
 
-#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
+void	 msl_biorq_release(struct bmpc_ioreq *);
 
 void	 msl_bmap_stash_lease(struct bmap *, const struct srt_bmapdesc *,  const char *);
 int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slrpc_cservice **);
