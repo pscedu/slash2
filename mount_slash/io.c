@@ -288,11 +288,8 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	}
 }
 
-#define msl_biorq_destroy(r)	 _msl_biorq_destroy(PFL_CALLERINFO(), (r))
-
 void
-_msl_biorq_destroy(const struct pfl_callerinfo *pci,
-    struct bmpc_ioreq *r)
+msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 
