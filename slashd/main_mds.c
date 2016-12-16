@@ -575,7 +575,7 @@ main(int argc, char *argv[])
 		size = sizeof(struct slm_wkdata_upsch_purge);
 	if (size < sizeof(struct slm_wkdata_upschq))
 		size = sizeof(struct slm_wkdata_upschq);
-	pfl_workq_init(size, 1024, 1024);
+	pfl_workq_init(size, 1024, 2048);
 
 	slm_upsch_init();
 
