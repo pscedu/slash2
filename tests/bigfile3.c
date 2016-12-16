@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
 	filename = argv[optind];
 	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
+	fflush(stdout);
 
 	if (readonly)
 		goto verify;
