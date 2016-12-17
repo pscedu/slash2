@@ -1483,6 +1483,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			BMPCE_LOCK(e);
 		}
 
+		/*
+		 * XXX If I don't make a valid page as FAULTING, a 
+		 * write could sneak it...
+		 */
 		if (msl_biorq_page_valid(r, i)) {
 			BMPCE_ULOCK(e);
 			if (r->biorq_flags & BIORQ_READAHEAD)
