@@ -1472,16 +1472,15 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
-  retry:
-		BMPCE_LOCK(e);
 		/*
 		 * The faulting flag could be set by a concurrent writer
 		 * that touches a different area in the page, so don't
 		 * assume that data is ready when it is cleared.
 		 */
-		if (e->bmpce_flags & BMPCEF_FAULTING) {
+		BMPCE_LOCK(e);
+		while (e->bmpce_flags & BMPCEF_FAULTING) {
 			BMPCE_WAIT(e);
-			goto retry;
+			BMPCE_LOCK(e);
 		}
 
 		if (msl_biorq_page_valid(r, i)) {
