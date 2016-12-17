@@ -5454,3 +5454,7 @@ Also, cp -p should copy ACL as well.
 
 Make bigfile3.c work! race with read-ahead mechanism?  Our flush before read logic works on per bmap basis.
 This might be have an issue with read-ahead code that can move into a different bmap.
+
+A possible scenario to check: a write request wait for a read-ahead to finish, when the read ahead is done,
+it clears the FAULTING bit, and then the write request continue to copy user data into buffer without the
+protection of the FAULTING bit.
