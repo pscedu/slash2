@@ -1589,6 +1589,11 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
 		BMPCE_LOCK(e);
+		/*
+ 		 * Waiting for I/O to complete, which could be
+ 		 * initiated by the read-ahead, by myself, or
+ 		 * by other thread.
+ 		 */
 		while (e->bmpce_flags & BMPCEF_FAULTING) {
 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
