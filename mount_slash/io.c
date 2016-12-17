@@ -1474,12 +1474,6 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
   retry:
 		BMPCE_LOCK(e);
-		if (msl_biorq_page_valid(r, i)) {
-			BMPCE_ULOCK(e);
-			if (r->biorq_flags & BIORQ_READAHEAD)
-				OPSTAT_INCR("msl.readahead-gratuitous");
-			continue;
-		}
 		/*
 		 * The faulting flag could be set by a concurrent writer
 		 * that touches a different area in the page, so don't
@@ -1488,6 +1482,13 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		if (e->bmpce_flags & BMPCEF_FAULTING) {
 			BMPCE_WAIT(e);
 			goto retry;
+		}
+
+		if (msl_biorq_page_valid(r, i)) {
+			BMPCE_ULOCK(e);
+			if (r->biorq_flags & BIORQ_READAHEAD)
+				OPSTAT_INCR("msl.readahead-gratuitous");
+			continue;
 		}
 
 		/*
