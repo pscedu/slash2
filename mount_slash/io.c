@@ -2209,8 +2209,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		/*
 		 * No need to update roff and tsize for the last
-		 * iteration.  Plus, we need them for predictive I/O
-		 * work in the next step.
+		 * iteration.  Plus, we need them for predictive
+		 * I/O work in the next step.
 		 */
 		if (i == nr - 1)
 			break;
