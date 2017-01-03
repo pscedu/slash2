@@ -1987,6 +1987,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 {
 	struct msl_fsrqinfo *q;
 
+	/* pool is inited in msl_init() */
 	q = psc_pool_get(msl_iorq_pool);
 	memset(q, 0, sizeof(*q));
 	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
