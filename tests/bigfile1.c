@@ -235,6 +235,7 @@ main(int argc, char *argv[])
 		printf("Try to allocate %12ld bytes of working memory for file %s\n", 
 			files[i].size, files[i].name); 
 
+		fflush(stdout);
 		files[i].buf = malloc(files[i].size);
 		if (!files[i].buf) {
 			printf("Fail to allocate memory, errno = %d\n", errno);
