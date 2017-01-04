@@ -1501,9 +1501,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		 * must test it with fault injection instead of just putting
 		 * the code in and hope it work.
 		 */
-		if (e->bmpce_rc) {
+		while (e->bmpce_flags & BMPCEF_EIO) {
 			OPSTAT_INCR("msl.clear_rc");
 			e->bmpce_rc = 0;
+			e->bmpce_len = 0;
+			e->bmpce_flags &= ~BMPCEF_EIO;
 		}
 		e->bmpce_flags |= BMPCEF_FAULTING;
 		psc_dynarray_add(&pages, e);
