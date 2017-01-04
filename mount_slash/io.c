@@ -1643,7 +1643,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 		}
 
 		/*
-		 * If this is a write, we should clear
+		 * Since this is a write, we should clear
 		 * the page to its pristine state because
 		 * a previous failure should not cause the
 		 * current write to fail.
@@ -2281,7 +2281,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	/*
 	 * Step 5: drop our reference to the fsrq.  The last drop will
-	 * reply to the userland file system interface.
+	 * reply to the userland file system interface. Note that we 
+	 * may or may not finish the entire I/O here.
 	 */
 	msl_complete_fsrq(q, 0, NULL);
 	return;
