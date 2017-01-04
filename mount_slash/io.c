@@ -1501,8 +1501,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		 * must test it with fault injection instead of just putting
 		 * the code in and hope it work.
 		 */
-		while (e->bmpce_flags & BMPCEF_EIO) {
-			OPSTAT_INCR("msl.clear_rc");
+		if (e->bmpce_flags & BMPCEF_EIO) {
+			OPSTAT_INCR("msl.read_clear_rc");
 			e->bmpce_rc = 0;
 			e->bmpce_len = 0;
 			e->bmpce_flags &= ~BMPCEF_EIO;
