@@ -1611,7 +1611,16 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			BMPCE_LOCK(e);
 			perfect_ra = 0;
 		}
-
+		/*
+		 * We can't read/write page in this state.
+		 */
+		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
+			msl_fsrq_aiowait_tryadd_locked(e, r);
+			aiowait = 1;
+			BMPCE_ULOCK(e);
+			OPSTAT_INCR("msl.aio-placed");
+			break;
+		}
 
 		if (e->bmpce_flags & BMPCEF_READAHEAD) {
 			if (!(r->biorq_flags & BIORQ_READAHEAD))
@@ -1651,16 +1660,6 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			continue;
 		}
 
-		/*
-		 * XXX We can't read/write page in this state.
-		 */
-		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
-			msl_fsrq_aiowait_tryadd_locked(e, r);
-			aiowait = 1;
-			BMPCE_ULOCK(e);
-			OPSTAT_INCR("msl.aio-placed");
-			break;
-		}
 		BMPCE_ULOCK(e);
 	}
 
