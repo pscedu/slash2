@@ -2,6 +2,7 @@
 #
 # Date: 01/03/2017
 #
+# Big file tests written for slash2 over the years.
 #
 START=`date +%s%N`
 myhost=$(hostname -s)
