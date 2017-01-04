@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
 		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
 		close(args[i].fd);
+		fflush(stdout);
 	}
         close(fd);
 
