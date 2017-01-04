@@ -11,7 +11,9 @@ cc -o bigfile2 bigfile2.c
 cc -o bigfile3 bigfile3.c -lpthread
 
 ./bigfile1 /zzh-slash2/zhihui/$myhost.bigfile1.dat | tee $myhost.bigfile1.log
-./bigfile2 /zzh-slash2/zhihui/$myhost.bigfile2.dat | tee $myhost.bigfile1.log
+
+./bigfile2    /zzh-slash2/zhihui/$myhost.bigfile2.dat | tee $myhost.bigfile1.log
+./bigfile2 -r /zzh-slash2/zhihui/$myhost.bigfile2.dat | tee $myhost.bigfile1.log
 
 ./bigfile3                                   /zzh-slash2/zhihui/$myhost.bigfile3-1.dat | tee $myhost.bigfile3-1.log
 
