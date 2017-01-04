@@ -833,6 +833,7 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 	psc_assert(e->bmpce_waitq);
 
 	/* AIOWAIT is removed no matter what. */
+	psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
 	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING);
 
 	if (rc) {
