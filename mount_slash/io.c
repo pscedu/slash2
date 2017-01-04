@@ -800,6 +800,11 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 		BIORQ_ULOCK(r);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 			BMPCE_LOCK(e);
+			/*
+ 			 * XXX This if statement looks suspicous to me.
+ 			 * If we ever want to support AIO again, we need
+ 			 * to revisit this.
+ 			 */
 			if (e->bmpce_flags & BMPCEF_FAULTING) {
 				e->bmpce_flags &= ~BMPCEF_FAULTING;
 				BMPCE_WAKE(e);
