@@ -37,7 +37,7 @@ main(int argc, char *argv[])
 
 	bsize = 5678;
 	nblocks = 1234567;
-	seed = getpid();
+	seed = 4456;
 	gettimeofday(&t1, NULL);
 
 	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 		}   
 	}
 	if (optind != argc - 1) {
-		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] filename\n");
+		printf("Usage: a.out [-s seed] [-r] [-b bsize] [-n nblocks ] filename\n");
 		exit(0);
 	}   
 	filename = argv[optind];
@@ -90,6 +90,7 @@ main(int argc, char *argv[])
 	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
 		seed, filename, bsize, readonly ? nblocks + 1: nblocks, fsize);
 
+	fflush(stdout);
 	for (i = 0; i < nblocks; i++) {
 		if (readonly)
 			size = read(fd, buf, bsize);
@@ -145,8 +146,10 @@ main(int argc, char *argv[])
  done:
 	if (!error && readonly)
 		printf("No corruption has been found (last block has %d bytes)\n", remainder);
-	if (!error && !readonly)
+	if (!error && !readonly) {
+		fsync(fd);
 		printf("File has been created successfully.\007\n");
+	}
         close(fd);
 
 	gettimeofday(&t2, NULL);
