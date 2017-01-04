@@ -1634,32 +1634,30 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 		} else
 			perfect_ra = 0;
 
-		if (r->biorq_flags & BIORQ_WRITE) {
-			/*
-			 * If this is a write, we should clear
-			 * the page to its pristine state because
-			 * a previous failure should not cause the
-			 * current write to fail.
-			 */
-			if (e->bmpce_flags & BMPCEF_EIO) {
-				OPSTAT_INCR("msl.write_clear_rc");
-				e->bmpce_rc = 0;
-				e->bmpce_len = 0;
-				e->bmpce_flags &= ~BMPCEF_EIO;
-			}
-			/*
-			 * Avoid a race with readahead thread.
-			 */
-			e->bmpce_flags |= BMPCEF_FAULTING;
+		/*
+ 		 * Read error should be catched in the callback.
+ 		 */
+		if (r->biorq_flags & BIORQ_READ) {
 			BMPCE_ULOCK(e);
 			continue;
 		}
 
-		if (msl_biorq_page_valid(r, i)) {
-			BMPCE_ULOCK(e);
-			continue;
+		/*
+		 * If this is a write, we should clear
+		 * the page to its pristine state because
+		 * a previous failure should not cause the
+		 * current write to fail.
+		 */
+		if (e->bmpce_flags & BMPCEF_EIO) {
+			OPSTAT_INCR("msl.write_clear_rc");
+			e->bmpce_rc = 0;
+			e->bmpce_len = 0;
+			e->bmpce_flags &= ~BMPCEF_EIO;
 		}
-
+		/*
+		 * Avoid a race with readahead thread.
+		 */
+		e->bmpce_flags |= BMPCEF_FAULTING;
 		BMPCE_ULOCK(e);
 	}
 
