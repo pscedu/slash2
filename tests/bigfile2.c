@@ -62,6 +62,9 @@ main(int argc, char *argv[])
 	}   
 	filename = argv[optind];
 	if (readonly)
+		/*
+ 		 * Verify file contents written by a previous run of this program.
+ 		 */
         	fd = open(filename, O_RDONLY);
 	else
         	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
