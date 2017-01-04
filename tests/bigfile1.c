@@ -245,6 +245,7 @@ main(int argc, char *argv[])
 			files[i].buf[j] = (char)random();
 	}
 	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
+	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
@@ -257,6 +258,7 @@ main(int argc, char *argv[])
 	        close(files[i].fd);
 	}
 	printf("Initial %d files have been created successfully.\n\n", nfile);
+	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
         	files[i].fd = open(files[i].name, O_RDWR);
@@ -274,6 +276,7 @@ main(int argc, char *argv[])
 			write_file(i);
 		}
 		printf("Loop %d on %d files is done successfully.\n", j, nfile);
+		fflush(stdout);
 	}
 
 	for (i = 0; i < nfile; i++) {
