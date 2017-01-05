@@ -600,6 +600,11 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
+		/*
+ 		 * XXX Checking flags here is bogus, we should assert that
+ 		 * the flag is set because it is on the list.  In addition,
+ 		 * we should check reference count here.
+ 		 */ 
 		if ((e->bmpce_flags & (flag |
 		    BMPCEF_REAPED)) == flag) {
 			e->bmpce_flags &= ~flag;
