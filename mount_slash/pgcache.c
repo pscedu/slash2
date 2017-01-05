@@ -497,7 +497,7 @@ bmpc_freeall(struct bmap *b)
 	/*
 	 * Remove any LRU pages still associated with the bmap.
 	 * Only readahead pages can be encountered here. If we
-	 * don't treat readahead pages specially, this code ca
+	 * don't treat readahead pages specially, this code can
 	 * go away some day.
 	 */
 	pfl_rwlock_wrlock(&bci->bci_rwlock);
