@@ -637,6 +637,10 @@ bmpce_reap(struct psc_poolmgr *m)
 	struct bmap_pagecache_entry *e;
 	int nfreed, i;
 
+	/* 
+	 * XXX A readahead page is not necessarily more valuable
+	 * until it is proven so.
+	 */
 	if (m->ppm_flags & PPMF_DESPERATE)
 		bmpce_reap_list(&a, &msl_readahead_pages,
 		    BMPCEF_READALC, m);
