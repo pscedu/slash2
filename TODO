@@ -5461,3 +5461,9 @@ protection of the FAULTING bit.   This only applies when msl_bmpce_complete_bior
 
 Perhaps try per-page synchronizing, all pages, regardless of whether it is being read or write, regardless
 of whether it is valid or not, are marked FAULTING.
+
+01/04/2017
+----------
+
+Test bigfile3.c fails when working on the same file successively. Looks like that the full truncation does 
+not fully clear the local cache before proceeding.
