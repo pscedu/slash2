@@ -150,7 +150,7 @@ msl_pgcache_reap(void)
 	if (curr <= msl_bmpces_min)
 		return;
 
-	nfree = (curr - msl_bmpces_min)/2;
+	nfree = (curr - msl_bmpces_min) / 2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
