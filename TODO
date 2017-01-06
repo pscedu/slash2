@@ -5467,3 +5467,17 @@ of whether it is valid or not, are marked FAULTING.
 
 Test bigfile3.c fails when working on the same file successively. Looks like that the full truncation does 
 not fully clear the local cache before proceeding.
+
+01/06/2017
+----------
+
+Make mysql test work or go farther:
+
+$ tar xvf mysql-5.7.17.tar.gz
+$ cd mysql-5.7.17
+$ cmake -DDOWNLOAD_BOOST=1 -DWITH_BOOST=. -DWITH_DEBUG=1  .
+$ make
+$ cd mysql-test/
+$ ./mysql-test-run --big-test --skip-test=federated
+
+Right now, the test fails with cp (errno = 1), I suspect name cache issue.
