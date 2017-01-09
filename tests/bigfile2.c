@@ -150,7 +150,7 @@ main(int argc, char *argv[])
 
  done:
 	if (!error && readonly)
-		printf("No corruption has been found (last block has %d bytes)\n", remainder);
+		printf("Good news! No corruption has been found (last block has %d bytes)\n", remainder);
 	if (!error && !readonly) {
 		fsync(fd);
 		printf("File has been created successfully.\007\n");
