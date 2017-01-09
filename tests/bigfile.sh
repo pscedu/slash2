@@ -19,13 +19,13 @@ cc -o bigfile1 bigfile1.c
 cc -o bigfile2 bigfile2.c
 cc -o bigfile3 bigfile3.c -lpthread
 
-./bigfile1    $mypath/$myhost.bigfile1.dat   | tee $myhost.bigfile1.log
+./bigfile1                                     $mypath/$myhost.bigfile1-1.dat | tee $myhost.bigfile1-1.log
 
-./bigfile2    $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
-./bigfile2 -r $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
+./bigfile2                                     $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
+./bigfile2 -r                                  $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
 
-./bigfile2    -s 4499 -b 12348 -n 3993777   $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
-./bigfile2 -r -s 4499 -b 12348 -n 3993777   $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+./bigfile2    -s 4499 -b 12348 -n 3993777      $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+./bigfile2 -r -s 4499 -b 12348 -n 3993777      $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
 
 
 ./bigfile3                                     $mypath/$myhost.bigfile3-1.dat | tee $myhost.bigfile3-1.log
