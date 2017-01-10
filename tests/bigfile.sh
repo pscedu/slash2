@@ -44,7 +44,8 @@ cc -o bigfile3 bigfile3.c -lpthread
 
 ./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.dat | tee $myhost-bigfile3-8.log
 
-./bigfile3 -s 55578 -t 23 -b  31029  -n 187750 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
+./bigfile3 -s 5555  -t 17 -b 114129  -n 280112 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
+
 
 END=`date +%s%N`
 ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
