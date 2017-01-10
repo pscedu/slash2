@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 		fsize = stbuf.st_size;
 		nblocks = fsize / bsize;
 		if (fsize % bsize)
-			nblocks++;
+			remainder = 1;
 	} else {
 		assert(!stbuf.st_size);
 		fsize = (long)nblocks * bsize;
@@ -93,7 +93,7 @@ main(int argc, char *argv[])
 	}
 	srandom(seed);
 	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
-		seed, filename, bsize, nblocks, fsize);
+		seed, filename, bsize, nblocks + remainder, fsize);
 
 	fflush(stdout);
 	for (i = 0; i < nblocks; i++) {
@@ -152,8 +152,11 @@ main(int argc, char *argv[])
 	if (!error && readonly)
 		printf("Good news! No corruption has been found (last block has %d bytes)\n", remainder);
 	if (!error && !readonly) {
-		fsync(fd);
-		printf("File has been created successfully.\007\n");
+		error = fsync(fd);
+		if (!error)
+			printf("File has been created successfully.\007\n");
+		else
+			printf("Fail to fsync file, errno = %d.\007\n", errno);
 	}
         close(fd);
 
