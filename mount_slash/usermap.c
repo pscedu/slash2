@@ -31,20 +31,21 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
-int
+/*
+ * Change effective UID based on the user map.
+ */
+void
 uidmap_ext_cred(struct srt_creds *cr)
 {
 	struct uid_mapping *um, q;
 
 	if (!msl_use_mapfile)
-		return (0);
+		return;
 
 	q.um_key = cr->scr_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um == NULL)
-		return (0);
-	cr->scr_uid = um->um_val;
-	return (0);
+	if (um != NULL)
+		cr->scr_uid = um->um_val;
 }
 
 int

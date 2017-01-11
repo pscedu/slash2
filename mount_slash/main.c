@@ -407,6 +407,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
@@ -418,9 +419,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = msl_pref_ios;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_cred(&mq->owner);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	uidmap_ext_cred(&mq->owner);
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
@@ -428,6 +427,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
+
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -1382,9 +1382,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_cred(&mq->creds);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+	uidmap_ext_cred(&mq->creds);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;

@@ -339,7 +339,7 @@ struct pscfs_creds *
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
-int	 uidmap_ext_cred(struct srt_creds *);
+void	 uidmap_ext_cred(struct srt_creds *);
 int	 gidmap_int_cred(struct pscfs_creds *);
 int	 uidmap_ext_stat(struct srt_stat *);
 int	 uidmap_int_stat(struct srt_stat *);
