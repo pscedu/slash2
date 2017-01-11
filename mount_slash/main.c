@@ -915,6 +915,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		mode |= S_ISGID;
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
@@ -934,6 +935,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
+
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -1373,6 +1375,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
