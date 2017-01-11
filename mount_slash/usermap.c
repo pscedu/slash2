@@ -32,7 +32,8 @@
 #include "pathnames.h"
 
 /*
- * Change effective UID based on the user map.
+ * Change effective UID based on the user map. It is called by
+ * mslfsop_create() and mslfsop_mknod().
  */
 void
 uidmap_ext_cred(struct srt_creds *cr)
