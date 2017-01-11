@@ -562,10 +562,9 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	struct pscfs_creds pcr;
 	int rc = 0;
 
-	slc_getfscreds(pfr, &pcr);
-
 	*mfhp = NULL;
 
+	slc_getfscreds(pfr, &pcr);
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
