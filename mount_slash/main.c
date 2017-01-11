@@ -293,7 +293,6 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = 0;
 	FCMH_LOCK(c);
 	if (pcr.pcr_uid == 0) {
 		if ((accmode & X_OK) && !S_ISDIR(c->fcmh_sstb.sst_mode) &&
