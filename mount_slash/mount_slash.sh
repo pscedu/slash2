@@ -68,7 +68,7 @@ opts=$(IFS=, ; echo "${xargs[*]}")
 
 mod_dir=$(dirname $(which $prog))/../lib/wokfs
 
-# pfl/utils/daemon/pfl_daemon.sh
+# rundaemon() is in file ../../pfl/utils/daemon/pfl_daemon.sh
 
 if [ $usemygdb -eq 1  ]
 then
