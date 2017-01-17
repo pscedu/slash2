@@ -4,6 +4,7 @@
 prog=mount_wokfs
 mod=slash2client.so
 ctl=msctl
+usemygdb=0
 
 PATH=$(dirname $0):$PATH:/usr/sbin
 . pfl_daemon.sh
@@ -17,14 +18,14 @@ usage()
 bkav=("$@")
 while getopts "dF:gOP:Tv" c; do
 	case $c in
-	d) nodaemonize=1	;;
-	F) filter=$OPTARG	;;
-	g) filter=mygdb		;;
-	O) once=1		;;
-	P) prof=$OPTARG		;;
-	T) testmail=1		;;
-	v) verbose=1		;;
-	*) usage		;;
+	d) nodaemonize=1		;;
+	F) filter=$OPTARG		;;
+	g) filter=mygdb; usemygdb=1	;;
+	O) once=1			;;
+	P) prof=$OPTARG			;;
+	T) testmail=1			;;
+	v) verbose=1			;;
+	*) usage			;;
 	esac
 done
 shift $(($OPTIND - 1))
@@ -69,4 +70,9 @@ mod_dir=$(dirname $(which $prog))/../lib/wokfs
 
 # pfl/utils/daemon/pfl_daemon.sh
 
-rundaemon $filter $prog -L "insert 0 $mod_dir/$mod $opts" -U $mp
+if [ $usemygdb -eq 1  ]
+then
+    rundaemon $filter $prog -L \"insert 0 $mod_dir/$mod $opts\" -U $mp
+else
+    rundaemon $filter $prog -L "insert 0 $mod_dir/$mod $opts" -U $mp
+fi
