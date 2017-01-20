@@ -174,8 +174,10 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	} else
 		slvr_io_done(s, rv);
 
-	if (rv)
+	if (rv) {
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 		PFL_GOTOERR(out, mp->rc = rv);
+	}
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
 
