@@ -164,7 +164,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 			OPSTAT_INCR("repl-fail-soft");
 		} else {
-			/* Fatal error: cancel replication. */
+			/* Fatal error: cancel replication.  Saw this. */
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
 			OPSTAT_INCR("repl-fail-hard");
 		}
