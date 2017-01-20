@@ -358,7 +358,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
 
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "sending");
+	PFLOG_BATCH_REP(bp->bp_rc ? PLL_WARN : PLL_DIAG, bp, "sending");
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
