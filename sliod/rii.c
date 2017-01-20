@@ -330,9 +330,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 }
 
 /*
- * Process a replication request initiated by a SLASH2 client.
- * This runs at the destination replica IOS and issues a REPL_READ RPC to
- * a replica source IOS.
+ * Process a replication request initiated by a SLASH2 client. This runs 
+ * at the destination IOS, which issues a REPL_READ RPC to the source IOS.
  */
 int
 sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
@@ -349,6 +348,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
 	    "%d len %u", w, w->srw_fg.fg_fid, w->srw_bmapno, slvrno,
 	    slvridx, w->srw_len);
 
+	/* to be handled by sli_rii_handle_repl_read() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_READ, rq, mq, mp);
 	if (rc)
 		return (rc);
