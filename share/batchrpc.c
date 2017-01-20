@@ -204,7 +204,9 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int where, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finish at = %d, rc = %d", where, rc);
+	PFLOG_BATCH_REQ(rc ? PLL_DIAG : PLL_DIAG, 
+	    bq, "finish at = %d, rc = %d", where, rc);
+
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 
