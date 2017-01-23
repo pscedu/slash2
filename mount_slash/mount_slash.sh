@@ -70,6 +70,9 @@ mod_dir=$(dirname $(which $prog))/../lib/wokfs
 
 # rundaemon() is in file ../../pfl/utils/daemon/pfl_daemon.sh
 
+# Make sure that quoted arguments are passed to gdb. This is not
+# needed for either slashd.sh or sliod.sh.
+
 if [ $usemygdb -eq 1  ]
 then
     rundaemon $filter $prog -L \"insert 0 $mod_dir/$mod $opts\" -U $mp
