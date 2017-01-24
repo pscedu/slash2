@@ -33,7 +33,8 @@
 
 /*
  * Change effective UID based on the user map. It is called by
- * mslfsop_create() and mslfsop_mknod().
+ * mslfsop_create(), mslfsop_mknod(), and others to map external
+ * credentials to slash2 internal ones.
  */
 void
 uidmap_ext_cred(struct srt_creds *cr)
