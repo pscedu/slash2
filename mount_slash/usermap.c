@@ -53,6 +53,8 @@ uidmap_ext_cred(struct srt_creds *cr)
 int
 gidmap_int_cred(struct pscfs_creds *cr)
 {
+	int i, n;
+	void *p;
 	struct gid_mapping *gm, q;
 
 	if (!msl_use_mapfile)
@@ -63,7 +65,9 @@ gidmap_int_cred(struct pscfs_creds *cr)
 	if (gm == NULL)
 		return (0);
 	cr->pcr_gid = gm->gm_gid;
-	memcpy(cr->pcr_gidv, gm->gm_gidv, sizeof(gm->gm_gidv));
+	DYNARRAY_FOREACH(p, n, &gm->gm_gidv)
+		cr->pcr_gidv[i++] = (int64_t)p;
+		
 	return (0);
 }
 
@@ -203,12 +207,7 @@ mapfile_parse_group(char *start)
 	DYNARRAY_FOREACH(p, n, &uids) {
 		gm = psc_hashtbl_search(&msl_gidmap_int, p);
 		if (gm) {
-			if (gm->gm_ngid >= SLASH2_NGROUPS_MAX) {
-				psclog_warnx("Too many groups for uid %ld", 
-				    (uint64_t)p);
-				goto malformed;
-			}
-			gm->gm_gidv[gm->gm_ngid++] = remote;
+			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
 		} else {
 			gm = PSCALLOC(sizeof(*gm));
 			psc_hashent_init(&msl_gidmap_int, gm);
