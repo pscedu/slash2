@@ -153,16 +153,16 @@ mapfile_parse_user(char *start)
 		goto malformed;
 
 	um = PSCALLOC(sizeof(*um));
-	psc_hashent_init(&msl_uidmap_ext, um);
+	psc_hashent_init(&msl_uidmap_int, um);
 	um->um_key = local;
 	um->um_val = remote;
-	psc_hashtbl_add_item(&msl_uidmap_ext, um);
+	psc_hashtbl_add_item(&msl_uidmap_int, um);
 
 	um = PSCALLOC(sizeof(*um));
-	psc_hashent_init(&msl_uidmap_int, um);
+	psc_hashent_init(&msl_uidmap_ext, um);
 	um->um_key = remote;
 	um->um_val = local;
-	psc_hashtbl_add_item(&msl_uidmap_int, um);
+	psc_hashtbl_add_item(&msl_uidmap_ext, um);
 
 	return (1);
  malformed:
