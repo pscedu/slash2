@@ -203,6 +203,11 @@ mapfile_parse_group(char *start)
 	DYNARRAY_FOREACH(p, n, &uids) {
 		gm = psc_hashtbl_search(&msl_gidmap_int, &remote);
 		if (gm) {
+			if (gm->gm_ngid >= SLASH2_NGROUPS_MAX) {
+				psclog_warnx("Too many groups for uid %ld", 
+				    (uint64_t)p);
+				goto malformed;
+			}
 			gm->gm_gidv[gm->gm_ngid++] = remote;
 		} else {
 			gm = PSCALLOC(sizeof(*gm));
