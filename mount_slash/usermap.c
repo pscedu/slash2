@@ -53,7 +53,7 @@ uidmap_ext_cred(struct srt_creds *cr)
 int
 gidmap_int_cred(struct pscfs_creds *cr)
 {
-	int i, n;
+	int i;
 	void *p;
 	struct gid_mapping *gm, q;
 
@@ -65,8 +65,9 @@ gidmap_int_cred(struct pscfs_creds *cr)
 	if (gm == NULL)
 		return (0);
 	cr->pcr_gid = gm->gm_gid;
-	DYNARRAY_FOREACH(p, n, &gm->gm_gidv)
+	DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
 		cr->pcr_gidv[i++] = (int64_t)p;
+	cr->pcr_ngid = gm->gm_ngid;
 		
 	return (0);
 }
