@@ -190,6 +190,8 @@ mapfile_parse_group(char *start)
 				    (void *)(uintptr_t)uid);
 			}
 		} else if (strcmp(start, "remote") == 0) {
+			if (remote != -1)
+				goto malformed;
 			start = run;
 			remote = PARSENUM(start, run);
 		} else
@@ -239,6 +241,10 @@ parse_mapfile(void)
 		if (*start == '#')
 		    continue;
 
+		/*
+		 * There must be at least one space after
+		 * either "user" or "group" string.
+		 */
 		start = buf;
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
