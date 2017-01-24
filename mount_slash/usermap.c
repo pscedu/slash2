@@ -233,6 +233,12 @@ parse_mapfile(void)
 	while (fgets(buf, sizeof(buf), fp)) {
 		ln++;
 
+		/*
+		 * Skip comments that starts with # sign.
+		 */
+		if (*start == '#')
+		    continue;
+
 		start = buf;
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
