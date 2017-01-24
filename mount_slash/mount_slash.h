@@ -273,6 +273,8 @@ struct readaheadrq {
 	int				rarq_npages;
 };
 
+#define SLASH2_NGROUPS_MAX		128		/* NGROUPS_MAX = 65536 */
+
 struct uid_mapping {
 	/* these are 64-bit as limitation of hash API */
 	uint64_t			um_key;
@@ -284,7 +286,7 @@ struct gid_mapping {
 	uint64_t			gm_key;
 	gid_t				gm_gid;
 	int				gm_ngid;
-	gid_t				gm_gidv[NGROUPS_MAX];
+	gid_t				gm_gidv[SLASH2_NGROUPS_MAX];
 	struct pfl_hashentry		gm_hentry;
 };
 
