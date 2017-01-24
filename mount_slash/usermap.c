@@ -201,7 +201,7 @@ mapfile_parse_group(char *start)
 		goto malformed;
 
 	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&msl_gidmap_int, &remote);
+		gm = psc_hashtbl_search(&msl_gidmap_int, p);
 		if (gm) {
 			if (gm->gm_ngid >= SLASH2_NGROUPS_MAX) {
 				psclog_warnx("Too many groups for uid %ld", 
