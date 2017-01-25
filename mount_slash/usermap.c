@@ -31,25 +31,6 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
-/*
- * Change effective UID based on the user map. It is called by
- * mslfsop_create(), mslfsop_mknod(), and others to map external
- * credentials to slash2 internal ones.
- */
-void
-uidmap_ext_cred(struct srt_creds *cr)
-{
-	struct uid_mapping *um, q;
-
-	if (!msl_use_mapfile)
-		return;
-
-	q.um_key = cr->scr_uid;
-	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um != NULL)
-		cr->scr_uid = um->um_val;
-}
-
 int
 gidmap_int_cred(struct pscfs_creds *cr)
 {
@@ -70,6 +51,20 @@ gidmap_int_cred(struct pscfs_creds *cr)
 	cr->pcr_ngid = gm->gm_ngid;
 		
 	return (0);
+}
+
+void
+uidmap_ext_cred(struct srt_creds *cr)
+{
+	struct uid_mapping *um, q;
+
+	if (!msl_use_mapfile)
+		return;
+
+	q.um_key = cr->scr_uid;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um != NULL)
+		cr->scr_uid = um->um_val;
 }
 
 int
@@ -142,6 +137,7 @@ mapfile_parse_user(char *start)
 	int64_t local = -1, remote = -1;
 	struct uid_mapping *um;
 	char *run;
+	int rc = 0;
 
 	do {
 		PARSESTR(start, run);
@@ -168,10 +164,11 @@ mapfile_parse_user(char *start)
 	um->um_key = remote;
 	um->um_val = local;
 	psc_hashtbl_add_item(&msl_uidmap_ext, um);
+	rc = 1;
 
-	return (1);
  malformed:
-	return (0);
+
+	return (rc);
 }
 
 int
@@ -207,9 +204,9 @@ mapfile_parse_group(char *start)
 
 	DYNARRAY_FOREACH(p, n, &uids) {
 		gm = psc_hashtbl_search(&msl_gidmap_int, p);
-		if (gm) {
+		if (gm)
 			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
-		} else {
+		else {
 			gm = PSCALLOC(sizeof(*gm));
 			psc_hashent_init(&msl_gidmap_int, gm);
 			gm->gm_key = (uint64_t)p;
