@@ -741,7 +741,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	int rc;
 
-	slc_getfscreds(pfr, &pcr);
 
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
@@ -750,6 +749,11 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	 * via the FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
 	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
