@@ -31,6 +31,9 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
+/* 
+ * Called by msctl_getcreds() and gidmap_int_cred().
+ */
 int
 gidmap_int_cred(struct pscfs_creds *cr)
 {
