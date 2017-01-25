@@ -2712,8 +2712,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	    strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2724,6 +2722,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
