@@ -378,7 +378,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	struct bmap *b;
-	struct srt_creds owner;
 
 	psc_assert(oflags & O_CREAT);
 
