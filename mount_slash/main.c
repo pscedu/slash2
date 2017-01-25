@@ -420,7 +420,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = msl_pref_ios;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
-	uidmap_ext_cred(&mq->owner);
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
@@ -1383,7 +1382,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
-	uidmap_ext_cred(&mq->creds);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
