@@ -2734,7 +2734,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
+	rc = uidmap_int_stat(&mq->sstb);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	mq->pfg.fg_fid = pinum;
