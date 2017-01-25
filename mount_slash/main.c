@@ -1878,7 +1878,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2423,8 +2422,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (FID_GET_SITEID(opinum) != FID_GET_SITEID(npinum))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, opinum, &op);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2433,6 +2430,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -3414,7 +3412,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3578,7 +3575,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3692,7 +3688,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 		buf = PSCALLOC(size);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
