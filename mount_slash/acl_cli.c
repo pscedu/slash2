@@ -174,8 +174,11 @@ sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
 	acl_t a;
 
 	a = slc_acl_get_fcmh(pfr, pcrp, f);
+	/*
+	 * If there is no ACL entries, we revert to traditional
+	 * Unix mode bits for permission checking.
+	 */
 	if (a == NULL) {
-
 #ifdef SLOPT_POSIX_ACLS_REVERT
 		locked = FCMH_RLOCK(f);
 		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
