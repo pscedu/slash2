@@ -909,7 +909,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1837,12 +1836,12 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	memset(&sstb, 0, sizeof(sstb));
 
-	slc_getfscreds(pfr, &pcr);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
 	    &c, &p, &dcu);
 	if (rc == ENOENT)
