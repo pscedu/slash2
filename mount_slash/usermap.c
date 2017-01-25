@@ -32,7 +32,7 @@
 #include "pathnames.h"
 
 /* 
- * Called by msctl_getcreds() and gidmap_int_cred().
+ * Called by msctl_getcreds() and slc_getfscreds().
  */
 int
 gidmap_int_cred(struct pscfs_creds *cr)
