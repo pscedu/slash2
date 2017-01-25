@@ -334,10 +334,11 @@ void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
-struct pscfs_creds *
-	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
+
+struct pscfs_creds *
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 
 void	 uidmap_ext_cred(struct srt_creds *);
 int	 gidmap_int_cred(struct pscfs_creds *);
