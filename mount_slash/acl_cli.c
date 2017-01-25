@@ -170,12 +170,11 @@ int
 sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	int locked, rv;
+	int locked, rc;
 	acl_t a;
 
 	a = slc_acl_get_fcmh(pfr, pcrp, f);
 	if (a == NULL) {
-		int rc;
 
 #ifdef SLOPT_POSIX_ACLS_REVERT
 		locked = FCMH_RLOCK(f);
@@ -187,10 +186,10 @@ sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
 		return (rc);
 	}
 	locked = FCMH_RLOCK(f);
-	rv = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
+	rc = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
 	FCMH_URLOCK(f, locked);
 	acl_free(a);
-	return (rv);
+	return (rc);
 }
 
 /* acl-2.2.52: setfacl/do_set.c */
