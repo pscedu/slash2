@@ -794,8 +794,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (strlen(newname) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	/* Check the parent inode. */
 	rc = msl_load_fcmh(pfr, p_inum, &p);
 	if (rc)
@@ -808,6 +806,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
