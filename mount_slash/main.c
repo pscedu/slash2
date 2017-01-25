@@ -563,7 +563,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
 	*mfhp = NULL;
 
-	slc_getfscreds(pfr, &pcr);
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
@@ -571,6 +570,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
