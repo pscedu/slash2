@@ -43,13 +43,12 @@ gidmap_int_cred(struct pscfs_creds *cr)
 
 	q.gm_key = cr->pcr_uid;
 	gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
-	if (gm == NULL)
-		return (0);
-	cr->pcr_gid = gm->gm_gid;
-	DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
-		cr->pcr_gidv[i++] = (int64_t)p;
-	cr->pcr_ngid = gm->gm_ngid;
-		
+	if (gm) {
+		cr->pcr_gid = gm->gm_gid;
+		DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
+			cr->pcr_gidv[i++] = (int64_t)p;
+		cr->pcr_ngid = gm->gm_ngid;
+	}
 	return (0);
 }
 
