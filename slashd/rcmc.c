@@ -268,11 +268,8 @@ slmrcmthr_main(struct psc_thread *thr)
 {
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
-	struct psc_dynarray da;
 	struct fidc_membh *f;
 	int rc;
-
-	psc_dynarray_init(&da);
 
 	srcm = slmrcmthr(thr);
 	while (pscthr_run(thr)) {
@@ -299,6 +296,5 @@ slmrcmthr_main(struct psc_thread *thr)
 		/* XXX if we failed above, client will never know */
 		sl_csvc_decref(rsw->rsw_csvc);
 		psc_pool_return(slm_repl_status_pool, rsw);
-		psc_dynarray_reset(&da);
 	}
 }
