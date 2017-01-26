@@ -287,6 +287,12 @@ slmrcmthr_main(struct psc_thread *thr)
 			fcmh_op_done(f);
 		}
 
+		/*
+		 * XXX We should return error code other than EOF as well. The
+		 * client side should be able to handle this. Right now, msctl
+		 * just returns nothing in case of an error.
+		 */
+
 		/* signal EOF */
 		slm_rcm_issue_getreplst(rsw, NULL);
 

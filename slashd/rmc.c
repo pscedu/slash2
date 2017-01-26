@@ -1852,6 +1852,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;
 	rsw->rsw_csvc = csvc;
+
+	/* handled by slmrcmthr_main() */
 	lc_add(&slm_replst_workq, rsw);
 
  out:
