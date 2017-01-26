@@ -270,9 +270,7 @@ slmrcmthr_main(struct psc_thread *thr)
 	struct slmrcm_thread *srcm;
 	struct psc_dynarray da;
 	struct fidc_membh *f;
-	struct sl_fidgen fg;
-	int n, rc;
-	void *p;
+	int rc;
 
 	psc_dynarray_init(&da);
 
@@ -282,30 +280,9 @@ slmrcmthr_main(struct psc_thread *thr)
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
-		/*
- 		 * Hit hang waiting on LOADING bit for a bmap.
- 		 */
-		if (rsw->rsw_fg.fg_fid == FID_ANY) {
-			OPSTAT_INCR("replst-all");
-			
-			/* XXX lock to be removed after extensive testing */
-			spinlock(&slm_upsch_lock);
-			dbdo(slmrcmthr_walk, &da,
-			    "SELECT DISTINCT fid FROM upsch");
-			freelock(&slm_upsch_lock);
-
-			DYNARRAY_FOREACH(p, n, &da) {
-				fg.fg_fid = (slfid_t)p;
-				fg.fg_gen = FGEN_ANY;
-				rc = slm_fcmh_get(&fg, &f);
-				if (rc)
-					break;
-				rc = slmrcmthr_walk_bmaps(rsw, f);
-				fcmh_op_done(f);
-			}
-
-		} else if (slm_fcmh_get(&rsw->rsw_fg, &f) == 0) {
-			OPSTAT_INCR("replst-file");
+		rc = slm_fcmh_get(&rsw->rsw_fg, &f);
+		if (!rc) {
+			OPSTAT_INCR("replst");
 			slmrcmthr_walk_bmaps(rsw, f);
 			fcmh_op_done(f);
 		}
