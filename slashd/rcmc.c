@@ -277,9 +277,9 @@ slmrcmthr_main(struct psc_thread *thr)
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
+		OPSTAT_INCR("replst");
 		rc = slm_fcmh_get(&rsw->rsw_fg, &f);
 		if (!rc) {
-			OPSTAT_INCR("replst");
 			slmrcmthr_walk_bmaps(rsw, f);
 			fcmh_op_done(f);
 		}
@@ -293,7 +293,6 @@ slmrcmthr_main(struct psc_thread *thr)
 		/* signal EOF */
 		slm_rcm_issue_getreplst(rsw, NULL);
 
-		/* XXX if we failed above, client will never know */
 		sl_csvc_decref(rsw->rsw_csvc);
 		psc_pool_return(slm_repl_status_pool, rsw);
 	}
