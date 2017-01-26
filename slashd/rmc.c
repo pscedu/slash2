@@ -1837,8 +1837,14 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	csvc = slm_getclcsvc(rq->rq_export);
-	if (csvc == NULL)
-		return (0);
+	if (csvc == NULL) {
+		mp->rc = -EHOSTDOWN;
+		goto out;
+	}
+	if (mq->fg.fg_fid == FID_ANY) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
 
 	rsw = psc_pool_get(slm_repl_status_pool);
 	memset(rsw, 0, sizeof(*rsw));
@@ -1847,6 +1853,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	rsw->rsw_cid = mq->id;
 	rsw->rsw_csvc = csvc;
 	lc_add(&slm_replst_workq, rsw);
+
+ out:
 	return (0);
 }
 
