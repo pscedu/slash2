@@ -5510,3 +5510,8 @@ Potential wrapper issue - cores with two different file names:
 <zhihui_> [root@r503 c]# /usr/bin/file mount_wokfs.29728
 <zhihui_> mount_wokfs.29728: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.32, BuildID[sha1]=1ab3c5793a438291eb6710935b95f5eecc6fa0bf, not stripped
 <zhihui_> [root@r503 c]# 
+
+01/26/2017
+----------
+
+The get replication status RPC is very efficient.  Bob is running some script to verify files are really replicated elsewhere and it takes a very long time.
