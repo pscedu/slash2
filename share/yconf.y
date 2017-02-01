@@ -637,7 +637,9 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	for (res = res0; res; res = res->ai_next) {
 		sa.p = res->ai_addr;
 		ip = ntohl(sa.s->sin.sin_addr.s_addr);
-		pflnet_getifnfordst(cfg_ifaddrs, res->ai_addr, ifn);
+		rc = pflnet_getifnfordst(cfg_ifaddrs, res->ai_addr, ifn);
+		if (rc)
+			continue;
 		ifv[0] = ifn;
 		rc = lnet_match_networks(&tnam,
 		    globalConfig.gconf_lnets, &ip, ifv, 1);
@@ -689,6 +691,10 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 
 		psc_dynarray_add(&m->resm_nids, resm_nidp);
 	}
+	if (!psc_dynarray_len(&currentResm->resm_nids))
+		psc_fatalx("Resource %s is not reachable", 
+		    currentRes->res_name);
+
 	freeaddrinfo(res0);
 }
 
