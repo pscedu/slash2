@@ -228,14 +228,14 @@ parse_mapfile(void)
 {
 	char fn[PATH_MAX], buf[LINE_MAX], *start, *run;
 	FILE *fp;
-	int ln;
+	int ln, good;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_MAPFILE);
 
 	fp = fopen(fn, "r");
 	if (fp == NULL)
 		err(1, "%s", fn);
-	ln = 0;
+	ln = good = 0;
 	while (fgets(buf, sizeof(buf), fp)) {
 		ln++;
 
@@ -252,16 +252,25 @@ parse_mapfile(void)
 		 */
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
-		    mapfile_parse_user(run))
+		    mapfile_parse_user(run)) {
+			good++;
 			continue;
+		}
 		else if (strcmp(start, "group") == 0 &&
-		    mapfile_parse_group(run))
+		    mapfile_parse_group(run)) {
+			good++;
 			continue;
+		}
 
  malformed:
+		if (*start == '\0')
+			continue;
+
 		warnx("%s: %d: malformed line", fn, ln);
 	}
 	if (ferror(fp))
 		warn("%s", fn);
 	fclose(fp);
+	if (!good)
+		warnx("Map file %s is empty.", fn);
 }
