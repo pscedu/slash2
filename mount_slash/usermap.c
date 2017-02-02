@@ -234,7 +234,7 @@ parse_mapfile(void)
 
 	fp = fopen(fn, "r");
 	if (fp == NULL)
-		err(1, "%s", fn);
+		errx(1, "Fail to open map file %s.", fn);
 	ln = good = 0;
 	while (fgets(buf, sizeof(buf), fp)) {
 		ln++;
@@ -269,8 +269,8 @@ parse_mapfile(void)
 		warnx("%s: %d: malformed line", fn, ln);
 	}
 	if (ferror(fp))
-		warn("%s", fn);
+		errx(1, "I/O error on map file %s.", fn);
 	fclose(fp);
 	if (!good)
-		warnx("Map file %s is empty.", fn);
+		errx(1, "Map file %s is empty.", fn);
 }
