@@ -273,4 +273,6 @@ parse_mapfile(void)
 	fclose(fp);
 	if (!good)
 		errx(1, "Map file %s is empty.", fn);
+	warnx("%d entries in the map file %s have been parsed successfully.", 
+	    good, fn);
 }
