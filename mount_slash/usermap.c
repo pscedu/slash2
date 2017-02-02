@@ -242,6 +242,7 @@ parse_mapfile(void)
 		/*
 		 * Skip comments that starts with # sign.
 		 */
+		start = buf;
 		if (*start == '#')
 		    continue;
 
@@ -249,7 +250,6 @@ parse_mapfile(void)
 		 * There must be at least one space after
 		 * either "user" or "group" string.
 		 */
-		start = buf;
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
 		    mapfile_parse_user(run))
