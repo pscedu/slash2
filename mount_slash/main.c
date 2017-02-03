@@ -257,7 +257,7 @@ struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
-	uidmap_int_cred(pcr);
+	gidmap_int_cred(pcr);
 	return (pcr);
 }
 
