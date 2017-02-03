@@ -59,6 +59,8 @@
  *		(o) file size
  *		(o) mtime
  *     (2) This function should only be used by a client.
+ *
+ * The current thinking is to store remote attributes in sstb.
  */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
