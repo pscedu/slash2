@@ -52,17 +52,17 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 }
 
 void
-uidmap_ext_cred(struct srt_creds *cr)
+uidmap_ext_cred(struct pscfs_creds *cr)
 {
 	struct uid_mapping *um, q;
 
 	if (!msl_use_mapfile)
 		return;
 
-	q.um_key = cr->scr_uid;
+	q.um_key = cr->pcr_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
 	if (um != NULL)
-		cr->scr_uid = um->um_val;
+		cr->pcr_uid = um->um_val;
 }
 
 int
