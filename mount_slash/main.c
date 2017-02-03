@@ -152,7 +152,7 @@ uint32_t			 sl_sys_upnonce;
 
 struct psc_hashtbl		 msl_uidmap_ext;
 struct psc_hashtbl		 msl_uidmap_int;
-struct psc_hashtbl		 msl_gidmap_int;
+struct psc_hashtbl		 msl_gidmap_ext;
 
 /*
  * This allows io_submit(2) to work before Linux kernel version 4.1.
@@ -257,7 +257,7 @@ struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
-	gidmap_int_cred(pcr);
+	gidmap_ext_cred(pcr);
 	return (pcr);
 }
 
@@ -3292,7 +3292,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	if (msl_use_mapfile) {
 		psc_hashtbl_destroy(&msl_uidmap_ext);
 		psc_hashtbl_destroy(&msl_uidmap_int);
-		psc_hashtbl_destroy(&msl_gidmap_int);
+		psc_hashtbl_destroy(&msl_gidmap_ext);
 	}
 
 	spinlock(&pfl_faults_lock);
@@ -3987,8 +3987,8 @@ msl_init(void)
 		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
 
-		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
-		    gm_key, gm_hentry, 191, NULL, "gidmapint");
+		psc_hashtbl_init(&msl_gidmap_ext, 0, struct gid_mapping,
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 
 		parse_mapfile();
 	}

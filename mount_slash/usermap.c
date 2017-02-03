@@ -32,7 +32,7 @@
 #include "pathnames.h"
 
 int
-gidmap_int_cred(struct pscfs_creds *cr)
+gidmap_ext_cred(struct pscfs_creds *cr)
 {
 	int i;
 	void *p;
@@ -42,7 +42,7 @@ gidmap_int_cred(struct pscfs_creds *cr)
 		return (0);
 
 	q.gm_key = cr->pcr_uid;
-	gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
+	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 	if (gm) {
 		cr->pcr_gid = gm->gm_gid;
 		DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
@@ -202,15 +202,15 @@ mapfile_parse_group(char *start)
 		goto malformed;
 
 	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&msl_gidmap_int, p);
+		gm = psc_hashtbl_search(&msl_gidmap_ext, p);
 		if (gm)
 			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
 		else {
 			gm = PSCALLOC(sizeof(*gm));
-			psc_hashent_init(&msl_gidmap_int, gm);
+			psc_hashent_init(&msl_gidmap_ext, gm);
 			gm->gm_key = (uint64_t)p;
 			gm->gm_gid = remote;
-			psc_hashtbl_add_item(&msl_gidmap_int, gm);
+			psc_hashtbl_add_item(&msl_gidmap_ext, gm);
 		}
 	}
 	rc = 1;

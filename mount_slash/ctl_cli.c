@@ -68,7 +68,6 @@ msctl_getcreds(int s, struct pscfs_creds *pcrp)
 	pcrp->pcr_uid = uid;
 	pcrp->pcr_gid = gid;
 	pcrp->pcr_ngid = 1;
-	gidmap_int_cred(pcrp);
 	return (rc);
 }
 

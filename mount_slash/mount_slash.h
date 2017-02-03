@@ -341,7 +341,7 @@ struct pscfs_creds *
 	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 
 void	 uidmap_ext_cred(struct srt_creds *);
-int	 gidmap_int_cred(struct pscfs_creds *);
+int	 gidmap_ext_cred(struct pscfs_creds *);
 int	 uidmap_ext_stat(struct srt_stat *);
 int	 uidmap_int_stat(struct srt_stat *);
 void	 parse_mapfile(void);
@@ -365,7 +365,7 @@ extern int			 msl_use_mapfile;
 
 extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
-extern struct psc_hashtbl	 msl_gidmap_int;
+extern struct psc_hashtbl	 msl_gidmap_ext;
 
 extern struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 extern struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
