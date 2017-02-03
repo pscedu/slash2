@@ -31,7 +31,7 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
-int
+void
 gidmap_ext_cred(struct pscfs_creds *cr)
 {
 	int i;
@@ -39,7 +39,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	struct gid_mapping *gm, q;
 
 	if (!msl_use_mapfile)
-		return (0);
+		return;
 
 	q.gm_key = cr->pcr_uid;
 	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
@@ -49,7 +49,6 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 			cr->pcr_gidv[i++] = (int64_t)p;
 		cr->pcr_ngid = gm->gm_ngid;
 	}
-	return (0);
 }
 
 void
