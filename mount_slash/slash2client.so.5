@@ -75,7 +75,7 @@ accessed.
 Defaults to
 .Pa /var/lib/slash .
 .It Ic mapfile
-Use the mapfile
+Use the map file named 
 .Pa /var/lib/slash/mapfile
 .Pq or wherever the data directory is configured; see Ic datadir
 for translating local user account IDs to global SLASH2 user IDs and
@@ -93,6 +93,8 @@ Group mappings may also specified:
 .Bd -literal -offset 4n
 .Ic group local-uids Ar uid ... Ic remote Ar gid
 .Ed
+.Pp
+An empty line or a line that starts with the # sign in the map file is ignored.
 .It Ic pagecache_maxsize Ns = Ns Ar size
 Specify the maximum amount of memory to which the file data cache can
 grow.
