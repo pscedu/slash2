@@ -5515,3 +5515,12 @@ Potential wrapper issue - cores with two different file names:
 ----------
 
 The get replication status RPC is very efficient.  Bob is running some script to verify files are really replicated elsewhere and it takes a very long time.
+
+02/17/2017
+----------
+
+(1) Make sure we ignore unknown I/O servers when checking for the last replica of a block in a file.
+
+(2) An IOS is shown not connected to a client, double check that on-demand connection actually happens.
+
+
