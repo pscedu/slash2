@@ -5528,4 +5528,4 @@ The get replication status RPC is very efficient.  Bob is running some script to
 ----------
 
 * More performance metrics are needed (average disk I/O time, RPC time).
-* UID map should map a user to nobody if no explicit mapping for it exists.
+* UID map should map a user to nobody if no explicit mapping for it exists (uid squash).
