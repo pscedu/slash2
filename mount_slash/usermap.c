@@ -48,6 +48,10 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 		DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
 			cr->pcr_gidv[i++] = (int64_t)p;
 		cr->pcr_ngid = gm->gm_ngid;
+	} else {
+		/* gid squashing */
+		cr->pcr_ngid = 1;
+		cr->pcr_gid = 65534;
 	}
 }
 
@@ -63,6 +67,10 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
 	if (um != NULL)
 		cr->pcr_uid = um->um_val;
+	else {
+		/* uid squashing */
+		cr->pcr_uid = 65534;
+	}
 }
 
 int
