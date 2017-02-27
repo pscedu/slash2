@@ -202,15 +202,17 @@ mapfile_parse_group(char *start)
 
 	DYNARRAY_FOREACH(p, n, &uids) {
 		gm = psc_hashtbl_search(&msl_gidmap_ext, p);
-		if (gm)
-			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
-		else {
+		if (!gm) {
 			gm = PSCALLOC(sizeof(*gm));
 			psc_hashent_init(&msl_gidmap_ext, gm);
+			gm->gm_ngid = 1;
 			gm->gm_key = (uint64_t)p;
 			gm->gm_gid = remote;
 			psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+			continue;
 		}
+		gm->gm_ngid++;
+		psc_dynarray_add(&gm->gm_gidv, (void *)remote);
 	}
 	rc = 1;
 
