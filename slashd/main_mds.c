@@ -502,7 +502,7 @@ main(int argc, char *argv[])
 	rc = mdsio_init();
 	if (rc) {
 		/* 08/03/2016: saw this today and the mds is still up */
-		psc_fatal("failed to initialize ZFS, rc= %d", rc);
+		psc_fatalx("failed to initialize ZFS, rc= %d", rc);
 	}
 	import_zpool(zpname, zpcachefn);
 
