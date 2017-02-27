@@ -90,6 +90,7 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
 		(_rv);							\
 	} _PFL_RVEND
 
+/* subtle: || 1 is there in case gid is zero to avoid premature exit */
 #define FOREACH_GROUP(g, i, pcrp)					\
 	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) == 0 ?	\
 	    (pcrp)->pcr_gid : (pcrp)->pcr_gidv[(i) - 1]) || 1); (i)++)
