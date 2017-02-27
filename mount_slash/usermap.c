@@ -31,6 +31,28 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
+/* Externalize UID credential */
+
+void
+uidmap_ext_cred(struct pscfs_creds *cr)
+{
+	struct uid_mapping *um, q;
+
+	if (!msl_use_mapfile)
+		return;
+
+	q.um_key = cr->pcr_uid;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um != NULL)
+		cr->pcr_uid = um->um_val;
+	else {
+		/* uid squashing */
+		cr->pcr_uid = 65534;
+	}
+}
+
+/* Externalize GID credentials */
+
 void
 gidmap_ext_cred(struct pscfs_creds *cr)
 {
@@ -48,21 +70,11 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 		DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
 			cr->pcr_gidv[i++] = (int64_t)p;
 		cr->pcr_ngid = gm->gm_ngid;
+	} else {
+		/* gid squashing */
+		cr->pcr_ngid = 1;
+		cr->pcr_gid = 65534;
 	}
-}
-
-void
-uidmap_ext_cred(struct pscfs_creds *cr)
-{
-	struct uid_mapping *um, q;
-
-	if (!msl_use_mapfile)
-		return;
-
-	q.um_key = cr->pcr_uid;
-	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um != NULL)
-		cr->pcr_uid = um->um_val;
 }
 
 int
@@ -202,15 +214,22 @@ mapfile_parse_group(char *start)
 
 	DYNARRAY_FOREACH(p, n, &uids) {
 		gm = psc_hashtbl_search(&msl_gidmap_ext, p);
-		if (gm)
-			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
-		else {
+		if (!gm) {
 			gm = PSCALLOC(sizeof(*gm));
 			psc_hashent_init(&msl_gidmap_ext, gm);
+			gm->gm_ngid = 1;
 			gm->gm_key = (uint64_t)p;
 			gm->gm_gid = remote;
 			psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+			continue;
 		}
+		if (gm->gm_ngid < NGROUPS_MAX) {
+			gm->gm_ngid++;
+			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
+			continue;
+		}
+		warnx("Too many groups for uid %ld", (uint64_t)p);
+		goto malformed;
 	}
 	rc = 1;
 
@@ -236,7 +255,7 @@ parse_mapfile(void)
 		ln++;
 
 		/*
-		 * Skip comments that starts with # sign.
+		 * Skip comments that start with # sign.
 		 */
 		start = buf;
 		if (*start == '#')
