@@ -211,8 +211,13 @@ mapfile_parse_group(char *start)
 			psc_hashtbl_add_item(&msl_gidmap_ext, gm);
 			continue;
 		}
-		gm->gm_ngid++;
-		psc_dynarray_add(&gm->gm_gidv, (void *)remote);
+		if (gm->gm_ngid < NGROUPS_MAX) {
+			gm->gm_ngid++;
+			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
+			continue;
+		}
+		warnx("Too many groups for uid %ld", (uint64_t)p);
+		goto malformed;
 	}
 	rc = 1;
 
