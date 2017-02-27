@@ -31,6 +31,28 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
+/* Externalize UID credential */
+
+void
+uidmap_ext_cred(struct pscfs_creds *cr)
+{
+	struct uid_mapping *um, q;
+
+	if (!msl_use_mapfile)
+		return;
+
+	q.um_key = cr->pcr_uid;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um != NULL)
+		cr->pcr_uid = um->um_val;
+	else {
+		/* uid squashing */
+		cr->pcr_uid = 65534;
+	}
+}
+
+/* Externalize GID credentials */
+
 void
 gidmap_ext_cred(struct pscfs_creds *cr)
 {
@@ -52,24 +74,6 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 		/* gid squashing */
 		cr->pcr_ngid = 1;
 		cr->pcr_gid = 65534;
-	}
-}
-
-void
-uidmap_ext_cred(struct pscfs_creds *cr)
-{
-	struct uid_mapping *um, q;
-
-	if (!msl_use_mapfile)
-		return;
-
-	q.um_key = cr->pcr_uid;
-	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um != NULL)
-		cr->pcr_uid = um->um_val;
-	else {
-		/* uid squashing */
-		cr->pcr_uid = 65534;
 	}
 }
 
@@ -251,7 +255,7 @@ parse_mapfile(void)
 		ln++;
 
 		/*
-		 * Skip comments that starts with # sign.
+		 * Skip comments that start with # sign.
 		 */
 		start = buf;
 		if (*start == '#')
