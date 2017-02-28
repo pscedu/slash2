@@ -248,6 +248,8 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 //		return (pcr.pcr_gid);
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		return (p->fcmh_sstb.sst_gid);
+
+	/* See notes on grpid in mount(8) */
 	if (msl_newent_inherit_groups)
 		return (p->fcmh_sstb.sst_gid);
 	return (pcr->pcr_gid);

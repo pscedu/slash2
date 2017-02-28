@@ -5533,3 +5533,8 @@ The get replication status RPC is very efficient.  Bob is running some script to
 * If we disable write on an I/O server, make sure that we can read the old data store on it and write new
   data elsewhere.  If I wait a while, I seem to get the right result. Perhaps the client still think the
   copy at the old I/O server is still valid.
+
+02/28/2017
+----------
+
+Gracefully online/offline an IOS (we have disable write, we need disable read as well).
