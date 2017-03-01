@@ -894,11 +894,14 @@ struct slm_repl_valid {
  * operation, to ensure the last replicas aren't removed.
  */
 void
-slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
+slm_repl_countvalid_cb(struct bmap *b, int iosidx, int val,
     void *arg)
 {
 	struct slm_repl_valid *t = arg;
-	int i;
+	struct slash_inode_handle *ih;
+	struct fidc_membh *f;
+	sl_replica_t *repl;
+	int i, rc;
 
 	/* If the state isn't VALID, nothing to count. */
 	if (val != BREPLST_VALID)
@@ -911,7 +914,27 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
 	for (i = 0; i < t->nios; i++)
 		if (iosidx == t->idx[i])
 			return;
-	t->n++;
+
+	/*
+ 	 * If the "valid" replica is hold by an unknown I/Os, don't take
+ 	 * it into account.
+ 	 */
+	f = b->bcm_fcmh;
+	ih = fcmh_2_inoh(f);
+	if (iosidx < SL_DEF_REPLICAS) {
+		i = iosidx;
+		repl = ih->inoh_ino.ino_repls;
+	} else {
+		rc = mds_inox_ensure_loaded(ih);
+		if (rc)
+			return;
+		i = iosidx - SL_DEF_REPLICAS;
+		repl = ih->inoh_extras->inox_repls;
+	} 
+	if (libsl_id2res(repl[i].bs_id))
+		t->n++;
+	else
+		OPSTAT_INCR("unknown-valid");
 }
 
 void
