@@ -158,7 +158,14 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mrq->mrq_fid, strerror(rc)));
 
-	/* parse I/O systems specified */
+	/* 
+	 * Parse I/O systems specified. We could allow an unknown I/O server
+	 * to be passed to the MDS.  If so, remember the IOS ID also encodes
+	 * the site ID and the MDS must take corresponding steps as well.
+	 *
+	 * It is rare, but an I/O server do retire and its ID is taken out of 
+	 * the config file. However, its ID should never be reused.
+	 */ 
 	for (n = 0; n < mrq->mrq_nios; n++, nrepls++) {
 		res_name = mrq->mrq_iosv[n];
 		if ((repls[n].bs_id = libsl_str2id(res_name)) == IOS_ID_ANY) {
