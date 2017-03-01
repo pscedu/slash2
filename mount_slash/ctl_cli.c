@@ -108,6 +108,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *f;
 	struct sl_fidgen fg;
 	uint32_t n, nrepls = 0;
+	char *res_name;
 	int rc;
 
 	rc = msctl_getcreds(fd, &pcr);
@@ -158,13 +159,14 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, strerror(rc)));
 
 	/* parse I/O systems specified */
-	for (n = 0; n < mrq->mrq_nios; n++, nrepls++)
-		if ((repls[n].bs_id =
-		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
+	for (n = 0; n < mrq->mrq_nios; n++, nrepls++) {
+		res_name = mrq->mrq_iosv[n];
+		if ((repls[n].bs_id = libsl_str2id(res_name)) == IOS_ID_ANY) {
 			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
 			goto out;
 		}
+	}
 
  again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
