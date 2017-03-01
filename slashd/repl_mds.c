@@ -146,7 +146,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	}
 
 	res = libsl_id2res(ios);
-	if (res == NULL || !RES_ISFS(res))
+	if (res == NULL)
+		PFL_GOTOERR(out, rc = -SLERR_RES_UNKNOWN);
+	if (!RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/*
