@@ -5538,3 +5538,54 @@ The get replication status RPC is very efficient.  Bob is running some script to
 ----------
 
 Gracefully online/offline an IOS (we have disable write, we need disable read as well).
+
+03/02/2017
+----------
+
+[zhihui@xl003 ~]$ msctl -p sys.version
+parameter                                               value
+================================================================================
+sys.version                                             43020
+[zhihui@xl003 ~]$ 
+
+(gdb) 
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+90		psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
+(gdb) bt
+#0  0x00007f90b749d5f7 in raise () from /lib64/libc.so.6
+#1  0x00007f90b749ece8 in abort () from /lib64/libc.so.6
+#2  0x000000000045d73c in pfl_abort () at /opt/packages/slash2/cli/p/pfl/init.c:106
+#3  0x0000000000474d15 in _psclogv (pci=0x7f8a5c000910, level=0, options=0, fmt=0x7f90b47e262f "[assert] %s", ap=0x7f8a6effa550)
+    at /opt/packages/slash2/cli/p/pfl/log.c:492
+#4  0x0000000000474ee4 in _psc_fatal (pci=0x7f8a5c000910, level=0, options=0, fmt=0x7f90b47e262f "[assert] %s")
+    at /opt/packages/slash2/cli/p/pfl/log.c:522
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+#6  0x00007f90b460e5d8 in msl_bmap_lease_extend_cb (rq=0x7f89e401c3a0, args=0x7f89e401c548)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:396
+#7  0x00007f90b478ef6a in pscrpc_interpret (rq=0x7f89e401c3a0) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:85
+#8  0x00007f90b47ae466 in _pscrpc_set_check (set=0x7f90a0038f30, finish_one=1) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:953
+#9  0x00007f90b471ef23 in pscrpc_nbreapthr_main (thr=0x7f90a06bfb50) at /opt/packages/slash2/cli/p/pfl/nb.c:81
+#10 0x00000000004aa8e3 in _pscthr_begin (arg=0x7f90b61fc120) at /opt/packages/slash2/cli/p/pfl/thread.c:332
+#11 0x00007f90b7830dc5 in start_thread () from /lib64/libpthread.so.0
+#12 0x00007f90b755e28d in clone () from /lib64/libc.so.6
+(gdb) up
+#6  0x00007f90b460e5d8 in msl_bmap_lease_extend_cb (rq=0x7f89e401c3a0, args=0x7f89e401c548)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:396
+396		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+(gdb) down
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+90		psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
+(gdb) p *b
+$1 = {bcm_bmapno = 0, bcm_flags = 38, bcm_fcmh = 0x7f89780416f0, bcm_opcnt = {value32 = 0}, bcm_lock = {psl_value = {value32 = 3}, 
+    psl_flags = 0, psl_owner_lineno = 378, 
+    psl_owner_file = 0x7f90b47e3220 "/opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c", psl_owner = 140232544466688}, 
+  bcm_tentry = {rbe_left = 0x0, rbe_right = 0x0, rbe_parent = 0x0, rbe_color = 0}, bcm_lentry = {plh_next = 0x7f899802fe20, 
+    plh_prev = 0x7f895001fb40, plh_magic = 1311693406324658740, plh_owner = 0x7f90a03a7e30}, bcm_owner = 0}
+(gdb) 
+
