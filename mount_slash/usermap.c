@@ -213,7 +213,7 @@ mapfile_parse_group(char *start)
 		goto malformed;
 
 	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&msl_gidmap_ext, p);
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &p);
 		if (!gm) {
 			gm = PSCALLOC(sizeof(*gm));
 			psc_hashent_init(&msl_gidmap_ext, gm);
