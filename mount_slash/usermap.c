@@ -150,6 +150,7 @@ mapfile_parse_user(char *start)
 	int rc = 0;
 
 	do {
+		/* the order of local and remote does not matter */
 		PARSESTR(start, run);
 		if (strcmp(start, "local") == 0) {
 			start = run;
