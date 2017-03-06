@@ -145,7 +145,7 @@ int
 mapfile_parse_user(char *start)
 {
 	int64_t local = -1, remote = -1;
-	struct uid_mapping *um;
+	struct uid_mapping *um, q;
 	char *run;
 	int rc = 0;
 
@@ -162,6 +162,11 @@ mapfile_parse_user(char *start)
 			goto malformed;
 	} while (*start);
 	if (local == -1 || remote == -1)
+		goto malformed;
+
+	q.um_key = local;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um != NULL)
 		goto malformed;
 
 	um = PSCALLOC(sizeof(*um));
