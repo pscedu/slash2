@@ -56,25 +56,36 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 void
 gidmap_ext_cred(struct pscfs_creds *cr)
 {
-	int i;
-	void *p;
+	int i, j;
 	struct gid_mapping *gm, q;
 
 	if (!msl_use_mapfile)
 		return;
 
-	q.gm_key = cr->pcr_uid;
+	i = j = 0;
+	q.gm_key = cr->pcr_gid;
 	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 	if (gm) {
+		j++;
 		cr->pcr_gid = gm->gm_gid;
-		DYNARRAY_FOREACH(p, i, &gm->gm_gidv)
-			cr->pcr_gidv[i++] = (int64_t)p;
-		cr->pcr_ngid = gm->gm_ngid;
-	} else {
+	}
+	for (i = 0; i < cr->pcr_ngid; i++) {
+		q.gm_key = cr->pcr_gidv[i];
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (!gm)
+			continue;
+		if (j == 0)
+			cr->pcr_gid = gm->gm_gid;
+		else
+			cr->pcr_gidv[j-1] = gm->gm_gid;
+		j++;
+	}
+	if (j == 0) {
 		/* gid squashing */
-		cr->pcr_ngid = 1;
+		j++;
 		cr->pcr_gid = 65534;
 	}
+	cr->pcr_ngid = j;
 }
 
 int
