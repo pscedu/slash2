@@ -287,7 +287,7 @@ parse_mapfile(void)
 		if (*start == '\0')
 			continue;
 
-		warnx("%s: %d: malformed line", fn, ln);
+		warnx("%s: %d: malformed or duplicate line", fn, ln);
 	}
 	if (ferror(fp))
 		errx(1, "I/O error on map file %s.", fn);
