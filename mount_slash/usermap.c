@@ -277,7 +277,7 @@ parse_mapfile(void)
 			good++;
 			continue;
 		}
-		else if (strcmp(start, "group") == 0 &&
+		if (strcmp(start, "group") == 0 &&
 		    mapfile_parse_group(run)) {
 			good++;
 			continue;
