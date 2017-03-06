@@ -282,6 +282,7 @@ struct uid_mapping {
 
 struct gid_mapping {
 	uint64_t			gm_key;
+	uint64_t			gm_val;
 	gid_t				gm_gid;
 	int				gm_ngid;
 	struct psc_dynarray		gm_gidv;
@@ -366,6 +367,7 @@ extern int			 msl_use_mapfile;
 extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
 extern struct psc_hashtbl	 msl_gidmap_ext;
+extern struct psc_hashtbl	 msl_gidmap_int;
 
 extern struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 extern struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;

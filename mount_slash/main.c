@@ -153,6 +153,7 @@ uint32_t			 sl_sys_upnonce;
 struct psc_hashtbl		 msl_uidmap_ext;
 struct psc_hashtbl		 msl_uidmap_int;
 struct psc_hashtbl		 msl_gidmap_ext;
+struct psc_hashtbl		 msl_gidmap_int;
 
 /*
  * This allows io_submit(2) to work before Linux kernel version 4.1.
@@ -3989,8 +3990,9 @@ msl_init(void)
 		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
-
 		psc_hashtbl_init(&msl_gidmap_ext, 0, struct gid_mapping,
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
+		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
 		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 
 		parse_mapfile();

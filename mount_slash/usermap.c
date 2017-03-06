@@ -190,57 +190,46 @@ mapfile_parse_user(char *start)
 int
 mapfile_parse_group(char *start)
 {
-	struct psc_dynarray uids = DYNARRAY_INIT;
-	struct gid_mapping *gm;
-	int64_t remote = -1;
-	int n, rc = 0;
+	int64_t local = -1, remote = -1;
+	struct gid_mapping *gm, q;
 	char *run;
-	uid_t uid;
-	void *p;
+	int rc = 0;
 
 	do {
+		/* the order of local and remote does not matter */
 		PARSESTR(start, run);
-		if (strcmp(start, "local-uids") == 0) {
+		if (strcmp(start, "local") == 0) {
 			start = run;
-			while (isdigit(*start)) {
-				uid = PARSENUM(start, run);
-				psc_dynarray_add(&uids,
-				    (void *)(uintptr_t)uid);
-			}
+			local = PARSENUM(start, run);
 		} else if (strcmp(start, "remote") == 0) {
-			if (remote != -1)
-				goto malformed;
 			start = run;
 			remote = PARSENUM(start, run);
 		} else
 			goto malformed;
 	} while (*start);
-	if (psc_dynarray_len(&uids) == 0 || remote == -1)
+	if (local == -1 || remote == -1)
 		goto malformed;
 
-	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&msl_gidmap_ext, &p);
-		if (!gm) {
-			gm = PSCALLOC(sizeof(*gm));
-			psc_hashent_init(&msl_gidmap_ext, gm);
-			gm->gm_ngid = 1;
-			gm->gm_key = (uint64_t)p;
-			gm->gm_gid = remote;
-			psc_hashtbl_add_item(&msl_gidmap_ext, gm);
-			continue;
-		}
-		if (gm->gm_ngid < NGROUPS_MAX) {
-			gm->gm_ngid++;
-			psc_dynarray_add(&gm->gm_gidv, (void *)remote);
-			continue;
-		}
-		warnx("Too many groups for uid %ld", (uint64_t)p);
+	q.gm_key = local;
+	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+	if (gm != NULL)
 		goto malformed;
-	}
+
+	gm = PSCALLOC(sizeof(*gm));
+	psc_hashent_init(&msl_gidmap_ext, gm);
+	gm->gm_key = local;
+	gm->gm_val = remote;
+	psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+
+	gm = PSCALLOC(sizeof(*gm));
+	psc_hashent_init(&msl_gidmap_int, gm);
+	gm->gm_key = remote;
+	gm->gm_val = local;
+	psc_hashtbl_add_item(&msl_gidmap_int, gm);
 	rc = 1;
 
  malformed:
-	psc_dynarray_free(&uids);
+
 	return (rc);
 }
 
