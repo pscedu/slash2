@@ -66,8 +66,6 @@ void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
     int flags)
 {
-	uidmap_int_stat(sstb);
-
 	if (flags & FCMH_SETATTRF_HAVELOCK)
 		FCMH_LOCK_ENSURE(f);
 	else

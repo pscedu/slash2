@@ -2731,15 +2731,14 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_int_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->linklen = strlen(buf);
