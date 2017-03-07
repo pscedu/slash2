@@ -105,26 +105,19 @@ uidmap_ext_stat(struct srt_stat *sstb)
 }
 
 void
-uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp, uint32_t *gidp)
+uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 {
-	uint32_t uid, gid;
-	struct uid_mapping *um, uq;
-	struct gid_mapping *gm, gq;
+	uint32_t uid;
+	struct uid_mapping *um, q;
 
 	uid = sstb->sst_uid;
-	gid = sstb->sst_gid;
 	if (msl_use_mapfile) {
-		uq.um_key = sstb->sst_uid;
-		um = psc_hashtbl_search(&msl_uidmap_int, &uq.um_key);
+		q.um_key = sstb->sst_uid;
+		um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
 		if (um)
 			uid = um->um_val;
-		gq.gm_key = sstb->sst_gid;
-		gm = psc_hashtbl_search(&msl_gidmap_int, &gq.gm_key);
-		if (gm)
-			gid = gm->gm_val;
 	}
 	*uidp = uid;
-	*gidp = gid;
 }
 
 #define PARSESTR(start, run)						\

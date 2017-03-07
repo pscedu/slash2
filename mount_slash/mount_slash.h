@@ -340,8 +340,13 @@ struct pscfs_creds *
 
 void	 uidmap_ext_cred(struct pscfs_creds *);
 void	 gidmap_ext_cred(struct pscfs_creds *);
+
 int	 uidmap_ext_stat(struct srt_stat *);
-void	 uidmap_int_stat(struct srt_stat *, uint32_t *, uint32_t *);
+int	 gidmap_ext_stat(struct srt_stat *);
+
+void	 uidmap_int_stat(struct srt_stat *, uint32_t *);
+void	 gidmap_int_stat(struct srt_stat *, uint32_t *);
+
 void	 parse_mapfile(void);
 
 #define bmap_flushq_wake(reason)					\
