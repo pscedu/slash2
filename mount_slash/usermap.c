@@ -104,6 +104,22 @@ uidmap_ext_stat(struct srt_stat *sstb)
 	return (0);
 }
 
+int
+gidmap_ext_stat(struct srt_stat *sstb)
+{
+	struct gid_mapping *gm, q;
+
+	if (!msl_use_mapfile)
+		return (0);
+
+	q.gm_key = sstb->sst_gid;
+	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+	if (gm == NULL)
+		return (0);
+	sstb->sst_gid = gm->gm_val;
+	return (0);
+}
+
 void
 uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 {
