@@ -3297,6 +3297,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 		psc_hashtbl_destroy(&msl_uidmap_ext);
 		psc_hashtbl_destroy(&msl_uidmap_int);
 		psc_hashtbl_destroy(&msl_gidmap_ext);
+		psc_hashtbl_destroy(&msl_gidmap_int);
 	}
 
 	spinlock(&pfl_faults_lock);
