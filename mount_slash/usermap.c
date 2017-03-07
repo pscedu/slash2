@@ -104,20 +104,20 @@ uidmap_ext_stat(struct srt_stat *sstb)
 	return (0);
 }
 
-int
+uint32_t
 uidmap_int_stat(struct srt_stat *sstb)
 {
+	uint32_t uid;
 	struct uid_mapping *um, q;
 
-	if (!msl_use_mapfile)
-		return (0);
-
-	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
-	if (um == NULL)
-		return (0);
-	sstb->sst_uid = um->um_val;
-	return (0);
+	uid = sstb->sst_uid;
+	if (msl_use_mapfile) {
+		q.um_key = sstb->sst_uid;
+		um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
+		if (um)
+			uid = um->um_val;
+	}
+	return (uid);
 }
 
 #define PARSESTR(start, run)						\
