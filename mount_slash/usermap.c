@@ -31,7 +31,7 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
-/* Externalize UID credential */
+/* Externalize UID and GID credential for permission checking */
 
 void
 uidmap_ext_cred(struct pscfs_creds *cr)
@@ -50,8 +50,6 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 		cr->pcr_uid = 65534;
 	}
 }
-
-/* Externalize GID credentials */
 
 void
 gidmap_ext_cred(struct pscfs_creds *cr)
@@ -88,6 +86,8 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	cr->pcr_ngid = j;
 }
 
+/* Externalize UID and GID credential for setting attributes */
+
 int
 uidmap_ext_stat(struct srt_stat *sstb)
 {
@@ -119,6 +119,8 @@ gidmap_ext_stat(struct srt_stat *sstb)
 	sstb->sst_gid = gm->gm_val;
 	return (0);
 }
+
+/* Internalize UID and GID credential for attribute reporting to FUSE */
 
 void
 uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
