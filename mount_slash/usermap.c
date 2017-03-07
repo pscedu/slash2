@@ -136,6 +136,22 @@ uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 	*uidp = uid;
 }
 
+void
+gidmap_int_stat(struct srt_stat *sstb, uint32_t *gidp)
+{
+	uint32_t gid;
+	struct gid_mapping *gm, q;
+
+	gid = sstb->sst_gid;
+	if (msl_use_mapfile) {
+		q.gm_key = sstb->sst_gid;
+		gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
+		if (gm)
+			gid = gm->gm_val;
+	}
+	*gidp = gid;
+}
+
 #define PARSESTR(start, run)						\
 	do {								\
 		for ((run) = (start); isalpha(*run) || *(run) == '-';	\
