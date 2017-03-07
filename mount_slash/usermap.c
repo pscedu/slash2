@@ -67,7 +67,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 	if (gm) {
 		j++;
-		cr->pcr_gid = gm->gm_gid;
+		cr->pcr_gid = gm->gm_val;
 	}
 	for (i = 0; i < cr->pcr_ngid; i++) {
 		q.gm_key = cr->pcr_gidv[i];
@@ -75,9 +75,9 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 		if (!gm)
 			continue;
 		if (j == 0)
-			cr->pcr_gid = gm->gm_gid;
+			cr->pcr_gid = gm->gm_val;
 		else
-			cr->pcr_gidv[j-1] = gm->gm_gid;
+			cr->pcr_gidv[j-1] = gm->gm_val;
 		j++;
 	}
 	if (j == 0) {

@@ -283,9 +283,6 @@ struct uid_mapping {
 struct gid_mapping {
 	uint64_t			gm_key;
 	uint64_t			gm_val;
-	gid_t				gm_gid;
-	int				gm_ngid;
-	struct psc_dynarray		gm_gidv;
 	struct pfl_hashentry		gm_hentry;
 };
 
