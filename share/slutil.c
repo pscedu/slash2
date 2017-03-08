@@ -98,8 +98,10 @@ sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 	stb->st_ino		= sstb->sst_fg.fg_fid;
 	stb->st_mode		= sstb->sst_mode;
 	stb->st_nlink		= sstb->sst_nlink;
-	stb->st_uid		= sstb->sst_uid;
-	stb->st_gid		= sstb->sst_gid;
+
+	uidmap_int_stat(sstb, &stb->st_uid);
+	gidmap_int_stat(sstb, &stb->st_gid);
+
 	stb->st_rdev		= sstb->sst_rdev;
 	stb->st_size		= sstb->sst_size;
 	stb->st_blksize		= sstb->sst_blksize;
