@@ -318,10 +318,8 @@ parse_mapfile(void)
 		}
 
  malformed:
-		if (*start == '\0')
-			continue;
-
-		warnx("%s: %d: malformed or duplicate line", fn, ln);
+		if (*start != '\0')
+			errx(1, "%s: %d: malformed or duplicate line", fn, ln);
 	}
 	if (ferror(fp))
 		errx(1, "I/O error on map file %s.", fn);
