@@ -2861,10 +2861,16 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * after loading the fcmh to avoid sending garbage resulting in
 	 * EIO.
 	 */
-	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_UID;
-	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_GID;
+	if (to_set & PSCFS_SETATTRF_UID) {
+		uidmap_ext_stat(stb);
+		if (stb->st_uid == (uid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_UID;
+	}
+	if (to_set & PSCFS_SETATTRF_GID) {
+		gidmap_ext_stat(stb);
+ 		if (stb->st_gid == (gid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_GID;
+	}
 	if (to_set == 0)
 		goto out;
 
