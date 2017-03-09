@@ -2860,6 +2860,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * entry, so we have to defer the short circuit processing till
 	 * after loading the fcmh to avoid sending garbage resulting in
 	 * EIO.
+	 *
+	 * If mapping is enabled, we can reject setting UID/GID if there
+	 * is no explicit mapping exists.
 	 */
 	if (to_set & PSCFS_SETATTRF_UID) {
 		uidmap_ext_stat(stb);
