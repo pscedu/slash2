@@ -88,36 +88,36 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 
 /* Externalize UID and GID credential for setting attributes */
 
-int
-uidmap_ext_stat(struct srt_stat *sstb)
+void
+uidmap_ext_stat(struct stat *stb)
 {
 	struct uid_mapping *um, q;
 
 	if (!msl_use_mapfile)
-		return (0);
+		return;
 
-	q.um_key = sstb->sst_uid;
+	q.um_key = stb->st_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
 	if (um == NULL)
-		return (0);
-	sstb->sst_uid = um->um_val;
-	return (0);
+		stb->st_uid = um->um_val;
+	else
+		stb->st_uid = -1;
 }
 
-int
-gidmap_ext_stat(struct srt_stat *sstb)
+void
+gidmap_ext_stat(struct stat *stb)
 {
 	struct gid_mapping *gm, q;
 
 	if (!msl_use_mapfile)
-		return (0);
+		return;
 
-	q.gm_key = sstb->sst_gid;
+	q.gm_key = stb->st_gid;
 	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 	if (gm == NULL)
-		return (0);
-	sstb->sst_gid = gm->gm_val;
-	return (0);
+		stb->st_gid = gm->gm_val;
+	else
+		stb->st_gid = -1;
 }
 
 /* Internalize UID and GID credential for attribute reporting to FUSE */

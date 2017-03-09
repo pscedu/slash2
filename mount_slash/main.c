@@ -929,9 +929,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	mq->sstb.sst_mode = mode;
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -2020,11 +2017,13 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	mq->attr.sst_fg = f->fcmh_fg;
 	mq->to_set = to_set;
 
+#if 0
 	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
 		rc = uidmap_ext_stat(&mq->attr);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+#endif
 
 	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x",
 	    to_set);
