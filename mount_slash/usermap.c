@@ -31,6 +31,12 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
+
+/*
+ * Perform UID and GID mapping when a map file is given. Otherwise, all
+ * functions in this file shouuld be no-op.
+ */
+
 /* Externalize UID and GID credential for permission checking */
 
 void
