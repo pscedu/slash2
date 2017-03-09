@@ -47,7 +47,7 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 		cr->pcr_uid = um->um_val;
 	else {
 		/* uid squashing */
-		cr->pcr_uid = 65534;
+		cr->pcr_uid = -1;
 	}
 }
 
@@ -66,7 +66,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	if (gm)
 		gid = gm->gm_val;
 	else 
-		gid = 65534;
+		gid = -1;
 	j = 0;
 	for (i = 0; i < cr->pcr_ngid; i++) {
 		if (cr->pcr_gid == cr->pcr_gidv[i]) {
