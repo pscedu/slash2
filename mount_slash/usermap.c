@@ -53,7 +53,7 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 		cr->pcr_uid = um->um_val;
 	else {
 		/* uid squashing */
-		cr->pcr_uid = -1;
+		cr->pcr_uid = 65534;
 	}
 }
 
@@ -72,7 +72,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	if (gm)
 		gid = gm->gm_val;
 	else 
-		gid = -1;
+		gid = 65534;
 	j = 0;
 	for (i = 0; i < cr->pcr_ngid; i++) {
 		if (cr->pcr_gid == cr->pcr_gidv[i]) {
@@ -107,7 +107,7 @@ uidmap_ext_stat(struct stat *stb)
 	if (um == NULL)
 		stb->st_uid = um->um_val;
 	else
-		stb->st_uid = -1;
+		stb->st_uid = 65534;
 }
 
 void
@@ -123,7 +123,7 @@ gidmap_ext_stat(struct stat *stb)
 	if (gm == NULL)
 		stb->st_gid = gm->gm_val;
 	else
-		stb->st_gid = -1;
+		stb->st_gid = 65534;
 }
 
 /* Internalize UID and GID credential for attribute reporting to FUSE */
@@ -141,7 +141,7 @@ uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 		if (um)
 			uid = um->um_val;
 		else
-			uid = -1;
+			uid = 65534;
 	}
 	*uidp = uid;
 }
@@ -159,7 +159,7 @@ gidmap_int_stat(struct srt_stat *sstb, uint32_t *gidp)
 		if (gm)
 			gid = gm->gm_val;
 		else
-			gid = -1;
+			gid = 65534;
 	}
 	*gidp = gid;
 }
