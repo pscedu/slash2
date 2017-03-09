@@ -134,6 +134,8 @@ uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 		um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
 		if (um)
 			uid = um->um_val;
+		else
+			uid = -1;
 	}
 	*uidp = uid;
 }
@@ -150,6 +152,8 @@ gidmap_int_stat(struct srt_stat *sstb, uint32_t *gidp)
 		gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
 		if (gm)
 			gid = gm->gm_val;
+		else
+			gid = -1;
 	}
 	*gidp = gid;
 }
