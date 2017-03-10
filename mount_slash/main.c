@@ -126,7 +126,7 @@ sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 
 char				 mountpoint[PATH_MAX];
-int				 msl_use_mapfile;
+int				 msl_has_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 char				*msl_cfgfn = SL_PATH_CONF;
 
@@ -3301,7 +3301,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_hashtbl_destroy(&msl_namecache_hashtbl);
 	slcfg_destroy();
 
-	if (msl_use_mapfile) {
+	if (msl_has_mapfile) {
 		psc_hashtbl_destroy(&msl_uidmap_ext);
 		psc_hashtbl_destroy(&msl_uidmap_int);
 		psc_hashtbl_destroy(&msl_gidmap_ext);
@@ -3999,7 +3999,7 @@ msl_init(void)
 	msl_newent_inherit_groups = 0;
 #endif
 
-	if (msl_use_mapfile) {
+	if (msl_has_mapfile) {
 		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
@@ -4155,7 +4155,7 @@ msl_opt_lookup(const char *opt)
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
-		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
 					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},

@@ -364,7 +364,7 @@ extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];
-extern int			 msl_use_mapfile;
+extern int			 msl_has_mapfile;
 
 extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
