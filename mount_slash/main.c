@@ -162,6 +162,7 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
+int				 msl_map_enabled;
 int				 msl_root_squash;
 int				 msl_repl_enable;
 int				 msl_max_retries = 5;
