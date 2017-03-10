@@ -210,12 +210,17 @@ mapfile_parse_user(char *start)
 		if (strcmp(start, "local") == 0) {
 			start = run;
 			local = PARSENUM(start, run);
-		} else if (strcmp(start, "remote") == 0) {
+			continue;
+		}
+		if (strcmp(start, "remote") == 0) {
 			start = run;
 			remote = PARSENUM(start, run);
-		} else
-			goto malformed;
+			continue;
+		}
+		goto malformed;
+
 	} while (*start);
+
 	if (local == -1 || remote == -1)
 		goto malformed;
 
@@ -256,12 +261,17 @@ mapfile_parse_group(char *start)
 		if (strcmp(start, "local") == 0) {
 			start = run;
 			local = PARSENUM(start, run);
-		} else if (strcmp(start, "remote") == 0) {
+			continue;
+		}
+		if (strcmp(start, "remote") == 0) {
 			start = run;
 			remote = PARSENUM(start, run);
-		} else
-			goto malformed;
+			continue;
+		} 
+		goto malformed;
+
 	} while (*start);
+
 	if (local == -1 || remote == -1)
 		goto malformed;
 
