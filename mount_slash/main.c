@@ -4010,6 +4010,7 @@ msl_init(void)
 		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 
 		parse_mapfile();
+		msl_map_enabled = 1;
 	}
 
 	authbuf_checkkeyfile();
