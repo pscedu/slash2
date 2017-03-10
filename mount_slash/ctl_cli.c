@@ -981,8 +981,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
-	psc_ctlparam_register_var("sys.map_enabled",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_map_enabled);
+	psc_ctlparam_register_var("sys.map_enable",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_map_enable);
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);

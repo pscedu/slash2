@@ -44,7 +44,7 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 {
 	struct uid_mapping *um, q;
 
-	if (!msl_map_enabled)
+	if (!msl_map_enable)
 		return;
 
 	q.um_key = cr->pcr_uid;
@@ -64,7 +64,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 	gid_t gid;
 	struct gid_mapping *gm, q;
 
-	if (!msl_map_enabled)
+	if (!msl_map_enable)
 		return;
 
 	q.gm_key = cr->pcr_gid;
@@ -99,7 +99,7 @@ uidmap_ext_stat(struct stat *stb)
 {
 	struct uid_mapping *um, q;
 
-	if (!msl_map_enabled)
+	if (!msl_map_enable)
 		return;
 
 	q.um_key = stb->st_uid;
@@ -115,7 +115,7 @@ gidmap_ext_stat(struct stat *stb)
 {
 	struct gid_mapping *gm, q;
 
-	if (!msl_map_enabled)
+	if (!msl_map_enable)
 		return;
 
 	q.gm_key = stb->st_gid;
@@ -135,7 +135,7 @@ uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 	struct uid_mapping *um, q;
 
 	uid = sstb->sst_uid;
-	if (msl_map_enabled) {
+	if (msl_map_enable) {
 		q.um_key = sstb->sst_uid;
 		um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
 		if (um)
@@ -153,7 +153,7 @@ gidmap_int_stat(struct srt_stat *sstb, uint32_t *gidp)
 	struct gid_mapping *gm, q;
 
 	gid = sstb->sst_gid;
-	if (msl_map_enabled) {
+	if (msl_map_enable) {
 		q.gm_key = sstb->sst_gid;
 		gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
 		if (gm)
