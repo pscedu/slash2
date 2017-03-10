@@ -3993,6 +3993,11 @@ msl_init(void)
 	if (slcfg_local->cfg_root_squash)
 		msl_root_squash = 1;
 	parse_allowexe();
+
+#ifdef Linux
+	msl_newent_inherit_groups = 0;
+#endif
+
 	if (msl_use_mapfile) {
 		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");

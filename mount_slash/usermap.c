@@ -253,12 +253,14 @@ mapfile_parse_group(char *start)
 	int64_t local = -1, remote = -1;
 	struct gid_mapping *gm, q;
 	char *run;
-	int rc = 0;
+	int rc = 0, localfirst = 0;
 
 	do {
-		/* the order of local and remote does not matter */
+		/* the order of local and remote does matter */
 		PARSESTR(start, run);
 		if (strcmp(start, "local") == 0) {
+			if (remote == -1)
+				localfirst = 1;
 			start = run;
 			local = PARSENUM(start, run);
 			continue;
@@ -275,22 +277,29 @@ mapfile_parse_group(char *start)
 	if (local == -1 || remote == -1)
 		goto malformed;
 
-	q.gm_key = local;
-	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
-	if (gm != NULL)
-		goto malformed;
+	if (localfirst) {
+		q.gm_key = local;
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (gm != NULL)
+			goto malformed;
 
-	gm = PSCALLOC(sizeof(*gm));
-	psc_hashent_init(&msl_gidmap_ext, gm);
-	gm->gm_key = local;
-	gm->gm_val = remote;
-	psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+		gm = PSCALLOC(sizeof(*gm));
+		psc_hashent_init(&msl_gidmap_ext, gm);
+		gm->gm_key = local;
+		gm->gm_val = remote;
+		psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+	} else {
+		q.gm_key = remote;
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (gm != NULL)
+			goto malformed;
 
-	gm = PSCALLOC(sizeof(*gm));
-	psc_hashent_init(&msl_gidmap_int, gm);
-	gm->gm_key = remote;
-	gm->gm_val = local;
-	psc_hashtbl_add_item(&msl_gidmap_int, gm);
+		gm = PSCALLOC(sizeof(*gm));
+		psc_hashent_init(&msl_gidmap_int, gm);
+		gm->gm_key = remote;
+		gm->gm_val = local;
+		psc_hashtbl_add_item(&msl_gidmap_int, gm);
+	}
 	rc = 1;
 
  malformed:
