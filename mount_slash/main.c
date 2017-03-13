@@ -480,7 +480,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(c);
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
 	    FCMH_SETATTRF_CLOBBER);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	fci = fcmh_2_fci(c);
 
@@ -778,7 +778,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 
 	FCMH_LOCK(f);
-	sl_internalize_stat(&f->fcmh_sstb, &stb);
+	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
  out:
 	if (f)
@@ -866,7 +866,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -965,7 +965,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1422,7 +1422,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1855,7 +1855,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    &c, &p, &dcu);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
-	sl_internalize_stat(&sstb, &stb);
+	msl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
@@ -2780,7 +2780,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -3100,7 +3100,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		sl_internalize_stat(&c->fcmh_sstb, stb);
+		msl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (flush_mtime || flush_size) {
 			if (rc) {
