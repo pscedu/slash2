@@ -1902,7 +1902,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		goto out;
 	}
 
-	/* Do some post setup on the new lease. */
+	/* 
+	 * Do some post setup on the new lease. This is probably a 
+	 * good idea because the bmap replication table can change
+	 * at anytime.
+	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
