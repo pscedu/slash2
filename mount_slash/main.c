@@ -3930,7 +3930,7 @@ slc_setprefios(sl_ios_id_t id)
 	r->res_flags |= RESF_PREFIOS;
 	if (RES_ISCLUSTER(r))
 		DYNARRAY_FOREACH(ri, j, &r->res_peers)
-			ri->res_flags &= ~RESF_PREFIOS;
+			ri->res_flags |= RESF_PREFIOS;
 //	CONF_ULOCK();
 }
 
