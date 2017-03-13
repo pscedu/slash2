@@ -739,7 +739,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 }
 
-#define FLAG_DIRTY			(1 << 0)	/* bmap was modified and must be saved */
+#define FLAG_REPLICA_STATE_DIRTY	(1 << 0)	/* bmap was modified and must be saved */
 #define FLAG_REPLICA_STATE_INVALID	(1 << 1)	/* return SLERR_REPLICA_STATE_INVALID */
 
 /*
@@ -763,7 +763,7 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_GARBAGE_QUEUED:
 	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_INVALID:
-		 *flags |= FLAG_DIRTY;
+		 *flags |= FLAG_REPLICA_STATE_DIRTY;
 		 break;
 
 	default:
@@ -865,7 +865,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
-		if (flags & FLAG_DIRTY)
+		if (flags & FLAG_REPLICA_STATE_DIRTY)
 			mds_bmap_write_logrepls(b);
 		else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
@@ -949,7 +949,7 @@ slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_REPL_QUEUED:
 	case BREPLST_REPL_SCHED:
 	case BREPLST_VALID:
-		*flags |= FLAG_DIRTY;
+		*flags |= FLAG_REPLICA_STATE_DIRTY;
 		break;
 	default:
 		 break;
@@ -1027,7 +1027,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
 			psc_assert(!rc);
-			if (flags & FLAG_DIRTY)
+			if (flags & FLAG_REPLICA_STATE_DIRTY)
 				rc = mds_bmap_write_logrepls(b);
 		}
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
