@@ -766,10 +766,14 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 		 *flags |= FLAG_REPLICA_STATE_DIRTY;
 		 break;
 
-	default:
+	case BREPLST_TRUNC_QUEUED:
+	case BREPLST_TRUNC_SCHED:
 		 /* Report that the replica will not be made valid. */
 		 *flags |= FLAG_REPLICA_STATE_INVALID;
 		 break;
+
+	default:
+		psc_fatalx("Invalid replication state %d", val);
 	}
 }
 
