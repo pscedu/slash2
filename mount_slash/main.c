@@ -366,6 +366,14 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+static void
+msl_internalize_stat(struct srt_stat *sstb, struct stat *stb)
+{
+	sl_internalize_stat(sstb, stb);
+	uidmap_int_stat(sstb, &stb->st_uid);
+	gidmap_int_stat(sstb, &stb->st_gid);
+}
+
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
