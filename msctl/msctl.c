@@ -544,6 +544,10 @@ cmd_replrq_one(FTSENT *f, void *arg)
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
+	/*
+ 	 * If the path points to a different slash2 installation
+ 	 * on the same machine, we could be rejected with ESTALE.
+ 	 */
 	mrq->mrq_fid = fn2fid(f->fts_path);
 	return (0);
 }
