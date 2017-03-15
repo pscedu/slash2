@@ -220,6 +220,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 	psc_assert(f->fcmh_flags & FCMH_INITING);
 
+	/* (gdb) p msl_rmc_resm->resm_res->res_site->site_id */
 	if (fcmh_2_fid(f) != SLFID_ROOT &&
 	    siteid != msl_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
