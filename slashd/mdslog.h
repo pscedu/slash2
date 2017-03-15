@@ -40,6 +40,7 @@ struct slm_progress {
 
 extern struct slm_progress	 nsupd_prg;
 extern struct slm_progress	 reclaim_prg;
+extern struct psc_journal_cursor mds_cursor;
 
 extern uint64_t			 slm_reclaim_proc_batchno;
 

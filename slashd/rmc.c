@@ -76,6 +76,14 @@ int			slm_conn_debug = 1;
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 
+#define			MIN_SPACE_RESERVE_PCT	10
+
+psc_spinlock_t		slm_min_space_spinlock = SPINLOCK_INIT;
+int			slm_min_space_lastcode;
+struct timespec		slm_min_space_lastcheck;
+int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
+	
+
 static void
 slm_root_attributes(struct srt_stat *attr)
 {
@@ -160,6 +168,35 @@ slm_get_next_slashfid(slfid_t *fidp)
 	psclog_diag("most recently allocated FID: "SLPRI_FID, fid);
 	*fidp = fid;
 	return (0);
+}
+
+int
+slm_rmc_check_capacity(int vfsid)
+{
+	int rc, percentage;
+	struct statvfs sfb;
+	struct timespec now;
+
+	spinlock(&slm_min_space_spinlock);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (now.tv_sec - slm_min_space_lastcheck.tv_sec < 600)
+		goto out;
+	rc = -mdsio_statfs(vfsid, &sfb);
+	if (rc) {
+		freelock(&slm_min_space_spinlock);
+		return (rc);
+	}
+
+	slm_min_space_lastcheck.tv_sec = now.tv_sec;
+	percentage = sfb.f_bavail * 100 / sfb.f_blocks;
+	if (percentage < slm_min_space_reserve_pct)
+		slm_min_space_lastcode = -ENOSPC;
+	else
+		slm_min_space_lastcode = 0;
+ out:
+	rc = slm_min_space_lastcode;
+	freelock(&slm_min_space_spinlock);
+	return (rc);
 }
 
 int
@@ -476,6 +513,12 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	/*
+ 	 * This returns attributes for a file without going through the code
+ 	 * that instantiates a fcmh for the child. One side effect is that
+ 	 * we can succeed here while failing the getattr RPC on the same 
+ 	 * file because we check the CRC of the inode there.
+ 	 */
 	mp->rc = -mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
 	    &rootcreds, &mp->attr, &mp->xattrsize);
 	if (mp->rc)
@@ -586,6 +629,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		return (0);
+
+	mp->rc = slm_rmc_check_capacity(vfsid);
+	if (mp->rc)
+		return (0);
+
 	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
 }
 
@@ -657,6 +705,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+
+	mp->rc = slm_rmc_check_capacity(vfsid);
+	if (mp->rc)
+		return (0);
 
 #if 0
 	if (strcmp(mq->name, ".sconsign.dblite") == 0)
@@ -1168,8 +1220,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			OPSTAT_INCR("truncate-full");
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
 			mq->attr.sst_blocks = 0;
-			for (i = 0; i < fcmh_2_nrepls(f); i++)
-				fcmh_set_repl_nblks(f, i, 0);
+			/*
+			 * (gdb) p ((struct fcmh_mds_info *)(f+1))->
+			 * fmi_inodeh.inoh_ino.ino_nrepls
+			 */ 
+			for (i = 0; i < fcmh_2_nrepls(f); i++) {
+				mp->rc = fcmh_set_repl_nblks(f, i, 0);
+				if (mp->rc)
+					PFL_GOTOERR(out, mp->rc);
+			}
 			to_set |= SL_SETATTRF_GEN | SL_SETATTRF_NBLKS;
 			unbump = 1;
 
@@ -1295,8 +1354,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mp->rc = -bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	bmap_2_replpol(b) = mq->pol;
 
@@ -1786,8 +1843,14 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	csvc = slm_getclcsvc(rq->rq_export);
-	if (csvc == NULL)
-		return (0);
+	if (csvc == NULL) {
+		mp->rc = -EHOSTDOWN;
+		goto out;
+	}
+	if (mq->fg.fg_fid == FID_ANY) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
 
 	rsw = psc_pool_get(slm_repl_status_pool);
 	memset(rsw, 0, sizeof(*rsw));
@@ -1795,7 +1858,11 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;
 	rsw->rsw_csvc = csvc;
+
+	/* handled by slmrcmthr_main() */
 	lc_add(&slm_replst_workq, rsw);
+
+ out:
 	return (0);
 }
 

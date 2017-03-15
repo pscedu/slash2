@@ -79,8 +79,9 @@ struct pfl_odt		*slm_ptrunc_odt;
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 slm_roots;
 
-struct psc_listcache	 slm_db_lopri_workq;
 struct psc_listcache	 slm_db_hipri_workq;
+struct psc_listcache	 slm_db_lopri_workq;
+
 int			 slm_opstate;
 
 struct psc_poolmaster	 slm_bml_poolmaster;
@@ -404,6 +405,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int i, c, rc, vfsid, found;
@@ -500,7 +502,7 @@ main(int argc, char *argv[])
 	rc = mdsio_init();
 	if (rc) {
 		/* 08/03/2016: saw this today and the mds is still up */
-		psc_fatal("failed to initialize ZFS, rc= %d", rc);
+		psc_fatalx("failed to initialize ZFS, rc= %d", rc);
 	}
 	import_zpool(zpname, zpcachefn);
 
@@ -567,7 +569,14 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-	pfl_workq_init(128);
+
+	size = sizeof(struct slm_wkdata_wr_brepl);
+	if (size < sizeof(struct slm_wkdata_upsch_purge))
+		size = sizeof(struct slm_wkdata_upsch_purge);
+	if (size < sizeof(struct slm_wkdata_upschq))
+		size = sizeof(struct slm_wkdata_upschq);
+	pfl_workq_init(size, 1024, 2048);
+
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
@@ -631,6 +640,7 @@ main(int argc, char *argv[])
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_bno_idx'"
 		    " ON 'upsch' ('bno')");
+#if 0
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_uid_idx'"
 		    " ON 'upsch' ('uid')");
@@ -650,6 +660,7 @@ main(int argc, char *argv[])
 		    "		RANDOM() AS rnd"
 		    " FROM	upsch"
 		    " GROUP BY uid");
+#endif
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
@@ -689,18 +700,17 @@ main(int argc, char *argv[])
 	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 4; i++) {
 		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
 		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
 		pscthr_setready(thr);
 	}
-	for (i = 0; i < 2; i++) {
-		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
-		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
-		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
-		pscthr_setready(thr);
-	}
+
+	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
+	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
+	pscthr_setready(thr);
 
 	slmbmaptimeothr_spawn();
 	slmconnthr_spawn();

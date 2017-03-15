@@ -521,12 +521,11 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 
 	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
 
-	CSVC_ULOCK(csvc);
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
-		CONF_LOCK();
+		csvc->csvc_flags &= ~CSVCF_ONLIST;
 		pll_remove(&sl_clients, csvc);
-		CONF_ULOCK();
 	}
+	CSVC_ULOCK(csvc);
 
 	/*
 	 * Due to the nature of non-blocking CONNECT,
@@ -684,7 +683,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	struct sl_exp_cli *expc;
 	struct sl_resm_nid *nr;
 	lnet_process_id_t *pp;
-	int i, j;
+	int i, j, new = 0;
 	uint64_t delta;
 
 	if (peertype != SLCONNT_CLI && 
@@ -765,11 +764,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_magic = magic;
 
 	/* publish new csvc */
+	new = 1;
 	*csvcp = csvc;
-	psclog_diag("new csvc = %p, refcnt = %d", csvc, csvc->csvc_refcnt);
 	pfl_rwlock_unlock(&sl_conn_lock);
 
  gotit:
+
+	psclog_diag("%s csvc = %p, refcnt = %d", 
+	    new ? "create" : "reuse",  csvc, csvc->csvc_refcnt);
 
 	CSVC_LOCK(csvc);
 	psc_assert(csvc->csvc_peertype == peertype);
@@ -877,17 +879,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	 */
 	rc = ENETUNREACH;
 	DYNARRAY_FOREACH(nr, i, peernids) {
-		DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
-			if (LNET_NIDNET(nr->resmnid_nid) ==
-			    LNET_NIDNET(pp->nid)) {
-				rc = slrpc_issue_connect(
-				    pp->nid, nr->resmnid_nid,
-				    csvc, flags, mw, stkversp, 
-				    uptimep);
-				if (rc == 0 || rc == EWOULDBLOCK)
-					goto proc_conn;
-			}
+	    DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
+		if (LNET_NIDNET(nr->resmnid_nid) == LNET_NIDNET(pp->nid)) {
+			rc = slrpc_issue_connect( pp->nid, nr->resmnid_nid,
+			    csvc, flags, mw, stkversp, uptimep);
+			if (rc == 0 || rc == EWOULDBLOCK)
+				goto proc_conn;
 		}
+	    }
 	}
 
  proc_conn:
@@ -924,8 +923,15 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	sl_csvc_online(csvc);
 
-	if (peertype == SLCONNT_CLI)
+	/*
+ 	 * In theory, a client csvc should go away once it is not online.
+ 	 * Apparently, there is a race condition somewhere that has caused
+ 	 * trouble on our production system. Hence CSVCF_ONLIST.
+ 	 */
+	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
+		csvc->csvc_flags |= CSVCF_ONLIST;
 		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
+	}
  out2:
 
 	if (!success) {

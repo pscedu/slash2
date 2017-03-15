@@ -323,7 +323,7 @@ main(int argc, char *argv[])
 		pscthr_init(SLITHRT_HEALTH, slihealththr_main, 0,
 		    "slihealththr");
 
-	pfl_workq_init(128);
+	pfl_workq_init(128, 1024, 1024);
 	pfl_wkthr_spawn(SLITHRT_WORKER, SLI_NWORKER_THREADS, 0, "sliwkthr%d");
 
 	slrpc_initcli();
@@ -350,7 +350,7 @@ main(int argc, char *argv[])
 	pfl_opstimerthr_spawn(SLITHRT_OPSTIMER, "sliopstimerthr");
 	sl_freapthr_spawn(SLITHRT_FREAP, "slifreapthr");
 
-	slrpc_batches_init(SLITHRT_BATCHRPC, "sli");
+	slrpc_batches_init(SLITHRT_BATCHRPC, SL_SLIOD, "sli");
 
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",

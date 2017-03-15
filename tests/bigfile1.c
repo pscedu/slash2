@@ -35,7 +35,6 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
-int tweak = 1;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -45,7 +44,9 @@ struct testfile {
 	char   name[BASE_NAME_MAX+BASE_NAME_SUFFIX];
 };
 
-struct testfile files[] = {
+#define	TOTAL_NUM_FILES		9
+
+struct testfile files[TOTAL_NUM_FILES] = {
 	{ 
 		123,
 	},
@@ -84,12 +85,12 @@ create_file(int i)
 
 	while (j < 20) {
 		tmp2 = write(files[i].fd, files[i].buf, tmp1);
-		if (tmp1 == tmp2)
-			return;
-		if (errno) {
-			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
+		if (tmp2 < 0) {
+			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
 			exit (0);
 		}
+		if (tmp1 == tmp2)
+			return;
 		tmp1 = tmp1 - tmp2;	
 		j++;
 	}
@@ -99,7 +100,8 @@ create_file(int i)
 
 read_file(int i)
 {
-	size_t j, k, size, offset, tmp1, tmp2;
+	off_t offset;
+	size_t j, k, size, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
@@ -144,7 +146,8 @@ read_file(int i)
 write_file(int i)
 {
 	char *buf;
-	size_t j, size, offset, tmp1, tmp2;
+	off_t offset;
+	size_t j, size, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
@@ -173,12 +176,10 @@ write_file(int i)
 		if (tmp1 == 0)
 			tmp1 = 1;
 
-		if (tweak) {
-			/* tweak some data on each write */
-			buf = files[i].buf + offset;
-			for (j = 0; j < tmp1; j++) {
-				buf[j] = (char)random();
-			}
+		/* always tweak some data on each write */
+		buf = files[i].buf + offset;
+		for (j = 0; j < tmp1; j++) {
+			buf[j] = (char)random();
 		}
 
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
@@ -199,12 +200,11 @@ main(int argc, char *argv[])
 	int times = 10;
 	unsigned int seed = 1234;
 	size_t i, j, c, fd, nfile;
+	struct timeval t1, t2, t3;
 
-	while ((c = getopt(argc, argv, "ts:n:")) != -1) {
+	gettimeofday(&t1, NULL);
+	while ((c = getopt(argc, argv, "s:n:")) != -1) {
 		switch (c) {
-			case 't':
-				tweak = 1;
-				break;
 			case 's':
 				seed = atoi(optarg);
 				break;
@@ -235,6 +235,7 @@ main(int argc, char *argv[])
 		printf("Try to allocate %12ld bytes of working memory for file %s\n", 
 			files[i].size, files[i].name); 
 
+		fflush(stdout);
 		files[i].buf = malloc(files[i].size);
 		if (!files[i].buf) {
 			printf("Fail to allocate memory, errno = %d\n", errno);
@@ -244,22 +245,28 @@ main(int argc, char *argv[])
 		for (j = 0; j < files[i].size; j++)
 			files[i].buf[j] = (char)random();
 	}
-	printf("\nMemory for %d files have been allocated successfully.\n\n", nfile);
+	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
+	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
-
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
-		assert(files[i].fd > 0);
-	
+		if (files[i].fd < 0) {
+			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
+			exit (0);
+		}
 		create_file(i);
 
 	        close(files[i].fd);
 	}
 	printf("Initial %d files have been created successfully.\n\n", nfile);
+	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
         	files[i].fd = open(files[i].name, O_RDWR);
-		assert(files[i].fd > 0);
+		if (files[i].fd < 0) {
+			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
+			exit (0);
+		}
 	}
 
 	for (j = 0; j < times; j++) {
@@ -270,10 +277,21 @@ main(int argc, char *argv[])
 			write_file(i);
 		}
 		printf("Loop %d on %d files is done successfully.\n", j, nfile);
+		fflush(stdout);
 	}
 
 	for (i = 0; i < nfile; i++) {
 	        close(files[i].fd);
 	}
+	gettimeofday(&t2, NULL);
 
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }

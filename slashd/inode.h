@@ -121,14 +121,18 @@ struct slm_inox_od {
 struct slm_inoh {
 	struct slm_ino_od	 inoh_ino;
 	struct slm_inox_od	*inoh_extras;
-	int			 inoh_flags;			/* see INOH_* */
+	int			 inoh_flags;		/* see INOH_* */
 };
 
 #define slash_inode_handle	 slm_inoh
 
 /* inoh_flags */
-#define INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
-#define INOH_INO_NOTLOADED	(1 << 1)
+#define INOH_INO_NEW		(1 << 0)		/* not yet written to disk */
+
+/* 
+ * not very useful, because if we fail the whole fcmh is freed.
+ */
+#define INOH_INO_NOTLOADED	(1 << 1)	
 
 #define INOH_GETLOCK(ih)	(&inoh_2_fcmh(ih)->fcmh_lock)
 #define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))

@@ -50,8 +50,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define MIN_SPACE_RESERVE_GB	16		/* min space in GiB - check first */
-#define MIN_SPACE_RESERVE_PCT	2		/* min space percentage */
+#define MIN_SPACE_RESERVE_GB	32		/* min space in GiB */
+#define MIN_SPACE_RESERVE_PCT	5		/* min space percentage */
 #define MAX_WRITE_PER_FILE	2048		/* slivers */
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
@@ -105,29 +105,17 @@ int
 sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
     uint32_t b_off, uint32_t size)
 {
-	off_t rc, f_off;
 	int fd, percentage;
+	off_t rc = -1, f_off;
 
 	/*
- 	 * Set sli_min_space_reserve_gb/pct to zero to disable
- 	 * the reserve.
+ 	 * First off, overwrite is always allowed.
  	 */
-	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
-	    >= (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
-		return (1);
-
-	percentage = sli_statvfs_buf.f_bavail * 100 /
-	    sli_statvfs_buf.f_blocks;
-
-	if (percentage >= sli_min_space_reserve_pct)
-		return (1);
-
 	fd = fcmh_2_fd(f);
 	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
+
 #ifdef SEEK_HOLE
 	rc = lseek(fd, f_off, SEEK_HOLE);
-#else
-	rc = -1;
 #endif
 	/*
 	 * rc = -1 is possible if the backend file system does not
@@ -136,8 +124,22 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	 */
 	if (rc != -1 && f_off + size <= rc)
 		return (1);
+	/*
+ 	 * Set sli_min_space_reserve_pct/gb to zero to disable
+ 	 * the reserve. We check percentage first because file
+ 	 * system does not do well when near full.
+ 	 */
+	percentage = sli_statvfs_buf.f_bavail * 100 /
+	    sli_statvfs_buf.f_blocks;
 
-	return (0);
+	if (percentage < sli_min_space_reserve_pct)
+		return (0);
+
+	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
+	    < (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
+		return (0);
+
+	return (1);
 }
 
 __static int

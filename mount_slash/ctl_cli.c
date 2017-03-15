@@ -68,7 +68,6 @@ msctl_getcreds(int s, struct pscfs_creds *pcrp)
 	pcrp->pcr_uid = uid;
 	pcrp->pcr_gid = gid;
 	pcrp->pcr_ngid = 1;
-	gidmap_int_cred(pcrp);
 	return (rc);
 }
 
@@ -109,6 +108,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *f;
 	struct sl_fidgen fg;
 	uint32_t n, nrepls = 0;
+	char *res_name;
 	int rc;
 
 	rc = msctl_getcreds(fd, &pcr);
@@ -158,14 +158,22 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mrq->mrq_fid, strerror(rc)));
 
-	/* parse I/O systems specified */
-	for (n = 0; n < mrq->mrq_nios; n++, nrepls++)
-		if ((repls[n].bs_id =
-		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
+	/* 
+	 * Parse I/O systems specified. We could allow an unknown I/O server
+	 * to be passed to the MDS.  If so, remember the IOS ID also encodes
+	 * the site ID and the MDS must take corresponding steps as well.
+	 *
+	 * It is rare, but an I/O server do retire and its ID is taken out of 
+	 * the config file. However, its ID should never be reused.
+	 */ 
+	for (n = 0; n < mrq->mrq_nios; n++, nrepls++) {
+		res_name = mrq->mrq_iosv[n];
+		if ((repls[n].bs_id = libsl_str2id(res_name)) == IOS_ID_ANY) {
 			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
 			goto out;
 		}
+	}
 
  again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
@@ -564,7 +572,7 @@ msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 	if (r)
 		strlcpy(buf, r->res_name, PCP_VALUE_MAX);
 	else
-		strlcpy(buf, "(null)", PCP_VALUE_MAX);
+		strlcpy(buf, "N/A", PCP_VALUE_MAX);
 }
 
 int
@@ -939,8 +947,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
 	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
-	psc_ctlparam_register_var("pid", PFLCTL_PARAMT_INT, 0,
-	    &pfl_pid);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
@@ -975,6 +981,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
+	psc_ctlparam_register_var("sys.map_enable",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_map_enable);
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);

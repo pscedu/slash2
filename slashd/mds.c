@@ -315,8 +315,15 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * lease should be okay because it does not increase disk usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
-	if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
+	if (si->si_flags & SIF_DISABLE_LEASE) {
+		OPSTAT_INCR("sliod-disable-lease");
 		psclog_diag("res=%s skipped due to DISABLE_LEASE",
+		    resm->resm_name);
+		return (0);
+	}
+	if (si->si_flags & SIF_DISABLE_ADVLEASE) {
+		OPSTAT_INCR("sliod-disable-advlease");
+		psclog_diag("res=%s skipped due to DISABLE_ADVLEASE",
 		    resm->resm_name);
 		return (0);
 	}
@@ -332,7 +339,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 
 	ok = mds_sliod_alive(si);
 	if (!ok) {
-		OPSTAT_INCR("sliod-ping-fail");
+		OPSTAT_INCR("sliod-ping-awol");
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_name);
 	}
@@ -446,6 +453,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	nr = fcmh_2_nrepls(f);
 	FCMH_ULOCK(f);
 
+	/* XXX if CRC check fails, we could end up with NULL inoh_extras */
 	if (nr > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
@@ -553,8 +561,6 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	}
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
@@ -612,12 +618,14 @@ __static int
 mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 {
 	int rc;
+	size_t item;
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
 	struct bmap_ios_assign *bia;
 	struct sl_resm *resm;
-	size_t item;
+	struct sl_resource *r;
+	struct fidc_membh *f = b->bcm_fcmh;
 
 	psc_assert(!bmi->bmi_wr_ion);
 	psc_assert(!bmi->bmi_assign);
@@ -627,9 +635,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	if (!resm) {
-		struct sl_resource *r;
-		struct fidc_membh *f = b->bcm_fcmh;
-
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
@@ -1257,9 +1262,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		 */
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
-		retifset[BREPLST_TRUNCPNDG] = 1;
+		retifset[BREPLST_TRUNC_QUEUED] = 1;
 
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
 			struct slm_update_data *upd;
@@ -1269,7 +1273,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
 			brepls_init(qifset, 0);
 			qifset[BREPLST_REPL_QUEUED] = 1;
-			qifset[BREPLST_TRUNCPNDG] = 1;
+			qifset[BREPLST_TRUNC_QUEUED] = 1;
 
 			upd = &bmi->bmi_upd;
 			if (mds_repl_bmap_walk_all(b, NULL, qifset,
@@ -1620,7 +1624,6 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 		FCMH_LOCK(f);
 		sstb.sst_mode = f->fcmh_sstb.sst_mode & ~(S_ISGID | S_ISUID);
 		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE, &sstb);
-		FCMH_ULOCK(f);
 	}
 
  out:
@@ -1775,22 +1778,18 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmap *b;
 	int rc;
 
-	FCMH_LOCK(f);
-
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
-
 	if (rc)
 		return (rc);
 
 	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 
-	if (!obml) {
+	if (!obml)
 		PFL_GOTOERR(out2, rc = -ENOENT);
 
-	} else if (!(obml->bml_flags & BML_WRITE)) {
+	if (!(obml->bml_flags & BML_WRITE)) 
 		PFL_GOTOERR(out2, rc = -EINVAL);
-	}
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 
@@ -1903,7 +1902,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		goto out;
 	}
 
-	/* Do some post setup on the new lease. */
+	/* 
+	 * Do some post setup on the new lease. This is probably a 
+	 * good idea because the bmap replication table can change
+	 * at anytime.
+	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
@@ -2026,12 +2029,11 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	/*
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */
 	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_VALID] = BREPLST_TRUNC_QUEUED;
 
 	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
@@ -2346,7 +2348,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	PFL_GETTIMEVAL(&tv);
 	timersub(&tv, &tv0, &tvd);
-	OPSTAT_ADD("sql-wait-usecs",
+	OPSTAT_INCR("sql-query-wait");
+	OPSTAT_ADD("sql-query-wait-usecs",
 	    tvd.tv_sec * 1000000 + tvd.tv_usec);
 	if (log)
 		psclog_debug("ran SQL in %.2fs: %s", tvd.tv_sec +
@@ -2378,9 +2381,9 @@ slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
 	}
 
 //	brepls_init(tract, -1);
-//	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
 
 //	brepls_init(retifset, 0);
-//	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+//	retifset[BREPLST_TRUNC_SCHED] = 1;
 //	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 }

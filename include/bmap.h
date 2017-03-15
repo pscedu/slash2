@@ -261,14 +261,18 @@ struct bmap {
 
 #define bmap_foff(b)		((b)->bcm_bmapno * SLASH_BMAP_SIZE)
 
-/* bmap per-replica states */
+/*
+ * bmap per-replica states. Note that these values have been baked into
+ * the on-disk data structures. So do not change them.
+ */
 #define BREPLST_INVALID		0	/* no data present (zeros) */
 #define BREPLST_REPL_SCHED	1	/* replica is being made */
 #define BREPLST_REPL_QUEUED	2	/* replica needs to be made */
 #define BREPLST_VALID		3	/* replica is active */
-#define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
-#define BREPLST_TRUNCPNDG_SCHED	5	/* ptrunc resolving CRCs recomp */
-#define BREPLST_GARBAGE		6	/* marked for reclamation */
+#define BREPLST_TRUNC_QUEUED	4	/* partial truncation in bmap */
+#define BREPLST_TRUNC_SCHED	5	/* ptrunc resolving CRCs recomp */
+#define BREPLST_GARBAGE_QUEUED	6	/* marked for reclamation, note */
+					/* a backend might support it */
 #define BREPLST_GARBAGE_SCHED	7	/* being reclaimed */
 #define NBREPLST		8
 

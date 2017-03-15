@@ -129,9 +129,9 @@ int
 slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-27s %2s %8s %7s %7s %6s %-17s\n",
-	    "resource", "fl", "capacity", "used", "remain", "utiliz", "type");
-	return(PSC_CTL_DISPLAY_WIDTH);
+	printf("%-27s %4s  %8s %7s %7s %10s  %-17s\n",
+	    "resource", "flag", "capacity", "used", "remain", "utilization", "type");
+	return(PSC_CTL_DISPLAY_WIDTH - 4);
 }
 
 void
@@ -159,11 +159,11 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 				break;
 			}
 	strlcpy(name, scsf->scsf_resname, sizeof(name));
-	printf("%-27s %c%c ", name,
+	printf("%-27s %c%c-- ", name,
 	    scsf->scsf_flags & (SIF_DISABLE_LEASE |
 	      SIF_DISABLE_ADVLEASE)		? 'W' : '-',
 	    scsf->scsf_flags & SIF_DISABLE_GC   ? 'G' : '-');
-	printf(" ");
+	printf("  ");
 	/*
 	 * The following uses the formula from df.c in GNU coreutils.
 	 * However, we don't do integer arithmetic.
@@ -184,9 +184,9 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		    b->sf_blocks - b->sf_bfree + b->sf_bavail);
 	else
 		strlcpy(cbuf, "-", sizeof(cbuf));
-	printf("%6s", cbuf);
+	printf("%11s", cbuf);
 	uncolor();
-	printf(" %-17s\n", b->sf_type);
+	printf("  %-17s\n", b->sf_type);
 }
 
 void

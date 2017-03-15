@@ -282,16 +282,14 @@ struct uid_mapping {
 
 struct gid_mapping {
 	uint64_t			gm_key;
-	gid_t				gm_gid;
-	int				gm_ngid;
-	gid_t				gm_gidv[NGROUPS_MAX];
+	uint64_t			gm_val;
 	struct pfl_hashentry		gm_hentry;
 };
 
 #define msl_read(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_READ)
 #define msl_write(pfr, fh, p, sz, off)	msl_io((pfr), (fh), (p), (sz), (off), SL_WRITE)
 
-#define msl_biorq_release(r)		_msl_biorq_release(PFL_CALLERINFOSS(SLSS_FCMH), (r))
+void	 msl_biorq_release(struct bmpc_ioreq *);
 
 void	 msl_bmap_stash_lease(struct bmap *, const struct srt_bmapdesc *,  const char *);
 int	 msl_bmap_to_csvc(struct bmap *, int, struct sl_resm **, struct slrpc_cservice **);
@@ -308,8 +306,12 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 
-ssize_t	 slc_getxattr(struct pscfs_req *pfr, const struct pscfs_creds *,
-	    const char *, void *, size_t, struct fidc_membh *, size_t *);
+int	 slc_getxattr(struct pscfs_req *, const char *, void *, size_t, 
+	     struct fidc_membh *, size_t *);
+int	 slc_setxattr(struct pscfs_req *, const char *, const void *, size_t, 
+	     struct fidc_membh *);
+int	 slc_removexattr(struct pscfs_req *, const char *, struct fidc_membh *);
+
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, struct msl_fsrqinfo *);
 
@@ -330,15 +332,21 @@ void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
 void	 slc_getuprog(pid_t, char *, size_t);
-struct pscfs_creds *
-	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
-int	 uidmap_ext_cred(struct srt_creds *);
-int	 gidmap_int_cred(struct pscfs_creds *);
-int	 uidmap_ext_stat(struct srt_stat *);
-int	 uidmap_int_stat(struct srt_stat *);
+struct pscfs_creds *
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
+
+void	 uidmap_ext_cred(struct pscfs_creds *);
+void	 gidmap_ext_cred(struct pscfs_creds *);
+
+void	 uidmap_ext_stat(struct stat *);
+void	 gidmap_ext_stat(struct stat *);
+
+void	 uidmap_int_stat(struct srt_stat *, uint32_t *);
+void	 gidmap_int_stat(struct srt_stat *, uint32_t *);
+
 void	 parse_mapfile(void);
 
 #define bmap_flushq_wake(reason)					\
@@ -356,10 +364,11 @@ extern const char		*msl_ctlsockfn;
 extern sl_ios_id_t		 msl_pref_ios;
 extern struct sl_resm		*msl_rmc_resm;
 extern char			 mountpoint[];
-extern int			 msl_use_mapfile;
+extern int			 msl_has_mapfile;
 
 extern struct psc_hashtbl	 msl_uidmap_ext;
 extern struct psc_hashtbl	 msl_uidmap_int;
+extern struct psc_hashtbl	 msl_gidmap_ext;
 extern struct psc_hashtbl	 msl_gidmap_int;
 
 extern struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
@@ -380,6 +389,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
 extern int			 msl_force_dio;
+extern int			 msl_map_enable;
 extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;

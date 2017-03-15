@@ -57,7 +57,7 @@ enum sl_res_type {
 	SLREST_MDS,
 	SLREST_PARALLEL_COMPNT,			/* A member of a parallel fs */
 	SLREST_PARALLEL_LFS,			/* Logical parallel fs */
-	SLREST_STANDALONE_FS			/* 6 */
+	SLREST_STANDALONE_FS			/* 6: local file system */
 };
 
 /* XXX rename to RES_ISNODE() */
@@ -76,6 +76,7 @@ struct sl_resource {
 	struct pfl_hashentry	 res_hentry;
 
 	sl_ios_id_t		 res_id;
+	psc_atomic32_t		 res_batchcnt;
 	int			 res_offset;
 	int			 res_flags;	/* see RESF_* below */
 	enum sl_res_type	 res_type;
@@ -346,6 +347,7 @@ sl_global_id_build(sl_siteid_t site_id, uint32_t intres_id)
 	if (!intres_id)
 		psc_fatalx("Resource ID must be non-zero and unique!");
 	psc_assert(site_id != SITE_ID_ANY);
+	psc_assert(site_id < (1 << SL_SITE_BITS) - 1);
 	psc_assert(intres_id < (1 << SL_RES_BITS) - 1);
 	return (((sl_ios_id_t)site_id << SL_SITE_BITS) | intres_id);
 }

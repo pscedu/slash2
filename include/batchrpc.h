@@ -44,7 +44,8 @@
  * A single failure will doom the entire batch. So a larger number
  * may not be always good.
  */
-#define	SLRPC_BATCH_MAX_COUNT		2048
+#define	SLRPC_BATCH_MIN_COUNT		4
+#define	SLRPC_BATCH_MAX_COUNT		4096
 
 struct psc_listcache;
 
@@ -83,6 +84,8 @@ struct slrpc_batch_req {
 	int32_t			  	  bq_opc;		/* underlying RPC operation code */
 
 	int				  bq_cnt;
+	int				  bq_size;		/* capacity */
+
 	void				 *bq_reqbuf;		/* outgoing request bulk RPC */
 	void				 *bq_repbuf;		/* incoming reply bulk RPC */
 	int				  bq_reqlen;
@@ -105,6 +108,8 @@ struct slrpc_batch_rep {
 	int				  bp_flags;
 	int				  bp_rc;
 	uint32_t			  bp_opc;		/* underlying RPC operation code */
+
+	int				  bp_cnt;
 
 	void				 *bp_reqbuf;		/* incoming request bulk RPC */
 	void				 *bp_repbuf;		/* outgoing reply bulk RPC */
@@ -136,9 +141,9 @@ struct slrpc_batch_rep {
 int	slrpc_batch_req_add(struct sl_resource *,
 	    struct psc_listcache *, struct slrpc_cservice *,
 	    int32_t, int, int, void *, int, void *,
-	    struct slrpc_batch_rep_handler *, int);
+	    struct slrpc_batch_rep_handler *, int, int);
 
-void	slrpc_batches_init(int, const char *);
+void	slrpc_batches_init(int, int, const char *);
 void	slrpc_batches_destroy(void);
 void	slrpc_batches_drop(struct sl_resource *res);
 

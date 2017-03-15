@@ -128,4 +128,7 @@ _slm_getclcsvc(const struct pfl_callerinfo *pci,
 }
 #undef _pfl_callerinfo
 
+void	slrcp_batch_get_max_inflight(char *);
+int	slrcp_batch_set_max_inflight(const char *);
+
 #endif /* _RPC_MDS_H_ */

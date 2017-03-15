@@ -288,11 +288,8 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	}
 }
 
-#define msl_biorq_destroy(r)	 _msl_biorq_destroy(PFL_CALLERINFO(), (r))
-
 void
-_msl_biorq_destroy(const struct pfl_callerinfo *pci,
-    struct bmpc_ioreq *r)
+msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 
@@ -327,8 +324,7 @@ _biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 }
 
 void
-_msl_biorq_release(const struct pfl_callerinfo *pci,
-    struct bmpc_ioreq *r)
+msl_biorq_release(struct bmpc_ioreq *r)
 {
 	BIORQ_LOCK(r);
 	if (r->biorq_ref == 1 &&
@@ -804,6 +800,11 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 		BIORQ_ULOCK(r);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 			BMPCE_LOCK(e);
+			/*
+ 			 * XXX This if statement looks suspicous to me.
+ 			 * If we ever want to support AIO again, we need
+ 			 * to revisit this.
+ 			 */
 			if (e->bmpce_flags & BMPCEF_FAULTING) {
 				e->bmpce_flags &= ~BMPCEF_FAULTING;
 				BMPCE_WAKE(e);
@@ -837,10 +838,12 @@ _msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
 	psc_assert(e->bmpce_waitq);
 
 	/* AIOWAIT is removed no matter what. */
+	psc_assert(e->bmpce_flags & BMPCEF_FAULTING);
 	e->bmpce_flags &= ~(BMPCEF_AIOWAIT | BMPCEF_FAULTING);
 
 	if (rc) {
 		e->bmpce_rc = rc;
+		e->bmpce_len = 0;
 		e->bmpce_flags |= BMPCEF_EIO;
 		psc_assert(!(e->bmpce_flags & BMPCEF_DATARDY));
 	} else {
@@ -1476,22 +1479,26 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
-  retry:
-		BMPCE_LOCK(e);
-		if (msl_biorq_page_valid(r, i)) {
-			BMPCE_ULOCK(e);
-			if (r->biorq_flags & BIORQ_READAHEAD)
-				OPSTAT_INCR("msl.readahead-gratuitous");
-			continue;
-		}
 		/*
 		 * The faulting flag could be set by a concurrent writer
 		 * that touches a different area in the page, so don't
 		 * assume that data is ready when it is cleared.
 		 */
-		if (e->bmpce_flags & BMPCEF_FAULTING) {
+		BMPCE_LOCK(e);
+		while (e->bmpce_flags & BMPCEF_FAULTING) {
 			BMPCE_WAIT(e);
-			goto retry;
+			BMPCE_LOCK(e);
+		}
+
+		/*
+		 * XXX If I don't make a valid page as FAULTING, a 
+		 * write could sneak it...
+		 */
+		if (msl_biorq_page_valid(r, i)) {
+			BMPCE_ULOCK(e);
+			if (r->biorq_flags & BIORQ_READAHEAD)
+				OPSTAT_INCR("msl.readahead-gratuitous");
+			continue;
 		}
 
 		/*
@@ -1500,9 +1507,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		 * must test it with fault injection instead of just putting
 		 * the code in and hope it work.
 		 */
-		if (e->bmpce_rc) {
-			OPSTAT_INCR("msl.clear_rc");
+		if (e->bmpce_flags & BMPCEF_EIO) {
+			OPSTAT_INCR("msl.read_clear_rc");
 			e->bmpce_rc = 0;
+			e->bmpce_len = 0;
+			e->bmpce_flags &= ~BMPCEF_EIO;
 		}
 		e->bmpce_flags |= BMPCEF_FAULTING;
 		psc_dynarray_add(&pages, e);
@@ -1592,22 +1601,25 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
 		BMPCE_LOCK(e);
+		/*
+ 		 * Waiting for I/O to complete, which could be
+ 		 * initiated by the read-ahead, by myself, or
+ 		 * by other thread.
+ 		 */
 		while (e->bmpce_flags & BMPCEF_FAULTING) {
 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
 			perfect_ra = 0;
 		}
-
 		/*
-		 * XXX If this is a write, we should clear
-		 * the page to its pristine state because
-		 * a previous failure should not cause the
-		 * current write to fail.
+		 * We can't read/write page in this state.
 		 */
-		if (e->bmpce_flags & BMPCEF_EIO) {
-			rc = e->bmpce_rc;
+		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
+			msl_fsrq_aiowait_tryadd_locked(e, r);
+			aiowait = 1;
 			BMPCE_ULOCK(e);
+			OPSTAT_INCR("msl.aio-placed");
 			break;
 		}
 
@@ -1623,30 +1635,29 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 		} else
 			perfect_ra = 0;
 
-		if (r->biorq_flags & BIORQ_WRITE) {
-			/*
-			 * Avoid a race with readahead thread.
-			 */
-			e->bmpce_flags |= BMPCEF_FAULTING;
-			BMPCE_ULOCK(e);
-			continue;
-		}
-
-		if (msl_biorq_page_valid(r, i)) {
+		/*
+ 		 * Read error should be catched in the callback.
+ 		 */
+		if (r->biorq_flags & BIORQ_READ) {
 			BMPCE_ULOCK(e);
 			continue;
 		}
 
 		/*
-		 * XXX We can't read/write page in this state.
+		 * Since this is a write, we clear the page to 
+		 * its pristine state because a previous failure 
+		 * should not cause the current write to fail.
 		 */
-		if (e->bmpce_flags & BMPCEF_AIOWAIT) {
-			msl_fsrq_aiowait_tryadd_locked(e, r);
-			aiowait = 1;
-			BMPCE_ULOCK(e);
-			OPSTAT_INCR("msl.aio-placed");
-			break;
+		if (e->bmpce_flags & BMPCEF_EIO) {
+			OPSTAT_INCR("msl.write_clear_rc");
+			e->bmpce_rc = 0;
+			e->bmpce_len = 0;
+			e->bmpce_flags &= ~BMPCEF_EIO;
 		}
+		/*
+		 * Avoid a race with readahead thread.
+		 */
+		e->bmpce_flags |= BMPCEF_FAULTING;
 		BMPCE_ULOCK(e);
 	}
 
@@ -1982,6 +1993,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 {
 	struct msl_fsrqinfo *q;
 
+	/* pool is inited in msl_init() */
 	q = psc_pool_get(msl_iorq_pool);
 	memset(q, 0, sizeof(*q));
 	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
@@ -2204,8 +2216,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		/*
 		 * No need to update roff and tsize for the last
-		 * iteration.  Plus, we need them for predictive I/O
-		 * work in the next step.
+		 * iteration.  Plus, we need them for predictive
+		 * I/O work in the next step.
 		 */
 		if (i == nr - 1)
 			break;
@@ -2269,7 +2281,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	/*
 	 * Step 5: drop our reference to the fsrq.  The last drop will
-	 * reply to the userland file system interface.
+	 * reply to the userland file system interface. So we may or 
+	 * may not finish the entire I/O here.
 	 */
 	msl_complete_fsrq(q, 0, NULL);
 	return;

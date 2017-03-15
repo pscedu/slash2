@@ -126,7 +126,7 @@ sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 
 char				 mountpoint[PATH_MAX];
-int				 msl_use_mapfile;
+int				 msl_has_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 char				*msl_cfgfn = SL_PATH_CONF;
 
@@ -152,6 +152,7 @@ uint32_t			 sl_sys_upnonce;
 
 struct psc_hashtbl		 msl_uidmap_ext;
 struct psc_hashtbl		 msl_uidmap_int;
+struct psc_hashtbl		 msl_gidmap_ext;
 struct psc_hashtbl		 msl_gidmap_int;
 
 /*
@@ -161,8 +162,9 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
+int				 msl_map_enable;
 int				 msl_root_squash;
-int				 msl_repl_enable;
+int				 msl_repl_enable = 1;
 int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
@@ -172,7 +174,7 @@ struct resprof_cli_info		 msl_statfs_aggr_rpci;
 int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
 int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
-int				 msl_newent_inherit_groups = 1;
+int				 msl_newent_inherit_groups = 1;	/* default to BSD behavior */
 
 struct psc_thread		*slcconnthr;
 
@@ -248,6 +250,8 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 //		return (pcr.pcr_gid);
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		return (p->fcmh_sstb.sst_gid);
+
+	/* See notes on grpid in mount(8) */
 	if (msl_newent_inherit_groups)
 		return (p->fcmh_sstb.sst_gid);
 	return (pcr->pcr_gid);
@@ -257,7 +261,8 @@ struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
-	gidmap_int_cred(pcr);
+	uidmap_ext_cred(pcr);
+	gidmap_ext_cred(pcr);
 	return (pcr);
 }
 
@@ -293,7 +298,6 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = 0;
 	FCMH_LOCK(c);
 	if (pcr.pcr_uid == 0) {
 		if ((accmode & X_OK) && !S_ISDIR(c->fcmh_sstb.sst_mode) &&
@@ -362,6 +366,14 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+static void
+msl_internalize_stat(struct srt_stat *sstb, struct stat *stb)
+{
+	sl_internalize_stat(sstb, stb);
+	uidmap_int_stat(sstb, &stb->st_uid);
+	gidmap_int_stat(sstb, &stb->st_gid);
+}
+
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -408,6 +420,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
@@ -419,9 +432,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = msl_pref_ios;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_cred(&mq->owner);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
@@ -429,6 +439,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
+
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -469,7 +480,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(c);
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
 	    FCMH_SETATTRF_CLOBBER);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	fci = fcmh_2_fci(c);
 
@@ -562,8 +573,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	struct pscfs_creds pcr;
 	int rc = 0;
 
-	slc_getfscreds(pfr, &pcr);
-
 	*mfhp = NULL;
 
 	if (!msl_progallowed(pfr))
@@ -573,6 +582,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
@@ -744,7 +754,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	int rc;
 
-	slc_getfscreds(pfr, &pcr);
 
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
@@ -756,6 +765,11 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	rc = msl_stat(f, pfr);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -764,7 +778,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 
 	FCMH_LOCK(f);
-	sl_internalize_stat(&f->fcmh_sstb, &stb);
+	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
  out:
 	if (f)
@@ -793,8 +807,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (strlen(newname) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	/* Check the parent inode. */
 	rc = msl_load_fcmh(pfr, p_inum, &p);
 	if (rc)
@@ -807,6 +819,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -853,7 +866,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -908,7 +921,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -917,6 +929,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		mode |= S_ISGID;
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
@@ -925,9 +938,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	mq->sstb.sst_mode = mode;
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -936,6 +946,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
+
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		namecache_fail(&dcu);
 		goto retry1;
@@ -954,7 +965,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1375,15 +1386,13 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_cred(&mq->creds);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
@@ -1413,7 +1422,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1836,17 +1845,17 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	memset(&sstb, 0, sizeof(sstb));
 
-	slc_getfscreds(pfr, &pcr);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
 	    &c, &p, &dcu);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
-	sl_internalize_stat(&sstb, &stb);
+	msl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
@@ -1878,7 +1887,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2018,11 +2026,13 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	mq->attr.sst_fg = f->fcmh_fg;
 	mq->to_set = to_set;
 
+#if 0
 	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
 		rc = uidmap_ext_stat(&mq->attr);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+#endif
 
 	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x",
 	    to_set);
@@ -2095,15 +2105,16 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	}
 
 	FCMH_ULOCK(f);
-
 	rc = msl_setattr(f, to_set, &attr, 0);
+	FCMH_LOCK(f);
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		if (flush_mtime)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_MTIME;
 		if (flush_size)
 			f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
-		FCMH_UNBUSY(f, 1);
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
 	} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 		/*
 		 * XXX: If an UNLINK occurs on an open file descriptor
@@ -2119,13 +2130,14 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-		FCMH_UNBUSY(f, 1);
+		FCMH_UNBUSY(f, 0);
 
-		// XXX locking order violation
 		lc_remove(&msl_attrtimeoutq, fcmh_2_fci(f));
 		fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-	} else
-		FCMH_UNBUSY(f, 1);
+	} else {
+		FCMH_UNBUSY(f, 0);
+		FCMH_ULOCK(f);
+	}
 
 	return (rc);
 }
@@ -2421,8 +2433,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (FID_GET_SITEID(opinum) != FID_GET_SITEID(npinum))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, opinum, &op);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2431,6 +2441,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -2712,8 +2723,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	    strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2724,20 +2733,20 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->linklen = strlen(buf);
@@ -2771,7 +2780,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -2860,11 +2869,20 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * entry, so we have to defer the short circuit processing till
 	 * after loading the fcmh to avoid sending garbage resulting in
 	 * EIO.
+	 *
+	 * If mapping is enabled, we can reject setting UID/GID if there
+	 * is no explicit mapping exists.
 	 */
-	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_UID;
-	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_GID;
+	if (to_set & PSCFS_SETATTRF_UID) {
+		uidmap_ext_stat(stb);
+		if (stb->st_uid == (uid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_UID;
+	}
+	if (to_set & PSCFS_SETATTRF_GID) {
+		gidmap_ext_stat(stb);
+ 		if (stb->st_gid == (gid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_GID;
+	}
 	if (to_set == 0)
 		goto out;
 
@@ -3082,7 +3100,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		sl_internalize_stat(&c->fcmh_sstb, stb);
+		msl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (flush_mtime || flush_size) {
 			if (rc) {
@@ -3265,6 +3283,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	/*
 	 * Removal of the control socket is the last thing for
 	 * observability reasons.
+	 *
+	 * XXX: crash because msl_ctlthr0->pscthr_private is NULL.
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
@@ -3289,9 +3309,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_hashtbl_destroy(&msl_namecache_hashtbl);
 	slcfg_destroy();
 
-	if (msl_use_mapfile) {
+	if (msl_has_mapfile) {
 		psc_hashtbl_destroy(&msl_uidmap_ext);
 		psc_hashtbl_destroy(&msl_uidmap_int);
+		psc_hashtbl_destroy(&msl_gidmap_ext);
 		psc_hashtbl_destroy(&msl_gidmap_int);
 	}
 
@@ -3411,7 +3432,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3499,50 +3519,23 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	PSCFREE(buf);
 }
 
-
-/*
- * XATTR_REPLACE is not supported.
- */
-void
-mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
-    const void *value, size_t size, pscfs_inum_t inum)
+int
+slc_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, struct fidc_membh *f)
 {
+	int rc;
+	struct iovec iov;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	struct iovec iov;
-	int rc;
-
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	/*
-	 * This prevents a crash in the RPC layer downwards.  So disable
-	 * it for now.
-	 */
-	if (size == 0)
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	mq->valuelen = size;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -3570,23 +3563,55 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		FCMH_ULOCK(f);
 	}
-
- out:
-	pscfs_reply_setxattr(pfr, rc);
-
-	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
-	    "name='%s' rc=%d", inum, name, rc);
-
-	if (f)
-		fcmh_op_done(f);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	return (rc);
 }
 
-ssize_t
-slc_getxattr(struct pscfs_req *pfr,
-    __unusedx const struct pscfs_creds *pcrp, const char *name, void *buf,
+/*
+ * XATTR_REPLACE is not supported.
+ */
+void
+mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	/*
+	 * This prevents a crash in the RPC layer downwards.  So disable
+	 * it for now.
+	 */
+	if (size == 0)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_setxattr(pfr, name, value, size, f);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+
+	pscfs_reply_setxattr(pfr, rc);
+	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
+}
+
+int
+slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	int rc = 0, locked = 0;
@@ -3599,10 +3624,6 @@ slc_getxattr(struct pscfs_req *pfr,
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
-
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
-//	if (rc)
-//		PFL_GOTOERR(out, rc);
 
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct timeval now;
@@ -3687,48 +3708,36 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 		buf = PSCALLOC(size);
 
 	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
+	rc = slc_getxattr(pfr, name, buf, size, f, &retsz);
 
  out:
 	if (f)
 		fcmh_op_done(f);
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	PSCFREE(buf);
+	psclogs_diag(SLCSS_FSOP, "GETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
 }
 
-void
-mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
-    pscfs_inum_t inum)
+int
+slc_removexattr(struct pscfs_req *pfr, const char *name, struct fidc_membh *f)
 {
+	int rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	int rc;
-
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -3739,18 +3748,40 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+void
+mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
+    pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_removexattr(pfr, name, f);
  out:
 	if (f)
 		fcmh_op_done(f);
 
 	pscfs_reply_removexattr(pfr, rc);
-
 	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
-
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 /*
@@ -3899,7 +3930,7 @@ slc_setprefios(sl_ios_id_t id)
 	r->res_flags |= RESF_PREFIOS;
 	if (RES_ISCLUSTER(r))
 		DYNARRAY_FOREACH(ri, j, &r->res_peers)
-			ri->res_flags &= ~RESF_PREFIOS;
+			ri->res_flags |= RESF_PREFIOS;
 //	CONF_ULOCK();
 }
 
@@ -3971,16 +4002,23 @@ msl_init(void)
 	if (slcfg_local->cfg_root_squash)
 		msl_root_squash = 1;
 	parse_allowexe();
-	if (msl_use_mapfile) {
+
+#ifdef Linux
+	msl_newent_inherit_groups = 0;
+#endif
+
+	if (msl_has_mapfile) {
 		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
-
+		psc_hashtbl_init(&msl_gidmap_ext, 0, struct gid_mapping,
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
-		    gm_key, gm_hentry, 191, NULL, "gidmapint");
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 
 		parse_mapfile();
+		msl_map_enable = 1;
 	}
 
 	authbuf_checkkeyfile();
@@ -4002,7 +4040,7 @@ msl_init(void)
 	msl_async_req_pool = psc_poolmaster_getmgr(&msl_async_req_poolmaster);
 
 	psc_poolmaster_init(&msl_biorq_poolmaster,
-	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 512, 512, 0,
+	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 1024, 1024, 0,
 	    NULL, "biorq");
 	msl_biorq_pool = psc_poolmaster_getmgr(&msl_biorq_poolmaster);
 
@@ -4125,7 +4163,7 @@ msl_opt_lookup(const char *opt)
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
-		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
 					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},

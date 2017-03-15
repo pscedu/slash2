@@ -35,7 +35,7 @@
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
  */
 acl_t
-slc_acl_get_fcmh(struct pscfs_req *pfr, const struct pscfs_creds *pcr,
+slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
     struct fidc_membh *f)
 {
 	char trybuf[64] = { 0 };
@@ -44,13 +44,13 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, const struct pscfs_creds *pcr,
 	ssize_t rc;
 	acl_t a;
 
-	rc = slc_getxattr(pfr, pcr, ACL_EA_ACCESS, trybuf,
+	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf,
 	    sizeof(trybuf), f, &retsz);
 	if (rc == 0) {
 		buf = trybuf;
 	} else if (rc == ERANGE) {
 		buf = PSCALLOC(retsz);
-		rc = slc_getxattr(pfr, pcr, ACL_EA_ACCESS, buf, retsz,
+		rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz,
 		    f, &retsz);
 		if (rc) {
 			PSCFREE(buf);
@@ -90,6 +90,7 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, const struct pscfs_creds *pcr,
 		(_rv);							\
 	} _PFL_RVEND
 
+/* subtle: || 1 is there in case gid is zero to avoid premature exit */
 #define FOREACH_GROUP(g, i, pcrp)					\
 	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) == 0 ?	\
 	    (pcrp)->pcr_gid : (pcrp)->pcr_gidv[(i) - 1]) || 1); (i)++)
@@ -170,13 +171,15 @@ int
 sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	int locked, rv;
+	int locked, rc;
 	acl_t a;
 
 	a = slc_acl_get_fcmh(pfr, pcrp, f);
+	/*
+	 * If there is no ACL entries, we revert to traditional
+	 * Unix mode bits for permission checking.
+	 */
 	if (a == NULL) {
-		int rc;
-
 #ifdef SLOPT_POSIX_ACLS_REVERT
 		locked = FCMH_RLOCK(f);
 		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
@@ -187,8 +190,117 @@ sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
 		return (rc);
 	}
 	locked = FCMH_RLOCK(f);
-	rv = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
+	rc = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
 	FCMH_URLOCK(f, locked);
+	acl_free(a);
+	return (rc);
+}
+
+/* acl-2.2.52: setfacl/do_set.c */
+
+static void
+set_perm(
+        acl_entry_t ent,
+        mode_t perm)
+{
+        acl_permset_t set;
+
+        acl_get_permset(ent, &set);
+        if (perm & ACL_READ)
+                acl_add_perm(set, ACL_READ);
+        else
+                acl_delete_perm(set, ACL_READ);
+        if (perm & ACL_WRITE)
+                acl_add_perm(set, ACL_WRITE);
+        else
+                acl_delete_perm(set, ACL_WRITE);
+        if (perm & ACL_EXECUTE)
+                acl_add_perm(set, ACL_EXECUTE);
+        else
+                acl_delete_perm(set, ACL_EXECUTE);
+}
+
+
+/*
+ * Update ACL after a chmod.
+ */
+int
+sl_fcmh_updateacls(struct fidc_membh *f, struct pscfs_req *pfr,
+    const struct pscfs_creds *pcrp)
+{
+	acl_t a;
+	int wh, rv = EACCES, rc;
+	acl_entry_t e;
+	acl_tag_t tag;
+	mode_t perm;
+	acl_entry_t mask_obj = NULL;
+	acl_entry_t group_obj = NULL;
+	uint32_t umode = f->fcmh_sstb.sst_mode;
+
+	a = slc_acl_get_fcmh(pfr, pcrp, f);
+	if (a == NULL)
+		return EACCES;
+
+	wh = ACL_FIRST_ENTRY;
+	while ((rc = acl_get_entry(a, wh, &e)) == 1) {
+		wh = ACL_NEXT_ENTRY;
+
+		rc = acl_get_tag_type(e, &tag);
+		switch (tag) {
+		case ACL_USER_OBJ:
+			perm = 0;
+			if (umode & S_IRUSR)
+        			perm |= ACL_READ;
+			if (umode & S_IWUSR)
+        			perm |= ACL_WRITE;
+			if (umode & S_IXUSR)
+        			perm |= ACL_EXECUTE;
+			set_perm(e, perm);
+			break;
+		case ACL_OTHER:
+			perm = 0;
+			if (umode & S_IROTH)
+        			perm |= ACL_READ;
+			if (umode & S_IWOTH)
+        			perm |= ACL_WRITE;
+			if (umode & S_IXOTH)
+        			perm |= ACL_EXECUTE;
+			set_perm(e, perm);
+			break;
+		case ACL_USER:
+		case ACL_GROUP:
+			break;
+		case ACL_GROUP_OBJ:
+			group_obj = e;
+			break;
+		case ACL_MASK:
+			mask_obj = e;
+			break;
+		default:
+			psclog_error("acl_get_tag_type");
+			break;
+		}
+	}
+	if (rc == -1)
+		psclog_error("acl_get_entry");
+	if (mask_obj)
+		goto set;
+	if (!group_obj) {
+		psclog_error("No group obj");
+		goto out;
+	}
+
+ set:
+	perm = 0;
+	if (umode & S_IRGRP)
+       		perm |= ACL_READ;
+	if (umode & S_IWGRP)
+       		perm |= ACL_WRITE;
+	if (umode & S_IXGRP)
+       		perm |= ACL_EXECUTE;
+	set_perm(e, perm);
+
+ out:
 	acl_free(a);
 	return (rv);
 }

@@ -45,7 +45,8 @@ pthread_t threads[MAX_THREADS];
 
 static void* thread_worker(void *arg)
 {
-	int i, j, ret;
+	off_t j;
+	int i, ret;
 	int32_t result;
 	unsigned char *buf;
 	char rand_statebuf[32];
@@ -89,16 +90,24 @@ int main(int argc, char *argv[])
 	int32_t result;
 	unsigned char *buf;
 	char rand_statebuf[32];
-	int i, j, fd, ret, nthreads;
+	struct timeval t1, t2, t3;
+	int i, j, fd, ret, error, nthreads, readonly;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
-	bsize = 7178;
+	error = 0;
+	readonly = 0;
+	bsize = 71781;
 	nthreads = 5;
-	nblocks = 14345;
-	seed = getpid();
-	while ((c = getopt(argc, argv, "b:s:n:t:")) != -1) {
+	nblocks = 243456;
+	seed = 35438;
+	gettimeofday(&t1, NULL);
+
+	while ((c = getopt(argc, argv, "rb:s:n:t:")) != -1) {
 		switch (c) {
+			case 'r':
+				readonly = 1;
+				break;
 			case 'b':
 				bsize = atoi(optarg);
 				break;
@@ -123,13 +132,18 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 	filename = argv[optind];
+	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
+		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
+	fflush(stdout);
+
+	if (readonly)
+		goto verify;
+
        	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(0);
 	}
-	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
-		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
 		args[i].fd = open(filename, O_RDWR, 0600);
@@ -153,13 +167,17 @@ int main(int argc, char *argv[])
 		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
 		close(args[i].fd);
+		fflush(stdout);
 	}
         close(fd);
 
-	printf("\nAll threads has exited. Now verifying file contents ... \n");
+ verify:
+
+	printf("\nAll threads has exited. Now verifying file contents ... \n\n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
+	fflush(stdout);
 
        	fd = open(filename, O_RDONLY);
 	for (i = 0; i < nblocks; i++) {
@@ -171,10 +189,23 @@ int main(int argc, char *argv[])
 		for (j = 0; j < bsize; j++) {
 			random_r(&rand_state, &result);
 			if (buf[j] != (unsigned char)result & 0xff) {
-				printf("File corrupted: %2x vs %2x\n", buf[j], result & 0xff);
-				exit(0);
+				error++;
+				printf("%d: File corrupted (%d:%d): %2x vs %2x\n", error, i, j, buf[j], result & 0xff);
+				fflush(stdout);
 			}
 		}
 	}
 	close(fd);
+
+	gettimeofday(&t2, NULL);
+
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }

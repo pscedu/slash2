@@ -57,7 +57,7 @@ struct msl_fsrqinfo;
 
 struct bmap_pagecache_entry {
 	struct bmap		*bmpce_bmap;
-	int16_t			 bmpce_rc;
+	int16_t			 bmpce_rc;	/* unused now, will purge */
 	int16_t			 bmpce_ref;	/* reference count */
 	uint16_t		 bmpce_flags;	/* BMPCEF_* flag bits */
 #if BMPC_BUFSZ > 65536

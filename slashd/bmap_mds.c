@@ -94,10 +94,10 @@ mds_bmap_ensure_valid(struct bmap *b)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
-	retifset[BREPLST_GARBAGE] = 1;
+	retifset[BREPLST_GARBAGE_QUEUED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	retifset[BREPLST_TRUNC_QUEUED] = 1;
+	retifset[BREPLST_TRUNC_SCHED] = 1;
 
 	/* Caller should busy fcmh and bmap. */
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT);
@@ -149,7 +149,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 	mds_repl_bmap_walk(a->b, tract, NULL, 0, &idx, 1);
 
 	return (0);
@@ -199,7 +199,7 @@ slm_bmap_resetnonce(struct bmap *b)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
@@ -229,9 +229,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	sl_bmapgen_t bgen;
 
 	upd = bmap_2_upd(b);
-	upd_init(upd, UPDT_BMAP);
-	UPD_LOCK(upd);
-	UPD_UNBUSY(upd);
+	upd_init(upd);
 
 	new = 0;
 	f = b->bcm_fcmh;
@@ -299,8 +297,6 @@ mds_bmap_read(struct bmap *b, int flags)
  out2:
 
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 	if (!new)
 		/* 
 		 * gdb help:
@@ -399,7 +395,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
  		 * Under massive deletion workload, we might be
  		 * starved, which causes delay on replication work.
  		 */
-		pfl_workq_putitemq_head(&slm_db_lopri_workq, wk);
+		pfl_workq_putitem(wk);
 		OPSTAT_INCR("bmap-write-log");
 	}
 
@@ -468,7 +464,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	retifset[BREPLST_VALID] = 1;
 
 	BMAP_LOCK(bmap);
-	bmap_wait_locked(bmap, bmap->bcm_flags & BMAPF_REPLMODWR);
 
 	rc = _mds_repl_bmap_walk(bmap, NULL, retifset, 0,
 	    &idx, 1, NULL, NULL);
@@ -550,9 +545,9 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 		ch[BREPLST_REPL_SCHED] = 's';				\
 		ch[BREPLST_REPL_QUEUED] = 'q';				\
 		ch[BREPLST_VALID] = '+';				\
-		ch[BREPLST_TRUNCPNDG] = 't';				\
-		ch[BREPLST_TRUNCPNDG_SCHED] = 'p';			\
-		ch[BREPLST_GARBAGE] = 'g';				\
+		ch[BREPLST_TRUNC_QUEUED] = 't';				\
+		ch[BREPLST_TRUNC_SCHED] = 'p';				\
+		ch[BREPLST_GARBAGE_QUEUED] = 'g';			\
 		ch[BREPLST_GARBAGE_SCHED] = 'x';			\
 									\
 		for (_k = 0, off = 0; _k < SL_MAX_REPLICAS;		\

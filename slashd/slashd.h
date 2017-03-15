@@ -70,6 +70,7 @@ enum {
 	SLMTHRT_RMM,			/* MDS <- MDS msg svc handler */
 	SLMTHRT_OPSTIMER,		/* opstats updater */
 	SLMTHRT_UPSCHED,		/* update scheduler for site resources */
+	SLMTHRT_PAGER,			/* read SQL table */
 	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	SLMTHRT_WORKER,			/* miscellaneous work */
 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
@@ -113,6 +114,10 @@ struct slmupsch_thread {
 	struct slmthr_dbh	  sus_dbh;
 };
 
+struct slmpager_thread {
+	struct slmthr_dbh	  pager_dbh;
+};
+
 struct slmwork_thread {
 	struct slmthr_dbh	  work_dbh;
 };
@@ -125,6 +130,7 @@ PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
+PSCTHR_MKCAST(slmpagerthr, slmpager_thread, SLMTHRT_PAGER)
 
 static __inline struct slmctl_thread *
 slmctlthr_getpri(struct psc_thread *thr)
@@ -157,10 +163,12 @@ slmthr_getdbh(void)
 		return (&slmrmithr(thr)->smrit_dbh);
 	case SLMTHRT_UPSCHED:
 		return (&slmupschthr(thr)->sus_dbh);
+	case SLMTHRT_PAGER:
+		return (&slmpagerthr(thr)->pager_dbh);
 	case SLMTHRT_DBWORKER:
 		return (&slmdbwkthr(thr)->smdw_dbh);
 	}
-	psc_fatalx("unknown thread type");
+	psc_fatalx("unknown thread type %d", thr->pscthr_type);
 }
 
 struct site_mds_info {
@@ -233,7 +241,7 @@ struct rpmi_ios {
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
-	int			  si_paging;
+	struct timespec		  si_lastpage;
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
 
@@ -251,7 +259,7 @@ struct rpmi_ios {
 #define SIF_DISABLE_LEASE	(1 << 1)		/* disable bmap lease assignments */
 #define SIF_DISABLE_ADVLEASE	(1 << 2)		/* advisory (from sliod) control */
 #define SIF_DISABLE_GC		(1 << 3)		/* disable garbage collection temporarily */
-#define SIF_UPSCH_PAGING	(1 << 4)		/* upsch will page more work in destined for this IOS */
+#define SIF_UPSCH_NEED_PAGE	(1 << 4)		/* upsch will page more work in destined for this IOS */
 #define SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
 #define SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
 
@@ -261,7 +269,6 @@ struct rpmi_ios {
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
-	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
 
 	/* rpmi_mds for peer MDS or rpmi_ios for IOS */
@@ -319,20 +326,9 @@ struct slm_wkdata_upsch_purge {
 	sl_bmapno_t		 bno;
 };
 
-struct slm_wkdata_upsch_cb {
-	struct slrpc_cservice	*csvc;
-	struct sl_resm		*src_resm;
-	struct sl_resm		*dst_resm;
-	struct bmap		*b;
-	int			 rc;
-	int			 off;
-	int64_t			 amt;
-};
-
 struct slm_wkdata_upschq {
-	struct sl_fidgen	 fg;
+	slfid_t			 fid;
 	sl_bmapno_t		 bno;
-	struct sl_resm          *resm;
 };
 
 struct slm_wkdata_rmdir_ino {
@@ -400,8 +396,8 @@ extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;
 extern struct pfl_odt		*slm_ptrunc_odt;
 extern struct slm_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
-extern struct psc_listcache	 slm_db_lopri_workq;
 extern struct psc_listcache	 slm_db_hipri_workq;
+extern struct psc_listcache	 slm_db_lopri_workq;
 
 extern struct psc_thread	*slmconnthr;
 
@@ -416,6 +412,8 @@ extern int			 slm_conn_debug;
 extern int			 slm_global_mount;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;
+
+extern int			 slm_min_space_reserve_pct;
 
 extern struct psc_hashtbl	 slm_roots;
 

@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "pfl/alloc.h"
+#include "pfl/ctl.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
 #include "pfl/opstats.h"
@@ -51,6 +52,10 @@ static struct psc_poolmgr	*slrpc_batch_rep_pool;
 static struct psc_listcache	 slrpc_batch_req_delayed;	/* to be filled/expired */
 static struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
+static struct psc_waitq		 slrpc_expire_waitq = PSC_WAITQ_INIT("expire");
+
+static int			 slrpc_batch_max_inflight = 2;
+
 struct slrpc_wkdata_batch_req {
 	struct slrpc_batch_req	*bq;
 	int			 rc;
@@ -62,11 +67,30 @@ struct slrpc_wkdata_batch_rep {
 };
 
 void
+slrcp_batch_get_max_inflight(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", slrpc_batch_max_inflight);
+}
+
+int
+slrcp_batch_set_max_inflight(char *val)
+{
+	int rc = 0, temp;
+
+	temp = strtol(val, NULL, 0);
+	if (temp < 1)
+		rc = -1;
+	else
+		slrpc_batch_max_inflight = temp;
+	return (rc);
+}
+
+void
 slrpc_batch_req_ctor(struct slrpc_batch_req *bq)
 {
     	struct slrpc_batch_rep_handler *h = bq->bq_handler;
-	bq->bq_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_qlen);
-	bq->bq_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bph_plen);
+	bq->bq_reqbuf = PSCALLOC(bq->bq_size * h->bph_qlen);
+	bq->bq_repbuf = PSCALLOC(bq->bq_size * h->bph_plen);
 }
 
 void
@@ -80,8 +104,8 @@ void
 slrpc_batch_rep_ctor(struct slrpc_batch_rep *bp)
 {
     	struct slrpc_batch_req_handler *h = bp->bp_handler;
-	bp->bp_reqbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_qlen);
-	bp->bp_repbuf = PSCALLOC(SLRPC_BATCH_MAX_COUNT * h->bqh_plen);
+	bp->bp_reqbuf = PSCALLOC(bp->bp_cnt * h->bqh_qlen);
+	bp->bp_repbuf = PSCALLOC(bp->bp_cnt * h->bqh_plen);
 }
 
 void
@@ -103,6 +127,7 @@ void
 slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 {
 	struct slrpc_batch_rep_handler *h;
+	struct sl_resource *res;
 	char *q, *p, *scratch;
 	int i, n;
 
@@ -144,6 +169,9 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		    scratch, -bq->bq_rc);
 		PSCFREE(scratch);
 	}
+	res = bq->bq_res;
+	psc_assert(psc_atomic32_read(&res->res_batchcnt) >= 1);
+	psc_atomic32_dec(&res->res_batchcnt);
 
 	psc_dynarray_free(&bq->bq_scratch);
 	slrpc_batch_req_dtor(bq);
@@ -176,7 +204,9 @@ slrpc_batch_req_sched_finish(struct slrpc_batch_req *bq, int where, int rc)
 {
 	struct slrpc_wkdata_batch_req *wk;
 
-	PFLOG_BATCH_REQ(PLL_DIAG, bq, "finish at = %d, rc = %d", where, rc);
+	PFLOG_BATCH_REQ(rc ? PLL_WARN : PLL_DIAG, 
+	    bq, "finish at = %d, rc = %d", where, rc);
+
 	wk = pfl_workq_getitem(slrpc_batch_req_finish_workcb,
 	    struct slrpc_wkdata_batch_req);
 
@@ -242,18 +272,12 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
 	psc_assert(!(bq->bq_flags & BATCHF_INFL));
-
-	LIST_CACHE_LOCK(&slrpc_batch_req_waitrep);
-
 	bq->bq_flags |= BATCHF_INFL;
 	bq->bq_flags &= ~BATCHF_DELAY;
+	freelock(&bq->bq_lock);
 
 	lc_remove(&slrpc_batch_req_delayed, bq);
 	lc_add(&slrpc_batch_req_waitrep, bq);
-
-	LIST_CACHE_ULOCK(&slrpc_batch_req_waitrep);
-
-	freelock(&bq->bq_lock);
 
 	PFLOG_BATCH_REQ(PLL_DIAG, bq, "qlen = %d, plen = %d, sending", 
 	    h->bph_qlen, h->bph_plen);
@@ -322,6 +346,10 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
+	/*
+	 * 11/04/2016: Hit mq = NULL crash because rq->rq_reqmsg.buflens[0] 
+	 * is 0. opc is 50, flags is 4.  Memory corruption or API misuse?
+	 */
 	mq->len = bp->bp_replen;
 	mq->bid = bp->bp_bid;
 	mq->opc = bp->bp_opc;
@@ -330,7 +358,7 @@ slrpc_batch_rep_send(struct slrpc_batch_rep *bp)
 	iov.iov_base = bp->bp_repbuf;
 	iov.iov_len = mq->len;
 
-	PFLOG_BATCH_REP(PLL_DIAG, bp, "sending");
+	PFLOG_BATCH_REP(bp->bp_rc ? PLL_WARN : PLL_DIAG, bp, "sending");
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 	    bp->bp_handler->bqh_snd_ptl, &iov, 1);
@@ -469,12 +497,13 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 	bp = psc_pool_get(slrpc_batch_rep_pool);	/* batch-rep */
 	memset(bp, 0, sizeof(*bp));
 	bp->bp_handler = h;
+	bp->bp_cnt = mq->cnt;
 	slrpc_batch_rep_ctor(bp);
 
 	iov.iov_len = mq->len;
 	iov.iov_base = bp->bp_reqbuf;
 	INIT_SPINLOCK(&bp->bp_lock);
-	INIT_PSC_LISTENTRY(&bp->bp_lentry);
+	INIT_PSC_LISTENTRY(&bp->bp_lentry);		/* needed by return */
 
 	/* retrieve buffer sent by slrpc_batch_req_send() */
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, h->bqh_rcv_ptl,
@@ -512,7 +541,7 @@ slrpc_batch_handle_request(struct slrpc_cservice *csvc,
 }
 
 /*
- * Handle a BATCHRP (i.e. a reply to a BATCHRQ) that arrives after a
+ * Handle a BATCHRP (i.e., a reply to a BATCHRQ) that arrives after a
  * recipient of a BATCHRQ is done processing the contents and sends us
  * a response indicating success/failure.
  *
@@ -596,6 +625,14 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
+int
+bq_cmp(const void *a, const void *b)
+{
+	struct slrpc_batch_req const *bq1 = a, *bq2 = b;
+
+	return (CMP(bq1->bq_expire.tv_sec, bq2->bq_expire.tv_sec));
+}
+
 /*
  * Add an item to a batch RPC request.  If doing so fills the batch, it
  * will be sent out immediately; otherwise it will sit around until
@@ -621,7 +658,7 @@ int
 slrpc_batch_req_add(struct sl_resource *dst_res,
     struct psc_listcache *workq, struct slrpc_cservice *csvc,
     int32_t opc, int rcvptl, int sndptl, void *buf, int len,
-    void *scratch, struct slrpc_batch_rep_handler *handler, int expire)
+    void *scratch, struct slrpc_batch_rep_handler *handler, int expire, int size)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 
@@ -630,6 +667,11 @@ slrpc_batch_req_add(struct sl_resource *dst_res,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	int rc = 0;
+
+	if (size < SLRPC_BATCH_MIN_COUNT)
+		size = SLRPC_BATCH_MIN_COUNT;
+	if (size > SLRPC_BATCH_MAX_COUNT)
+		size = SLRPC_BATCH_MAX_COUNT;
 
 	psc_assert(handler->bph_qlen == len);
 
@@ -641,6 +683,16 @@ retry:
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			OPSTAT_INCR("batch-req-yield");
 			goto retry;
+		}
+		if (bq->bq_cnt == bq->bq_size) {
+			OPSTAT_INCR("batch-req-full");
+			freelock(&bq->bq_lock);
+			continue;
+		}
+		if (bq->bq_flags & BATCHF_INFL) {
+			OPSTAT_INCR("batch-req-inflight");
+			freelock(&bq->bq_lock);
+			continue;
 		}
 		if ((bq->bq_res == dst_res) && (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
@@ -665,8 +717,9 @@ retry:
 		bq->bq_flags |= BATCHF_DELAY;
 		PFL_GETTIMEVAL(&bq->bq_expire);
 		bq->bq_expire.tv_sec += expire;
-		lc_addtail(&slrpc_batch_req_delayed, bq);
+		lc_add_sorted(&slrpc_batch_req_delayed, bq, bq_cmp);
 		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+		OPSTAT_INCR("batch-req-new");
 		goto retry;
 	}
 	LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
@@ -683,6 +736,7 @@ retry:
 
 	newbq = psc_pool_get(slrpc_batch_req_pool);
 	memset(newbq, 0, sizeof(*newbq));
+	newbq->bq_size = size;
 	newbq->bq_handler = handler;
 	slrpc_batch_req_ctor(newbq);
 
@@ -709,6 +763,7 @@ retry:
 
 	memcpy(bq->bq_reqbuf + bq->bq_reqlen, buf, len);
 	bq->bq_reqlen += len;
+	mq->cnt++;
 	mq->len += len;
 	psc_dynarray_add(&bq->bq_scratch, scratch);
 
@@ -720,12 +775,10 @@ retry:
 	 * of the same size.
 	 */
 	bq->bq_cnt++;
-	psc_assert(bq->bq_cnt <= SLRPC_BATCH_MAX_COUNT);
-	if (bq->bq_cnt == SLRPC_BATCH_MAX_COUNT) {
-		OPSTAT_INCR("batch-send-full");
-		slrpc_batch_req_send(bq);
-	} else
-		freelock(&bq->bq_lock);
+	psc_assert(bq->bq_cnt <= bq->bq_size);
+	if (bq->bq_cnt == bq->bq_size)
+		psc_waitq_wakeone(&slrpc_expire_waitq);
+	freelock(&bq->bq_lock);
 
 	if (newbq) {
 		OPSTAT_INCR("batch-req-free");
@@ -746,35 +799,63 @@ retry:
 void
 slrpc_batch_thr_main(struct psc_thread *thr)
 {
+	int sendit, skip;
 	struct timeval now, stall;
+	struct sl_resource *res;
 	struct slrpc_batch_req *bq;
 
 	while (pscthr_run(thr)) {
-		/*
- 		 * XXX only works for single thread, Otherwise, two
- 		 * threads might try to send the send batch request.
- 		 */
-		bq = lc_peekheadwait(&slrpc_batch_req_delayed);
-		if (!trylock(&bq->bq_lock)) {
-			pscthr_yield();
-			continue;
-		}
-		if (!bq->bq_cnt) {
-			freelock(&bq->bq_lock);
-			pscthr_yield();
-			continue;
-		}
-		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &bq->bq_expire, >=)) {
+ again:
+		skip = 0;
+		LIST_CACHE_LOCK(&slrpc_batch_req_delayed);
+		LIST_CACHE_FOREACH(bq, &slrpc_batch_req_delayed) {
+			if (!trylock(&bq->bq_lock))
+				continue;
+			if (!bq->bq_cnt) {
+				freelock(&bq->bq_lock);
+				skip++;
+				continue;
+			}
+			sendit = 0;
+			if (bq->bq_cnt == bq->bq_size) {
+				sendit = 1;
+				OPSTAT_INCR("batch-send-full");
+			}
+			PFL_GETTIMEVAL(&now);
+			if (timercmp(&now, &bq->bq_expire, >=)) {
+				sendit = 1;
+				OPSTAT_INCR("batch-send-expire");
+			}
+#if 0
+			if (!sendit && psc_atomic32_read(&res->res_batchcnt)) {
+#endif
+			if (!sendit) {
+				freelock(&bq->bq_lock);
+				skip++;
+				continue;
+			}
+			res = bq->bq_res;
+			if (psc_atomic32_read(&res->res_batchcnt) >=
+			    slrpc_batch_max_inflight) { 
+				freelock(&bq->bq_lock);
+				OPSTAT_INCR("batch-send-throttle");
+				skip++;
+				continue;
+			}
+			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+			psc_atomic32_inc(&res->res_batchcnt);
 			slrpc_batch_req_send(bq);
-			OPSTAT_INCR("batch-send-expire");
-		} else {
-			timersub(&bq->bq_expire, &now, &stall);
-			freelock(&bq->bq_lock);
-			OPSTAT_INCR("batch-send-wait");
-			psc_assert(stall.tv_sec >= 0);
-			usleep(stall.tv_sec * 1000000 + stall.tv_usec);
+			goto again;
 		}
+		LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
+		if (skip) {
+			OPSTAT_INCR("batch-send-wait");
+			stall.tv_sec = 1; 
+			stall.tv_usec = 0; 
+			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
+			continue;
+		} 
+		lc_peekheadwait(&slrpc_batch_req_delayed);
 	}
 }
 
@@ -807,19 +888,23 @@ slrpc_batches_drop(struct sl_resource *res)
  * @thrprefix: prefix for batch RPC transmitter threads.
  */
 void
-slrpc_batches_init(int thrtype, const char *thrprefix)
+slrpc_batches_init(int thrtype, int service, const char *thrprefix)
 {
-	psc_poolmaster_init(&slrpc_batch_req_poolmaster,
-	    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 16, 16,
-	    0, NULL, "batch-req");
-	slrpc_batch_req_pool = psc_poolmaster_getmgr(
-	    &slrpc_batch_req_poolmaster);
+	if (service == SL_SLMDS) {
+		psc_poolmaster_init(&slrpc_batch_req_poolmaster,
+		    struct slrpc_batch_req, bq_lentry, PPMF_AUTO, 16, 16,
+		    0, NULL, "batch-req");
+		slrpc_batch_req_pool = psc_poolmaster_getmgr(
+		    &slrpc_batch_req_poolmaster);
+	}
 
-	psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
-	    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 16, 16, 
-	    0, NULL, "batch-rep");
-	slrpc_batch_rep_pool = psc_poolmaster_getmgr(
-	    &slrpc_batch_rep_poolmaster);
+	if (service == SL_SLIOD) {
+		psc_poolmaster_init(&slrpc_batch_rep_poolmaster,
+		    struct slrpc_batch_rep, bp_lentry, PPMF_AUTO, 16, 16, 
+		    0, NULL, "batch-rep");
+		slrpc_batch_rep_pool = psc_poolmaster_getmgr(
+		    &slrpc_batch_rep_poolmaster);
+	}
 
 	lc_reginit(&slrpc_batch_req_delayed, struct slrpc_batch_req,
 	    bq_lentry, "batchrpc-delay");

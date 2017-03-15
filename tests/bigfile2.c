@@ -16,7 +16,7 @@
 /*  ---------------------------------------------------------------------
 /*  %END_LICENSE%
 /*
- * 06/21/2016: bigfile2.c, read and write a file with different block sizes.
+ * 06/21/2016: bigfile2.c, read and write a file with an arbitrary block size.
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -31,12 +31,15 @@ main(int argc, char *argv[])
 	char *filename;
 	struct stat stbuf;
 	unsigned char *buf;
+	struct timeval t1, t2, t3;
 	int fd, error = 0, readonly = 0;
 	size_t i, j, c, seed, size, bsize, nblocks, remainder = 0;
 
 	bsize = 5678;
-	nblocks = 12345;
-	seed = getpid();
+	nblocks = 1234567;
+	seed = 4456;
+	gettimeofday(&t1, NULL);
+
 	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
 		switch (c) {
 			case 'b':
@@ -54,11 +57,14 @@ main(int argc, char *argv[])
 		}   
 	}
 	if (optind != argc - 1) {
-		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] filename\n");
+		printf("Usage: a.out [-s seed] [-r] [-b bsize] [-n nblocks ] filename\n");
 		exit(0);
 	}   
 	filename = argv[optind];
 	if (readonly)
+		/*
+ 		 * Verify file contents written by a previous run of this program.
+ 		 */
         	fd = open(filename, O_RDONLY);
 	else
         	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
@@ -73,6 +79,8 @@ main(int argc, char *argv[])
 	if (readonly) {
 		fsize = stbuf.st_size;
 		nblocks = fsize / bsize;
+		if (fsize % bsize)
+			remainder = 1;
 	} else {
 		assert(!stbuf.st_size);
 		fsize = (long)nblocks * bsize;
@@ -85,8 +93,9 @@ main(int argc, char *argv[])
 	}
 	srandom(seed);
 	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
-		seed, filename, bsize, readonly ? nblocks + 1: nblocks, fsize);
+		seed, filename, bsize, nblocks + remainder, fsize);
 
+	fflush(stdout);
 	for (i = 0; i < nblocks; i++) {
 		if (readonly)
 			size = read(fd, buf, bsize);
@@ -141,8 +150,25 @@ main(int argc, char *argv[])
 
  done:
 	if (!error && readonly)
-		printf("No corruption has been found (last block has %d bytes)\n", remainder);
-	if (!error && !readonly)
-		printf("File has been created successfully.\007\n");
+		printf("Good news! No corruption has been found (last block has %d bytes)\n", remainder);
+	if (!error && !readonly) {
+		error = fsync(fd);
+		if (!error)
+			printf("File has been created successfully.\007\n");
+		else
+			printf("Fail to fsync file, errno = %d.\007\n", errno);
+	}
         close(fd);
+
+	gettimeofday(&t2, NULL);
+
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }

@@ -126,9 +126,11 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));
 	if (rc) {
+		/* system administrator needed in this case */
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_lookup_slfid failed; "
 		    "fid="SLPRI_FID" rc=%d",
 		    fcmh_2_fid(f), rc);
+		OPSTAT_INCR("lookup-slfid-err");
 		return (rc);
 	}
 

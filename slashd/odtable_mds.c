@@ -192,8 +192,8 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 		    O_RDWR, 0, NULL, NULL, NULL, &t->odt_mfh, NULL,
 		    NULL, 0);
 		if (rc)
-			psc_fatalx("failed to open odtable %s, rc=%d",
-			    fn, rc);
+			psc_fatalx("failed to open odtable %s: %s",
+			    fn, sl_strerror(rc));
 
 		rc = mdsio_read(current_vfsid, &rootcreds, h,
 		    sizeof(*h), &nb, 0, t->odt_mfh);

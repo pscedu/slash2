@@ -59,13 +59,13 @@
  *		(o) file size
  *		(o) mtime
  *     (2) This function should only be used by a client.
+ *
+ * The current thinking is to store remote attributes in sstb.
  */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
     int flags)
 {
-	uidmap_int_stat(sstb);
-
 	if (flags & FCMH_SETATTRF_HAVELOCK)
 		FCMH_LOCK_ENSURE(f);
 	else
@@ -220,6 +220,13 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 	psc_assert(f->fcmh_flags & FCMH_INITING);
 
+	/*
+	 * ESTALE can happen with msctl working on a file in a different
+	 * slash2 file system on the same machine. Make sure you supply
+	 * the right socket to msctl.
+	 *
+	 * (gdb) p msl_rmc_resm->resm_res->res_site->site_id 
+	 */
 	if (fcmh_2_fid(f) != SLFID_ROOT &&
 	    siteid != msl_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
@@ -227,6 +234,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			psclog_errorx("fid "SLPRI_FID" has "
 			    "invalid site ID %d",
 			    fcmh_2_fid(f), siteid);
+			OPSTAT_INCR("msl.stale1");
 			return (ESTALE);
 		}
 		SITE_FOREACH_RES(s, res, i)
@@ -237,6 +245,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			}
 		psclog_errorx("fid "SLPRI_FID" has invalid site ID %d",
 		    fcmh_2_fid(f), siteid);
+		OPSTAT_INCR("msl.stale2");
 		return (ESTALE);
 	}
 	fci->fci_resm = msl_rmc_resm;

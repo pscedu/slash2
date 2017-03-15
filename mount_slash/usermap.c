@@ -31,69 +31,137 @@
 #include "mount_slash.h"
 #include "pathnames.h"
 
-int
-uidmap_ext_cred(struct srt_creds *cr)
+
+/*
+ * Perform UID and GID mapping when a map file is given. Otherwise, all
+ * functions in this file shouuld be no-op.
+ */
+
+/* Externalize UID and GID credential for permission checking */
+
+void
+uidmap_ext_cred(struct pscfs_creds *cr)
 {
 	struct uid_mapping *um, q;
 
-	if (!msl_use_mapfile)
-		return (0);
+	if (!msl_map_enable)
+		return;
 
-	q.um_key = cr->scr_uid;
+	q.um_key = cr->pcr_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um == NULL)
-		return (0);
-	cr->scr_uid = um->um_val;
-	return (0);
+	if (um != NULL)
+		cr->pcr_uid = um->um_val;
+	else {
+		/* uid squashing */
+		cr->pcr_uid = 65534;
+	}
 }
 
-int
-gidmap_int_cred(struct pscfs_creds *cr)
+void
+gidmap_ext_cred(struct pscfs_creds *cr)
+{
+	int i, j;
+	gid_t gid;
+	struct gid_mapping *gm, q;
+
+	if (!msl_map_enable)
+		return;
+
+	q.gm_key = cr->pcr_gid;
+	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+	if (gm)
+		gid = gm->gm_val;
+	else 
+		gid = 65534;
+	j = 0;
+	for (i = 0; i < cr->pcr_ngid; i++) {
+		if (cr->pcr_gid == cr->pcr_gidv[i]) {
+			cr->pcr_gidv[j] = gid;
+			j++;
+			continue;
+		}
+		q.gm_key = cr->pcr_gidv[i];
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (!gm)
+			continue;
+		/* overwrite is fine */
+		cr->pcr_gidv[j] = gm->gm_val;
+		j++;
+	}
+	cr->pcr_gid = gid;
+	cr->pcr_ngid = j;
+}
+
+/* Externalize UID and GID credential for setting attributes */
+
+void
+uidmap_ext_stat(struct stat *stb)
+{
+	struct uid_mapping *um, q;
+
+	if (!msl_map_enable)
+		return;
+
+	q.um_key = stb->st_uid;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um == NULL)
+		stb->st_uid = um->um_val;
+	else
+		stb->st_uid = 65534;
+}
+
+void
+gidmap_ext_stat(struct stat *stb)
 {
 	struct gid_mapping *gm, q;
 
-	if (!msl_use_mapfile)
-		return (0);
+	if (!msl_map_enable)
+		return;
 
-	q.gm_key = cr->pcr_uid;
-	gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
+	q.gm_key = stb->st_gid;
+	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 	if (gm == NULL)
-		return (0);
-	cr->pcr_gid = gm->gm_gid;
-	memcpy(cr->pcr_gidv, gm->gm_gidv, sizeof(gm->gm_gidv));
-	return (0);
+		stb->st_gid = gm->gm_val;
+	else
+		stb->st_gid = 65534;
 }
 
-int
-uidmap_ext_stat(struct srt_stat *sstb)
+/* Internalize UID and GID credential for attribute reporting to FUSE */
+
+void
+uidmap_int_stat(struct srt_stat *sstb, uint32_t *uidp)
 {
+	uint32_t uid;
 	struct uid_mapping *um, q;
 
-	if (!msl_use_mapfile)
-		return (0);
-
-	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um == NULL)
-		return (0);
-	sstb->sst_uid = um->um_val;
-	return (0);
+	uid = sstb->sst_uid;
+	if (msl_map_enable) {
+		q.um_key = sstb->sst_uid;
+		um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
+		if (um)
+			uid = um->um_val;
+		else
+			uid = 65534;
+	}
+	*uidp = uid;
 }
 
-int
-uidmap_int_stat(struct srt_stat *sstb)
+void
+gidmap_int_stat(struct srt_stat *sstb, uint32_t *gidp)
 {
-	struct uid_mapping *um, q;
+	uint32_t gid;
+	struct gid_mapping *gm, q;
 
-	if (!msl_use_mapfile)
-		return (0);
-
-	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
-	if (um == NULL)
-		return (0);
-	sstb->sst_uid = um->um_val;
-	return (0);
+	gid = sstb->sst_gid;
+	if (msl_map_enable) {
+		q.gm_key = sstb->sst_gid;
+		gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
+		if (gm)
+			gid = gm->gm_val;
+		else
+			gid = 65534;
+	}
+	*gidp = gid;
 }
 
 #define PARSESTR(start, run)						\
@@ -132,21 +200,33 @@ int
 mapfile_parse_user(char *start)
 {
 	int64_t local = -1, remote = -1;
-	struct uid_mapping *um;
+	struct uid_mapping *um, q;
 	char *run;
+	int rc = 0;
 
 	do {
+		/* the order of local and remote does not matter */
 		PARSESTR(start, run);
 		if (strcmp(start, "local") == 0) {
 			start = run;
 			local = PARSENUM(start, run);
-		} else if (strcmp(start, "remote") == 0) {
+			continue;
+		}
+		if (strcmp(start, "remote") == 0) {
 			start = run;
 			remote = PARSENUM(start, run);
-		} else
-			goto malformed;
+			continue;
+		}
+		goto malformed;
+
 	} while (*start);
+
 	if (local == -1 || remote == -1)
+		goto malformed;
+
+	q.um_key = local;
+	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
+	if (um != NULL)
 		goto malformed;
 
 	um = PSCALLOC(sizeof(*um));
@@ -160,57 +240,70 @@ mapfile_parse_user(char *start)
 	um->um_key = remote;
 	um->um_val = local;
 	psc_hashtbl_add_item(&msl_uidmap_int, um);
+	rc = 1;
 
-	return (1);
  malformed:
-	return (0);
+
+	return (rc);
 }
 
 int
 mapfile_parse_group(char *start)
 {
-	struct psc_dynarray uids = DYNARRAY_INIT;
-	struct gid_mapping *gm;
-	int64_t remote = -1;
-	int n, rc = 0;
+	int64_t local = -1, remote = -1;
+	struct gid_mapping *gm, q;
 	char *run;
-	uid_t uid;
-	void *p;
+	int rc = 0, localfirst = 0;
 
 	do {
+		/* the order of local and remote does matter */
 		PARSESTR(start, run);
-		if (strcmp(start, "local-uids") == 0) {
+		if (strcmp(start, "local") == 0) {
+			if (remote == -1)
+				localfirst = 1;
 			start = run;
-			while (isdigit(*start)) {
-				uid = PARSENUM(start, run);
-				psc_dynarray_add(&uids,
-				    (void *)(uintptr_t)uid);
-			}
-		} else if (strcmp(start, "remote") == 0) {
+			local = PARSENUM(start, run);
+			continue;
+		}
+		if (strcmp(start, "remote") == 0) {
 			start = run;
 			remote = PARSENUM(start, run);
-		} else
-			goto malformed;
-	} while (*start);
-	if (psc_dynarray_len(&uids) == 0 || remote == -1)
+			continue;
+		} 
 		goto malformed;
 
-	DYNARRAY_FOREACH(p, n, &uids) {
-		gm = psc_hashtbl_search(&msl_gidmap_int, &remote);
-		if (gm) {
-			gm->gm_gidv[gm->gm_ngid++] = remote;
-		} else {
-			gm = PSCALLOC(sizeof(*gm));
-			psc_hashent_init(&msl_gidmap_int, gm);
-			gm->gm_key = (uint64_t)p;
-			gm->gm_gid = remote;
-			psc_hashtbl_add_item(&msl_gidmap_int, gm);
-		}
+	} while (*start);
+
+	if (local == -1 || remote == -1)
+		goto malformed;
+
+	if (localfirst) {
+		q.gm_key = local;
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (gm != NULL)
+			goto malformed;
+
+		gm = PSCALLOC(sizeof(*gm));
+		psc_hashent_init(&msl_gidmap_ext, gm);
+		gm->gm_key = local;
+		gm->gm_val = remote;
+		psc_hashtbl_add_item(&msl_gidmap_ext, gm);
+	} else {
+		q.gm_key = remote;
+		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		if (gm != NULL)
+			goto malformed;
+
+		gm = PSCALLOC(sizeof(*gm));
+		psc_hashent_init(&msl_gidmap_int, gm);
+		gm->gm_key = remote;
+		gm->gm_val = local;
+		psc_hashtbl_add_item(&msl_gidmap_int, gm);
 	}
 	rc = 1;
 
  malformed:
-	psc_dynarray_free(&uids);
+
 	return (rc);
 }
 
@@ -219,30 +312,49 @@ parse_mapfile(void)
 {
 	char fn[PATH_MAX], buf[LINE_MAX], *start, *run;
 	FILE *fp;
-	int ln;
+	int ln, good;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_MAPFILE);
 
 	fp = fopen(fn, "r");
 	if (fp == NULL)
-		err(1, "%s", fn);
-	ln = 0;
+		errx(1, "Fail to open map file %s.", fn);
+	ln = good = 0;
 	while (fgets(buf, sizeof(buf), fp)) {
 		ln++;
 
+		/*
+		 * Skip comments that start with # sign.
+		 */
 		start = buf;
+		if (*start == '#')
+		    continue;
+
+		/*
+		 * There must be at least one space after
+		 * either "user" or "group" string.
+		 */
 		PARSESTR(start, run);
 		if (strcmp(start, "user") == 0 &&
-		    mapfile_parse_user(run))
+		    mapfile_parse_user(run)) {
+			good++;
 			continue;
-		else if (strcmp(start, "group") == 0 &&
-		    mapfile_parse_group(run))
+		}
+		if (strcmp(start, "group") == 0 &&
+		    mapfile_parse_group(run)) {
+			good++;
 			continue;
+		}
 
  malformed:
-		warnx("%s: %d: malformed line", fn, ln);
+		if (*start != '\0')
+			errx(1, "%s: %d: malformed or duplicate line", fn, ln);
 	}
 	if (ferror(fp))
-		warn("%s", fn);
+		errx(1, "I/O error on map file %s.", fn);
 	fclose(fp);
+	if (!good)
+		errx(1, "Map file %s is empty.", fn);
+	warnx("%d entries in the map file %s have been parsed successfully.", 
+	    good, fn);
 }

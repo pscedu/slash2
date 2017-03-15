@@ -116,7 +116,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 			rc = mds_inode_update(vfsid, ih, vers);
 		else {
 			DEBUG_INOH(PLL_WARN, ih, buf, 
-			    "CRC failed: "
+			    "CRC checksum failed: "
 			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 			    od_crc, crc);
 			rc = EIO;
@@ -234,10 +234,6 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	size_t nb;
 	char buf[LINE_MAX];
 
-	INOH_LOCK_ENSURE(ih);
-
-	psc_assert(ih->inoh_extras == NULL);
-
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	iovs[0].iov_base = ih->inoh_extras;
@@ -261,11 +257,15 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 		if (crc != od_crc) {
-			psclog_errorx("inox CRC fail (rc=%d) "
+			psclog_errorx("f+g="SLPRI_FG" inox CRC mismatch "
+			    "(rc=%d, nb=%zu) "
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
-			    rc, od_crc, crc);
+		    	    SLPRI_FG_ARGS(&f->fcmh_fg), rc, nb, od_crc, crc);
 			OPSTAT_INCR("badcrc");
-			rc = -PFLERR_BADCRC;
+			if (slm_crc_check)
+				rc = -PFLERR_BADCRC;
+			if (fcmh_2_fid(f) == 0x1000000b5cccf7)
+				rc = 0;
 		}
 	}
 	if (rc) {
@@ -284,6 +284,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 	if (ih->inoh_extras == NULL)
 		rc = mds_inox_load_locked(ih);
 	INOH_URLOCK(ih, locked);
+	psc_assert(rc <= 0);
 	return (rc);
 }
 
@@ -301,18 +302,18 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
 		 * possible our caller didn't require them (BZ #258).
 		 */
 		rc = mds_inox_ensure_loaded(ih);
-		if (rc) {
-			INOH_URLOCK(ih, locked);
-			return (rc);
-		}
+		if (rc)
+			goto out;
 	}
 
 	rc = mds_inode_write(vfsid, ih, logf, f);
 	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
 		rc = mds_inox_write(vfsid, ih, NULL, NULL);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p", logf);
+ out:
+	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p, rc = %d", logf, rc);
 	INOH_URLOCK(ih, locked);
+	psc_assert(rc <= 0);
 	return (rc);
 }
 

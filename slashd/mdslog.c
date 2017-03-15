@@ -1244,6 +1244,7 @@ slmjcursorthr_main(struct psc_thread *thr)
 			    mds_cursor.pjc_fid,
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
+		OPSTAT_INCR("slm-cursor-update");
 	}
 }
 
