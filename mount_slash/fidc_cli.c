@@ -228,6 +228,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			psclog_errorx("fid "SLPRI_FID" has "
 			    "invalid site ID %d",
 			    fcmh_2_fid(f), siteid);
+			OPSTAT_INCR("msl.stale1");
 			return (ESTALE);
 		}
 		SITE_FOREACH_RES(s, res, i)
@@ -238,6 +239,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			}
 		psclog_errorx("fid "SLPRI_FID" has invalid site ID %d",
 		    fcmh_2_fid(f), siteid);
+		OPSTAT_INCR("msl.stale2");
 		return (ESTALE);
 	}
 	fci->fci_resm = msl_rmc_resm;
