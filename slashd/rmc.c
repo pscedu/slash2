@@ -70,7 +70,7 @@
 int			slm_quiesce;
 int			slm_force_dio;
 int			slm_global_mount;
-int			slm_crc_check = 1;
+int			slm_crc_check = 0;
 int			slm_conn_debug = 1;
 
 uint64_t		slm_next_fid = UINT64_MAX;
