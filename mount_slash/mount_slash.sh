@@ -31,6 +31,9 @@ done
 shift $(($OPTIND - 1))
 
 xargs=()
+
+# See ../../pfl/utils/daemon/pfl_daemon.sh
+
 apply_host_prefs "$@"
 
 base=$dir/$prof.s2
