@@ -605,6 +605,10 @@ main(int argc, char *argv[])
 	time(&now);
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
+	rc = sqlite3_threadsafe();
+	if (rc != 1)
+		psc_fatal("SQLite is not safe in multi-threaded environment.");  
+
 	sqlite3_enable_shared_cache(1);
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
