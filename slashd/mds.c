@@ -2231,7 +2231,7 @@ _dbdo(const struct pfl_callerinfo *pci,
     const char *fmt, ...)
 {
 	static int check;
-	int type, log = 0, dbuf_off = 0, rc, n, j;
+	int type, log = 0, dbuf_off = 0, rc, n, i;
 	char *p, dbuf[LINE_MAX] = "";
 	struct timeval tv, tv0, tvd;
 	struct slmthr_dbh *dbh;
@@ -2285,48 +2285,48 @@ _dbdo(const struct pfl_callerinfo *pci,
 		dbuf_off = strlen(fmt);
 	}
 	PFL_GETTIMEVAL(&tv0);
-	for (j = 0; j < n; j++) {
+	for (i = 0; i < n; i++) {
 		type = va_arg(ap, int);
 		switch (type) {
 		case SQLITE_INTEGER64: {
 			int64_t arg;
 
 			arg = va_arg(ap, int64_t);
-			rc = sqlite3_bind_int64(sth->sth_sth, j + 1,
+			rc = sqlite3_bind_int64(sth->sth_sth, i + 1,
 			    arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %"PRId64, j + 1, arg);
+				    "; arg %d: %"PRId64, i + 1, arg);
 			break;
 		    }
 		case SQLITE_INTEGER: {
 			int32_t arg;
 
 			arg = va_arg(ap, int32_t);
-			rc = sqlite3_bind_int(sth->sth_sth, j + 1, arg);
+			rc = sqlite3_bind_int(sth->sth_sth, i + 1, arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %d", j + 1, arg);
+				    "; arg %d: %d", i + 1, arg);
 			break;
 		    }
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
-			rc = sqlite3_bind_text(sth->sth_sth, j + 1, p,
+			rc = sqlite3_bind_text(sth->sth_sth, i + 1, p,
 			    strlen(p), SQLITE_STATIC);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %s", j + 1, p);
+				    "; arg %d: %s", i + 1, p);
 			break;
 		case SQLITE_NULL:
 			(void)va_arg(ap, int);
-			rc = sqlite3_bind_null(sth->sth_sth, j + 1);
+			rc = sqlite3_bind_null(sth->sth_sth, i + 1);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: NULL", j + 1);
+				    "; arg %d: NULL", i + 1);
 			break;
 		default:
 			psc_fatalx("type");
