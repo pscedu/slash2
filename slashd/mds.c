@@ -2212,7 +2212,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
  */
 int
 _dbdo(const struct pfl_callerinfo *pci,
-    int (*cb)(struct slm_sth *, void *), void *cbarg,
+    int (*cb)(sqlite3_stmt *, void *), void *cbarg,
     const char *fmt, ...)
 {
 	static int check;
@@ -2220,8 +2220,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	char *p, dbuf[LINE_MAX] = "";
 	struct timeval tv, tv0, tvd;
 	struct slmthr_dbh *dbh;
-	struct slm_sth *sth;
-	uint64_t key;
+	sqlite3_stmt *sth;
 	va_list ap;
 
 	dbh = slmthr_getdbh();
@@ -2244,25 +2243,16 @@ _dbdo(const struct pfl_callerinfo *pci,
 		    NULL, "sth-%s", pscthr_get()->pscthr_name);
 	}
 
-	key = (uint64_t)fmt;
-	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
-	if (sth == NULL) {
-		sth = PSCALLOC(sizeof(*sth));
-		psc_hashent_init(&dbh->dbh_sth_hashtbl, sth);
-		sth->sth_fmt = fmt;
+	do {
+		rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
+		    &sth, NULL);
+		if (rc == SQLITE_BUSY)
+			pscthr_yield();
+	} while (rc == SQLITE_BUSY);
+	psc_assert(rc == SQLITE_OK);
 
-		do {
-			rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
-			    &sth->sth_sth, NULL);
-			if (rc == SQLITE_BUSY)
-				pscthr_yield();
-		} while (rc == SQLITE_BUSY);
-		psc_assert(rc == SQLITE_OK);
 
-		psc_hashtbl_add_item(&dbh->dbh_sth_hashtbl, sth);
-	}
-
-	n = sqlite3_bind_parameter_count(sth->sth_sth);
+	n = sqlite3_bind_parameter_count(sth);
 	va_start(ap, fmt);
 	log = psc_log_shouldlog(pci, PLL_DEBUG);
 	if (log) {
@@ -2277,7 +2267,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			int64_t arg;
 
 			arg = va_arg(ap, int64_t);
-			rc = sqlite3_bind_int64(sth->sth_sth, i + 1,
+			rc = sqlite3_bind_int64(sth, i + 1,
 			    arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
@@ -2289,7 +2279,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			int32_t arg;
 
 			arg = va_arg(ap, int32_t);
-			rc = sqlite3_bind_int(sth->sth_sth, i + 1, arg);
+			rc = sqlite3_bind_int(sth, i + 1, arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
@@ -2298,7 +2288,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		    }
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
-			rc = sqlite3_bind_text(sth->sth_sth, i + 1, p,
+			rc = sqlite3_bind_text(sth, i + 1, p,
 			    strlen(p), SQLITE_STATIC);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
@@ -2307,7 +2297,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			break;
 		case SQLITE_NULL:
 			(void)va_arg(ap, int);
-			rc = sqlite3_bind_null(sth->sth_sth, i + 1);
+			rc = sqlite3_bind_null(sth, i + 1);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
@@ -2321,13 +2311,13 @@ _dbdo(const struct pfl_callerinfo *pci,
 	va_end(ap);
 
 	do {
-		rc = sqlite3_step(sth->sth_sth);
+		rc = sqlite3_step(sth);
 		if (rc == SQLITE_ROW && cb)
 			cb(sth, cbarg);
 		if (rc != SQLITE_DONE)
 			pscthr_yield();
 		if (rc == SQLITE_LOCKED)
-			sqlite3_reset(sth->sth_sth);
+			sqlite3_reset(sth);
 	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
 	    rc == SQLITE_LOCKED);
 
@@ -2343,7 +2333,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 	if (rc != SQLITE_DONE)
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, sqlite3_errmsg(dbh->dbh));
-	sqlite3_reset(sth->sth_sth);
+
+	sqlite3_finalize(sth);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
 

@@ -389,7 +389,7 @@ int	 slm_wkcb_wr_brepl(void *);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
 int	 _dbdo(const struct pfl_callerinfo *,
-	    int (*)(struct slm_sth *, void *), void *, const char *,
+	    int (*)(sqlite3_stmt *, void *), void *, const char *,
 	    ...);
 
 extern struct slash_creds	 rootcreds;
