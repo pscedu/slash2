@@ -115,7 +115,6 @@ struct slm_sth {
 	struct pfl_hashentry	 sth_hentry;
 	const char		*sth_fmt;
 	sqlite3_stmt		*sth_sth;
-	struct pfl_mutex	 sth_mutex;
 };
 
 #ifndef SQLITE_INTEGER64
