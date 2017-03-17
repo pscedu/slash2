@@ -48,6 +48,8 @@ struct srt_stat;
 struct slm_sth;
 struct bmap_mds_lease;
 
+extern sqlite3	*db_handle;
+
 /* MDS thread types. */
 enum {
 	SLMTHRT_BATCHRPC = _PFL_NTHRT,	/* batch RPC reaper */

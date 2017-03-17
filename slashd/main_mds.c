@@ -67,6 +67,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 extern const char *__progname;
 
+sqlite3                 *db_handle;
+
 int			 current_vfsid;
 
 struct slash_creds	 rootcreds = { 0, 0 };
@@ -412,6 +414,7 @@ main(int argc, char *argv[])
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
+	char dbfn[PATH_MAX];
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -610,6 +613,12 @@ main(int argc, char *argv[])
 		psc_fatal("SQLite is not safe in multi-threaded environment.");  
 
 	sqlite3_enable_shared_cache(1);
+
+	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+	rc = sqlite3_open(dbfn, &db_handle);
+	if (rc != SQLITE_OK)
+		psc_fatalx("Fail to open SQLite data base %s", dbfn);
+
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 

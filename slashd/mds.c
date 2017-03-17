@@ -2225,19 +2225,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	dbh = slmthr_getdbh();
 
-	if (dbh->dbh == NULL) {
-		char dbfn[PATH_MAX], *estr;
-
-		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
-		rc = sqlite3_open(dbfn, &dbh->dbh);
-		if (rc == SQLITE_OK && !check) {
-			rc = sqlite3_exec(dbh->dbh,
-			    "PRAGMA integrity_check", NULL, NULL,
-			    &estr);
-			check = 1;
-		}
-		psc_assert(rc == SQLITE_OK);
-	}
+	if (dbh->dbh == NULL)
+		dbh->dbh = db_handle;
 
 	do {
 		rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
@@ -2246,7 +2235,6 @@ _dbdo(const struct pfl_callerinfo *pci,
 			pscthr_yield();
 	} while (rc == SQLITE_BUSY);
 	psc_assert(rc == SQLITE_OK);
-
 
 	n = sqlite3_bind_parameter_count(sth);
 	va_start(ap, fmt);
