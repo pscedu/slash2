@@ -2202,21 +2202,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	return (rc);
 }
 
-int
-str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
-{
-	const char *i;
-	char *o;
-
-	for (i = in, o = out; *i && o < out + PATH_MAX - 1; i++, o++) {
-		if (*i == '\\' || *i == '\'')
-			*o++ = '\\';
-		*o = *i;
-	}
-	out[PATH_MAX - 1] = '\0';
-	return (0);
-}
-
 /*
  * Execute an SQL query on the SQLite database.
  *
