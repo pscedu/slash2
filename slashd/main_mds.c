@@ -617,7 +617,7 @@ main(int argc, char *argv[])
 
 	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
 	rc = sqlite3_open_v2(dbfn, &db_handle, 
-		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
+		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 	if (rc != SQLITE_OK)
 		psc_fatalx("Fail to open/create SQLite data base %s", dbfn);
 
