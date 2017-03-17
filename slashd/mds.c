@@ -2237,10 +2237,6 @@ _dbdo(const struct pfl_callerinfo *pci,
 			check = 1;
 		}
 		psc_assert(rc == SQLITE_OK);
-		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
-		    struct slm_sth, sth_fmt, sth_hentry,
-		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
-		    NULL, "sth-%s", pscthr_get()->pscthr_name);
 	}
 
 	do {
