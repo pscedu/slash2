@@ -51,6 +51,7 @@
 #include "ctl_mds.h"
 #include "fidcache.h"
 #include "mdsio.h"
+#include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -609,15 +610,16 @@ main(int argc, char *argv[])
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
 	rc = sqlite3_threadsafe();
-	if (rc != 1)
-		psc_fatal("SQLite is not safe in multi-threaded environment.");  
+	if (rc == SQLITE_CONFIG_SINGLETHREAD)
+		psclog_warnx("SQLite is configured in single-threaded mode.");
 
 	sqlite3_enable_shared_cache(1);
 
 	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
-	rc = sqlite3_open(dbfn, &db_handle);
+	rc = sqlite3_open_v2(dbfn, &db_handle, 
+		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
 	if (rc != SQLITE_OK)
-		psc_fatalx("Fail to open SQLite data base %s", dbfn);
+		psc_fatalx("Fail to open/create SQLite data base %s", dbfn);
 
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
