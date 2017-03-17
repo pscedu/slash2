@@ -2223,6 +2223,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	sqlite3_stmt *sth;
 	va_list ap;
 
+	spinlock(&slm_upsch_lock);
 	dbh = slmthr_getdbh();
 
 	if (dbh->dbh == NULL)
@@ -2319,6 +2320,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		    fmt, sqlite3_errmsg(dbh->dbh));
 
 	sqlite3_finalize(sth);
+	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
 

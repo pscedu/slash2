@@ -935,7 +935,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
-	spinlock(&slm_upsch_lock);
     	r->res_offset = 0;
 	while (1) {
 		dbdo(upd_proc_pagein_cb, da,
@@ -961,7 +960,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		}
 		break;
 	}
-	freelock(&slm_upsch_lock);
 }
 
 #if 0
@@ -1066,7 +1064,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
-	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1098,7 +1095,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 
-	freelock(&slm_upsch_lock);
 	if (!rc) {
 		/*
 		 * XXX this is an optimization path, use non-blocking.
