@@ -690,6 +690,11 @@ main(int argc, char *argv[])
 		    "WHERE type = 'table' AND name = 'upsch'");
 		if (table_total != 1)
 			psc_fatalx("SQLite data base %s is problematic", dbfn);
+		dbdo(slm_upsch_tally_cb, &table_total,
+		    "SELECT count (*)"
+	    	    "FROM upsch");
+		psclog_warnx("Reusing existing table (%d rows) for replication.", 
+		    table_total);
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
