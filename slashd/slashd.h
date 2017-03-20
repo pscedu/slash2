@@ -101,7 +101,6 @@ struct slmdbwk_thread {
 
 
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
-PSCTHR_MKCAST(slmworkthr, pfl_wk_thread, SLMTHRT_WORKER)
 PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
@@ -113,12 +112,6 @@ static __inline struct slmctl_thread *
 slmctlthr_getpri(struct psc_thread *thr)
 {
 	return ((void *)(slmctlthr(thr) + 1));
-}
-
-static __inline struct slmwork_thread *
-slmworkthr_getpri(struct psc_thread *thr)
-{
-	return ((void *)(slmworkthr(thr) + 1));
 }
 
 struct site_mds_info {
