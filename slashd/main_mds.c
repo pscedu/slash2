@@ -409,7 +409,7 @@ int
 main(int argc, char *argv[])
 {
 	size_t size;
-	char *path_env, *zpcachefn = NULL, *zpname;
+	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int i, c, rc, vfsid, found, table_total;
 	struct psc_thread *thr;
@@ -620,6 +620,11 @@ main(int argc, char *argv[])
 
 	if (rc != SQLITE_OK)
 		psc_fatalx("Fail to open/create SQLite data base %s", dbfn);
+
+	rc = sqlite3_exec(db_handle,
+		"PRAGMA integrity_check", NULL, NULL, &estr);
+	if (rc != SQLITE_OK)
+		psc_fatalx("SQLite data base %s is corrupted", dbfn);
 
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
