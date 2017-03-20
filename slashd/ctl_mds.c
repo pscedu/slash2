@@ -640,6 +640,5 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register_var("sys.quiesce",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_quiesce);
 
-	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 
-	    sizeof(struct slmctl_thread), SLMTHRT_CTLAC);
+	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), 0, SLMTHRT_CTLAC);
 }

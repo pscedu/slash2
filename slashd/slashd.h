@@ -78,25 +78,17 @@ enum {
 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
 };
 
-struct slmthr_dbh {
-	sqlite3			 *dbh;
-	struct psc_hashtbl	  dbh_sth_hashtbl;
-};
-
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
-	struct slmthr_dbh	  smrct_dbh;
 };
 
 struct slmrcm_thread {
-	struct slmthr_dbh	  srcm_dbh;
 	char			 *srcm_page;
 	int			  srcm_page_bitpos;
 };
 
 struct slmrmi_thread {
 	struct pscrpc_thread	  smrit_prt;
-	struct slmthr_dbh	  smrit_dbh;
 };
 
 struct slmrmm_thread {
@@ -105,24 +97,8 @@ struct slmrmm_thread {
 
 struct slmdbwk_thread {
 	struct pfl_wk_thread	  smdw_wkthr;
-	struct slmthr_dbh	  smdw_dbh;
 };
 
-struct slmctl_thread {
-	struct slmthr_dbh	  smct_dbh;
-};
-
-struct slmupsch_thread {
-	struct slmthr_dbh	  sus_dbh;
-};
-
-struct slmpager_thread {
-	struct slmthr_dbh	  pager_dbh;
-};
-
-struct slmwork_thread {
-	struct slmthr_dbh	  work_dbh;
-};
 
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
 PSCTHR_MKCAST(slmworkthr, pfl_wk_thread, SLMTHRT_WORKER)
@@ -132,7 +108,6 @@ PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
-PSCTHR_MKCAST(slmpagerthr, slmpager_thread, SLMTHRT_PAGER)
 
 static __inline struct slmctl_thread *
 slmctlthr_getpri(struct psc_thread *thr)
@@ -144,33 +119,6 @@ static __inline struct slmwork_thread *
 slmworkthr_getpri(struct psc_thread *thr)
 {
 	return ((void *)(slmworkthr(thr) + 1));
-}
-
-static __inline struct slmthr_dbh *
-slmthr_getdbh(void)
-{
-	struct psc_thread *thr;
-
-	thr = pscthr_get();
-	switch (thr->pscthr_type) {
-	case SLMTHRT_CTL:
-		return (&slmctlthr_getpri(thr)->smct_dbh);
-	case SLMTHRT_WORKER:
-		return (&slmworkthr_getpri(thr)->work_dbh);
-	case SLMTHRT_RCM:
-		return (&slmrcmthr(thr)->srcm_dbh);
-	case SLMTHRT_RMC:
-		return (&slmrmcthr(thr)->smrct_dbh);
-	case SLMTHRT_RMI:
-		return (&slmrmithr(thr)->smrit_dbh);
-	case SLMTHRT_UPSCHED:
-		return (&slmupschthr(thr)->sus_dbh);
-	case SLMTHRT_PAGER:
-		return (&slmpagerthr(thr)->pager_dbh);
-	case SLMTHRT_DBWORKER:
-		return (&slmdbwkthr(thr)->smdw_dbh);
-	}
-	psc_fatalx("unknown thread type %d", thr->pscthr_type);
 }
 
 struct site_mds_info {

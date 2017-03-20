@@ -1183,12 +1183,11 @@ slmupschthr_spawn(void)
 	struct psc_thread *thr;
 
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
-		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
-		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main, 
+		    0, "slmupschthr%d", i);
 		pscthr_setready(thr);
 	}
-	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
-	    sizeof(struct slmupsch_thread), "slmpagerthr");
+	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main, 0, "slmpagerthr");
 	pscthr_setready(thr);
 }
 

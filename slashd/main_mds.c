@@ -470,8 +470,7 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(SLMTHRT_CTL, NULL, 
-	    sizeof(struct psc_ctlthr) +
-	    sizeof(struct slmctl_thread), "slmctlthr0");
+	    sizeof(struct psc_ctlthr), "slmctlthr0");
 
 	sl_sys_upnonce = psc_random32();
 
@@ -712,8 +711,7 @@ main(int argc, char *argv[])
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	pfl_workq_lock();
-	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
-	    sizeof(struct slmwork_thread), "slmwkthr%d");
+	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS, 0, "slmwkthr%d");
 	pfl_workq_waitempty();
 
 	for (i = 0; i < 4; i++) {
