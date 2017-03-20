@@ -233,6 +233,8 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	/* pfl_odt_close(ptrunc); */
 	/* pfl_odt_close(bml); */
 
+	sqlite3_close_v2(&db_handle);
+
 	mdsio_exit();
 	/* XXX journal_close */
 	pscthr_killall();
