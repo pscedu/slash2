@@ -2215,23 +2215,15 @@ _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(sqlite3_stmt *, void *), void *cbarg,
     const char *fmt, ...)
 {
-	static int check;
 	int type, log = 0, dbuf_off = 0, rc, n, i;
 	char *p, dbuf[LINE_MAX] = "";
 	struct timeval tv, tv0, tvd;
-	struct slmthr_dbh *dbh;
 	sqlite3_stmt *sth;
 	va_list ap;
 
 	spinlock(&slm_upsch_lock);
-	dbh = slmthr_getdbh();
-
-	if (dbh->dbh == NULL)
-		dbh->dbh = db_handle;
-
 	do {
-		rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
-		    &sth, NULL);
+		rc = sqlite3_prepare_v2(db_handle, fmt, -1, &sth, NULL);
 		if (rc == SQLITE_BUSY)
 			pscthr_yield();
 	} while (rc == SQLITE_BUSY);
@@ -2317,7 +2309,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	if (rc != SQLITE_DONE)
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
-		    fmt, sqlite3_errmsg(dbh->dbh));
+		    fmt, sqlite3_errmsg(db_handle));
 
 	sqlite3_finalize(sth);
 	freelock(&slm_upsch_lock);

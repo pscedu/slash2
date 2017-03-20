@@ -618,6 +618,7 @@ main(int argc, char *argv[])
 	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
 	rc = sqlite3_open_v2(dbfn, &db_handle, 
 		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+
 	if (rc != SQLITE_OK)
 		psc_fatalx("Fail to open/create SQLite data base %s", dbfn);
 
@@ -625,7 +626,7 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
 	/* no-op to test integrity */
-	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
+	rc = sqlite3_exec(db_handle,
 	    " UPDATE	upsch"
 	    "	SET	id=0"
 	    " WHERE	id=0", NULL,
