@@ -411,7 +411,7 @@ main(int argc, char *argv[])
 	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	int i, c, rc, vfsid, found;
+	int i, c, rc, vfsid, found, table_total;
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
@@ -623,6 +623,13 @@ main(int argc, char *argv[])
 
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+
+	dbdo(slm_upsch_tally_cb, &table_total,
+		"SELECT count(*) "
+		"FROM sqlite_master WHERE type = 'table'");
+
+	if (table_total)
+		psclog_warnx("Creating a new upsch table for replication.");
 
 	/* no-op to test integrity */
 	rc = sqlite3_exec(db_handle,
