@@ -629,6 +629,7 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
+	table_total = 0;
 	dbdo(slm_upsch_tally_cb, &table_total,
 		"SELECT count(*) "
 		"FROM sqlite_master WHERE type = 'table'");
@@ -681,6 +682,14 @@ main(int argc, char *argv[])
 		    " FROM	upsch"
 		    " GROUP BY uid");
 #endif
+	} else {
+		table_total = 0;
+		dbdo(slm_upsch_tally_cb, &table_total,
+		    "SELECT count(*) "
+		    "FROM sqlite_master "
+		    "WHERE type = 'table' AND name = 'upsch'");
+		if (table_total != 1)
+			psc_fatalx("SQLite data base %s is problematic", dbfn);
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
