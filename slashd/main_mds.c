@@ -628,16 +628,9 @@ main(int argc, char *argv[])
 		"SELECT count(*) "
 		"FROM sqlite_master WHERE type = 'table'");
 
-	if (table_total)
+	if (!table_total) {
 		psclog_warnx("Creating a new upsch table for replication.");
 
-	/* no-op to test integrity */
-	rc = sqlite3_exec(db_handle,
-	    " UPDATE	upsch"
-	    "	SET	id=0"
-	    " WHERE	id=0", NULL,
-	    NULL, &estr);
-	if (rc == SQLITE_ERROR) {
 		dbdo(NULL, NULL,
 		    "CREATE TABLE upsch ("
 		    "	id		INT PRIMARY KEY,"
