@@ -411,7 +411,7 @@ main(int argc, char *argv[])
 	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	int i, c, rc, vfsid, found, table_total;
+	int i, c, rc, vfsid, found, total;
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
@@ -629,12 +629,12 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-	table_total = 0;
-	dbdo(slm_upsch_tally_cb, &table_total,
+	total = 0;
+	dbdo(slm_upsch_tally_cb, &total,
 		"SELECT count(*) "
 		"FROM sqlite_master WHERE type = 'table'");
 
-	if (!table_total) {
+	if (!total) {
 		psclog_warnx("Creating a new upsch table for replication.");
 
 		dbdo(NULL, NULL,
@@ -683,18 +683,19 @@ main(int argc, char *argv[])
 		    " GROUP BY uid");
 #endif
 	} else {
-		table_total = 0;
-		dbdo(slm_upsch_tally_cb, &table_total,
+		total = 0;
+		dbdo(slm_upsch_tally_cb, &total,
 		    "SELECT count(*) "
 		    "FROM sqlite_master "
 		    "WHERE type = 'table' AND name = 'upsch'");
-		if (table_total != 1)
+		if (total != 1)
 			psc_fatalx("SQLite data base %s is problematic", dbfn);
-		dbdo(slm_upsch_tally_cb, &table_total,
+		total = 0;
+		dbdo(slm_upsch_tally_cb, &total,
 		    "SELECT count (*)"
 	    	    "FROM upsch");
 		psclog_warnx("Reusing existing table (%d rows) for replication.", 
-		    table_total);
+		    total);
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
