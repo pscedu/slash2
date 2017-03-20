@@ -409,7 +409,7 @@ int
 main(int argc, char *argv[])
 {
 	size_t size;
-	char *path_env, *zpcachefn = NULL, *zpname, *estr;
+	char *path_env, *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn, *p;
 	int i, c, rc, vfsid, found, table_total;
 	struct psc_thread *thr;
