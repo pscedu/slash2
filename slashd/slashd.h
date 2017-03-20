@@ -100,19 +100,12 @@ struct slmdbwk_thread {
 };
 
 
-PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
 PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
-
-static __inline struct slmctl_thread *
-slmctlthr_getpri(struct psc_thread *thr)
-{
-	return ((void *)(slmctlthr(thr) + 1));
-}
 
 struct site_mds_info {
 };
