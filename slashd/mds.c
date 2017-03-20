@@ -2295,8 +2295,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			pscthr_yield();
 		if (rc == SQLITE_LOCKED)
 			sqlite3_reset(sth);
-	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
-	    rc == SQLITE_LOCKED);
+	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY || rc == SQLITE_LOCKED);
 
 	PFL_GETTIMEVAL(&tv);
 	timersub(&tv, &tv0, &tvd);
