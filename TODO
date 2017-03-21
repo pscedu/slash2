@@ -5593,3 +5593,12 @@ $1 = {bcm_bmapno = 0, bcm_flags = 38, bcm_fcmh = 0x7f89780416f0, bcm_opcnt = {va
 ----------
 
 You are correct that replicating to multiple sliods is not currently supported.
+
+03/21/2017
+----------
+
+Need to add more optstas for monitoring purposes:
+
+# Total and pending number of RPCs
+# Number of read and write on I/O server.
+
