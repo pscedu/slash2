@@ -5589,3 +5589,7 @@ $1 = {bcm_bmapno = 0, bcm_flags = 38, bcm_fcmh = 0x7f89780416f0, bcm_opcnt = {va
     plh_prev = 0x7f895001fb40, plh_magic = 1311693406324658740, plh_owner = 0x7f90a03a7e30}, bcm_owner = 0}
 (gdb) 
 
+03/21/2017
+----------
+
+You are correct that replicating to multiple sliods is not currently supported.
