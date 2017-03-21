@@ -390,6 +390,7 @@ extern struct psc_poolmgr	*msl_mfh_pool;
 extern int			 msl_acl;
 extern int			 msl_force_dio;
 extern int			 msl_map_enable;
+extern int			 msl_bmap_reassign;
 extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
