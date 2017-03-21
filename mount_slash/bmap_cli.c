@@ -721,6 +721,9 @@ msl_bmap_lease_reassign(struct bmap *b)
 	struct srm_reassignbmap_rep *mp;
 	int rc;
 
+	if (!msl_bmap_reassign)
+		return;
+
 	BMAP_LOCK(b);
 
 	/*

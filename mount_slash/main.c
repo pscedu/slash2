@@ -164,6 +164,7 @@ int				 msl_acl;
 int				 msl_force_dio;
 int				 msl_map_enable;
 int				 msl_root_squash;
+int				 msl_bmap_reassign;
 int				 msl_repl_enable = 1;
 int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
