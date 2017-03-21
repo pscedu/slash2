@@ -739,6 +739,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 		OPSTAT_INCR("msl.bmap-reassign-bail");
 		return;
 	}
+	OPSTAT_INCR("msl.bmap-reassign-attempt");
 
 	bci->bci_prev_sliods[bci->bci_nreassigns] =
 	    bci->bci_sbd.sbd_ios;
