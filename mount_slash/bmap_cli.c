@@ -714,7 +714,6 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 void
 msl_bmap_lease_reassign(struct bmap *b)
 {
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info  *bci  = bmap_2_bci(b);
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -731,9 +730,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	 * Additionally, no biorqs may be on the wire since those could
 	 * be committed by the sliod.
 	 */
-	if ((b->bcm_flags & BMAPF_REASSIGNREQ) ||
-	    RB_EMPTY(&bmpc->bmpc_biorqs) ||
-	    !pll_empty(&bmpc->bmpc_pndg_biorqs) ||
+	if (b->bcm_flags & BMAPF_REASSIGNREQ ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMAP_ULOCK(b);
 		OPSTAT_INCR("msl.bmap-reassign-bail");
