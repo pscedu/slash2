@@ -62,7 +62,7 @@ main(int argc, char **argv)
 		/* sync from time to time */
 		if ((val & 0xffff) == 0xffff) {
 			rc = fsync(fd);
-			printf("%2d: Sync offset = %8ld, rc = %d.\n", j, i, rc);
+			printf("%2ld: Sync offset = %8ld, rc = %d.\n", j, i, rc);
 			if (rc)
 				break;
 			j++;
