@@ -924,8 +924,6 @@ msctlthr_main(struct psc_thread *thr)
 		fn = expandbuf;
 	}
 
-	/* stash thread so mslfsop_destroy() can kill ctlthr */
-	msl_ctlthr0 = thr;
 	psc_ctlthr_main(fn, msctlops, nitems(msctlops), 0, MSTHRT_CTLAC);
 }
 
@@ -1030,5 +1028,7 @@ msctlthr_spawn(void)
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
+	/* stash thread so mslfsop_destroy() can kill ctlthr */
+	msl_ctlthr0 = thr;
 	pscthr_setready(thr);
 }
