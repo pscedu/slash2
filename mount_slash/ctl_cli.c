@@ -52,6 +52,7 @@
 #include "slashd/inode.h"
 
 struct psc_thread	*msl_ctlthr0;
+void			*msl_ctlthr0_private;
 
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
@@ -903,7 +904,7 @@ struct psc_ctlop msctlops[] = {
 };
 
 void
-msctlthr_main(struct psc_thread *thr)
+msctlthr_main(__unusedx struct psc_thread *thr)
 {
 	char expandbuf[PATH_MAX];
 	char *s, *fn = (void *)msl_ctlsockfn;
@@ -1030,5 +1031,6 @@ msctlthr_spawn(void)
 	    sizeof(struct psc_ctlthr), "msctlthr0");
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
 	msl_ctlthr0 = thr;
+	msl_ctlthr0_private = thr->pscthr_private;
 	pscthr_setready(thr);
 }

@@ -141,5 +141,6 @@ void mrsq_release(struct msctl_replstq *, int);
 extern struct psc_lockedlist	msctl_replsts;
 
 extern struct psc_thread	*msl_ctlthr0;
+extern void			*msl_ctlthr0_private;
 
 #endif /* _SL_CTL_CLI_H_ */
