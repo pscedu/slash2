@@ -3283,8 +3283,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	/*
 	 * Removal of the control socket is the last thing for
 	 * observability reasons.
-	 *
-	 * XXX: crash because msl_ctlthr0->pscthr_private is NULL.
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
