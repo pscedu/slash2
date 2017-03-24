@@ -3287,6 +3287,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
 	PLL_LOCK(&psc_threads);
+	/*
+ 	 * See _pscthr_finish_init().
+ 	 */
 	PLL_FOREACH_SAFE(thr, thr_next, &psc_threads)
 	    if (strncmp(thr->pscthr_name, "msfsthr",
 		strlen("msfsthr")) == 0)
