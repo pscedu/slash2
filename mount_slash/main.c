@@ -4122,6 +4122,9 @@ msl_init(void)
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
+	/* Catch future breakage after two-day's debugging */
+	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
+
 	time(&now);
 	psclogs_info(SLCSS_INFO, "SLASH2 client version %d "
 	    "started at %s", sl_stk_version, ctime(&now));
