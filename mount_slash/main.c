@@ -136,9 +136,6 @@ struct psc_poolmgr		*msl_async_req_pool;
 struct psc_poolmaster		 msl_biorq_poolmaster;
 struct psc_poolmgr		*msl_biorq_pool;
 
-struct psc_poolmaster		 msl_retry_req_poolmaster;
-struct psc_poolmgr		*msl_retry_req_pool;
-
 struct psc_poolmaster		 msl_mfh_poolmaster;
 struct psc_poolmgr		*msl_mfh_pool;
 
@@ -3344,7 +3341,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	bmap_cache_destroy();
 
 	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
-	pfl_poolmaster_destroy(&msl_retry_req_poolmaster);
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
