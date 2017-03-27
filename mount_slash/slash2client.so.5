@@ -84,8 +84,11 @@ The concept of
 .Dq global
 simply means the user account IDs present on the MDS.
 .Pp
-Each line in this file should start with one of two keywords: user and group. The format
-of each line are illustrated as follows:
+Each line in this file should start with one of two keywords:
+.Ic user
+and 
+.Ic group.
+The format of each line is illustrated as follows:
 .Bd -literal -offset 4n
 .Ic user local Ar uid1 Ic remote Ar uid2
 .Ed
@@ -97,18 +100,22 @@ the same effect:
 .Ic user remote Ar uid2 Ic local Ar uid1
 .Ed
 .Pp
-The following line map local group gid1 to remote group gid2
+The following line maps local gid gid1 to remote gid gid2:
 .Bd -literal -offset 4n
 .Ic group local Ar gid1 Ic remote Ar gid2
 .Ed
 .Pp
-The following line maps remote gid gid3 to local gid gid4.
+The following line maps remote gid gid3 to local gid gid4:
 .Bd -literal -offset 4n
 .Ic group remote Ar gid3 Ic local Ar gid4
 .Ed
 .Pp
-Unlike user mapping, group mapping is done one way only. Finally, an empty line or a line that starts with 
-the # sign in the map file is ignored. Empty spaces in each line are also ignored whenever appropriate.
+Unlike user mapping, group mapping is done one way only. This may or may not be useful in practice.
+.Pp
+Finally, an empty line or a line that starts with the # sign is ignored. Empty spaces in each 
+line are also ignored whenever appropriate. If the map file contains a malformed or duplicate 
+line, the entire map file is rejected. For security reason, if a mapping for a uid or a gid 
+does not exist in the map file, it is mapped to nobody or nogroup respectively.
 .Ed
 .It Ic pagecache_maxsize Ns = Ns Ar size
 Specify the maximum amount of memory to which the file data cache can
