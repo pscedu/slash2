@@ -229,6 +229,11 @@ mapfile_parse_user(char *start)
 	if (um != NULL)
 		goto malformed;
 
+	q.um_key = remote;
+	um = psc_hashtbl_search(&msl_uidmap_int, &q.um_key);
+	if (um != NULL)
+		goto malformed;
+
 	um = PSCALLOC(sizeof(*um));
 	psc_hashent_init(&msl_uidmap_ext, um);
 	um->um_key = local;
