@@ -110,7 +110,8 @@ The following line maps remote gid gid3 to local gid gid4:
 .Ic group remote Ar gid3 Ic local Ar gid4
 .Ed
 .Pp
-Unlike user mapping, group mapping is done one way only. This may or may not be useful in practice.
+Unlike user mapping, group mapping is done one way only. This allows multiple groups on one side to be
+mapped to one group on the other side, which may or may not be useful in practice.
 .Pp
 Finally, an empty line or a line that starts with the # sign is ignored. Empty spaces in each 
 line are also ignored whenever appropriate. If the map file contains a malformed or duplicate 
