@@ -5602,3 +5602,32 @@ Need to add more optstas for monitoring purposes:
 # Total and pending number of RPCs
 # Number of read and write on I/O server.
 
+
+03/27/2017
+----------
+
+(gdb) bt
+#0  0x00007fe46a3ae5f7 in raise () from /lib64/libc.so.6
+#1  0x00007fe46a3afce8 in abort () from /lib64/libc.so.6
+#2  0x000000000045d73c in pfl_abort () at /opt/packages/slash2/cli/p/pfl/init.c:106
+#3  0x0000000000474d15 in _psclogv (pci=0x7fe36c000910, level=0, options=0, fmt=0x4bbeeb "[assert] %s", ap=0x7fe37bbfd420)
+    at /opt/packages/slash2/cli/p/pfl/log.c:492
+#4  0x0000000000474ee4 in _psc_fatal (pci=0x7fe36c000910, level=0, options=0, fmt=0x4bbeeb "[assert] %s")
+    at /opt/packages/slash2/cli/p/pfl/log.c:522
+#5  0x0000000000468de3 in _psclist_add (e=0x7fe2600c51a0, prev=0x7fe2600c51a0, next=0x7fe4537f8260 <msl_bmaptimeoutq>)
+    at /opt/packages/slash2/cli/p/pfl/list.h:148
+#6  0x000000000046bfaa in _pll_add (pci=0x7fe36c000910, pll=0x7fe4537f8260 <msl_bmaptimeoutq>, p=0x7fe2600c4ff8, flags=2)
+    at /opt/packages/slash2/cli/p/pfl/lockedlist.c:83
+#7  0x0000000000462e2b in _lc_add (plc=0x7fe4537f8260 <msl_bmaptimeoutq>, p=0x7fe2600c4ff8, flags=1, cmpf=0x0)
+    at /opt/packages/slash2/cli/p/pfl/listcache.c:142
+#8  0x00007fe4533e3034 in msl_bmap_reap_init (b=0x7fe2600c4f80) at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:853
+#9  0x00007fe4533cdeee in msl_bmap_retrieve_cb (rq=0x7fe2c81fe4e0, args=0x7fe2c81fe688)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:225
+#10 0x00007fe453554f6a in pscrpc_interpret (rq=0x7fe2c81fe4e0) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:85
+#11 0x00007fe453574466 in _pscrpc_set_check (set=0x7fe454038f40, finish_one=1) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:953
+#12 0x00007fe4534e4f23 in pscrpc_nbreapthr_main (thr=0x7fe45462d860) at /opt/packages/slash2/cli/p/pfl/nb.c:81
+#13 0x00000000004aa8e3 in _pscthr_begin (arg=0x7fe46910d120) at /opt/packages/slash2/cli/p/pfl/thread.c:332
+#14 0x00007fe46a741dc5 in start_thread () from /lib64/libpthread.so.0
+#15 0x00007fe46a46f28d in clone () from /lib64/libc.so.6
+
+The above has happend a few times now ...
