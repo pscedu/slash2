@@ -93,8 +93,8 @@ The format of each line is illustrated as follows:
 .Ic user local Ar uid1 Ic remote Ar uid2
 .Ed
 .Pp
-The above line maps local uid uid1 to remote uid uid2 and vice versa. The keyword
-local and remote can appear in any order. In other words, the following line can achieve
+The above line maps local uid uid1 to remote uid uid2 and vice versa (it creates two mappings). 
+The keyword local and remote can appear in any order. In other words, the following line can achieve
 the same effect:
 .Bd -literal -offset 4n
 .Ic user remote Ar uid2 Ic local Ar uid1
