@@ -3223,8 +3223,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lc_kill(&msl_bmaptimeoutq);
 	lc_kill(&msl_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
-
-	psc_waitq_wakeall(&msl_flush_attrq);
+	lc_kill(&msl_attrtimeoutq);
 
 	/* XXX crash on NULL sl_freapthr on destroy */
 	if (sl_freapthr)
