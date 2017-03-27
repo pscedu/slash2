@@ -3218,6 +3218,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct sl_site *s;
 	int i, j, remaining;
 
+	pscthr_setdead(slcconnthr, 1);
+
 	/* mark listcaches as dead */
 	lc_kill(&msl_bmapflushq);
 	lc_kill(&msl_bmaptimeoutq);
