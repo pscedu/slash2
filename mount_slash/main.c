@@ -3859,7 +3859,8 @@ msreapthr_main(struct psc_thread *thr)
 void
 msreapthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, msreapthr_main, 0, name);
+	/* client has its custom version of reaper */
+	sl_freapthr = pscthr_init(thrtype, msreapthr_main, 0, name);
 }
 
 void
