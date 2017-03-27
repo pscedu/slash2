@@ -3225,10 +3225,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lc_kill(&msl_readaheadq);
 	lc_kill(&msl_attrtimeoutq);
 
-	/* XXX crash on NULL sl_freapthr on destroy */
-	if (sl_freapthr)
-		pscthr_setdead(sl_freapthr, 1);
-	psc_waitq_wakeall(&sl_freap_waitq);
+	pscthr_setdead(sl_freapthr, 1);
 
 	/* wait for drain */
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmapflushq,
