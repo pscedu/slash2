@@ -84,17 +84,32 @@ The concept of
 .Dq global
 simply means the user account IDs present on the MDS.
 .Pp
-The format of each line in this file is:
+Each line in this file should start with one of two keywords: user and group. The format
+of each line are illustrated as follows:
 .Bd -literal -offset 4n
-.Ic user local Ar uid Ic remote Ar uid
+.Ic user local Ar uid1 Ic remote Ar uid2
 .Ed
 .Pp
-Group mappings may also specified:
+The above line maps local uid uid1 to remote uid uid2 and vice versa. The keyword
+local and remote can appear in any order. In other words, the following line can achieve
+the same effect:
 .Bd -literal -offset 4n
-.Ic group local-uids Ar uid ... Ic remote Ar gid
+.Ic user remote Ar uid2 Ic local Ar uid1
 .Ed
 .Pp
-An empty line or a line that starts with the # sign in the map file is ignored.
+The following line map local group gid1 to remote group gid2
+.Bd -literal -offset 4n
+.Ic group local Ar gid1 Ic remote Ar gid2
+.Ed
+.Pp
+The following line maps remote gid gid3 to local gid gid4.
+.Bd -literal -offset 4n
+.Ic group remote Ar gid3 Ic local Ar gid4
+.Ed
+.Pp
+Unlike user mapping, group mapping is done one way only. Finally, an empty line or a line that starts with 
+the # sign in the map file is ignored. Empty spaces in each line are also ignored whenever appropriate.
+.Ed
 .It Ic pagecache_maxsize Ns = Ns Ar size
 Specify the maximum amount of memory to which the file data cache can
 grow.
