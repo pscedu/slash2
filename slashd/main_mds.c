@@ -603,11 +603,6 @@ main(int argc, char *argv[])
 	slrpc_initcli();
 	mds_update_boot_file();
 
-	slmctlthr_spawn(sfn);
-	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
-	time(&now);
-	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
-
 	rc = sqlite3_threadsafe();
 	if (rc == SQLITE_CONFIG_SINGLETHREAD)
 		psclog_warnx("SQLite is configured in single-threaded mode.");
@@ -718,6 +713,12 @@ main(int argc, char *argv[])
 	    " UPDATE	upsch"
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
+
+	slmctlthr_spawn(sfn);
+	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
+	time(&now);
+	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
+
 
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);

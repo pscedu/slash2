@@ -2227,6 +2227,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		if (rc == SQLITE_BUSY)
 			pscthr_yield();
 	} while (rc == SQLITE_BUSY);
+	/* saw SQLITE_MISUSE  = 21  */
 	psc_assert(rc == SQLITE_OK);
 
 	n = sqlite3_bind_parameter_count(sth);
