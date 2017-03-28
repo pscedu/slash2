@@ -474,8 +474,8 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 
 	if (nskip) {
 		/*
- 		 * Is this because we already invalidate other bmaps 
- 		 * when handing out a write lease?
+ 		 * This is because we already invalidate other bmaps 
+ 		 * when handing out a write lease.
  		 */
 		if (repls != 1) {
 			DEBUG_FCMH(PLL_WARN, f,
@@ -507,13 +507,6 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		}
 		psc_dynarray_reset(&a);
 		repls = 0;
-	}
-
-	if (repls && !psc_dynarray_len(&a)) {
-		psc_dynarray_free(&a);
-		DEBUG_BMAPOD(PLL_ERROR, b, "no replicas marked valid we "
-		    "can use; repls=%d nskip=%d", repls, nskip);
-		return (rc);
 	}
 
 	slm_get_ioslist(f, pios, &a);
