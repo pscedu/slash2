@@ -438,10 +438,11 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
  *	When found, slm_resm_select() must choose a replica which is
  *	marked as BREPLST_VALID.
  */
-__static struct sl_resm *
+__static int
 slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
-    int nskip)
+    int nskip, struct sl_resm **resmp)
 {
+	int rc = -SLERR_ION_OFFLINE;
 	int i, j, skip, off, val, nr, repls = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -507,7 +508,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		psc_dynarray_free(&a);
 		DEBUG_BMAPOD(PLL_ERROR, b, "no replicas marked valid we "
 		    "can use; repls=%d nskip=%d", repls, nskip);
-		return (NULL);
+		return (rc);
 	}
 
 	slm_get_ioslist(f, pios, &a);
@@ -522,13 +523,18 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 				break;
 			}
 
-		if (!skip && slm_try_sliodresm(resm))
+		if (skip)
+			continue;
+		rc = slm_try_sliodresm(resm);
+		if (!rc) {
+			*resmp = resm;
 			break;
+		}
 	}
 
  out:
 	psc_dynarray_free(&a);
-	return (resm);
+	return (rc);
 }
 
 __static int
@@ -629,10 +635,10 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	psc_assert(!bmi->bmi_assign);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	resm = slm_resm_select(b, iosid, NULL, 0);
+	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
-	if (!resm) {
+	if (!rc) {
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
@@ -642,7 +648,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		    "for lease, fid = "SLPRI_FID, iosid, 
 		    r ? r->res_name : NULL, fcmh_2_fid(f)); 
 
-		return (-SLERR_ION_OFFLINE);
+		return (rc);
 	}
 
 	BMAP_ULOCK(b);
@@ -1815,9 +1821,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 	psc_assert(bia->bia_seq == bmi->bmi_seq);
 
-	resm = slm_resm_select(b, pios, prev_ios, nprev_ios);
+	rc = slm_resm_select(b, pios, prev_ios, nprev_ios, &resm);
 	if (!resm)
-		PFL_GOTOERR(out1, rc = -SLERR_ION_OFFLINE);
+		PFL_GOTOERR(out1, rc);
 
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
