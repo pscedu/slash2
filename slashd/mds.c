@@ -464,11 +464,12 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		if (val != BREPLST_VALID)
 			continue;
 
-		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
-		if (resm)
-			psc_dynarray_add(&a, resm);
+		if (!resm)
+			continue;
+		repls++;
+		psc_dynarray_add(&a, resm);
 	}
 
 	if (nskip) {
