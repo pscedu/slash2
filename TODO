@@ -5631,3 +5631,10 @@ Need to add more optstas for monitoring purposes:
 #15 0x00007fe46a46f28d in clone () from /lib64/libc.so.6
 
 The above has happend a few times now ...
+
+03/28/2017
+----------
+
+[1490717843.93547700 msnbrqthr6:7f9a89ff7700:def bmap_cli.c msl_bmap_reap_init 837] Invalid IOS 41505
+
+Fix the above with EIO.
