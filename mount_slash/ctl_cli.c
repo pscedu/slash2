@@ -909,6 +909,9 @@ msctlthr_main(__unusedx struct psc_thread *thr)
 	char expandbuf[PATH_MAX];
 	char *s, *fn = (void *)msl_ctlsockfn;
 	int rc;
+	struct psc_thread *me;
+
+	me = pscthr_get();
 
 	for (;;) {
 		/*
@@ -926,6 +929,12 @@ msctlthr_main(__unusedx struct psc_thread *thr)
 	}
 
 	psc_ctlthr_main(fn, msctlops, nitems(msctlops), 0, MSTHRT_CTLAC);
+	/*
+	 * If we did not enter this loop, the thread will die.  As part of
+	 * its destruction, _pscthr_destroy() will be called to free the
+	 * thread structure.
+	 */
+	psc_ctlthr_mainloop(me);
 }
 
 void
