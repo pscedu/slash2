@@ -473,6 +473,10 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	}
 
 	if (nskip) {
+		/*
+ 		 * Is this because we already invalidate other bmaps 
+ 		 * when handing out a write lease?
+ 		 */
 		if (repls != 1) {
 			DEBUG_FCMH(PLL_WARN, f,
 			    "invalid reassign req");
@@ -516,7 +520,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
-			/* gdb help: resm->resm_res->res_id */
+			/* gdb: resm->resm_res->res_id */
 			if (resm->resm_res_id == to_skip[j]) {
 				skip = 1;
 				psclog_notice("res=%s skipped due being a "
