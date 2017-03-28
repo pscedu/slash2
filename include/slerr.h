@@ -61,7 +61,7 @@
 #define SLERR_AIOWAIT			(_SLERR_START + 25)
 #define SLERR_REIMPORT_OLD		(_SLERR_START + 26)
 #define SLERR_IMPORT_XREPL_DIFF		(_SLERR_START + 27)
-/* 28 - reuse */
+#define SLERR_ION_READONLY		(_SLERR_START + 28)
 /* 29 - reuse */
 #define SLERR_RES_BADTYPE		(_SLERR_START + 30)
 /* 31 - reuse me */

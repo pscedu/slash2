@@ -301,7 +301,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct sl_mds_iosinfo *si;
-	int ok = 0;
+	int rc;
 
 	psclog_info("trying res(%s)", resm->resm_res->res_name);
 
@@ -319,13 +319,13 @@ slm_try_sliodresm(struct sl_resm *resm)
 		OPSTAT_INCR("sliod-disable-lease");
 		psclog_diag("res=%s skipped due to DISABLE_LEASE",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_READONLY);
 	}
 	if (si->si_flags & SIF_DISABLE_ADVLEASE) {
 		OPSTAT_INCR("sliod-disable-advlease");
 		psclog_diag("res=%s skipped due to DISABLE_ADVLEASE",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_READONLY);
 	}
 
 	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
@@ -334,19 +334,20 @@ slm_try_sliodresm(struct sl_resm *resm)
 		/* This sliod hasn't established a connection to us. */
 		psclog_diag("res=%s skipped due to NULL csvc",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_OFFLINE);
 	}
 
-	ok = mds_sliod_alive(si);
-	if (!ok) {
+	rc = mds_sliod_alive(si);
+	if (!rc) {
 		OPSTAT_INCR("sliod-ping-awol");
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_name);
+		return (-SLERR_ION_OFFLINE);
 	}
 
 	sl_csvc_decref(csvc);
 
-	return (ok);
+	return (0);
 }
 
 /*
