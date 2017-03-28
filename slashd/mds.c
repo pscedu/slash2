@@ -460,13 +460,10 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
-		/* Determine if there are any active replicas. */
-		if (val != BREPLST_INVALID)
-			repls++;
-
 		if (val != BREPLST_VALID)
 			continue;
 
+		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
 		if (resm)
@@ -517,6 +514,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
+			/* gdb help: resm->resm_res->res_id */
 			if (resm->resm_res_id == to_skip[j]) {
 				skip = 1;
 				psclog_notice("res=%s skipped due being a "
