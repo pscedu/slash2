@@ -464,12 +464,11 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		if (val != BREPLST_VALID)
 			continue;
 
+		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
-		if (!resm)
-			continue;
-		repls++;
-		psc_dynarray_add(&a, resm);
+		if (resm)
+			psc_dynarray_add(&a, resm);
 	}
 
 	if (nskip) {
@@ -505,11 +504,14 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			    resm->resm_res_id);
 			goto out;
 		}
-		psc_dynarray_reset(&a);
-		repls = 0;
 	}
 
-	slm_get_ioslist(f, pios, &a);
+	/*
+ 	 * If we have valid replicas, we must select one of them.
+ 	 * Otherwise, we can lose data.
+ 	 */
+	if (!repls)
+		slm_get_ioslist(f, pios, &a);
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
