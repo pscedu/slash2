@@ -125,7 +125,7 @@ read_file(int i)
 
 	tmp1 = size;
 	if (verbose)
-		printf("Read %5d bytes from file %s at offset %8ld\n", tmp1, files[i].name, offset);
+		printf("Read %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
 	tmp2 = read(files[i].fd, scratch, tmp1);
 	if (tmp1 != tmp2) {
 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
@@ -186,7 +186,7 @@ write_file(int i)
 		}
 
 		if (verbose)
-			printf("Write %5d bytes to file %s at offset %8ld\n", tmp1, files[i].name, offset);
+			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp1 != tmp2) {
 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
