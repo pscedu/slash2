@@ -580,25 +580,37 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 			pfl_opstat_add(sli_backingstore_iostats.wr, rc);
 	}
 
-	if (rc < 0)
+	if (rc < 0) {
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 		    "%s blks=%d off=%zu errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    nblks, foff, save_errno);
+		if (rw == SL_WRITE)
+			OPSTAT_INCR("write-error");
+		else
+			OPSTAT_INCR("read-error");
 
-	else if ((uint32_t)rc != size) {
+	} else if ((uint32_t)rc != size) {
 		DEBUG_SLVR(foff + size > slvr_2_fcmh(s)->
 		    fcmh_sstb.sst_size ? PLL_DIAG : PLL_NOTICE, s,
 		    "short I/O (rc=%zd, size=%u) "
 		    "%s blks=%d off=%zu errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    nblks, foff, save_errno);
+		if (rw == SL_WRITE)
+			OPSTAT_INCR("write-short");
+		else
+			OPSTAT_INCR("read-short");
 	} else {
 		v8 = slvr_2_buf(s, sblk);
 		DEBUG_SLVR(PLL_DIAG, s, "ok %s size=%u off=%zu"
 		    " rc=%zd nblks=%d v8(%"PRIx64")",
 		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    size, foff, rc, nblks, *v8);
+		if (rw == SL_WRITE)
+			OPSTAT_INCR("write-perfect");
+		else
+			OPSTAT_INCR("read-perfect");
 	}
 
 	return (rc < 0 ? -save_errno : 0);
