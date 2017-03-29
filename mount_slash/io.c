@@ -1356,8 +1356,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		BMPCE_LOCK(e);
 		/*
 		 * A read must wait until all pending writes are
-		 * flushed.  So we should never see a pinned down page
-		 * here.
+		 * flushed.  So we should never see a pinned down
+		 * page here.
 		 */
 		psc_assert(!e->bmpce_pins);
 
@@ -1826,8 +1826,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 
 		msl_biorq_page_valid_accounting(r, i);
 
-		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r,
-		    i));
+		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r, i));
 
 		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
 		q->mfsrq_iovs[q->mfsrq_niov].iov_base = src;
@@ -2068,7 +2067,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
  *	pointer to our fcmh.
  * @buf: the application destination buffer (only used for WRITEs).
  * @size: size of buffer.
- * @off: file logical offset similar to pwrite().
+ * @off: file logical offset similar to pread() and pwrite().
  * @rw: the operation type (SL_READ or SL_WRITE).
  */
 void
@@ -2123,8 +2122,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	/*
 	 * Get the start and end block regions from the input
-	 * parameters.  We support at most 1MiB I/O that span at most
-	 * one bmap boundary.
+	 * parameters.  We support at most 1MiB I/O that span
+	 * at most one bmap boundary.
 	 */
 	start = off / SLASH_BMAP_SIZE;
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
