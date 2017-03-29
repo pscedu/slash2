@@ -198,14 +198,15 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/*
 	 * Ensure that this request fits into the bmap's address range.
 	 *
-	 * XXX this check assumes that mq->offset has not been made
-	 *     bmap relative (i.e. it's filewise).
+	 * Our client should already make sure that mq->offset is relative
+	 * to the start of a bmap (i.e., it's NOT filewise).
 	 */
 	if (mq->offset + mq->size > SLASH_BMAP_SIZE) {
 		psclog_errorx("req offset/size outside of the bmap's "
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
 		mp->rc = -ERANGE;
+		OPSTAT_INCR("io-erange");
 		return (mp->rc);
 	}
 
