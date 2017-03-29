@@ -35,6 +35,7 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
+int verbose;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -123,6 +124,8 @@ read_file(int i)
 	}
 
 	tmp1 = size;
+	if (verbose)
+		printf("Read %5d bytes from file %s at offset %8ld\n", tmp1, files[i].name, offset);
 	tmp2 = read(files[i].fd, scratch, tmp1);
 	if (tmp1 != tmp2) {
 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
@@ -131,7 +134,7 @@ read_file(int i)
 
 	for (j = 0; j < size; j++) {
 		if (scratch[j] != files[i].buf[offset + j]) {
-			printf("Compare Fail: file = %d, offset = %d, size = %d\n", i, j, size);
+			printf("Compare fail: file = %d, offset = %d, size = %d\n", i, j, size);
 			tmp1 = 0;
 			for (k = j; k < size; k++) {
 				if (tmp1++ > 100)
@@ -182,6 +185,8 @@ write_file(int i)
 			buf[j] = (char)random();
 		}
 
+		if (verbose)
+			printf("Write %5d bytes to file %s at offset %8ld\n", tmp1, files[i].name, offset);
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp1 != tmp2) {
 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
@@ -193,7 +198,7 @@ write_file(int i)
 	}
 }
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *name;
 	size_t tmp;
@@ -203,7 +208,7 @@ main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 
 	gettimeofday(&t1, NULL);
-	while ((c = getopt(argc, argv, "s:n:")) != -1) {
+	while ((c = getopt(argc, argv, "s:n:v")) != -1) {
 		switch (c) {
 			case 's':
 				seed = atoi(optarg);
@@ -211,10 +216,14 @@ main(int argc, char *argv[])
                         case 'n':
 				times = atoi(optarg);
 				break;
+                        case 'v':
+				verbose = 1;
+				break;
 		}   
 	}
 	if (optind > argc - 1) {
-		printf("Usage: a.out [-s seed] [-n count] name\n");
+		printf("optind = %d, argc - 1 = %d\n", optind, argc - 1);
+		printf("Usage: a.out [-v] [-s seed] [-n count] name\n");
 		exit(0);
 	}   
 
