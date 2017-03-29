@@ -334,6 +334,12 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		bci->bci_nreassigns = 0;
 		BMAP_ULOCK(b);
 	}
+	if (rc == -SLERR_ION_READONLY) {
+		rc = EACCES;
+		BMAP_LOCK(b);
+		bci->bci_nreassigns = 0;
+		BMAP_ULOCK(b);
+	}
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
 		pscrpc_req_finished(rq);
