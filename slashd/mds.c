@@ -454,8 +454,11 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	nr = fcmh_2_nrepls(f);
 
 	/* XXX if CRC check fails, we could end up with NULL inoh_extras */
-	if (nr > SL_DEF_REPLICAS)
-		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+	if (nr > SL_DEF_REPLICAS) {
+		rc = mds_inox_ensure_loaded(fcmh_2_inoh(f));
+		if (rc)
+			goto out;
+	}
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
