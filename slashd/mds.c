@@ -635,9 +635,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	if (rc) {
+		BMAP_LOCK(b);
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
@@ -649,8 +648,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 		return (rc);
 	}
-
-	BMAP_ULOCK(b);
 
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
 	psc_atomic32_inc(&rmmi->rmmi_refcnt);
