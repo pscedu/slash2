@@ -567,6 +567,10 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
+ 	 *
+ 	 * If another client wants to read and write to the same 
+ 	 * bmap, the writing client should flush its dirty data first.
+ 	 * So we should be safe in theory.
  	 */
 	rc = mds_repl_inv_except(b, iosidx);
 	if (rc) {
