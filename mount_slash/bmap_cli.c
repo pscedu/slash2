@@ -333,12 +333,14 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		BMAP_LOCK(b);
 		bci->bci_nreassigns = 0;
 		BMAP_ULOCK(b);
+		OPSTAT_INCR("msl.bmap-lease-ehostdown");
 	}
 	if (rc == -SLERR_ION_READONLY) {
-		rc = EACCES;
+		rc = EAGAIN;
 		BMAP_LOCK(b);
 		bci->bci_nreassigns = 0;
 		BMAP_ULOCK(b);
+		OPSTAT_INCR("msl.bmap-lease-eagain");
 	}
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
