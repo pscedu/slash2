@@ -104,7 +104,7 @@ uidmap_ext_stat(struct stat *stb)
 
 	q.um_key = stb->st_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um == NULL)
+	if (um)
 		stb->st_uid = um->um_val;
 	else
 		stb->st_uid = 65534;
@@ -120,7 +120,7 @@ gidmap_ext_stat(struct stat *stb)
 
 	q.gm_key = stb->st_gid;
 	gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
-	if (gm == NULL)
+	if (gm)
 		stb->st_gid = gm->gm_val;
 	else
 		stb->st_gid = 65534;
