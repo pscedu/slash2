@@ -1823,7 +1823,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	psc_assert(bia->bia_seq == bmi->bmi_seq);
 
 	rc = slm_resm_select(b, pios, prev_ios, nprev_ios, &resm);
-	if (!resm)
+	if (rc)
 		PFL_GOTOERR(out1, rc);
 
 	/*
