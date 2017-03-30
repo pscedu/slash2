@@ -718,6 +718,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	struct bmap_ios_assign *bia;
 	int rc, dio;
 
+	OPSTAT_INCR("bmap-update");
+
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	dio = b->bcm_flags & BMAPF_DIO;
