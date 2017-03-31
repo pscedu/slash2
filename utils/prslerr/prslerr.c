@@ -90,6 +90,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_AIOWAIT]: %s\n", SLERR_AIOWAIT, strerror(SLERR_AIOWAIT));
 	printf("%4d [SLERR_REIMPORT_OLD]: %s\n", SLERR_REIMPORT_OLD, strerror(SLERR_REIMPORT_OLD));
 	printf("%4d [SLERR_IMPORT_XREPL_DIFF]: %s\n", SLERR_IMPORT_XREPL_DIFF, strerror(SLERR_IMPORT_XREPL_DIFF));
+	printf("%4d [SLERR_ION_READONLY]: %s\n", SLERR_ION_READONLY, strerror(SLERR_ION_READONLY));
 	printf("%4d [SLERR_RES_BADTYPE]: %s\n", SLERR_RES_BADTYPE, strerror(SLERR_RES_BADTYPE));
 	printf("%4d [SLERR_CRCABSENT]: %s\n", SLERR_CRCABSENT, strerror(SLERR_CRCABSENT));
 	/* end custom errnos */
