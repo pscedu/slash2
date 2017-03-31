@@ -3523,6 +3523,10 @@ slc_setxattr(struct pscfs_req *pfr, const char *name,
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
 
+	/*
+ 	 * XXX Do uid/gid mapping if the name is ACL_EA_ACCESS.
+ 	 */
+
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
