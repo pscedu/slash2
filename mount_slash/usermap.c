@@ -33,8 +33,7 @@
 
 
 /*
- * Perform UID and GID mapping when a map file is given. Otherwise, all
- * functions in this file shouuld be no-op.
+ * Perform UID and GID mapping when a map file is given.
  */
 
 /* Externalize UID and GID credential for permission checking */
@@ -49,7 +48,7 @@ uidmap_ext_cred(struct pscfs_creds *cr)
 
 	q.um_key = cr->pcr_uid;
 	um = psc_hashtbl_search(&msl_uidmap_ext, &q.um_key);
-	if (um != NULL)
+	if (um)
 		cr->pcr_uid = um->um_val;
 	else {
 		/* uid squashing */
