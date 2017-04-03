@@ -97,13 +97,16 @@ bim_updateseq(uint64_t seq)
  out1:
 	/*
 	 * This should never happen.  Complain and ask our caller to
-	 * retry again.
+	 * retry again. 04/02/0217: This can actually happen if MDS 
+	 * is recreated while the IOS is still up. As a result, we
+	 * will stuck in this loop and the client will keep getting
+	 * ETIMEOUT.
 	 */
 	invalid = 1;
+	OPSTAT_INCR("seqno-invalid");
 	psclog_warnx("seqno %"PRId64" is invalid "
 	    "(bim_minseq=%"PRId64")",
 	    seq, sli_bminseq.bim_minseq);
-	OPSTAT_INCR("seqno-invalid");
 
  out2:
 	freelock(&sli_bminseq.bim_lock);
