@@ -124,12 +124,12 @@ int main(int argc, char *argv[])
 	}
 	if (optind != argc - 1 || nthreads < 1 || nthreads > MAX_THREADS) {
 		printf("Usage: a.out [-s seed] [-b bsize] [-n nblocks ] [-t nthreads (1-128)] filename\n");
-		exit(0);
+		exit(1);
 	} 
 	buf = malloc(bsize);
 	if (buf == NULL) {
 		printf("Allocation failed with errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	filename = argv[optind];
 	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
@@ -142,14 +142,14 @@ int main(int argc, char *argv[])
        	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
 		printf("Fail to open file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
 		args[i].fd = open(filename, O_RDWR, 0600);
 		if (args[i].fd < 0) {
 			printf("Fail to open file, errno = %d\n", errno);
-			exit(0);
+			exit(1);
 		}
 		args[i].ret = 0;
 		args[i].seed = seed;
@@ -159,13 +159,14 @@ int main(int argc, char *argv[])
 		ret = pthread_create(&threads[i], NULL, &thread_worker, &args[i]);
 		if (ret < 0) {
 			printf("pthread_create failed with %d (%s)\n", ret, strerror(ret));
-			exit(0);
+			exit(1);
 		}
 	}
 	for (i = 0; i < nthreads; i++) {
 		pthread_join(threads[i], NULL);
 		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
+		error += args[i].ret;
 		close(args[i].fd);
 		fflush(stdout);
 	}
@@ -184,7 +185,7 @@ int main(int argc, char *argv[])
 		ret = read(fd, buf, bsize);
 		if (ret != bsize) {
 			printf("Read file failed with errno = %d.\n", errno);
-			exit(0);
+			exit(1);
 		}
 		for (j = 0; j < bsize; j++) {
 			random_r(&rand_state, &result);
@@ -208,4 +209,9 @@ int main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+
+	if (error)
+		exit(1);
+	else
+		exit(0);
 }
