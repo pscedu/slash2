@@ -88,7 +88,7 @@ create_file(int i)
 		tmp2 = write(files[i].fd, files[i].buf, tmp1);
 		if (tmp2 < 0) {
 			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 		if (tmp1 == tmp2)
 			return;
@@ -96,7 +96,7 @@ create_file(int i)
 		j++;
 	}
 	printf("Can't finish creating file %s within 20 attempts\n", files[i].name);
-	exit (0);
+	exit (1);
 }
 
 read_file(int i)
@@ -112,7 +112,7 @@ read_file(int i)
 	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
 	if (tmp1 != offset) {
 		printf("Seek fail: file = %d, offset = %d\n", i, j);
-		exit (0);
+		exit (1);
 	}
 
 	if (files[i].size - offset > MAX_BUF_LEN) {
@@ -129,7 +129,7 @@ read_file(int i)
 	tmp2 = read(files[i].fd, scratch, tmp1);
 	if (tmp1 != tmp2) {
 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
-		exit (0);
+		exit (1);
 	}
 
 	for (j = 0; j < size; j++) {
@@ -141,7 +141,7 @@ read_file(int i)
 					break;
 				printf("%08x: %08x - %08x\n", k, scratch[k], files[i].buf[offset + k]);
 			}
-			exit (0);
+			exit (1);
 		}
 	}
 }
@@ -158,7 +158,7 @@ write_file(int i)
 	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
 	if (tmp1 != offset) {
 		printf("Seek fail: file = %d, offset = %d\n", i, offset);
-		exit (0);
+		exit (1);
 	}
 
 	size = random();
@@ -190,7 +190,7 @@ write_file(int i)
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp1 != tmp2) {
 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
-			exit (0);
+			exit (1);
 		}
 			
 		offset += tmp1;
@@ -224,12 +224,12 @@ int main(int argc, char *argv[])
 	if (optind > argc - 1) {
 		printf("optind = %d, argc - 1 = %d\n", optind, argc - 1);
 		printf("Usage: a.out [-v] [-s seed] [-n count] name\n");
-		exit(0);
+		exit (1);
 	}   
 
 	if (strlen(argv[optind]) > BASE_NAME_MAX) {
 		printf("Base name is too long\n");
-		exit (0);
+		exit (1);
 	}
 
 	srandom(seed);
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 		files[i].buf = malloc(files[i].size);
 		if (!files[i].buf) {
 			printf("Fail to allocate memory, errno = %d\n", errno);
-			exit (0);
+			exit (1);
 		}
 
 		for (j = 0; j < files[i].size; j++)
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
 		if (files[i].fd < 0) {
 			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 		create_file(i);
 
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
         	files[i].fd = open(files[i].name, O_RDWR);
 		if (files[i].fd < 0) {
 			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 	}
 
@@ -303,4 +303,5 @@ int main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	exit (0);
 }
