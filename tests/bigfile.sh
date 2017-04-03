@@ -12,6 +12,11 @@ else
     mypath=/zzh-slash2/zhihui
 fi
 
+if [ ! -d "$mypath" ]; then
+    echo "Working directory $mypath does not exist, bailing.."
+    exit 0
+fi
+
 START=`date +%s%N`
 myhost=$(hostname -s)
 

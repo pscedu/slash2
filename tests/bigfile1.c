@@ -270,6 +270,9 @@ int main(int argc, char *argv[])
 	printf("Initial %d files have been created successfully.\n\n", nfile);
 	fflush(stdout);
 
+
+	exit (1);
+
 	for (i = 0; i < nfile; i++) {
         	files[i].fd = open(files[i].name, O_RDWR);
 		if (files[i].fd < 0) {
