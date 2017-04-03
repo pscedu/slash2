@@ -58,7 +58,7 @@ main(int argc, char *argv[])
 	}
 	if (optind != argc - 1) {
 		printf("Usage: a.out [-s seed] [-r] [-b bsize] [-n nblocks ] filename\n");
-		exit(0);
+		exit(1);
 	}   
 	filename = argv[optind];
 	if (readonly)
@@ -70,11 +70,11 @@ main(int argc, char *argv[])
         	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
 		printf("Fail to open file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	if (fstat(fd, &stbuf) < 0) {
 		printf("Failed to stat file %s, errno = %d\n", filename, errno);
-		exit(0);
+		exit(1);
 	}
 	if (readonly) {
 		fsize = stbuf.st_size;
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 	buf = malloc(bsize);
 	if (buf == NULL) {
 		printf("Fail to allocate memory, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	srandom(seed);
 	printf("Seed = %d, file name = %s, bsize = %d, blocks = %d, size = %ld\n", 
@@ -171,4 +171,5 @@ main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	exit(0);
 }
