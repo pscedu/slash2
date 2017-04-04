@@ -108,22 +108,24 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	int fd, percentage;
 	off_t rc = -1, f_off;
 
-	/*
- 	 * First off, overwrite is always allowed.
- 	 */
-	fd = fcmh_2_fd(f);
-	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
+	if (f) {
+		/*
+ 		 * First off, overwrite is always allowed.
+ 		 */
+		fd = fcmh_2_fd(f);
+		f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
 
 #ifdef SEEK_HOLE
-	rc = lseek(fd, f_off, SEEK_HOLE);
+		rc = lseek(fd, f_off, SEEK_HOLE);
 #endif
-	/*
-	 * rc = -1 is possible if the backend file system does not
-	 * support it (e.g. ZFS on FreeBSD 9.0) or the offset is beyond
-	 * EOF.
-	 */
-	if (rc != -1 && f_off + size <= rc)
-		return (1);
+		/*
+		 * rc = -1 is possible if the backend file system 
+		 * does not support it (e.g. ZFS on FreeBSD 9.0) 
+		 * or the offset is beyond EOF.
+		 */
+		if (rc != -1 && f_off + size <= rc)
+			return (1);
+	}
 	/*
  	 * Set sli_min_space_reserve_pct/gb to zero to disable
  	 * the reserve. We check percentage first because file
