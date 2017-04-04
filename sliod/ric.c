@@ -123,8 +123,10 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 		 * does not support it (e.g. ZFS on FreeBSD 9.0) 
 		 * or the offset is beyond EOF.
 		 */
-		if (rc != -1 && f_off + size <= rc)
+		if (rc != -1 && f_off + size <= rc) {
+			OPSTAT_INCR("space-overwrite");
 			return (1);
+		}
 	}
 	/*
  	 * Set sli_min_space_reserve_pct/gb to zero to disable
@@ -134,12 +136,16 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	percentage = sli_statvfs_buf.f_bavail * 100 /
 	    sli_statvfs_buf.f_blocks;
 
-	if (percentage < sli_min_space_reserve_pct)
+	if (percentage < sli_min_space_reserve_pct) {
+		OPSTAT_INCR("space-reserve-pct");
 		return (0);
+	}
 
 	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
-	    < (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
+	    < (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024) {
+		OPSTAT_INCR("space-reserve-abs");
 		return (0);
+	}
 
 	return (1);
 }
