@@ -180,6 +180,8 @@ slihealththr_main(struct psc_thread *thr)
 			rc = -errno;
 		else if (WIFEXITED(rc))
 			rc = WEXITSTATUS(rc);
+		if (!rc)
+			rc = sli_has_enough_space(NULL, 0, 0, 0);
 		if (sli_selftest_rc != rc) {
 			psclog_warnx("self-health check command is %s", 
 			    cmdbuf);
