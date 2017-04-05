@@ -5638,3 +5638,22 @@ The above has happend a few times now ...
 [1490717843.93547700 msnbrqthr6:7f9a89ff7700:def bmap_cli.c msl_bmap_reap_init 837] Invalid IOS 41505
 
 Fix the above with EIO.
+
+04/05/2017
+----------
+
+Investigate if the following cause too much CPU time.
+
+[root@r193 zhihui]# msctl -S /var/run/mount_slash.r193.sock -p opstats > a1
+[root@r193 zhihui]# msctl -S /var/run/mount_slash.r193.sock -p opstats > a2
+[root@r193 zhihui]# diff a1 a2
+9,11c9,11
+< opstats.ctl.accept                                      68
+< opstats.ctl.recv                                        123
+< opstats.ctl.sent                                        12032
+---
+> opstats.ctl.accept                                      69
+> opstats.ctl.recv                                        124
+> opstats.ctl.sent                                        12610
+[root@r193 zhihui]# 
+
