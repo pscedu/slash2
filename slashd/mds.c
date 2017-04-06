@@ -311,8 +311,9 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * the member's native resource and not to a logical resource
 	 * like a CNOS.
 	 *
-	 * XXX: If the IOS already has the block mapped, giving out a
-	 * lease should be okay because it does not increase disk usage.
+	 * If the IOS already has the block mapped, giving out a lease 
+	 * might be okay because it does not necessarily increase disk
+	 * usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_LEASE) {
