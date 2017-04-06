@@ -297,7 +297,7 @@ mds_sliod_alive(void *arg)
  *	points at the real resm's identifier not the logical identifier.
  */
 __static int
-slm_try_sliodresm(struct sl_resm *resm)
+slm_try_sliodresm(struct sl_resm *resm, int repls)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct sl_mds_iosinfo *si;
@@ -528,7 +528,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 
 		if (skip)
 			continue;
-		rc = slm_try_sliodresm(resm);
+		rc = slm_try_sliodresm(resm, repls);
 		if (!rc) {
 			*resmp = resm;
 			break;
