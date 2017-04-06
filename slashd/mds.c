@@ -310,10 +310,6 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 	 * are marked RES_ISCLUSTER().  resm_res always points back to
 	 * the member's native resource and not to a logical resource
 	 * like a CNOS.
-	 *
-	 * If the IOS already has the block mapped, giving out a lease 
-	 * might be okay because it does not necessarily increase disk
-	 * usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_LEASE) {
@@ -322,7 +318,12 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 		    resm->resm_name);
 		return (-SLERR_ION_READONLY);
 	}
-	if (si->si_flags & SIF_DISABLE_ADVLEASE) {
+	/*
+	 * If the IOS already has the block mapped, giving out a lease 
+	 * might be okay because it does not necessarily increase disk
+	 * usage.
+	 */
+	if (!repls && (si->si_flags & SIF_DISABLE_ADVLEASE)) {
 		OPSTAT_INCR("sliod-disable-advlease");
 		psclog_diag("res=%s skipped due to DISABLE_ADVLEASE",
 		    resm->resm_name);
