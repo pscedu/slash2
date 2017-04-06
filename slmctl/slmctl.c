@@ -159,10 +159,11 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 				break;
 			}
 	strlcpy(name, scsf->scsf_resname, sizeof(name));
-	printf("%-27s %c%c-- ", name,
-	    scsf->scsf_flags & (SIF_DISABLE_LEASE |
-	      SIF_DISABLE_ADVLEASE)		? 'W' : '-',
-	    scsf->scsf_flags & SIF_DISABLE_GC   ? 'G' : '-');
+	printf("%-27s %c%c%c- ", name,
+	    scsf->scsf_flags & SIF_DISABLE_LEASE ?    'W' : '-',
+	    scsf->scsf_flags & SIF_DISABLE_ADVLEASE ? 'F' : '-',
+	    scsf->scsf_flags & SIF_DISABLE_GC ?       'G' : '-');
+
 	printf("  ");
 	/*
 	 * The following uses the formula from df.c in GNU coreutils.
