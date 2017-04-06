@@ -338,8 +338,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    slcfg_local->cfg_selftest ?
-	    slirmiconnthr_upcall : NULL, NULL);
+	    slirmiconnthr_upcall, NULL);
 
 	prefmds = slcfg_local->cfg_prefmds;
 	if (argc)
