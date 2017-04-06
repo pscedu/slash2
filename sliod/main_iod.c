@@ -157,7 +157,7 @@ slihealththr_main(struct psc_thread *thr)
 	char cmdbuf[BUFSIZ];
 	int rc;
 
-	/* See slash2/utils/fshealthtest */
+	/* See ../../slash2/utils/fshealthtest */
 	(void)FMTSTR(cmdbuf, sizeof(cmdbuf), slcfg_local->cfg_selftest,
 	    FMTSTRCASE('r', "s", slcfg_local->cfg_fsroot)
 	);
