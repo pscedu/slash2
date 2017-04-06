@@ -133,7 +133,7 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
  	 * the reserve. We check percentage first because file
  	 * system does not do well when near full.
  	 */
-	percentage = sli_statvfs_buf.f_bavail * 100 /
+	percentage = sli_statvfs_buf.f_bfree * 100 /
 	    sli_statvfs_buf.f_blocks;
 
 	if (percentage < sli_min_space_reserve_pct) {
@@ -141,8 +141,9 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 		return (0);
 	}
 
-	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
-	    < (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024) {
+	if (sli_statvfs_buf.f_bfree * sli_statvfs_buf.f_bsize
+	    < (unsigned long) sli_min_space_reserve_gb * 
+	       1024 * 1024 * 1024) {
 		OPSTAT_INCR("space-reserve-abs");
 		return (0);
 	}
