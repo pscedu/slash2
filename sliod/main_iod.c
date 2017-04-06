@@ -189,7 +189,7 @@ slihealththr_main(struct psc_thread *thr)
 				rc = WEXITSTATUS(rc);
 		}
 		if (!rc)
-			rc = sli_has_enough_space(NULL, 0, 0, 0);
+			rc = !sli_has_enough_space(NULL, 0, 0, 0);
 		if (sli_selftest_rc != rc) {
 
 			sli_selftest_rc = rc;
