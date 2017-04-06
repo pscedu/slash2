@@ -321,7 +321,8 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 	/*
 	 * If the IOS already has the block mapped, giving out a lease 
 	 * might be okay because it does not necessarily increase disk
-	 * usage.
+	 * usage.  In other words, SIF_DISABLE_ADVLEASE only affecting
+	 * a write into a new block.
 	 */
 	if (!repls && (si->si_flags & SIF_DISABLE_ADVLEASE)) {
 		OPSTAT_INCR("sliod-disable-advlease");
