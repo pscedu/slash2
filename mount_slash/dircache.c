@@ -827,8 +827,7 @@ namecache_get_entries(struct dircache_ent_update *odcu,
  * instead.
  */
 void
-_namecache_update(const struct pfl_callerinfo *pci,
-    struct dircache_ent_update *dcu, uint64_t fid, int rc)
+namecache_update(struct dircache_ent_update *dcu, uint64_t fid, int rc)
 {
 	struct dircache_ent *dce;
 

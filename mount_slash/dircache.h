@@ -279,10 +279,6 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 #define namecache_hold_entry(dcu, d, name)				\
 	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
 
-/* XXX capitalize this name to inform it's a macro */
-#define namecache_update(dcu, fid, rc)					\
-	_namecache_update(PFL_CALLERINFO(), (dcu),			\
-	    (rc) ? FID_ANY : (fid), (rc))
 
 #define namecache_fail(dcu)						\
 	namecache_update((dcu), FID_ANY, -1)
@@ -294,8 +290,7 @@ void	 namecache_get_entries(struct dircache_ent_update *,
 	    struct fidc_membh *, const char *,
 	    struct dircache_ent_update *,
 	    struct fidc_membh *, const char *);
-void	_namecache_update(const struct pfl_callerinfo *,
-	    struct dircache_ent_update *, uint64_t, int);
+void	 namecache_update(struct dircache_ent_update *, uint64_t, int);
 void	 namecache_delete(struct dircache_ent_update *, int);
 void	 namecache_purge(struct fidc_membh *);
 
