@@ -665,7 +665,7 @@ dircache_ent_tryhold(void *p, void *arg)
  * non-existent.
  */
 int
-_namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
+namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
     const char *name, int blocking)
 {
 	struct dircache_ent *dce, *new_dce;
