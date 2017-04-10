@@ -3016,10 +3016,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				 * bmap_biorq_waitempty() shouldn't be
 				 * called while holding the fcmh lock.
 				 */
-				bmap_op_start_type(b,
-				    BMAP_OPCNT_TRUNCWAIT);
-				DEBUG_BMAP(PLL_DIAG, b,
-				    "BMAP_OPCNT_TRUNCWAIT");
+				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
 				psc_dynarray_add(&a, b);
 			}
 			pfl_rwlock_unlock(&c->fcmh_rwlock);
