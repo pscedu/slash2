@@ -5657,3 +5657,7 @@ Investigate if the following cause too much CPU time.
 > opstats.ctl.sent                                        12610
 [root@r193 zhihui]# 
 
+04/10/2017
+----------
+
+dircache crash in lookup path.
