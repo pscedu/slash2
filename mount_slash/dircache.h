@@ -273,11 +273,8 @@ int	dircache_ent_cmp(const void *, const void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
-#define namecache_hold_entry(dcu, d, name)				\
-	namecache_get_entry((dcu), (d), (name), 1)
 
-
-#define namecache_fail(dcu)						\
+#define namecache_fail(dcu)				\
 	namecache_update((dcu), FID_ANY, -1)
 
 int	namecache_get_entry(

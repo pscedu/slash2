@@ -812,7 +812,7 @@ namecache_get_entries(struct dircache_ent_update *odcu,
     struct fidc_membh *np, const char *newname)
 {
 	for (;;) {
-		namecache_hold_entry(odcu, op, oldname);
+		namecache_get_entry(odcu, op, oldname, 1);
 		if (!namecache_get_entry(ndcu, np, newname, 0))
 			break;
 		namecache_release_entry(odcu);

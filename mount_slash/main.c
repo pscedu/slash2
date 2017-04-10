@@ -433,7 +433,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
-	namecache_hold_entry(&dcu, p, name);
+	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
@@ -847,7 +847,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		mq->fg = c->fcmh_fg;
 		strlcpy(mq->name, newname, sizeof(mq->name));
 
-		namecache_hold_entry(&dcu, p, newname);
+		namecache_get_entry(&dcu, p, newname, 1);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -940,7 +940,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_hold_entry(&dcu, p, name);
+	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
@@ -1155,7 +1155,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	namecache_hold_entry(dcup, p, name);
+	namecache_get_entry(dcup, p, name, 1);
 	/*
 	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
 	 */
@@ -1280,7 +1280,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (!rc) {
 		mq->pfid = pinum;
 		strlcpy(mq->name, name, sizeof(mq->name));
-		namecache_hold_entry(&dcu, p, name);
+		namecache_get_entry(&dcu, p, name, 1);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -1397,7 +1397,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->rdev = rdev;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_hold_entry(&dcu, p, name);
+	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
@@ -2756,7 +2756,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
 	    1);
 
-	namecache_hold_entry(&dcu, p, name);
+	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
