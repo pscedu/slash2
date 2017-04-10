@@ -859,8 +859,11 @@ _namecache_update(const struct pfl_callerinfo *pci,
 
 		psc_hashbkt_lock(dcu->dcu_bkt);
 		/*
+ 		 * 04/10/2017
+ 		 *
  		 * Hit crash: rc = 0 from pscfs_fuse_handle_lookup()
- 		 * because dce->dce_pfd is NULL.
+ 		 * because dce->dce_pfd is NULL. This happens on 
+ 		 * two different machines.
  		 */
 		dce->dce_pfd->pfd_ino = fid;
 		namecache_release_entry_locked(dcu);
