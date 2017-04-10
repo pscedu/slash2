@@ -858,6 +858,10 @@ _namecache_update(const struct pfl_callerinfo *pci,
 		psc_assert(fid != FID_ANY);
 
 		psc_hashbkt_lock(dcu->dcu_bkt);
+		/*
+ 		 * Hit crash: rc = 0 from pscfs_fuse_handle_lookup()
+ 		 * because dce->dce_pfd is NULL.
+ 		 */
 		dce->dce_pfd->pfd_ino = fid;
 		namecache_release_entry_locked(dcu);
 		OPSTAT_INCR("msl.namecache-update");
