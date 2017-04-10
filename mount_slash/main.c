@@ -2993,6 +2993,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 * sizes match.
 			 */
 			FCMH_ULOCK(c);
+			OPSTAT_INCR("msl.truncate-noop");
 			goto out;
 		} else {
 			struct psc_dynarray a = DYNARRAY_INIT;
