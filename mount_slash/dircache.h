@@ -274,16 +274,16 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
 #define namecache_get_entry(dcu, d, name)				\
-	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 0)
+	_namecache_get_entry((dcu), (d), (name), 0)
 
 #define namecache_hold_entry(dcu, d, name)				\
-	_namecache_get_entry(PFL_CALLERINFO(), (dcu), (d), (name), 1)
+	_namecache_get_entry((dcu), (d), (name), 1)
 
 
 #define namecache_fail(dcu)						\
 	namecache_update((dcu), FID_ANY, -1)
 
-int	_namecache_get_entry(const struct pfl_callerinfo *,
+int	_namecache_get_entry(
 	    struct dircache_ent_update *, struct fidc_membh *,
 	    const char *, int);
 void	 namecache_get_entries(struct dircache_ent_update *,
