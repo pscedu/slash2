@@ -1,0 +1,28 @@
+04/11/2017
+----------
+
+UID/GID mapping is done at the client side _before_ permission checking using either
+ACL or traditional Unix mode bits.  UID/GID mapping is enabled by giving a map file.
+The following is a sample map file (extra space and comments starting with # will be 
+ignored):
+
+	user remote 43666 local 1000
+	group remote 15313 local 1001
+	group local 1001 remote 15313
+
+The above map file does the following:
+
+	- map local user ID 1000 to remote user ID 43666 and _vice versa_. The same
+	  effect can be achieved with the following line:
+	
+		user local 1000 remote 43666
+ 
+	- map remote group ID 15313 to local group ID 1001.
+	- map local group ID 1001 to remote group ID 15313.
+
+Note that group mapping is one way only, either from local to remote or from remote 
+to local.  This opens the possibility of mapping multiple groups of one side to one 
+group on the other side.
+
+If a user does not have explicit mapping, he or she will be treated as nobody and 
+nogroup.  This makes sure that a user does not gain more privileges accidentally.
