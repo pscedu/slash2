@@ -220,7 +220,12 @@ fcmh_checkcreds(struct fidc_membh *f,
 {
 	int rc, locked;
 
-	if (msl_root_squash && pcrp->pcr_uid == 0)
+	/*
+ 	 * Allow tools like puppet that runs as root to take a peek
+ 	 * at the root directory.
+ 	 */
+	if (msl_root_squash && pcrp->pcr_uid == 0 && 
+	    fcmh_2_fid(f) != SLFID_ROOT)
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
