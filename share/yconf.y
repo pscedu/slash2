@@ -403,6 +403,7 @@ statement	: bool_stmt
 		| peerlist
 		| quoteds_stmt
 		| restype_stmt
+		| resflag_stmt
 		| size_stmt
 		;
 
@@ -431,6 +432,15 @@ restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
 				//psc_fatalx("uninitialized resource type");
 				break;
 			}
+		}
+		;
+
+resflag_stmt	: NAME '=' RESOURCE_FLAG ';' {
+			psclog_debug("found resflag statement: "
+			    "tok '%s' val '%s'", $1, $3);
+			slcfg_store_tok_val($1, $3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -698,6 +708,9 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	freeaddrinfo(res0);
 }
 
+/*
+ * Handle resource flags (e.g., flags   = "disable_write";)
+ */
 int
 slcfg_str2flags(const char *flags)
 {
