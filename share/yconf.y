@@ -403,7 +403,6 @@ statement	: bool_stmt
 		| peerlist
 		| quoteds_stmt
 		| restype_stmt
-		| resflag_stmt
 		| size_stmt
 		;
 
@@ -435,14 +434,6 @@ restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
 		}
 		;
 
-resflag_stmt	: NAME '=' RESOURCE_FLAG ';' {
-			psclog_debug("found resflag statement: "
-			    "tok '%s' val '%s'", $1, $3);
-			slcfg_store_tok_val($1, $3);
-			PSCFREE($1);
-			PSCFREE($3);
-		}
-		;
 
 path_stmt	: NAME '=' PATHNAME ';' {
 			psclog_debug("found path statement: tok "
