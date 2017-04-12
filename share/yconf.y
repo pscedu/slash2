@@ -702,7 +702,7 @@ int
 slcfg_str2flags(const char *flags)
 {
 	char *p, *t, *s, **fp, buf[LINE_MAX], *ftab[] = {
-		"disable_bia",		/* historical name, should be disable_write */
+		"disable_write",
 		NULL
 	};
 	int i, rc = 0;
