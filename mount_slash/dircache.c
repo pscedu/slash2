@@ -512,7 +512,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
-
+	/*
+	 * Sort the array based on their directory offsets, but do
+	 * we really need this?
+	 */ 
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
@@ -524,8 +527,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		/*
 		 * As the bucket lock is now held, this entry is
-		 * immutable and cannot race with other operations (e.g.
-		 * unlink).
+		 * immutable and cannot race with other operations 
+		 * (e.g. unlink).
 		 */
 		if (p->dcp_dirgen != fcmh_2_gen(d)) {
 			psc_hashbkt_put(&msl_namecache_hashtbl, b);
