@@ -1465,7 +1465,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	rc = dircache_reg_ents(d, p, &nents, base, size, eof);
 	if (rc)
 		return (rc);
-	DIRCACHE_WAKE(d);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		fgp = &e->sstb.sst_fg;
 		if (fgp->fg_fid == FID_ANY ||
@@ -1501,9 +1500,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	 * the various pointers referenced by the dynarrays.
 	 */
 //	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
-	p->dcp_refcnt--;
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
-	DIRCACHE_ULOCK(d);
 	return (0);
 }
 
@@ -1560,14 +1556,15 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	DIRCACHE_WRLOCK(d);
 	p->dcp_refcnt--;
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
-	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-		p->dcp_rc = rc;
-		OPSTAT_INCR("msl.dircache-load-error");
-		PFL_GETPTIMESPEC(&p->dcp_local_tm);
-		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-		DIRCACHE_WAKE(d);
-	}
+
+	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
+	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	p->dcp_rc = rc;
+	OPSTAT_INCR("msl.dircache-load-error");
+	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
+	DIRCACHE_WAKE(d);
+
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
 

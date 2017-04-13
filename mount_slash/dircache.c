@@ -603,7 +603,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
-	DIRCACHE_WAKE(d);
 	DIRCACHE_ULOCK(d);
 	return (0);
 }
