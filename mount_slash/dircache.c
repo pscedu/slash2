@@ -579,6 +579,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	if (dirent)
 		p->dcp_nextoff = dirent->pfd_off;
 	else {
+		psc_assert(!size);
 		OPSTAT_INCR("msl.namecache-empty-page");
 		p->dcp_nextoff = p->dcp_off;
 	}
