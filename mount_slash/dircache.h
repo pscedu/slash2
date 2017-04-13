@@ -252,9 +252,6 @@ dce_sort_cmp_off(const void *x, const void *y)
 	return (dce_cmp_off(a, b));
 }
 
-#define dircache_free_page(d, p)					\
-	_dircache_free_page(PFL_CALLERINFO(), (d), (p), 1)
-
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
 int	dircache_hasoff(struct dircache_page *, off_t);

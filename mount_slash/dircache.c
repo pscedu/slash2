@@ -194,8 +194,7 @@ _dircache_ent_destroy(struct fidc_membh *d, struct dircache_ent *dce,
  * @block: whether to block for all other references to release.
  */
 int
-_dircache_free_page(const struct pfl_callerinfo *pci,
-    struct fidc_membh *d, struct dircache_page *p, int block)
+dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 {
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
@@ -205,12 +204,6 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 
 	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
-
-	if (p->dcp_flags & DIRCACHEPGF_FREEING)
-		return (0);
-
-	if (p->dcp_refcnt && !block)
-		return (0);
 
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
