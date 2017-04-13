@@ -580,8 +580,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 				    &msl_namecache_hashtbl, b, dce2);
 				dce2->dce_flags &= ~DCEF_ACTIVE;
 			}
-			psc_hashbkt_add_item(&msl_namecache_hashtbl, b,
-			    dce);
+			psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 			dce->dce_flags |= DCEF_ACTIVE;
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
