@@ -552,6 +552,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 				 */
 				psc_dynarray_free(da_off);
 				PSCFREE(da_off);
+				OPSTAT_INCR("msl.readdir-all-stale");
 				return (-ESTALE);
 			}
 
