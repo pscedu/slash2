@@ -1467,8 +1467,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		return (rc);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		fgp = &e->sstb.sst_fg;
-		if (fgp->fg_fid == FID_ANY ||
-		    fgp->fg_fid == 0) {
+		if (fgp->fg_fid == FID_ANY || fgp->fg_fid == 0) {
 			DEBUG_SSTB(PLL_WARN, &e->sstb,
 			    "invalid readdir prefetch FID ent=%d "
 			    "parent@%p="SLPRI_FID, i, d, fcmh_2_fid(d));
@@ -1494,7 +1493,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 			fcmh_op_done(f);
 		}
 	}
-	DIRCACHE_WRLOCK(d);
 	/*
 	 * We could free unused space here but we would have to adjust
 	 * the various pointers referenced by the dynarrays.
