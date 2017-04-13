@@ -136,7 +136,7 @@ struct dircache_expire {
  *   (1) no current references to this page
  *   (2) page was READ and is older than soft timeout: evict.
  *   (3) page is older than hard timeout: evict.
- *   (4) page is older than directory's mtime: evict.
+ *   (4) XXX page is older than directory's mtime: evict.
  *   (5) page references an older directory generation: evict.
  */
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\

@@ -1685,8 +1685,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	psc_assert(d);
 
 	if (!fcmh_isdir(d)) {
-		DEBUG_FCMH(PLL_ERROR, d,
-		    "inconsistency: readdir on a non-dir");
+		DEBUG_FCMH(PLL_ERROR, d, "readdir on a non-dir");
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	}
 	rc = fcmh_reserved(d);
