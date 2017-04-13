@@ -205,6 +205,7 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
+	psc_assert(!(p->dcp_flags & DIRCACHEPGF_FREEING));
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
