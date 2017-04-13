@@ -418,7 +418,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 			/* Stale page in cache; purge and refresh. */
 			if (block)
 				dircache_free_page(d, p);
-			else if (!dircache_free_page_nowait(d, p)) {
+			else {
 				p = NULL;
 				goto out;
 			}
