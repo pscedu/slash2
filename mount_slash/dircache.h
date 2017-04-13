@@ -182,7 +182,10 @@ struct dircache_ent {
 	slfid_t			 dce_pfid;	/* parent dir FID+GEN, for hashtbl cmp */
 	uint32_t		 dce_flags;	/* see DCEF_* flags below */
 	struct dircache_page	*dce_page;	/* back pointer to READDIR page */
-	struct pscfs_dirent	*dce_pfd;	/* actual dirent */
+	/*
+ 	 * It points to an entry in the directory page or an entry that is allocated.
+ 	 */
+	struct pscfs_dirent	*dce_pfd;
 	struct psc_hashentry	 dce_hentry;	/* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 };
