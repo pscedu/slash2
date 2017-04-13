@@ -1702,9 +1702,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	 * it to be filled in instead of rescanning the entire list.
 	 */
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-			// XXX need to wake up if csvc fails
 			OPSTAT_INCR("msl.dircache-wait");
 			DIRCACHE_WAIT(d);
 			goto restart;
