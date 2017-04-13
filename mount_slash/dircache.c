@@ -205,14 +205,13 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
+	psc_assert(!p->dcp_refcnt);
 	psc_assert(!(p->dcp_flags & DIRCACHEPGF_FREEING));
+
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
 		OPSTAT_INCR("msl.dircache-unused-page");
-
-	while (p->dcp_refcnt)
-		DIRCACHE_WAIT(d);
 
 	pll_remove(&fci->fci_dc_pages, p);
 
