@@ -1526,22 +1526,18 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		PFL_GOTOERR(out, rc);
 	}
 
-	len = mp->size + mp->nents *
-	    sizeof(struct srt_readdir_ent);
+	len = mp->size + mp->nents * sizeof(struct srt_readdir_ent);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <=
-	    sizeof(mp->ents)) {
+	if (SRM_READDIR_BUFSZ(mp->size, mp->nents) <= sizeof(mp->ents)) {
 		OPSTAT_INCR("msl.readdir-piggyback");
-
 		memcpy(dentbuf, mp->ents, len);
 	} else {
 		OPSTAT_INCR("msl.readdir-bulk-reply");
 
 		iov.iov_base = dentbuf;
 		iov.iov_len = len;
-		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg,
-		    &iov, 1);
+		rc = slrpc_bulk_checkmsg(rq, rq->rq_repmsg, &iov, 1);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
@@ -1552,15 +1548,18 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
  out:
 	DIRCACHE_WRLOCK(d);
-	p->dcp_refcnt--;
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 
+	p->dcp_rc = rc;
+	p->dcp_refcnt--;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-	p->dcp_rc = rc;
+
 	OPSTAT_INCR("msl.dircache-load-error");
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
+
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
+
 	DIRCACHE_WAKE(d);
 
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
