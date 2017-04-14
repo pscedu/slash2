@@ -685,7 +685,7 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		OPSTAT_INCR("msl.namecache-get-hold");
-		return (-1);
+		return (1);
 	}
 	psc_hashbkt_unlock(b);
 	if (dce) {
@@ -715,7 +715,7 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 		PSCFREE(new_dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, new_dce);
 		OPSTAT_INCR("msl.namecache-race-hold");
-		return (-1);
+		return (1);
 	}
 	if (dce) {
 		OPSTAT_INCR("msl.namecache-race-lost");
@@ -752,6 +752,7 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 
 	dcu->dcu_dce = dce;
 
+	OPSTAT_INCR("msl.namecache-get-new");
 	return (0);
 }
 
