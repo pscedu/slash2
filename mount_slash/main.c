@@ -2876,6 +2876,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	slc_getfscreds(pfr, &pcr);
+	if (msl_root_squash && pcr.pcr_uid == 0 && 
+	    fcmh_2_fid(c) != SLFID_ROOT) {
+		rc = EACCES;
+		FCMH_ULOCK(c);
+		goto out;
+	}
 
 	if ((to_set & PSCFS_SETATTRF_MODE) && pcr.pcr_uid) {
 #if 0
