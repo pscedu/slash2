@@ -225,7 +225,7 @@ fcmh_checkcreds(struct fidc_membh *f,
  	 * at the root directory.
  	 */
 	if (msl_root_squash && pcrp->pcr_uid == 0 && 
-	    fcmh_2_fid(f) != SLFID_ROOT)
+	    (fcmh_2_fid(f) != SLFID_ROOT || accmode & W_OK))
 		return (EACCES);
 
 #ifdef SLOPT_POSIX_ACLS
