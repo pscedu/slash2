@@ -638,7 +638,7 @@ dircache_ent_tryhold(void *p, void *arg)
 {
 	struct dircache_ent *dce = p;
 
-	if ((dce->dce_flags & DCEF_HOLD) == 0) {
+	if ((dce->dce_flags & (DCEF_HOLD | DCEF_TOFREE)) == 0) {
 		dce->dce_flags |= DCEF_HOLD;
 		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "set HOLD");
 		*(int *)arg = 1;
