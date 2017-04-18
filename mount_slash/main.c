@@ -1592,8 +1592,8 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 		return (-ESRCH);
 	}
 
-	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 	DIRCACHE_ULOCK(d);
+	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
 	MSL_RMC_NEWREQ(d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
@@ -1667,7 +1667,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
-	off_t raoff = 0;
+	off_t raoff;
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -1693,9 +1693,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	fci = fcmh_2_fci(d);
 
  restart:
-	DIRCACHEPG_INITEXP(&dexp);
 
+	raoff = 0;
 	issue = 1;
+	DIRCACHEPG_INITEXP(&dexp);
 
 	/*
 	 * XXX Large directories will page in lots of buffers so this
@@ -1809,21 +1810,18 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		goto restart;
 	}
 
-	if (0) {
- out:
-		rc = abs(rc);
-		psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
-		    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
-		    fcmh_2_fid(d), size, off, rc);
-		pscfs_reply_readdir(pfr, NULL, 0, rc);
-		raoff = 0;
-		DIRCACHE_ULOCK(d);
-	}
-
 	if (raoff) {
 		msl_readdir_issue(d, raoff, size, 0);
 		fcmh_op_done_type(d, FCMH_OPCNT_READAHEAD);
+		return;
 	}
+
+ out:
+	rc = abs(rc);
+	psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
+	    "size=%zd off=%"PSCPRIdOFFT" rc=%d",
+	    fcmh_2_fid(d), size, off, rc);
+	pscfs_reply_readdir(pfr, NULL, 0, rc);
 }
 
 void
