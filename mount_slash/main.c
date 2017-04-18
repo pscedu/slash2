@@ -1587,10 +1587,13 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	int rc, nents;
 
 	p = dircache_new_page(d, off, block);
-	if (p == NULL)
+	if (p == NULL) {
+		DIRCACHE_ULOCK(d);
 		return (-ESRCH);
+	}
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
+	DIRCACHE_ULOCK(d);
 
 	MSL_RMC_NEWREQ(d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
@@ -1792,7 +1795,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			break;
 		}
 	}
-	DIRCACHE_ULOCK(d);
 
 	if (issue) {
 		/*
@@ -1815,6 +1817,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		    fcmh_2_fid(d), size, off, rc);
 		pscfs_reply_readdir(pfr, NULL, 0, rc);
 		raoff = 0;
+		DIRCACHE_ULOCK(d);
 	}
 
 	if (raoff) {

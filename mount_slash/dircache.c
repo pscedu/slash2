@@ -368,67 +368,26 @@ dircache_hasoff(struct dircache_page *p, off_t off)
 struct dircache_page *
 dircache_new_page(struct fidc_membh *d, off_t off, int block)
 {
-	struct dircache_page *p, *np, *newp;
-	struct dircache_expire dexp;
+	struct dircache_page *p;
 	struct fcmh_cli_info *fci;
 
-	newp = psc_pool_get(dircache_page_pool);
+	if (block)
+		p = psc_pool_get(dircache_page_pool);
+	else
+		p = psc_pool_tryget(dircache_page_pool);
 
-	DIRCACHE_WRLOCK(d);
-
- restart:
-	DIRCACHEPG_INITEXP(&dexp);
+	if (p == NULL)
+		return (NULL);
 
 	fci = fcmh_2_fci(d);
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-			if (block) {
-				DIRCACHE_WAIT(d);
-				goto restart;
-			}
-			/*
-			 * Someone is already taking care of
-			 * this page for us.
-			 */
-			p = NULL;
-			goto out;
-		}
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
-			dircache_free_page(d, p);
-			continue;
-		}
-		if (dircache_hasoff(p, off)) {
-			/* Stale page in cache; purge and refresh. */
-			if (block)
-				dircache_free_page(d, p);
-			else {
-				p = NULL;
-				goto out;
-			}
-			p = NULL;
-			break;
-		}
-	}
-
-	if (p == NULL) {
-		memset(newp, 0, sizeof(*newp));
-		INIT_PSC_LISTENTRY(&newp->dcp_lentry);
-		newp->dcp_off = off;
-		pll_addtail(&fci->fci_dc_pages, newp);
-		p = newp;
-		newp = NULL;
-	}
-	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
+	memset(p, 0, sizeof(*p));
+	INIT_PSC_LISTENTRY(&p->dcp_lentry);
+	p->dcp_off = off;
+	pll_addtail(&fci->fci_dc_pages, p);
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
 	p->dcp_refcnt++;
 	p->dcp_dirgen = fcmh_2_gen(d);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "incref");
-
- out:
-	DIRCACHE_ULOCK(d);
-
-	if (newp)
-		psc_pool_return(dircache_page_pool, newp);
 
 	return (p);
 }
