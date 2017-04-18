@@ -464,8 +464,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
-		b = psc_hashbkt_get(&msl_namecache_hashtbl,
-		    &dce->dce_key);
+		b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
 
 		/*
 		 * As the bucket lock is now held, this entry is
