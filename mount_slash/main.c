@@ -116,6 +116,10 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
+/*
+ * XXX We might be able to get away by building a partial name cache just
+ * for the purpose of unlink after open.
+ */
 struct psc_hashtbl		 msl_namecache_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT("flush-attr");
 
