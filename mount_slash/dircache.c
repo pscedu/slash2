@@ -615,21 +615,16 @@ namecache_purge(struct fidc_membh *d)
 	fci = fcmh_get_pri(d);
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
 		PFLOG_DIRCACHENT(PLL_DEBUG, dce, "purge fcmh=%p", d);
-		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		if (dce->dce_flags & DCEF_ACTIVE) {
-			psc_hashbkt_del_item(&msl_namecache_hashtbl, b,
-			    dce);
+			b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
+			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 			dce->dce_flags &= ~DCEF_ACTIVE;
+			psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		}
 		dce->dce_flags |= DCEF_DETACHED;
-		if (dce->dce_flags & DCEF_HOLD) {
-			dce->dce_flags |= DCEF_FREEME;
-			dce = NULL;
-		}
-		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		psc_assert(!(dce->dce_flags & DCEF_HOLD));
 
-		if (dce)
-			dircache_ent_destroy_locked(d, dce);
+		dircache_ent_destroy_locked(d, dce);
 	}
 	psc_dynarray_free(&fci->fcid_ents);
 }
