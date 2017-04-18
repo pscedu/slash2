@@ -194,7 +194,7 @@ struct dircache_ent {
 #define DCEF_HOLD		(1 << 0)	/* being updated via RPC */
 #define DCEF_DESTROYED		(1 << 1)	/* garbage collected */
 #define DCEF_ACTIVE		(1 << 2)	/* in hash table */
-#define DCEF_FREEME		(1 << 3)	/* HOLD'er thread must free */
+#define DCEF_TOFREE		(1 << 3)	/* HOLD'er thread must free */
 #define DCEF_DETACHED		(1 << 4)	/* not on fcid_ents list */
 
 /*

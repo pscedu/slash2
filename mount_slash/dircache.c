@@ -231,7 +231,7 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 					dce->dce_flags &= ~DCEF_ACTIVE;
 				}
 				if (dce->dce_flags & DCEF_HOLD) {
-					dce->dce_flags |= DCEF_FREEME;
+					dce->dce_flags |= DCEF_TOFREE;
 					dce = NULL;
 				}
 				psc_hashbkt_put(&msl_namecache_hashtbl,
@@ -772,7 +772,7 @@ _namecache_release_entry(struct dircache_ent_update *dcu, int locked)
 	psc_assert(dce->dce_flags & DCEF_HOLD);
 	dce->dce_flags &= ~DCEF_HOLD;
 	PFLOG_DIRCACHENT(PLL_DEBUG, dce, "release HOLD");
-	if (dce->dce_flags & DCEF_FREEME)
+	if (dce->dce_flags & DCEF_TOFREE)
 		psc_assert(!(dce->dce_flags & DCEF_ACTIVE));
 	else
 		dce = NULL;
