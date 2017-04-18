@@ -119,6 +119,10 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 /*
  * XXX We might be able to get away by building a partial name cache just
  * for the purpose of unlink after open.
+ *
+ * Currently, name cache entries can go away because its containg page is
+ * expired.  This does not work with unlink-after-open semantics.
+ *
  */
 struct psc_hashtbl		 msl_namecache_hashtbl;
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT("flush-attr");
