@@ -1731,6 +1731,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			off_t poff, thisoff = p->dcp_off;
 			size_t len, tlen;
 
+			/*
+ 			 * XXX Do we ignore concurrent namespace
+ 			 * updates here when returning contents
+ 			 * from the readdir pages?
+ 			 */
+
 			/* find starting entry */
 			poff = 0;
 			nd = psc_dynarray_len(p->dcp_dents_off);
