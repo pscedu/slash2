@@ -1705,6 +1705,15 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			DIRCACHE_WAIT(d);
 			goto restart;
 		}
+		if (p->dcp_rc) {
+			rc = p->dcp_rc;
+			dircache_free_page(d, p);
+			if (!slc_rpc_should_retry(pfr, &rc)) {
+				DIRCACHE_ULOCK(d);
+				PFL_GOTOERR(out, rc);
+			}
+			break;
+		}
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
 			continue;
@@ -1719,72 +1728,62 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 
 		if (dircache_hasoff(p, off)) {
-			if (p->dcp_rc) {
-				rc = p->dcp_rc;
-				dircache_free_page(d, p);
-				if (!slc_rpc_should_retry(pfr, &rc)) {
-					DIRCACHE_ULOCK(d);
-					PFL_GOTOERR(out, rc);
-				}
-				break;
-			} else {
-				off_t poff, thisoff = p->dcp_off;
-				size_t len, tlen;
+			off_t poff, thisoff = p->dcp_off;
+			size_t len, tlen;
 
-				/* find starting entry */
-				poff = 0;
-				nd = psc_dynarray_len(p->dcp_dents_off);
-				for (j = 0, pfd = p->dcp_base;
-				    j < nd; j++) {
-					if (off == thisoff)
-						break;
-					poff += PFL_DIRENT_SIZE(
-					    pfd->pfd_namelen);
-					thisoff = pfd->pfd_off;
-					pfd = PSC_AGP(p->dcp_base,
-					    poff);
-				}
-
-				/* determine size */
-				for (len = 0; j < nd; j++)  {
-					tlen = PFL_DIRENT_SIZE(
-					    pfd->pfd_namelen);
-					if (tlen + len > size)
-						break;
-					len += tlen;
-					pfd = PSC_AGP(p->dcp_base,
-					    poff + len);
-				}
-
-				// XXX I/O: remove from lock
-				pscfs_reply_readdir(pfr,
-				    p->dcp_base + poff, len, 0);
-				p->dcp_flags |= DIRCACHEPGF_READ;
-				if (hit)
-					OPSTAT_INCR("msl.dircache-hit");
-
-				psclogs_diag(SLCSS_FSOP, "READDIR: "
-				    "fid="SLPRI_FID" size=%zd "
-				    "off=%"PSCPRIdOFFT" rc=%d",
-				    fcmh_2_fid(d), size, off, rc);
-
-				if ((p->dcp_flags & DIRCACHEPGF_EOF) == 0) {
-					/*
-					 * The reply_readdir() up ahead
-					 * may be followed by a RELEASE
-					 * so take an extra reference to
-					 * avoid use-after-free on the
-					 * fcmh.
-					 */
-					fcmh_op_start_type(d,
-					    FCMH_OPCNT_READAHEAD);
-					raoff = p->dcp_nextoff;
-					psc_assert(raoff);
-				}
-
-				issue = 0;
-				break;
+			/* find starting entry */
+			poff = 0;
+			nd = psc_dynarray_len(p->dcp_dents_off);
+			for (j = 0, pfd = p->dcp_base;
+			    j < nd; j++) {
+				if (off == thisoff)
+					break;
+				poff += PFL_DIRENT_SIZE(
+				    pfd->pfd_namelen);
+				thisoff = pfd->pfd_off;
+				pfd = PSC_AGP(p->dcp_base,
+				    poff);
 			}
+
+			/* determine size */
+			for (len = 0; j < nd; j++)  {
+				tlen = PFL_DIRENT_SIZE(
+				    pfd->pfd_namelen);
+				if (tlen + len > size)
+					break;
+				len += tlen;
+				pfd = PSC_AGP(p->dcp_base,
+				    poff + len);
+			}
+
+			// XXX I/O: remove from lock
+			pscfs_reply_readdir(pfr,
+			    p->dcp_base + poff, len, 0);
+			p->dcp_flags |= DIRCACHEPGF_READ;
+			if (hit)
+				OPSTAT_INCR("msl.dircache-hit");
+
+			psclogs_diag(SLCSS_FSOP, "READDIR: "
+			    "fid="SLPRI_FID" size=%zd "
+			    "off=%"PSCPRIdOFFT" rc=%d",
+			    fcmh_2_fid(d), size, off, rc);
+
+			if ((p->dcp_flags & DIRCACHEPGF_EOF) == 0) {
+				/*
+				 * The reply_readdir() up ahead
+				 * may be followed by a RELEASE
+				 * so take an extra reference to
+				 * avoid use-after-free on the
+				 * fcmh.
+				 */
+				fcmh_op_start_type(d,
+				    FCMH_OPCNT_READAHEAD);
+				raoff = p->dcp_nextoff;
+				psc_assert(raoff);
+			}
+
+			issue = 0;
+			break;
 		}
 	}
 	DIRCACHE_ULOCK(d);
