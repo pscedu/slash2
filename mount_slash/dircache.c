@@ -669,8 +669,7 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 	q.dcq_name = name;
 	q.dcq_namelen = strlen(name);
 	q.dcq_key = dircache_ent_hash(q.dcq_pfid, name, q.dcq_namelen);
-	dcu->dcu_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl,
-	    &q.dcq_key);
+	dcu->dcu_bkt = b = psc_hashbkt_get(&msl_namecache_hashtbl, &q.dcq_key);
 
  retry_hold:
 	dce = psc_hashbkt_search_cmpf(
