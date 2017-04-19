@@ -1468,11 +1468,11 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	void *ebase;
 	int rc, i;
 
-	ebase = PSC_AGP(base, size);
-
 	rc = dircache_reg_ents(d, p, &nents, base, size, eof);
 	if (rc)
 		return (rc);
+
+	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
 		fgp = &e->sstb.sst_fg;
 		if (fgp->fg_fid == FID_ANY || fgp->fg_fid == 0) {
