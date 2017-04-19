@@ -1526,6 +1526,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	int rc;
 	size_t len;
 
+	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
+
 	SL_GET_RQ_STATUSF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK, rc);
 
@@ -1549,10 +1551,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
-	rc = msl_readdir_finish(d, p, mp->eof, mp->nents,
-	    mp->size, dentbuf);
-	if (!rc)
-		dentbuf = NULL;
+	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size, dentbuf);
 
  out:
 	DIRCACHE_WRLOCK(d);
@@ -1573,7 +1572,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
 
-	PSCFREE(dentbuf);
+	if (rc)
+		PSCFREE(dentbuf);
 
 	return (0);
 }

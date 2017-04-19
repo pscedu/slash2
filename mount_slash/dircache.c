@@ -465,8 +465,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	 */ 
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
-	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
-
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
