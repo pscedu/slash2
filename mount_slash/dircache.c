@@ -544,7 +544,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_size = size;
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	DIRCACHE_ULOCK(d);
