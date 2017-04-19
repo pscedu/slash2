@@ -425,6 +425,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 
+	if (p->dcp_dirgen != fcmh_2_gen(d)) {
+		OPSTAT_INCR("msl.readdir-all-stale");
+		return (-ESTALE);
+	}
+
 	da_off = PSCALLOC(sizeof(*da_off));
 	psc_dynarray_init(da_off);
 
@@ -465,45 +470,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	DYNARRAY_FOREACH(dce, i, da_off) {
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
-
-		/*
-		 * As the bucket lock is now held, this entry is
-		 * immutable and cannot race with other operations 
-		 * (e.g. unlink).
-		 */
-		if (p->dcp_dirgen != fcmh_2_gen(d)) {
-			psc_hashbkt_put(&msl_namecache_hashtbl, b);
-
-			*nents = i;
-			DYNARRAY_FOREACH_CONT(dce, i, da_off) {
-				PFLOG_DIRCACHENT(PLL_DEBUG, dce,
-				    "early free");
-				psc_pool_return(dircache_ent_pool, dce);
-			}
-
-			if (*nents == 0) {
-				/*
-				 * We were unable to use any ents from
-				 * the page so just treat it like a
-				 * wholesale error and toss the entire
-				 * page out.
-				 *
-				 * 04/30/2016: I saw this error duing 
-				 * testing, which is wrong.
-				 */
-				psc_dynarray_free(da_off);
-				PSCFREE(da_off);
-				OPSTAT_INCR("msl.readdir-all-stale");
-				return (-ESTALE);
-			}
-
-			pfl_dynarray_truncate(da_off, *nents);
-
-			eof = 0;
-
-			OPSTAT_INCR("msl.readdir-stale");
-			break;
-		}
 
 		dce2 = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
