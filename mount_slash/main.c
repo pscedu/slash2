@@ -1180,6 +1180,9 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	/*
 	 * Note that the name cache is actually disconnected from the
 	 * fcmh cache.  So we must populate the name cache carefully.
+	 *
+	 * XXX 04/18/2017: Hit crash from mslfsop_lookup(), flags is
+	 * 100000100100000.
 	 */
 	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
 	FCMH_ULOCK(c);
