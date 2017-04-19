@@ -87,6 +87,10 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 
 	BMAP_LOCK_ENSURE(b);
 
+	/*
+ 	 * 04/18/2017: Hit crash from msl_bmap_lease_extend_cb().
+ 	 * The flags is 100110.
+ 	 */
 	psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
 
 	va_start(ap, fmt);
