@@ -1089,6 +1089,8 @@ slc_wk_issue_readdir(void *p)
  * Then the local caches are queried.  If not present and fresh, remote
  * RPCs are made to perform classic UNIX-style "namei" resolution and
  * refresh file attribute metadata.
+ *
+ * Introduced by commit b79584686ca8182d18de8d25f6b94861cd0cb962.
  */
 __static int
 msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
