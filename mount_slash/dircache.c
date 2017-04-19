@@ -480,6 +480,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "skip");
 			dce->dce_pfd->pfd_ino = FID_ANY;
 		} else {
+			/*
+			 * Remove the old entry if exists and insert the
+			 * new entry.
+			 */
 			if (dce2) {
 				psc_hashbkt_del_item(
 				    &msl_namecache_hashtbl, b, dce2);
