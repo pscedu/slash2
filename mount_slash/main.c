@@ -452,7 +452,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
  retry2:
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry1;
 	}
 	rc = abs(rc);
@@ -864,7 +863,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry;
 	}
 	rc = abs(rc);
@@ -959,7 +957,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
   retry2:
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry1;
 	}
 	rc = abs(rc);
@@ -1297,7 +1294,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry;
 	}
 	rc = abs(rc);
@@ -1416,7 +1412,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
  retry2:
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry1;
 	}
 	rc = abs(rc);
@@ -2547,8 +2542,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
   retry2:
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&odcu);
-		namecache_fail(&ndcu);
 		goto retry1;
 	}
 	rc = abs(rc);
@@ -2764,7 +2757,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
  retry2:
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		namecache_fail(&dcu);
 		goto retry1;
 	}
 	rc = abs(rc);

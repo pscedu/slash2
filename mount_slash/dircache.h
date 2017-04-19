@@ -196,6 +196,7 @@ struct dircache_ent {
 #define DCEF_ACTIVE		(1 << 2)	/* in hash table */
 #define DCEF_TOFREE		(1 << 3)	/* HOLD'er thread must free */
 #define DCEF_DETACHED		(1 << 4)	/* not on fcid_ents list */
+#define DCEF_INPAGE		(1 << 5)	/* not on fcid_ents list */
 
 /*
  * This structure is almost identical to dircache_ent but slightly
@@ -269,9 +270,6 @@ int	dircache_ent_cmp(const void *, const void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
-
-#define namecache_fail(dcu)				\
-	namecache_update((dcu), FID_ANY, -1)
 
 int	namecache_get_entry(
 	    struct dircache_ent_update *, struct fidc_membh *,
