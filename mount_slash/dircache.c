@@ -579,6 +579,7 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 	struct dircache_ent *dce, *new_dce;
 	struct dircache_ent_query q;
 	struct psc_hashbkt *b;
+	struct fcmh_cli_info *fci;
 	int mine = 0;
 
 	dcu->dcu_d = d;
@@ -659,8 +660,6 @@ namecache_get_entry(struct dircache_ent_update *dcu, struct fidc_membh *d,
 		PSCFREE(new_dce->dce_pfd);
 		psc_pool_return(dircache_ent_pool, new_dce);
 	} else {
-		struct fcmh_cli_info *fci;
-
 		fci = fcmh_2_fci(d);
 		DIRCACHE_WRLOCK(d);
 		psc_dynarray_add(&fci->fcid_ents, dce);
