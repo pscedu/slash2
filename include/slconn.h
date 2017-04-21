@@ -133,8 +133,7 @@ struct slrpc_cservice {
 #define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
 #define CSVCF_TOFREE		(1 << 6)	/* don't use */
 
-/* debugging */
-#define CSVCF_ONLIST		(1 << 7)	/* On sl_clients list */
+#define CSVCF_ONLIST		(1 << 7)	/* debugging: on sl_clients list */
 
 /* sl_csvc_get() flags, shared in numerical space */
 
