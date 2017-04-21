@@ -155,7 +155,8 @@ slihealththr_main(struct psc_thread *thr)
 	struct slrpc_cservice *csvc;
 	struct timespec ts;
 	char cmdbuf[BUFSIZ];
-	int rc;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	int i, rc;
 
 	/* See ../../slash2/utils/fshealthtest for an example */
 	if (slcfg_local->cfg_selftest) {
@@ -196,22 +197,27 @@ slihealththr_main(struct psc_thread *thr)
 			psclog_warnx("health changed from %d to %d "
 			    "(errno=%d)", sli_selftest_rc, rc, errno);
 
-			CONF_LOCK();
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
 				CSVC_LOCK(csvc);
-				if (!csvc->csvc_refcnt) {
+				if (csvc->csvc_flags & CSVCF_TOFREE) {
+					OPSTAT_INCR("health-tofree");
 					CSVC_ULOCK(csvc);
 					continue;
 				}
 				sl_csvc_incref(csvc);
 				CSVC_ULOCK(csvc);
-				sli_rci_ctl_health_send(csvc);
+				psc_dynarray_add(&a, csvc);
 			}
 			PLL_ULOCK(&sl_clients);
-			CONF_ULOCK();
+			DYNARRAY_FOREACH(csvc, i, &a) {
+				OPSTAT_INCR("health-report");
+				sli_rci_ctl_health_send(csvc);
+			}
+			psc_dynarray_reset(&a);
 		}
 	}
+	psc_dynarray_free(&a);
 }
 
 int

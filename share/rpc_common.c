@@ -518,14 +518,17 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		CSVC_ULOCK(csvc);
 		return;
 	}
-
 	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
+	psc_assert(!(csvc->csvc_flags & CSVCF_TOFREE));
+	csvc->csvc_flags |= CSVCF_TOFREE;
+
+	/* Drop lock before potentially grabbing the list lock */
+	CSVC_ULOCK(csvc);
 
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
 		csvc->csvc_flags &= ~CSVCF_ONLIST;
 		pll_remove(&sl_clients, csvc);
 	}
-	CSVC_ULOCK(csvc);
 
 	/*
 	 * Due to the nature of non-blocking CONNECT,
