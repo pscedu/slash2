@@ -5661,3 +5661,98 @@ Investigate if the following cause too much CPU time.
 ----------
 
 dircache crash in lookup path.
+
+04/24/2017
+----------
+
+Client crash:
+
+(gdb) 
+#5  0x0000000000468df3 in _psclist_add (e=0x7f28e8576040, prev=0x7f28e8576040, next=0x7f2a8ce2a2c0 <msl_bmaptimeoutq>)
+    at /opt/packages/slash2/cli/p/pfl/list.h:148
+148		psc_assert(e->plh_owner == NULL);
+(gdb) bt
+#0  0x00007f2a8f8955f7 in raise () from /lib64/libc.so.6
+#1  0x00007f2a8f896ce8 in abort () from /lib64/libc.so.6
+#2  0x000000000045d74c in pfl_abort () at /opt/packages/slash2/cli/p/pfl/init.c:106
+#3  0x0000000000474d30 in _psclogv (pci=0x7f2984000910, level=0, options=0, fmt=0x4bbf2b "[assert] %s", ap=0x7f298bffe420)
+    at /opt/packages/slash2/cli/p/pfl/log.c:494
+#4  0x0000000000474eff in _psc_fatal (pci=0x7f2984000910, level=0, options=0, fmt=0x4bbf2b "[assert] %s")
+    at /opt/packages/slash2/cli/p/pfl/log.c:524
+#5  0x0000000000468df3 in _psclist_add (e=0x7f28e8576040, prev=0x7f28e8576040, next=0x7f2a8ce2a2c0 <msl_bmaptimeoutq>)
+    at /opt/packages/slash2/cli/p/pfl/list.h:148
+#6  0x000000000046bfba in _pll_add (pci=0x7f2984000910, pll=0x7f2a8ce2a2c0 <msl_bmaptimeoutq>, p=0x7f28e8575e98, flags=2)
+    at /opt/packages/slash2/cli/p/pfl/lockedlist.c:83
+#7  0x0000000000462e3b in _lc_add (plc=0x7f2a8ce2a2c0 <msl_bmaptimeoutq>, p=0x7f28e8575e98, flags=1, cmpf=0x0)
+    at /opt/packages/slash2/cli/p/pfl/listcache.c:142
+#8  0x00007f2a8ca15a19 in msl_bmap_reap_init (b=0x7f28e8575e20) at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:861
+#9  0x00007f2a8ca0005e in msl_bmap_retrieve_cb (rq=0x7f28ec4c4130, args=0x7f28ec4c42d8)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:225
+#10 0x00007f2a8cb87312 in pscrpc_interpret (rq=0x7f28ec4c4130) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:85
+#11 0x00007f2a8cba680e in _pscrpc_set_check (set=0x7f2a7803dbe0, finish_one=1) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:953
+#12 0x00007f2a8cb172cb in pscrpc_nbreapthr_main (thr=0x7f2a78632160) at /opt/packages/slash2/cli/p/pfl/nb.c:81
+#13 0x00000000004aa903 in _pscthr_begin (arg=0x7f2a8e5f4120) at /opt/packages/slash2/cli/p/pfl/thread.c:332
+#14 0x00007f2a8fc28dc5 in start_thread () from /lib64/libpthread.so.0
+#15 0x00007f2a8f95628d in clone () from /lib64/libc.so.6
+(gdb) 
+
+MDS crash:
+
+(gdb) bt
+#0  0x00002b3e27bcd5f7 in raise () from /lib64/libc.so.6
+#1  0x00002b3e27bcece8 in abort () from /lib64/libc.so.6
+#2  0x0000000000616bfc in pfl_abort () at /opt/packages/slash2/mds/p/pfl/init.c:106
+#3  0x000000000062df6c in _psclogv (pci=0x2b4184000920, level=0, options=0, fmt=0x7752e3 "[assert] %s", ap=0x2b4169c053c0)
+    at /opt/packages/slash2/mds/p/pfl/log.c:494
+#4  0x000000000062e13b in _psc_fatal (pci=0x2b4184000920, level=0, options=0, fmt=0x7752e3 "[assert] %s")
+    at /opt/packages/slash2/mds/p/pfl/log.c:524
+#5  0x0000000000511375 in mds_bmap_bml_add (bml=0x2b41a5662b70, rw=SL_WRITE, prefios=270335)
+    at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:1039
+#6  0x000000000051f6b4 in mds_bmap_load_cli (f=0x2a88c40, bmapno=202, lflags=2, rw=SL_WRITE, prefios=270335, sbd=0x2b41866d6248, 
+    exp=0x2b41c402e6e0, repls=0x2b41866d6280 "", new=0) at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:1735
+#7  0x0000000000581d47 in slm_rmc_handle_getbmap (rq=0x2b41c0467930) at /opt/packages/slash2/mds/p/slash2/slashd/rmc.c:413
+#8  0x000000000058da26 in slm_rmc_handler (rq=0x2b41c0467930) at /opt/packages/slash2/mds/p/slash2/slashd/rmc.c:1902
+#9  0x00000000005de405 in pscrpc_server_handle_request (svc=0x6f13840, thread=0x6d3ef10)
+    at /opt/packages/slash2/mds/p/pfl/service.c:394
+#10 0x00000000005e1888 in pscrpcthr_main (thr=0x6d3ef10) at /opt/packages/slash2/mds/p/pfl/service.c:750
+#11 0x000000000064dc49 in _pscthr_begin (arg=0x7ffd6bc06510) at /opt/packages/slash2/mds/p/pfl/thread.c:332
+#12 0x00002b3e27983dc5 in start_thread () from /lib64/libpthread.so.0
+#13 0x00002b3e27c8e28d in clone () from /lib64/libc.so.6
+(gdb) up
+#1  0x00002b3e27bcece8 in abort () from /lib64/libc.so.6
+(gdb) 
+#2  0x0000000000616bfc in pfl_abort () at /opt/packages/slash2/mds/p/pfl/init.c:106
+106		abort();
+(gdb) 
+#3  0x000000000062df6c in _psclogv (pci=0x2b4184000920, level=0, options=0, fmt=0x7752e3 "[assert] %s", ap=0x2b4169c053c0)
+    at /opt/packages/slash2/mds/p/pfl/log.c:494
+494			pfl_abort();
+(gdb) 
+#4  0x000000000062e13b in _psc_fatal (pci=0x2b4184000920, level=0, options=0, fmt=0x7752e3 "[assert] %s")
+    at /opt/packages/slash2/mds/p/pfl/log.c:524
+524		_psclogv(pci, level, options, fmt, ap);
+(gdb) 
+#5  0x0000000000511375 in mds_bmap_bml_add (bml=0x2b41a5662b70, rw=SL_WRITE, prefios=270335)
+    at /opt/packages/slash2/mds/p/slash2/slashd/mds.c:1039
+1039				psc_assert(!bmi->bmi_wr_ion);
+(gdb) l
+1034			} else if (!wlease && bmi->bmi_writers == 1) {
+1035				/*
+1036				 * No duplicate lease detected and this client
+1037				 * is the first writer.
+1038				 */
+1039				psc_assert(!bmi->bmi_wr_ion);
+1040				BMAP_ULOCK(b);
+1041				rc = mds_bmap_ios_assign(bml, prefios);
+1042	
+1043			} else {
+(gdb) p wlease
+$1 = 0
+(gdb) p bmi->bmi_writers
+$2 = 1
+(gdb) p bmi->bmi_wr_ion
+$3 = (struct resm_mds_info *) 0x10e2680
+(gdb) p *bmi->bmi_wr_ion
+$4 = {rmmi_refcnt = {value32 = 3}}
+(gdb) 
+
