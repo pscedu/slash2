@@ -722,9 +722,10 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts,
-			    <))
+			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
+				bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 				psc_dynarray_add(&bmaps, b);
+			}
 			BMAP_ULOCK(b);
 		}
 		LIST_CACHE_ULOCK(&msl_bmapflushq);
@@ -737,15 +738,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.lease-refresh");
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
-			/*
-			 * XXX: If BMAPF_TOFREE is set after the above
-			 * loop but before this one.  The bmap reaper
-			 * logic will assert on the bmap reference count
-			 * not being zero.  And this has been seen
-			 * although with a different patch.
-			 */
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
+			BMAP_LOCK(b);
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		}
 		psc_dynarray_reset(&bmaps);
 	}
