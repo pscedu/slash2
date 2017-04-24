@@ -262,13 +262,14 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	/* It doesn't exist; add to inode replica table if requested. */
 	if (flag == IOSV_LOOKUPF_ADD) {
 
+		/* paranoid */
+		psc_assert(i == nr);
+
 		if (nr == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
 			PFL_GOTOERR(out, rc = -ENOSPC);
 		}
 
-		/* paranoid */
-		psc_assert(i == nr);
 		if (nr >= SL_DEF_REPLICAS) {
 			/* be careful with the case of nr = SL_DEF_REPLICAS */
 			rc = mds_inox_ensure_loaded(ih);
