@@ -389,8 +389,10 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	/* ignore all errors for this background operation */
-	if (!rc)
+	if (!rc) {
+		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	}
 
 	/*
 	 * Unflushed data in this bmap is now invalid.
