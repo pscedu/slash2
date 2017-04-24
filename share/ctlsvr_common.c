@@ -135,7 +135,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_FOREACH(csvc, &sl_clients) {
 
 		CSVC_LOCK(csvc);
-		if (!csvc->csvc_refcnt) {
+		if (csvc->csvc_flags & CSVCF_TOFREE) {
 			CSVC_ULOCK(csvc);
 			continue;
 		}
