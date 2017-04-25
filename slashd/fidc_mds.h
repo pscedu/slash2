@@ -87,7 +87,7 @@ struct fcmh_mds_info {
 #define fcmh_nvalidbmaps(f)	howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE)
 
 #define fcmh_getrepl(f, n)	((n) < SL_DEF_REPLICAS ?		\
-				    fcmh_2_ino(f)->ino_repls[n] :	\
+				    fcmh_2_ino(f)->ino_repls[(n)] :	\
 				    fcmh_2_inox(f)->inox_repls[(n) - SL_DEF_REPLICAS])
 
 #define FCMH_HAS_GARBAGE(f)	(fcmh_nallbmaps(f) > fcmh_nvalidbmaps(f))
