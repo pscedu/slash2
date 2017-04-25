@@ -751,6 +751,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 			continue;
 		}
 		valid = 1;
+		/*
+ 		 * This code tells me that the relative position of an I/O
+ 		 * server is the same in the per-file I/O list and per-bmap
+ 		 * bmap states. See also msl_try_get_replica_res().
+ 		 */
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		switch (val) {

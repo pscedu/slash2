@@ -395,40 +395,53 @@ void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
+	int i, nr, begin;
 	struct sl_resource *pios, *r;
-	int begin, i;
 
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return;
 
-	/* If affinity, prefer the first resm from the reptbl. */
-	if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
-		r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
-		if (r)
-			slm_res_fillmembers(r, a, 1);
+	nr = fcmh_2_nrepls(f);
+	if (nr < SL_MAX_REPLICAS) {
+
+		/* If affinity, prefer the first resm from the reptbl. */
+		if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
+			r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
+			if (r)
+				slm_res_fillmembers(r, a, 1);
+		}
+		/*
+		 * Add the preferred IOS member(s) next.  Note that PIOS
+		 * may be a CNOS, parallel IOS, or stand-alone.
+		 */
+		slm_res_fillmembers(pios, a, 1);
+		begin = psc_dynarray_len(a);
+
+		/*
+		 * Add everything else.  Archival are not considered and 
+		 * must be specifically set via PREF_IOS to obtain write 
+		 * leases.
+		 */
+		DYNARRAY_FOREACH(r, i, &nodeSite->site_resources) {
+			if (!RES_ISFS(r) || r == pios ||
+			    r->res_type == SLREST_ARCHIVAL_FS)
+				continue;
+
+			slm_res_fillmembers(r, a, 0);
+		}
+
+	} else {
+
+		OPSTAT_INCR("reuse-iolist");
+
+		begin = psc_dynarray_len(a);
+		for (i = 0; i < SL_MAX_REPLICAS; i++) {
+			r = libsl_id2res(fcmh_getrepl(f, i).bs_id);
+			if (r)
+				slm_res_fillmembers(r, a, 0);
+		}
 	}
-
-	/*
-	 * Add the preferred IOS member(s) next.  Note that PIOS may be
-	 * a CNOS, parallel IOS, or stand-alone.
-	 */
-	slm_res_fillmembers(pios, a, 1);
-
-	begin = psc_dynarray_len(a);
-
-	/*
-	 * Add everything else.  Archival are not considered and must be
-	 * specifically set via PREF_IOS to obtain write leases.
-	 */
-	DYNARRAY_FOREACH(r, i, &nodeSite->site_resources) {
-		if (!RES_ISFS(r) || r == pios ||
-		    r->res_type == SLREST_ARCHIVAL_FS)
-			continue;
-
-		slm_res_fillmembers(r, a, 0);
-	}
-
 	slm_res_shuffle(a, begin);
 }
 
@@ -559,8 +572,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
 	FCMH_LOCK(f);
-	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
-	    bia->bia_ios);
+	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih, bia->bia_ios);
 	FCMH_ULOCK(f);
 
 	if (iosidx < 0) {
