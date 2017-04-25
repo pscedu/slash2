@@ -559,8 +559,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
 	FCMH_LOCK(f);
-	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
-	    bia->bia_ios);
+	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih, bia->bia_ios);
 	FCMH_ULOCK(f);
 
 	if (iosidx < 0) {
