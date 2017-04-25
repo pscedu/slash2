@@ -395,15 +395,14 @@ void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
-	int i, nr, begin = 0;
+	int i, nr, begin;
 	struct sl_resource *pios, *r;
-
-	nr = fcmh_2_nrepls(f);
 
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return;
 
+	nr = fcmh_2_nrepls(f);
 	if (nr < SL_MAX_REPLICAS) {
 
 		/* If affinity, prefer the first resm from the reptbl. */
@@ -435,6 +434,8 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	} else {
 
 		OPSTAT_INCR("reuse-iolist");
+
+		begin = psc_dynarray_len(a);
 		for (i = 0; i < SL_MAX_REPLICAS; i++) {
 			r = libsl_id2res(fcmh_getrepl(f, i).bs_id);
 			if (r)
