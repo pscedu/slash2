@@ -1960,6 +1960,9 @@ msl_flush(struct msl_fhent *mfh)
 
   restart:
 	DYNARRAY_FOREACH(b, i, &a)
+		/*
+ 		 * Hit segment fault here with b =  0x100000000
+ 		 */
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	psc_dynarray_reset(&a);
 
