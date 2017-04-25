@@ -1369,6 +1369,11 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 			BML_ULOCK(bml);
 			mds_bmap_bml_release(bml);
 		}
+		/*
+ 		 * 04/25/2017: Hit crash on bmi->bmi_assign == NULL
+ 		 * I suspect it has something to do with the ENOSPC
+ 		 * bug in selecting a sliod.
+ 		 */
 		bmap_op_done(b);
  next:
 		fcmh_op_done(f);
