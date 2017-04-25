@@ -702,9 +702,9 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		/*
-		 * A bmap can be on both msl_bmapflushq and
-		 * msl_bmaptimeoutq.  It is taken off the msl_bmapflushq
-		 * after all its biorqs are flushed if any.
+		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
+		 * It is taken off the msl_bmapflushq after all its biorqs 
+		 * are flushed if any.
 		 */
 		LIST_CACHE_LOCK(&msl_bmapflushq);
 		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {

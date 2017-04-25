@@ -140,10 +140,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	locked = INOH_RLOCK(ih);
 
 	psc_assert(nr <= SL_MAX_REPLICAS);
-	if (nr == SL_MAX_REPLICAS && flag == IOSV_LOOKUPF_ADD) {
-		DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
-		PFL_GOTOERR(out, rc = -ENOSPC);
-	}
 
 	res = libsl_id2res(ios);
 	if (res == NULL)
@@ -256,7 +252,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 				if (rc)
 					goto out;
 			}
-			/* XXX EEXIST for IOSV_LOOKUPF_ADD? */
+			if (flag == IOSV_LOOKUPF_ADD)
+				OPSTAT_INCR("ios-add-noop");
 			rc = i; 
 			goto out;
 		}
@@ -267,6 +264,12 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 		/* paranoid */
 		psc_assert(i == nr);
+
+		if (nr == SL_MAX_REPLICAS) {
+			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
+			PFL_GOTOERR(out, rc = -ENOSPC);
+		}
+
 		if (nr >= SL_DEF_REPLICAS) {
 			/* be careful with the case of nr = SL_DEF_REPLICAS */
 			rc = mds_inox_ensure_loaded(ih);
