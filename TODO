@@ -5756,3 +5756,74 @@ $3 = (struct resm_mds_info *) 0x10e2680
 $4 = {rmmi_refcnt = {value32 = 3}}
 (gdb) 
 
+04/26/2017
+----------
+
+with kernel build, iozone -a, and ./a.out /zzh-slash2/zhihui/newfile 123456789 (dribble-write).
+
+zhihui@yuzu: ~/stable$ ./git-find.sh 
+The current # of commits in the stable tree sandbox is 43325.
+
+
+I got the following in the stable tree as of today:
+
+(gdb) p/t bmpce->bmpce_flags
+$5 = 10000010
+(gdb) bt
+#0  0x00007ffff6ce05f7 in __GI_raise (sig=sig@entry=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+#1  0x00007ffff6ce1ce8 in __GI_abort () at abort.c:90
+#2  0x000000000048ff44 in pfl_abort () at /home/zhihui/stable/pfl/init.c:106
+#3  0x00000000004ad28f in _psclogv (pci=0x7ffe00000910, level=0, options=0, fmt=0x7fffd7daeeca "[assert] %s", ap=0x7ffe387efe30) at /home/zhihui/stable/pfl/log.c:494
+#4  0x00000000004ad45e in _psc_fatal (pci=0x7ffe00000910, level=0, options=0, fmt=0x7fffd7daeeca "[assert] %s") at /home/zhihui/stable/pfl/log.c:524
+#5  0x00007fffd7bd4376 in bmpce_usecheck (bmpce=0x7ffe20081990, op=2, off=6160384) at pgcache.h:282
+#6  0x00007fffd7c0c2de in msl_pages_copyin (r=0x7ffe0007a250) at /home/zhihui/stable/slash2/mount_slash/io.c:1725
+#7  0x00007fffd7beaf9e in msl_biorq_complete_fsrq (r=0x7ffe0007a250) at /home/zhihui/stable/slash2/mount_slash/io.c:769
+#8  0x00007fffd7bdd7ec in msl_biorq_release (r=0x7ffe0007a250) at /home/zhihui/stable/slash2/mount_slash/io.c:339
+#9  0x00007fffd7c17740 in msl_io (pfr=0x7699e0, mfh=0x7fffe4355910, buf=0x7ffefc2bf060 "\325       ", size=1, off=6193151, rw=SL_WRITE) at /home/zhihui/stable/slash2/mount_slash/io.c:2278
+#10 0x00007fffd7c9114a in mslfsop_write (pfr=0x7699e0, buf=0x7ffefc2bf060, size=1, off=6193151, data=0x7fffe4355910) at /home/zhihui/stable/slash2/mount_slash/main.c:3395
+#11 0x000000000045ac1b in pscfs_fuse_handle_write (req=0x7ffe0004c890, ino=327636872891463633, buf=0x7ffefc2bf060 "\325       ", size=1, off=6193151, fi=0x7ffe387f0b30) at /home/zhihui/stable/pfl/fuse.c:1186
+#12 0x00007ffff78b26f4 in do_write (req=<optimized out>, nodeid=<optimized out>, inarg=<optimized out>) at fuse_lowlevel.c:1276
+#13 0x00007ffff78b2fd6 in fuse_ll_process_buf (data=0x7360e0, buf=buf@entry=0x7ffe387f0cd0, ch=<optimized out>) at fuse_lowlevel.c:2462
+#14 0x00007ffff78b33c6 in fuse_ll_process (data=<optimized out>, buf=<optimized out>, len=<optimized out>, ch=<optimized out>) at fuse_lowlevel.c:2484
+#15 0x00000000004450e7 in pscfs_fuse_listener_loop (thr=0x76e3a0) at /home/zhihui/stable/pfl/fuse.c:395
+#16 0x00000000004fec91 in _pscthr_begin (arg=0x7fffffffcff0) at /home/zhihui/stable/pfl/thread.c:332
+#17 0x00007ffff7073dc5 in start_thread (arg=0x7ffe387f1700) at pthread_create.c:308
+#18 0x00007ffff6da128d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:113
+(gdb) 
+
+(gdb) p *r
+$6 = {biorq_buf = 0x7ffefc2bf060 "\325       ", biorq_ref = 1, biorq_off = 6193151, biorq_len = 1, biorq_flags = 2, biorq_retries = 0, biorq_last_sliod = 4294967295, biorq_lock = {psl_value = {value32 = 2}, 
+    psl_flags = 0, psl_owner_lineno = 737, psl_owner_file = 0x7fffd7daf1d0 "/home/zhihui/stable/slash2/mount_slash/io.c", psl_owner = 0}, biorq_expire = {tv_sec = 1493216835, tv_nsec = 79775013}, biorq_pages = {
+    pda_flags = 0, pda_pos = 1, pda_nalloc = 2, pda_items = 0x7ffe0003e130}, biorq_lentry = {plh_next = 0x7ffdf402eaf8, plh_prev = 0x7ffdf009ae20, plh_magic = 1311693406324658740, plh_owner = 0x7ffdf402eaf8}, 
+  biorq_exp_lentry = {plh_next = 0x0, plh_prev = 0x0, plh_magic = 1311693406324658740, plh_owner = 0x0}, biorq_aio_lentry = {plh_next = 0x0, plh_prev = 0x0, plh_magic = 1311693406324658740, plh_owner = 0x0}, 
+  biorq_tentry = {rbe_left = 0x0, rbe_right = 0x0, rbe_parent = 0x0, rbe_color = 0}, biorq_bmap = 0x7ffdf402ea20, biorq_fsrqi = 0x0}
+(gdb) up
+#7  0x00007fffd7beaf9e in msl_biorq_complete_fsrq (r=0x7ffe0007a250) at /home/zhihui/stable/slash2/mount_slash/io.c:769
+769                             len = msl_pages_copyin(r);
+(gdb) 
+#8  0x00007fffd7bdd7ec in msl_biorq_release (r=0x7ffe0007a250) at /home/zhihui/stable/slash2/mount_slash/io.c:339
+339                     msl_biorq_complete_fsrq(r);
+(gdb) 
+#9  0x00007fffd7c17740 in msl_io (pfr=0x7699e0, mfh=0x7fffe4355910, buf=0x7ffefc2bf060 "\325       ", size=1, off=6193151, rw=SL_WRITE) at /home/zhihui/stable/slash2/mount_slash/io.c:2278
+2278                            msl_biorq_release(r);
+(gdb) p size
+$7 = 1
+
+	<-- this is odd.
+
+(gdb) 
+
+(gdb) l
+2273             */
+2274            mfsrq_seterr(q, rc);
+2275            for (i = 0; i < nr; i++) {
+2276                    r = q->mfsrq_biorq[i];
+2277                    if (r)
+2278                            msl_biorq_release(r);
+2279            }
+2280
+2281            /*
+2282             * Step 5: drop our reference to the fsrq.  The last drop will
+(gdb) p rc
+$8 = 0
+
