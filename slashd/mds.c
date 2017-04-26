@@ -355,14 +355,15 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 
 /*
  * Do proper shuffling to avoid statistical bias when some IOS are
- * offline, which would give unfair advantage to the first IOS that was
- * online if we simply filled this list in sequentially.
+ * offline, which would give unfair advantage to the first IOS that 
+ * was online if we simply filled this list in sequentially.
  */
 void
 slm_res_shuffle(struct psc_dynarray *a, int begin)
 {
 	int i;
 
+	/* We never touch the element at or before begin */
 	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
 		psc_dynarray_swap(a, begin + i, begin +
 		    psc_random32u(i + 1));
