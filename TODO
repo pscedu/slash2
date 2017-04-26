@@ -5808,6 +5808,9 @@ $6 = {biorq_buf = 0x7ffefc2bf060 "\325       ", biorq_ref = 1, biorq_off = 61931
 2278                            msl_biorq_release(r);
 (gdb) p size
 $7 = 1
+
+	<-- this is odd.
+
 (gdb) 
 
 (gdb) l
