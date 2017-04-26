@@ -584,6 +584,9 @@ slmctlthr_spawn(const char *fn)
 
 	psc_ctlparam_register_var("sys.global",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_global_mount);
+	psc_ctlparam_register_var("sys.max_ios",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_max_ios);
+
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
 	psc_ctlparam_register_var("sys.ptrunc",

@@ -58,6 +58,8 @@
 
 struct pfl_odt		*slm_bia_odt;
 
+int			slm_max_ios = SL_MAX_REPLICAS;
+
 int			slm_ptrunc_enabled = 0;
 int			slm_preclaim_enabled = 1;
 
@@ -396,7 +398,7 @@ void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
-	int i, nr, begin;
+	int i, nr, max, begin;
 	struct sl_resource *pios, *r;
 
 	pios = libsl_id2res(piosid);
@@ -437,7 +439,14 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		OPSTAT_INCR("reuse-iolist");
 
 		begin = psc_dynarray_len(a);
-		for (i = 0; i < SL_MAX_REPLICAS; i++) {
+		slm_ptrunc_enabled = 0;
+
+		if (slm_max_ios > SL_MAX_REPLICAS)
+			slm_max_ios = SL_MAX_REPLICAS;
+		if (slm_max_ios < 1)
+			slm_max_ios = 1;
+
+		for (i = 0; i < slm_max_ios; i++) {
 			r = libsl_id2res(fcmh_getrepl(f, i).bs_id);
 			if (r)
 				slm_res_fillmembers(r, a, 0);
