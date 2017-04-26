@@ -345,6 +345,7 @@ extern int			 slm_force_dio;
 extern int			 slm_crc_check;
 extern int			 slm_conn_debug;
 extern int			 slm_global_mount;
+extern int			 slm_max_ios;
 extern int			 slm_ptrunc_enabled;
 extern int			 slm_preclaim_enabled;
 
