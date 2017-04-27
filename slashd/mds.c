@@ -365,7 +365,7 @@ slm_res_shuffle(struct psc_dynarray *a, int begin)
 {
 	int i;
 
-	/* We never touch the element at or before begin */
+	/* We never touch the element before begin */
 	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
 		psc_dynarray_swap(a, begin + i, begin +
 		    psc_random32u(i + 1));
@@ -398,15 +398,20 @@ void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
-	int i, nr, max, begin;
+	int i, nr, begin;
 	struct sl_resource *pios, *r;
 
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return;
 
+	if (slm_max_ios < 1)
+		slm_max_ios = 1;
+	if (slm_max_ios > SL_MAX_REPLICAS)
+		slm_max_ios = SL_MAX_REPLICAS;
+
 	nr = fcmh_2_nrepls(f);
-	if (nr < SL_MAX_REPLICAS) {
+	if (nr < slm_max_ios) {
 
 		/* If affinity, prefer the first resm from the reptbl. */
 		if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
@@ -441,10 +446,6 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		begin = psc_dynarray_len(a);
 		slm_ptrunc_enabled = 0;
 
-		if (slm_max_ios > SL_MAX_REPLICAS)
-			slm_max_ios = SL_MAX_REPLICAS;
-		if (slm_max_ios < 1)
-			slm_max_ios = 1;
 
 		for (i = 0; i < slm_max_ios; i++) {
 			r = libsl_id2res(fcmh_getrepl(f, i).bs_id);
