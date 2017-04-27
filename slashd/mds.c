@@ -365,7 +365,7 @@ slm_res_shuffle(struct psc_dynarray *a, int begin)
 {
 	int i;
 
-	/* We never touch the element at or before begin */
+	/* We never touch the element before begin */
 	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
 		psc_dynarray_swap(a, begin + i, begin +
 		    psc_random32u(i + 1));
