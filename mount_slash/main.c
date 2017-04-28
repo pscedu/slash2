@@ -1170,6 +1170,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	namecache_get_entry(dcup, p, name, 1);
 	/*
 	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
+	 * Hit again today - 04/27/2017.
 	 */
 	if (dcup->dcu_dce->dce_pfd->pfd_ino == FID_ANY ||
 	    sl_fcmh_lookup(dcup->dcu_dce->dce_pfd->pfd_ino, FGEN_ANY,
