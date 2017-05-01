@@ -5837,3 +5837,8 @@ $ ./a.out file 200
 
 Need more investigation - reclaim and writes on the same file cause deadlock
 on the FCMH read-write lock.
+
+05/01/2017
+----------
+
+Make sure xattr operations never return ENOSYS.
