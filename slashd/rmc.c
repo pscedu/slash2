@@ -120,9 +120,8 @@ slm_get_curr_slashfid(void)
 {
 	slfid_t fid;
 
-	spinlock(&slm_fid_lock);
+	/* atomic read - no locking is needed */
 	fid = slm_next_fid;
-	freelock(&slm_fid_lock);
 	return (fid);
 }
 
