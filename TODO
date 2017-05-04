@@ -5827,3 +5827,18 @@ $7 = 1
 (gdb) p rc
 $8 = 0
 
+
+04/27/2017
+----------
+
+With sparse-write.c, I can hit deadlock in an IOS as follows:
+
+$ ./a.out file 200
+
+Need more investigation - reclaim and writes on the same file cause deadlock
+on the FCMH read-write lock.
+
+05/01/2017
+----------
+
+Make sure xattr operations never return ENOSYS.

@@ -1170,6 +1170,7 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	namecache_get_entry(dcup, p, name, 1);
 	/*
 	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
+	 * Hit again today - 04/27/2017.
 	 */
 	if (dcup->dcu_dce->dce_pfd->pfd_ino == FID_ANY ||
 	    sl_fcmh_lookup(dcup->dcu_dce->dce_pfd->pfd_ino, FGEN_ANY,
@@ -1814,6 +1815,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		rc = msl_readdir_issue(d, off, size, 1);
 		if (rc && !slc_rpc_should_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
+		/* 05/02/2017: XXX crash with d = NULL */
 		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}

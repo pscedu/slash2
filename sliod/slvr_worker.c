@@ -72,6 +72,7 @@ sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
 		bcr = psc_dynarray_getpos(a, i);
 		bii = bcr->bcr_bii;
 
+		/* 05/03/2017: Saw unknown, no buf */
 		DEBUG_BCR(rc || !mp || mp->rc ?
 		    PLL_ERROR : PLL_DIAG, bcr, "rq_status=%d rc=%d%s",
 		    rq->rq_status, rc, mp ? "" : " (unknown, no buf)");
