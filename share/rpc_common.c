@@ -1051,6 +1051,7 @@ slconnthr_main(struct psc_thread *thr)
 			spinlock(&sl_watch_lock);
 		}
 		freelock(&sl_watch_lock);
+		/* 05/06/2017: Sigbus */
 		pfl_multiwait_secs(&sct->sct_mw, &dummy, CSVC_PING_INTV);
 		//pfl_multiwait_secs(&sct->sct_mw, &dummy, 100000);
 	}
