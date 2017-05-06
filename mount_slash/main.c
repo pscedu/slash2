@@ -1815,7 +1815,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		rc = msl_readdir_issue(d, off, size, 1);
 		if (rc && !slc_rpc_should_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
-		/* 05/02/2017: XXX crash with d = NULL */
+		/* 05/02/2017: XXX crash with d = NULL  - SIGBUS */
 		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}
