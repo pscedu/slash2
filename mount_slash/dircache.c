@@ -113,10 +113,6 @@ int
 dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 {
 	struct fcmh_cli_info *fci;
-	struct pscfs_dirent *pfd;
-	struct dircache_ent *dce;
-	struct psc_hashbkt *b;
-	int i;
 
 	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
