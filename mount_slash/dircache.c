@@ -343,20 +343,22 @@ dircache_purge(struct fidc_membh *d)
 int
 dircache_hasoff(struct dircache_page *p, off_t off)
 {
-	struct dircache_ent *dce;
-	int n;
+	struct pscfs_dirent *dirent;
+	off_t adj;
+	int i;
 
 	if (off == p->dcp_off)
 		return (1);
 	if (off == p->dcp_nextoff)
 		return (0);
 
-	n = psc_dynarray_bsearch(p->dcp_dents_off, &off,
-	    dce_cmp_off_search);
-	if (n >= psc_dynarray_len(p->dcp_dents_off))
-		return (0);
-	dce = psc_dynarray_getpos(p->dcp_dents_off, n);
-	return (dce->dce_pfd->pfd_off == (uint64_t)off);
+	for (i = 0, adj = 0; i < p->dcp_nents; i++) {
+		dirent = PSC_AGP(p->dcp_base, adj);
+		if (dirent->pfd_off == (uint64_t)off)
+			return (1);
+		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
+	}
+	return (0);
 }
 
 /*
