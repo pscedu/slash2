@@ -296,6 +296,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		OPSTAT_INCR("msl.readdir-all-stale");
 		return (-ESTALE);
 	}
+	DIRCACHE_WRLOCK(d);
 	p->dcp_nents = nents;
 	p->dcp_base = base;
 	p->dcp_size = size;
