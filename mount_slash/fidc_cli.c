@@ -263,7 +263,6 @@ slc_fcmh_dtor(struct fidc_membh *f)
 		 */
 		DIRCACHE_WRLOCK(f);
 		dircache_purge(f);
-		namecache_purge(f);
 		DIRCACHE_ULOCK(f);
 	}
 
