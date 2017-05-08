@@ -416,12 +416,6 @@ int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int *nents, void *base, size_t size, int eof)
 {
-	struct pscfs_dirent *dirent = NULL;
-	struct dircache_ent *dce, *dce2;
-	struct psc_dynarray *da_off;
-	struct psc_hashbkt *b;
-	off_t adj;
-	int i;
 
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 
