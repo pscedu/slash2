@@ -121,7 +121,7 @@ msl_resm_throttle_wait(struct sl_resm *m)
 			account = 1;
 		}
 		RPCI_WAIT(rpci);
-		OPSTAT_INC("msl.throttle-wait");
+		OPSTAT_INCR("msl.throttle-wait");
 		RPCI_LOCK(rpci);
 	}
 	rpci->rpci_infl_rpcs++;
