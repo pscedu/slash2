@@ -414,7 +414,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  */
 int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    void *base, size_t size, int eof)
+    int nents, void *base, size_t size, int eof)
 {
 
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
@@ -423,6 +423,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		OPSTAT_INCR("msl.readdir-all-stale");
 		return (-ESTALE);
 	}
+	p->dcp_nents = nents;
 	p->dcp_base = base;
 	p->dcp_size = size;
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
