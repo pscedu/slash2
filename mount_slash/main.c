@@ -2370,7 +2370,6 @@ void
 mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
     const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
-	struct dircache_ent_update odcu = DCE_UPD_INIT, ndcu = DCE_UPD_INIT;
 	struct fidc_membh *child = NULL, *np = NULL, *op = NULL, *ch;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
