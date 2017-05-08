@@ -83,7 +83,6 @@ struct dircache_page {
 	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
 	struct pfl_timespec	 dcp_remote_tm;	/* remote clock when populated */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
-	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by pfd_off */
 	void			*dcp_base;	/* pscfs_dirents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
 	int			 dcp_refcnt;

@@ -1597,7 +1597,7 @@ void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
-	int hit = 1, j, nd, issue, rc;
+	int hit = 1, j, issue, rc;
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
@@ -1681,9 +1681,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 			/* find starting entry */
 			poff = 0;
-			nd = psc_dynarray_len(p->dcp_dents_off);
 			for (j = 0, pfd = p->dcp_base;
-			    j < nd; j++) {
+			    j < p->dcp_nents; j++) {
 				if (off == thisoff)
 					break;
 				poff += PFL_DIRENT_SIZE(
@@ -1694,7 +1693,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 
 			/* determine size */
-			for (len = 0; j < nd; j++)  {
+			for (len = 0; j < p->dcp_nents; j++)  {
 				tlen = PFL_DIRENT_SIZE(
 				    pfd->pfd_namelen);
 				if (tlen + len > size)

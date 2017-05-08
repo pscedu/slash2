@@ -131,34 +131,6 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 
 	pll_remove(&fci->fci_dc_pages, p);
 
-	if (p->dcp_dents_off) {
-		DYNARRAY_FOREACH(dce, i, p->dcp_dents_off) {
-			PFLOG_DIRCACHENT(PLL_DEBUG, dce, "free_page "
-			    "fcmh=%p", d);
-			pfd = dce->dce_pfd;
-			if (pfd->pfd_ino != FID_ANY) {
-				b = psc_hashent_getbucket(
-				    &msl_namecache_hashtbl, dce);
-				dce->dce_pfd = NULL;
-				if (dce->dce_flags & DCEF_ACTIVE) {
-					psc_hashbkt_del_item(
-					    &msl_namecache_hashtbl, b,
-					    dce);
-					dce->dce_flags &= ~DCEF_ACTIVE;
-				}
-				if (dce->dce_flags & DCEF_HOLD) {
-					dce->dce_flags |= DCEF_TOFREE;
-					dce = NULL;
-				}
-				psc_hashbkt_put(&msl_namecache_hashtbl,
-				    b);
-			}
-			if (dce)
-				psc_pool_return(dircache_ent_pool, dce);
-		}
-		psc_dynarray_free(p->dcp_dents_off);
-		PSCFREE(p->dcp_dents_off);
-	}
 	PSCFREE(p->dcp_base);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
 	psc_pool_return(dircache_page_pool, p);
@@ -189,8 +161,6 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
 			continue;
-		DYNARRAY_FOREACH(dce, n, p->dcp_dents_off)
-			cbf(p, dce, cbarg);
 	}
 	DYNARRAY_FOREACH(dce, n, &fci->fcid_ents)
 		cbf(NULL, dce, cbarg);
