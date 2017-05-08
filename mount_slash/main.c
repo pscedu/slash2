@@ -1147,42 +1147,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	/*
-	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
-	 * Hit again today - 04/27/2017.
-	 */
-	if (sl_fcmh_lookup(pfd_ino, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &c, pfr)) {
-		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
-		PFL_GOTOERR(out, rc);
-	}
-	/*
-	 * Note that the name cache is actually disconnected from the
-	 * fcmh cache.  So we must populate the name cache carefully.
-	 *
-	 * XXX 04/18/2017: Hit crash from mslfsop_lookup(), flags is
-	 * 100000100100000.
-	 */
-	psc_assert((c->fcmh_flags & FCMH_DELETED) == 0);
-	FCMH_ULOCK(c);
-
-	/*
-	 * We should do a lookup based on name here because a rename
-	 * does not change the FID and we would get a success in a STAT
-	 * RPC.  Note the call is looking based on a name here, not
-	 * based on FID.
-	 */
-	rc = msl_stat(c, pfr);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	FCMH_LOCK(c);
-	if (fgp)
-		*fgp = c->fcmh_fg;
-	if (sstb)
-		*sstb = c->fcmh_sstb;
-	if (fp)
-		FCMH_ULOCK(c);
+	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 
  out:
 
