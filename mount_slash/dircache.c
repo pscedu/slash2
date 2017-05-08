@@ -414,7 +414,7 @@ dircache_ent_hash(uint64_t pfid, const char *name, size_t namelen)
  */
 int
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int *nents, void *base, size_t size, int eof)
+    void *base, size_t size, int eof)
 {
 
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");

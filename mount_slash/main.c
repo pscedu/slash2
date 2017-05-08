@@ -1394,7 +1394,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	void *ebase;
 	int rc, i;
 
-	rc = dircache_reg_ents(d, p, &nents, base, size, eof);
+	rc = dircache_reg_ents(d, p, base, size, eof);
 	if (rc)
 		return (rc);
 
