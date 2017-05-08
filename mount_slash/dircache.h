@@ -104,11 +104,9 @@ struct dircache_page {
 
 #define DIRCACHE_WAKE(d)						\
 	do {								\
-		int _waslocked;						\
-									\
-		_waslocked = DIRCACHE_REQWRLOCK(d);			\
+		DIRCACHE_WR_ENSURE(d);					\
 		psc_waitq_wakeall(&(d)->fcmh_waitq);			\
-		DIRCACHE_UREQLOCK((d), _waslocked);			\
+		DIRCACHE_ULOCK(d);					\
 	} while (0)
 
 #define DIRCACHE_WAIT(d)						\
