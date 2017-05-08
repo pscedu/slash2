@@ -1083,15 +1083,13 @@ __static int
 msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp, struct fidc_membh **parentp)
+    struct fidc_membh **fp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	int rc;
 
 	if (fp)
 		*fp = NULL;
-	if (parentp)
-		*parentp = NULL;
 
 	/*
 	 * The parent inode number is either the super root or the site
@@ -1153,8 +1151,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
 	 * Hit again today - 04/27/2017.
 	 */
-	if (dcup->dcu_dce->dce_pfd->pfd_ino == FID_ANY ||
-	    sl_fcmh_lookup(dcup->dcu_dce->dce_pfd->pfd_ino, FGEN_ANY,
+	if (sl_fcmh_lookup(pfd_ino, FGEN_ANY,
 	    FIDC_LOOKUP_LOCK, &c, pfr)) {
 		rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 		PFL_GOTOERR(out, rc);
@@ -1188,12 +1185,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		FCMH_ULOCK(c);
 
  out:
-	/* Caller wants parent; don't drop. */
-	if (parentp && p) {
-		*parentp = p;
-		p = NULL;
-		psc_assert(orig_dcu);
-	}
 
 	if (rc == 0 && fp) {
 		*fp = c;
