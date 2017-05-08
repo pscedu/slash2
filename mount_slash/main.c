@@ -390,7 +390,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
 	int rc = 0, rc2, rflags = 0;
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -446,7 +445,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
-	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
@@ -801,7 +799,6 @@ void
 mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
     pscfs_inum_t p_inum, const char *newname)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -898,7 +895,6 @@ void
 mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, mode_t mode)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1072,10 +1068,6 @@ slc_wk_issue_readdir(void *p)
 }
 #endif
 
-#define msl_lookup_fidcache(pfr, pcrp, pinum, name, fgp, sstb, fp)	\
-	msl_lookup_fidcache_dcu((pfr), (pcrp), (pinum), (name), (fgp),	\
-	    (sstb), (fp), NULL, NULL)
-
 /*
  * Query the fidcache for a file system entity name.
  *
@@ -1088,18 +1080,13 @@ slc_wk_issue_readdir(void *p)
  * Introduced by commit b79584686ca8182d18de8d25f6b94861cd0cb962.
  */
 __static int
-msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
+msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp, struct fidc_membh **parentp,
-    struct dircache_ent_update *dcup)
+    struct fidc_membh **fp, struct fidc_membh **parentp)
 {
-	struct dircache_ent_update *orig_dcu = dcup, dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	int rc;
-
-	if (dcup == NULL)
-		dcup = &dcu;
 
 	if (fp)
 		*fp = NULL;
@@ -2592,7 +2579,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
  out:
 	pscfs_reply_rename(pfr, rc);
-	namecache_update(&ndcu, mp->srr_cattr.sst_fid, rc);
 
 	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
 	    "npinum="SLPRI_FID" oldname='%s' newname='%s' rc=%d",
@@ -2693,7 +2679,6 @@ void
 mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
     pscfs_inum_t pinum, const char *name)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct srm_symlink_rep *mp = NULL;
@@ -2745,7 +2730,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
 	    1);
 
-	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
