@@ -270,18 +270,6 @@ int	dircache_ent_cmp(const void *, const void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
-
-int	namecache_get_entry(
-	    struct dircache_ent_update *, struct fidc_membh *,
-	    const char *, int);
-void	 namecache_get_entries(struct dircache_ent_update *,
-	    struct fidc_membh *, const char *,
-	    struct dircache_ent_update *,
-	    struct fidc_membh *, const char *);
-void	 namecache_update(struct dircache_ent_update *, uint64_t, int);
-void	 namecache_delete(struct dircache_ent_update *, int);
-void	 namecache_purge(struct fidc_membh *);
-
 extern struct psc_hashtbl msl_namecache_hashtbl;
 
 #endif /* _DIRCACHE_H_ */

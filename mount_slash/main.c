@@ -559,7 +559,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
-	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
@@ -859,7 +858,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		mq->fg = c->fcmh_fg;
 		strlcpy(mq->name, newname, sizeof(mq->name));
 
-		namecache_get_entry(&dcu, p, newname, 1);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -882,7 +880,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
-	namecache_update(&dcu, fcmh_2_fid(c), rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
@@ -951,7 +948,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
@@ -980,7 +976,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
-	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
@@ -1167,7 +1162,6 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	namecache_get_entry(dcup, p, name, 1);
 	/*
 	 * Hit dcup->dcu_dce->dce_pfd = NULL at revision 41635.
 	 * Hit again today - 04/27/2017.
@@ -1214,12 +1208,6 @@ msl_lookup_fidcache_dcu(struct pscfs_req *pfr,
 		psc_assert(orig_dcu);
 	}
 
-	/*
-	 * Use 'dcu' here instead of 'dcup' because we only want to
-	 * release HOLD if we grabbed it; whereas a caller will want to
-	 * release it if they grabbed HOLD.
-	 */
-	namecache_update(&dcu, fcmh_2_fid(c), rc);
 	if (rc == 0 && fp) {
 		*fp = c;
 		c = NULL;
@@ -1296,7 +1284,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (!rc) {
 		mq->pfid = pinum;
 		strlcpy(mq->name, name, sizeof(mq->name));
-		namecache_get_entry(&dcu, p, name, 1);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	}
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -1335,7 +1322,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	else
 		pscfs_reply_rmdir(pfr, rc);
 
-	namecache_delete(&dcu, rc);
 
 	if (c)
 		fcmh_op_done(c);
@@ -1412,7 +1398,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->rdev = rdev;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	namecache_get_entry(&dcu, p, name, 1);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
@@ -1441,7 +1426,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
-	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
 	psclogs_diag(SLCSS_FSOP, "MKNOD: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
@@ -1868,7 +1852,6 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
  out:
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
-	namecache_update(&dcu, sstb.sst_fid, rc);
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -2549,8 +2532,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
 	}
 
-	namecache_get_entries(&odcu, op, oldname, &ndcu, np, newname);
-
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
   retry2:
@@ -2611,7 +2592,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
  out:
 	pscfs_reply_rename(pfr, rc);
-	namecache_delete(&odcu, rc);
 	namecache_update(&ndcu, mp->srr_cattr.sst_fid, rc);
 
 	psclogs_diag(SLCSS_FSOP, "RENAME: opinum="SLPRI_FID" "
@@ -2793,7 +2773,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
-	namecache_update(&dcu, mp->cattr.sst_fid, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
