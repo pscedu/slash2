@@ -1489,6 +1489,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
+#if 0
 			/*
 			 * Race: entry was entered into namecache, file
 			 * system unlink occurred, then we tried to
@@ -1496,17 +1497,20 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 			 * however, since namecache is synchronized with
 			 * unlink, we just did extra work here.
 			 */
-//			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+#endif
 
 			msl_fcmh_stash_xattrsize(f, e->xattrsize);
 			fcmh_op_done(f);
 		}
 	}
+#if 0
 	/*
 	 * We could free unused space here but we would have to adjust
 	 * the various pointers referenced by the dynarrays.
 	 */
-//	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
+#endif
 	return (0);
 }
 
