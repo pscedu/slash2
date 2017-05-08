@@ -1803,7 +1803,6 @@ void
 mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
@@ -1819,8 +1818,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	slc_getfscreds(pfr, &pcr);
-	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
-	    &c, &p, &dcu);
+	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &c);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	msl_internalize_stat(&sstb, &stb);
