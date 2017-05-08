@@ -1776,8 +1776,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 
 			// XXX I/O: remove from lock
-			pscfs_reply_readdir(pfr,
-			    p->dcp_base + poff, len, 0);
+			pscfs_reply_readdir(pfr, p->dcp_base + poff, len, 0);
 			p->dcp_flags |= DIRCACHEPGF_READ;
 			if (hit)
 				OPSTAT_INCR("msl.dircache-hit");
