@@ -1329,7 +1329,6 @@ void
 mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, mode_t mode, dev_t rdev)
 {
-	struct dircache_ent_update dcu = DCE_UPD_INIT;
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
