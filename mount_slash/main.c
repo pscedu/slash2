@@ -3365,6 +3365,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		fci = fcmh_2_fci(f);
 		if (timercmp(&now, &fci->fci_age, >=)) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
+		/* 05/08/2017: suspect crash site */
 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
 			OPSTAT_INCR("msl.xattr-hit-size");
 			FCMH_ULOCK(f);
