@@ -1547,7 +1547,7 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	struct pscrpc_request *rq = NULL;
 	struct dircache_page *p;
 	struct iovec iov;
-	int rc, nents;
+	int rc, nents, wake;
 
 	p = dircache_new_page(d, off, block);
 	if (p == NULL) {
@@ -1612,9 +1612,9 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	DIRCACHE_WRLOCK(d);
 	p->dcp_refcnt--;
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	wake = p->dcp_flags & DIRCACHEPGF_WAIT;
 	dircache_free_page(d, p);
-	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
-		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
+	if (wake) {
 		OPSTAT_INCR("msl.dircache-wakeup");
 		DIRCACHE_WAKE(d);
 	} else
