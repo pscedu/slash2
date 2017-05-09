@@ -254,7 +254,7 @@ dce_sort_cmp_off(const void *x, const void *y)
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
 int	dircache_hasoff(struct dircache_page *, off_t);
-int	dircache_free_page(struct fidc_membh *, struct dircache_page *);
+void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 void	dircache_mgr_destroy(void);
 void	dircache_mgr_init(void);
 void	dircache_init(struct fidc_membh *);

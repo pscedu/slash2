@@ -109,7 +109,7 @@ dircache_mgr_destroy(void)
  * @p: page to release.
  * @block: whether to block for all other references to release.
  */
-int
+void
 dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 {
 	struct fcmh_cli_info *fci;
@@ -130,10 +130,6 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	PSCFREE(p->dcp_base);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
 	psc_pool_return(dircache_page_pool, p);
-
-	DIRCACHE_WAKE(d);
-
-	return (1);
 }
 
 /*
