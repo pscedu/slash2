@@ -1407,7 +1407,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
-	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 
 	p->dcp_nents = nents;
 	p->dcp_base = base;
@@ -1415,6 +1414,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
+	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 
 	DIRCACHE_ULOCK(d);
 
