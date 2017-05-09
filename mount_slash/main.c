@@ -1734,18 +1734,21 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			    "off=%"PSCPRIdOFFT" rc=%d",
 			    fcmh_2_fid(d), size, off, rc);
 
-			if ((p->dcp_flags & DIRCACHEPGF_EOF) == 0) {
-				/*
-				 * The reply_readdir() up ahead
-				 * may be followed by a RELEASE
-				 * so take an extra reference to
-				 * avoid use-after-free on the
-				 * fcmh.
-				 */
-				fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
-				raoff = p->dcp_nextoff;
-				psc_assert(raoff);
+			if (p->dcp_flags & DIRCACHEPGF_EOF) {
+				DIRCACHE_ULOCK(d);
+				return;
 			}
+	
+			/*
+			 * The reply_readdir() up ahead
+			 * may be followed by a RELEASE
+			 * so take an extra reference to
+			 * avoid use-after-free on the
+			 * fcmh.
+			 */
+			fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
+			raoff = p->dcp_nextoff;
+			psc_assert(raoff);
 
 			issue = 0;
 			break;
