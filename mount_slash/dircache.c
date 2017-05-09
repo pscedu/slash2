@@ -271,34 +271,3 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 
 	return (p);
 }
-
-/*
- * Register directory entries with our cache.
- * @d: directory.
- * @p: buffer of dirent objects.
- * @nents: number of dirent objects in @p.
- * @base: pointer to buffer of pscfs_dirents from RPC.
- * @size: size of @base buffer.
- * @eof: whether this signifies the last READDIR for this directory.
- */
-int
-dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int nents, void *base, size_t size, int eof)
-{
-
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
-
-	if (p->dcp_dirgen != fcmh_2_gen(d)) {
-		OPSTAT_INCR("msl.readdir-all-stale");
-		return (-ESTALE);
-	}
-	DIRCACHE_WRLOCK(d);
-	p->dcp_nents = nents;
-	p->dcp_base = base;
-	p->dcp_size = size;
-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
-	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
-	DIRCACHE_ULOCK(d);
-	return (0);
-}

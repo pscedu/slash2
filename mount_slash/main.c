@@ -1394,9 +1394,21 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	void *ebase;
 	int rc, i;
 
-	rc = dircache_reg_ents(d, p, nents, base, size, eof);
-	if (rc)
-		return (rc);
+	if (p->dcp_dirgen != fcmh_2_gen(d)) {
+		OPSTAT_INCR("msl.readdir-all-stale");
+		return (-ESTALE);
+	}
+
+	DIRCACHE_WRLOCK(d);
+
+	p->dcp_nents = nents;
+	p->dcp_base = base;
+	p->dcp_size = size;
+	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
+	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
+
+	DIRCACHE_ULOCK(d);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
