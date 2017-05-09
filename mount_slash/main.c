@@ -1389,10 +1389,12 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
 	struct srt_readdir_ent *e;
+	struct pscfs_dirent *dirent = NULL;
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
 	int rc, i;
+	off_t adj;
 
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
 		OPSTAT_INCR("msl.readdir-all-stale");
@@ -1400,6 +1402,15 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	}
 
 	DIRCACHE_WRLOCK(d);
+
+	for (i = 0, adj = 0; i < nents; i++) {
+		dirent = PSC_AGP(base, adj);
+		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
+	}
+	if (dirent)
+		p->dcp_nextoff = dirent->pfd_off;
+	else
+		p->dcp_nextoff = p->dcp_off;
 
 	p->dcp_nents = nents;
 	p->dcp_base = base;
