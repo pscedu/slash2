@@ -1722,8 +1722,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				 * avoid use-after-free on the
 				 * fcmh.
 				 */
-				fcmh_op_start_type(d,
-				    FCMH_OPCNT_READAHEAD);
+				fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
 				raoff = p->dcp_nextoff;
 				psc_assert(raoff);
 			}
@@ -1740,8 +1739,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(d, off, size, 1);
-		if (rc && !slc_rpc_should_retry(pfr, &rc))
+		if (rc && !slc_rpc_should_retry(pfr, &rc)) {
+			DIRCACHE_ULOCK(d);
 			PFL_GOTOERR(out, rc);
+		}
 		/* 05/02/2017: XXX crash with d = NULL  - SIGBUS */
 		DIRCACHE_WRLOCK(d);
 		goto restart;
