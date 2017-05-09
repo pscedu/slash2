@@ -1605,7 +1605,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
-	off_t raoff;
+	off_t raoff, poff, thisoff;
+	size_t len, tlen;
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -1670,8 +1671,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 
 		if (dircache_hasoff(p, off)) {
-			off_t poff, thisoff = p->dcp_off;
-			size_t len, tlen;
+			thisoff = p->dcp_off;
 
 			/*
  			 * XXX Do we ignore concurrent namespace
