@@ -1770,9 +1770,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (raoff) {
 		msl_readdir_issue(d, raoff, size, 0);
 		fcmh_op_done_type(d, FCMH_OPCNT_READAHEAD);
-		return;
 	}
-
+	return;
  out:
 	rc = abs(rc);
 	psclogs_diag(SLCSS_FSOP, "READDIR: fid="SLPRI_FID" "
