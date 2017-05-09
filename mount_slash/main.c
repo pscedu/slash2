@@ -1393,7 +1393,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
-	int rc, i;
+	int i;
 	off_t adj;
 
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
@@ -1407,10 +1407,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
-	if (dirent)
-		p->dcp_nextoff = dirent->pfd_off;
-	else
-		p->dcp_nextoff = p->dcp_off;
+	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 
 	p->dcp_nents = nents;
 	p->dcp_base = base;
