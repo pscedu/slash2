@@ -1517,7 +1517,12 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 
-	DIRCACHE_WAKE(d);
+	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
+		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
+		OPSTAT_INCR("msl.dircache-wakeup");
+		DIRCACHE_WAKE(d);
+	} else
+		DIRCACHE_ULOCK(d);
 
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
@@ -1608,7 +1613,12 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	p->dcp_refcnt--;
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	dircache_free_page(d, p);
-	DIRCACHE_ULOCK(d);
+	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
+		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
+		OPSTAT_INCR("msl.dircache-wakeup");
+		DIRCACHE_WAKE(d);
+	} else
+		DIRCACHE_ULOCK(d);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (rc);
 }
@@ -1665,6 +1675,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			OPSTAT_INCR("msl.dircache-wait");
+			p->dcp_flags |= DIRCACHEPGF_WAIT;
 			DIRCACHE_WAIT(d);
 			goto restart;
 		}

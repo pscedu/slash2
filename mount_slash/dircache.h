@@ -93,7 +93,8 @@ struct dircache_page {
 #define DIRCACHEPGF_LOADING	(1 << 0)	/* stub is waiting for network load */
 #define DIRCACHEPGF_EOF		(1 << 1)	/* denotes last page */
 #define DIRCACHEPGF_READ	(1 << 2)	/* page has been used */
-#define DIRCACHEPGF_FREEING	(1 << 3)	/* a thread is trying to free */
+#define DIRCACHEPGF_WAIT	(1 << 3)	/* someone is waiting */
+#define DIRCACHEPGF_FREEING	(1 << 4)	/* a thread is trying to free */
 
 #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_REQWRLOCK(d)	pfl_rwlock_reqwrlock(fcmh_2_dc_rwlock(d))
