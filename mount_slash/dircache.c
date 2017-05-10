@@ -77,6 +77,17 @@ dircache_init(struct fidc_membh *d)
 }
 
 /*
+ * Compute a hash key for a dircache_ent based on the parent
+ * directory's FID and the entry's basename.
+ * @dce: entry to compute hash for.
+ */
+uint64_t
+dircache_hash(uint64_t pfid, const char *name, size_t namelen)
+{
+	return (pfid ^ psc_strn_hashify(name, namelen));
+}
+
+/*
  * Initialize global dircache structures.
  */
 void
@@ -271,3 +282,4 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 
 	return (p);
 }
+
