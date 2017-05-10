@@ -5841,4 +5841,9 @@ on the FCMH read-write lock.
 05/01/2017
 ----------
 
-Make sure xattr operations never return ENOSYS.
+Make sure all xattr operations never return ENOSYS.
+
+05/10/2017
+----------
+
+Looks like fuselib3 turn on readdirplus by default.  We don't support that yet.
