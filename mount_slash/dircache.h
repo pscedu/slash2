@@ -171,31 +171,20 @@ struct dircache_expire {
 	    (e)->dce_flags, (e)->dce_pfd->pfd_namelen,			\
 	    (e)->dce_pfd->pfd_name, ## __VA_ARGS__)
 
-/*
- * This is essentially a pointer to a pscfs_dirent.  Many of these
- * reside in one dircache_page but may exist totally independently if
- * brought in through certain namespace operations.
- */
+#define	SL_SHORT_NAME	32
+
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
-	slfid_t			 dce_pfid;	/* parent dir FID+GEN, for hashtbl cmp */
-	uint32_t		 dce_flags;	/* see DCEF_* flags below */
-	struct dircache_page	*dce_page;	/* back pointer to READDIR page */
-	/*
- 	 * It points to an entry in the directory page or an entry that is allocated.
- 	 */
-	struct pscfs_dirent	*dce_pfd;
-	struct psc_hashentry	 dce_hentry;	/* hash table linkage */
+	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
-};
 
-/* dce_flags */
-#define DCEF_HOLD		(1 << 0)	/* being updated via RPC */
-#define DCEF_DESTROYED		(1 << 1)	/* garbage collected */
-#define DCEF_ACTIVE		(1 << 2)	/* in hash table */
-#define DCEF_TOFREE		(1 << 3)	/* HOLD'er thread must free */
-#define DCEF_DETACHED		(1 << 4)	/* not on fcid_ents list */
-#define DCEF_INPAGE		(1 << 5)	/* not on fcid_ents list */
+	slfid_t			 dce_pino;
+	uint64_t		 dce_ino;
+	uint32_t		 dce_type;
+	uint32_t		 dce_namelen;
+	char			 dce_short[SL_SHORT_NAME];
+	char			*dce_name;	/* only in look up path */
+};
 
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
@@ -216,19 +205,5 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 
 extern struct psc_hashtbl msl_namecache_hashtbl;
 
-#define	SL_SHORT_NAME	32
-
-struct dir_namecache_entry {
-	uint64_t		 dce_key;	/* hash table key */
-	struct psc_hashentry     dce_hentry;    /* hash table linkage */
-#define dce_lentry dce_hentry.phe_lentry
-
-	slfid_t			 dce_pino;
-	uint64_t		 dce_ino;
-	uint32_t		 dce_type;
-	uint32_t		 dce_namelen;
-	char			 dce_short[SL_SHORT_NAME];
-	char			*dce_name;	/* only in look up path */
-};
 
 #endif /* _DIRCACHE_H_ */
