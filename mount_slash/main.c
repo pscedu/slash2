@@ -1400,6 +1400,10 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 	/*
  	 * Stop name cache changes while we populating it.
+ 	 * We should limit the number of name cache entries
+ 	 * per directory or system wide here. However, when
+ 	 * the name is found in the look up path, it must
+ 	 * be created for possibly silly renaming support.
  	 */
 	FCMH_LOCK(d);
 	FCMH_WAIT_BUSY(f, 1);
@@ -1440,7 +1444,10 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		}
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
-
+		/*
+		 * Possibly limit the number of fcmh we can create to
+		 * avoid memory pressure.
+		 */
 		if (!sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
