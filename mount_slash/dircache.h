@@ -225,32 +225,6 @@ struct slc_wkdata_dircache {
 	struct psc_compl	 *compl;
 };
 
-/* The different interfaces below are used for searching and sorting. */
-static __inline int
-dce_cmp_off_search(const void *a, const void *b)
-{
-	const struct dircache_ent *y = b;
-	const off_t *xoff = a;
-
-	return (CMP((uint64_t)*xoff, y->dce_pfd->pfd_off));
-}
-
-static __inline int
-dce_cmp_off(const void *a, const void *b)
-{
-	const struct dircache_ent *x = a, *y = b;
-
-	return (CMP(x->dce_pfd->pfd_off, y->dce_pfd->pfd_off));
-}
-
-static __inline int
-dce_sort_cmp_off(const void *x, const void *y)
-{
-	const void * const *pa = x, *a = *pa;
-	const void * const *pb = y, *b = *pb;
-
-	return (dce_cmp_off(a, b));
-}
 
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
@@ -274,7 +248,7 @@ extern struct psc_hashtbl msl_namecache_hashtbl;
 #define	SL_SHORT_NAME	32
 
 struct dir_namecache_entry {
-
+	uint64_t		 dce_key;	/* hash table key */
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 
