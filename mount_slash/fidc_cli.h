@@ -75,6 +75,9 @@ struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
 
+	uint64_t                         fci_pino;	/* silly rename */
+	char                            *fci_name;
+
 	union {
 		struct fcmh_cli_info_file f;
 #define fci_xattrsize		u.f.xattrsize
