@@ -1419,6 +1419,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 	/*
  	 * Stop name cache changes while we populating it.
+ 	 *
  	 * We should limit the number of name cache entries
  	 * per directory or system wide here. However, when
  	 * the name is found in the look up path, it must
@@ -1788,11 +1789,9 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 	
 			/*
-			 * The reply_readdir() up ahead
-			 * may be followed by a RELEASE
-			 * so take an extra reference to
-			 * avoid use-after-free on the
-			 * fcmh.
+			 * The reply_readdir() up ahead may be followed by 
+			 * a RELEASE so take an extra reference to avoid 
+			 * use-after-free on the fcmh.
 			 */
 			fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
 			raoff = p->dcp_nextoff;
