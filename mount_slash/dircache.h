@@ -271,4 +271,15 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 
 extern struct psc_hashtbl msl_namecache_hashtbl;
 
+#define	SL_SHORT_NAME	32
+
+struct dir_namecache_entry {
+	slfid_t			 dce_pino;
+	uint64_t		 dce_ino;
+	uint32_t		 dce_type;
+	uint32_t		 dce_namelen;
+	char			 dce_short[SL_SHORT_NAME];
+	char			*dce_name;
+};
+
 #endif /* _DIRCACHE_H_ */
