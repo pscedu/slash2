@@ -1440,6 +1440,12 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 	DIRCACHE_WRLOCK(d);
 
+	/*
+ 	 * We used to allow an entry to point to a dirent inside the
+ 	 * readdir page or allocate its own memory. It is tricky and
+ 	 * we can't let the entry to last longer than its associated
+ 	 * page.  So let us keep it as simple as possible.
+ 	 */
 	for (i = 0, adj = 0; i < nents; i++) {
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
