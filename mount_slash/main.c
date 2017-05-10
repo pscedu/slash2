@@ -378,6 +378,16 @@ _msl_progallowed(struct pscfs_req *pfr)
 }
 
 static void
+msl_wait_readdir(struct fidc_membh *p)
+{
+	FCMH_LOCK(p);
+	FCMH_WAIT_BUSY(p, 0);
+	fcmh_2_gen(p)++;
+	FCMH_UNBUSY(p, 0);
+	FCMH_ULOCK(p);
+}
+
+static void
 msl_internalize_stat(struct srt_stat *sstb, struct stat *stb)
 {
 	sl_internalize_stat(sstb, stb);
@@ -2496,6 +2506,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
+	msl_wait_readdir(op);
+	msl_wait_readdir(np);
+
  retry1:
 	MSL_RMC_NEWREQ(np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
@@ -2711,11 +2724,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	FCMH_LOCK(p);
-	FCMH_WAIT_BUSY(p, 0);
-	fcmh_2_gen(p)++;
-	FCMH_UNBUSY(p, 0);
-	FCMH_ULOCK(p);
+	msl_wait_readdir(p);
 
  retry1:
 
