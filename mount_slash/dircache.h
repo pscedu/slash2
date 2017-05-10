@@ -274,12 +274,16 @@ extern struct psc_hashtbl msl_namecache_hashtbl;
 #define	SL_SHORT_NAME	32
 
 struct dir_namecache_entry {
+
+	struct psc_hashentry     dce_hentry;    /* hash table linkage */
+#define dce_lentry dce_hentry.phe_lentry
+
 	slfid_t			 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_type;
 	uint32_t		 dce_namelen;
 	char			 dce_short[SL_SHORT_NAME];
-	char			*dce_name;
+	char			*dce_name;	/* only in look up path */
 };
 
 #endif /* _DIRCACHE_H_ */
