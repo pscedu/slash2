@@ -197,35 +197,6 @@ struct dircache_ent {
 #define DCEF_DETACHED		(1 << 4)	/* not on fcid_ents list */
 #define DCEF_INPAGE		(1 << 5)	/* not on fcid_ents list */
 
-/*
- * This structure is almost identical to dircache_ent but slightly
- * different solely to accommodate hash table lookups.
- */
-struct dircache_ent_query {
-	uint64_t		 dcq_key;	/* hash table key */
-	slfid_t			 dcq_pfid;	/* parent dir FID+GEN */
-	uint32_t		 dcq_namelen;	/* strlen(dcq_name) */
-	const char		*dcq_name;	/* entry basename */
-};
-
-/* struct to simplify updating entries */
-struct dircache_ent_update {
-	struct dircache_ent	 *dcu_dce;	/* dirent */
-	struct psc_hashbkt	 *dcu_bkt;	/* namecache hashtable */
-	struct fidc_membh	 *dcu_d;	/* parent directory */
-};
-
-#define DCE_UPD_INIT		{ NULL, NULL, NULL }
-
-struct slc_wkdata_dircache {
-	struct fidc_membh	 *d;
-	void			(*cbf)(struct dircache_page *,
-				    struct dircache_ent *, void *);
-	void			 *cbarg;
-	struct psc_compl	 *compl;
-};
-
-
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
 int	dircache_hasoff(struct dircache_page *, off_t);
