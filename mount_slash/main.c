@@ -1477,6 +1477,9 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		/*
 		 * Possibly limit the number of fcmh we can create to
 		 * avoid memory pressure.
+		 *
+		 * XXX we should probably only do this when the fcmh does not
+		 * already exist. Otherwise, we might accept stale attributes.
 		 */
 		if (!sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
