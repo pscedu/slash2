@@ -535,6 +535,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	msl_bmap_stash_lease(b, &mp->sbd, "preload");
 	msl_bmap_reap_init(b);
 
+	/* 05/09/2017: random crash here: bcm_bmapno = 4026567200 */
 	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,
 	    libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
