@@ -379,7 +379,7 @@ _msl_progallowed(struct pscfs_req *pfr)
 
 /*
  * New readdir should not be allowed if the directory is being modified.
- * So we only need to finish or abort the existing readdir requests.
+ * So we only need to finish or abort any inflight readdir requests.
  */
 static void
 msl_wait_readdir(struct fidc_membh *p)
