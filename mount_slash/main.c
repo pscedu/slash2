@@ -2711,6 +2711,12 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	FCMH_LOCK(p);
+	FCMH_WAIT_BUSY(p, 0);
+	fcmh_2_gen(p)++;
+	FCMH_UNBUSY(p, 0);
+	FCMH_ULOCK(p);
+
  retry1:
 
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
