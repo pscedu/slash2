@@ -5847,3 +5847,9 @@ Make sure all xattr operations never return ENOSYS.
 ----------
 
 Looks like fuselib3 turn on readdirplus by default.  We don't support that yet.
+
+05/10/2017
+----------
+
+Random sigbus crashes happen when the machine is busy with other jobs, need to audit
+all call sites of memory allocation.
