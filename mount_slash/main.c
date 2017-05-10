@@ -1397,8 +1397,16 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	int i;
 	off_t adj;
 
+
+	/*
+ 	 * Stop name cache changes while we populating it.
+ 	 */
+	FCMH_LOCK(d);
+	FCMH_WAIT_BUSY(f, 1);
+
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
 		OPSTAT_INCR("msl.readdir-all-stale");
+		FCMH_UNBUSY(d, 1);
 		return (-ESTALE);
 	}
 
@@ -1418,6 +1426,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 
 	DIRCACHE_ULOCK(d);
+
+	FCMH_UNBUSY(d, 1);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
