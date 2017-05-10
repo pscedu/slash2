@@ -64,7 +64,7 @@ struct psc_compl;
 
 struct fidc_membh;
 
-#define DIRCACHE_NPAGES		64		/* initial number of pages in pool*/
+#define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
 
 #define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
 #define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
@@ -160,16 +160,6 @@ struct dircache_expire {
 	    "sz %zu fl %#x nextoff %"PSCPRIdOFFT": " fmt,		\
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
-
-#define PFLOG_DIRCACHENT(lvl, e, fmt, ...)				\
-	psclog((lvl), "dce@%p pfd=%p page=%p pfid="SLPRI_FID" "		\
-	    "fid="SLPRI_FID" off=%"PRId64" "				\
-	    "type=%#o flags=%#x name='%.*s' " fmt,			\
-	    (e), (e)->dce_pfd, (e)->dce_page,				\
-	    (e)->dce_pfid, (e)->dce_pfd->pfd_ino,			\
-	    (e)->dce_pfd->pfd_off, (e)->dce_pfd->pfd_type,		\
-	    (e)->dce_flags, (e)->dce_pfd->pfd_namelen,			\
-	    (e)->dce_pfd->pfd_name, ## __VA_ARGS__)
 
 #define	SL_SHORT_NAME	32
 
