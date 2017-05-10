@@ -170,42 +170,6 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 	DIRCACHE_ULOCK(d);
 }
 
-int
-dircache_walk_async_wkcb(void *arg)
-{
-	struct slc_wkdata_dircache *wk = arg;
-
-	dircache_walk(wk->d, wk->cbf, wk->cbarg);
-
-	fcmh_op_done_type(wk->d, FCMH_OPCNT_DIRCACHE);
-
-	if (wk->compl)
-		psc_compl_ready(wk->compl, 1);
-
-	return (0);
-}
-
-/*
- * Perform an operation on each cached dirent referenced by an fcmh
- * asynchronously.
- */
-void
-dircache_walk_async(struct fidc_membh *d, void (*cbf)(
-    struct dircache_page *, struct dircache_ent *, void *), void *cbarg,
-    struct psc_compl *compl)
-{
-	struct slc_wkdata_dircache *wk;
-
-	wk = pfl_workq_getitem(dircache_walk_async_wkcb,
-	    struct slc_wkdata_dircache);
-	fcmh_op_start_type(d, FCMH_OPCNT_DIRCACHE);
-	wk->d = d;
-	wk->cbf = cbf;
-	wk->cbarg = cbarg;
-	wk->compl = compl;
-	pfl_workq_putitem(wk);
-}
-
 /*
  * Destroy all dirent pages belonging to a directory.
  * @d: directory handle.
