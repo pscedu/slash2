@@ -5853,3 +5853,8 @@ Looks like fuselib3 turn on readdirplus by default.  We don't support that yet.
 
 Random sigbus crashes happen when the machine is busy with other jobs, need to audit
 all call sites of memory allocation.
+
+05/11/2017
+----------
+
+Find a way to control the memory usage of slash2.
