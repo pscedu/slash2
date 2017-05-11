@@ -270,8 +270,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	int i;
 	off_t adj;
 	struct pscfs_dirent *dirent = NULL;
+	struct fcmh_cli_info *fci;
 	struct psc_hashbkt *b;
-	struct psc_dynarray *da_off;
 
 	/*
  	 * Stop name cache changes while we populating it.
@@ -290,10 +290,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		return (-ESTALE);
 	}
 
-	da_off = PSCALLOC(sizeof(*da_off));
-	psc_dynarray_init(da_off);
-	psc_dynarray_ensurelen(da_off, nents);
-
+	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
 
 	/*
@@ -337,8 +334,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (dce) {
 			OPSTAT_INCR("msl.dircache-exist");
 			psc_pool_return(dircache_ent_pool, dce);
-		} else
-			psc_dynarray_add(da_off, dce);
+			continue;
+		}
+		psc_dynarray_add(&fci->fcid_ents, dce);
 	}
 
 	p->dcp_nents = nents;
