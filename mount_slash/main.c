@@ -117,11 +117,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define fcmh_reserved(f)	(FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS ? EPERM : 0)
 
 /*
- * XXX We might be able to get away by building a partial name cache just
- * for the purpose of unlink after open.
- *
- * Currently, name cache entries can go away because its containg page is
- * expired.  This does not work with unlink-after-open semantics.
+ * Name cache are used for two purposes: (1) save future lookup RPCs, (2)
+ * detect if a file being deleted is in use.
  *
  */
 struct psc_hashtbl		 msl_namecache_hashtbl;
