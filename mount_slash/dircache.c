@@ -314,7 +314,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 
-		if (dirent->pfd_namelen > SL_SHORT_NAME) {
+		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-longname");
 			continue;
 		}
@@ -327,6 +327,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_pino = fcmh_2_fid(d);
 		dce->dce_type = dirent->pfd_type;
 		dce->dce_namelen = dirent->pfd_namelen;
+		dce->dce_flag |= DIRCACHE_F_SHORT;
+		dce->dce_name = &dce->dce_short[0];
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
@@ -379,13 +381,25 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 int
 dircache_insert(struct fidc_membh *d, const char *name)
 {
+	int len;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, *tmpdce;
 
+	len = strlen(name);
 	dce = psc_pool_get(dircache_ent_pool);
 
-	dce->dce_namelen = strlen(name);
+	dce->dce_namelen = len;
+	if (len < SL_SHORT_NAME) {
+		dce->dce_flag |= DIRCACHE_F_SHORT;
+		dce->dce_name = &dce->dce_short[0];
+	} else
+		dce->dce_name = PSCALLOC(len);
+
 	strncpy(dce->dce_name, name, dce->dce_namelen);
+
+	dce->dce_pino = fcmh_2_fid(d);
+	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
+		    dce->dce_namelen);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
 
