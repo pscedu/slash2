@@ -364,3 +364,45 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	return (0);
 }
+
+
+int
+dircache_lookup(struct fidc_membh *d, const char *name)
+{
+
+	return (0);
+}
+
+/*
+ * Add a name after a successful lookup.
+ */
+int
+dircache_insert(struct fidc_membh *d, const char *name)
+{
+	struct psc_hashbkt *b;
+	struct dircache_ent *dce, *tmpdce;
+
+	dce = psc_pool_get(dircache_ent_pool);
+
+	dce->dce_namelen = strlen(name);
+	strncpy(dce->dce_name, name, dce->dce_namelen);
+
+	b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
+
+	tmpdce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
+		dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
+	if (!tmpdce) {
+		psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+		dce = NULL;
+	}
+
+	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+	return (0);
+}
+
+int
+dircache_delete(struct fidc_membh *d, const char *name)
+{
+
+	return (0);
+}

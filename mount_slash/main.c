@@ -1163,6 +1163,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	rc = dircache_lookup(p, name);
+
 	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 
  out:
