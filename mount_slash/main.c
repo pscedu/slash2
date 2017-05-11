@@ -1101,6 +1101,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
+	pscfs_inum_t inum;
 	struct fidc_membh *p = NULL, *c = NULL;
 	int rc;
 
@@ -1163,7 +1164,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	rc = dircache_lookup(p, name);
+	rc = dircache_lookup(p, name, &inum);
 
 	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 
