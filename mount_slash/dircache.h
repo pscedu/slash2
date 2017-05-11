@@ -163,6 +163,9 @@ struct dircache_expire {
 
 #define	SL_SHORT_NAME	32
 
+#define	DIRCACHE_F_SHORT	0x01
+#define	DIRCACHE_F_STICKY	0x02
+
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
@@ -172,7 +175,8 @@ struct dircache_ent {
 	uint64_t		 dce_ino;
 	uint32_t		 dce_type;
 	uint32_t		 dce_namelen;
-	char			 dce_short[SL_SHORT_NAME];
+	int			 dce_flag;
+	char			 dce_short[SL_SHORT_NAME+1];
 	char			*dce_name;	/* only in look up path */
 };
 

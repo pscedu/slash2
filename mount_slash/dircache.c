@@ -328,8 +328,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_type = dirent->pfd_type;
 		dce->dce_namelen = dirent->pfd_namelen;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
-		dce->dce_key = dircache_hash(dce->dce_pino, 
-		    dce->dce_name, dce->dce_namelen);
+		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
+		    dce->dce_namelen);
 
 		psc_hashent_init(&msl_namecache_hashtbl, dce);
 		b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
@@ -343,10 +343,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 		if (dce) {
-			OPSTAT_INCR("msl.dircache-exist");
+			OPSTAT_INCR("msl.dircache-skip");
 			psc_pool_return(dircache_ent_pool, dce);
 			continue;
 		}
+		OPSTAT_INCR("msl.dircache-insert");
 		psc_dynarray_add(&fci->fcid_ents, dce);
 	}
 

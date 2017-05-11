@@ -1413,8 +1413,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
 	struct srt_readdir_ent *e;
-	struct pscfs_dirent *dirent = NULL;
-	struct psc_dynarray *da_off;
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
