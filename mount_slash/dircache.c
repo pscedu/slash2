@@ -306,11 +306,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 
-		if (dirent->pfd_namelen > SL_SHORT_NAME)
+		if (dirent->pfd_namelen > SL_SHORT_NAME) {
+			OPSTAT_INCR("msl.dircache-longname");
 			continue;
+		}
 		dce = psc_pool_shallowget(dircache_ent_pool);
-		if (!dce)
+		if (!dce) {
+			OPSTAT_INCR("msl.dircache-pool-low");
 			continue;
+		}
 
 		dce->dce_pino = fcmh_2_fid(d);
 		dce->dce_type = dirent->pfd_type;
@@ -325,14 +329,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		tmpdce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 			dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 		if (!tmpdce) {
-			dce = NULL;
 			psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+			dce = NULL;
 		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-		if (dce)
+		if (dce) {
+			OPSTAT_INCR("msl.dircache-exist");
 			psc_pool_return(dircache_ent_pool, dce);
-		else
+		} else
 			psc_dynarray_add(da_off, dce);
 	}
 
