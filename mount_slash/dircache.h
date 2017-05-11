@@ -193,6 +193,8 @@ int	dircache_ent_cmp(const void *, const void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
+int	dircache_ent_cmp(const void *, const void *);
+
 extern struct psc_hashtbl msl_namecache_hashtbl;
 
 

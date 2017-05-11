@@ -1414,54 +1414,15 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 {
 	struct srt_readdir_ent *e;
 	struct pscfs_dirent *dirent = NULL;
+	struct psc_dynarray *da_off;
 	struct sl_fidgen *fgp;
 	struct fidc_membh *f;
 	void *ebase;
-	int i;
-	off_t adj;
+	int i, rc;
 
-
-	/*
- 	 * Stop name cache changes while we populating it.
- 	 *
- 	 * We should limit the number of name cache entries
- 	 * per directory or system wide here. However, when
- 	 * the name is found in the look up path, it must
- 	 * be created for possibly silly renaming support.
- 	 */
-	FCMH_LOCK(d);
-	FCMH_WAIT_BUSY(f, 1);
-
-	if (p->dcp_dirgen != fcmh_2_gen(d)) {
-		OPSTAT_INCR("msl.readdir-all-stale");
-		FCMH_UNBUSY(d, 1);
-		return (-ESTALE);
-	}
-
-	DIRCACHE_WRLOCK(d);
-
-	/*
- 	 * We used to allow an entry to point to a dirent inside the
- 	 * readdir page or allocate its own memory. It is tricky and
- 	 * we can't let the entry to last longer than its associated
- 	 * page.  So let us keep it as simple as possible.
- 	 */
-	for (i = 0, adj = 0; i < nents; i++) {
-		dirent = PSC_AGP(base, adj);
-		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
-	}
-
-	p->dcp_nents = nents;
-	p->dcp_base = base;
-	p->dcp_size = size;
-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
-	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
-	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
-
-	DIRCACHE_ULOCK(d);
-
-	FCMH_UNBUSY(d, 1);
+	rc = dircache_reg_ents(d, p, nents, base, size, eof);
+	if (rc)
+		return (rc);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {

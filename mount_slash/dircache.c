@@ -247,3 +247,105 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 	return (p);
 }
 
+
+/*
+ * Perform a dircache_ent comparison for use by the hash table API to
+ * disambiguate entries with the same hash key.
+ */
+int
+dircache_ent_cmp(const void *a, const void *b) 
+{
+	const struct dircache_ent *da = a, *db = b;
+
+	return (da->dce_pino == db->dce_pino &&
+		da->dce_namelen == db->dce_namelen &&
+		strncmp(da->dce_name, db->dce_name, da->dce_namelen) == 0); 
+}
+
+int
+dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
+    int nents, void *base, size_t size, int eof)
+{
+	struct dircache_ent *dce, *tmpdce;
+	int i;
+	off_t adj;
+	struct pscfs_dirent *dirent = NULL;
+	struct psc_hashbkt *b;
+	struct psc_dynarray *da_off;
+
+	/*
+ 	 * Stop name cache changes while we populating it.
+ 	 *
+ 	 * We should limit the number of name cache entries
+ 	 * per directory or system wide here. However, when
+ 	 * the name is found in the look up path, it must
+ 	 * be created for possibly silly renaming support.
+ 	 */
+	FCMH_LOCK(d);
+	FCMH_WAIT_BUSY(d, 1);
+
+	if (p->dcp_dirgen != fcmh_2_gen(d)) {
+		OPSTAT_INCR("msl.readdir-all-stale");
+		FCMH_UNBUSY(d, 1);
+		return (-ESTALE);
+	}
+
+	da_off = PSCALLOC(sizeof(*da_off));
+	psc_dynarray_init(da_off);
+	psc_dynarray_ensurelen(da_off, nents);
+
+	DIRCACHE_WRLOCK(d);
+
+	/*
+ 	 * We used to allow an entry to point to a dirent inside the
+ 	 * readdir page or allocate its own memory. It is tricky and
+ 	 * we can't let the entry to last longer than its associated
+ 	 * page.  So let us keep it as simple as possible.
+ 	 */
+	for (i = 0, adj = 0; i < nents; i++) {
+		dirent = PSC_AGP(base, adj);
+		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
+
+		if (dirent->pfd_namelen > SL_SHORT_NAME)
+			continue;
+		dce = psc_pool_shallowget(dircache_ent_pool);
+		if (!dce)
+			continue;
+
+		dce->dce_pino = fcmh_2_fid(d);
+		dce->dce_type = dirent->pfd_type;
+		dce->dce_namelen = dirent->pfd_namelen;
+		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
+		dce->dce_key = dircache_hash(dce->dce_pino, 
+		    dce->dce_name, dce->dce_namelen);
+
+		psc_hashent_init(&msl_namecache_hashtbl, dce);
+		b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
+
+		tmpdce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
+			dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
+		if (!tmpdce) {
+			dce = NULL;
+			psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+		}
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+		if (dce)
+			psc_pool_return(dircache_ent_pool, dce);
+		else
+			psc_dynarray_add(da_off, dce);
+	}
+
+	p->dcp_nents = nents;
+	p->dcp_base = base;
+	p->dcp_size = size;
+	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
+	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
+	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
+
+	DIRCACHE_ULOCK(d);
+	FCMH_UNBUSY(d, 1);
+
+	return (0);
+}
