@@ -400,7 +400,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
  * Add a name after a successful lookup.
  */
 void
-dircache_insert(struct fidc_membh *d, const char *name)
+dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
 	int len;
 	struct psc_hashbkt *b;
@@ -422,6 +422,7 @@ dircache_insert(struct fidc_membh *d, const char *name)
 	strncpy(dce->dce_name, name, dce->dce_namelen);
 
 	dce->dce_pino = fcmh_2_fid(d);
+	dce->dce_ino = ino;
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
 

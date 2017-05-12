@@ -171,7 +171,7 @@ struct dircache_ent {
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 
-	slfid_t			 dce_pino;
+	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_type;
 	uint32_t		 dce_namelen;
@@ -200,7 +200,7 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 int	dircache_ent_cmp(const void *, const void *);
 
 int	dircache_lookup(struct fidc_membh *, const char *, uint64_t *);
-void	dircache_insert(struct fidc_membh *, const char *);
+void	dircache_insert(struct fidc_membh *, const char *, uint64_t);
 void	dircache_delete(struct fidc_membh *, const char *);
 
 extern struct psc_hashtbl msl_namecache_hashtbl;

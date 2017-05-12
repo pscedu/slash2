@@ -1172,6 +1172,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	}
 
 	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
+	if (!rc)
+		dircache_insert(p, name, fcmh_2_fid(c));
 
  out:
 
