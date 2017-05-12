@@ -383,7 +383,7 @@ _msl_progallowed(struct pscfs_req *pfr)
  * complex.
  */
 static void
-msl_wait_readdir(struct fidc_membh *p)
+msl_block_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
 	FCMH_WAIT_BUSY(p, 0);
@@ -1733,22 +1733,18 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			    j < p->dcp_nents; j++) {
 				if (off == thisoff)
 					break;
-				poff += PFL_DIRENT_SIZE(
-				    pfd->pfd_namelen);
+				poff += PFL_DIRENT_SIZE( pfd->pfd_namelen);
 				thisoff = pfd->pfd_off;
-				pfd = PSC_AGP(p->dcp_base,
-				    poff);
+				pfd = PSC_AGP(p->dcp_base, poff);
 			}
 
 			/* determine size */
 			for (len = 0; j < p->dcp_nents; j++)  {
-				tlen = PFL_DIRENT_SIZE(
-				    pfd->pfd_namelen);
+				tlen = PFL_DIRENT_SIZE(pfd->pfd_namelen);
 				if (tlen + len > size)
 					break;
 				len += tlen;
-				pfd = PSC_AGP(p->dcp_base,
-				    poff + len);
+				pfd = PSC_AGP(p->dcp_base, poff + len);
 			}
 
 			// XXX I/O: remove from lock
