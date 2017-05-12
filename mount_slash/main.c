@@ -1289,6 +1289,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 				OPSTAT_INCR("msl.delete-marked");
 			}
 		}
+		dircache_delete(p, name);
 	}
 
  out:
@@ -1301,9 +1302,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		pscfs_reply_unlink(pfr, rc);
 	else
 		pscfs_reply_rmdir(pfr, rc);
-
-	if (!rc)
-		dircache_delete(pinum, name);
 
 	if (c)
 		fcmh_op_done(c);
