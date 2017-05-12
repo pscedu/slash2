@@ -480,5 +480,6 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
+	psc_dynarray_remove_item(&fci->fcid_ents, dce);
 	DIRCACHE_ULOCK(d);
 }
