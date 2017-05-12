@@ -383,7 +383,7 @@ _msl_progallowed(struct pscfs_req *pfr)
  * complex.
  */
 static void
-msl_block_readdir(struct fidc_membh *p)
+msl_wait_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
 	FCMH_WAIT_BUSY(p, 0);
