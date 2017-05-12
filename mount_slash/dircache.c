@@ -346,6 +346,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (!tmpdce)
 			psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+	
+		if (strncmp(dirent->pfd_name, "dt-bindings", 11) == 0)
+			psclog_warn("delete");
 
 		if (!tmpdce) {
 			psc_dynarray_add(&fci->fcid_ents, dce);
@@ -472,6 +475,9 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	if (psc_disable_namecache)
 		return;
+
+	if (strncmp(name, "dt-bindings", 11) == 0)
+		psclog_warn("delete");
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
