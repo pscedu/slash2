@@ -1171,6 +1171,10 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		rc = msl_load_fcmh(pfr, inum, &c);
 		if (!rc && sstb)
 			*sstb = c->fcmh_sstb;
+		/*
+ 		 * Should we retry LOOK RPC below in case
+ 		 * the name cache has wrong information?
+ 		 */
 		PFL_GOTOERR(out, rc);
 	}
 
