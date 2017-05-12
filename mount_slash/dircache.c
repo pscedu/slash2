@@ -348,7 +348,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	
 		if (strncmp(dirent->pfd_name, "dt-bindings", 11) == 0)
-			psclog_warn("delete");
+			psclog_warn("insert2");
 
 		if (!tmpdce) {
 			psc_dynarray_add(&fci->fcid_ents, dce);
@@ -400,6 +400,10 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		*ino = dce->dce_ino;
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+	if (dce && strncmp(dce->dce_name, "dt-bindings", 11) == 0)
+		psclog_warn("lookup");
+
 	return (rc);
 }
 
