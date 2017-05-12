@@ -193,7 +193,7 @@ dircache_purge(struct fidc_membh *d)
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
-		if (dce->dce_flag & DIRCACHE_F_SHORT)
+		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(dce->dce_name);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
@@ -347,7 +347,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 		if (dce) {
-			OPSTAT_INCR("msl.dircache-skip");
+			OPSTAT_INCR("msl.dircache-discard");
 			psc_pool_return(dircache_ent_pool, dce);
 			continue;
 		}
@@ -421,8 +421,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	strncpy(dce->dce_name, name, dce->dce_namelen);
 
-	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_ino = ino;
+	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
 
@@ -434,7 +434,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	if (tmpdce) {
 		OPSTAT_INCR("msl.dircache-update");
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
-		if (tmpdce->dce_flag & DIRCACHE_F_SHORT)
+		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(tmpdce->dce_name);
 		psc_pool_return(dircache_ent_pool, tmpdce);
 	}
