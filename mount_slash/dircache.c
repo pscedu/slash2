@@ -399,7 +399,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 /*
  * Add a name after a successful lookup.
  */
-int
+void
 dircache_insert(struct fidc_membh *d, const char *name)
 {
 	int len;
@@ -440,10 +440,9 @@ dircache_insert(struct fidc_membh *d, const char *name)
 
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-	return (0);
 }
 
-int
+void
 dircache_delete(struct fidc_membh *d, const char *name)
 {
 	int len;
@@ -467,5 +466,4 @@ dircache_delete(struct fidc_membh *d, const char *name)
 		OPSTAT_INCR("msl.dircache-delete-nop");
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-	return (0);
 }
