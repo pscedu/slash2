@@ -189,6 +189,7 @@ dircache_purge(struct fidc_membh *d)
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		dircache_free_page(d, p);
 
+	/* (gdb) p fci.u.d.ents */
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
