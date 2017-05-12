@@ -410,10 +410,13 @@ dircache_insert(struct fidc_membh *d, const char *name)
 
 	dce->dce_namelen = len;
 	if (len < SL_SHORT_NAME) {
+		OPSTAT_INCR("msl.dircache-insert-short");
 		dce->dce_flag |= DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
-	} else
+	} else {
+		OPSTAT_INCR("msl.dircache-insert-long");
 		dce->dce_name = PSCALLOC(len);
+	}
 
 	strncpy(dce->dce_name, name, dce->dce_namelen);
 
@@ -427,6 +430,7 @@ dircache_insert(struct fidc_membh *d, const char *name)
 		dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 
 	if (tmpdce) {
+		OPSTAT_INCR("msl.dircache-update");
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (tmpdce->dce_flag & DIRCACHE_F_SHORT)
 			PSCFREE(tmpdce->dce_name);
@@ -444,12 +448,22 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	int len;
 	uint64_t key, pino;
 	struct psc_hashbkt *b;
+	struct dircache_ent *dce, tmpdce;
 
 	len = strlen(name);
-	pino = fcmh_2_fid(d);
-	key = dircache_hash(pino, name, len);
+	tmpdce.dce_name = (char *) name;
+	tmpdce.dce_namelen = len;
+	tmpdce.dce_pino = fcmh_2_fid(d);
+	tmpdce.dce_key = dircache_hash(tmpdce.dce_pino, name, len);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &key);
+	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
+		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
+	if (dce) {
+		OPSTAT_INCR("msl.dircache-delete");
+		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+	} else
+		OPSTAT_INCR("msl.dircache-delete-nop");
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	return (0);
