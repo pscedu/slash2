@@ -181,7 +181,6 @@ int				 msl_newent_inherit_groups = 1;	/* default to BSD behavior */
 
 struct psc_thread		*slcconnthr;
 
-//#define DO_DEBUG
 
 #ifdef DO_DEBUG
 struct sl_fidgen		 debug_fg;	

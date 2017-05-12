@@ -60,6 +60,8 @@ struct psc_poolmgr	*dircache_ent_pool;
 
 struct psc_lockedlist	 msl_dircache_pages_lru;
 
+int	psc_disable_namecache = 1;
+
 /*
  * Initialize per-fcmh dircache structures.
  */
@@ -376,6 +378,9 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
 
+	if (psc_disable_namecache)
+		return (rc);
+
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
 	tmpdce.dce_namelen = len;
@@ -405,6 +410,9 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
+
+	if (psc_disable_namecache)
+		return;
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
@@ -458,6 +466,9 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	struct fcmh_cli_info *fci;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
+
+	if (psc_disable_namecache)
+		return;
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
