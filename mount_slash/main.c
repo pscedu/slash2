@@ -1535,11 +1535,9 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 
-	OPSTAT_INCR("msl.dircache-load-error");
+	OPSTAT_INCR("msl.dircache-load-err");
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
-
-	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
@@ -1547,6 +1545,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		DIRCACHE_WAKE(d);
 	} else
 		DIRCACHE_ULOCK(d);
+
+	psclogs_warnx(SLCSS_FSOP, "READDIR CB: "
+	    "fid="SLPRI_FID" off=%"PSCPRIdOFFT" rc=%d",
+	    fcmh_2_fid(d), p->dcp_off, rc);
 
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	sl_csvc_decref(csvc);
