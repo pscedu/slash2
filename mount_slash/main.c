@@ -1168,7 +1168,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (!rc) {
 		OPSTAT_INCR("msl.dircache-hit");
 		/* will call msl_stat() if necessary */
-		rc = msl_load_fcmh(pfr, inum, fp);
+		rc = msl_load_fcmh(pfr, inum, &c);
 		PFL_GOTOERR(out, rc);
 	}
 
