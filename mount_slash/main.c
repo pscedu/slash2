@@ -1302,6 +1302,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	else
 		pscfs_reply_rmdir(pfr, rc);
 
+	if (!rc)
+		dircache_delete(pinum, name);
 
 	if (c)
 		fcmh_op_done(c);

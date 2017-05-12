@@ -456,8 +456,12 @@ dircache_delete(struct fidc_membh *d, const char *name)
 {
 	int len;
 	uint64_t key;
+	struct fcmh_cli_info *fci;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
+
+	fci = fcmh_get_pri(d);
+	DIRCACHE_WRLOCK(d);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
@@ -475,4 +479,6 @@ dircache_delete(struct fidc_membh *d, const char *name)
 		OPSTAT_INCR("msl.dircache-delete-nop");
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+	DIRCACHE_ULOCK(d);
 }
