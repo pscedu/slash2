@@ -1184,7 +1184,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
 	if (!rc)
 		dircache_insert(p, name, fcmh_2_fid(c));
-
  out:
 
 	if (rc == 0 && fp) {
@@ -2587,7 +2586,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 
 	dircache_delete(op, oldname); 
-	dircache_delete(np, newname); 
+#if 0
+	dircache_insert(np, newname, cfid); 
+#endif
 
  out:
 	pscfs_reply_rename(pfr, rc);

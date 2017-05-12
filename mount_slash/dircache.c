@@ -461,13 +461,13 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 		psc_pool_return(dircache_ent_pool, tmpdce);
 	}
 
-	if (strncmp(name, "dt-bindings", 11) == 0)
-		psclog_warn("insert (%d), pino = %lx", 
-		    (int)strlen(name), dce->dce_pino);
-
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	psc_dynarray_add(&fci->fcid_ents, dce);
+
+	if (strncmp(name, "dt-bindings", 11) == 0)
+		psclog_warn("insert (%d), pino = %lx", 
+		    (int)strlen(name), dce->dce_pino);
 
 	DIRCACHE_ULOCK(d);
 }
