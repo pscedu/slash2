@@ -863,6 +863,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
+	msl_wait_readdir(p);
+
  retry:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (!rc) {
@@ -887,6 +889,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	slc_fcmh_setattr_locked(c, &mp->cattr);
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
+
+	dircache_insert(p, newname, fcmh_2_fid(c));
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
