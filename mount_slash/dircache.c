@@ -329,7 +329,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_ino = dirent->pfd_ino;
 		dce->dce_pino = fcmh_2_fid(d);
 		dce->dce_namelen = dirent->pfd_namelen;
-		dce->dce_flag |= DIRCACHE_F_SHORT;
+		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
@@ -413,6 +413,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	len = strlen(name);
 	dce = psc_pool_get(dircache_ent_pool);
 
+	dce->dce_flag = 0;
 	dce->dce_namelen = len;
 	if (len < SL_SHORT_NAME) {
 		OPSTAT_INCR("msl.dircache-insert-short");
