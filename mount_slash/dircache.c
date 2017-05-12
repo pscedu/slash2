@@ -341,19 +341,17 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		tmpdce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 			dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
-		if (!tmpdce) {
+		if (!tmpdce)
 			psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
-			dce = NULL;
-		}
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-		if (dce) {
+		if (!tmpdce) {
+			psc_dynarray_add(&fci->fcid_ents, dce);
+			OPSTAT_INCR("msl.dircache-insert");
+		} else {
 			OPSTAT_INCR("msl.dircache-discard");
 			psc_pool_return(dircache_ent_pool, dce);
-			continue;
 		}
-		OPSTAT_INCR("msl.dircache-insert");
-		psc_dynarray_add(&fci->fcid_ents, dce);
 	}
 
 	p->dcp_nents = nents;
