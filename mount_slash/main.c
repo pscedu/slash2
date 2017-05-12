@@ -2733,15 +2733,14 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
-	    1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
  retry2:
-	if (rc && slc_rpc_should_retry(pfr, &rc)) {
+	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry1;
-	}
+
 	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
