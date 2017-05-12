@@ -373,12 +373,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 int
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 {
-	int len;
+	int rc = 1, len;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
 
 	len = strlen(name);
-
 	tmpdce.dce_name = (char *) name;
 	tmpdce.dce_namelen = len;
 	tmpdce.dce_pino = fcmh_2_fid(d);
@@ -389,10 +388,12 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 
-	if (dce)
+	if (dce) {
+		rc = 0;
 		*ino = dce->dce_ino;
+	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-	return (0);
+	return (rc);
 }
 
 /*
