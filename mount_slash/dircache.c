@@ -447,7 +447,7 @@ int
 dircache_delete(struct fidc_membh *d, const char *name)
 {
 	int len;
-	uint64_t key, pino;
+	uint64_t key;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
 
