@@ -2581,6 +2581,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * outright as a result of this rename op.
 	 */
 
+	dircache_delete(op, oldname); 
+	dircache_delete(np, newname); 
+
  out:
 	pscfs_reply_rename(pfr, rc);
 
@@ -2759,6 +2762,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	FCMH_ULOCK(c);
 
  out:
+	if (rc)
+		psc_fatal("debug me, p = %p", p);
+		
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
