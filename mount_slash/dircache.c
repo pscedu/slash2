@@ -404,7 +404,11 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
 	int len;
 	struct psc_hashbkt *b;
+	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
+
+	fci = fcmh_get_pri(d);
+	DIRCACHE_WRLOCK(d);
 
 	len = strlen(name);
 	dce = psc_pool_get(dircache_ent_pool);
@@ -441,6 +445,9 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+	psc_dynarray_add(&fci->fcid_ents, dce);
+
+	DIRCACHE_ULOCK(d);
 }
 
 void
