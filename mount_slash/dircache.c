@@ -428,12 +428,12 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	dce->dce_ino = ino;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
-		    dce->dce_namelen);
+	    dce->dce_namelen);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &dce->dce_key);
 
 	tmpdce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
-		dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
+	    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 
 	if (tmpdce) {
 		OPSTAT_INCR("msl.dircache-update");
