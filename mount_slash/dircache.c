@@ -505,7 +505,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	if (strncmp(name, "dt-bindings", 11) == 0)
+	if (dce && strncmp(name, "dt-bindings", 11) == 0)
 		psclog_warn("delete, pino = %lx", tmpdce.dce_pino);
 
 	DIRCACHE_ULOCK(d);
