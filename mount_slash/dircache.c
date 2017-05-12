@@ -403,7 +403,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (dce && strncmp(dce->dce_name, "dt-bindings", 11) == 0)
-		psclog_warn("lookup");
+		psclog_warn("lookup, pino = %lx", tmpdce.dce_pino);
 
 	DIRCACHE_ULOCK(d);
 
@@ -462,7 +462,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	}
 
 	if (strncmp(name, "dt-bindings", 11) == 0)
-		psclog_warn("insert (%d)", (int)strlen(name));
+		psclog_warn("insert (%d), pino = %lx", 
+		    (int)strlen(name), dce->dce_pino);
 
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
@@ -505,7 +506,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (strncmp(name, "dt-bindings", 11) == 0)
-		psclog_warn("delete");
+		psclog_warn("delete, pino = %lx", tmpdce.dce_pino);
 
 	DIRCACHE_ULOCK(d);
 }
