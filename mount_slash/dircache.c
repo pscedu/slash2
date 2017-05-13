@@ -198,6 +198,7 @@ dircache_purge(struct fidc_membh *d)
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(dce->dce_name);
+		dce->dce_flag = DIRCACHE_F_FREED;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	psc_dynarray_free(&fci->fcid_ents);
@@ -358,6 +359,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			OPSTAT_INCR("msl.dircache-insert-readdir");
 		} else {
 			OPSTAT_INCR("msl.dircache-discard-readdir");
+			dce->dce_flag = DIRCACHE_F_FREED;
 			psc_pool_return(dircache_ent_pool, dce);
 		}
 	}
@@ -426,9 +428,9 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
 
-	len = strlen(name);
 	dce = psc_pool_get(dircache_ent_pool);
 
+	len = strlen(name);
 	dce->dce_flag = 0;
 	dce->dce_namelen = len;
 	if (len < SL_SHORT_NAME) {
@@ -514,6 +516,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	if (dce) {
 		if (strncmp(name, "linux-event-codes.h", 17) == 0)
 			psclog_warn("delete, pino = %lx", dce->dce_pino);
+		dce->dce_flag |= DIRCACHE_F_FREED;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 
