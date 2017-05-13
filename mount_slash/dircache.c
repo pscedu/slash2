@@ -198,7 +198,7 @@ dircache_purge(struct fidc_membh *d)
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(dce->dce_name);
-		dce->dce_flag = DIRCACHE_F_FREED;
+		dce->dce_flag |= DIRCACHE_F_FREED;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	psc_dynarray_free(&fci->fcid_ents);
@@ -359,7 +359,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			OPSTAT_INCR("msl.dircache-insert-readdir");
 		} else {
 			OPSTAT_INCR("msl.dircache-discard-readdir");
-			dce->dce_flag = DIRCACHE_F_FREED;
+			dce->dce_flag |= DIRCACHE_F_FREED;
 			psc_pool_return(dircache_ent_pool, dce);
 		}
 	}
@@ -456,6 +456,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	if (tmpdce) {
 		OPSTAT_INCR("msl.dircache-replace");
+		psc_dynarray_removeitem(&fci->fcid_ents, tmpdce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(tmpdce->dce_name);
