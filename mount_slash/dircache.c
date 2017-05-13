@@ -474,7 +474,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 void
 dircache_delete(struct fidc_membh *d, const char *name)
 {
-	int len;
+	int i, len;
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, tmpdce;
@@ -491,12 +491,20 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	tmpdce.dce_pino = fcmh_2_fid(d);
 	tmpdce.dce_key = dircache_hash(tmpdce.dce_pino, name, len);
 
+	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
+		if (!dircache_ent_cmp((const void *)&tmpdce, 
+		                      (const void *)dce))
+			continue;
+		OPSTAT_INCR("msl.dircache-delete-list");
+		psc_dynarray_removeitem(&fci->fcid_ents, dce);
+		break;
+	}
+
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce.dce_key);
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
-		OPSTAT_INCR("msl.dircache-delete");
-		psc_dynarray_removeitem(&fci->fcid_ents, dce);
+		OPSTAT_INCR("msl.dircache-delete-hash");
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 	} else
 		OPSTAT_INCR("msl.dircache-delete-noop");
