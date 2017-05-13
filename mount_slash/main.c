@@ -1282,22 +1282,20 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (!rc) {
-		slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr);
 
-		if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
-		    FIDC_LOOKUP_LOCK, &c, pfr))
-			OPSTAT_INCR("msl.delete-skipped");
-		else {
-			if (mp->valid) {
-				slc_fcmh_setattr_locked(c, &mp->cattr);
-			} else {
-				c->fcmh_flags |= FCMH_DELETED;
-				OPSTAT_INCR("msl.delete-marked");
-			}
+	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
+	    FIDC_LOOKUP_LOCK, &c, pfr))
+		OPSTAT_INCR("msl.delete-skipped");
+	else {
+		if (mp->valid) {
+			slc_fcmh_setattr_locked(c, &mp->cattr);
+		} else {
+			c->fcmh_flags |= FCMH_DELETED;
+			OPSTAT_INCR("msl.delete-marked");
 		}
-		dircache_delete(p, name);
 	}
+	dircache_delete(p, name);
 
  out:
 	if (strncmp(name, "linux-event-codes.h", 17) == 0)
