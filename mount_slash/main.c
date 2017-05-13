@@ -573,8 +573,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
-	if (strncmp(name, "linux-event-codes.h", 17) == 0)
-	psclogs(rc ? PLL_WARN : PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
@@ -1057,8 +1056,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*sstb = f->fcmh_sstb;
 
  out:
-	if (strncmp(name, "linux-event-codes.h", 17) == 0)
-	psclogs_warnx(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
+	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
@@ -1298,8 +1296,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	dircache_delete(p, name);
 
  out:
-	if (strncmp(name, "linux-event-codes.h", 17) == 0)
-	psclogs_warn(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
+	psclogs_diag(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
