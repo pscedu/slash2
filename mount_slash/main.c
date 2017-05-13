@@ -1300,7 +1300,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	}
 
  out:
-	psclogs_diag(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
+	if (strncmp(name, "linux-event-codes.h", 17) == 0)
+	psclogs_warn(SLCSS_FSOP, "UNLINK: pinum="SLPRI_FID" "
 	    "fid="SLPRI_FID" valid=%d name='%s' isfile=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY,
 	    mp ? mp->valid : -1, name, isfile, rc);
