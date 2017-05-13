@@ -1006,7 +1006,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 __static int
-msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
+msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
@@ -1056,7 +1056,8 @@ msl_lookuprpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*sstb = f->fcmh_sstb;
 
  out:
-	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
+	if (strncmp(name, "linux-event-codes.h", 17) == 0)
+	psclogs_warnx(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
@@ -1181,7 +1182,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	rc = msl_lookuprpc(pfr, p, name, fgp, sstb, &c);
+	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
 	if (!rc)
 		dircache_insert(p, name, fcmh_2_fid(c));
  out:
