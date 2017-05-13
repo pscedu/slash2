@@ -500,7 +500,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 		psc_dynarray_removeitem(&fci->fcid_ents, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 	} else
-		OPSTAT_INCR("msl.dircache-delete-nop");
+		OPSTAT_INCR("msl.dircache-delete-noop");
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
