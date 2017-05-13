@@ -573,7 +573,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
-	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	if (strncmp(name, "linux-event-codes.h", 17) == 0)
+	psclogs(rc ? PLL_WARN : PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
