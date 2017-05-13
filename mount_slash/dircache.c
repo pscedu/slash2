@@ -373,15 +373,16 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	return (0);
 }
 
-int
+void
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 {
-	int rc = 1, len;
+	int len;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
 
+	*ino = 0;
 	if (psc_disable_namecache)
-		return (rc);
+		return;
 
 	DIRCACHE_WRLOCK(d);
 	len = strlen(name);
@@ -394,19 +395,15 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
-
-	if (dce) {
-		rc = 0;
+	if (dce)
 		*ino = dce->dce_ino;
-	}
+
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (dce && strncmp(dce->dce_name, "linux-event-codes.h", 17) == 0)
 		psclog_warn("lookup, pino = %lx", dce->dce_pino);
 
 	DIRCACHE_ULOCK(d);
-
-	return (rc);
 }
 
 /*
