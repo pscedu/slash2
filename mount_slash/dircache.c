@@ -323,12 +323,12 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
-			OPSTAT_INCR("msl.dircache-longname");
+			OPSTAT_INCR("msl.dircache-skip-long");
 			continue;
 		}
 		dce = psc_pool_shallowget(dircache_ent_pool);
 		if (!dce) {
-			OPSTAT_INCR("msl.dircache-pool-low");
+			OPSTAT_INCR("msl.dircache-skip-pool");
 			continue;
 		}
 

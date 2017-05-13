@@ -1169,7 +1169,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	dircache_lookup(p, name, &inum);
 	if (inum) {
-		OPSTAT_INCR("msl.dircache-hit");
+		OPSTAT_INCR("msl.dircache-lookup-hit");
 		/* will call msl_stat() if necessary */
 		rc = msl_load_fcmh(pfr, inum, &c);
 		if (!rc) {
@@ -1181,7 +1181,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
  		 * Retry LOOK RPC below in case the name 
  		 * cache has wrong information.
  		 */
-		OPSTAT_INCR("msl.dircache-hit-retry");
+		OPSTAT_INCR("msl.dircache-lookup-retry");
 	}
 
 	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
