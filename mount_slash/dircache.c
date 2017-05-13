@@ -319,6 +319,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 
+		if (psc_disable_namecache)
+			continue;
+
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-longname");
 			continue;
@@ -352,9 +355,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		if (!tmpdce) {
 			psc_dynarray_add(&fci->fcid_ents, dce);
-			OPSTAT_INCR("msl.dircache-insert");
+			OPSTAT_INCR("msl.dircache-insert-readdir");
 		} else {
-			OPSTAT_INCR("msl.dircache-discard");
+			OPSTAT_INCR("msl.dircache-discard-readdir");
 			psc_pool_return(dircache_ent_pool, dce);
 		}
 	}
