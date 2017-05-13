@@ -475,7 +475,6 @@ void
 dircache_delete(struct fidc_membh *d, const char *name)
 {
 	int len;
-	uint64_t key;
 	struct fcmh_cli_info *fci;
 	struct psc_hashbkt *b;
 	struct dircache_ent *dce, tmpdce;
@@ -492,7 +491,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	tmpdce.dce_pino = fcmh_2_fid(d);
 	tmpdce.dce_key = dircache_hash(tmpdce.dce_pino, name, len);
 
-	b = psc_hashbkt_get(&msl_namecache_hashtbl, &key);
+	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce.dce_key);
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
