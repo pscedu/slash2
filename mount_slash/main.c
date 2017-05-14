@@ -1463,6 +1463,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	DIRCACHE_WRLOCK(d);
 	dircache_reg_ents(d, p, nents, base, size, eof);
 	DIRCACHE_ULOCK(d);
+	FCMH_UNBUSY(d, 1);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
@@ -1514,7 +1515,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	 */
 	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
 #endif
-	FCMH_UNBUSY(d, 1);
 	return (0);
 }
 

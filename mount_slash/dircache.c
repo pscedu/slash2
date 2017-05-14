@@ -290,6 +290,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	struct pscfs_dirent *dirent = NULL;
 	struct psc_hashbkt *b;
 
+	DIRCACHE_WRLOCK(d);
 	fci = fcmh_get_pri(d);
 	/*
  	 * We used to allow an entry to point to a dirent inside the
@@ -357,6 +358,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
+	DIRCACHE_ULOCK(d);
 }
 
 void
