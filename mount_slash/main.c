@@ -1458,7 +1458,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		 * already exist. Otherwise, we might accept stale attributes.
 		 */
 		if (!sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
-		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK, &f, NULL)) {
+		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
+		    &f, NULL)) {
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
 #if 0

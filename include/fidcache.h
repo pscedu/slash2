@@ -237,6 +237,7 @@ void	sl_freapthr_spawn(int, const char *);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* create if not present */
 #define FIDC_LOOKUP_LOAD		(1 << 1)	/* use external fetching mechanism */
 #define FIDC_LOOKUP_LOCK		(1 << 2)	/* leave locked upon return */
+#define FIDC_LOOKUP_EXCL		(1 << 4)	/* ensure that this call creates */
 
 int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
 	    int, struct fidc_membh **, void *);
