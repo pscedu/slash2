@@ -1462,7 +1462,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 	DIRCACHE_WRLOCK(d);
 	dircache_reg_ents(d, p, nents, base, size, eof);
-	DIRCACHE_WRLOCK(d);
+	DIRCACHE_ULOCK(d);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
