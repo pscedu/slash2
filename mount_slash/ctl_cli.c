@@ -982,8 +982,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
 
-	psc_ctlparam_register_var("sys.disable_namecache", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &msl_disable_namecache);
+	psc_ctlparam_register_var("sys.enable_namecache", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_enable_namecache);
 
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);

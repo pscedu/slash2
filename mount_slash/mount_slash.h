@@ -388,7 +388,7 @@ extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
-extern int			 msl_disable_namecache;
+extern int			 msl_enable_namecache;
 extern int			 msl_force_dio;
 extern int			 msl_map_enable;
 extern int			 msl_bmap_reassign;
