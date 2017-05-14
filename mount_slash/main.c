@@ -1462,9 +1462,10 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    &f, NULL); 
 
 		if (rc) {
-			OPSTAT_INCR("msl.readdir-fcmh-skip");
+			OPSTAT_INCR("msl.readdir-fcmh-excl");
 			continue;
 		}
+		OPSTAT_INCR("msl.readdir-fcmh");
 		slc_fcmh_setattr_locked(f, &e->sstb);
 
 #if 0
