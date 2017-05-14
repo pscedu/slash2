@@ -323,6 +323,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (msl_disable_namecache)
 			continue;
 
+#if 0
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
 			continue;
@@ -364,6 +365,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			dce->dce_flag |= DIRCACHE_F_FREED;
 			psc_pool_return(dircache_ent_pool, dce);
 		}
+#endif
+
 	}
 
 	p->dcp_nents = nents;
