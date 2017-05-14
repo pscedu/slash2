@@ -60,7 +60,7 @@ struct psc_poolmgr	*dircache_ent_pool;
 
 struct psc_lockedlist	 msl_dircache_pages_lru;
 
-int	psc_disable_namecache = 0;
+int	msl_disable_namecache = 1;
 
 /*
  * Initialize per-fcmh dircache structures.
@@ -320,7 +320,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dirent = PSC_AGP(base, adj);
 		adj += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 
-		if (psc_disable_namecache)
+		if (msl_disable_namecache)
 			continue;
 
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
@@ -388,7 +388,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	struct dircache_ent *dce, tmpdce;
 
 	*ino = 0;
-	if (psc_disable_namecache)
+	if (msl_disable_namecache)
 		return;
 
 	DIRCACHE_WRLOCK(d);
@@ -426,7 +426,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
 
-	if (psc_disable_namecache)
+	if (msl_disable_namecache)
 		return;
 
 	fci = fcmh_get_pri(d);
@@ -488,7 +488,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, tmpdce;
 
-	if (psc_disable_namecache)
+	if (msl_disable_namecache)
 		return;
 
 	fci = fcmh_get_pri(d);
