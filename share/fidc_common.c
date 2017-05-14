@@ -231,6 +231,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		psc_assert(fid == fcmh_2_fid(f));
 
 		if (flags & FIDC_LOOKUP_EXCL) {
+			FCMH_ULOCK(f);
 			psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 			return (EEXIST);
 		}
