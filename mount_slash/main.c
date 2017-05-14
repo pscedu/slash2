@@ -1172,6 +1172,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	msl_wait_readdir(p);
 	dircache_lookup(p, name, &inum);
 	if (inum) {
 		OPSTAT_INCR("msl.dircache-lookup-hit");
@@ -1459,7 +1460,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		FCMH_UNBUSY(d, 1);
 		return (-ESTALE);
 	}
-
 	dircache_reg_ents(d, p, nents, base, size, eof);
 	FCMH_UNBUSY(d, 1);
 
