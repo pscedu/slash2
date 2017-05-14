@@ -1259,6 +1259,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	msl_wait_readdir(p);
+	
 	/*
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.

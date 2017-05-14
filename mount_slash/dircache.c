@@ -323,7 +323,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (!msl_enable_namecache)
 			continue;
 
-#if 0
+#if 1
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
 			continue;
