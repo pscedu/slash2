@@ -1036,6 +1036,8 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
+
 	/*
 	 * Add the inode to the cache first, otherwise pscfs may come to
 	 * us with another request for the inode since it won't yet be
@@ -1185,8 +1187,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	}
 
 	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
-	if (!rc)
-		dircache_insert(p, name, fcmh_2_fid(c));
  out:
 
 	if (rc == 0 && fp) {
