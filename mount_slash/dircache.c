@@ -279,37 +279,18 @@ dircache_ent_cmp(const void *a, const void *b)
 		strncmp(da->dce_name, db->dce_name, da->dce_namelen) == 0); 
 }
 
-int
+void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int nents, void *base, size_t size, int eof)
 {
 	struct dircache_ent *dce, *tmpdce;
 	int i;
 	off_t adj;
-	struct pscfs_dirent *dirent = NULL;
 	struct fcmh_cli_info *fci;
+	struct pscfs_dirent *dirent = NULL;
 	struct psc_hashbkt *b;
 
-	/*
- 	 * Stop name cache changes while we populating it.
- 	 *
- 	 * We should limit the number of name cache entries
- 	 * per directory or system wide here. However, when
- 	 * the name is found in the look up path, it must
- 	 * be created for possibly silly renaming support.
- 	 */
-	FCMH_LOCK(d);
-	FCMH_WAIT_BUSY(d, 1);
-
-	if (p->dcp_dirgen != fcmh_2_gen(d)) {
-		OPSTAT_INCR("msl.readdir-all-stale");
-		FCMH_UNBUSY(d, 1);
-		return (-ESTALE);
-	}
-
 	fci = fcmh_get_pri(d);
-	DIRCACHE_WRLOCK(d);
-
 	/*
  	 * We used to allow an entry to point to a dirent inside the
  	 * readdir page or allocate its own memory. It is tricky and
@@ -376,11 +357,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
-
-	DIRCACHE_ULOCK(d);
-	FCMH_UNBUSY(d, 1);
-
-	return (0);
 }
 
 void

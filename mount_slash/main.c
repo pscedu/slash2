@@ -1443,9 +1443,26 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	void *ebase;
 	int i, rc;
 
-	rc = dircache_reg_ents(d, p, nents, base, size, eof);
-	if (rc)
-		return (rc);
+	/*
+ 	 * Stop name cache changes while we populating it.
+ 	 *
+ 	 * We should limit the number of name cache entries
+ 	 * per directory or system wide here. However, when
+ 	 * the name is found in the look up path, it must
+ 	 * be created for possibly silly renaming support.
+ 	 */
+	FCMH_LOCK(d);
+	FCMH_WAIT_BUSY(d, 1);
+
+	if (p->dcp_dirgen != fcmh_2_gen(d)) {
+		OPSTAT_INCR("msl.readdir-all-stale");
+		FCMH_UNBUSY(d, 1);
+		return (-ESTALE);
+	}
+
+	DIRCACHE_WRLOCK(d);
+	dircache_reg_ents(d, p, nents, base, size, eof);
+	DIRCACHE_WRLOCK(d);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
@@ -1497,6 +1514,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	 */
 	p->dcp_base = psc_realloc(p->dcp_base, size, 0);
 #endif
+	FCMH_UNBUSY(d, 1);
 	return (0);
 }
 

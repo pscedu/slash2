@@ -188,7 +188,7 @@ void	dircache_mgr_destroy(void);
 void	dircache_mgr_init(void);
 void	dircache_init(struct fidc_membh *);
 void	dircache_purge(struct fidc_membh *);
-int	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, 
+void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, 
 	    int, void *, size_t, int);
 void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),
