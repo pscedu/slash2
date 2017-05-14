@@ -1058,7 +1058,8 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*sstb = f->fcmh_sstb;
 
  out:
-	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
+	if (rc)
+	psclogs_warn(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
 
