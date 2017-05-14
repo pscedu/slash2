@@ -1460,9 +1460,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		return (-ESTALE);
 	}
 
-	DIRCACHE_WRLOCK(d);
 	dircache_reg_ents(d, p, nents, base, size, eof);
-	DIRCACHE_ULOCK(d);
 	FCMH_UNBUSY(d, 1);
 
 	ebase = PSC_AGP(base, size);
