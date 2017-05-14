@@ -949,6 +949,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
 
+	msl_wait_readdir(p);
+
  retry1:
 
 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
