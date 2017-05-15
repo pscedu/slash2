@@ -1172,7 +1172,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_wait_readdir(p);
 	dircache_lookup(p, name, &inum);
 	if (inum) {
 		OPSTAT_INCR("msl.dircache-lookup-hit");
@@ -1267,6 +1266,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * and store the silly name into the fcmh.
  	 */
 
+	/*
+ 	 * FixMe: The MDS should bump the generation number of the directory
+ 	 * after an unlink/rmdir.
+ 	 */
  retry:
 	if (isfile)
 		MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
