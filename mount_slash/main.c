@@ -385,9 +385,7 @@ static void
 msl_wait_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
-	FCMH_WAIT_BUSY(p, 0);
 	fcmh_2_gen(p)++;
-	FCMH_UNBUSY(p, 0);
 	FCMH_ULOCK(p);
 }
 
@@ -1456,15 +1454,13 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
  	 * be created for possibly silly renaming support.
  	 */
 	FCMH_LOCK(d);
-	FCMH_WAIT_BUSY(d, 1);
-
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
 		OPSTAT_INCR("msl.readdir-all-stale");
-		FCMH_UNBUSY(d, 1);
+		FCMH_ULOCK(d);
 		return (-ESTALE);
 	}
 	dircache_reg_ents(d, p, nents, base, size, eof);
-	FCMH_UNBUSY(d, 1);
+	FCMH_ULOCK(d);
 
 	ebase = PSC_AGP(base, size);
 	for (i = 0, e = ebase; i < nents; i++, e++) {
