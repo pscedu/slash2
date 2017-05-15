@@ -86,7 +86,11 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 		    fcmh_2_gen(f), sstb->sst_gen);
 		goto out;
 	}
-	if (fcmh_isdir(f))
+	/*
+ 	 * Make sure that our generation number always goes up.
+ 	 * Currently, the MDS does not bump it at least for unlink.
+ 	 */
+	if (fcmh_isdir(f) && sstb->sst_gen < fcmh_2_gen(f))
 	    sstb->sst_gen = fcmh_2_gen(f);
 
 	/*
