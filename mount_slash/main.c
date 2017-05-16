@@ -1453,8 +1453,8 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		FCMH_ULOCK(d);
 		return (-ESTALE);
 	}
-	dircache_reg_ents(d, p, nents, base, size, eof);
 	FCMH_ULOCK(d);
+	dircache_reg_ents(d, p, nents, base, size, eof);
 #if 0
 	/*
 	 * We could free unused space here but we would have to adjust
