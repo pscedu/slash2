@@ -1485,7 +1485,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		    &f, NULL); 
 
 		if (rc) {
-			OPSTAT_INCR("msl.readdir-fcmh-excl");
+			OPSTAT_INCR("msl.readdir-fcmh-exist");
 			continue;
 		}
 		OPSTAT_INCR("msl.readdir-fcmh");
