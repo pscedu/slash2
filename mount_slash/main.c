@@ -2619,9 +2619,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 
 	dircache_delete(op, oldname); 
-#if 0
-	dircache_insert(np, newname, cfid); 
-#endif
+	if (child)
+		dircache_insert(np, newname, fcmh_2_fid(child)); 
 
  out:
 	pscfs_reply_rename(pfr, rc);
