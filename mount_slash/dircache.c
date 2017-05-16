@@ -468,7 +468,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	dce = psc_pool_get(dircache_ent_pool);
 
 	len = strlen(name);
-	dce->dce_flag = 0;
+	dce->dce_flag = DIRCACHE_F_STICKY;
 	dce->dce_namelen = len;
 	if (len < SL_SHORT_NAME) {
 		OPSTAT_INCR("msl.dircache-insert-short");
