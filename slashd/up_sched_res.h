@@ -63,8 +63,6 @@ struct slm_update_generic {
 	struct psc_listentry		 upg_lentry;
 };
 
-#define UPD_CALLERINFO()		PFL_CALLERINFOSS(SLMSS_UPSCH)
-
 #define UPD_LOCK(upd)			spinlock(&(upd)->upd_lock)
 #define UPD_ULOCK(upd)			freelock(&(upd)->upd_lock)
 
