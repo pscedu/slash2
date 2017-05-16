@@ -1439,12 +1439,6 @@ int
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
     int eof, int nents, int size, void *base)
 {
-	struct srt_readdir_ent *e;
-	struct sl_fidgen *fgp;
-	struct fidc_membh *f;
-	void *ebase;
-	int i, rc;
-
 	/*
  	 * Stop name cache changes while we populating it.
  	 *
@@ -1461,53 +1455,6 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	}
 	dircache_reg_ents(d, p, nents, base, size, eof);
 	FCMH_ULOCK(d);
-
-	ebase = PSC_AGP(base, size);
-	for (i = 0, e = ebase; i < nents; i++, e++) {
-		fgp = &e->sstb.sst_fg;
-		if (fgp->fg_fid == FID_ANY || fgp->fg_fid == 0) {
-			DEBUG_SSTB(PLL_WARN, &e->sstb,
-			    "invalid readdir prefetch FID ent=%d "
-			    "parent@%p="SLPRI_FID, i, d, fcmh_2_fid(d));
-			continue;
-		}
-
-		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
-		/*
-		 * Possibly limit the number of fcmh we can create to
-		 * avoid memory pressure.
-		 *
-		 * Create a fcmh only when it does not already exist. 
-		 * Otherwise, we might accept stale attributes.
-		 *
-		 * XXX What if an readdir RPC comes back very late
-		 * and we have fcmh update in bewteen?
-		 */
-		rc = sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
-		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
-		    &f, NULL); 
-
-		if (rc) {
-			OPSTAT_INCR("msl.readdir-fcmh-exist");
-			continue;
-		}
-		OPSTAT_INCR("msl.readdir-fcmh");
-		slc_fcmh_setattr_locked(f, &e->sstb);
-
-#if 0
-		/*
-		 * Race: entry was entered into namecache, file
-		 * system unlink occurred, then we tried to
-		 * refresh stat(2) attributes.  This is OK
-		 * however, since namecache is synchronized with
-		 * unlink, we just did extra work here.
-		 */
-		psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
-#endif
-
-		msl_fcmh_stash_xattrsize(f, e->xattrsize);
-		fcmh_op_done(f);
-	}
 #if 0
 	/*
 	 * We could free unused space here but we would have to adjust
