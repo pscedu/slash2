@@ -2812,6 +2812,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
+	dircache_insert(p, name, fcmh_2_fid(c));
+
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
