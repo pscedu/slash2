@@ -2511,8 +2511,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				rc = msl_lookup_fidcache(pfr, &pcr,
 				    npinum, newname, &dstfg, &dstsstb,
 				    NULL);
-				if (rc == 0 &&
-				    dstsstb.sst_uid != pcr.pcr_uid)
+				if (rc == 0 && dstsstb.sst_uid != pcr.pcr_uid)
 					rc = EACCES;
 				else
 					rc = 0;
