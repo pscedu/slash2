@@ -382,7 +382,7 @@ _msl_progallowed(struct pscfs_req *pfr)
  * complex.
  */
 static void
-msl_wait_readdir(struct fidc_membh *p)
+msl_block_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
 	fcmh_2_gen(p)++;
@@ -861,7 +861,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	msl_wait_readdir(p);
+	msl_block_readdir(p);
 
  retry:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_LINK, rq, mq, mp, rc);
@@ -947,7 +947,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
 
-	msl_wait_readdir(p);
+	msl_block_readdir(p);
 
  retry1:
 
@@ -1257,7 +1257,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_wait_readdir(p);
+	msl_block_readdir(p);
 	
 	/*
  	 * Look up the name cache, if found the file is open, do a silly remame
@@ -1374,7 +1374,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_wait_readdir(p);
+	msl_block_readdir(p);
 
  retry1:
 
@@ -2481,8 +2481,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
-	msl_wait_readdir(op);
-	msl_wait_readdir(np);
+	msl_block_readdir(op);
+	msl_block_readdir(np);
 
  retry1:
 	MSL_RMC_NEWREQ(np, csvc, SRMT_RENAME, rq, mq, mp, rc);
@@ -2709,7 +2709,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_wait_readdir(p);
+	msl_block_readdir(p);
 
 #if 0
 	psclogs_warn(SLCSS_FSOP, "start 2 SYMLINK: pfid="SLPRI_FID" "
