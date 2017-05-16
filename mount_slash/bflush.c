@@ -184,7 +184,7 @@ bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 }
 
 void
-_bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
+bmap_flushq_wake(int reason)
 {
 	int wake = 0;
 
