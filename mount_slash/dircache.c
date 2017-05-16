@@ -316,6 +316,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 		}
 
+		psc_assert(dirent->pfd_ino);
 		dce->dce_ino = dirent->pfd_ino;
 		dce->dce_pino = fcmh_2_fid(d);
 		dce->dce_namelen = dirent->pfd_namelen;
@@ -429,6 +430,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	strncpy(dce->dce_name, name, dce->dce_namelen);
 
+	/* fuse treats zero node ID as ENOENT */
+	psc_assert(ino);
 	dce->dce_ino = ino;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
