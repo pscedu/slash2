@@ -861,8 +861,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	    FID_GET_SITEID(fcmh_2_fid(c)))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	msl_block_readdir(p);
-
  retry:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (!rc) {
@@ -888,6 +886,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
+	msl_block_readdir(p);
 	dircache_insert(p, newname, fcmh_2_fid(c));
 
  out:
@@ -946,8 +945,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
-
-	msl_block_readdir(p);
 
  retry1:
 
@@ -1036,6 +1033,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	msl_block_readdir(p);
 	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
 
 	/*
@@ -1257,8 +1255,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_block_readdir(p);
-	
 	/*
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.
@@ -1301,6 +1297,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			OPSTAT_INCR("msl.delete-marked");
 		}
 	}
+	msl_block_readdir(p);
 	dircache_delete(p, name);
 
  out:
@@ -1373,8 +1370,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	msl_block_readdir(p);
 
  retry1:
 
@@ -2481,9 +2476,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 	}
 
-	msl_block_readdir(op);
-	msl_block_readdir(np);
-
  retry1:
 	MSL_RMC_NEWREQ(np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
@@ -2566,9 +2558,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * outright as a result of this rename op.
 	 */
 
+	msl_block_readdir(op);
 	dircache_delete(op, oldname); 
-	if (child)
+	if (child) {
+		msl_block_readdir(np);
 		dircache_insert(np, newname, fcmh_2_fid(child)); 
+	}
 
  out:
 	pscfs_reply_rename(pfr, rc);
@@ -2709,8 +2704,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_block_readdir(p);
-
 #if 0
 	psclogs_warn(SLCSS_FSOP, "start 2 SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
@@ -2759,6 +2752,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
+	msl_block_readdir(p);
 	dircache_insert(p, name, fcmh_2_fid(c));
 
  out:
