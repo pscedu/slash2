@@ -1477,8 +1477,11 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		 * Possibly limit the number of fcmh we can create to
 		 * avoid memory pressure.
 		 *
-		 * XXX we should probably only do this when the fcmh does not
-		 * already exist. Otherwise, we might accept stale attributes.
+		 * Create a fcmh only when it does not already exist. 
+		 * Otherwise, we might accept stale attributes.
+		 *
+		 * XXX What if an readdir RPC comes back very late
+		 * and we have fcmh update in bewteen?
 		 */
 		rc = sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
 		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
@@ -1642,8 +1645,7 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	 * contents can fit directly in the reply message.
 	 */
 	rq->rq_bulk_abortable = 1;
-	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov,
-	    1);
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
