@@ -178,7 +178,7 @@ struct dircache_ent {
 	uint32_t		 dce_namelen;
 	int			 dce_flag;
 	char			 dce_short[SL_SHORT_NAME];
-	char			*dce_name;	/* only in look up path */
+	char			*dce_name;
 };
 
 struct dircache_page *
