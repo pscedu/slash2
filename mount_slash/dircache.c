@@ -257,6 +257,8 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 	p->dcp_off = off;
 	pll_addtail(&fci->fci_dc_pages, p);
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
+	if (!block)
+		p->dcp_flags |= DIRCACHEPGF_ASYNC;
 	p->dcp_refcnt++;
 	p->dcp_dirgen = fcmh_2_gen(d);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "incref");

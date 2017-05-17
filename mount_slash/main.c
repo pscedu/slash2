@@ -1473,7 +1473,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
 	char buf[PSCRPC_NIDSTR_SIZE];
-	int rc;
+	int rc, async;
 	size_t len;
 
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
@@ -1509,8 +1509,9 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	p->dcp_rc = rc;
 	p->dcp_refcnt--;
+	async = p->dcp_flags & DIRCACHEPGF_ASYNC;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
@@ -1522,11 +1523,20 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	} else
 		DIRCACHE_ULOCK(d);
 
-	if (rc) {
-		OPSTAT_INCR("msl.dircache-load-err");
-		psclogs_warnx(SLCSS_FSOP, "READDIR CB: "
+	if (!rc) {
+		if (async)
+			OPSTAT_INCR("msl.dircache-load-async-ok");
+		else
+			OPSTAT_INCR("msl.dircache-load-sync-ok");
+	} else {
+		if (async)
+			OPSTAT_INCR("msl.dircache-load-async-err");
+		else
+			OPSTAT_INCR("msl.dircache-load-sync-err");
+		psclogs_warnx(SLCSS_FSOP, "READDIR CB (%s):"
 		    "fid="SLPRI_FID" off=%"PSCPRIdOFFT" rc=%d",
-		    fcmh_2_fid(d), p->dcp_off, rc);
+		    async ? "async" : "sync", fcmh_2_fid(d), 
+		    p->dcp_off, rc);
 	}
 
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
