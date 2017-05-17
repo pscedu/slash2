@@ -253,6 +253,7 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 		break;
 
 	/* only retry for a limited number of times */
+	case EAGAIN:
 	case ETIMEDOUT:
 	case PFLERR_TIMEDOUT:
 		/* XXX track on per IOS/MDS basis */

@@ -1445,7 +1445,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
 		OPSTAT_INCR("msl.readdir-all-stale");
 		FCMH_ULOCK(d);
-		return (-ESTALE);
+		return (-EAGAIN);
 	}
 	FCMH_ULOCK(d);
 	dircache_reg_ents(d, p, nents, base, size, eof);
