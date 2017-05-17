@@ -1440,6 +1440,16 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
  	 * per directory or system wide here. However, when
  	 * the name is found in the look up path, it must
  	 * be created for possibly silly renaming support.
+ 	 *
+ 	 * 05/16/2017:
+ 	 *
+ 	 * bash-4.2# msctl -p opstats | grep opstats.msl.dircache-load-sync-err
+ 	 * opstats.msl.dircache-load-sync-err                      54
+ 	 *
+ 	 * I get some EAGAIN for synchronous load, which I am
+ 	 * not sure why.  When a readdir happens, there should
+ 	 * not be any concurrent name space modification. Maybe
+ 	 * this is due to generation number bug in the MDS.
  	 */
 	FCMH_LOCK(d);
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
