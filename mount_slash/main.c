@@ -382,7 +382,7 @@ _msl_progallowed(struct pscfs_req *pfr)
  * complex.
  */
 static void
-msl_block_readdir(struct fidc_membh *p)
+msl_invalidate_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
 	fcmh_2_gen(p)++;
@@ -886,7 +886,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
-	msl_block_readdir(p);
+	msl_invalidate_readdir(p);
 	dircache_insert(p, newname, fcmh_2_fid(c));
 
  out:
@@ -1033,7 +1033,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_block_readdir(p);
+	msl_invalidate_readdir(p);
 	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
 
 	/*
@@ -1297,7 +1297,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			OPSTAT_INCR("msl.delete-marked");
 		}
 	}
-	msl_block_readdir(p);
+	msl_invalidate_readdir(p);
 	dircache_delete(p, name);
 
  out:
@@ -2558,10 +2558,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * outright as a result of this rename op.
 	 */
 
-	msl_block_readdir(op);
+	msl_invalidate_readdir(op);
 	dircache_delete(op, oldname); 
 	if (child) {
-		msl_block_readdir(np);
+		msl_invalidate_readdir(np);
 		dircache_insert(np, newname, fcmh_2_fid(child)); 
 	}
 
@@ -2752,7 +2752,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
-	msl_block_readdir(p);
+	msl_invalidate_readdir(p);
 	dircache_insert(p, name, fcmh_2_fid(c));
 
  out:
