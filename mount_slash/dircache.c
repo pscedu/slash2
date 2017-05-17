@@ -310,9 +310,12 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (!msl_enable_namecache)
 			continue;
 
-#if 1
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
+			continue;
+		}
+		if (dirent->pfd_ino == FID_ANY || dirent->pfd_ino == 0) {
+			OPSTAT_INCR("msl.dircache-skip-fid");
 			continue;
 		}
 		dce = psc_pool_shallowget(dircache_ent_pool);
@@ -349,17 +352,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_pool_return(dircache_ent_pool, dce);
 			continue;
 		}
-#endif
 
 		fgp = &e->sstb.sst_fg;
 		psc_assert(dce->dce_ino == fgp->fg_fid);
-
-		if (fgp->fg_fid == FID_ANY || fgp->fg_fid == 0) {
-			DEBUG_SSTB(PLL_WARN, &e->sstb,
-			    "invalid readdir prefetch FID ent=%d "
-			    "parent@%p="SLPRI_FID, i, d, fcmh_2_fid(d));
-			continue;
-		}
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 		/*
