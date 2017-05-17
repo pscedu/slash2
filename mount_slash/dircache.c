@@ -283,16 +283,16 @@ void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int nents, void *base, size_t size, int eof)
 {
-	struct dircache_ent *dce, *tmpdce;
 	int i, rc;
-	struct fidc_membh *f;
 	off_t adj;
-	struct sl_fidgen *fgp;
-	struct fcmh_cli_info *fci;
-	struct pscfs_dirent *dirent = NULL;
-	struct psc_hashbkt *b;
-	struct srt_readdir_ent *e;
 	void *ebase;
+	struct fidc_membh *f;
+	struct psc_hashbkt *b;
+	struct sl_fidgen *fgp;
+	struct srt_readdir_ent *e;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *dce, *tmpdce;
+	struct pscfs_dirent *dirent = NULL;
 
 	DIRCACHE_WRLOCK(d);
 	fci = fcmh_get_pri(d);
