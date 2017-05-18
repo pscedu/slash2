@@ -1210,7 +1210,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 #if 1
 
 __static void
-msl_clear_sillyname(struct fidc_membh *f)
+msl_remove_sillyname(struct fidc_membh *f)
 {
 	struct fidc_membh *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
@@ -2271,6 +2271,7 @@ mfh_decref(struct msl_fhent *mfh)
 	MFH_LOCK_ENSURE(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
+		msl_remove_sillyname(mfh->mfh_fcmh);
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(msl_mfh_pool, mfh);
 	} else
