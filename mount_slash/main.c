@@ -1210,9 +1210,9 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 #if 1
 
 __static void
-msl_clear_sillyrename(struct fidc_membh *f)
+msl_clear_sillyname(struct fidc_membh *f)
 {
-	struct fidc_membh *c = NULL, *p = NULL;
+	struct fidc_membh *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_unlink_rep *mp = NULL;
@@ -1248,7 +1248,7 @@ msl_clear_sillyrename(struct fidc_membh *f)
 }
 
 __static int
-msl_sillyrename(struct fidc_membh *f, pscfs_inum_t pinum, const char *name, 
+msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name, 
     struct fidc_membh *c)
 {
 	int rc, len;
@@ -1275,7 +1275,7 @@ msl_sillyrename(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (!rc)
+	if (!rc) {
 		fci = fcmh_2_fci(c);
 		fci->fci_pino = pinum;
 		fci->fci_name = newname;
@@ -1367,7 +1367,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			goto retry;
 		}
 
-		rc = msl_sillyrename(p, pinum, name, c);
+		rc = msl_create_sillyname(p, pinum, name, c);
 		PFL_GOTOERR(out, rc);
 	}
 
