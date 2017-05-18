@@ -103,8 +103,9 @@ dircache_mgr_init(void)
 	    &dircache_page_poolmaster);
 
 	psc_poolmaster_init(&dircache_ent_poolmaster,
-	    struct dircache_ent, dce_lentry, PPMF_AUTO, DIRCACHE_NPAGES,
-	    DIRCACHE_NPAGES, 0, NULL, "dircachent");
+	    struct dircache_ent, dce_lentry, PPMF_AUTO, 
+	    DIRCACHE_NAMECACHE, DIRCACHE_NAMECACHE, 0, NULL, 
+	    "dircachent");
 	dircache_ent_pool = psc_poolmaster_getmgr(
 	    &dircache_ent_poolmaster);
 }

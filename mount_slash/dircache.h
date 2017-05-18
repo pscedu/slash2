@@ -65,6 +65,7 @@ struct psc_compl;
 struct fidc_membh;
 
 #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
+#define DIRCACHE_NAMECACHE	256		/* initial number of name cache enties in pool */
 
 #define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
 #define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
@@ -162,7 +163,7 @@ struct dircache_expire {
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
-#define	SL_SHORT_NAME	32
+#define	SL_SHORT_NAME		32
 
 #define	DIRCACHE_F_SHORT	0x01
 #define	DIRCACHE_F_FREED	0x02		/* debug */
@@ -205,6 +206,5 @@ void	dircache_insert(struct fidc_membh *, const char *, uint64_t);
 void	dircache_delete(struct fidc_membh *, const char *);
 
 extern struct psc_hashtbl msl_namecache_hashtbl;
-
 
 #endif /* _DIRCACHE_H_ */
