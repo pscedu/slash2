@@ -1284,6 +1284,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 		fci->fci_pino = pinum;
 		fci->fci_name = newname;
 		newname = NULL;
+		c->fcmh_flags |= FCMH_CLI_SILLY_RENAME;
 		OPSTAT_INCR("msl.sillyname-add");
 	}
 
