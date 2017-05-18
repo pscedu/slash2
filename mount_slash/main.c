@@ -520,6 +520,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if ((c->fcmh_sstb.sst_mode & _S_IXUGO) == 0 && msl_fuse_direct_io)
 		rflags |= PSCFS_CREATEF_DIO;
 
+	fci->fci_nopen = 1;
 	FCMH_ULOCK(c);
 
 	/*
@@ -591,6 +592,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 {
 	struct fidc_membh *c = NULL;
 	struct pscfs_creds pcr;
+	struct fcmh_cli_info *fci;
 	int rc = 0;
 
 	*mfhp = NULL;
@@ -656,6 +658,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		/* XXX write me */
 	}
 	FCMH_LOCK(c);
+	fci = fcmh_2_fci(c);
+	fci->fci_nopen++;
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
@@ -1203,6 +1207,93 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	return (rc);
 }
 
+#if 1
+
+__static void
+msl_clear_sillyrename(struct fidc_membh *f)
+{
+	struct fidc_membh *c = NULL, *p = NULL;
+	struct slrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_unlink_rep *mp = NULL;
+	struct srm_unlink_req *mq;
+	struct fcmh_cli_info *fci;
+	int rc;
+
+	fci = fcmh_2_fci(f);
+	if (!fci->fci_pino) {
+		psc_assert(!fci->fci_name);
+		return;
+	}
+
+	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
+	if (rc)
+		goto out;
+
+	MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
+	if (rc)
+		goto out;
+
+	mq->pfid = fci->fci_pino;
+	strlcpy(mq->name, fci->fci_name, sizeof(mq->name));
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (!rc)
+		rc = mp->rc;
+
+ out:
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+}
+
+__static int
+msl_sillyrename(struct fidc_membh *f, pscfs_inum_t pinum, const char *name, 
+    struct fidc_membh *c)
+{
+	int rc, len;
+	char *newname = NULL;
+	struct srm_rename_req *mq;
+	struct pscrpc_request *rq = NULL;
+	struct srm_rename_rep *mp = NULL;
+	struct slrpc_cservice *csvc = NULL;
+	struct fcmh_cli_info *fci;
+
+	MSL_RMC_NEWREQ(f, csvc, SRMT_RENAME, rq, mq, mp, rc);
+	if (rc)
+		goto out; 
+
+	mq->opfg.fg_fid = pinum;
+	mq->npfg.fg_fid = pinum;
+	mq->opfg.fg_gen = mq->npfg.fg_gen = FGEN_ANY;
+	mq->fromlen = len = strlen(name);
+
+	newname = PSCALLOC(SRM_RENAME_NAMEMAX - len);
+	len = snprintf(newname, SRM_RENAME_NAMEMAX - len, ".deleted-%s-deleted", name);
+	mq->tolen = len;
+	memcpy(mq->buf, name, mq->fromlen);
+	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (!rc)
+		fci = fcmh_2_fci(c);
+		fci->fci_pino = pinum;
+		fci->fci_name = newname;
+		newname = NULL;
+	}
+
+ out:
+
+	if (newname)
+		PSCFREE(newname);
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+#endif
+
 __static void
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     int isfile)
@@ -1213,7 +1304,9 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct pscfs_creds pcr;
+	uint64_t inum;
 	int rc;
+	struct fcmh_cli_info *fci;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1254,11 +1347,31 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+#if 1
+
 	/*
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.
  	 */
+	dircache_lookup(p, name, &inum);
+	if (inum) {
+		rc = msl_load_fcmh(pfr, inum, &c);
+		if (rc)
+			PFL_GOTOERR(out, rc);
 
+		FCMH_LOCK(c);
+		fci = fcmh_2_fci(c);
+		if (!fci->fci_nopen) {
+			FCMH_ULOCK(c);
+			c = NULL;
+			goto retry;
+		}
+
+		rc = msl_sillyrename(p, pinum, name, c);
+		PFL_GOTOERR(out, rc);
+	}
+
+#endif
 	/*
  	 * FixMe: The MDS should bump the generation number of the directory
  	 * after an unlink/rmdir.

@@ -76,6 +76,7 @@ struct fcmh_cli_info {
 	struct timeval			 fci_age;
 
 	uint64_t                         fci_pino;	/* silly rename */
+	int                         	 fci_nopen;
 	char                            *fci_name;
 
 	union {
