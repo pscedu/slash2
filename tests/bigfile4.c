@@ -53,12 +53,12 @@ int main(int argc, char *argv[])
 	}
 	if (optind != argc - 1) {
 		printf("Usage: a.out [-s seed] [-S size] filename\n");
-		exit(0);
+		exit(1);
 	} 
 	buf = malloc(size);
 	if (buf == NULL) {
 		printf("Allocation failed with errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	filename = argv[optind];
 	printf("seed = %d, size = %ld, file name = %s.\n\n", seed, size, filename);
@@ -68,23 +68,23 @@ int main(int argc, char *argv[])
        	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
 		printf("Fail to open file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	ret = truncate(filename, size);
 	if (ret < 0) {
 		printf("Fail to truncate file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	ret = read(fd, buf, size);
 	if (ret != size) {
 		printf("Fail to read file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	srandom(seed);
 	for (i = 0; i < size; i++) {
 		if (buf[i]) {
 			printf("File content is corrupted (0 versus %x)\n", buf[i]);
-			exit(0);
+			exit(1);
 		}
 		buf[i] = random();
 	}
@@ -92,13 +92,13 @@ int main(int argc, char *argv[])
 	ret = lseek(fd, 0, SEEK_SET);
 	if (ret < 0) {
 		printf("Fail to lseek file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 
 	ret = write(fd, buf, size);
 	if (ret != size) {
 		printf("Fail to write file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
         close(fd);
 
@@ -111,30 +111,30 @@ int main(int argc, char *argv[])
 	ret = truncate(filename, off);
 	if (ret < 0) {
 		printf("Fail to truncate file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 
 	printf("Truncate file to %d bytes ...\n", size);
 	ret = truncate(filename, size);
 	if (ret < 0) {
 		printf("Fail to truncate file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	srandom(seed);
 	ret = read(fd, buf, size);
 	if (ret != size) {
 		printf("Fail to read file, errno = %d\n", errno);
-		exit(0);
+		exit(1);
 	}
 	for (i = 0; i < size; i++) {
 		val = random();
 		if (i <  off && buf[i] != val) {
 			printf("File content is corrupted (%#x versus %#x)\n", buf[i], val);
-			exit(0);
+			exit(1);
 		}
 		if (i >= off && buf[i]) {
 			printf("File content is corrupted (%#x versus %#x)\n", buf[i], 0);
-			exit(0);
+			exit(1);
 		}
 	}
 
@@ -149,4 +149,5 @@ int main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	exit(0);
 }
