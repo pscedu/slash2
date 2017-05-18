@@ -1218,11 +1218,14 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct fcmh_cli_info *fci;
 	int rc;
 
+	FCMH_LOCK(f);
 	fci = fcmh_2_fci(f);
-	if (!fci->fci_pino) {
+	if (!fci->fci_pino || f->fcmh_refcnt != 1) {
+		FCMH_ULOCK(f);
 		psc_assert(!fci->fci_name);
 		return;
 	}
+	FCMH_ULOCK(f);
 
 	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
 	if (rc)
@@ -2277,7 +2280,6 @@ mfh_decref(struct msl_fhent *mfh)
 	MFH_LOCK_ENSURE(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
-		msl_remove_sillyname(mfh->mfh_fcmh);
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(msl_mfh_pool, mfh);
 	} else
@@ -2492,6 +2494,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_uprog);
 	}
 
+	msl_remove_sillyname(mfh->mfh_fcmh);
 	mfh_decref(mfh);
 }
 
