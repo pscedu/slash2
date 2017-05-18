@@ -1274,8 +1274,8 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	mq->fromlen = len = strlen(name);
 
 	newname = PSCALLOC(SRM_RENAME_NAMEMAX - len);
-	len = snprintf(newname, SRM_RENAME_NAMEMAX - len, 
-	    ".deleted-%s-deleted-%s", name, psc_hostname);
+	len = snprintf(newname, SRM_RENAME_NAMEMAX - len - 1, 
+	    ".~%s-deleted-on-%s.~", name, psc_hostname);
 	mq->tolen = len;
 	memcpy(mq->buf, name, mq->fromlen);
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
@@ -1360,22 +1360,24 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.
  	 */
-	dircache_lookup(p, name, &inum);
-	if (inum) {
-		rc = msl_load_fcmh(pfr, inum, &c);
-		if (rc)
+	if (isfile) {
+		dircache_lookup(p, name, &inum);
+		if (inum) {
+			rc = msl_load_fcmh(pfr, inum, &c);
+			if (rc)
+				PFL_GOTOERR(out, rc);
+
+			FCMH_LOCK(c);
+			fci = fcmh_2_fci(c);
+			if (!fci->fci_nopen) {
+				FCMH_ULOCK(c);
+				c = NULL;
+				goto retry;
+			}
+
+			rc = msl_create_sillyname(p, pinum, name, c);
 			PFL_GOTOERR(out, rc);
-
-		FCMH_LOCK(c);
-		fci = fcmh_2_fci(c);
-		if (!fci->fci_nopen) {
-			FCMH_ULOCK(c);
-			c = NULL;
-			goto retry;
 		}
-
-		rc = msl_create_sillyname(p, pinum, name, c);
-		PFL_GOTOERR(out, rc);
 	}
 
 #endif
