@@ -379,7 +379,7 @@ _msl_progallowed(struct pscfs_req *pfr)
  *
  * We could hold and release each name cache entry individually to deal
  * with races with the readdir prefetch.  However, that logic is more
- * complex.
+ * complex.  Our approach is conservative.
  */
 static void
 msl_invalidate_readdir(struct fidc_membh *p)
