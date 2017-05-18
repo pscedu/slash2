@@ -1221,8 +1221,9 @@ msl_remove_sillyname(struct fidc_membh *f)
 	FCMH_LOCK(f);
 	fci = fcmh_2_fci(f);
 	if (!fci->fci_pino || f->fcmh_refcnt != 1) {
+		if (f->fcmh_flags & FCMH_CLI_SILLY_RENAME)
+			psc_assert(fci->fci_name);
 		FCMH_ULOCK(f);
-		psc_assert(!fci->fci_name);
 		return;
 	}
 	FCMH_ULOCK(f);
