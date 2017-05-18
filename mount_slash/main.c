@@ -1207,8 +1207,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	return (rc);
 }
 
-#if 1
-
 __static void
 msl_remove_sillyname(struct fidc_membh *f)
 {
@@ -1299,8 +1297,6 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	return (rc);
 }
 
-#endif
-
 __static void
 msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
     int isfile)
@@ -1354,8 +1350,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-#if 1
-
 	/*
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.
@@ -1368,19 +1362,21 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 				PFL_GOTOERR(out, rc);
 
 			FCMH_LOCK(c);
-			fci = fcmh_2_fci(c);
-			if (!fci->fci_nopen) {
+			if (c->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
 				FCMH_ULOCK(c);
-				c = NULL;
-				goto retry;
+				PFL_GOTOERR(out, rc = EBUSY);
 			}
-
-			rc = msl_create_sillyname(p, pinum, name, c);
-			PFL_GOTOERR(out, rc);
+			fci = fcmh_2_fci(c);
+			if (fci->fci_nopen) {
+				/* XXX: hold lock across RPC */
+				rc = msl_create_sillyname(p, pinum, name, c);
+				PFL_GOTOERR(out, rc);
+			}
+			FCMH_ULOCK(c);
+			c = NULL;
 		}
 	}
 
-#endif
 	/*
  	 * FixMe: The MDS should bump the generation number of the directory
  	 * after an unlink/rmdir.
