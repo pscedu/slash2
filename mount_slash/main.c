@@ -1240,6 +1240,10 @@ msl_remove_sillyname(struct fidc_membh *f)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
 		rc = mp->rc;
+	if (!rc) {
+		msl_invalidate_readdir(p);
+		dircache_delete(p, fci->fci_name);
+	}
 
  out:
 	pscrpc_req_finished(rq);
