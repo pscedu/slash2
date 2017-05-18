@@ -171,5 +171,9 @@ main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
-	exit(0);
+
+	if (error)
+		exit(1);
+	else
+		exit(0);
 }
