@@ -1486,8 +1486,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	int rc, async;
 	size_t len;
 
-	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
-
 	SL_GET_RQ_STATUSF(csvc, rq, mp,
 	    SRPCWAITF_DEFER_BULK_AUTHBUF_CHECK, rc);
 
@@ -1543,7 +1541,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			OPSTAT_INCR("msl.dircache-load-async-err");
 		else
 			OPSTAT_INCR("msl.dircache-load-sync-err");
-		psclogs_warnx(SLCSS_FSOP, "READDIR CB (%s):"
+		psclogs_diag(SLCSS_FSOP, "READDIR CB (%s):"
 		    "fid="SLPRI_FID" off=%"PSCPRIdOFFT" rc=%d",
 		    async ? "async" : "sync", fcmh_2_fid(d), 
 		    p->dcp_off, rc);
