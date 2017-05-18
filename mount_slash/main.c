@@ -1241,6 +1241,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 	if (!rc)
 		rc = mp->rc;
 	if (!rc) {
+		OPSTAT_INCR("msl.sillyname-del");
 		msl_invalidate_readdir(p);
 		dircache_delete(p, fci->fci_name);
 	}
@@ -1273,7 +1274,8 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	mq->fromlen = len = strlen(name);
 
 	newname = PSCALLOC(SRM_RENAME_NAMEMAX - len);
-	len = snprintf(newname, SRM_RENAME_NAMEMAX - len, ".deleted-%s-deleted", name);
+	len = snprintf(newname, SRM_RENAME_NAMEMAX - len, 
+	    ".deleted-%s-deleted-%s", name, psc_hostname);
 	mq->tolen = len;
 	memcpy(mq->buf, name, mq->fromlen);
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
@@ -1284,6 +1286,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 		fci->fci_pino = pinum;
 		fci->fci_name = newname;
 		newname = NULL;
+		OPSTAT_INCR("msl.sillyname-add");
 	}
 
  out:
