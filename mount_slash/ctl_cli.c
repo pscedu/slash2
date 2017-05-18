@@ -1042,6 +1042,9 @@ msctlthr_spawn(void)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_mds_max_inflight_rpcs);
 
+	psc_ctlparam_register_var("sys.enable_sillyrename", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_enable_sillyrename);
+
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
 	/* stash thread so mslfsop_destroy() can kill ctlthr */
