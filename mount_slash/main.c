@@ -2514,6 +2514,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 			    mfh->mfh_uprog);
 	}
+	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID
+	    "nopen = %d.", fcmh_2_fid(f), fci->fci_nopen);
 
 	mfh_decref(mfh);
 }
