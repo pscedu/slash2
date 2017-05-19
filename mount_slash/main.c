@@ -1316,7 +1316,8 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	OPSTAT_INCR("msl.sillyname-add");
 
 	msl_invalidate_readdir(f);
-	dircache_insert(f, fci->fci_name, fcmh_2_fid(c));
+	dircache_delete(f, name);
+	dircache_insert(f, newname, fcmh_2_fid(c));
 
  out:
 
