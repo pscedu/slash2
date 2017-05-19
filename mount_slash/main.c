@@ -572,8 +572,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
-	//psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
-	psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	//psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o nopen=%d rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, 
 	    oflags, fci ? fci->fci_nopen : -1, rc);
@@ -665,8 +665,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
-	//psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
-	psclogs(PLL_WARN, SLCSS_FSOP, ""
+	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
+	//psclogs(PLL_WARN, SLCSS_FSOP, ""
 	    "OPEN: fid="SLPRI_FID" dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
 	    fcmh_2_fid(c), (oflags & O_DIRECTORY) ? "yes" : "no", 
 	    rc, fci->fci_nopen, oflags, *rflags);
@@ -2530,7 +2530,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 			    mfh->mfh_uprog);
 	}
-	psclogs(PLL_WARN, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
+	//psclogs(PLL_WARN, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
+	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
 	    "nopen = %d.", fcmh_2_fid(f), fci->fci_nopen);
 
 	mfh_decref(mfh);
