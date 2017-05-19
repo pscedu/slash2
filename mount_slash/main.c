@@ -665,13 +665,14 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
  out:
-	if (c) 
-		fcmh_op_done(c);
 	//psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
 	psclogs(PLL_WARN, SLCSS_FSOP, ""
-	    "OPEN: new mfh=%p dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
-	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", 
+	    "OPEN: fid="SLPRI_FID" dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
+	    fcmh_2_fid(c), (oflags & O_DIRECTORY) ? "yes" : "no", 
 	    rc, fci->fci_nopen, oflags, *rflags);
+
+	if (c) 
+		fcmh_op_done(c);
 	return (rc);
 }
 
