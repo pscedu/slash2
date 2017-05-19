@@ -65,7 +65,7 @@ struct psc_compl;
 struct fidc_membh;
 
 #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
-#define DIRCACHE_NAMECACHE	256		/* initial number of name cache enties in pool */
+#define DIRCACHE_NAMECACHE	2048		/* initial number of name cache enties in pool */
 
 #define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
 #define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
