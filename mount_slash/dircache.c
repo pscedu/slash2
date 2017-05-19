@@ -61,7 +61,7 @@ struct psc_poolmgr	*dircache_ent_pool;
 struct psc_lockedlist	 msl_dircache_pages_lru;
 
 int	msl_enable_namecache = 1;
-int	msl_enable_sillyrename = 0;
+int	msl_enable_sillyrename = 1;
 
 /*
  * Initialize per-fcmh dircache structures.

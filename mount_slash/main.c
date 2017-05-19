@@ -572,7 +572,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
-	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	//psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+	psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
 	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
 	    rc);
@@ -666,9 +667,11 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
  out:
 	if (c) 
 		fcmh_op_done(c);
-	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
-	    "OPEN: new mfh=%p dir=%s rc=%d oflags=%#o rflags=%#o",
-	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags, *rflags);
+	//psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
+	psclogs(PLL_WARN, SLCSS_FSOP, ""
+	    "OPEN: new mfh=%p dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
+	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", 
+	    rc, fci->fci_nopen, oflags, *rflags);
 	return (rc);
 }
 
@@ -1219,10 +1222,11 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct fcmh_cli_info *fci;
 	int rc;
 
-	if (!msl_enable_sillyrename)
+	if (!msl_enable_sillyrename) {
+		FCMH_ULOCK(f);
 		return;
+	}
 
-	FCMH_LOCK(f);
 	if (!(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
 		return;
@@ -1230,7 +1234,6 @@ msl_remove_sillyname(struct fidc_membh *f)
 	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_pino);
 	psc_assert(fci->fci_name);
-
 	FCMH_ULOCK(f);
 
 	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
@@ -2297,7 +2300,6 @@ mfh_decref(struct msl_fhent *mfh)
 	MFH_LOCK_ENSURE(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
-		msl_remove_sillyname(mfh->mfh_fcmh);
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(msl_mfh_pool, mfh);
 	} else
@@ -2484,10 +2486,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		fci->fci_etime.tv_sec--;
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
-	fci->fci_nopen--;
-	if (!fci->fci_nopen)
-		msl_remove_sillyname(mfh->mfh_fcmh);
-	FCMH_ULOCK(f);
+	msl_remove_sillyname(mfh->mfh_fcmh);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
@@ -2514,7 +2513,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 			    mfh->mfh_uprog);
 	}
-	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID
+	psclogs(PLL_WARN, SLCSS_FSOP, "RELEASE fid="SLPRI_FID
 	    "nopen = %d.", fcmh_2_fid(f), fci->fci_nopen);
 
 	mfh_decref(mfh);
