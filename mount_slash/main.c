@@ -1227,8 +1227,13 @@ msl_remove_sillyname(struct fidc_membh *f)
 		return;
 	}
 
+	/*
+	 * What if the open is opened and closed quickly while the cleanup
+	 * is still in progress?
+	 */
 	fci = fcmh_2_fci(f);
-	if (fci->fci_nopen > 1 || !(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
+	fci->fci_nopen--;
+	if (fci->fci_nopen || !(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
 		return;
 	}
@@ -1253,18 +1258,17 @@ msl_remove_sillyname(struct fidc_membh *f)
 	if (rc)
 		goto out;
 
-	FCMH_LOCK(f);
-	if (f->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
-		fci->fci_pino = 0;
-		PSCFREE(fci->fci_name);
-		fci->fci_name = NULL;
-		f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
-	}
-	FCMH_ULOCK(f);
-
 	OPSTAT_INCR("msl.sillyname-del");
 	msl_invalidate_readdir(p);
 	dircache_delete(p, fci->fci_name);
+
+	FCMH_LOCK(f);
+	fci->fci_pino = 0;
+	PSCFREE(fci->fci_name);
+	fci->fci_name = NULL;
+	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
+	FCMH_ULOCK(f);
+
 
  out:
 	pscrpc_req_finished(rq);
