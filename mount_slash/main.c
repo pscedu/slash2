@@ -1230,7 +1230,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 
 	/*
 	 * What if the open is opened and closed quickly while the cleanup
-	 * is still in progress?
+	 * is still in progress?  Perhaps adding a busy flag?
 	 */
 	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_nopen > 0);
@@ -1258,7 +1258,11 @@ msl_remove_sillyname(struct fidc_membh *f)
 	if (!rc)
 		rc = mp->rc;
 	if (rc) {
-		psclogs_warn(SLCSS_FSOP, "clean up sillyname: "
+		/*
+		 * This can happen if I rename the silly name to a
+		 * different name.
+		 */
+		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
 		    fci->fci_pino, fci->fci_name, rc);
 		OPSTAT_INCR("msl.sillyname-del-err");

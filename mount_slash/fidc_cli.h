@@ -75,7 +75,7 @@ struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
 
-	uint64_t                         fci_pino;	/* silly rename */
+	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
 
