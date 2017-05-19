@@ -574,9 +574,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	//psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
-	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o rc=%d",
-	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, oflags,
-	    rc);
+	    "cfid="SLPRI_FID" name='%s' mode=%#o oflags=%#o nopen=%d rc=%d",
+	    pinum, mp ? mp->cattr.sst_fid : FID_ANY, name, mode, 
+	    fci ? fci->fci_nopen : -1, oflags, rc);
 
 	if (c)
 		fcmh_op_done(c);
