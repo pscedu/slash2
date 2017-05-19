@@ -1269,7 +1269,6 @@ msl_remove_sillyname(struct fidc_membh *f)
 	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
 	FCMH_ULOCK(f);
 
-
  out:
 	pscrpc_req_finished(rq);
 	if (csvc)
@@ -1305,14 +1304,18 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (!rc) {
-		fci = fcmh_2_fci(c);
-		fci->fci_pino = pinum;
-		fci->fci_name = newname;
-		newname = NULL;
-		c->fcmh_flags |= FCMH_CLI_SILLY_RENAME;
-		OPSTAT_INCR("msl.sillyname-add");
-	}
+	if (rc)
+		goto out;
+
+	fci = fcmh_2_fci(c);
+	fci->fci_pino = pinum;
+	fci->fci_name = newname;
+	newname = NULL;
+	c->fcmh_flags |= FCMH_CLI_SILLY_RENAME;
+	OPSTAT_INCR("msl.sillyname-add");
+
+	msl_invalidate_readdir(f);
+	dircache_insert(f, fci->fci_name, fcmh_2_fid(c));
 
  out:
 
