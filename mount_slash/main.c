@@ -1378,7 +1378,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * and store the silly name into the fcmh.
  	 */
 	if (isfile && msl_enable_sillyrename) {
-		return;
 		dircache_lookup(p, name, &inum);
 		if (inum) {
 			rc = msl_load_fcmh(pfr, inum, &c);
