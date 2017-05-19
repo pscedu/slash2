@@ -1227,11 +1227,11 @@ msl_remove_sillyname(struct fidc_membh *f)
 		return;
 	}
 
-	if (!(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
+	fci = fcmh_2_fci(f);
+	if (fci->fci_nopen > 1 || !(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
 		return;
 	}
-	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_pino);
 	psc_assert(fci->fci_name);
 	FCMH_ULOCK(f);
