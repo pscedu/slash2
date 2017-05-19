@@ -597,6 +597,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
 	*mfhp = NULL;
 
+
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
@@ -1218,14 +1219,18 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct fcmh_cli_info *fci;
 	int rc;
 
+	if (!msl_enable_sillyrename)
+		return;
+
 	FCMH_LOCK(f);
-	fci = fcmh_2_fci(f);
-	if (!fci->fci_pino || f->fcmh_refcnt != 1) {
-		if (f->fcmh_flags & FCMH_CLI_SILLY_RENAME)
-			psc_assert(fci->fci_name);
+	if (!(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
 		return;
 	}
+	fci = fcmh_2_fci(f);
+	psc_assert(fci->fci_pino);
+	psc_assert(fci->fci_name);
+
 	FCMH_ULOCK(f);
 
 	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
@@ -1242,11 +1247,21 @@ msl_remove_sillyname(struct fidc_membh *f)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
 		rc = mp->rc;
-	if (!rc) {
-		OPSTAT_INCR("msl.sillyname-del");
-		msl_invalidate_readdir(p);
-		dircache_delete(p, fci->fci_name);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(f);
+	if (f->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
+		fci->fci_pino = 0;
+		PSCFREE(fci->fci_name);
+		fci->fci_name = NULL;
+		f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
 	}
+	FCMH_ULOCK(f);
+
+	OPSTAT_INCR("msl.sillyname-del");
+	msl_invalidate_readdir(p);
+	dircache_delete(p, fci->fci_name);
 
  out:
 	pscrpc_req_finished(rq);
@@ -1359,7 +1374,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * Look up the name cache, if found the file is open, do a silly remame
  	 * and store the silly name into the fcmh.
  	 */
-	if (isfile) {
+	if (isfile && msl_enable_sillyrename) {
+		return;
 		dircache_lookup(p, name, &inum);
 		if (inum) {
 			rc = msl_load_fcmh(pfr, inum, &c);
@@ -2281,6 +2297,7 @@ mfh_decref(struct msl_fhent *mfh)
 	MFH_LOCK_ENSURE(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
+		msl_remove_sillyname(mfh->mfh_fcmh);
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(msl_mfh_pool, mfh);
 	} else
@@ -2467,6 +2484,9 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		fci->fci_etime.tv_sec--;
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
+	fci->fci_nopen--;
+	if (!fci->fci_nopen)
+		msl_remove_sillyname(mfh->mfh_fcmh);
 	FCMH_ULOCK(f);
 
 	if (fcmh_isdir(f)) {
@@ -2494,8 +2514,9 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
 			    mfh->mfh_uprog);
 	}
+	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID
+	    "nopen = %d.", fcmh_2_fid(f), fci->fci_nopen);
 
-	msl_remove_sillyname(mfh->mfh_fcmh);
 	mfh_decref(mfh);
 }
 
