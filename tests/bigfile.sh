@@ -112,4 +112,5 @@ fi
 
 END=`date +%s%N`
 ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
-echo "Total time $ELAPSED seconds"
+echo
+echo "All tests have passed successfully! Total time $ELAPSED seconds"
