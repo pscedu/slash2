@@ -408,7 +408,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_create_rep *mp = NULL;
 	struct msl_fhent *mfh = NULL;
 	struct srm_create_req *mq;
-	struct fcmh_cli_info *fci;
+	struct fcmh_cli_info *fci = NULL;
 	struct bmap_cli_info *bci;
 	struct pscfs_creds pcr;
 	struct stat stb;
