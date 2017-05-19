@@ -1233,6 +1233,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 	 * is still in progress?
 	 */
 	fci = fcmh_2_fci(f);
+	psc_assert(fci->fci_nopen > 0);
 	fci->fci_nopen--;
 	if (fci->fci_nopen || !(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
@@ -2494,11 +2495,11 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		fci->fci_etime.tv_sec--;
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
-	msl_remove_sillyname(mfh->mfh_fcmh);
 
 	if (fcmh_isdir(f)) {
 		pscfs_reply_releasedir(pfr, 0);
 	} else {
+		msl_remove_sillyname(mfh->mfh_fcmh);
 		pscfs_reply_release(pfr, 0);
 
 		if (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)
