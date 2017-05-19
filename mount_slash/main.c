@@ -1256,7 +1256,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
 	if (rc) {
 		/*
 		 * This can happen if I rename the silly name to a
@@ -1273,8 +1273,8 @@ msl_remove_sillyname(struct fidc_membh *f)
 	dircache_delete(p, fci->fci_name);
 
 	FCMH_LOCK(f);
-	fci->fci_pino = 0;
 	PSCFREE(fci->fci_name);
+	fci->fci_pino = 0;
 	fci->fci_name = NULL;
 	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
 	FCMH_ULOCK(f);
