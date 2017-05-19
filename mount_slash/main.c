@@ -1257,10 +1257,14 @@ msl_remove_sillyname(struct fidc_membh *f)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
 		rc = mp->rc;
-	if (rc)
-		goto out;
+	if (rc) {
+		psclogs_warn(SLCSS_FSOP, "clean up sillyname: "
+		    "pfid="SLPRI_FID "name='%s' rc=%d", 
+		    fci->fci_pino, fci->fci_name, rc);
+		OPSTAT_INCR("msl.sillyname-del-err");
+	} else
+		OPSTAT_INCR("msl.sillyname-del-ok");
 
-	OPSTAT_INCR("msl.sillyname-del");
 	msl_invalidate_readdir(p);
 	dircache_delete(p, fci->fci_name);
 
