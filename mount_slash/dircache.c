@@ -483,7 +483,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 
 	if (tmpdce) {
-		OPSTAT_INCR("msl.dircache-replace");
+		OPSTAT_INCR("msl.dircache-update");
 		psc_dynarray_removeitem(&fci->fcid_ents, tmpdce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))
