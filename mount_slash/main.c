@@ -1042,7 +1042,6 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	msl_invalidate_readdir(p);
 	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
 
 	/*
