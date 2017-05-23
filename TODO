@@ -5482,6 +5482,16 @@ $ ./mysql-test-run --big-test --skip-test=federated
 
 Right now, the test fails with cp (errno = 1), I suspect name cache issue.
 
+	05/23/2017: It fails like this after name cache rewrite:
+
+	rpl.rpl_semi_sync_event 'mix'            [ pass ]  14474
+	rpl.rpl_semi_sync_after_sync 'mix'       [ pass ]  20782
+	rpl.rpl_semi_sync_shutdown_hang 'mix'    [ pass ]  19918
+	worker[1] Trying to dump core for [mysqltest - pid: 27540, winpid: 27540]
+	worker[1] Trying to dump core for [mysqld.1 - pid: 27450, winpid: 27450]
+	worker[1] Trying to dump core for [mysqld.2 - pid: 27495, winpid: 27495]
+	rpl.rpl_semi_sync_group_commit_deadlock 'mix' [ fail ]  timeout after 900 seconds
+
 01/13/2017
 ----------
 
