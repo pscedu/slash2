@@ -429,9 +429,10 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
-	if (dce)
+	if (dce) {
+		dce->dce_flag = DIRCACHE_F_STICKY;
 		*ino = dce->dce_ino;
-
+	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	DIRCACHE_ULOCK(d);
