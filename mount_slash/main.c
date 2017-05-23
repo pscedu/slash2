@@ -1611,8 +1611,11 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
  	 */
 	FCMH_LOCK(d);
 	if (p->dcp_dirgen != fcmh_2_gen(d)) {
-		if (!(p->dcp_flags & DIRCACHEPGF_ASYNC))
+		if (!(p->dcp_flags & DIRCACHEPGF_ASYNC)) {
 			OPSTAT_INCR("msl.readdir-all-stale");
+			psclogs_warnx(SLCSS_FSOP, "Unexpected stale readdir"
+			"fid="SLPRI_FID, fcmh_2_fid(d));
+		}
 		FCMH_ULOCK(d);
 		return (-EAGAIN);
 	}
