@@ -1562,6 +1562,9 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	msl_invalidate_readdir(p);
+	dircache_insert(p, name, fcmh_2_fid(c));
+
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
 	msl_internalize_stat(&mp->cattr, &stb);
