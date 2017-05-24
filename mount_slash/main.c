@@ -477,6 +477,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	msl_invalidate_readdir(p);
+	dircache_insert(p, name, fcmh_2_fid(c));
+
 #if 0
 	if (oflags & O_APPEND) {
 		FCMH_LOCK(c);
