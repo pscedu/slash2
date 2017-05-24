@@ -1314,7 +1314,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 
 	newname = PSCALLOC(SRM_RENAME_NAMEMAX - len);
 	len = snprintf(newname, SRM_RENAME_NAMEMAX - len - 1, 
-	    ".~%s-deleted-on-%s.~", name, psc_hostname);
+	    ".slash2~%s~deleted~on~%s.", name, psc_hostname);
 	mq->tolen = len;
 	memcpy(mq->buf, name, mq->fromlen);
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
