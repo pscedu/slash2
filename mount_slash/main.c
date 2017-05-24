@@ -386,6 +386,7 @@ msl_invalidate_readdir(struct fidc_membh *p)
 {
 	FCMH_LOCK(p);
 	fcmh_2_gen(p)++;
+	fcmh_wait_locked(p, p->fcmh_flags & FCMH_BUSY);
 	FCMH_ULOCK(p);
 }
 
@@ -1619,8 +1620,16 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		FCMH_ULOCK(d);
 		return (-EAGAIN);
 	}
+	d->fcmh_flags |= FCMH_BUSY;
 	FCMH_ULOCK(d);
+
 	dircache_reg_ents(d, p, nents, base, size, eof);
+
+	FCMH_LOCK(d);
+	d->fcmh_flags &= ~FCMH_BUSY;
+	fcmh_wake_locked(d);
+	FCMH_ULOCK(d);
+
 #if 0
 	/*
 	 * We could free unused space here but we would have to adjust
