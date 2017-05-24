@@ -1884,7 +1884,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (p->dcp_rc) {
 			rc = p->dcp_rc;
 			dircache_free_page(d, p);
-			if (!slc_rpc_should_retry(pfr, &rc)) {
+			if (rc != -EAGAIN && 
+			    !slc_rpc_should_retry(pfr, &rc)) {
 				DIRCACHE_ULOCK(d);
 				PFL_GOTOERR(out, rc);
 			}
