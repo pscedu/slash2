@@ -5868,3 +5868,17 @@ all call sites of memory allocation.
 ----------
 
 Find a way to control the memory usage of slash2.
+
+
+05/25/2017
+----------
+
+tar xvf ~/gcc-7.1.0.tar.bz2 
+cd gcc-7.1.0/
+./configure --disable-multilib
+make
+
+The above passes. But not the following:
+
+make check
+
