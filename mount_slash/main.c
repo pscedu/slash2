@@ -2884,12 +2884,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	    strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-#if 0
-	psclogs_warn(SLCSS_FSOP, "start 1 SYMLINK: pfid="SLPRI_FID" "
-	    "cfid="SLPRI_FID" name='%s' rc=%d",
-	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
-#endif
-
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2904,12 +2898,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-#if 0
-	psclogs_warn(SLCSS_FSOP, "start 2 SYMLINK: pfid="SLPRI_FID" "
-	    "cfid="SLPRI_FID" name='%s' rc=%d",
-	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
-#endif
 
  retry1:
 
@@ -2961,8 +2949,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 
-	if (rc)
-	psclogs_warn(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
+	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
 	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, name, rc);
 
