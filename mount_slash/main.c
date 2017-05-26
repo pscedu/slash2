@@ -1354,6 +1354,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct pscrpc_request *rq = NULL;
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
+
+	struct srm_lookup_rep *mp0 = NULL;
+	struct srm_lookup_req *mq0;
+
 	struct pscfs_creds pcr;
 	uint64_t inum;
 	int rc;
@@ -1403,10 +1407,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * and store the silly name into the fcmh.
  	 */
 	if (isfile && msl_enable_sillyrename) {
-
-		struct srm_lookup_rep *mp0 = NULL;
-		struct srm_lookup_req *mq0;
-
 		dircache_lookup(p, name, &inum);
 		if (!inum) {
 			OPSTAT_INCR("msl.unlink-cache-miss");
