@@ -165,11 +165,9 @@ struct dircache_expire {
 
 #define	SL_SHORT_NAME		32
 
+#define	DIRCACHE_F_NONE 	0x00
 #define	DIRCACHE_F_SHORT	0x01
 #define	DIRCACHE_F_FREED	0x02		/* debug */
-
-/* cached until the directory is gone, needed for unlink after open */
-#define	DIRCACHE_F_STICKY	0x04		
 
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
