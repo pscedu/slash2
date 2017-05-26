@@ -1439,7 +1439,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 				PFL_GOTOERR(out, rc = EBUSY);
 			fci = fcmh_2_fci(c);
 			if (fci->fci_nopen) {
-				/* XXX: hold lock across RPC */
+				FCMH_ULOCK(c);
 				rc = msl_create_sillyname(p, pinum, name, c);
 				PFL_GOTOERR(out, rc);
 			}
