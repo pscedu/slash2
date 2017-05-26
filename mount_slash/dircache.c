@@ -498,13 +498,23 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-	psc_dynarray_add(&fci->fcid_ents, dce);
 
-#if 0
+	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory) {
+		psc_dynarray_add(&fci->fcid_ents, dce);
+		DIRCACHE_ULOCK(d);
+		return;
+	}
+	OPSTAT_INCR("msl.dircache-evict");
+	if (fci->fci_pos == psc_dynarray_len(&fci->fcid_ents))
+		fci->fci_pos = 0;
+
 	tmpdce = psc_dynarray_getpos(&fci->fcid_ents, fci->fci_pos);
 	psc_dynarray_setpos(&fci->fcid_ents, fci->fci_pos, dce);
 	fci->fci_pos++;
-#endif
+
+	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce->dce_key);
+	psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
+	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	DIRCACHE_ULOCK(d);
 }
