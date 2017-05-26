@@ -1409,6 +1409,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 		dircache_lookup(p, name, &inum);
 		if (!inum) {
+			OPSTAT_INCR("msl.unlink-lookup");
 			MSL_RMC_NEWREQ(p, csvc, SRMT_LOOKUP, rq, mq0, mp0, rc);
 			if (rc)
 				PFL_GOTOERR(out, rc);
@@ -1425,7 +1426,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			rq = NULL;
 			csvc = NULL;
 			inum = mp0->attr.sst_fg.fg_fid;
-		}
+		} else
+			OPSTAT_INCR("msl.unlink-cache-hit");
 		rc = msl_load_fcmh(pfr, inum, &c);
 		if (rc)
 			PFL_GOTOERR(out, rc);
