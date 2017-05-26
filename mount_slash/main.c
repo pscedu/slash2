@@ -1432,19 +1432,22 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 		if (rc)
 			PFL_GOTOERR(out, rc);
 
-		FCMH_LOCK(c);
-		if (c->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
-			FCMH_ULOCK(c);
-			PFL_GOTOERR(out, rc = EBUSY);
-		}
-		fci = fcmh_2_fci(c);
-		if (fci->fci_nopen) {
-			/* XXX: hold lock across RPC */
-			rc = msl_create_sillyname(p, pinum, name, c);
+		rc = sl_fcmh_lookup(inum, FGEN_ANY, 0, &c, NULL); 
+		if (!rc) {
+			FCMH_LOCK(c);
+			if (c->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
+				FCMH_ULOCK(c);
+				PFL_GOTOERR(out, rc = EBUSY);
+			}
+			fci = fcmh_2_fci(c);
+			if (fci->fci_nopen) {
+				/* XXX: hold lock across RPC */
+				rc = msl_create_sillyname(p, pinum, name, c);
 				PFL_GOTOERR(out, rc);
+			}
+			FCMH_ULOCK(c);
+			c = NULL;
 		}
-		FCMH_ULOCK(c);
-		c = NULL;
 	}
 
 	/*
