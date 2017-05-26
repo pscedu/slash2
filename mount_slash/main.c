@@ -1409,7 +1409,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 		dircache_lookup(p, name, &inum);
 		if (!inum) {
-			OPSTAT_INCR("msl.unlink-lookup");
+			OPSTAT_INCR("msl.unlink-cache-miss");
 			MSL_RMC_NEWREQ(p, csvc, SRMT_LOOKUP, rq, mq0, mp0, rc);
 			if (rc)
 				PFL_GOTOERR(out, rc);
