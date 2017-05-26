@@ -167,7 +167,6 @@ struct dircache_expire {
 
 #define	DIRCACHE_F_NONE 	0x00
 #define	DIRCACHE_F_SHORT	0x01
-#define	DIRCACHE_F_FREED	0x02		/* debug */
 
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
