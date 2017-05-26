@@ -506,6 +506,12 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	psc_dynarray_add(&fci->fcid_ents, dce);
 
+#if 0
+	tmpdce = psc_dynarray_getpos(&fci->fcid_ents, fci->fci_pos);
+	psc_dynarray_setpos(&fci->fcid_ents, fci->fci_pos, dce);
+	fci->fci_pos++;
+#endif
+
 	DIRCACHE_ULOCK(d);
 }
 

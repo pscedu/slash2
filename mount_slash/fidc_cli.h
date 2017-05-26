@@ -78,6 +78,7 @@ struct fcmh_cli_info {
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
+	int				 fci_pos;	/* next to displace */
 
 	union {
 		struct fcmh_cli_info_file f;
