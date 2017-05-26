@@ -314,6 +314,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (!msl_enable_namecache)
 			continue;
 
+		if (psc_dynarray_len(&fci->fcid_ents) >= 
+		    msl_max_namecache_per_directory)
+			continue;
+
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
 			continue;
@@ -454,6 +458,12 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
+
+	if (psc_dynarray_len(&fci->fcid_ents) >= 
+	    msl_max_namecache_per_directory) {
+		DIRCACHE_ULOCK(d);
+		return;
+	}
 
 	dce = psc_pool_get(dircache_ent_pool);
 
