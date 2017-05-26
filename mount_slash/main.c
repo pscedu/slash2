@@ -1403,26 +1403,46 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
  	 * and store the silly name into the fcmh.
  	 */
 	if (isfile && msl_enable_sillyrename) {
+
+		struct srm_lookup_rep *mp0 = NULL;
+		struct srm_lookup_req *mq0;
+
 		dircache_lookup(p, name, &inum);
-		if (inum) {
-			rc = msl_load_fcmh(pfr, inum, &c);
+		if (!inum) {
+			MSL_RMC_NEWREQ(p, csvc, SRMT_LOOKUP, rq, mq0, mp0, rc);
 			if (rc)
 				PFL_GOTOERR(out, rc);
-
-			FCMH_LOCK(c);
-			if (c->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
-				FCMH_ULOCK(c);
-				PFL_GOTOERR(out, rc = EBUSY);
-			}
-			fci = fcmh_2_fci(c);
-			if (fci->fci_nopen) {
-				/* XXX: hold lock across RPC */
-				rc = msl_create_sillyname(p, pinum, name, c);
+			mq0->pfg.fg_fid = pinum;
+			mq0->pfg.fg_gen = FGEN_ANY;;
+			strlcpy(mq0->name, name, sizeof(mq0->name));
+			rc = SL_RSX_WAITREP(csvc, rq, mp0);
+			if (!rc)
+				rc = -mp0->rc;
+			if (rc)
 				PFL_GOTOERR(out, rc);
-			}
-			FCMH_ULOCK(c);
-			c = NULL;
+			sl_csvc_decref(csvc);
+			pscrpc_req_finished(rq);
+			rq = NULL;
+			csvc = NULL;
+			inum = mp0->attr.sst_fg.fg_fid;
 		}
+		rc = msl_load_fcmh(pfr, inum, &c);
+		if (rc)
+			PFL_GOTOERR(out, rc);
+
+		FCMH_LOCK(c);
+		if (c->fcmh_flags & FCMH_CLI_SILLY_RENAME) {
+			FCMH_ULOCK(c);
+			PFL_GOTOERR(out, rc = EBUSY);
+		}
+		fci = fcmh_2_fci(c);
+		if (fci->fci_nopen) {
+			/* XXX: hold lock across RPC */
+			rc = msl_create_sillyname(p, pinum, name, c);
+				PFL_GOTOERR(out, rc);
+		}
+		FCMH_ULOCK(c);
+		c = NULL;
 	}
 
 	/*
