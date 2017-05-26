@@ -453,17 +453,11 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
 
-	if (!msl_enable_namecache)
+	if (!msl_enable_namecache || !msl_max_namecache_per_directory)
 		return;
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
-
-	if (psc_dynarray_len(&fci->fcid_ents) >= 
-	    msl_max_namecache_per_directory) {
-		DIRCACHE_ULOCK(d);
-		return;
-	}
 
 	dce = psc_pool_get(dircache_ent_pool);
 
