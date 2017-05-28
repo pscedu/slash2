@@ -501,7 +501,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 		return;
 	}
 	OPSTAT_INCR("msl.dircache-evict");
-	if (fci->fci_pos == psc_dynarray_len(&fci->fcid_ents))
+	if (fci->fci_pos >= psc_dynarray_len(&fci->fcid_ents))
 		fci->fci_pos = 0;
 
 	/* (gdb) p fci->u.d.ents */
