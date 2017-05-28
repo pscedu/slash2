@@ -671,9 +671,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
  out:
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
-	//psclogs(PLL_WARN, SLCSS_FSOP, ""
 	    "OPEN: fid="SLPRI_FID" dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
-	    fcmh_2_fid(c), (oflags & O_DIRECTORY) ? "yes" : "no", 
+	    c ? fcmh_2_fid(c) : FID_ANY , (oflags & O_DIRECTORY) ? "yes" : "no", 
 	    rc, fci->fci_nopen, oflags, *rflags);
 
 	if (c) 
