@@ -315,7 +315,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		if (psc_dynarray_len(&fci->fcid_ents) >= 
 		    msl_max_namecache_per_directory)
-			continue;
+			goto cache_fcmh;
 
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
@@ -358,6 +358,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			psc_pool_return(dircache_ent_pool, dce);
 			continue;
 		}
+
+ cache_fcmh:
 
 		fgp = &e->sstb.sst_fg;
 		psc_assert(fgp->fg_fid == dirent->pfd_ino);
