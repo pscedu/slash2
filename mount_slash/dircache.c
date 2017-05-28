@@ -360,7 +360,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		}
 
 		fgp = &e->sstb.sst_fg;
-		psc_assert(dce->dce_ino == fgp->fg_fid);
+		psc_assert(fgp->fg_fid == dirent->pfd_ino);
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 		/*
