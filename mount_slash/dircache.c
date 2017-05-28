@@ -313,9 +313,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		if (!msl_enable_namecache)
 			continue;
 
+		/*
+ 		 * Allow cache attributes in fcmh might help getattrs
+ 		 * after a readdir.
+ 		 */
 		if (psc_dynarray_len(&fci->fcid_ents) >= 
-		    msl_max_namecache_per_directory)
+		    msl_max_namecache_per_directory) {
+			OPSTAT_INCR("msl.dircache-cache-fcmh");
 			goto cache_fcmh;
+		}
 
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
