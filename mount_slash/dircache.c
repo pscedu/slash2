@@ -501,6 +501,11 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 		return;
 	}
 	OPSTAT_INCR("msl.dircache-evict");
+	/*
+ 	 * Note that the array can shrink due to deletion of files and
+ 	 * msl_max_namecache_per_directory is set to a lower value at 
+ 	 * the same time.
+ 	 */
 	if (fci->fci_pos >= psc_dynarray_len(&fci->fcid_ents))
 		fci->fci_pos = 0;
 
