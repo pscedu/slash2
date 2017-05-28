@@ -8,6 +8,7 @@ then
     exit 0
 fi
 
+start_time=$SECONDS
 
 for ((i=0; i < $3; i++))
 do
@@ -49,5 +50,7 @@ do
         echo "File $filename has been unlinked ..."
 done
 
+end_time=$SECONDS
 echo
-echo "Total file created and linked: $3"
+printf "Total file created and linked: %ld.\n" $3 
+printf "Total elapsed time: %ld seconds.\n" $total $(($end_time - $start_time))
