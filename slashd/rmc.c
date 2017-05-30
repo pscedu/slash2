@@ -161,6 +161,7 @@ slm_get_next_slashfid(slfid_t *fidp)
 		freelock(&slm_fid_lock);
 		return (ENOSPC);
 	}
+	/* end up in zp_s2fid in struct znode_phys */
 	fid = slm_next_fid++;
 	freelock(&slm_fid_lock);
 
