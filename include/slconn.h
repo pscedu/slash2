@@ -145,6 +145,7 @@ struct slrpc_cservice {
 #define CSVC_CONN_INTV		10		/* seconds */
 #define CSVC_PING_INTV		30		/* seconds */
 
+/* keep in sync with sl_conn_prdat() */
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s ref:%d " fmt,		\
 	    (csvc), (csvc)->csvc_flags,					\

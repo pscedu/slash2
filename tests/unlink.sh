@@ -52,5 +52,5 @@ done
 
 end_time=$SECONDS
 echo
-printf "Total file created and linked: %ld.\n" $3 
+printf "Total file created and then unlinked: %ld.\n" $3 
 printf "Total elapsed time: %ld seconds.\n" $total $(($end_time - $start_time))
