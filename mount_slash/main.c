@@ -1302,6 +1302,11 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	struct srm_rename_rep *mp = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct fcmh_cli_info *fci;
+	struct timeval tv;
+	struct psc_thread *me;
+
+	me = pscthr_get();
+	gettimeofday(&tv, NULL);
 
 	MSL_RMC_NEWREQ(f, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
@@ -1314,7 +1319,9 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 
 	newname = PSCALLOC(SRM_RENAME_NAMEMAX - len);
 	len = snprintf(newname, SRM_RENAME_NAMEMAX - len - 1, 
-	    ".slash2~%s~deleted~on~%s.", name, psc_hostname);
+	    ".%ld~%d~%s~deleted~on~%s.", 
+	    tv.tv_sec, me->pscthr_thrid, name, psc_hostname);
+
 	mq->tolen = len;
 	memcpy(mq->buf, name, mq->fromlen);
 	memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
