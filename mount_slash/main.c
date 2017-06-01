@@ -2474,11 +2474,6 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 	struct pfl_fsthr *pft;
 	struct pscfs_req *pfr;
 
-	pld = psclog_getdata();
-// || mft->mft_lastp != p
-	if (pld->pld_uprog)
-		return (pld->pld_uprog);
-
 	if (thr->pscthr_type != PFL_THRT_FS)
 		return "<n/a>";
 
@@ -2498,7 +2493,7 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 		    sizeof(pft->pft_uprog));
 	}
 
-	return (pld->pld_uprog = pft->pft_uprog);
+	return (&pft->pft_uprog[0]);
 }
 
 pid_t
