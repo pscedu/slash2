@@ -4059,9 +4059,6 @@ msl_init(void)
 	pfl_subsys_register(SLCSS_INFO, "info");
 	pfl_subsys_register(SLCSS_FSOP, "fsop");
 
-#if 0
-	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
-#endif
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
 	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
 
