@@ -368,15 +368,6 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 
-	if (!fcmh_isdir(f)) {
-		struct pfl_callerinfo pci;
-
-		pci.pci_subsys = SLCSS_INFO;
-		if (psc_log_shouldlog(&pci, PLL_INFO))
-			slc_getuprog(mfh->mfh_pid, mfh->mfh_uprog,
-			    sizeof(mfh->mfh_uprog));
-	}
-
 	return (mfh);
 }
 

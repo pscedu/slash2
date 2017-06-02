@@ -169,7 +169,6 @@ struct msl_fhent {
 	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
-	char				 mfh_uprog[128];
 };
 
 #define MFHF_TRACKING_RA		(1 << 0)	/* tracking for readahead */
@@ -331,7 +330,6 @@ void	 msctlthr_spawn(void);
 void	 msreadaheadthr_spawn(void);
 void	 msl_readahead_svc_destroy(void);
 
-void	 slc_getuprog(pid_t, char *, size_t);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 

@@ -2444,7 +2444,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    "oatime="PFLPRI_PTIMESPEC" "
 			    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 			    "otime="PSCPRI_TIMESPEC" "
-			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
+			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 			    fcmh_2_fid(f),
 			    mfh->mfh_accessing_euid,
 			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
@@ -2453,8 +2453,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
 			    mfh->mfh_sid,
 			    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
-			    mfh->mfh_uprog);
+			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	}
 	//psclogs(PLL_WARN, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
 	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
