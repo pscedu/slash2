@@ -1266,7 +1266,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 	if (rc) {
 		/*
 		 * This can happen if I rename the silly name to a
-		 * different name.
+		 * different name. This is unusual but oaky.
 		 */
 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
