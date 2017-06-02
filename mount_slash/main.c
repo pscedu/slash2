@@ -2375,6 +2375,8 @@ mfh_decref(struct msl_fhent *mfh)
 		MFH_ULOCK(mfh);
 }
 
+#if 0
+
 /*
  * Scrape user program name (uprog).
  *
@@ -2495,6 +2497,8 @@ slc_log_get_fsctx_uprog(struct psc_thread *thr)
 
 	return (&pft->pft_uprog[0]);
 }
+
+#endif
 
 pid_t
 slc_log_get_fsctx_pid(struct psc_thread *thr)
@@ -4180,7 +4184,9 @@ msl_init(void)
 	pfl_subsys_register(SLCSS_INFO, "info");
 	pfl_subsys_register(SLCSS_FSOP, "fsop");
 
+#if 0
 	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
+#endif
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
 	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
 
