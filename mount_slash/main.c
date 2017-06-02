@@ -3423,7 +3423,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			pfl_opstat_destroy_pos(i--);
 	freelock(&pfl_opstats_lock);
 
-	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
 	pflog_get_fsctx_pid = NULL;
 
