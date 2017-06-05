@@ -19,6 +19,11 @@ Things to change:
 	* All slash2 per-file metadata must be store in a file.  Right now, we modify
 	  ZFS inode to store some slash2 specific inode information.
 
+	* Journaling code. We don't know when the file system flushes its caches, so a 
+	  replay can fail. Also, we need a way to reclaim log space - use syncfs().
+	
+	  Replay made easy because we never re-use FID, we never truncate.
+
 Obstacle:
 
 	* This is a on-disk format change.
