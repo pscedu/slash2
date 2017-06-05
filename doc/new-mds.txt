@@ -1,0 +1,24 @@
+06/05/2017
+---------
+
+Motivation:
+
+	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
+	* All metadata are user visible files.
+
+Feasibility:
+
+	* We can always create links in the user space, but the open-by-handle feature
+	  in the kernel makes it more efficient.
+
+Things to change:
+
+
+	* All RPCs will have to change to replace a fid with a file handle.
+
+	* All slash2 per-file metadata must be store in a file.  Right now, we modify
+	  ZFS inode to store some slash2 specific inode information.
+
+Obstacle:
+
+	* This is a on-disk format change.
