@@ -162,10 +162,6 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
 
-	/* root can do anything */
-	if (pcrp->pcr_uid == 0)
-		return (0);
-
 	if (sstb->sst_uid == pcrp->pcr_uid)
 		return (PERMCHECK(accmode, sstb->sst_mode, S_IRWXU));
 	for (n = 0; n <= pcrp->pcr_ngid; n++) {

@@ -233,6 +233,10 @@ fcmh_checkcreds(struct fidc_membh *f,
 	    (fcmh_2_fid(f) != SLFID_ROOT || accmode & W_OK))
 		return (EACCES);
 
+	/* root can do anything without root squash */
+	if (pcrp->pcr_uid == 0)
+		return (0);
+
 #ifdef SLOPT_POSIX_ACLS
 	if (msl_acl)
 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
