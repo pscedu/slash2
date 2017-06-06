@@ -5882,3 +5882,7 @@ The above passes. But not the following:
 
 make check
 
+06/06/2017
+----------
+
+Make mds and ios run as non-root.
