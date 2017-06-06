@@ -188,6 +188,10 @@ sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
 	/*
 	 * If there is no ACL entries, we revert to traditional
 	 * Unix mode bits for permission checking.
+	 *
+	 * I have seen small ACL with 28 bytes that does not
+	 * refer to other group or user. Should we consider
+	 * such a case as no ACL as well?
 	 */
 	if (a == NULL) {
 #ifdef SLOPT_POSIX_ACLS_REVERT
