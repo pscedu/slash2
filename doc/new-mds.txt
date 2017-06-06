@@ -5,6 +5,7 @@ Motivation:
 
 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
 	* All metadata are user visible files.
+	* Help MDS run as non-root.
 
 Feasibility:
 
