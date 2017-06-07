@@ -37,105 +37,105 @@ main(int argc, char **argv)
 
 	fd = open(filename, O_RDWR|O_TRUNC|O_EXCL|O_CREAT, 0600);
 	if (fd < 0) {
-		printf("Open fails with errno = %d\n", errno);
+		printf("Open fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = ftruncate(fd, size);
 	if (ret < 0) {
-		printf("Truncate fails with errno = %d\n", errno);
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = lseek(fd, size - 1234, SEEK_SET);
 	if (ret < 0) {
-		printf("Seek fails with errno = %d\n", errno);
+		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 
 	ret = write(fd, buf, 4096);
 	if (ret != 4096) {
-		printf("Write fails with errno = %d\n", errno);
+		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
-		printf("Stat fails with errno = %d\n", errno);
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	if (stbuf.st_size != size - 1234 + 4096) {
-		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
 
 	ret = ftruncate(fd, 1024);
 	if (ret < 0) {
-		printf("Truncate fails with errno = %d\n", errno);
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = lseek(fd, 0, SEEK_SET);
 	if (ret < 0) {
-		printf("Seek fails with errno = %d\n", errno);
+		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 
 	ret = read(fd, buf, 10240);
 	if (ret < 0) {
-		printf("Read fails with errno = %d\n", errno);
+		printf("Read fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	if (ret != 1024) {
-		printf("Unexpected bytes returned = %d\n", ret);
+		printf("Unexpected bytes returned = %d at line %d\n", ret, __LINE__);
 		exit (0);
 	}
 	for (i = 0; i < ret; i++) {
 		if (buf[i]) {
-			printf("Unexpected file size detected.\n");
+			printf("Unexpected file size detected at line %d.\n", __LINE__);
 			exit (0);
 		}
 	}
 
 	ret = ftruncate(fd, 1000);
 	if (ret < 0) {
-		printf("Truncate fails with errno = %d\n", errno);
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
-		printf("Stat fails with errno = %d\n", errno);
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	if (stbuf.st_size != 1000) {
-		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
 
 	ret = ftruncate(fd, 234);
 	if (ret < 0) {
-		printf("Truncate fails with errno = %d\n", errno);
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
-		printf("Stat fails with errno = %d\n", errno);
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	if (stbuf.st_size != 234) {
-		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
 
 	ret = ftruncate(fd, 23400);
 	if (ret < 0) {
-		printf("Truncate fails with errno = %d\n", errno);
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
-		printf("Stat fails with errno = %d\n", errno);
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	if (stbuf.st_size != 23400) {
-		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
 
