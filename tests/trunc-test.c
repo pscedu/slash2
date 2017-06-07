@@ -93,6 +93,52 @@ main(int argc, char **argv)
 			exit (0);
 		}
 	}
+
+	ret = ftruncate(fd, 1000);
+	if (ret < 0) {
+		printf("Truncate fails with errno = %d\n", errno);
+		exit (0);
+	}
+	ret = stat(filename, &stbuf);
+	if (ret < 0) {
+		printf("Stat fails with errno = %d\n", errno);
+		exit (0);
+	}
+	if (stbuf.st_size != 1000) {
+		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		exit (0);
+	}
+
+	ret = ftruncate(fd, 234);
+	if (ret < 0) {
+		printf("Truncate fails with errno = %d\n", errno);
+		exit (0);
+	}
+	ret = stat(filename, &stbuf);
+	if (ret < 0) {
+		printf("Stat fails with errno = %d\n", errno);
+		exit (0);
+	}
+	if (stbuf.st_size != 234) {
+		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		exit (0);
+	}
+
+	ret = ftruncate(fd, 23400);
+	if (ret < 0) {
+		printf("Truncate fails with errno = %d\n", errno);
+		exit (0);
+	}
+	ret = stat(filename, &stbuf);
+	if (ret < 0) {
+		printf("Stat fails with errno = %d\n", errno);
+		exit (0);
+	}
+	if (stbuf.st_size != 23400) {
+		printf("Unexpected file size = %ld\n", stbuf.st_size);
+		exit (0);
+	}
+
 	printf("All tests has passed successfully.\n");
 	close(fd);
 }
