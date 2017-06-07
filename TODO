@@ -5921,3 +5921,4 @@ zhihui@yuzu: /zzh-slash2/zhihui$ cd ..
 zhihui@yuzu: /zzh-slash2/zhihui$ printf "%x\n" 327636872891308833
 48c000000019b21
 
+FIXED with help of strace.
