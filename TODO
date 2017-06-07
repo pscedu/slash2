@@ -5886,3 +5886,38 @@ make check
 ----------
 
 Make mds and ios run as non-root.
+
+
+06/07/2017
+----------
+
+bash-4.2# pwd
+/zzh-slash2/.slfidns
+
+bash-4.2# ls -al 0x48c000000019b21
+ls: 0x48c000000019b21/..: No such file or directory
+total 55962
+drwxrwxrwx 3 root   root        7 Jun  7 11:56 .
+d--x--x--x 2 root   root        2 Dec 31  1969 ..
+drwxrwxr-x 2 zhihui pscstaff    2 Jun  7 11:55 dddd
+-rw------- 1 zhihui pscstaff  129 Jun  6 16:13 file1
+-rw------- 1 zhihui pscstaff 7862 Jun  7 11:28 newfile
+-rw------- 1 zhihui pscstaff 7862 Jun  7 11:47 newfile1
+-rw------- 1 zhihui pscstaff   25 Jun  7 11:56 .yuzu.psc.edu.gdb_history
+bash-4.2# 
+
+zhihui@yuzu: /zzh-slash2/zhihui$ ls -ali
+ls: cannot access ..: Permission denied
+total 55965
+327636872891308833 drwxrwxrwx 3 root   root        7 Jun  7 11:56 .
+                 ? d????????? ? ?      ?           ?            ? ..
+327636872903180631 drwxrwxr-x 2 zhihui pscstaff    2 Jun  7 11:55 dddd
+327636872903180628 -rw------- 1 zhihui pscstaff  129 Jun  6 16:13 file1
+327636872903180629 -rw------- 1 zhihui pscstaff 7862 Jun  7 11:28 newfile
+327636872903180630 -rw------- 1 zhihui pscstaff 7862 Jun  7 11:47 newfile1
+327636872903180632 -rw------- 1 zhihui pscstaff   25 Jun  7 11:56 .yuzu.psc.edu.gdb_history
+zhihui@yuzu: /zzh-slash2/zhihui$ cd ..
+
+zhihui@yuzu: /zzh-slash2/zhihui$ printf "%x\n" 327636872891308833
+48c000000019b21
+
