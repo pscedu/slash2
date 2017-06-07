@@ -1168,7 +1168,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 		rc = msl_load_fcmh(pfr, fid, &c);
 		if (rc)
-			return (-rc);
+			return (ENOENT);
 		if (fgp)
 			*fgp = c->fcmh_fg;
 		if (sstb) {
