@@ -67,6 +67,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 
+	/* EOPNOTSUPP = 95 */
 	ret = ftruncate(fd, 1024);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
