@@ -3097,8 +3097,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			pfl_rwlock_unlock(&c->fcmh_rwlock);
 
 			/*
-			 * XXX some writes can be cancelled, but no API
-			 * exists yet.
+ 			 * Write beyond the truncation point can be cancelled
+ 			 * in theory. But no API exists yet. Considering the 
+ 			 * fact that partial truncation is rare, we should be 
+ 			 * happy as long as it works.
 			 */
 			DYNARRAY_FOREACH(b, i, &a) {
 				struct bmap_pagecache *bmpc;
@@ -3110,7 +3112,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
-				/* 05/09/2017 sigbus */
 				bmap_biorq_waitempty(b);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
