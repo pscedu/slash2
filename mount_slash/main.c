@@ -3784,6 +3784,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	if (FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS)
+		PFL_GOTOERR(out, rc == ENODATA);
+
 	rc = slc_getxattr(pfr, name, buf, size, f, &retsz);
 
  out:
