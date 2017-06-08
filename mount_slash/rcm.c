@@ -220,6 +220,7 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 
+		b->bcm_flags |= BMAPF_TOFREE; 
 		bmap_op_done(b);
 		b = NULL;
 		fcmh_op_done(f);
