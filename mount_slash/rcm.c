@@ -191,18 +191,44 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 }
 
 /*
- * Handle a RELEASEBMAP request for CLI from MDS.
+ * Handle a SRMT_RELEASEBMAP request for CLI from MDS.
  * @rq: request.
  */
 int
 msrcm_handle_releasebmap(struct pscrpc_request *rq)
 {
+	uint32_t i;
+	struct srt_bmapdesc *sbd;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-
+	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->nbmaps > MAX_BMAP_RELEASE) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+
+	for (i = 0; i < mq->nbmaps; i++) {
+		sbd = &mq->sbd[i];
+		mp->rc = -sl_fcmh_peek_fid(sbd->sbd_fg.fg_fid, &f);
+		if (mp->rc)
+			break;
+
+		mp->rc = -bmap_lookup(f, sbd->sbd_bmapno, &b);
+		if (mp->rc)
+			break;
+
+		bmap_op_done(b);
+		b = NULL;
+		fcmh_op_done(f);
+		f = NULL;
+	}
+	if (b)
+		bmap_op_done(b);
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
