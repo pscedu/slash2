@@ -38,3 +38,9 @@ Obstacle:
 
 		- currently the metadata file of slash2 file can be huge. Last time
 		  I looked, some CRC fields are probably not needed any more.
+
+Concerns:
+
+	* The new MDS will take some time to stablize.
+
+	* There will be work needed to migrate existing data to the new MDS code.
