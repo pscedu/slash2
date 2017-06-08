@@ -2225,7 +2225,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 	FCMH_ULOCK(f);
 
-	/* XXX assert on PJF_REPLAYINPROG during replay */
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
 	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
