@@ -67,7 +67,7 @@ int			slm_max_ios = SL_MAX_REPLICAS;
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
 
-__static int slm_ptrunc_prepare(struct fidc_membh *);
+__static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -2008,18 +2008,8 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
 	int rc;
-	struct fcmh_mds_info *fmi;
 
-	psc_assert(sstb->sst_size);
-
-	FCMH_LOCK_ENSURE(f);
-	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
-	fmi = fcmh_2_fmi(f);
-	fmi->fmi_ptrunc_size = sstb->sst_size;
-
-	FCMH_ULOCK(f);
-	rc = slm_ptrunc_prepare(f);
-	FCMH_LOCK(f);
+	rc = slm_ptrunc_prepare(f, sstb, to_set);
 
 	return (rc);
 }
@@ -2160,9 +2150,10 @@ slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
 }
 
 __static int
-slm_ptrunc_prepare(struct fidc_membh *f)
+slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb,
+    int to_set)
 {
-	int to_set, rc;
+	int rc;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct slrpc_cservice *csvc;
@@ -2174,13 +2165,18 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	uint64_t size;
 
 	fmi = fcmh_2_fmi(f);
+	psc_assert(sstb->sst_size);
+
+	FCMH_LOCK_ENSURE(f);
+	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_size = sstb->sst_size;
 
 	DEBUG_FCMH(PLL_MAX, f, "prepare ptrunc");
 	/*
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
 	 */
-	FCMH_LOCK(f);
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2222,7 +2218,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	}
 
 	FCMH_LOCK(f);
-	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
+	to_set |= SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
 	size = f->fcmh_sstb.sst_size;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
