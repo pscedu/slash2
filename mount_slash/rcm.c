@@ -222,6 +222,7 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 
 		b->bcm_flags |= BMAPF_TOFREE; 
 		bmap_op_done(b);
+		OPSTAT_INCR("msl.bmap_reclaim");
 		b = NULL;
 		fcmh_op_done(f);
 		f = NULL;
