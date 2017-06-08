@@ -33,3 +33,14 @@ Things to change:
 Obstacle:
 
 	* This is a on-disk format change.
+
+		- mandatory: we have to store things like slash2 file size ourselves.
+
+		- currently the metadata file of slash2 file can be huge. Last time
+		  I looked, some CRC fields are probably not needed any more.
+
+Concerns:
+
+	* The new MDS will take some time to stablize.
+
+	* There will be work needed to migrate existing data to the new MDS code.
