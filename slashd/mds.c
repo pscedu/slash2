@@ -2159,6 +2159,8 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb,
 	 * best-effort.
 	 */
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
+
+	FCMH_ULOCK(f);
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
