@@ -2186,6 +2186,10 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb,
 				BMAP_LOCK(b);
 				continue;
 			}
+			mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
+			mq->sbd[0].sbd_fg.fg_gen = fcmh_2_gen(f);
+			mq->sbd[0].sbd_bmapno = b->bcm_bmapno;
+			mq->nbmaps = 1;
 			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 			rq->rq_interpret_reply = slm_bmap_release_cb;
 			rc = SL_NBRQSET_ADD(csvc, rq);
