@@ -2076,14 +2076,11 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		upd = bmap_2_upd(b);
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc queued, upd = %p", upd);
 		/*
-		 * upsch will take a reference to the bmap, but we
-		 * are not sure when it is going to happen. So we
-		 * must hold the bmap reference to avoid a race.
+                 * If queued, upsch will take a reference with UPD_INCREF().
 		 */
 		upsch_enqueue(upd);
-		BMAP_ULOCK(b);
-	} else
-		bmap_op_done(b);
+	}
+	bmap_op_done(b);
 
 	i++;
 
