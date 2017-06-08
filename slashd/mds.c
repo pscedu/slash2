@@ -2092,6 +2092,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	retifset[BREPLST_VALID] = 1;
 
 	for (;; i++) {
+		/*
+ 		 * We could use file size to terminate the loop. Howerver,
+ 		 * the file size in fcmh has already been updated.
+ 		 */
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
