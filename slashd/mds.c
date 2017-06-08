@@ -2007,25 +2007,20 @@ int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
-	int rc = 0;
+	int rc;
 	struct fcmh_mds_info *fmi;
 
-	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
-		if (!slm_ptrunc_enabled) {
-			DEBUG_SSTB(PLL_MAX, sstb, "ptrunc averted");
-			return 0;
-		}
-		FCMH_LOCK_ENSURE(f);
-		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
-		fmi = fcmh_2_fmi(f);
-		fmi->fmi_ptrunc_size = sstb->sst_size;
+	psc_assert(sstb->sst_size);
 
-		FCMH_ULOCK(f);
+	FCMH_LOCK_ENSURE(f);
+	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_size = sstb->sst_size;
 
-		rc = slm_ptrunc_prepare(f);
+	FCMH_ULOCK(f);
+	rc = slm_ptrunc_prepare(f);
+	FCMH_LOCK(f);
 
-		FCMH_LOCK(f);
-	}
 	return (rc);
 }
 
