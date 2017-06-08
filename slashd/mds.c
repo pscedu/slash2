@@ -2069,7 +2069,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
 		goto out1;
 
-	/* When do we drop this reference? */
+	/*
+ 	 * If we truncate in the middle of a bmap, we have to do
+ 	 * partial truncation of the bmap.
+ 	 */
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;

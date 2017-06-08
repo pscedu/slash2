@@ -369,6 +369,10 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 	if (tract) {
 		/*
 		 * The caller must set the flag if modifications are made.
+		 *
+		 * With bmap locked, we will save old replication info.
+		 * The change will be updated by a worker thread, which
+		 * is protected by the BMAPF_REPLMODWR flag.
 		 */
 		PFL_GETTIMEVAL(&tv1);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
