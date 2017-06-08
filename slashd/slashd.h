@@ -314,7 +314,6 @@ void	 slm_set_curr_slashfid(slfid_t);
 int	 slm_get_next_slashfid(slfid_t *);
 
 void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
-int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 int	 mdscoh_req(struct bmap_mds_lease *);
 void	 slm_coh_delete_file(struct fidc_membh *);
