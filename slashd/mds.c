@@ -1993,6 +1993,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 /*
  * Note: The caller must lock the fcmh if it is not NULL.
+ *
+ * We used to (at least at v1.0) call slm_setattr_core() when
+ * we replay NS_OP_SETSIZE and NS_OP_SETATTR journal logs.
+ * But no more, so we can probably simplify the logic of
+ * this function some more.
  */
 int
 slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
