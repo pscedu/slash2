@@ -2213,6 +2213,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 			}
 
 			BMAP_LOCK(b);
+			OPSTAT_INCR("msl.truncate-revoke-lease");
 		}
 		bmap_op_done(b);
 	}

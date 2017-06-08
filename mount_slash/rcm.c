@@ -200,6 +200,8 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 
+	struct fidc_membh *f = NULL;
+
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
 }

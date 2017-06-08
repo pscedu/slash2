@@ -17,6 +17,8 @@ Things to change:
 
 	* All RPCs will have to change to replace a fid with a file handle.
 
+		- currently we path 64-bit FID around.  The value of MAX_HANDLE_SZ is 128.
+
 	* All slash2 per-file metadata must be store in a file.  Right now, we modify
 	  ZFS inode to store some slash2 specific inode information.
 
