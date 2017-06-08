@@ -212,7 +212,7 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
-		mp->rc = -sl_fcmh_peek_fid(sbd->sbd_fg.fg_fid, &f);
+		mp->rc = -sl_fcmh_peek_fg(&sbd->sbd_fg, &f);
 		if (mp->rc)
 			break;
 
