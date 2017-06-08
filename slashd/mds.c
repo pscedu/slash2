@@ -2102,9 +2102,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		BHGEN_INCREMENT(b);
 		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
-		if (ret) {
+		if (ret)
 			mds_bmap_write_logrepls(b);
-		}
 		bmap_op_done(b);
 	}
 
