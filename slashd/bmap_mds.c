@@ -537,6 +537,7 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 	va_end(ap);
 }
 
+/* Keep the symbols in sync with fnstat_prdat() */
 #define DUMP_BMAP_REPLS(repls, buf)					\
 	do {								\
 		int _k, off, ch[NBREPLST];				\
