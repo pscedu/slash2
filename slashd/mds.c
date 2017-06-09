@@ -2051,14 +2051,15 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	 * Arrange upd_proc_bmap() to call slm_upsch_tryptrunc().
 	 */
 	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = BREPLST_TRUNC_QUEUED;
+	tract[BREPLST_VALID] = BREPLST_TRUNC_QUEUED;	/* 't' */
 
 	mds_repl_bmap_walkcb(b, tract, NULL, 0, ptrunc_tally_ios, &ios_list);
 	fmi->fmi_ptrunc_nios = ios_list.nios;
 	if (fmi->fmi_ptrunc_nios) {
 		/*
-		 * fcmh will be unbusied in
-		 * slm_wkcb_wr_brepl().
+		 * fcmh will be unbusied in slm_wkcb_wr_brepl().
+		 *
+		 * bmaps are replayed by mds_replay_bmap_repls().
 		 */
 		rc = mds_bmap_write_logrepls(b);
 		if (rc) {

@@ -264,6 +264,8 @@ struct bmap {
 /*
  * bmap per-replica states. Note that these values have been baked into
  * the on-disk data structures. So do not change them.
+ *
+ * See DUMP_BMAP_REPLS() for the corresponding symbols of these flags.
  */
 #define BREPLST_INVALID		0	/* no data present (zeros) */
 #define BREPLST_REPL_SCHED	1	/* replica is being made */
