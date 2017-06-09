@@ -162,6 +162,7 @@ mds_replay_bmap(void *jent, int op)
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
+		tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		BMAP_ULOCK(b);
@@ -183,6 +184,7 @@ mds_replay_bmap(void *jent, int op)
 			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 			    off)) {
 			case BREPLST_REPL_QUEUED:
+			case BREPLST_TRUNC_QUEUED:
 			case BREPLST_GARBAGE_QUEUED:
 				resid = fcmh_2_repl(f, n);
 
