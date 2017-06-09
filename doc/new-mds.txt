@@ -20,7 +20,8 @@ Things to change:
 		- currently we path 64-bit FID around.  The value of MAX_HANDLE_SZ is 128.
 
 	* All slash2 per-file metadata must be store in a file.  Right now, we modify
-	  ZFS inode to store some slash2 specific inode information.
+	  ZFS inode to store some slash2 specific inode information (e.g., zp_s2nblks
+	  and zp_s2ptruncgen).
 
 	* Journaling code. We don't know when the file system flushes its caches, so a 
 	  replay can fail. Also, we need a way to reclaim log space - use syncfs().
@@ -44,3 +45,13 @@ Concerns:
 	* The new MDS will take some time to stablize.
 
 	* There will be work needed to migrate existing data to the new MDS code.
+
+
+
+
+<yanovich> so it *should* entail just replacing mdsio-zfs.c
+<yanovich> that was my plan long ago
+<yanovich> but we laced way too many hooks
+<yanovich> also, there is a lot of functionality that you have to replace (if you so choose), like the zfs send/recv and 
+	   raidz3 and everything else provided (unless you switch to a system that provides that..)
+<yanovich> i am sorry but i do not have any time right now to review anything that would require serious attention
