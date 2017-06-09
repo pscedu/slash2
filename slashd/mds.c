@@ -2130,9 +2130,8 @@ slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
 	return (0);
 }
 
-__static int
-slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb,
-    int to_set)
+int
+slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 {
 	int rc;
 	struct srm_bmap_release_req *mq;
