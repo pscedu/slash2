@@ -1069,6 +1069,9 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
+	/*
+	 * Constraints of the table: UNIQUE(resid, fid, bno).
+	 */
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
