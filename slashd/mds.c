@@ -2058,6 +2058,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if (fmi->fmi_ptrunc_nios) {
 		/*
 		 * fcmh will be unbusied in slm_wkcb_wr_brepl().
+		 *
+		 * bmaps are replayed by mds_replay_bmap_repls().
 		 */
 		rc = mds_bmap_write_logrepls(b);
 		if (rc) {
