@@ -2057,8 +2057,7 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	fmi->fmi_ptrunc_nios = ios_list.nios;
 	if (fmi->fmi_ptrunc_nios) {
 		/*
-		 * fcmh will be unbusied in
-		 * slm_wkcb_wr_brepl().
+		 * fcmh will be unbusied in slm_wkcb_wr_brepl().
 		 */
 		rc = mds_bmap_write_logrepls(b);
 		if (rc) {

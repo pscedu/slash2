@@ -149,6 +149,11 @@ mds_replay_bmap(void *jent, int op)
 		memcpy(bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 
+		/*
+ 		 * Here, we assume that if we replay the log entry, the
+ 		 * correponding changes have not be made to the file
+ 		 * system.
+ 		 */
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
