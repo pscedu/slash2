@@ -28,9 +28,10 @@ Things to change:
 	
 	  Replay made easy because we never re-use FID, we never truncate.
 
-	  In stead of using a system wide transaction group ID, we can use generation number 
+	  Instead of using a system wide transaction group ID, we can use generation number 
 	  associated with different parts of a file to determine whether we should reply a log
-	  entry (bmap generation number, inode generation number, etc).
+	  entry (bmap generation number, inode generation number, etc).  The generation number
+	  is stored in each log entry.
 
 	* We still need to keep the FID name space. Our replication script uses it and
 	  it can be a quick way to do FID->name mapping.
