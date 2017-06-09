@@ -67,7 +67,7 @@ int			slm_max_ios = SL_MAX_REPLICAS;
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
 
-__static int slm_ptrunc_prepare(struct fidc_membh *);
+__static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -1995,35 +1995,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	return (rc);
 }
 
-/*
- * Note: The caller must lock the fcmh if it is not NULL.
- *
- * We used to (at least at v1.0) call slm_setattr_core() when
- * we replay NS_OP_SETSIZE and NS_OP_SETATTR journal logs.
- * But no more, so we can probably simplify the logic of
- * this function some more.
- */
-int
-slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
-    int to_set)
-{
-	int rc;
-	struct fcmh_mds_info *fmi;
-
-	psc_assert(sstb->sst_size);
-
-	FCMH_LOCK_ENSURE(f);
-	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
-	fmi = fcmh_2_fmi(f);
-	fmi->fmi_ptrunc_size = sstb->sst_size;
-
-	FCMH_ULOCK(f);
-	rc = slm_ptrunc_prepare(f);
-	FCMH_LOCK(f);
-
-	return (rc);
-}
-
 struct ios_list {
 	sl_replica_t	iosv[SL_MAX_REPLICAS];
 	int		nios;
@@ -2069,7 +2040,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	if ((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) == 0)
 		goto out1;
 
-	/* When do we drop this reference? */
+	/*
+ 	 * If we truncate in the middle of a bmap, we have to do
+ 	 * partial truncation of the bmap.
+ 	 */
 	rc = bmap_get(f, i, SL_WRITE, &b);
 	if (rc)
 		goto out2;
@@ -2102,14 +2076,11 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		upd = bmap_2_upd(b);
 		DEBUG_FCMH(PLL_MAX, f, "ptrunc queued, upd = %p", upd);
 		/*
-		 * upsch will take a reference to the bmap, but we
-		 * are not sure when it is going to happen. So we
-		 * must hold the bmap reference to avoid a race.
+                 * If queued, upsch will take a reference with UPD_INCREF().
 		 */
 		upsch_enqueue(upd);
-		BMAP_ULOCK(b);
-	} else
-		bmap_op_done(b);
+	}
+	bmap_op_done(b);
 
 	i++;
 
@@ -2121,6 +2092,10 @@ slm_ptrunc_apply(struct fidc_membh *f)
 	retifset[BREPLST_VALID] = 1;
 
 	for (;; i++) {
+		/*
+ 		 * We could use file size to terminate the loop. Howerver,
+ 		 * the file size in fcmh has already been updated.
+ 		 */
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
 			break;
@@ -2128,9 +2103,8 @@ slm_ptrunc_apply(struct fidc_membh *f)
 		BHGEN_INCREMENT(b);
 		ret = mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    NULL, NULL);
-		if (ret) {
+		if (ret)
 			mds_bmap_write_logrepls(b);
-		}
 		bmap_op_done(b);
 	}
 
@@ -2156,10 +2130,10 @@ slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
 	return (0);
 }
 
-__static int
-slm_ptrunc_prepare(struct fidc_membh *f)
+int
+slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 {
-	int to_set, rc;
+	int rc;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct slrpc_cservice *csvc;
@@ -2171,14 +2145,21 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	uint64_t size;
 
 	fmi = fcmh_2_fmi(f);
+	psc_assert(sstb->sst_size);
+
+	FCMH_LOCK_ENSURE(f);
+	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_size = sstb->sst_size;
 
 	DEBUG_FCMH(PLL_MAX, f, "prepare ptrunc");
 	/*
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
 	 */
-	FCMH_LOCK(f);
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
+
+	FCMH_ULOCK(f);
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
@@ -2204,6 +2185,10 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 				BMAP_LOCK(b);
 				continue;
 			}
+			mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
+			mq->sbd[0].sbd_fg.fg_gen = fcmh_2_gen(f);
+			mq->sbd[0].sbd_bmapno = b->bcm_bmapno;
+			mq->nbmaps = 1;
 			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 			rq->rq_interpret_reply = slm_bmap_release_cb;
 			rc = SL_NBRQSET_ADD(csvc, rq);
@@ -2219,7 +2204,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	}
 
 	FCMH_LOCK(f);
-	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
+	to_set |= SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
 	size = f->fcmh_sstb.sst_size;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;

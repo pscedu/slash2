@@ -295,32 +295,32 @@ enum {
 	SLM_OPSTATE_NORMAL
 };
 
-int	 mds_handle_rls_bmap(struct pscrpc_request *, int);
-int	 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
+int	mds_handle_rls_bmap(struct pscrpc_request *, int);
+int	mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 	    struct srt_bmapdesc *, struct pscrpc_export *);
-int	 mds_lease_reassign(struct fidc_membh *, struct srt_bmapdesc *,
+int	mds_lease_reassign(struct fidc_membh *, struct srt_bmapdesc *,
 	    sl_ios_id_t, sl_ios_id_t *, int, struct srt_bmapdesc *,
 	    struct pscrpc_export *);
 
-int	 mds_sliod_alive(void *);
+int	mds_sliod_alive(void *);
 
-void	 slmbkdbthr_main(struct psc_thread *);
-void	 slmbmaptimeothr_spawn(void);
-void	 slmctlthr_spawn(const char *);
-void	 slmrcmthr_main(struct psc_thread *);
+void	slmbkdbthr_main(struct psc_thread *);
+void	slmbmaptimeothr_spawn(void);
+void	slmctlthr_spawn(const char *);
+void	slmrcmthr_main(struct psc_thread *);
 
-slfid_t	 slm_get_curr_slashfid(void);
-void	 slm_set_curr_slashfid(slfid_t);
-int	 slm_get_next_slashfid(slfid_t *);
+slfid_t	slm_get_curr_slashfid(void);
+void	slm_set_curr_slashfid(slfid_t);
+int	slm_get_next_slashfid(slfid_t *);
 
-void	 slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
-int	 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
+void	slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
+int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
-int	 mdscoh_req(struct bmap_mds_lease *);
-void	 slm_coh_delete_file(struct fidc_membh *);
+int	mdscoh_req(struct bmap_mds_lease *);
+void	slm_coh_delete_file(struct fidc_membh *);
 
-void	 slm_mdfs_scan(void);
-int	 slm_wkcb_wr_brepl(void *);
+void	slm_mdfs_scan(void);
+int	slm_wkcb_wr_brepl(void *);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
 int	 _dbdo(const struct pfl_callerinfo *,

@@ -1258,15 +1258,20 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mp->rc) {
 			if (unbump)
 				fcmh_2_gen(f)--;
+			FCMH_LOCK(f);
 			goto out;
 		}
 		FCMH_LOCK(f);
 	}
 
+	/*
+ 	 * Not sure if we can follow through after the above to_set statement.
+ 	 */
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
-		mp->rc = slm_setattr_core(f, &mq->attr, to_set | tadj);
+		mp->rc = slm_ptrunc_prepare(f, &mq->attr, to_set | tadj);
 		if (!mp->rc)
 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
+		FCMH_LOCK(f);
 	}
 
  out:
