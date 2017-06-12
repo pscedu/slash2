@@ -40,7 +40,6 @@ struct psc_ctlmsghdr;
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	slfid_t			mrs_fid;
-	struct sl_fidgen	mrs_fg;		/* used intermittenly */
 	char			mrs_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
 	uint32_t		mrs_nios;
 	uint32_t		mrs_newreplpol;	/* default replication policy */
