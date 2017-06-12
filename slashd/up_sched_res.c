@@ -383,14 +383,16 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	mds_bmap_write_logrepls(b);
 	BMAP_ULOCK(b);
 
-	if (!rc) {
-		FCMH_LOCK(f);
-		fmi = fcmh_2_fmi(f);
-		fmi->fmi_ptrunc_nios--;
-		if (!fmi->fmi_ptrunc_nios)
-			f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		FCMH_ULOCK(f);
-	}
+	/*
+	 * Regardless of success or failure, the operation on the
+	 * IOS is done for now.  We might try later.
+	 */
+	FCMH_LOCK(f);
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_nios--;
+	if (!fmi->fmi_ptrunc_nios)
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+	FCMH_ULOCK(f);
 
 	psclog(rc ? PLL_WARN : PLL_DIAG,
 	    "partial truncation resolution: ios_repl_off=%d, rc=%d",
