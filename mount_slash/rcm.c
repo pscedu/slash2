@@ -82,7 +82,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct msctlmsg_replst mrs;		/* XXX big stack usage */
+	struct msctlmsg_replst mrs;		/* > 4KiB stack usage */
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
