@@ -473,8 +473,11 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	tract[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_SCHED;
 	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-	if (rc != BREPLST_TRUNC_QUEUED)
-		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
+	if (rc != BREPLST_TRUNC_QUEUED) {
+		DEBUG_BMAPOD(PLL_DEBUG, b, "consistency error; expected "
+		    "state=TRUNC at off %d", off);
+		PFL_GOTOERR(out, rc = EINVAL);
+	}
 
 	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
