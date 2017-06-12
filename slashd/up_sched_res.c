@@ -595,8 +595,11 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = mds_bmap_write_logrepls(b);
-	psc_assert(rc == 0);
-
+	if (rc) {
+		OPSTAT_INCR("msl.bmap-write-err");
+		psclog_warnx("bmap write: fid="SLPRI_FID", bno = %d, rc = %d", 
+		    fcmh_2_fid(f), b->bcm_bmapno, rc);
+	}
 	return (1);
 
  out:
