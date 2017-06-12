@@ -1170,6 +1170,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* handle SRMT_SETATTR RPC */
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
