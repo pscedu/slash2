@@ -352,7 +352,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 void
 slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
-    struct bmap *b, int sched, int rc, int off)
+    struct bmap *b, int rc, int off)
 {
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
@@ -363,25 +363,23 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	f = b->bcm_fcmh;
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
 
-	if (sched) {
-		/*
-		 * If successful, the IOS is responsible to send a
-		 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
-		 * and the disk usage. However, we don't wait for
-		 * it to happen.
-		 */
-		brepls_init(tract, -1);
-		tract[BREPLST_TRUNC_SCHED] = rc ?
-		    BREPLST_TRUNC_QUEUED : BREPLST_VALID;
-		brepls_init_idx(retifset);
+	/*
+	 * If successful, the IOS is responsible to send a
+	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+	 * and the disk usage. However, we don't wait for
+	 * it to happen.
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_TRUNC_SCHED] = rc ?
+	    BREPLST_TRUNC_QUEUED : BREPLST_VALID;
+	brepls_init_idx(retifset);
 
-		BMAP_LOCK(b);
-		ret = mds_repl_bmap_apply(b, tract, retifset, off);
-		if (ret != BREPLST_TRUNC_SCHED)
-			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
-		mds_bmap_write_logrepls(b);
-		BMAP_ULOCK(b);
-	}
+	BMAP_LOCK(b);
+	ret = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (ret != BREPLST_TRUNC_SCHED)
+		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
+	mds_bmap_write_logrepls(b);
+	BMAP_ULOCK(b);
 
 	if (!rc) {
 		FCMH_LOCK(f);
@@ -410,7 +408,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc);
-	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (0);
 }
 
@@ -421,7 +419,7 @@ int
 slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
+	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc;
 	struct srt_ptrunc_req *mq;
@@ -479,7 +477,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		PFL_GOTOERR(out, rc = EINVAL);
 	}
 
-	sched = 1;
 	av.pointer_arg[IP_BMAP] = b;
 
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc req=%p, off=%d, id=%#x",
@@ -493,7 +490,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
  out:
 	pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(csvc, b, sched, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (rc);
 }
 
