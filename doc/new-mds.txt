@@ -47,6 +47,12 @@ Obstacle:
 		- currently the metadata file of slash2 file can be huge. Last time
 		  I looked, some CRC fields are probably not needed any more.
 
+		- since we have on-disk format change, we might as well do the following:
+
+			- combine ino and inox, add a version to inode
+			- increase number of IOS per inode from 64 to 128
+			- get rid of CRC stuff.
+
 Concerns:
 
 	* The new MDS will take some time to stablize.
