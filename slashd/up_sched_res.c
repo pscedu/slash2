@@ -361,7 +361,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	psc_assert(b);
 
 	f = b->bcm_fcmh;
-	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished, rc = %d", rc);
 
 	/*
 	 * If successful, the IOS is responsible to send a
@@ -376,8 +376,10 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 
 	BMAP_LOCK(b);
 	ret = mds_repl_bmap_apply(b, tract, retifset, off);
-	if (ret != BREPLST_TRUNC_SCHED)
-		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
+	if (ret != BREPLST_TRUNC_SCHED) {
+		OPSTAT_INCR("msl.ptrunc-bmap-err");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap is corrupted");
+	}
 	mds_bmap_write_logrepls(b);
 	BMAP_ULOCK(b);
 
