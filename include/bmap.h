@@ -98,6 +98,8 @@ struct bmap_ondisk {
 
 /* used by SL_REPL_GET_BMAP_IOS_STAT() */
 
+/* Some of the following are used by dumpfid.c */
+
 #define bod_repls	bod_corestate.bcs_repls
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs
