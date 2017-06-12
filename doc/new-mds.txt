@@ -25,6 +25,8 @@ Things to change:
 	  ZFS inode to store some slash2 specific inode information (e.g., zp_s2nblks
 	  and zp_s2ptruncgen).
 
+	  Other information like owner, permission can stay.
+
 	* Journaling code. We don't know when the file system flushes its caches, so a 
 	  replay can fail. Also, we need a way to reclaim log space - use syncfs().
 	
