@@ -556,11 +556,6 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	struct sl_resm *m;
 
 	f = b->bcm_fcmh;
-	if (!slm_preclaim_enabled) {
-		OPSTAT_INCR("preclaim-averted");
-		DEBUG_FCMH(PLL_DIAG, f, "preclaim averted");
-		return (0);
-	}
 
 	OPSTAT_INCR("preclaim-attempt");
 	si = res2iosinfo(r);
