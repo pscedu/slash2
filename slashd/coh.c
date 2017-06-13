@@ -64,7 +64,8 @@ slm_coh_bml_release(struct bmap_mds_lease *bml)
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
-	BMAP_RLOCK(b);
+
+	BMAP_LOCK(b);
 	bmi->bmi_diocb--;
 	bml->bml_flags &= ~BML_DIOCB;
 

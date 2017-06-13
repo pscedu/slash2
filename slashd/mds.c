@@ -1190,7 +1190,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * If this becomes problematic we should investigate more.
 	 * ATM BMAPF_IOSASSIGNED is not relied upon.
 	 */
-	(void)BMAP_RLOCK(b);
+	BMAP_LOCK_ENSURE(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 	b->bcm_flags |= BMAPF_IOSASSIGNED;
 
