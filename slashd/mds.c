@@ -1326,6 +1326,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	bmap_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
+	if (bml->bml_flags & BML_WRITE)
+		OPSTAT_DECR("write-lease");
+	else
+		OPSTAT_DECR("read-lease");
+
 	psc_pool_return(slm_bml_pool, bml);
 
 	if (odtr) {
@@ -1431,6 +1436,11 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 	bml->bml_cli_nidpid = *cnp;
 	bml->bml_start = time(NULL);
 	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+
+	if (flags & BML_WRITE)
+		OPSTAT_INCR("write-lease");
+	else
+		OPSTAT_INCR("read-lease");
 
 	return (bml);
 }
