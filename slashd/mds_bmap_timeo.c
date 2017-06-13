@@ -179,13 +179,11 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
 	uint64_t seq = 0;
 
-	BML_LOCK(bml);
 	spinlock(&slm_bmap_leases.btt_lock);
 	if (flags & BTE_DEL) {
 		bml->bml_flags &= ~BML_TIMEOQ;
 		mds_bmap_timeotbl_remove(bml);
 		freelock(&slm_bmap_leases.btt_lock);
-		BML_ULOCK(bml);
 		return (BMAPSEQ_ANY);
 	}
 
@@ -220,7 +218,6 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	}
 	freelock(&slm_bmap_leases.btt_lock);
-	BML_ULOCK(bml);
 
 	return (seq);
 }
@@ -229,6 +226,7 @@ void
 slmbmaptimeothr_begin(struct psc_thread *thr)
 {
 	char wait[16];
+	struct bmap *b;
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
@@ -240,27 +238,28 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			nsecs = BMAP_TIMEO_MAX;
 			goto out;
 		}
+		b = bml_2_bmap(bml);
 
-		if (!BML_TRYLOCK(bml)) {
+		if (!BMAP_TRYLOCK(b)) {
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
 			goto out;
 		}
 		if (bml->bml_refcnt) {
-			BML_ULOCK(bml);
+			BMAP_ULOCK(b);
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
 			goto out;
 		}
 		if (bml->bml_flags & BML_FREEING) {
-			BML_ULOCK(bml);
+			BMAP_ULOCK(b);
 			freelock(&slm_bmap_leases.btt_lock);
 			nsecs = 1;
 			goto out;
 		}
 		nsecs = bml->bml_expire - time(NULL);
 		if (nsecs > 0) {
-			BML_ULOCK(bml);
+			BMAP_ULOCK(b);
 			freelock(&slm_bmap_leases.btt_lock);
 			goto out;
 		}
@@ -268,7 +267,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		bml->bml_refcnt++;
 		bml->bml_flags |= BML_FREEING;
 
-		BML_ULOCK(bml);
+		BMAP_ULOCK(b);
 		freelock(&slm_bmap_leases.btt_lock);
 
 		rc = mds_bmap_bml_release(bml);

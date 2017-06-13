@@ -62,14 +62,11 @@ slm_coh_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
 
-	BML_RLOCK(bml);
-	bml->bml_flags &= ~BML_DIOCB;
-	BML_ULOCK(bml);
-
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
 	BMAP_RLOCK(b);
 	bmi->bmi_diocb--;
+	bml->bml_flags &= ~BML_DIOCB;
 
 	mds_bmap_bml_release(bml);
 }
@@ -84,6 +81,8 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
 	struct srm_bmap_dio_req *mq;
 	char buf[PSCRPC_NIDSTR_SIZE];
+	struct bmap_mds_info *bmi;
+	struct bmap *b;
 	int rc;
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
@@ -96,8 +95,12 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	if (rc && rc != -ENOENT)
 		goto out;
 
-	BML_LOCK(bml);
+	bmi = bml->bml_bmi;
+	b = bmi_2_bmap(bmi);
+
+	BMAP_LOCK(b);
 	bml->bml_flags |= BML_DIO;
+	BMAP_ULOCK(b);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
@@ -134,7 +137,6 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
 
-	BML_LOCK_ENSURE(bml);
 	BMAP_LOCK_ENSURE(b);
 
 	if (bml->bml_flags & BML_RECOVER) {

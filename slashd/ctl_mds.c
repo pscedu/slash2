@@ -476,7 +476,6 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_FOREACH(bml, pll) {
 		bmi = bml->bml_bmi;
 		memset(scbl, 0, sizeof(*scbl));
-		BML_LOCK(bml);
 		strlcpy(scbl->scbl_resname,
 		    bml->bml_ios && bml->bml_ios != IOS_ID_ANY ?
 		    libsl_id2res(bml->bml_ios)->res_name : "<any>",
@@ -492,7 +491,6 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pscrpc_id2str(bml->bml_cli_nidpid, scbl->scbl_client);
 		for (t = bml; t->bml_chain != bml; t = t->bml_chain)
 			scbl->scbl_ndups++;
-		BML_ULOCK(bml);
 
 		rc = psc_ctlmsg_sendv(fd, mh, scbl, NULL);
 		if (!rc)

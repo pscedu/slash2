@@ -153,7 +153,6 @@ struct bmap_mds_lease {
 	uint32_t		  bml_flags;
 	time_t			  bml_start;
 	time_t			  bml_expire;
-	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmi;
 	struct pscrpc_export	 *bml_exp;
 	struct psc_listentry	  bml_bmi_lentry;
@@ -174,13 +173,6 @@ struct bmap_mds_lease {
 #define BML_RECOVERFAIL		(1 <<  9)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmi)
-
-#define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
-#define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
-#define BML_RLOCK(bml)		reqlock(&(bml)->bml_lock)
-#define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
-#define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
-#define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
 
 #define PFLOG_BML(level, bml, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "bml@%p " fmt, (bml), ##__VA_ARGS__)
