@@ -691,7 +691,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		DEBUG_BMAP(PLL_ERROR, b, "failed pfl_odt_allocslot()");
 		return (-ENOMEM);
 	}
-	BMAP_ULOCK(b);
 
 	pfl_odt_mapitem(slm_bia_odt, item, &bia);
 
