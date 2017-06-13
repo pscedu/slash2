@@ -91,9 +91,8 @@ struct bmap_mds_info {
 /* MDS-specific bcm_flags, _BMAPF_SHIFT	 = (1 <<  9) */
 
 #define BMAPF_CRC_UP		(_BMAPF_SHIFT << 0)	/* CRC update in progress */
-#define BMAPF_NOION		(_BMAPF_SHIFT << 1)	/* IOS could not be contacted for lease request */
-#define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 2)	/* res state changes have been written */
-#define BMAPF_IOSASSIGNED	(_BMAPF_SHIFT << 3)	/* write request bound an IOS to this bmap */
+#define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 1)	/* res state changes have been written */
+#define BMAPF_IOSASSIGNED	(_BMAPF_SHIFT << 2)	/* write request bound an IOS to this bmap */
 
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen

@@ -673,9 +673,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
 	if (rc) {
-		BMAP_LOCK(b);
-		b->bcm_flags |= BMAPF_NOION;
-		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
 
 		r = libsl_id2res(iosid);
@@ -698,16 +695,11 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	 */
 	item = pfl_odt_allocslot(slm_bia_odt);
 
-	BMAP_LOCK(b);
 	if (item == ODTBL_SLOT_INV) {
-		b->bcm_flags |= BMAPF_NOION;
-		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
-
 		DEBUG_BMAP(PLL_ERROR, b, "failed pfl_odt_allocslot()");
 		return (-ENOMEM);
 	}
-	b->bcm_flags &= ~BMAPF_NOION;
 	BMAP_ULOCK(b);
 
 	pfl_odt_mapitem(slm_bia_odt, item, &bia);
@@ -1255,12 +1247,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
 		int retifset[NBREPLST];
-
-		if (b->bcm_flags & BMAPF_NOION) {
-			psc_assert(!bmi->bmi_assign);
-			psc_assert(!bmi->bmi_wr_ion);
-			goto out;
-		}
 
 		/*
 		 * bml's which have failed ION assignment shouldn't be
