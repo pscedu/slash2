@@ -1797,8 +1797,10 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (!obml)
 		PFL_GOTOERR(out2, rc = -ENOENT);
 
-	if (!(obml->bml_flags & BML_WRITE)) 
+	if (!(obml->bml_flags & BML_WRITE))  {
+		BMAP_LOCK(b);
 		PFL_GOTOERR(out2, rc = -EINVAL);
+	}
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 
@@ -1935,9 +1937,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 * mds_bmap_bml_release() since a new lease has already been
 	 * issued.
 	 */
-	if (obml) {
+	if (obml)
 		obml->bml_flags |= BML_FREEING;
-	}
 
  out:
 	if (bml)
