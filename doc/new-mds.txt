@@ -57,7 +57,8 @@ Obstacle:
 			- get rid of CRC stuff.
 
 	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
-	  used by dumpfid.c.
+	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
+	  ask Ed.
 
 Concerns:
 
