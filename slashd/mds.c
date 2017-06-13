@@ -1384,6 +1384,9 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		if (bmap_lookup(f, sbd->sbd_bmapno, &b))
 			goto next;
 
+		/*
+ 		 * Leases are timed out by slmbmaptimeothr_begin().
+ 		 */
 		bml = mds_bmap_getbml(b, sbd->sbd_seq,
 		    sbd->sbd_nid, sbd->sbd_pid);
 
