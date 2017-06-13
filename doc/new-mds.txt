@@ -55,6 +55,9 @@ Obstacle:
 			- increase number of IOS per inode from 64 to 128
 			- get rid of CRC stuff.
 
+	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
+	  used by dumpfid.c.
+
 Concerns:
 
 	* The new MDS will take some time to stablize.
