@@ -7,7 +7,8 @@ Motivation:
 	* All metadata are user visible files.
 	* Help MDS run as non-root.
 
-	* No more confusion between zfs-fuse tools and ZFS-on-Linux tools (which ones to use).
+	* No more confusion between zfs-fuse toolchains and ZFS-on-Linux toolchains (which 
+	  ones to use).
 
 Feasibility:
 
