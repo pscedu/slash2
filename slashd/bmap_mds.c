@@ -630,7 +630,6 @@ dump_bml_flags(uint32_t flags)
 	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
 	PFL_PRFLAG(BML_CHAIN, &flags, &seq);
 	PFL_PRFLAG(BML_FREEING, &flags, &seq);
-	PFL_PRFLAG(BML_ASSFAIL, &flags, &seq);
 	PFL_PRFLAG(BML_RECOVERFAIL, &flags, &seq);
 	printf("\n");
 }

@@ -673,13 +673,10 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
 	if (rc) {
-		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
-
 		r = libsl_id2res(iosid);
 		psclog_warnx("Fail to contact IOS %#x (pref_ios=%s) "
 		    "for lease, fid = "SLPRI_FID, iosid, 
 		    r ? r->res_name : NULL, fcmh_2_fid(f)); 
-
 		return (rc);
 	}
 
@@ -696,7 +693,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	item = pfl_odt_allocslot(slm_bia_odt);
 
 	if (item == ODTBL_SLOT_INV) {
-		bml->bml_flags |= BML_ASSFAIL;
 		DEBUG_BMAP(PLL_ERROR, b, "failed pfl_odt_allocslot()");
 		return (-ENOMEM);
 	}
@@ -872,7 +868,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	    bml, rc, bmi->bmi_writers, bmi->bmi_readers);
 
 	if (rc) {
-		bml->bml_flags |= BML_ASSFAIL;
+		bml->bml_flags |= BML_FREEING;
 		goto out;
 	}
 	psc_assert(bmi->bmi_wr_ion);
@@ -1761,8 +1757,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	if (rc) {
 		BML_LOCK(bml);
 		bml->bml_flags |= BML_FREEING;
-		if (rc == -SLERR_ION_OFFLINE)
-			bml->bml_flags |= BML_ASSFAIL;
 		BML_ULOCK(bml);
 		goto out;
 	}
@@ -1933,8 +1927,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc) {
 		BML_LOCK(bml);
 		bml->bml_flags |= BML_FREEING;
-		if (rc == -SLERR_ION_OFFLINE)
-			bml->bml_flags |= BML_ASSFAIL;
 		BML_ULOCK(bml);
 		goto out;
 	}
