@@ -4,11 +4,15 @@
 Motivation:
 
 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
+
 	* All metadata are user visible files.
+
 	* Help MDS run as non-root.
 
 	* No more confusion between zfs-fuse toolchains and ZFS-on-Linux toolchains (which 
 	  ones to use).
+
+	* Use file handle is more efficient than going through the FID namespace.
 
 Feasibility:
 
@@ -40,6 +44,8 @@ Things to change:
 
 	* We still need to keep the FID name space. Our replication script uses it and
 	  it can be a quick way to do FID->name mapping.
+
+	  Also, the IOS uses FID to do I/O.
 
 Obstacle:
 
