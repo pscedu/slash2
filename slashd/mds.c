@@ -900,9 +900,12 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	}
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_WRITE;
-	OPSTAT_INCR("bmap-chwrmode");
 
   out:
+	if (rc)
+		OPSTAT_INCR("bmap-chwrmode-ok");
+	else
+		OPSTAT_INCR("bmap-chwrmode-err");
 	b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 	bmap_wake_locked(b);
 	return (rc);
