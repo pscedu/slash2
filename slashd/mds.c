@@ -1248,14 +1248,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
 		int retifset[NBREPLST];
 
-		/*
-		 * bml's which have failed ION assignment shouldn't be
-		 * relevant to any odtable entry.
-		 */
-		if (bml->bml_flags & BML_ASSFAIL)
-			goto out;
-
-		if (!(bml->bml_flags & BML_RECOVERFAIL)) {
+		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
 
 			pfl_odt_getitem(slm_bia_odt,
@@ -1278,8 +1271,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			/* End sanity checks. */
 			odtr = bmi->bmi_assign;
 			bmi->bmi_assign = NULL;
-		} else {
-			psc_assert(!bmi->bmi_assign);
 		}
 		psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
 		bmi->bmi_wr_ion = NULL;
