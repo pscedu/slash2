@@ -1910,13 +1910,12 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 
 	if (!rc) {
 		rsw = psc_pool_get(slm_repl_status_pool);
-		memset(rsw, 0, sizeof(*rsw));
-		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
+		rsw->rsw_csvc = csvc;
 		rsw->rsw_fg = mq->fg;
 		rsw->rsw_cid = mq->id;
-		rsw->rsw_csvc = csvc;
+		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 
-		/* handled by slmrcmthr_main() */
+		/* queue work for slmrcmthr_main() */
 		lc_add(&slm_replst_workq, rsw);
 	}
 
