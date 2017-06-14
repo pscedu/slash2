@@ -1908,7 +1908,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
 
-	rc = mds_bmap_bml_add(bml, (rw == BML_READ ? SL_READ : SL_WRITE),
+	rc = mds_bmap_bml_add(bml, rw == BML_READ ? SL_READ : SL_WRITE,
 	    sbd_in->sbd_ios);
 	if (rc) {
 		bml->bml_flags |= BML_FREEING;
