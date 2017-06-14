@@ -1907,7 +1907,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
-
 	rc = mds_bmap_bml_add(bml, rw == BML_READ ? SL_READ : SL_WRITE,
 	    sbd_in->sbd_ios);
 	if (rc) {
@@ -1931,8 +1930,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		psc_assert(bmi->bmi_wr_ion);
 
 		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_crc;
-		sbd_out->sbd_ios =
-		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
@@ -1947,8 +1945,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		obml->bml_flags |= BML_FREEING;
 
  out:
-	if (bml)
+	if (bml) {
 		mds_bmap_bml_release(bml);
+		BMAP_LOCK(b);
+	}
 	if (obml)
 		mds_bmap_bml_release(obml);
 
