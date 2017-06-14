@@ -1884,13 +1884,13 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
     struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
 	struct bmap_mds_lease *bml = NULL, *obml;
-	struct bmap *b;
+	struct bmap *b = NULL;
 	int rc, rw;
 
 	OPSTAT_INCR("lease-renew");
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
-		return (rc);
+		goto out;
 
 	/* Lookup the original lease to ensure it actually exists. */
 	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
@@ -1944,13 +1944,14 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		mds_bmap_bml_release(bml);
 	if (obml)
 		mds_bmap_bml_release(obml);
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
+	psclogs(rc ? PLL_WARN : PLL_DIAG, 
 	    "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
 	    sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
 
-	bmap_op_done(b);
+	if (b)
+		bmap_op_done(b);
 	return (rc);
 }
 
