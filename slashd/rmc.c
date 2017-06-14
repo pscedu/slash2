@@ -1862,6 +1862,9 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	/*
+ 	 * Scan for any bmap in an outstanding queued state. 
+ 	 */
 	rc = slm_fcmh_get(&mq->fg, &f);
 	if (rc) {
 		mp->rc = rc;
@@ -1873,12 +1876,16 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		rc = -bmap_get(f, i, SL_WRITE, &b);
 		if (rc) {
 			mp->rc = rc;
-			goto out;
+			break;
 		}
 		rc = mds_repl_bmap_walk_all(b, NULL, retifset, 0);
-
+		if (rc) {
+			OPSTAT_INCR("bmap-requeue");
+			upsch_enqueue(bmap_2_upd(b));
+		}
 		bmap_op_done(b);
 	}
+	fcmh_op_done(f);
 
 	rsw = psc_pool_get(slm_repl_status_pool);
 	memset(rsw, 0, sizeof(*rsw));
@@ -1891,8 +1898,6 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	lc_add(&slm_replst_workq, rsw);
 
  out:
-	if (f)
-		fcmh_op_done(f);
 	return (0);
 }
 
