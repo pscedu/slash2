@@ -1380,6 +1380,10 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml = psc_pool_get(slm_bml_pool);
 
+	/*
+ 	 * The order of initialization matches the definition
+ 	 * for easy check.
+ 	 */
 	bml->bml_seq = 0;
 	bml->bml_refcnt = 1;
 	bml->bml_ios = 0;
