@@ -1845,6 +1845,10 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
 	struct slrpc_cservice *csvc;
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
+	sl_bmapno_t i;
+	int rc, retifset[NBREPLST];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1858,6 +1862,24 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	rc = slm_fcmh_get(&mq->fg, &f);
+	if (rc) {
+		mp->rc = rc;
+		goto out;
+	}
+	retifset[BREPLST_TRUNC_QUEUED] = 1;
+	for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
+
+		rc = -bmap_get(f, i, SL_WRITE, &b);
+		if (rc) {
+			mp->rc = rc;
+			goto out;
+		}
+		rc = mds_repl_bmap_walk_all(b, NULL, retifset, 0);
+
+		bmap_op_done(b);
+	}
+
 	rsw = psc_pool_get(slm_repl_status_pool);
 	memset(rsw, 0, sizeof(*rsw));
 	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
@@ -1869,6 +1891,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	lc_add(&slm_replst_workq, rsw);
 
  out:
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
