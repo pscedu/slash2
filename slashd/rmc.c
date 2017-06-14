@@ -1836,6 +1836,18 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	mp->nbmaps_processed = mq->nbmaps;
 	return (0);
 }
+void
+slm_repl_queue_cb(__unusedx struct bmap *b, __unusedx int iosidx,
+    int val, void *arg)
+{
+	int *queued = arg;
+
+	switch (val) {
+	case BREPLST_REPL_QUEUED:
+		queued[val]++;
+		break;
+	}
+}
 
 /* Handle SRMT_REPL_GETST request */
 int
@@ -1848,7 +1860,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 	sl_bmapno_t i;
-	int rc, retifset[NBREPLST];
+	int rc, queued[NBREPLST];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1870,7 +1882,6 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		mp->rc = rc;
 		goto out;
 	}
-	retifset[BREPLST_TRUNC_QUEUED] = 1;
 	for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
 
 		rc = -bmap_get(f, i, SL_WRITE, &b);
@@ -1878,7 +1889,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 			mp->rc = rc;
 			break;
 		}
-		rc = mds_repl_bmap_walk_all(b, NULL, retifset, 0);
+		_mds_repl_bmap_walk(b, NULL, NULL, 0, NULL, 0,
+		    slm_repl_queue_cb, &queued);
 		if (rc) {
 			OPSTAT_INCR("bmap-requeue");
 			upsch_enqueue(bmap_2_upd(b));
