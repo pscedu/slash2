@@ -1951,13 +1951,12 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		mds_bmap_bml_release(bml);
 	if (obml)
 		mds_bmap_bml_release(obml);
-#if 0
-	psclogs(rc ? PLL_WARN : PLL_DIAG, 
+
+	psclogs(rc ? PLL_WARN : PLL_DIAG, SLSS_BMAP,
 	    "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
 	    sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
-#endif
 
 	if (b)
 		bmap_op_done(b);
