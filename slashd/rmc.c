@@ -1873,6 +1873,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 
 	/*
  	 * Scan for any bmap in an outstanding queued state. 
+ 	 * Since we are going to retrieve bmap states anyway,
+ 	 * so this should not add much overhead.
  	 */
 	rc = slm_fcmh_get(&mq->fg, &f);
 	if (rc) {
@@ -1882,7 +1884,6 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	for (i = 0; i < NBREPLST; i++)
 		queued[i] = 0;
 	for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
-
 		rc = -bmap_get(f, i, SL_WRITE, &b);
 		if (rc) {
 			mp->rc = rc;
