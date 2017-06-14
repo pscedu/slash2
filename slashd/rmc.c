@@ -1893,7 +1893,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		    slm_repl_queue_cb, &queued);
 	
 		if (queued[BREPLST_TRUNC_QUEUED]) {
-			OPSTAT_INCR("bmap-truc-requeue");
+			OPSTAT_INCR("bmap-trunc-requeue");
 			upsch_enqueue(bmap_2_upd(b));
 		}
 		if (queued[BREPLST_REPL_QUEUED]) {
