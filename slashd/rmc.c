@@ -1842,11 +1842,8 @@ slm_repl_queue_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 {
 	int *queued = arg;
 
-	switch (val) {
-	case BREPLST_REPL_QUEUED:
+	if (val >= 0 && val < NBREPLST)
 		queued[val]++;
-		break;
-	}
 }
 
 /* Handle SRMT_REPL_GETST request */
@@ -1891,8 +1888,17 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		}
 		_mds_repl_bmap_walk(b, NULL, NULL, 0, NULL, 0,
 		    slm_repl_queue_cb, &queued);
-		if (rc) {
-			OPSTAT_INCR("bmap-requeue");
+	
+		if (queued[BREPLST_TRUNC_QUEUED]) {
+			OPSTAT_INCR("bmap-truc-requeue");
+			upsch_enqueue(bmap_2_upd(b));
+		}
+		if (queued[BREPLST_REPL_QUEUED]) {
+			OPSTAT_INCR("bmap-repl-requeue");
+			upsch_enqueue(bmap_2_upd(b));
+		}
+		if (queued[BREPLST_GARBAGE_QUEUED]) {
+			OPSTAT_INCR("bmap-garbage-requeue");
 			upsch_enqueue(bmap_2_upd(b));
 		}
 		bmap_op_done(b);
