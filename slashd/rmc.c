@@ -1879,6 +1879,8 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		mp->rc = rc;
 		goto out;
 	}
+	for (i = 0; i < NBREPLST; i++)
+		queued[i] = 0;
 	for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
 
 		rc = -bmap_get(f, i, SL_WRITE, &b);
