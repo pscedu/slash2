@@ -1908,15 +1908,17 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	}
 	fcmh_op_done(f);
 
-	rsw = psc_pool_get(slm_repl_status_pool);
-	memset(rsw, 0, sizeof(*rsw));
-	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
-	rsw->rsw_fg = mq->fg;
-	rsw->rsw_cid = mq->id;
-	rsw->rsw_csvc = csvc;
+	if (!rc) {
+		rsw = psc_pool_get(slm_repl_status_pool);
+		memset(rsw, 0, sizeof(*rsw));
+		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
+		rsw->rsw_fg = mq->fg;
+		rsw->rsw_cid = mq->id;
+		rsw->rsw_csvc = csvc;
 
-	/* handled by slmrcmthr_main() */
-	lc_add(&slm_replst_workq, rsw);
+		/* handled by slmrcmthr_main() */
+		lc_add(&slm_replst_workq, rsw);
+	}
 
  out:
 	return (0);
