@@ -1379,18 +1379,21 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 	struct bmap_mds_lease *bml;
 
 	bml = psc_pool_get(slm_bml_pool);
-	memset(bml, 0, sizeof(*bml));
 
-	INIT_PSC_LISTENTRY(&bml->bml_bmi_lentry);
-	INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
-
-	bml->bml_exp = e;
+	bml->bml_seq = 0;
 	bml->bml_refcnt = 1;
-	bml->bml_bmi = bmap_2_bmi(b);
-	bml->bml_flags = flags;
+	bml->bml_ios = 0;
 	bml->bml_cli_nidpid = *cnp;
+
+	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
 	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_bmi = bmap_2_bmi(b);
+
+	bml->bml_exp = e;
+	INIT_PSC_LISTENTRY(&bml->bml_bmi_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
+	bml->bml_chain = NULL;
 
 	if (flags & BML_WRITE)
 		OPSTAT_INCR("write-lease");
@@ -1944,11 +1947,13 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		mds_bmap_bml_release(bml);
 	if (obml)
 		mds_bmap_bml_release(obml);
+#if 0
 	psclogs(rc ? PLL_WARN : PLL_DIAG, 
 	    "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
 	    sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
+#endif
 
 	if (b)
 		bmap_op_done(b);
