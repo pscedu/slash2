@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2007-2016, Pittsburgh Supercomputing Center
+ * Copyright 2007-2017, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -161,7 +161,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	strlcpy(name, scsf->scsf_resname, sizeof(name));
 	printf("%-27s %c%c%c- ", name,
 	    scsf->scsf_flags & SIF_DISABLE_LEASE ?    'W' : '-',
-	    scsf->scsf_flags & SIF_DISABLE_ADVLEASE ? 'F' : '-',
+	    scsf->scsf_flags & SIF_DISABLE_ADVLEASE ? 'X' : '-',
 	    scsf->scsf_flags & SIF_DISABLE_GC ?       'G' : '-');
 
 	printf("  ");
