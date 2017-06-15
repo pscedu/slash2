@@ -1217,6 +1217,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * we must still bump the generation since size
 			 * updates from the sliod may be pending for
 			 * this generation.
+			 *
+			 * If the client has pending attributes for a new
+			 * file, we will hit this case as well. Any problem
+			 * in that case?
 			 */
 			OPSTAT_INCR("truncate-full");
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;

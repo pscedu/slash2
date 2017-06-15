@@ -57,6 +57,15 @@ main(int argc, char **argv)
 		exit (0);
 	}
 
+	/*
+ 	 * Flush so that the MDS has the latest attributes.
+ 	 */
+	ret = close(fd);
+	if (ret < 0) {
+		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
 		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
