@@ -394,7 +394,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	mds_bmap_write_logrepls(b);
 	BMAP_ULOCK(b);
 
-
 	psclog(rc ? PLL_WARN : PLL_DIAG,
 	    "partial truncation resolution: ios_repl_off=%d, rc=%d",
 	    off, rc);
@@ -496,7 +495,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
  out:
 	pscrpc_req_finished(rq);
+
+	/* There has to be a better way than this lock/unlock juggle */
+	BMAP_ULOCK(b);
 	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	BMAP_LOCK(b);
+
 	return (rc);
 }
 
