@@ -110,6 +110,8 @@ main(int argc, char **argv)
 		exit (0);
 	}
 
+
+	/* EAGAIN  = 11 */
 	ret = ftruncate(fd, 234);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
