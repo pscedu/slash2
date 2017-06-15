@@ -1266,7 +1266,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	/*
- 	 * Not sure if we can follow through after the above to_set statement.
+ 	 * The above if statement may only set ctime and mtime. So we still
+ 	 * might need to do the truncation below.
  	 */
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
 		mp->rc = slm_ptrunc_prepare(f, &mq->attr, to_set | tadj);
