@@ -48,7 +48,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
-	printf("File has been created successfully at line %d.\n", __LINE__);
+	printf("File %s has been created successfully at line %d.\n", filename, __LINE__);
 
 	ret = ftruncate(fd, size);
 	if (ret < 0) {
@@ -98,7 +98,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
-	printf("File has been opened successfully at line %d.\n", __LINE__);
+	printf("File %s has been opened successfully at line %d.\n", filename, __LINE__);
 
 	ret = fstat(fd, &stbuf);
 	if (fd < 0) {
@@ -118,7 +118,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
-	printf("File has been truncated successfully at line %d.\n", __LINE__);
+	printf("File %s has been truncated successfully at line %d.\n", filename, __LINE__);
 
 	ret = lseek(fd, 0, SEEK_SET);
 	if (ret < 0) {
@@ -144,6 +144,7 @@ main(int argc, char **argv)
 			exit (0);
 		}
 	}
+	printf("File %s has been read successfully at line %d.\n", filename, __LINE__);
 
 	ret = ftruncate(fd, 1000);
 	if (ret < 0) {
@@ -151,6 +152,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
+	printf("File %s has been truncated successfully at line %d.\n", filename, __LINE__);
 
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
@@ -240,7 +242,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
-	printf("File has been written successfully at line %d.\n", __LINE__);
+	printf("File %s has been written successfully at line %d.\n", filename, __LINE__);
 
 	ret = close(fd);
 	if (ret < 0) {
