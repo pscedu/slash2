@@ -19,6 +19,7 @@ main(int argc, char **argv)
 	int i, fd, ret, total = 0;
 	struct stat stbuf;
 	char *buf, *filename;
+	struct timeval t1, t2;
 
 	if (argc != 3) {
 		printf("Usage: a.out filename initial-size\n");
@@ -31,6 +32,8 @@ main(int argc, char **argv)
 		printf("The initial size of the file is too small (< 4096)!\n");
 		exit (0);
 	}
+
+	gettimeofday(&t1, NULL);
 
 	srandom(1234);
 	buf = malloc(BUF_SIZE);
@@ -246,7 +249,17 @@ main(int argc, char **argv)
 	}
 	total++;
 
-	for (i = 23400; i >= 0; i-=10) {
+	printf("Now perform a series of truncations to shorten the file...\n");
+	for (i = 23400; i >= 0; i-=749) {
+		ret = truncate(filename, i);
+		if (ret < 0) {
+			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+	}
+	printf("Now perform a series of truncations to length the file...\n");
+	for (i = 0; i <= 123456789; i+=54301) {
 		ret = truncate(filename, i);
 		if (ret < 0) {
 			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
@@ -255,5 +268,13 @@ main(int argc, char **argv)
 		total++;
 	}
 
-	printf("\nAll %d tests has passed successfully!\n", total);
+	gettimeofday(&t2, NULL);
+
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+        }
+
+	printf("\nAll %d tests has passed successfully in %ld seconds!\n", 
+		total, t2.tv_sec - t1.tv_sec);
 }
