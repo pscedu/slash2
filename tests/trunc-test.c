@@ -38,7 +38,7 @@ main(int argc, char **argv)
 	/* ETIMEDOUT = 110 */
 	fd = open(filename, O_RDWR|O_TRUNC|O_EXCL|O_CREAT, 0600);
 	if (fd < 0) {
-		printf("Open fails with errno = %d at line %d\n", errno, __LINE__);
+		printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	total++;
@@ -76,6 +76,24 @@ main(int argc, char **argv)
 
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	if (stbuf.st_size != size - 1234 + 4096) {
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	fd = open(filename, O_RDWR, 0600);
+	if (fd < 0) {
+		printf("Open fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = fstat(fd, &stbuf);
+	if (fd < 0) {
 		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
