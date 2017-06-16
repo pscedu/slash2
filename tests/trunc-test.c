@@ -42,12 +42,14 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
+
 	ret = ftruncate(fd, size);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
 	total++;
+
 	ret = lseek(fd, size - 1234, SEEK_SET);
 	if (ret < 0) {
 		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
@@ -83,7 +85,7 @@ main(int argc, char **argv)
 	}
 	total++;
 
-	/* EOPNOTSUPP = 95 */
+	/* EOPNOTSUPP = 95, EBADF = 9 */
 	ret = ftruncate(fd, 1024);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
