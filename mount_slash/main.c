@@ -2260,14 +2260,11 @@ again:
 		rc = 0;
 	}
 
+	if (!rc)
+		slc_fcmh_setattrf(f, &mp->attr, setattrflags);
+ out:
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_fcmh_setattrf(f, &mp->attr, setattrflags);
-
- out:
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
