@@ -2255,8 +2255,10 @@ again:
 		}
 		OPSTAT_INCR("ptrunc-bail");
 		rc = EAGAIN;
-	} else if (rc == SLERR_BMAP_PTRUNC_STARTED)
+	} else if (rc == SLERR_BMAP_PTRUNC_STARTED) {
+		OPSTAT_INCR("ptrunc-queue");
 		rc = 0;
+	}
 
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
