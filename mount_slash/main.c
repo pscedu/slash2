@@ -2249,6 +2249,7 @@ again:
 	if (rc == SLERR_BMAP_IN_PTRUNC) {
 		if (retries < 256) {
 			retries++;
+			sleep(1);
 			OPSTAT_INCR("ptrunc-retry");
 			goto again;
 		}
