@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#define	 BUF_SIZE	128*1024*1024
+
 int
 main(int argc, char **argv)
 {
@@ -19,21 +21,21 @@ main(int argc, char **argv)
 	char *buf, *filename;
 
 	if (argc != 3) {
-		printf("Usage: a.out filename size\n");
+		printf("Usage: a.out filename initial-size\n");
 		exit (0);
 	}
 
 	filename = argv[1];
 	size = atol(argv[2]);
 	if (size < 4096) {
-		printf("The size of the file is too small!\n");
+		printf("The initial size of the file is too small (< 4096)!\n");
 		exit (0);
 	}
 
 	srandom(1234);
-	buf = malloc(size);
+	buf = malloc(BUF_SIZE);
 
-	for (i = 0; i < size; i++)
+	for (i = 0; i < BUF_SIZE; i++)
 		buf[i] = random();
 
 	/* ETIMEDOUT = 110 */
@@ -43,6 +45,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
+	printf("File has been created successfully at line %d.\n", __LINE__);
 
 	ret = ftruncate(fd, size);
 	if (ret < 0) {
@@ -92,6 +95,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
+	printf("File has been opened successfully at line %d.\n", __LINE__);
 
 	ret = fstat(fd, &stbuf);
 	if (fd < 0) {
@@ -111,6 +115,7 @@ main(int argc, char **argv)
 		exit (0);
 	}
 	total++;
+	printf("File has been truncated successfully at line %d.\n", __LINE__);
 
 	ret = lseek(fd, 0, SEEK_SET);
 	if (ret < 0) {
@@ -194,6 +199,46 @@ main(int argc, char **argv)
 	}
 	total++;
 
+	ret = lseek(fd, 0, SEEK_SET);
+	if (ret < 0) {
+		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = write(fd, buf, 23400);
+	if (ret != 23400) {
+		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = write(fd, buf, BUF_SIZE);
+	if (ret != BUF_SIZE) {
+		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = write(fd, buf, BUF_SIZE);
+	if (ret != BUF_SIZE) {
+		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = fstat(fd, &stbuf);
+	if (ret < 0) {
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	if (stbuf.st_size != 23400 + 2 * BUF_SIZE) {
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
+		exit (0);
+	}
+	total++;
+	printf("File has been written successfully at line %d.\n", __LINE__);
+
 	ret = close(fd);
 	if (ret < 0) {
 		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
@@ -201,5 +246,14 @@ main(int argc, char **argv)
 	}
 	total++;
 
-	printf("All %d tests has passed successfully!\n", total);
+	for (i = 23400; i >= 0; i-=10) {
+		ret = truncate(filename, i);
+		if (ret < 0) {
+			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+	}
+
+	printf("\nAll %d tests has passed successfully!\n", total);
 }
