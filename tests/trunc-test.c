@@ -35,6 +35,7 @@ main(int argc, char **argv)
 	for (i = 0; i < size; i++)
 		buf[i] = random();
 
+	/* ETIMEDOUT = 110 */
 	fd = open(filename, O_RDWR|O_TRUNC|O_EXCL|O_CREAT, 0600);
 	if (fd < 0) {
 		printf("Open fails with errno = %d at line %d\n", errno, __LINE__);

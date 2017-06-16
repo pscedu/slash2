@@ -2213,6 +2213,12 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 #endif
 
 again:
+
+	/*
+	 * There won't be a leak of pscrpc_request() because MSL_RMC_NEWREQ()
+	 * will drop it automatically. In other words, rq must initiazed to
+	 * NULL at the beginning.
+	 */
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2243,8 +2249,8 @@ again:
 	if (rc == SLERR_BMAP_IN_PTRUNC) {
 		if (retries < 256) {
 			retries++;
-			goto again;
 			OPSTAT_INCR("ptrunc-retry");
+			goto again;
 		}
 		OPSTAT_INCR("ptrunc-bail");
 		rc = EAGAIN;
