@@ -2202,7 +2202,7 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	int rc;
+	int rc, retries = 0;
 
 	FCMH_BUSY_ENSURE(f);
 
@@ -2212,6 +2212,7 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 			sstb->sst_size, to_set & PSCFS_SETATTRF_DATASIZE);
 #endif
 
+again:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2239,9 +2240,15 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	if (rc == 0)
 		rc = -mp->rc;
 
-	if (rc == SLERR_BMAP_IN_PTRUNC)
+	if (rc == SLERR_BMAP_IN_PTRUNC) {
+		if (retries < 256) {
+			retries++;
+			goto again;
+			OPSTAT_INCR("ptrunc-retry");
+		}
+		OPSTAT_INCR("ptrunc-bail");
 		rc = EAGAIN;
-	else if (rc == SLERR_BMAP_PTRUNC_STARTED)
+	} else if (rc == SLERR_BMAP_PTRUNC_STARTED)
 		rc = 0;
 
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
