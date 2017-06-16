@@ -5922,3 +5922,26 @@ zhihui@yuzu: /zzh-slash2/zhihui$ printf "%x\n" 327636872891308833
 48c000000019b21
 
 FIXED with help of strace.
+
+
+07/17/2017
+----------
+
+Crash on FreeBSD, no stack trace, need to double check the code:
+
+
+core file is /usr/local/arc.s2/c/sliod.15850.core
+binary is /usr/local/arc.s2/c/sliod.15850
+log is /usr/local/arc.s2/log/sense2.sliod/1497172500
+exited via signal 8
+--------------------------------------------------
+[1497601113.83897800 slirimthr00:0x8110f3400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273425 (371 files) took 1.266 second(s)
+[1497601140.63078300 slirimthr05:0x8110f4800:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273425 (437 files) took 1.191 second(s)
+[1497601173.05332300 slirimthr05:0x8110f4800:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273426 (449 files) took 2.283 second(s)
+[1497601204.53981600 slirimthr00:0x8110f3400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273426 (502 files) took 1.304 second(s)
+[1497601239.45490300 slirimthr06:0x8110f4c00:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273426 (473 files) took 1.544 second(s)
+[1497601273.08985000 slirimthr04:0x8110f4400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273426 (465 files) took 1.764 second(s)
+[1497601312.21121700 slirimthr00:0x8110f3400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (409 files) took 1.523 second(s)
+[1497601344.54953900 slirimthr00:0x8110f3400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (422 files) took 1.608 second(s)
+[1497637214.21352500 slirimthr02:0x8110f3c00:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (3 files) took 1.113 second(s)
+[1497637877.43467900 slirimthr01:0x8110f3800:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (2 files) took 1.163 second(s)
