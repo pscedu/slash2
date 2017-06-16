@@ -1,5 +1,6 @@
 /*
- * 06/06/2017: trunc-test.c
+ * 06/06/2017: trunc-test.c, perform a series of truncation and other file system
+ *             operations on a file to test partial truncation support.
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -198,5 +199,7 @@ main(int argc, char **argv)
 		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
-	printf("All tests has passed successfully (number of operations is %d).\n", total);
+	total++;
+
+	printf("All %d tests has passed successfully!\n", total);
 }
