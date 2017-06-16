@@ -251,20 +251,77 @@ main(int argc, char **argv)
 	}
 	total++;
 
-	printf("Now perform a series of truncations to shorten the file...\n");
-	for (i = 23400; i >= 0; i-=749) {
+	printf("Now perform a series of truncations to shorten the file %s...\n", filename);
+	for (i = 23400; i >= 0; i-=2749) {
 		ret = truncate(filename, i);
 		if (ret < 0) {
 			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 			exit (0);
 		}
 		total++;
+
+		fd = open(filename, O_RDWR, 0600);
+		if (fd < 0) {
+			printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = write(fd, buf, 12345);
+		if (ret != 12345) {
+			printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = fsync(fd);
+		if (ret < 0) {
+			printf("fsync fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = close(fd);
+		if (ret < 0) {
+			printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
 	}
-	printf("Now perform a series of truncations to length the file...\n");
+
+	printf("Now perform a series of truncations to length the file %s...\n", filename);
 	for (i = 0; i <= 123456789; i+=54301) {
 		ret = truncate(filename, i);
 		if (ret < 0) {
 			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		fd = open(filename, O_RDWR, 0600);
+		if (fd < 0) {
+			printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = write(fd, buf, 76543);
+		if (ret != 76543) {
+			printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = fsync(fd);
+		if (ret < 0) {
+			printf("fsync fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		total++;
+
+		ret = close(fd);
+		if (ret < 0) {
+			printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
 			exit (0);
 		}
 		total++;
