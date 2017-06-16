@@ -13,7 +13,7 @@ int
 main(int argc, char **argv)
 {
 	long size;
-	int i, fd, ret;
+	int i, fd, ret, total = 0;
 	struct stat stbuf;
 	char *buf, *filename;
 
@@ -41,22 +41,26 @@ main(int argc, char **argv)
 		printf("Open fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 	ret = ftruncate(fd, size);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 	ret = lseek(fd, size - 1234, SEEK_SET);
 	if (ret < 0) {
 		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	ret = write(fd, buf, 4096);
 	if (ret != 4096) {
 		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	/*
  	 * Flush so that the MDS has the latest attributes.
@@ -66,6 +70,7 @@ main(int argc, char **argv)
 		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
@@ -76,6 +81,7 @@ main(int argc, char **argv)
 		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	/* EOPNOTSUPP = 95 */
 	ret = ftruncate(fd, 1024);
@@ -83,11 +89,14 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	ret = lseek(fd, 0, SEEK_SET);
 	if (ret < 0) {
 		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	ret = read(fd, buf, 10240);
 	if (ret < 0) {
@@ -98,6 +107,8 @@ main(int argc, char **argv)
 		printf("Unexpected bytes returned = %d at line %d\n", ret, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	for (i = 0; i < ret; i++) {
 		if (buf[i]) {
 			printf("Unexpected file size detected at line %d.\n", __LINE__);
@@ -110,11 +121,15 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
 		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	if (stbuf.st_size != 1000) {
 		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
@@ -127,6 +142,8 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
 		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
@@ -136,12 +153,15 @@ main(int argc, char **argv)
 		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
+	total++;
 
 	ret = ftruncate(fd, 23400);
 	if (ret < 0) {
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	total++;
+
 	ret = stat(filename, &stbuf);
 	if (ret < 0) {
 		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
@@ -151,7 +171,12 @@ main(int argc, char **argv)
 		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
 		exit (0);
 	}
+	total++;
 
-	printf("All tests has passed successfully.\n");
-	close(fd);
+	ret = close(fd);
+	if (ret < 0) {
+		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	printf("All tests has passed successfully (number of operations is %d).\n", total);
 }
