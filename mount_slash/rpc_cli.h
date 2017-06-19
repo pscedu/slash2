@@ -67,6 +67,9 @@ struct slrpc_cservice;
 /*
  * Initialize a new RPC request for a pscfs clientctx.
  * Most arguments here are macro-value-result.
+ *
+ * This is the _only_ API that frees the request. It is
+ * used by the client side RPC retry logic.
  */
 #define MSL_RMC_NEWREQ(f, csvc, op, rq, mq, mp, rc)			\
 	do {								\
