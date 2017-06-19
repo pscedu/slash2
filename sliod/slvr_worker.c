@@ -356,6 +356,7 @@ slislvrthr_proc(struct slvr *s)
 		uint32_t i;
 		int found;
 
+		/* 06/19/2017: seg fault with bcr when debugging ptrunc */
 		psc_assert(bcr->bcr_crcup.bno == b->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
 		    b->bcm_fcmh->fcmh_fg.fg_fid);
