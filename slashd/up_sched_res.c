@@ -478,6 +478,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNC_QUEUED) {
+		OPSTAT_INCR("msl.ptrunc-bmap-bail");
 		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
 		    "state=TRUNC at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -600,6 +601,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_GARBAGE_QUEUED) {
+		OPSTAT_INCR("msl.preclaim-bmap-bail");
 		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
 		    "state=GARBAGE at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
