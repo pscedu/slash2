@@ -411,6 +411,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
+	OPSTAT_INCR("msl.ptrunc-bmap-done");
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc);
 	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (0);
@@ -490,8 +491,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc == 0)
+	if (rc == 0) {
+		OPSTAT_INCR("msl.ptrunc-bmap-send");
 		return (0);
+	}
 
  out:
 	pscrpc_req_finished(rq);
