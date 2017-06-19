@@ -446,18 +446,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.space[IN_OFF] = off;
 
-	/*
-	 * Make sure that a truncation is not already scheduled on
-	 * this bmap.
-	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_TRUNC_SCHED] = 1;
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT)) {
-		DEBUG_BMAPOD(PLL_WARN, b, "truncate already scheduled");
-		return (0);
-	}
-
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, NULL);
 	if (csvc == NULL)
@@ -475,7 +463,10 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_SCHED;
+
+	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
+
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNC_QUEUED) {
 		OPSTAT_INCR("msl.ptrunc-bmap-bail");
