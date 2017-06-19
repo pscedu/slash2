@@ -512,6 +512,7 @@ void
 slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 {
 	sl_replica_t repl;
+	struct resprof_mds_info *rpmi;
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
@@ -523,8 +524,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		error = -pp->rc;
 
 	if (error == -PFLERR_NOTSUP) {
-		struct resprof_mds_info *rpmi;
-
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
