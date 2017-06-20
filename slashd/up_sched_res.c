@@ -434,11 +434,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct fidc_membh *f;
 
 	f = b->bcm_fcmh;
-	if (!slm_ptrunc_enabled) {
-		OPSTAT_INCR("msl.ptrunc-averted");
-		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
-		return (0);
-	}
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
