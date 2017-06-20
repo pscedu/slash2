@@ -388,6 +388,9 @@ slislvrthr_proc(struct slvr *s)
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			bcr->bcr_bii->bii_bcr = NULL;
 	} else {
+		/*
+		 * XXX Do we really need bii and bcr to point to each other?
+		 */
 		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
 		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);
 
