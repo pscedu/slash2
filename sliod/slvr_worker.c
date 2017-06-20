@@ -280,8 +280,7 @@ slicrudthr_main(struct psc_thread *thr)
 				 * existence than our packaged update is
 				 * for, so this can be safely discarded.
 				 */
-				if (rc == ESTALE ||
-				    rc == EBADF) {
+				if (rc == ESTALE || rc == EBADF) {
 					bcr_ready_remove(bcr);
 				}
 			}
@@ -390,6 +389,8 @@ slislvrthr_proc(struct slvr *s)
 	} else {
 		/*
 		 * XXX Do we really need bii and bcr to point to each other?
+		 *
+		 * bcr is freed in bcr_ready_remove().
 		 */
 		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
 		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);
