@@ -1880,6 +1880,13 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
  	 * Scan for any bmap in an outstanding queued state. 
  	 * Since we are going to retrieve bmap states anyway,
  	 * so this should not add much overhead.
+ 	 *
+ 	 * All bmap changes (replication, partial truncation
+ 	 * and reclamation) are done by best effort. If there
+ 	 * is a network issue, a bmap would be stuck in a 
+ 	 * queued state. If so, a user can trigger action on
+ 	 * such a bmap by querying the replication status of
+ 	 * the file.
  	 */
 	rc = slm_fcmh_get(&mq->fg, &f);
 	if (rc) {

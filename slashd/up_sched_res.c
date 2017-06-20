@@ -434,29 +434,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct fidc_membh *f;
 
 	f = b->bcm_fcmh;
-	if (!slm_ptrunc_enabled) {
-		OPSTAT_INCR("msl.ptrunc-averted");
-		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
-		return (0);
-	}
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.space[IN_OFF] = off;
-
-	/*
-	 * Make sure that a truncation is not already scheduled on
-	 * this bmap.
-	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_TRUNC_SCHED] = 1;
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset, REPL_WALKF_SCIRCUIT)) {
-		DEBUG_BMAPOD(PLL_WARN, b, "truncate already scheduled");
-		return (0);
-	}
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, NULL);
@@ -475,9 +458,13 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_SCHED;
+
+	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
+
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_TRUNC_QUEUED) {
+		OPSTAT_INCR("msl.ptrunc-bmap-bail");
 		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
 		    "state=TRUNC at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -511,6 +498,7 @@ void
 slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 {
 	sl_replica_t repl;
+	struct resprof_mds_info *rpmi;
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
@@ -522,8 +510,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		error = -pp->rc;
 
 	if (error == -PFLERR_NOTSUP) {
-		struct resprof_mds_info *rpmi;
-
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
@@ -600,6 +586,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_GARBAGE_QUEUED) {
+		OPSTAT_INCR("msl.preclaim-bmap-bail");
 		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
 		    "state=GARBAGE at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
