@@ -736,7 +736,7 @@ slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
 		return;
 
 	slvrno = offset / SLASH_SLVR_SIZE;
-	for (i = slvrno; i < SLASH_SLVRS_PER_BMAP; i++) {
+	for (i = 0; i <= slvrno; i++) {
 		s = slvr_lookup(slvrno + i, bmap_2_bii(bmap));
 		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
 		slvr_io_done(s, rc);

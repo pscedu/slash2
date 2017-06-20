@@ -154,8 +154,12 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	/*
 	 * Simulate a write to trigger a CRC update to be transmitted 
 	 * back to MDS.
+	 *
+	 * We should not need to care about the CRC values beyond the 
+	 * truncation point.
 	 */
-	slvr_crc_update(f, mq->bmapno, mq->offset);
+	if (mq->offset)
+		slvr_crc_update(f, mq->bmapno, mq->offset);
 
 	fcmh_op_done(f);
 	return (0);
