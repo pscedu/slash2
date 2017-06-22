@@ -527,7 +527,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRIC_MAGIC, SRIC_VERSION,
 		    SLCONNT_CLI);
-		if (sli_selftest_rc) {
+		if (sli_selftest_result) {
 			struct slrpc_cservice *csvc;
 
 			csvc = sli_getclcsvc(rq->rq_export);

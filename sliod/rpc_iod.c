@@ -139,7 +139,7 @@ sli_rci_ctl_health_send(struct slrpc_cservice *csvc)
 	mq->opc = SRM_CTLOP_SETOPT;
 	c = (void *)mq->buf;
 	c->opt = SRMCTL_OPT_HEALTH;
-	c->opv = sli_selftest_rc;
+	c->opv = sli_selftest_result;
 
 	rq->rq_interpret_reply = sli_rci_ctl_cb;
 	rq->rq_async_args.pointer_arg[0] = csvc;
