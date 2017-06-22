@@ -4,7 +4,12 @@
 # Sample file system self test script used by the sliod. Please 
 # tweak it as need be or write your own script.
 #
-# exit codes: 
+# Usage example:
+#
+#    # ./fshealthtest -u 75 //arc_sliod/0
+#    # ./fshealthtest  /sbb5_pool0
+#
+# Exit code: 
 #
 # zero: healthy
 # non-zero: problematic
