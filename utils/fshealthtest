@@ -38,6 +38,7 @@ shift $((OPTIND - 1))
 fsroot=$1
 
 # set -e means exit immediately if a command exits with a non-zero status.
+# With this, [ command ] below won't exit when command fails.
 
 set -e
 

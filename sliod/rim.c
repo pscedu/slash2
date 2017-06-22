@@ -86,9 +86,8 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 
 	OPSTAT_INCR("slvr-remove-preclaim");
 	slvr_remove_all(f);
-	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE |
-	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE,
-	    SLASH_BMAP_SIZE);
+	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE,
+	    q->bno * SLASH_BMAP_SIZE, SLASH_BMAP_SIZE);
 	if (rc < 0) {
 		p->rc = errno;
 		OPSTAT_INCR("preclaim-err");
