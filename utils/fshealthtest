@@ -1,12 +1,14 @@
 #!/bin/sh
 # $Id$
 #
-# file system self test
+# Sample file system self test script used by the sliod. Please 
+# tweak it as need be or write your own script.
 #
-# exit codes:
-# 0: healthy
-# 1: serious error
-# 2: degraded
+# exit codes: 
+#
+# zero: healthy
+# non-zero: problematic
+#
 
 warn()
 {
