@@ -263,6 +263,9 @@ slmrcmthr_walk(struct slm_sth *sth, void *p)
 	return (0);
 }
 
+/*
+ * Wait for work posted by slm_rmc_handle_getreplst().
+ */
 void
 slmrcmthr_main(struct psc_thread *thr)
 {
