@@ -35,12 +35,8 @@ done
 shift $((OPTIND - 1))
 
 [ $# -eq 1 ] || usage
+
 fsroot=$1
-
-# set -e means exit immediately if a command exits with a non-zero status.
-# With this, [ command ] below won't exit when command fails.
-
-set -e
 
 # phase 1: check for degraded or unavailable file systems
 #
@@ -70,13 +66,13 @@ fi
 case $fstype in
 zfs)	pool=$1
         #
-        # We used to look for ONLINE/DEGRADED in specific
+        # We used to look for ONLINE and DEGRADED in specific
         # column in the zpool list output with awk. However,
         # FreeBSD and Linux have different formats. So grep
         # is used now.
         #
-	stat=$(zpool list -H $pool | grep ONLINE)
-	if [ $? -ne 0 ]
+        zpool list -H $pool | grep --quiet ONLINE
+        if [ $? -ne 0 ]
         then
             exit 1
         fi
@@ -85,12 +81,20 @@ esac
 # check disk space utilization
 
 if [ $util -gt 0 ]; then
+
 	# phase 2: disable if X% full
 	fs_util=$(df $fsroot | awk '{print $5}' | tr -d % | tail -1)
 	[ $fs_util -le $util ] || exit 1
 fi
 
 # phase 3: do a simple I/O test and verify correctness
+
+# set -e so that we exit immediately if a command exits with 
+# a non-zero status. Without this, [ command ] below won't 
+# exit when the command fails.
+
+set -e
+
 [ -d $fsroot ]
 mkdir -p $fsroot/.selftest
 [ \! -f $fsroot/.selftest/fault_inject ]
