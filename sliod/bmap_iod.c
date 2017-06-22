@@ -202,8 +202,11 @@ bcr_ready_remove(struct bcrcupd *bcr)
 {
 	DEBUG_BCR(PLL_DIAG, bcr, "bcr remove");
 
+	/*
+	 * When bcr is sent out, the pointer to it from bii (bii_bcr) 
+	 * has been nullified.
+	 */
 	lc_remove(&bcr_ready, bcr);
-
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	psc_pool_return(bmap_crcupd_pool, bcr);
 }
