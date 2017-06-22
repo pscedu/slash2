@@ -35,11 +35,11 @@ done
 shift $((OPTIND - 1))
 
 [ $# -eq 1 ] || usage
-fs=$1
+fsroot=$1
 set -e
 
 # phase 1: check for degraded or unavailable file systems
-set -- $(mount | grep -w "$fs")
+set -- $(mount | grep -w "$fsroot")
 if [ x"$4" = x"type" ]; then
 	# $1            $2 $3             $4   $5
 	# sense51_pool4 on /sense51_pool4 type zfs
@@ -53,31 +53,35 @@ fi
 
 case $fstype in
 zfs)	pool=$1
-	stat=$(zpool list -H $pool | awk '{print $7}')
-	case $stat in
-	ONLINE)	;;
-	DEGRADED)	exit 2 ;;
-	# SCRUB)	exit 2 ;;
-	*)		exit 1 ;
-	esac
+        #
+        # We used to looking for ONLINE/DEGRADED in specific
+        # column in the zpool list output with awk. However,
+        # FreeBSD and Linux have different formats. So grep
+        # is used now.
+        #
+	stat=$(zpool list -H $pool | grep ONLINE)
+        if [ $stat -ne 0 ]
+        then
+            exit 1
+        fi
 esac
 
 # check disk space utilization
 
 if [ $util -gt 0 ]; then
 	# phase 2: disable if X% full
-	fs_util=$(df $fs | awk '{print $5}' | tr -d % | tail -1)
+	fs_util=$(df $fsroot | awk '{print $5}' | tr -d % | tail -1)
 	[ $fs_util -le $util ] || exit 1
 fi
 
 # phase 3: do a simple I/O test and verify correctness
-[ -d $fs ]
-mkdir -p $fs/.selftest
-[ \! -f $fs/.selftest/fault_inject ]
+[ -d $fsroot ]
+mkdir -p $fsroot/.selftest
+[ \! -f $fsroot/.selftest/fault_inject ]
 
 sum="a5b5761d31a2c201170f62c33acab475"
 
-fn=$fs/.selftest/$(date +%s)
+fn=$fsroot/.selftest/$(date +%s)
 
 md5=md5sum
 type md5sum >/dev/null 2>&1 || md5="md5 -q"
