@@ -36,6 +36,9 @@ shift $((OPTIND - 1))
 
 [ $# -eq 1 ] || usage
 fsroot=$1
+
+# set -e means exit immediately if a command exits with a non-zero status.
+
 set -e
 
 # phase 1: check for degraded or unavailable file systems
