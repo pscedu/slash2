@@ -26,6 +26,9 @@ Things to change:
 
 		- currently we path 64-bit FID around.  The value of MAX_HANDLE_SZ is 128.
 
+		- Do I need to add a sequence number to all RPCs to deal with out-of-order
+		  arrivals?
+
 	* All slash2 per-file metadata must be store in a file.  Right now, we modify
 	  ZFS inode to store some slash2 specific inode information (e.g., zp_s2nblks
 	  and zp_s2ptruncgen).
