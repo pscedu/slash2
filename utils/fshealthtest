@@ -6,7 +6,7 @@
 #
 # Usage example:
 #
-#    # ./fshealthtest -u 75 //arc_sliod/0
+#    # ./fshealthtest -u 75 /arc_sliod/0
 #    # ./fshealthtest  /sbb5_pool0
 #
 # Exit code: 
@@ -52,7 +52,7 @@ fsroot=$1
 # # mount | grep -w sbb5_pool0
 # sbb5_pool0 on /sbb5_pool0 type zfs (rw,relatime,xattr,noacl)
 #
-# FreeBSD  example:
+# FreeBSD example:
 #
 # # mount | grep -w arc_sliod/0
 # sense1_pool0 on /arc_sliod/0 (zfs, local, noatime, nfsv4acls)
@@ -60,6 +60,7 @@ fsroot=$1
 
 set -- $(mount | grep -w "$fsroot")
 if [ x"$4" = x"type" ]; then
+	# Linux
 	# $1            $2 $3             $4   $5
 	# sense51_pool4 on /sense51_pool4 type zfs
 	fstype=$5
