@@ -54,7 +54,7 @@ fi
 case $fstype in
 zfs)	pool=$1
         #
-        # We used to looking for ONLINE/DEGRADED in specific
+        # We used to look for ONLINE/DEGRADED in specific
         # column in the zpool list output with awk. However,
         # FreeBSD and Linux have different formats. So grep
         # is used now.
