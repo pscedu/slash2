@@ -642,8 +642,11 @@ slictlthr_spawn(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_batchno);
 	psc_ctlparam_register_var("sys.reclaim_xid",
 	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_xid);
-	psc_ctlparam_register_var("sys.selftestrc", PFLCTL_PARAMT_INT,
-	    0, &sli_selftest_rc);
+
+	psc_ctlparam_register_var("sys.self_test_enable",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &sli_selftest_enable);
+	psc_ctlparam_register_var("sys.self_test_result", PFLCTL_PARAMT_INT,
+	    0, &sli_selftest_result);
 
 	psc_ctlparam_register_var("sys.min_space_reserve_gb",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,

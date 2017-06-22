@@ -69,7 +69,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 extern const char *__progname;
 
-int			 sli_selftest_rc;
+int			 sli_selftest_result;
+int			 sli_selftest_enable = 1;
 
 struct srt_bwqueued	 sli_bwqueued;
 psc_spinlock_t		 sli_bwqueued_lock = SPINLOCK_INIT;
@@ -191,11 +192,11 @@ slihealththr_main(struct psc_thread *thr)
 		}
 		if (!rc)
 			rc = !sli_has_enough_space(NULL, 0, 0, 0);
-		if (sli_selftest_rc != rc) {
+		if (sli_selftest_result != rc) {
 
-			sli_selftest_rc = rc;
+			sli_selftest_result = rc;
 			psclog_warnx("health changed from %d to %d "
-			    "(errno=%d)", sli_selftest_rc, rc, errno);
+			    "(errno=%d)", sli_selftest_result, rc, errno);
 
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
@@ -223,7 +224,7 @@ slihealththr_main(struct psc_thread *thr)
 int
 slirmiconnthr_upcall(__unusedx void *arg)
 {
-	return (sli_selftest_rc);
+	return (sli_selftest_result);
 }
 
 __dead void
