@@ -120,6 +120,9 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
  *
  * XXX	If there is srw_offset, we must send back a CRC update for the
  *	sliver that got chopped.
+ *
+ * XXX  What happens if a write to the file was initiated after the
+ *      truncation, but arrives earlier?
  */
 int
 sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
