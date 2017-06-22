@@ -175,7 +175,12 @@ slihealththr_main(struct psc_thread *thr)
 		errno = 0;
 
 		rc = 0;
-		if (slcfg_local->cfg_selftest) {
+		/*
+ 		 * sli_selftest_enable can be used to disable the selftest 
+ 		 * script when it is buggy or does not apply to the local
+ 		 * environment.
+ 		 */
+		if (slcfg_local->cfg_selftest && sli_selftest_enable) {
 			rc = system(cmdbuf);
 
 			/*
