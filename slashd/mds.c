@@ -486,6 +486,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			goto out;
 	}
 
+	j = 0;
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
@@ -495,8 +496,14 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
-		if (resm)
+		if (resm) {
+			j++;
 			psc_dynarray_add(&a, resm);
+			if (pios == ios && j > 2) {
+				OPSTAT_INCR("bmap-pref-ios");
+				psc_dynarray_swap(&a, 0, j-1);
+			}
+		}
 	}
 
 	if (nskip) {
