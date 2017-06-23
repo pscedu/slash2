@@ -509,7 +509,13 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (!error && pp && pp->rc)
 		error = -pp->rc;
 
+	/*
+	 * If our I/O server does not support hole punch, fake success 
+	 * and go ahead mark the bmap as invalid. Note that PFLERR_NOTSUP
+	 * is not the same as EOPNOTSUPP.
+	 */
 	if (error == -PFLERR_NOTSUP) {
+		error = 0;
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
