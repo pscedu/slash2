@@ -2118,6 +2118,7 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 
 	FCMH_LOCK_ENSURE(f);
 	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+	OPSTAT_INCR("msl.ptrunc-start");
 	fmi = fcmh_2_fmi(f);
 	fmi->fmi_ptrunc_size = sstb->sst_size;
 

@@ -368,8 +368,10 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	FCMH_LOCK(f);
 	fmi = fcmh_2_fmi(f);
 	fmi->fmi_ptrunc_nios--;
-	if (!fmi->fmi_ptrunc_nios)
+	if (!fmi->fmi_ptrunc_nios) {
+		OPSTAT_INCR("msl.ptrunc-done");
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+	}
 	FCMH_ULOCK(f);
 
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished, rc = %d", rc);
