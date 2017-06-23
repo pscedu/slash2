@@ -694,6 +694,9 @@ retry:
 			freelock(&bq->bq_lock);
 			continue;
 		}
+		/*
+		 * Batch RPCs with the same destination and opcode (type).
+		 */
 		if ((bq->bq_res == dst_res) && (opc == bq->bq_opc)) {
 			LIST_CACHE_ULOCK(&slrpc_batch_req_delayed);
 			/*

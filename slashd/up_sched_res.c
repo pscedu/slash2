@@ -529,6 +529,9 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
+	/*
+ 	 * Map I/O ID to index into the table and then modify the bmap.
+ 	 */
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
 	if (rc >= 0) {

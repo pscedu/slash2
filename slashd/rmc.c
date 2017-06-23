@@ -408,6 +408,17 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	/*
+ 	 * If we don't wait for a truncation to complete on an IOS, a
+ 	 * later write could race with it and cause data corruption.
+ 	 */
+	FCMH_LOCK(f);
+	if (mq->rw == SL_WRITE && f->fcmh_flags & FCMH_MDS_IN_PTRUNC) {
+		OPSTAT_INCR("getbmap-lease-write-ptrunc");
+		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
+	}
+	FCMH_ULOCK(f);
+
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
@@ -1786,6 +1797,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/* Handle SRMT_REMOVEXATTR RPC */
 int
 slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 {
