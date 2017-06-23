@@ -510,7 +510,7 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		error = -pp->rc;
 
 	/*
-	 * If our I/O server does not support hole punch, fake success 
+	 * If our I/O server does not support punching a hole, fake success 
 	 * and go ahead mark the bmap as invalid. Note that PFLERR_NOTSUP
 	 * is not the same as EOPNOTSUPP.
 	 */
@@ -522,18 +522,18 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 		    SIF_PRECLAIM_NOTSUP;
 		RPMI_ULOCK(rpmi);
 	}
-	repl.bs_id = bsp->bsp_res->res_id;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE_SCHED] = error ?
-	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
-
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
+
+	repl.bs_id = bsp->bsp_res->res_id;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = error ?
+	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
 
 	/*
  	 * Map I/O ID to index into the table and then modify the bmap.
