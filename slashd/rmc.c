@@ -1797,6 +1797,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/* Handle SRMT_REMOVEXATTR RPC */
 int
 slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 {
