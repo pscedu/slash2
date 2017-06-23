@@ -963,8 +963,8 @@ struct srm_replrq_req {
 	uint32_t		nrepls;
 	uint32_t		usr_prio;	/* priority */
 	uint32_t		sys_prio;
-	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
-	sl_bmapno_t		nbmaps;		/* length */
+	sl_bmapno_t		bmapno;		/* the first bmap */
+	sl_bmapno_t		nbmaps;		/* length or -1 for all */
 	 int32_t		_pad;
 } __packed;
 
