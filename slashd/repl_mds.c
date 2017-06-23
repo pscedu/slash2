@@ -955,6 +955,9 @@ slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	switch (val) {
 	case BREPLST_REPL_QUEUED:
 	case BREPLST_REPL_SCHED:
+	case BREPLST_TRUNC_QUEUED:
+	case BREPLST_TRUNC_SCHED:
+	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_VALID:
 		*flags |= FLAG_REPLICA_STATE_DIRTY;
 		break;
@@ -996,9 +999,17 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	replv.nios = nios;
 	replv.idx = iosidx;
 
+	/*
+ 	 * In theory, we should only have VALID --> GARBASE transition.
+ 	 * However, if the MDS or IOS crashes, we could be stuck in
+ 	 * other states as well.
+ 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE_QUEUED;
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_TRUNC_QUEUED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_TRUNC_SCHED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
@@ -1034,6 +1045,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
 			psc_assert(!rc);
+
+			/* schedule a call to slm_upsch_trypreclaim() */
 			if (flags & FLAG_REPLICA_STATE_DIRTY)
 				rc = mds_bmap_write_logrepls(b);
 		}
