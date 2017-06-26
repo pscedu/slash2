@@ -339,7 +339,7 @@ main(int argc, char **argv)
 	}
 	total++;
 
-	printf("Now open file %s for final operations around truncation point ...\n", filename);
+	printf("Now perform final round of operations around a truncation point ...\n");
 	fd = open(filename, O_RDWR, 0600);
 	if (fd < 0) {
 		printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
@@ -385,6 +385,7 @@ main(int argc, char **argv)
 			printf("Unexpected file contents detected at line %d.\n", __LINE__);
 			exit (0);
 		}
+		total++;
 	}
 	for (i = 0; i < 1234; i++) {
 		ret = read(fd, &ch, 1);
@@ -396,6 +397,7 @@ main(int argc, char **argv)
 			printf("Unexpected file contents detected at line %d.\n", __LINE__);
 			exit (0);
 		}
+		total++;
 	}
 	ret = close(fd);
 	if (ret < 0) {
