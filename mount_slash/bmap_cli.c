@@ -1186,6 +1186,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	BMAP_LOCK(b);
 	OPSTAT_INCR("msl.bmap-wait-empty");
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
+	OPSTAT_INCR("msl.bmap-wait-empty-done");
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
