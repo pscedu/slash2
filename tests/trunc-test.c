@@ -355,7 +355,7 @@ main(int argc, char **argv)
 	total++;
 
 	ret = write(fd, buf, 678907);
-	if (ret != 67890) {
+	if (ret != 678907) {
 		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
