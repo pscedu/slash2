@@ -42,7 +42,7 @@ main(int argc, char **argv)
 		buf[i] = random();
 
 	/* ETIMEDOUT = 110 */
-	fd = open(filename, O_RDWR|O_TRUNC|O_EXCL|O_CREAT, 0600);
+	fd = open(filename, O_RDWR|O_TRUNC|O_CREAT, 0600);
 	if (fd < 0) {
 		printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
