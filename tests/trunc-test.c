@@ -41,7 +41,7 @@ main(int argc, char **argv)
 	for (i = 0; i < BUF_SIZE; i++)
 		buf[i] = random();
 
-	/* ETIMEDOUT = 110 */
+	/* ETIMEDOUT = 110, ECONNABORTED = 103 */
 	fd = open(filename, O_RDWR|O_TRUNC|O_CREAT, 0600);
 	if (fd < 0) {
 		printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
