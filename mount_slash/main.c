@@ -3085,9 +3085,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 		} else {
 			/*
-			 * A tricky case to handle: we might be called
-			 * when a previous partial truncation is not fully
-			 * completed yet.
+			 * A tricky case to handle: we might be called when 
+			 * a previous partial truncation is not fully completed 
+			 * yet.
 			 */
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
@@ -3097,29 +3097,34 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			FCMH_ULOCK(c);
 
-			/* Partial truncate.  Block and flush. */
-			pfl_rwlock_rdlock(&c->fcmh_rwlock);
-			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
-				if (b->bcm_bmapno < x)
-					continue;
-
-				/*
-				 * Take a reference to ensure the bmap
-				 * is still valid.
-				 * bmap_biorq_waitempty() shouldn't be
-				 * called while holding the fcmh lock.
-				 */
-				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
-				psc_dynarray_add(&a, b);
-			}
-			pfl_rwlock_unlock(&c->fcmh_rwlock);
-
 			/*
  			 * Write beyond the truncation point can be cancelled
  			 * in theory. But no API exists yet. Considering the 
  			 * fact that partial truncation is rare, we should be 
  			 * happy as long as it works.
 			 */
+			pfl_rwlock_rdlock(&c->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
+				BMAP_LOCK(b);
+				if ((b->bcm_bmapno < x) ||
+				    (b->bcm_flags & BMAPF_TOFREE)) {
+					BMAP_ULOCK(b);
+					continue;
+				}
+				
+				/*
+				 * Take a reference to ensure the bmap
+				 * is still valid.
+				 *  
+				 * bmap_biorq_waitempty() shouldn't be
+				 * called while holding the fcmh lock.
+				 */
+				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
+				BMAP_ULOCK(b);
+				psc_dynarray_add(&a, b);
+			}
+			pfl_rwlock_unlock(&c->fcmh_rwlock);
+
 			DYNARRAY_FOREACH(b, i, &a) {
 				struct bmap_pagecache *bmpc;
 
