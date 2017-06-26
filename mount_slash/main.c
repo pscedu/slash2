@@ -3084,6 +3084,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			OPSTAT_INCR("msl.truncate-noop");
 			goto out;
 		} else {
+			/*
+			 * A tricky case to handle: we might be called
+			 * when a previous partial truncation is not fully
+			 * completed yet.
+			 */
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
