@@ -3087,7 +3087,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			OPSTAT_INCR("msl.truncate-part");
+			OPSTAT_INCR("msl.truncate-partial");
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
 			FCMH_ULOCK(c);
@@ -3122,6 +3122,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				BMAP_LOCK(b);
 				bmpc_expire_biorqs(bmpc);
 				BMAP_ULOCK(b);
+				OPSTAT_INCR("msl.truncate-expire-bmap");
 			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
