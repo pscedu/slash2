@@ -499,6 +499,10 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		if (resm) {
 			j++;
 			psc_dynarray_add(&a, resm);
+			/*
+ 			 * When we have multiple copies, put preferred
+ 			 * I/O server up front to be selected first.
+ 			 */
 			if (pios == ios && j > 2) {
 				OPSTAT_INCR("bmap-pref-ios");
 				psc_dynarray_swap(&a, 0, j-1);
