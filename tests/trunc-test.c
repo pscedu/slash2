@@ -15,10 +15,10 @@
 int
 main(int argc, char **argv)
 {
-	long size;
+	long size, length;
 	int i, fd, ret, total = 0;
 	struct stat stbuf;
-	char *buf, *filename;
+	char ch, *buf, *filename;
 	struct timeval t1, t2;
 
 	if (argc != 3) {
@@ -140,7 +140,7 @@ main(int argc, char **argv)
 
 	for (i = 0; i < ret; i++) {
 		if (buf[i]) {
-			printf("Unexpected file size detected at line %d.\n", __LINE__);
+			printf("Unexpected file contents detected at line %d.\n", __LINE__);
 			exit (0);
 		}
 	}
@@ -326,6 +326,83 @@ main(int argc, char **argv)
 		}
 		total++;
 	}
+
+	length = i - 54301;
+	ret = stat(filename, &stbuf);
+	if (ret < 0) {
+		printf("Stat fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	if (stbuf.st_size != length) {
+		printf("Unexpected file size = %ld at line %d\n", stbuf.st_size, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	printf("Now open file %s for final operations around truncation point ...\n", filename);
+	fd = open(filename, O_RDWR, 0600);
+	if (fd < 0) {
+		printf("Create fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = lseek(fd, length - 54301, SEEK_SET);
+	if (ret < 0) {
+		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = write(fd, buf, 678907);
+	if (ret != 67890) {
+		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = truncate(filename, length - 54301 + 678907 + 1234);
+	if (ret < 0) {
+		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	ret = lseek(fd, length - 54301, SEEK_SET);
+	if (ret < 0) {
+		printf("Seek fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
+
+	for (i = 0; i < 678907; i++) {
+		ret = read(fd, &ch, 1);
+		if (ret != 1) {
+			printf("Read fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		if (ch != buf[i]) {
+			printf("Unexpected file contents detected at line %d.\n", __LINE__);
+			exit (0);
+		}
+	}
+	for (i = 0; i < 1234; i++) {
+		ret = read(fd, &ch, 1);
+		if (ret != 1) {
+			printf("Read fails with errno = %d at line %d\n", errno, __LINE__);
+			exit (0);
+		}
+		if (ch) {
+			printf("Unexpected file contents detected at line %d.\n", __LINE__);
+			exit (0);
+		}
+	}
+	ret = close(fd);
+	if (ret < 0) {
+		printf("Close fails with errno = %d at line %d\n", errno, __LINE__);
+		exit (0);
+	}
+	total++;
 
 	gettimeofday(&t2, NULL);
 
