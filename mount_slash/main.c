@@ -2216,8 +2216,8 @@ again:
 
 	/*
 	 * There won't be a leak of pscrpc_request() because MSL_RMC_NEWREQ()
-	 * will drop it automatically. In other words, rq must be initiazed to
-	 * NULL at the beginning.
+	 * will drop it automatically. In other words, rq must be initialized 
+	 * to NULL at the beginning.
 	 */
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)

@@ -368,8 +368,10 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	FCMH_LOCK(f);
 	fmi = fcmh_2_fmi(f);
 	fmi->fmi_ptrunc_nios--;
-	if (!fmi->fmi_ptrunc_nios)
+	if (!fmi->fmi_ptrunc_nios) {
+		OPSTAT_INCR("msl.ptrunc-done");
 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+	}
 	FCMH_ULOCK(f);
 
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished, rc = %d", rc);
@@ -509,19 +511,19 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (!error && pp && pp->rc)
 		error = -pp->rc;
 
+	/*
+	 * If our I/O server does not support punching a hole, fake success 
+	 * and go ahead mark the bmap as invalid. Note that PFLERR_NOTSUP
+	 * is not the same as EOPNOTSUPP.
+	 */
 	if (error == -PFLERR_NOTSUP) {
+		error = 0;
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
 		    SIF_PRECLAIM_NOTSUP;
 		RPMI_ULOCK(rpmi);
 	}
-	repl.bs_id = bsp->bsp_res->res_id;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE_SCHED] = error ?
-	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
-
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
@@ -529,6 +531,15 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
+	repl.bs_id = bsp->bsp_res->res_id;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = error ?
+	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
+
+	/*
+ 	 * Map I/O ID to index into the table and then modify the bmap.
+ 	 */
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
 	if (rc >= 0) {

@@ -86,8 +86,12 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 
 	OPSTAT_INCR("slvr-remove-preclaim");
 	slvr_remove_all(f);
-	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE,
-	    q->bno * SLASH_BMAP_SIZE, SLASH_BMAP_SIZE);
+	/*
+ 	 * KEEP_SIZE is needed to avoid EOPNOTSUPP errno.
+ 	 */
+	rc = fallocate(fcmh_2_fd(f), FALLOC_FL_PUNCH_HOLE | 
+	    FALLOC_FL_KEEP_SIZE, q->bno * SLASH_BMAP_SIZE, 
+	    SLASH_BMAP_SIZE);
 	if (rc < 0) {
 		p->rc = errno;
 		OPSTAT_INCR("preclaim-err");
@@ -120,6 +124,9 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
  *
  * XXX	If there is srw_offset, we must send back a CRC update for the
  *	sliver that got chopped.
+ *
+ * XXX  What happens if a write to the file was initiated after the
+ *      truncation, but arrives earlier?
  */
 int
 sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)

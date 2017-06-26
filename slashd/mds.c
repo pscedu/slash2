@@ -486,6 +486,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			goto out;
 	}
 
+	j = 0;
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
@@ -495,8 +496,18 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
-		if (resm)
+		if (resm) {
+			j++;
 			psc_dynarray_add(&a, resm);
+			/*
+ 			 * When we have multiple copies, put preferred
+ 			 * I/O server up front to be selected first.
+ 			 */
+			if (pios == ios && j > 2) {
+				OPSTAT_INCR("bmap-pref-ios");
+				psc_dynarray_swap(&a, 0, j-1);
+			}
+		}
 	}
 
 	if (nskip) {
@@ -2118,6 +2129,7 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 
 	FCMH_LOCK_ENSURE(f);
 	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
+	OPSTAT_INCR("msl.ptrunc-start");
 	fmi = fcmh_2_fmi(f);
 	fmi->fmi_ptrunc_size = sstb->sst_size;
 
