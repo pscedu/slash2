@@ -220,6 +220,11 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 
+		/*
+ 		 * We can't flush dirty data at this moment because
+ 		 * our MDS thread is waiting and we don't know how
+ 		 * long the flush will take.
+ 		 */
 		b->bcm_flags |= BMAPF_TOFREE; 
 		bmap_op_done(b);
 		fcmh_op_done(f);
