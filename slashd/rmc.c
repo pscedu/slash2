@@ -1893,6 +1893,10 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		mp->rc = rc;
 		goto out;
 	}
+	/*
+ 	 * We allow retrieving the replication table of a directory. 
+ 	 * However, only regular files have real bmaps.
+ 	 */
 	if (fcmh_isreg(f)) {
 		/*
 	 	 * Scan for any bmap in an outstanding queued state. 
