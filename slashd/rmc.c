@@ -410,12 +410,14 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	/*
  	 * If we don't wait for a truncation to complete on an IOS, a
- 	 * later write could race with it and cause data corruption.
+ 	 * later write beyond the truncation point could race with it 
+ 	 * and cause data corruption.  Give more head start to the
+ 	 * truncation RPC to finish first.
  	 */
 	FCMH_LOCK(f);
 	if (mq->rw == SL_WRITE && f->fcmh_flags & FCMH_MDS_IN_PTRUNC) {
 		OPSTAT_INCR("getbmap-lease-write-ptrunc");
-		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
+		sleep(3);
 	}
 	FCMH_ULOCK(f);
 
