@@ -1881,70 +1881,71 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	csvc = slm_getclcsvc(rq->rq_export);
 	if (csvc == NULL) {
 		mp->rc = -EHOSTDOWN;
-		goto out2;
+		goto out;
 	}
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = -EINVAL;
-		goto out2;
+		goto out;
 	}
 
-	/*
- 	 * Scan for any bmap in an outstanding queued state. 
- 	 * Since we are going to retrieve bmap states anyway,
- 	 * so this should not add much overhead.
- 	 *
- 	 * All bmap changes (replication, partial truncation
- 	 * and reclamation) are done by best effort. If there
- 	 * is a network issue, a bmap would be stuck in a 
- 	 * queued state. If so, a user can trigger action on
- 	 * such a bmap by querying the replication status of
- 	 * the file.
- 	 */
 	rc = slm_fcmh_get(&mq->fg, &f);
 	if (rc) {
 		mp->rc = rc;
-		goto out2;
+		goto out;
 	}
-	for (i = 0; i < NBREPLST; i++)
-		queued[i] = 0;
-	for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
-		rc = -bmap_get(f, i, SL_WRITE, &b);
-		if (rc) {
-			mp->rc = rc;
-			break;
-		}
-		_mds_repl_bmap_walk(b, NULL, NULL, 0, NULL, 0,
-		    slm_repl_queue_cb, &queued);
+	if (fcmh_isreg(f)) {
+		/*
+	 	 * Scan for any bmap in an outstanding queued state. 
+ 		 * Since we are going to retrieve bmap states anyway,
+ 		 * so this should not add much overhead.
+ 		 *
+ 		 * All bmap changes (replication, partial truncation
+ 		 * and reclamation) are done by best effort. If there
+ 		 * is a network issue, a bmap would be stuck in a 
+ 		 * queued state. If so, a user can trigger action on
+ 		 * such a bmap by querying the replication status of
+ 		 * the file.
+ 		 */
+		for (i = 0; i < NBREPLST; i++)
+			queued[i] = 0;
+		for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
+			rc = -bmap_get(f, i, SL_WRITE, &b);
+			if (rc) {
+				mp->rc = rc;
+				break;
+			}
+			_mds_repl_bmap_walk(b, NULL, NULL, 0, NULL, 0,
+			    slm_repl_queue_cb, &queued);
 	
-		if (queued[BREPLST_TRUNC_QUEUED]) {
-			OPSTAT_INCR("bmap-trunc-requeue");
-			upsch_enqueue(bmap_2_upd(b));
+			if (queued[BREPLST_TRUNC_QUEUED]) {
+				OPSTAT_INCR("bmap-trunc-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			if (queued[BREPLST_REPL_QUEUED]) {
+				OPSTAT_INCR("bmap-repl-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			if (queued[BREPLST_GARBAGE_QUEUED]) {
+				OPSTAT_INCR("bmap-garbage-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			bmap_op_done(b);
 		}
-		if (queued[BREPLST_REPL_QUEUED]) {
-			OPSTAT_INCR("bmap-repl-requeue");
-			upsch_enqueue(bmap_2_upd(b));
-		}
-		if (queued[BREPLST_GARBAGE_QUEUED]) {
-			OPSTAT_INCR("bmap-garbage-requeue");
-			upsch_enqueue(bmap_2_upd(b));
-		}
-		bmap_op_done(b);
 	}
 	fcmh_op_done(f);
 
-	if (rc)
-		goto out2;
+	if (!rc) {
+		rsw = psc_pool_get(slm_repl_status_pool);
+		rsw->rsw_csvc = csvc;
+		rsw->rsw_fg = mq->fg;
+		rsw->rsw_cid = mq->id;
+		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 
-	rsw = psc_pool_get(slm_repl_status_pool);
-	rsw->rsw_csvc = csvc;
-	rsw->rsw_fg = mq->fg;
-	rsw->rsw_cid = mq->id;
-	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
+		/* queue work for slmrcmthr_main() */
+		lc_add(&slm_replst_workq, rsw);
+	}
 
-	/* queue work for slmrcmthr_main() */
-	lc_add(&slm_replst_workq, rsw);
-
- out2:
+ out:
 	return (0);
 }
 
