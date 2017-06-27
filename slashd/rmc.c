@@ -1881,11 +1881,11 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	csvc = slm_getclcsvc(rq->rq_export);
 	if (csvc == NULL) {
 		mp->rc = -EHOSTDOWN;
-		goto out;
+		goto out2;
 	}
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = -EINVAL;
-		goto out;
+		goto out2;
 	}
 
 	/*
@@ -1903,7 +1903,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	rc = slm_fcmh_get(&mq->fg, &f);
 	if (rc) {
 		mp->rc = rc;
-		goto out;
+		goto out2;
 	}
 	for (i = 0; i < NBREPLST; i++)
 		queued[i] = 0;
@@ -1932,18 +1932,19 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	}
 	fcmh_op_done(f);
 
-	if (!rc) {
-		rsw = psc_pool_get(slm_repl_status_pool);
-		rsw->rsw_csvc = csvc;
-		rsw->rsw_fg = mq->fg;
-		rsw->rsw_cid = mq->id;
-		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
+	if (rc)
+		goto out2;
 
-		/* queue work for slmrcmthr_main() */
-		lc_add(&slm_replst_workq, rsw);
-	}
+	rsw = psc_pool_get(slm_repl_status_pool);
+	rsw->rsw_csvc = csvc;
+	rsw->rsw_fg = mq->fg;
+	rsw->rsw_cid = mq->id;
+	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 
- out:
+	/* queue work for slmrcmthr_main() */
+	lc_add(&slm_replst_workq, rsw);
+
+ out2:
 	return (0);
 }
 
