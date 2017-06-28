@@ -1231,6 +1231,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	/*
 	 * Only release the odtable entry if the key matches.  If a
 	 * match is found then verify the sequence number matches.
+	 *
+	 * bmi->bmi_writers is decremented in mds_bmap_bml_del_locked().
+	 * Anyway, I don't understand why we allow more than one
+	 * write lease on a bmap form a single client. In reality, I
+	 * suspect bmi->bmi_writers will be zero all the time.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
 		if (bmi->bmi_assign) {
