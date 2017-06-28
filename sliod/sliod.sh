@@ -36,6 +36,10 @@ preinit
 # Initialization/configuration
 ulimit -n 100000
 ulimit -c $((1024 * 1024 * 1024 * 50))
+
+# Double the default value on Linux. This does not work on FreeBSD
+sysctl -w fs.nr_open=2097152 >& /dev/null
+
 export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG=1
 #export PFL_SYSLOG_PIPE=logger
