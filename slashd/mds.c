@@ -1238,6 +1238,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * suspect bmi->bmi_writers will be zero all the time at this
 	 * point.
 	 */
+	psc_assert(!bmi->bmi_writers);
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
 		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
