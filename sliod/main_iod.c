@@ -292,8 +292,6 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
-	psc_setrlimit(RLIMIT_NOFILE, 1048576*2, 1048576*2);
-
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
@@ -376,6 +374,10 @@ main(int argc, char *argv[])
 	time(&now);
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
+
+	if (psc_setrlimit(RLIMIT_NOFILE, 1048576*2, 1048576*2))
+		psclogs_info(SLISS_INFO, "Fail to raise open file limit to %d",
+		    1048576*2);
 
 	pfl_fault_register(RIC_HANDLE_FAULT);
 
