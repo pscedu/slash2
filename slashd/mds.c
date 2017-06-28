@@ -878,8 +878,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	}
 	psc_assert(bmi->bmi_wr_ion);
 
-	mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease,
-	    &rlease);
+	mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease, &rlease);
 
 	/* Account for the read lease which is to be converted. */
 	psc_assert(rlease);
@@ -1070,7 +1069,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
-
 	}
 
  out:
