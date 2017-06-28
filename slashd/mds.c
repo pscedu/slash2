@@ -1235,8 +1235,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * match is found then verify the sequence number matches.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
-		int retifset[NBREPLST];
-
 		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
 
@@ -1264,31 +1262,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		if (bmi->bmi_wr_ion) {
 			psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
 			bmi->bmi_wr_ion = NULL;
-		}
-
-		/*
-		 * Check if any replication work is ready and queue it
-		 * up.
-		 */
-		brepls_init(retifset, 0);
-		retifset[BREPLST_REPL_QUEUED] = 1;
-		retifset[BREPLST_TRUNC_QUEUED] = 1;
-
-		if (mds_repl_bmap_walk_all(b, NULL, retifset,
-		    REPL_WALKF_SCIRCUIT)) {
-			struct slm_update_data *upd;
-			int qifset[NBREPLST];
-
-			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-				mds_inox_ensure_loaded(fcmh_2_inoh(f));
-			brepls_init(qifset, 0);
-			qifset[BREPLST_REPL_QUEUED] = 1;
-			qifset[BREPLST_TRUNC_QUEUED] = 1;
-
-			upd = &bmi->bmi_upd;
-			if (mds_repl_bmap_walk_all(b, NULL, qifset,
-			    REPL_WALKF_SCIRCUIT))
-				upsch_enqueue(upd);
 		}
 	}
 
