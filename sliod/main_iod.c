@@ -376,7 +376,7 @@ main(int argc, char *argv[])
 	    __progname, sl_stk_version, ctime(&now));
 
 	if (psc_setrlimit(RLIMIT_NOFILE, 1048576*2, 1048576*2))
-		psclog_warnx("Fail to raise open file limit to %d",
+		psclog_warnx("Fail to raise open file limit to %d.",
 		    1048576*2);
 
 	pfl_fault_register(RIC_HANDLE_FAULT);
