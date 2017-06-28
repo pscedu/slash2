@@ -1312,12 +1312,12 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	struct timeval tv;
 	struct psc_thread *me;
 
-	me = pscthr_get();
-	gettimeofday(&tv, NULL);
-
 	MSL_RMC_NEWREQ(f, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		goto out; 
+
+	me = pscthr_get();
+	gettimeofday(&tv, NULL);
 
 	mq->opfg.fg_fid = pinum;
 	mq->npfg.fg_fid = pinum;
