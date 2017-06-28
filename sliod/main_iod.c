@@ -375,9 +375,9 @@ main(int argc, char *argv[])
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
-	if (psc_setrlimit(RLIMIT_NOFILE, 1048576*2, 1048576*2))
+	if (psc_setrlimit(RLIMIT_NOFILE, 1048576, 1048576))
 		psclog_warnx("Fail to raise open file limit to %d.",
-		    1048576*2);
+		    1048576);
 
 	pfl_fault_register(RIC_HANDLE_FAULT);
 
