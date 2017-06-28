@@ -1261,8 +1261,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			odtr = bmi->bmi_assign;
 			bmi->bmi_assign = NULL;
 		}
-		psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
-		bmi->bmi_wr_ion = NULL;
+		if (bmi->bmi_wr_ion) {
+			psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
+			bmi->bmi_wr_ion = NULL;
+		}
 
 		/*
 		 * Check if any replication work is ready and queue it
