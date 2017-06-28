@@ -103,7 +103,7 @@ sli_fg_makepath(const struct sl_fidgen *fg, char *fid_path)
 static int
 sli_open_backing_file(struct fidc_membh *f)
 {
-	int lvl = PLL_DIAG, incr, rc = 0;
+	int lvl = PLL_DIAG, rc = 0;
 	char fidfn[PATH_MAX];
 
 	sli_fg_makepath(&f->fcmh_fg, fidfn);
