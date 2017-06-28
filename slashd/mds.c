@@ -1236,9 +1236,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * above. Anyway, I don't understand why we allow more than one
 	 * write lease on a bmap form a single client. In reality, I
 	 * suspect bmi->bmi_writers will be zero all the time at this
-	 * point.
+	 * point. Not really, if obml is not NULL in renew path, we could
+	 * have its value as 1.
 	 */
-	psc_assert(!bmi->bmi_writers);
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmi_writers) {
 		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
