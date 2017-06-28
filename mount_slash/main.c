@@ -1290,6 +1290,9 @@ msl_remove_sillyname(struct fidc_membh *f)
 	FCMH_ULOCK(f);
 
  out:
+	if (p)
+		fcmh_op_done(p);
+
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
