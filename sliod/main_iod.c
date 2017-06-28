@@ -375,9 +375,18 @@ main(int argc, char *argv[])
 	psclogs_info(SLISS_INFO, "SLASH2 %s version %d started at %s",
 	    __progname, sl_stk_version, ctime(&now));
 
+#ifdef Linux
+
+	/* fs.nr_open */
 	if (psc_setrlimit(RLIMIT_NOFILE, 1048576, 1048576))
 		psclog_warnx("Fail to raise open file limit to %d.",
 		    1048576);
+#else
+	/* kern.maxfilesperproc */
+	if (psc_setrlimit(RLIMIT_NOFILE, 131072, 131072))
+		psclog_warnx("Fail to raise open file limit to %d.",
+		    131072);
+#endif
 
 	pfl_fault_register(RIC_HANDLE_FAULT);
 
