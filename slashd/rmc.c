@@ -723,7 +723,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-#if 0
+#ifdef OLD_DEBUG_BITS
 	if (strcmp(mq->name, ".sconsign.dblite") == 0)
 		psclog_max("creating file .sconsign.dblite");
 #endif
