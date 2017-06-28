@@ -25,7 +25,6 @@
 
 #include "pfl/ctlsvr.h"
 #include "pfl/log.h"
-#include "pfl/rlimit.h"
 #include "pfl/str.h"
 
 #include "fidc_iod.h"
@@ -107,18 +106,10 @@ sli_open_backing_file(struct fidc_membh *f)
 	int lvl = PLL_DIAG, incr, rc = 0;
 	char fidfn[PATH_MAX];
 
-	/*
- 	 * XXX hit setrlimit: operation not permitted, but no open-fail.
- 	 * This per open system call should go!  Hit again due to fs.nr_open
- 	 * sysctl limit.
- 	 */
-	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 	sli_fg_makepath(&f->fcmh_fg, fidfn);
 	fcmh_2_fd(f) = open(fidfn, O_CREAT|O_RDWR, 0600);
 	if (fcmh_2_fd(f) == -1) {
 		rc = errno;
-		if (incr)
-			psc_rlim_adj(RLIMIT_NOFILE, -1);
 		OPSTAT_INCR("open-fail");
 		lvl = PLL_WARN;
 	} else
@@ -217,7 +208,6 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 				OPSTAT_INCR("close-succeed");
 			}
 			fcmh_2_fd(f) = -1;
-			psc_rlim_adj(RLIMIT_NOFILE, -1);
 			f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 		}
 
@@ -302,7 +292,6 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 			    "dtor/close errno=%d", errno);
 		} else
 			OPSTAT_INCR("close-succeed");
-		psc_rlim_adj(RLIMIT_NOFILE, -1);
 		f->fcmh_flags &= ~FCMH_IOD_BACKFILE;
 	}
 	if (f->fcmh_flags & FCMH_IOD_DIRTYFILE) {

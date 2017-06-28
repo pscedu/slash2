@@ -41,6 +41,7 @@
 #include "pfl/opstats.h"
 #include "pfl/pfl.h"
 #include "pfl/random.h"
+#include "pfl/rlimit.h"
 #include "pfl/str.h"
 #include "pfl/sys.h"
 #include "pfl/thread.h"
@@ -290,6 +291,8 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc > 1)
 		usage();
+
+	psc_setrlimit(RLIMIT_NOFILE, 1048576*2, 1048576*2);
 
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
