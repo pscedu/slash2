@@ -1441,9 +1441,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			inum = mp0->attr.sst_fg.fg_fid;
 		} else
 			OPSTAT_INCR("msl.unlink-cache-hit");
-		rc = msl_load_fcmh(pfr, inum, &c);
-		if (rc)
-			PFL_GOTOERR(out, rc);
 
 		rc = sl_fcmh_lookup(inum, FGEN_ANY, 0, &c, NULL); 
 		if (!rc) {
@@ -1456,7 +1453,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 				rc = msl_create_sillyname(p, pinum, name, c);
 				PFL_GOTOERR(out, rc);
 			}
-			FCMH_ULOCK(c);
+			fcmh_op_done(c);
 			c = NULL;
 		}
 	}
