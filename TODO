@@ -5945,3 +5945,20 @@ exited via signal 8
 [1497601344.54953900 slirimthr00:0x8110f3400:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (422 files) took 1.608 second(s)
 [1497637214.21352500 slirimthr02:0x8110f3c00:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (3 files) took 1.113 second(s)
 [1497637877.43467900 slirimthr01:0x8110f3800:def rim.c sli_rim_handle_reclaim 262] reclaim processing for batchno 273427 (2 files) took 1.163 second(s)
+
+06/29/2017
+----------
+
+Saw one bigfile.sh test failure during four-way tests on the same client.  Here are some information
+from the log file of the client:
+
+
+pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
+[1498719149.58986900 msnbrqthr8:7ffefc7f1700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6c0172f0 x32406066/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59002000 msnbrqthr15:7ffeba7f9700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe4c00df10 x32406063/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59008900 msnbrqthr13:7ffebaffb700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe60035b40 x32406069/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59017500 msnbrqthr0:7ffefe7f9700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe540f6010 x32406074/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59028000 msnbrqthr13:7ffebaffb700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe4c059060 x32406075/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59035000 msnbrqthr8:7ffefc7f1700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe540bd2e0 x32406078/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+[1498719149.59042200 msnbrqthr5:7ffefd3f4700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6c0bb980 x32406084/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+
