@@ -145,6 +145,8 @@ int main(int argc, char *argv[])
 		printf("Fail to open file, errno = %d\n", errno);
 		exit(1);
 	}
+        close(fd);
+
 	for (i = 0; i < nthreads; i++) {
 		args[i].id = i;
 		args[i].fd = open(filename, O_RDWR, 0600);
@@ -171,7 +173,6 @@ int main(int argc, char *argv[])
 		close(args[i].fd);
 		fflush(stdout);
 	}
-        close(fd);
 
  verify:
 
