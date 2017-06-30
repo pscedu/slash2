@@ -677,6 +677,9 @@ bmpce_reap(struct psc_poolmgr *m)
 void
 bmpc_global_init(void)
 {
+	/*
+	 * msl_pagecache_maxsize can be set like this: pagecache_maxsize=2G
+ 	 */
 	if (msl_pagecache_maxsize)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
 	if (msl_bmpces_max < msl_bmpces_min)
