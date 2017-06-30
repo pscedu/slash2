@@ -119,7 +119,7 @@ msl_pgcache_get(int wait)
 
 	if (wait) {
 		/*
-		 * Use timed wait in case the max limit is bumped.
+		 * Use timed wait in case the limit is bumped by sys admin.
 		 */
 		ts.tv_nsec = 0;
 		ts.tv_sec = time(NULL) + 10;
