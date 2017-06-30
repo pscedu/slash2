@@ -88,11 +88,13 @@ void *
 msl_pgcache_get(int wait)
 {
 	void *p;
+	struct timespec ts;
 	static int warned = 0, failed = 0;
 
 	p = lc_getnb(&page_buffers);
 	if (p)
 		return p;
+ again:
 
 	LIST_CACHE_LOCK(&page_buffers);
 	if (page_buffers_count < bmpce_pool->ppm_max) {
@@ -115,9 +117,16 @@ msl_pgcache_get(int wait)
 		psclog_warnx("Please raise vm.max_map_count for performance");
 	}
 
-	if (wait)
-		p = lc_getwait(&page_buffers);
-	else
+	if (wait) {
+		/*
+		 * Use timed wait in case the max limit is bumped.
+		 */
+		ts.tv_nsec = 0;
+		ts.tv_sec = time(NULL) + 10;
+		p = lc_gettimed(&page_buffers, &ts);
+		if (!p)
+			goto again;
+	} else
 		p = lc_getnb(&page_buffers);
 	return (p);
 }
