@@ -70,7 +70,7 @@ msl_pgcache_init(void)
 	lc_reginit(&page_buffers, struct bmap_page_entry,
 	    page_lentry, "pagebuffers");
 
-	for (i = 0; i < msl_bmpces_min; i++) {
+	for (i = 0; i < bmpce_pool->ppm_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 
@@ -95,7 +95,7 @@ msl_pgcache_get(int wait)
 		return p;
 
 	LIST_CACHE_LOCK(&page_buffers);
-	if (page_buffers_count < msl_bmpces_max) {
+	if (page_buffers_count < bmpce_pool->ppm_max) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 		if (p != MAP_FAILED) {
@@ -147,10 +147,10 @@ msl_pgcache_reap(void)
 		count = curr;
 		return;
 	}
-	if (curr <= msl_bmpces_min)
+	if (curr <= bmpce_pool->ppm_min)
 		return;
 
-	nfree = (curr - msl_bmpces_min) / 2;
+	nfree = (curr - bmpce_pool->ppm_min) / 2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
