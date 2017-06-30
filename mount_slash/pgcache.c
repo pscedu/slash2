@@ -145,6 +145,7 @@ msl_pgcache_put(void *p)
 			OPSTAT_INCR("munmap-drop-failure");
 		else
 			OPSTAT_INCR("munmap-drop-success");
+		page_buffers_count--;
 	} else {
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
 		lc_add(&page_buffers, p);
@@ -183,10 +184,10 @@ msl_pgcache_reap(void)
 			OPSTAT_INCR("munmap-reap-failure");
 		else
 			OPSTAT_INCR("munmap-reap-success");
-		LIST_CACHE_LOCK(&page_buffers);
-		page_buffers_count--;
-		LIST_CACHE_ULOCK(&page_buffers);
 	}
+	LIST_CACHE_LOCK(&page_buffers);
+	page_buffers_count -= i;
+	LIST_CACHE_ULOCK(&page_buffers);
 }
 
 /*
