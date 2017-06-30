@@ -89,9 +89,10 @@ int main(int argc, char *argv[])
 	char *filename;
 	int32_t result;
 	unsigned char *buf;
+	struct stat stb;
 	char rand_statebuf[32];
 	struct timeval t1, t2, t3;
-	int i, j, fd, ret, error, nthreads, readonly;
+	int i, j, k, fd, ret, error, nthreads, readonly;
 	struct random_data rand_state;
 	size_t c, seed, size, bsize, nblocks;
 
@@ -181,18 +182,32 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 
        	fd = open(filename, O_RDONLY);
-	for (i = 0; i < nblocks; i++) {
-		ret = read(fd, buf, bsize);
-		if (ret != bsize) {
-			printf("Read file failed with errno = %d.\n", errno);
-			exit(1);
-		}
-		for (j = 0; j < bsize; j++) {
-			random_r(&rand_state, &result);
-			if (buf[j] != (unsigned char)result & 0xff) {
-				error++;
-				printf("%d: File corrupted (%d:%d): %2x vs %2x\n", error, i, j, buf[j], result & 0xff);
-				fflush(stdout);
+	ret = fstat(fd, &stb);
+	if (ret < 0) {
+		printf("fstat failed with %d (%s)\n", ret, strerror(ret));
+		exit(1);
+	}
+	if (stb.st_size != (off_t)nthreads * nblocks * bsize) {
+		printf("File size mismatch: %ld vs %ld\n",stb.st_size,  
+			(off_t)nthreads * nblocks * bsize);
+		exit(1);
+	}
+	
+	for (i = 0; i < nthreads; i++) {
+		for (j = 0; j < nblocks; j++) {
+			ret = read(fd, buf, bsize);
+			if (ret != bsize) {
+				printf("Read file failed with errno = %d.\n", errno);
+				exit(1);
+			}
+			for (k = 0; k < bsize; k++) {
+				random_r(&rand_state, &result);
+				if (buf[k] != (unsigned char)result & 0xff) {
+					error++;
+					printf("%4d: File corrupted (%d:%d): %2x vs %2x\n", 
+						error, i*j, k, buf[k], result & 0xff);
+					fflush(stdout);
+				}
 			}
 		}
 	}
@@ -208,7 +223,9 @@ int main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	printf("\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
+		error ? "Test failed" : "Test succeeded", 
+		t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 
 	if (error)
 		exit(1);
