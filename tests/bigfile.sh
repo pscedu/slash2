@@ -4,6 +4,11 @@
 #
 # Big file tests written for slash2 over the years.
 #
+# Result of 06/29/2017 (orange-yuzu-lime):
+#
+# All tests have passed successfully! Total time 40085.30578621 seconds
+#
+#
 
 if [ $# -eq 1 ]
 then
