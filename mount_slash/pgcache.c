@@ -160,8 +160,8 @@ msl_pgcache_reap(void)
 	static int count;		/* this assume one reaper */
 
 	/* 
-	 * We don't reap even if the number of free buffers keeps 
-	 * growing. This greatly cuts down the mmap() calls.
+	 * We don't reap if the number of free buffers keeps growing. 
+	 * This greatly cuts down the number of mmap() calls.
 	 */
 	curr = lc_nitems(&page_buffers);
 	if (!count || count != curr) {
