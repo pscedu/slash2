@@ -667,6 +667,8 @@ bmpc_global_init(void)
 {
 	if (msl_pagecache_maxsize)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
+	if (msl_bmpces_max < msl_bmpces_min)
+		msl_bmpces_max = msl_bmpces_min;
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
