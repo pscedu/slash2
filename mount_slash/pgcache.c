@@ -130,7 +130,7 @@ msl_pgcache_put(void *p)
  	 * Do not assume that the max value has not changed.
  	 */
 	LIST_CACHE_LOCK(&page_buffers);
-	if (page_buffers_count >= bmpce_pool->ppm_max) {
+	if (page_buffers_count > bmpce_pool->ppm_max) {
 		rc = munmap(p, BMPC_BUFSZ);
 		if (rc)
 			OPSTAT_INCR("munmap-drop-failure");
