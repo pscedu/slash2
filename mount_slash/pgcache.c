@@ -122,10 +122,12 @@ msl_pgcache_get(int wait)
 		 * Use timed wait in case the limit is bumped by sys admin.
 		 */
 		ts.tv_nsec = 0;
-		ts.tv_sec = time(NULL) + 10;
+		ts.tv_sec = time(NULL) + 30;
 		p = lc_gettimed(&page_buffers, &ts);
-		if (!p)
+		if (!p) {
+			OPSTAT_INCR("pagecache-get-retry");
 			goto again;
+		}
 	} else
 		p = lc_getnb(&page_buffers);
 	return (p);
