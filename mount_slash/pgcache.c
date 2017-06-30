@@ -125,9 +125,21 @@ msl_pgcache_get(int wait)
 void
 msl_pgcache_put(void *p)
 {
+	int rc;
+	/*
+ 	 * Do not assume that the max value has not changed.
+ 	 */
 	LIST_CACHE_LOCK(&page_buffers);
-	INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-	lc_add(&page_buffers, p);
+	if (page_buffers_count >= bmpce_pool->ppm_max) {
+		rc = munmap(p, BMPC_BUFSZ);
+		if (rc)
+			OPSTAT_INCR("munmap-drop-failure");
+		else
+			OPSTAT_INCR("munmap-drop-success");
+	} else {
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&page_buffers, p);
+	}
 	LIST_CACHE_ULOCK(&page_buffers);
 }
 
@@ -159,9 +171,9 @@ msl_pgcache_reap(void)
 			break;
 		rc = munmap(p, BMPC_BUFSZ);
 		if (rc)
-			OPSTAT_INCR("munmap-failure");
+			OPSTAT_INCR("munmap-reap-failure");
 		else
-			OPSTAT_INCR("munmap-success");
+			OPSTAT_INCR("munmap-reap-success");
 		LIST_CACHE_LOCK(&page_buffers);
 		page_buffers_count--;
 		LIST_CACHE_ULOCK(&page_buffers);
