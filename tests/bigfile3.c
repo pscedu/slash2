@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 
  verify:
 
-	printf("\nAll threads has exited. Now verifying file contents ... \n\n");
+	printf("\nAll threads have exited. Now verifying file contents ... \n\n");
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
