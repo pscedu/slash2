@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	filename = argv[optind];
-	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
+	printf("seed = %5d, # of threads = %3d, block size = %6d, nblocks = %6d, file size = %ld.\n\n", 
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
 	fflush(stdout);
 
