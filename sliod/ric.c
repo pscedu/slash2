@@ -493,6 +493,11 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	if (mq->nbmaps > MAX_BMAP_RELEASE || !mq->nbmaps)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
+	/*
+	 * 07/01/2017: Client still experiences timeout with my
+	 * big file tests. Perhaps increase the number of threads
+	 * or take other measures.
+	 */
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		newbrls = psc_pool_get(bmap_rls_pool);
