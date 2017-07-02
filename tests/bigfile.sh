@@ -4,10 +4,9 @@
 #
 # Big file tests written for slash2 over the years.
 #
-# Result of 06/29/2017 (orange-yuzu-lime):
+# Result of 07/02/2017 (orange-yuzu-lime):
 #
-# All tests have passed successfully! Total time 40085.30578621 seconds
-#
+# All tests have passed successfully! Total time 83275.18377186 seconds
 #
 
 if [ $# -eq 1 ]
