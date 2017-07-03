@@ -64,6 +64,7 @@ main(int argc, char **argv)
 	}
 	total++;
 
+	/* EFBIG = 27 */
 	ret = write(fd, buf, 4096);
 	if (ret != 4096) {
 		printf("Write fails with errno = %d at line %d\n", errno, __LINE__);
