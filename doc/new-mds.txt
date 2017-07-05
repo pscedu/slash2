@@ -14,6 +14,13 @@ Motivation:
 
 	* Use file handle is more efficient than going through the FID namespace.
 
+	* We still have workaround with ZFS-fuse.  For example:
+
+		zfs_rmnode, skipping znode: mount = 1, id = 820768619
+		zfs_rmnode, skipping znode: mount = 1, id = 820776170
+		zfs_rmnode, skipping znode: mount = 1, id = 820780706
+		zfs_rmnode, skipping znode: mount = 1, id = 820759349
+
 Feasibility:
 
 	* We can always create links in the user space, but the open-by-handle feature
