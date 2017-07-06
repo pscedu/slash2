@@ -89,7 +89,7 @@ Concerns:
 
 	* There will be work needed to migrate existing data to the new MDS code.
 
-
+	* How to deal with upcalls from ZFS to log namespace operations, etc.?
 
 
 <yanovich> so it *should* entail just replacing mdsio-zfs.c
