@@ -160,7 +160,7 @@ msl_pgcache_reap(void)
 {
 	void *p;
 	int i, rc, curr, nfree;
-	static int count;		/* this assume one reaper */
+	static int count = 0;		/* this assume one reaper */
 
 	/* 
 	 * We don't reap if the number of free buffers keeps growing. 
