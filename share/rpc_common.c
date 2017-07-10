@@ -934,6 +934,9 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 *
  	 * (gdb) p csvc->csvc_params.scp_flags
  	 *
+ 	 * 07/10/2017: Hit a crash with flag 11000010, this indicates that 
+ 	 * there is a code path that can reach the csvc after its reference 
+ 	 * count is zero and marked to free.
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
