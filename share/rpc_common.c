@@ -930,6 +930,11 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 * In theory, a client csvc should go away once it is not online.
  	 * Apparently, there is a race condition somewhere that has caused
  	 * trouble on our production system. Hence CSVCF_ONLIST.
+ 	 *
+ 	 * To examine csvc_flags, use the following:
+ 	 *
+ 	 * (gdb) p csvc->csvc_params.scp_flags
+ 	 *
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
