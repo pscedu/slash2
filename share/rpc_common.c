@@ -531,9 +531,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	}
 
 	/*
-	 * Due to the nature of non-blocking CONNECT,
-	 * the import may or may not actually be
-	 * present.
+	 * Due to the nature of non-blocking CONNECT, the import 
+	 * may or may not actually be present.
 	 */
 	imp = csvc->csvc_import;
 	if (imp)
