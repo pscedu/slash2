@@ -1201,6 +1201,11 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
 		csvc = sl_expcli_ops.secop_allocpri(exp);
+		/*
+		 * This is probably Okay because we re-use the 
+		 * connection from the client that has already 
+		 * been established. See comments in _sl_csvc_get().
+		 */
 		psc_assert(csvc);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
