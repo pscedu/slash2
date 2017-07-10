@@ -522,7 +522,12 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	psc_assert(!(csvc->csvc_flags & CSVCF_TOFREE));
 	csvc->csvc_flags |= CSVCF_TOFREE;
 
-	/* Drop lock before potentially grabbing the list lock */
+	/*
+	 * Drop lock before potentially grabbing the list lock.
+	 * This is different from the locking order we use in
+	 * instantiation. However, I have not found any reason
+	 * why this causes the crash.
+	 */
 	CSVC_ULOCK(csvc);
 
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
