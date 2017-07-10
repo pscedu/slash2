@@ -404,7 +404,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != magic || mq->version != version)
-		mp->rc = -EINVAL;
+		mp->rc = -EPERM;
 
 	/* stkvers and uptime are returned in slctlrep_getconn() */
 	tv1.tv_sec = mq->uptime;
