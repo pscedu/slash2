@@ -438,8 +438,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			mp->rc = -SLERR_ION_UNKNOWN;
 			break;
 		}
-		if (!RES_ISFS(m->resm_res))
+		if (!RES_ISFS(m->resm_res)) {
 			mp->rc = -SLERR_RES_BADTYPE;
+			break;
+		}
 		m->resm_res->res_stkvers = mq->stkvers;
 		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
@@ -449,8 +451,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			mp->rc = -SLERR_RES_UNKNOWN;
 			break;
 		}
-		if (m->resm_type != SLREST_MDS)
+		if (m->resm_type != SLREST_MDS) {
 			mp->rc = -SLERR_RES_BADTYPE;
+			break;
+		}
 		m->resm_res->res_stkvers = mq->stkvers;
 		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
