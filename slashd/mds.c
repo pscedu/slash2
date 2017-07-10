@@ -2130,8 +2130,10 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 			BMAP_ULOCK(b);
 
 			/* we are recovering after restart */
-			if (bml->bml_exp == NULL)
+			if (bml->bml_exp == NULL) {
+				BMAP_LOCK(b);
 				continue;
+			}
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL) {
 				psclog_warnx("Unable to get csvc: %p",
