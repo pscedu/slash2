@@ -1186,6 +1186,9 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 /*
  * Get pscrpc_export private data specific to CLIENT peer.
  * @exp: RPC export to CLI peer.
+ *
+ * populate is only true when we handles a connection request.
+ * See slrpc_handle_connect().
  */
 void *
 sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
