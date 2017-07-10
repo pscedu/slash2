@@ -390,7 +390,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 			struct sl_resm *m;
 
 			m = libsl_nid2resm(rq->rq_peer.nid);
-			clock_gettime(CLOCK_MONOTONIC,
+			    clock_gettime(CLOCK_MONOTONIC,
 			    &res2iosinfo(m->resm_res)->si_lastcomm);
 
 			slconnthr_watch(slmconnthr, m->resm_csvc,

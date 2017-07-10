@@ -1115,6 +1115,16 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	if (rc)
 		return;
 
+	/*
+	 * 07/10/2017:
+	 *
+	 * Odd output from slmctl -sc from the MDS:
+	 *
+ 	 *  stor013s1  ...    -O--       0    8     2  201d22h18m
+ 	 *
+ 	 * We should have a W flag, and the uptime is bogus as well.
+ 	 * This is fixed by restarting the corresponding sliod.
+ 	 */
 	CSVC_LOCK(csvc);
 	scp->scp_flags |= flags | CSVCF_WATCH;
 	scp->scp_useablef = useablef;
