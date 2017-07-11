@@ -21,6 +21,9 @@ Motivation:
 		zfs_rmnode, skipping znode: mount = 1, id = 820780706
 		zfs_rmnode, skipping znode: mount = 1, id = 820759349
 
+	* After removing a huge number of files in a directory, the ls performance of
+	  that directory never recovers (after reboot, etc).  Sounds like a performance bug.
+
 Feasibility:
 
 	* We can always create links in the user space, but the open-by-handle feature
