@@ -203,7 +203,7 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 		return;
 	}
 	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
-		t->odt_ops.odtop_create(t, fn, -1);
+		t->odt_ops.odtop_new(t, fn, -1);
 		return;
 	}
 	psc_fatalx("failed to lookup odtable %s, rc=%d", fn, rc);
@@ -213,7 +213,7 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
  * Create a default on-disk table if no one is found.
  */
 void
-slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
+slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
 	struct pfl_odt_slotftr f;
 	struct pfl_odt_receipt r;
@@ -258,7 +258,7 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 /* compare to pfl_odtops_mmap */
 struct pfl_odt_ops slm_odtops = {
-	slm_odt_create,		/* odtop_create() */
+	slm_odt_new,		/* odtop_new() */
 	slm_odt_open,		/* odtop_open() */
 	slm_odt_close,		/* odtop_close() */
 	slm_odt_read,		/* odtop_read() */
