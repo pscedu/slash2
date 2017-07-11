@@ -62,6 +62,14 @@
 #define SL_RPATH_FIDNS_DIR	"fidns"
 #define SL_RPATH_TMP_DIR	"tmp"
 
+/*
+ * The following was introduced by commit:
+ *
+ * commit 8d6ee7efa9aa4e4f8fea97ba9b5fe1c7a11102bc
+ * Author: Jared Yanovich <yanovich@psc.edu>
+ *
+ */
+
 #define SL_FN_BMAP_ODTAB	"bmap.odtab"
 #define SL_FN_PTRUNC_ODTAB	"ptrunc.odt"
 

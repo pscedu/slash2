@@ -1127,7 +1127,8 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
  	 *  stor013s1  ...    -O--       0    8     2  201d22h18m
  	 *
  	 * We should have a W flag, and the uptime is bogus as well.
- 	 * This is fixed by restarting the corresponding sliod.
+ 	 * The sliod is otherwise functional though. This is fixed 
+ 	 * by restarting the corresponding sliod.
  	 */
 	CSVC_LOCK(csvc);
 	scp->scp_flags |= flags | CSVCF_WATCH;
