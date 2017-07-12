@@ -703,7 +703,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		return (-ENOMEM);
 	}
 
-	pfl_odt_mapitem(slm_bia_odt, item, &bia);
+	pfl_odt_allocitem(slm_bia_odt, (void **)&bia);
 
 	bia->bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
 	bia->bia_lastcli = bml->bml_cli_nidpid;
@@ -717,7 +717,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc) {
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		PSCFREE(bia);
 		// release odt ent?
 		return (rc);
 	}
@@ -730,7 +730,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmi_wr_ion, bmi->bmi_assign);
 
-	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+	PSCFREE(bia);
 
 	return (0);
 }

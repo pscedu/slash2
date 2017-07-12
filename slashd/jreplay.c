@@ -379,7 +379,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_replay_bmap(&sjar->sjar_rep, B_REPLAY_OP_REPLS);
 
-	pfl_odt_mapitem(slm_bia_odt, item, &bia);
+	pfl_odt_allocitem(slm_bia_odt, (void **)&bia);
 
 	if (sjar->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
 		sjba = &sjar->sjar_bmap;
@@ -397,6 +397,8 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 
 	pfl_odt_putitem(slm_bia_odt, item, bia,
 	    sjar->sjar_flags & SLJ_ASSIGN_REP_FREE ? 0 : 1);
+
+	PSCFREE(bia);
 
 	return (0);
 }
