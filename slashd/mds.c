@@ -1245,8 +1245,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
 
-			pfl_odt_getitem(slm_bia_odt,
-			    bmi->bmi_assign, &bia);
+			pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
 			/*
