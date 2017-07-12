@@ -773,7 +773,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bml->bml_ios = bia->bia_ios;
 
 	rc = mds_bmap_add_repl(b, bia);
-	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+	PSCFREE(bia);
+
 	if (rc)
 		return (rc);
 
@@ -1859,7 +1860,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
  out1:
 	if (bia)
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		PSCFREE(bia);
+
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	b->bcm_flags &= ~BMAPF_IOSASSIGNED;
