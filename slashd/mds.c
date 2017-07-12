@@ -755,7 +755,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		/* XXX release bia? */
 		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
 		   bia->bia_fid);
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		PSCFREE(bia);
 		return (-1); // errno
 	}
 	/*
@@ -1260,7 +1260,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				     b->bcm_bmapno, fcmh_2_fid(f)); 
 			}
 
-			pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+			PSCFREE(bia);
 
 			/* End sanity checks. */
 			odtr = bmi->bmi_assign;
