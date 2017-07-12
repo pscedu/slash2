@@ -713,7 +713,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_start = time(NULL);
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia);
+	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia, 1);
 
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc) {

@@ -395,7 +395,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		bia->bia_flags = sjba->sjba_flags;
 	}
 
-	pfl_odt_putitemf(slm_bia_odt, item, bia,
+	pfl_odt_putitem(slm_bia_odt, item, bia,
 	    sjar->sjar_flags & SLJ_ASSIGN_REP_FREE ? 0 : 1);
 
 	return (0);
