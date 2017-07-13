@@ -752,7 +752,6 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 	if (bia->bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
-		/* XXX release bia? */
 		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
 		   bia->bia_fid);
 		PSCFREE(bia);
