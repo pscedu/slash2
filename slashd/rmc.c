@@ -288,7 +288,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
-	mp->sbd.sbd_key = bmi->bmi_assign->odtr_crc;
+	mp->sbd.sbd_key = BMAPSEQ_ANY;
 
 	psc_assert(bmi->bmi_wr_ion);
 	mp->sbd.sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;

@@ -1744,10 +1744,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
-
-	/* Stash the odtable key if this is a write lease. */
-	sbd->sbd_key = (rw == SL_WRITE) ?
-	    bml->bml_bmi->bmi_assign->odtr_crc : BMAPSEQ_ANY;
+	sbd->sbd_key = BMAPSEQ_ANY;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1854,7 +1851,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_seq = obml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
-	sbd_out->sbd_key = obml->bml_bmi->bmi_assign->odtr_crc;
+	sbd_out->sbd_key = BMAPSEQ_ANY;
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
@@ -1922,7 +1919,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		psc_assert(bmi->bmi_wr_ion);
 
-		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_crc;
+		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
