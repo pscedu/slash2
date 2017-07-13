@@ -713,7 +713,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_start = time(NULL);
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia, 1);
+	bmi->bmi_assign = item;
+	pfl_odt_putitem(slm_bia_odt, item, bia, 1);
 
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc) {
@@ -1178,9 +1179,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
-	int64_t item = 0;
 	struct fidc_membh *f = b->bcm_fcmh;
-	size_t item;
+	int64_t item;
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
@@ -1294,7 +1294,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		pjournal_put_buf(slm_journal, sjar);
 		mds_unreserve_slot(1);
 
-		pfl_odt_freeitem(slm_bia_odt, odtr);
+		pfl_odt_freeitem(slm_bia_odt, item);
 	}
 
 	return (rc);
