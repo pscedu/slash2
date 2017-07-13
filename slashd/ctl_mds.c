@@ -468,13 +468,11 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slmctlmsg_bml *scbl = m;
 	struct bmap_mds_lease *bml, *t;
 	struct psc_lockedlist *pll;
-	struct bmap_mds_info *bmi;
 	int rc = 1;
 
 	pll = &slm_bmap_leases.btt_leases;
 	PLL_LOCK(pll);
 	PLL_FOREACH(bml, pll) {
-		bmi = bml->bml_bmi;
 		memset(scbl, 0, sizeof(*scbl));
 		strlcpy(scbl->scbl_resname,
 		    bml->bml_ios && bml->bml_ios != IOS_ID_ANY ?
@@ -483,8 +481,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
 		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
 		scbl->scbl_seq = bml->bml_seq;
-		scbl->scbl_key = bmi->bmi_assign ?
-		    bmi->bmi_assign->odtr_crc : BMAPSEQ_ANY;
+		scbl->scbl_key = BMAPSEQ_ANY;
 		scbl->scbl_flags = bml->bml_flags;
 		scbl->scbl_start = bml->bml_start;
 		scbl->scbl_expire = bml->bml_expire;
