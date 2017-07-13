@@ -725,10 +725,9 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bml->bml_seq = bia->bia_seq;
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, item=%zd",
-	    bmi->bmi_assign->odtr_item);
+	    bmi->bmi_assign);
 	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
-	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
-	    bmi->bmi_wr_ion, bmi->bmi_assign);
+	    "rmmi(%p)", resm->resm_res->res_name, bmi->bmi_wr_ion);
 
 	PSCFREE(bia);
 
@@ -778,7 +777,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		return (rc);
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, item=%zd",
-	    bmi->bmi_assign->odtr_item);
+	    bmi->bmi_assign);
 
 	return (0);
 }
