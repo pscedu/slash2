@@ -245,6 +245,8 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 	for (item = 0; item < h->odth_nitems; item++) {
 		f.odtf_flags = 0;
+		if (item == 0)
+			f.odtf_flags = ODT_FTRF_INUSE;
 		f.odtf_slotno = item;
 		psc_crc64_init(&f.odtf_crc);
 		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
