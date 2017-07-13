@@ -69,7 +69,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 
 void
 slm_odt_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_slotftr *f, size_t item)
+    struct pfl_odt_slotftr *f, int64_t item)
 {
 	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
