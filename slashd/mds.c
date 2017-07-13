@@ -1400,7 +1400,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 }
 
 void
-mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
+mds_bia_odtable_startup_cb(void *data, int64_t item,
     __unusedx void *arg)
 {
 	struct bmap_ios_assign *bia = data;
@@ -1413,8 +1413,6 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 
 	OPSTAT_INCR("bmap-restart-check");
 
-	r = PSCALLOC(sizeof(*r));
-	memcpy(r, odtr, sizeof(*r));
 
 	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq,
@@ -1436,7 +1434,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
-		    r->odtr_item, fg.fg_fid);
+		    item, fg.fg_fid);
 		PFL_GOTOERR(out, rc);
 	}
 
@@ -2308,7 +2306,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 }
 
 void
-slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
+slm_ptrunc_odt_startup_cb(void *data, __unusedx int64_t item,
     __unusedx void *arg)
 {
 	struct {

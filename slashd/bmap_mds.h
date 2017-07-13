@@ -226,7 +226,7 @@ uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
 int64_t	 slm_bmap_calc_repltraffic(struct bmap *);
 
-void	 mds_bia_odtable_startup_cb(void *, struct pfl_odt_receipt *, void *);
+void	 mds_bia_odtable_startup_cb(void *, int64_t, void *);
 
 extern struct psc_poolmaster	 slm_bml_poolmaster;
 extern struct psc_poolmgr	*slm_bml_pool;
