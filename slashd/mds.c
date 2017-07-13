@@ -642,7 +642,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign->odtr_item;
+	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign;
 
 	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
 	    sizeof(*sjar));
@@ -1179,7 +1179,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
-	struct pfl_odt_receipt *odtr = NULL;
+	int64_t item = 0;
 	struct fidc_membh *f = b->bcm_fcmh;
 	size_t item;
 	int rc = 0;
@@ -1262,8 +1262,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			PSCFREE(bia);
 
 			/* End sanity checks. */
-			odtr = bmi->bmi_assign;
-			bmi->bmi_assign = NULL;
+			item = bmi->bmi_assign;
+			bmi->bmi_assign = 0;
 		}
 		if (bmi->bmi_wr_ion) {
 			psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
@@ -1283,14 +1283,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	psc_pool_return(slm_bml_pool, bml);
 
-	if (odtr) {
+	if (item) {
 		struct slmds_jent_assign_rep *sjar;
 
-		item = odtr->odtr_item;
-
 		mds_reserve_slot(1);
-		sjar = pjournal_get_buf(slm_journal,
-		    sizeof(*sjar));
+		sjar = pjournal_get_buf(slm_journal, sizeof(*sjar));
 		sjar->sjar_item = item;
 		sjar->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,

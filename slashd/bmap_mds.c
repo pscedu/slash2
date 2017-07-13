@@ -422,7 +422,6 @@ mds_bmap_destroy(struct bmap *b)
 
 	psc_assert(bmi->bmi_writers == 0);
 	psc_assert(bmi->bmi_readers == 0);
-	psc_assert(bmi->bmi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmi_leases));
 	upd_destroy(&bmi->bmi_upd);
 }

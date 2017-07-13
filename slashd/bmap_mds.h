@@ -63,7 +63,7 @@ struct bmap_mds_info {
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
-	struct pfl_odt_receipt	*bmi_assign;		/* bmap <-> ION binding */
+	int64_t			 bmi_assign;		/* bmap <-> ION binding */
 	uint64_t		 bmi_seq;		/* Largest write bml seq # */
 
 	/*
