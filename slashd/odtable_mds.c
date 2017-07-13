@@ -215,8 +215,8 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 void
 slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
+	int64_t item;
 	struct pfl_odt_slotftr f;
-	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	size_t nb;
 	int rc;
@@ -243,13 +243,13 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	if (rc || nb != sizeof(*h))
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
-	for (r.odtr_item = 0; r.odtr_item < h->odth_nitems; r.odtr_item++) {
+	for (item = 0; item < h->odth_nitems; item++) {
 		f.odtf_flags = 0;
-		f.odtf_slotno = r.odtr_item;
+		f.odtf_slotno = item;
 		psc_crc64_init(&f.odtf_crc);
 		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
-		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
+		t->odt_ops.odtop_write(t, NULL, &f, item);
 	}
 	t->odt_ops.odtop_sync(t, -1);
 	zfsslash2_wait_synced(0);
