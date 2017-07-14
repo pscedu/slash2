@@ -443,9 +443,6 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		OPSTAT_INCR("reuse-iolist");
 
 		begin = psc_dynarray_len(a);
-		slm_ptrunc_enabled = 0;
-
-
 		for (i = 0; i < slm_max_ios; i++) {
 			r = libsl_id2res(fcmh_getrepl(f, i).bs_id);
 			if (r)
