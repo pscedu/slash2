@@ -108,7 +108,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 }
 
 void
-slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+slm_odt_read(struct pfl_odt *t, int64_t item,
     void *p, struct pfl_odt_slotftr *f)
 {
 	size_t nb, expect = 0;
@@ -126,7 +126,7 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 
 	_slm_odt_zerobuf_ensurelen(pad);
 
-	off = h->odth_start + r->odtr_item * h->odth_slotsz;
+	off = h->odth_start + item * h->odth_slotsz;
 
 	if (p)
 		PACK_IOV(p, h->odth_itemsz);
