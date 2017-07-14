@@ -40,9 +40,9 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-void *slm_odt_zerobuf;
+static void *slm_odt_zerobuf;
 
-void
+static void
 _slm_odt_zerobuf_ensurelen(size_t len)
 {
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
