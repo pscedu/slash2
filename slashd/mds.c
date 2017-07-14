@@ -1405,6 +1405,8 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 
 	OPSTAT_INCR("bmap-restart-check");
 
+	if (item == 0)
+		return;
 
 	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq,
