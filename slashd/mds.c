@@ -1400,7 +1400,6 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
     __unusedx void *arg)
 {
 	struct bmap_ios_assign *bia = data;
-	struct pfl_odt_receipt *r = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap_mds_lease *bml;
 	struct sl_fidgen fg;
