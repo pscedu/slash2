@@ -1465,7 +1465,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 		// XXX BMAP_LOCK(b)
 		b->bcm_flags |= BMAPF_DIO;
 
-	bmap_2_bmi(b)->bmi_assign = r;
+	bmap_2_bmi(b)->bmi_assign = item;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	psc_assert(!rc);
