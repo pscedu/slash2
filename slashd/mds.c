@@ -2296,29 +2296,3 @@ _dbdo(const struct pfl_callerinfo *pci,
 	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
-
-void
-slm_ptrunc_odt_startup_cb(void *data, __unusedx int64_t item,
-    __unusedx void *arg)
-{
-	struct {
-		struct sl_fidgen fg;
-	} *pt = data;
-	struct fidc_membh *f;
-//	sl_bmapno_t bno;
-	int rc;
-
-	rc = slm_fcmh_get(&pt->fg, &f);
-	if (rc == 0) {
-//		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
-		/* XXX do something */
-		fcmh_op_done(f);
-	}
-
-//	brepls_init(tract, -1);
-//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
-
-//	brepls_init(retifset, 0);
-//	retifset[BREPLST_TRUNC_SCHED] = 1;
-//	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-}

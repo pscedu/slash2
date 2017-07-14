@@ -77,8 +77,6 @@ struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
 uint32_t		 sl_sys_upnonce;
 
-struct pfl_odt		*slm_ptrunc_odt;
-
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 slm_roots;
 
@@ -717,9 +715,7 @@ main(int argc, char *argv[])
 	time(&now);
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
-
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
-	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
 	/*
 	 * As soon as log replay is over, we should be able to set the
