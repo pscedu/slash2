@@ -595,8 +595,6 @@ main(int argc, char *argv[])
 
 	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
-	pfl_odt_load(&slm_ptrunc_odt, &slm_odtops, 0,
-	    SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
 

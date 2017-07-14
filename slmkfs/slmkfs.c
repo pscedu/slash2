@@ -204,10 +204,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
 	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe,
 	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
-
-	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	pfl_odt_create(fn, ODT_ITEM_COUNT, ODT_ITEM_SIZE, wipe,
-	    ODT_ITEM_START, 0, ODTBL_OPT_CRC);
 }
 
 __dead void

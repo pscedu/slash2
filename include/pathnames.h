@@ -71,7 +71,6 @@
  */
 
 #define SL_FN_BMAP_ODTAB	"bmap.odtab"
-#define SL_FN_PTRUNC_ODTAB	"ptrunc.odt"
 
 #define SL_FN_UPDATELOG		"op-update"
 #define SL_FN_UPDATEPROG	"op-update-prog"
