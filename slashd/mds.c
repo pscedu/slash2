@@ -1489,7 +1489,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 		 * However, it should be able to work because our cursor
 		 * thread (i.e. slmjcursorthr_main() has already started.
 		 */
-		pfl_odt_freeitem(slm_bia_odt, r);
+		pfl_odt_freeitem(slm_bia_odt, item);
 	if (b)
 		bmap_op_done(b);
 	if (f)
