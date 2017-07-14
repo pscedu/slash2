@@ -147,7 +147,7 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 }
 
 void
-slm_odt_sync(struct pfl_odt *t, __unusedx size_t item)
+slm_odt_sync(struct pfl_odt *t, __unusedx int64_t item)
 {
 	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 }
@@ -258,7 +258,7 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
 }
 
-/* compare to pfl_odtops */
+/* See also to pfl_odtops */
 struct pfl_odt_ops slm_odtops = {
 	slm_odt_new,		/* odtop_new() */
 	slm_odt_open,		/* odtop_open() */
