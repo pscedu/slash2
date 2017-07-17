@@ -165,10 +165,6 @@ slm_odt_resize(struct pfl_odt *t)
 	size_t nb;
 	int rc;
 
-	/*
-	 * XXX either trust the bitmap or initialize the footer
-	 * of new items
-	 */
 	h = t->odt_hdr;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
@@ -262,8 +258,8 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 /* See also to pfl_odtops */
 struct pfl_odt_ops slm_odtops = {
-	slm_odt_new,		/* odtop_new() */
-	slm_odt_open,		/* odtop_open() */
+	slm_odt_new,		/* odtop_new() - called by pfl_odt_create() */
+	slm_odt_open,		/* odtop_open() - called by pfl_odt_load() */
 	slm_odt_read,		/* odtop_read() */
 	slm_odt_write,		/* odtop_write() */
 	slm_odt_resize,		/* odtop_resize() */
