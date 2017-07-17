@@ -254,7 +254,7 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 
 		t->odt_ops.odtop_write(t, NULL, &f, item);
 	}
-	t->odt_ops.odtop_sync(t, -1);
+	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 	zfsslash2_wait_synced(0);
 	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
 	return (0);
@@ -267,6 +267,5 @@ struct pfl_odt_ops slm_odtops = {
 	slm_odt_read,		/* odtop_read() */
 	slm_odt_write,		/* odtop_write() */
 	slm_odt_resize,		/* odtop_resize() */
-	slm_odt_sync,		/* odtop_sync() */
 	slm_odt_close		/* odtop_close() */
 };
