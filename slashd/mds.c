@@ -1177,7 +1177,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
 	struct fidc_membh *f = b->bcm_fcmh;
-	int64_t item;
+	int64_t item = 0;
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
