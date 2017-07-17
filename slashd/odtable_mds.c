@@ -212,7 +212,7 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 /*
  * Create a default on-disk table if no one is found.
  */
-void
+int
 slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
 	int64_t item;
@@ -244,19 +244,20 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
 	for (item = 0; item < h->odth_nitems; item++) {
-		if (item == 0)
-			f.odtf_flags = ODT_FTRF_INUSE;
-		else
-			f.odtf_flags = 0;
+		f.odtf_flags = 0;
 		f.odtf_slotno = item;
+
+		/* CRC only cover the footer of an unused slot. */
 		psc_crc64_init(&f.odtf_crc);
 		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
+
 		t->odt_ops.odtop_write(t, NULL, &f, item);
 	}
 	t->odt_ops.odtop_sync(t, -1);
 	zfsslash2_wait_synced(0);
 	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
+	return (0);
 }
 
 /* See also to pfl_odtops */
