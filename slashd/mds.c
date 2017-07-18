@@ -713,10 +713,11 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bmi->bmi_assign = item;
 	pfl_odt_putitem(slm_bia_odt, item, bia, 1);
 
+	/* journalling happens in the following function */
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc) {
 		PSCFREE(bia);
-		// release odt ent?
+		pfl_odt_freeitem(slm_bia_odt, item);
 		return (rc);
 	}
 
