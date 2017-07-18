@@ -1444,8 +1444,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
  	 * So we only put a write lease into the odtable.
  	 */
 	BMAP_ULOCK(b);
-	bml = mds_bml_new(b, NULL, BML_WRITE | BML_RECOVER,
-	    &bia->bia_lastcli);
+	bml = mds_bml_new(b, NULL, BML_WRITE|BML_RECOVER, &bia->bia_lastcli);
 	BMAP_LOCK(b);
 
 	bml->bml_seq = bia->bia_seq;
