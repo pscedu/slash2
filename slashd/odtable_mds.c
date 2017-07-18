@@ -201,7 +201,9 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0)
 		rc = t->odt_ops.odtop_new(t, fn, -1);
 
-	psc_fatalx("failed to lookup/create odtable %s, rc=%d", fn, rc);
+	if (rc)
+		psc_fatalx("failed to lookup/create odtable %s, rc=%d", 
+		    fn, rc);
 }
 
 /*
