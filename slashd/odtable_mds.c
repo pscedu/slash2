@@ -253,7 +253,7 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	}
 	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 	zfsslash2_wait_synced(0);
-	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
+	psclog_max("On-disk table %s has been created successfully!", fn);
 	return (0);
 }
 
