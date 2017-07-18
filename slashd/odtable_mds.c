@@ -244,7 +244,7 @@ slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 		f.odtf_flags = 0;
 		f.odtf_slotno = item;
 
-		/* CRC only cover the footer of an unused slot. */
+		/* CRC only cover the footer for an unused slot. */
 		psc_crc64_init(&f.odtf_crc);
 		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
