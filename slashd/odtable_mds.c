@@ -43,7 +43,7 @@
 static void *slm_odt_zerobuf;
 
 static void
-_slm_odt_zerobuf_ensurelen(size_t len)
+slm_odt_zerobuf_ensurelen(size_t len)
 {
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
 	static size_t zerobuf_len;
@@ -85,7 +85,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	slm_odt_zerobuf_ensurelen(pad);
 
 	off = item * h->odth_slotsz + h->odth_start;
 
@@ -124,7 +124,7 @@ slm_odt_read(struct pfl_odt *t, int64_t item,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	slm_odt_zerobuf_ensurelen(pad);
 
 	off = h->odth_start + item * h->odth_slotsz;
 
