@@ -57,7 +57,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-struct timespec			 msl_bflush_timeout = { 1, 0L };
+struct timespec			 msl_bflush_timeout = { 2, 0L };
 struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 msl_bmapflushq;
 struct psc_listcache		 msl_bmaptimeoutq;
