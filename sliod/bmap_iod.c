@@ -64,16 +64,18 @@ bim_updateseq(uint64_t seq)
 
 	spinlock(&sli_bminseq.bim_lock);
 
-	if (seq == BMAPSEQ_ANY)
-		goto out1;
+	if (seq == BMAPSEQ_ANY) {
+		invalid = 1;
+		goto out;
+	}
 
 	if (seq >= sli_bminseq.bim_minseq ||
 	    sli_bminseq.bim_minseq == BMAPSEQ_ANY) {
 		sli_bminseq.bim_minseq = seq;
 		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&sli_bminseq.bim_age);
-		OPSTAT_INCR("seqno-update");
-		goto out2;
+		OPSTAT_INCR("seqno-advance");
+		goto out;
 	}
 
 	if (seq >= sli_bminseq.bim_minseq - BMAP_SEQLOG_FACTOR) {
@@ -91,24 +93,26 @@ bim_updateseq(uint64_t seq)
 		    sli_bminseq.bim_minseq, seq);
 		sli_bminseq.bim_minseq = seq;
 		OPSTAT_INCR("seqno-reduce");
-		goto out2;
+		goto out;
 	}
 
- out1:
 	/*
 	 * This should never happen.  Complain and ask our caller to
-	 * retry again. 04/02/0217: This can actually happen if MDS 
+	 * retry again. 04/02/2017: This can actually happen if MDS 
 	 * is recreated while the IOS is still up. As a result, we
 	 * will stuck in this loop and the client will keep getting
 	 * ETIMEOUT.
+	 *
+	 * 07/19/2017: All thread stuck in this loop and the client
+	 * cannot connect to the sliod. So we must accept whatever
+	 * the MDS gives us.
 	 */
-	invalid = 1;
-	OPSTAT_INCR("seqno-invalid");
-	psclog_warnx("seqno %"PRId64" is invalid "
-	    "(bim_minseq=%"PRId64")",
+	psclog_warnx("seqno %"PRId64" wraps around (bim_minseq=%"PRId64")",
 	    seq, sli_bminseq.bim_minseq);
+	sli_bminseq.bim_minseq = seq;
+	OPSTAT_INCR("seqno-restart");
 
- out2:
+ out:
 	freelock(&sli_bminseq.bim_lock);
 
 	return (invalid);
