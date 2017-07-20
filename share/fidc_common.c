@@ -491,29 +491,6 @@ sl_freapthr_spawn(int thrtype, const char *name)
 }
 
 #if PFL_DEBUG > 0
-void
-dump_fcmh(struct fidc_membh *f)
-{
-	int locked;
-
-	locked = FCMH_RLOCK(f);
-	DEBUG_FCMH(PLL_MAX, f, "");
-	FCMH_URLOCK(f, locked);
-}
-
-void
-dump_fidcache(void)
-{
-	struct psc_hashbkt *bkt;
-	struct fidc_membh *tmp;
-
-	PSC_HASHTBL_FOREACH_BUCKET(bkt, &sl_fcmh_hashtbl) {
-		psc_hashbkt_lock(bkt);
-		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, bkt)
-			dump_fcmh(tmp);
-		psc_hashbkt_unlock(bkt);
-	}
-}
 
 void
 _dump_fcmh_flags_common(int *flags, int *seq)
