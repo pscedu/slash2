@@ -393,7 +393,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		 * We did not load attributes above, if it has attributes now,
 		 * then we lose the race.
 		 */
-		if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
+		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
 			OPSTAT_INCR("msl.readdir-fcmh");
 			slc_fcmh_setattr_locked(f, &e->sstb);
 
