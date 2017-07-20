@@ -340,7 +340,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		*fp = f;
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), f, FCMH_OPCNT_NEW);
+	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
 	return (rc);
 }
 
@@ -394,8 +394,7 @@ fcmh_getsize_locked(struct fidc_membh *f)
 }
 
 void
-_fcmh_op_start_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, int type)
+fcmh_op_start_type(struct fidc_membh *f, int type)
 {
 	int locked;
 
@@ -420,8 +419,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 }
 
 void
-_fcmh_op_done_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, int type)
+fcmh_op_done_type(struct fidc_membh *f, int type)
 {
 	int rc;
 
