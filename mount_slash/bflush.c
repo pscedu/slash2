@@ -612,7 +612,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		/*
 		 * If any member is expired then we'll push everything
-		 * out.
+		 * out. See msl_bflush_maxage.
 		 */
 		if (!expired)
 			expired = bmap_flush_biorq_expired(curr, 1);
