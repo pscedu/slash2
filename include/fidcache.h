@@ -271,7 +271,7 @@ ssize_t	 fcmh_getsize(struct fidc_membh *);
 #define fcmh_op_start_type(f, type)					\
 	_fcmh_op_start_type(FCMH_PCI, (f), (type))
 #define fcmh_op_done_type(f, type)					\
-	_fcmh_op_done_type(FCMH_PCI, (f), (type), 0)
+	_fcmh_op_done_type(FCMH_PCI, (f), (type))
 
 #define fcmh_op_done(f)							\
     fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
@@ -279,7 +279,7 @@ ssize_t	 fcmh_getsize(struct fidc_membh *);
 void	_fcmh_op_start_type(const struct pfl_callerinfo *,
 	    struct fidc_membh *, int);
 void	_fcmh_op_done_type(const struct pfl_callerinfo *,
-	    struct fidc_membh *, int, int);
+	    struct fidc_membh *, int);
 
 void	_dump_fcmh_flags_common(int *, int *);
 
