@@ -218,6 +218,7 @@ struct fidc_membh {
 #define FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
 #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
 #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
+#define FCMH_OPCNT_KEEP_LOCK		11	/* IOD: sync ahead */
 #define FCMH_OPCNT_MAXTYPE		12
 
 void	fidc_init(int);
