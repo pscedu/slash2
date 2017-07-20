@@ -2663,12 +2663,17 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 	/*
 	 * Refresh clobbered file's attributes.  This file might have
-	 * additional links and may not be completely destroyed so don't
-	 * evict.
+	 * additional links and may not be completely destroyed so we
+	 * don't evict it.
+	 *
+	 * We used to keep the fcmh locked upon returning from lookup.
+	 * Now we do FCMH_LOCK() by ourselve. I don't see the reason
+	 * to make the two steps atomic.
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+	    0, &ch, pfr) == 0) {
+		FCMH_LOCK(ch);
 		if (!mp->srr_clattr.sst_nlink) {
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
