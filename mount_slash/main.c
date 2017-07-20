@@ -1484,10 +1484,14 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 	slc_fcmh_setattr(p, &mp->pattr);
 
-	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &c, pfr))
+	/*
+ 	 * I don't see the reason why should we make lookup and update
+ 	 * attributes atomic. We used to return a fcmh locked.
+ 	 */
+	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");
 	else {
+		FCMH_LOCK(c);
 		if (mp->valid) {
 			slc_fcmh_setattr_locked(c, &mp->cattr);
 		} else {
