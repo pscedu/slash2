@@ -250,8 +250,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 			f->fcmh_flags |= FCMH_TOFREE;
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		} else {
-			if ((flags & FIDC_LOOKUP_LOCK) == 0)
-				FCMH_ULOCK(f);
+			FCMH_ULOCK(f);
 			*fp = f;
 		}
 		OPSTAT_INCR("fidcache.hit");
@@ -342,7 +341,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), f,
-	    FCMH_OPCNT_NEW, flags & FIDC_LOOKUP_LOCK);
+	    FCMH_OPCNT_NEW, 0);
 	return (rc);
 }
 
