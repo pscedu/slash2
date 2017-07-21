@@ -2228,7 +2228,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
-	/* Note that i can only be 0 or 1 after the above loop. */
+	/* 
+	 * Note that i can only be 0 or 1 after the above loop.
+	 *
+	 * At the very start, roff is not necessarily aligned 
+	 * to a page, but it is made relative to the start of
+	 * bmap. aoff probably means page aligned offset.
+	 */ 
 	if (i == 1) {
 		psc_assert(roff == SLASH_BMAP_SIZE);
 		roff = 0;
