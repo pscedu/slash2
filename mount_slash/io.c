@@ -2246,15 +2246,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/* Calculate predictive I/O offset. */
 	bno = b->bcm_bmapno;
 	aoff = roff + tlen;
-	if (aoff & BMPC_BUFMASK) {
-		aoff += BMPC_BUFSZ;
-		aoff &= ~BMPC_BUFMASK;
-	}
-	if (aoff >= SLASH_BMAP_SIZE) {
-		aoff -= SLASH_BMAP_SIZE;
-		bno++;
-	}
-	npages = howmany(size, BMPC_BUFSZ);
+
+	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
+	alen = tlen + (roff & BMPC_BUFMASK);
+	npages = alen / BMPC_BUFSZ;
+	if (alen % BMPC_BUFSZ)
+		npages++;
 
 	msl_issue_predio(mfh, bno, rw, aoff, npages);
 
