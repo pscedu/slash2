@@ -2209,6 +2209,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
 
+		bno = b->bcm_bmapno;
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
@@ -2244,7 +2245,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Calculate predictive I/O offset. */
-	bno = b->bcm_bmapno;
 	aoff = roff + tlen;
 
 	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
