@@ -1952,6 +1952,9 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	}
 
 	f = mfh->mfh_fcmh;
+	psclog_max("readahead: FID = "SLPRI_FID", offset = %ld, size = %d", 
+	    fcmh_2_fid(f), raoff * bno * SLASH_BMAP_SIZE, rapages);
+
 	/* Now issue an I/O for each bmap in the prediction. */
 	for (; rapages && bno < fcmh_2_nbmaps(f);
 	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
@@ -2091,7 +2094,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 	psclog_max("read: FID = "SLPRI_FID", offset = %ld, size = %zd", 
-		    fcmh_2_fid(f), off, size);
+	    fcmh_2_fid(f), off, size);
 
 	/* XXX EBADF if fd is not open for writing */
 
