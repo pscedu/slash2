@@ -1860,7 +1860,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 {
 	sl_bmapno_t orig_bno = bno;
 	int bsize, tpages, rapages;
-	off_t absoff, newissued;
+	off_t raoff, newissued;
 	struct fidc_membh *f;
 
 	MFH_LOCK(mfh);
@@ -1889,7 +1889,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		}
 	}
 
-	absoff = bno * SLASH_BMAP_SIZE + off;
+	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
 
 	/*
 	 * If the first read starts from offset 0, the following will
@@ -1900,7 +1900,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * This allows predictive I/O amidst slightly out of order
 	 * (typically because of application threading) or skipped I/Os.
 	 */
-	if (labs(absoff - mfh->mfh_predio_lastoff) <
+	if (labs(raoff - mfh->mfh_predio_lastoff) <
 	    msl_predio_window_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
@@ -1911,7 +1911,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	} else
 		mfh->mfh_predio_nseq = 0;
 
-	mfh->mfh_predio_lastoff = absoff;
+	mfh->mfh_predio_lastoff = raoff;
 
 	if (mfh->mfh_predio_nseq)
 		OPSTAT_INCR("msl.predio-window-hit");
@@ -1923,7 +1923,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	rapages = mfh->mfh_predio_nseq;
 
 	/* Note: this can extend past current EOF. */
-	newissued = absoff + rapages * BMPC_BUFSZ;
+	newissued = raoff + rapages * BMPC_BUFSZ;
 	if (newissued < mfh->mfh_predio_issued) {
 		/*
 		 * Our tracking is incoherent; we'll sync up with the
