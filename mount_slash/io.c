@@ -2090,6 +2090,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
+	psclog_max("read: FID = "SLPRI_FID", offset = %ld, size = %zd", 
+		    fcmh_2_fid(f), off, size);
 
 	/* XXX EBADF if fd is not open for writing */
 
