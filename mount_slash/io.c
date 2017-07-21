@@ -2142,7 +2142,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	rc = 0;
 	tsize = size;
 
-	/* Relativize the length and offset (roff is not aligned). */
+	/* 
+	 * Relativize the offset and length within the bmap. Note that
+	 * roff is not necessarily page-aligned.
+	 */
 	roff = off - (start * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
 
