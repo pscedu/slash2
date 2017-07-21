@@ -1914,6 +1914,13 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	mfh->mfh_predio_lastoff = raoff;
 
 	if (mfh->mfh_predio_nseq)
+		/*
+ 		 * XXX If we are within out window, we should
+ 		 * not try again. Our read-ahead pages might
+ 		 * be evicted due to low memory. If so, we 
+ 		 * should not try again to compete with real
+ 		 * read requests.
+ 		 */
 		OPSTAT_INCR("msl.predio-window-hit");
 	else {
 		OPSTAT_INCR("msl.predio-window-miss");
