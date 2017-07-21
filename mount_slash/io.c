@@ -2078,7 +2078,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t bno;
-	uint32_t aoff;
+	uint32_t aoff, alen;
 	uint64_t fsz;
 	off_t roff;
 
@@ -2248,6 +2248,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	aoff = roff + tlen;
 
 	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
+
+	/* Adjust alen accordingly if roff is not page-aligned */
 	alen = tlen + (roff & BMPC_BUFMASK);
 	npages = alen / BMPC_BUFSZ;
 	if (alen % BMPC_BUFSZ)
