@@ -1935,6 +1935,11 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		    BMPC_BUFSZ;
 		if (rapages < msl_predio_issue_minpages)
 			PFL_GOTOERR(out, 0);
+		/*
+ 		 * XXX: for the first time, this following range
+ 		 * will overlap with the orignal read.  It should
+ 		 * start _after_ the read request.
+ 		 */
 		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
 		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
 	}
