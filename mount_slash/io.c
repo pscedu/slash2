@@ -1948,7 +1948,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
  		 * start _after_ the read request.
  		 */
 		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
-		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
+		raoff = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
 	}
 
 	f = mfh->mfh_fcmh;
@@ -1958,8 +1958,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	/* Now issue an I/O for each bmap in the prediction. */
 	for (; rapages && bno < fcmh_2_nbmaps(f);
 	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (off >= SLASH_BMAP_SIZE) {
-			off = 0;
+		if (raoff >= SLASH_BMAP_SIZE) {
+			raoff = 0;
 			bno++;
 		}
 		bsize = SLASH_BMAP_SIZE;
@@ -1983,10 +1983,10 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		if (rw == SL_WRITE && bno == orig_bno)
 			continue;
 
-		predio_enqueue(&f->fcmh_fg, bno, rw, off, tpages);
+		predio_enqueue(&f->fcmh_fg, bno, rw, raoff, tpages);
 	}
 
-	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + off;
+	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + raoff;
 
  out:
 	MFH_ULOCK(mfh);
