@@ -759,13 +759,12 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		PSCFREE(bia);
 		return (-1); // errno
 	}
+	bia->bia_start = time(NULL);
 	/*
  	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
  	 */
 	psc_assert(bia->bia_seq == bmi->bmi_seq);
-	bia->bia_start = time(NULL);
-	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml,
-	    BTE_ADD);
+	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bia->bia_lastcli = bml->bml_cli_nidpid;
 	bia->bia_flags = dio ? BIAF_DIO : 0;
 
