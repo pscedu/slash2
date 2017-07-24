@@ -972,6 +972,10 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
+	/*
+ 	 * We are adding a new lease. Let us check the lease status
+ 	 * of the bmap and see if we need to trigger DIO.
+ 	 */
 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && (bml->bml_flags & BML_RECOVER))
