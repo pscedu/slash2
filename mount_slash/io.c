@@ -1860,7 +1860,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 {
 	sl_bmapno_t orig_bno = bno;
 	int bsize, tpages, rapages;
-	off_t absoff, newissued;
+	off_t raoff, newissued;
 	struct fidc_membh *f;
 
 	MFH_LOCK(mfh);
@@ -1889,7 +1889,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		}
 	}
 
-	absoff = bno * SLASH_BMAP_SIZE + off;
+	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
 
 	/*
 	 * If the first read starts from offset 0, the following will
@@ -1900,7 +1900,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * This allows predictive I/O amidst slightly out of order
 	 * (typically because of application threading) or skipped I/Os.
 	 */
-	if (labs(absoff - mfh->mfh_predio_lastoff) <
+	if (labs(raoff - mfh->mfh_predio_lastoff) <
 	    msl_predio_window_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
@@ -1911,9 +1911,16 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	} else
 		mfh->mfh_predio_nseq = 0;
 
-	mfh->mfh_predio_lastoff = absoff;
+	mfh->mfh_predio_lastoff = raoff;
 
 	if (mfh->mfh_predio_nseq)
+		/*
+ 		 * XXX If we are within out window, we should
+ 		 * not try again. Our read-ahead pages might
+ 		 * be evicted due to low memory. If so, we 
+ 		 * should not try again to compete with real
+ 		 * read requests.
+ 		 */
 		OPSTAT_INCR("msl.predio-window-hit");
 	else {
 		OPSTAT_INCR("msl.predio-window-miss");
@@ -1923,7 +1930,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	rapages = mfh->mfh_predio_nseq;
 
 	/* Note: this can extend past current EOF. */
-	newissued = absoff + rapages * BMPC_BUFSZ;
+	newissued = raoff + rapages * BMPC_BUFSZ;
 	if (newissued < mfh->mfh_predio_issued) {
 		/*
 		 * Our tracking is incoherent; we'll sync up with the
@@ -1935,16 +1942,24 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		    BMPC_BUFSZ;
 		if (rapages < msl_predio_issue_minpages)
 			PFL_GOTOERR(out, 0);
+		/*
+ 		 * XXX: for the first time, this following range
+ 		 * will overlap with the orignal read.  It should
+ 		 * start _after_ the read request.
+ 		 */
 		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
-		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
+		raoff = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
 	}
 
 	f = mfh->mfh_fcmh;
+	psclog_max("readahead: FID = "SLPRI_FID", offset = %ld, size = %d", 
+	    fcmh_2_fid(f), raoff * bno * SLASH_BMAP_SIZE, rapages);
+
 	/* Now issue an I/O for each bmap in the prediction. */
 	for (; rapages && bno < fcmh_2_nbmaps(f);
 	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (off >= SLASH_BMAP_SIZE) {
-			off = 0;
+		if (raoff >= SLASH_BMAP_SIZE) {
+			raoff = 0;
 			bno++;
 		}
 		bsize = SLASH_BMAP_SIZE;
@@ -1968,10 +1983,10 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		if (rw == SL_WRITE && bno == orig_bno)
 			continue;
 
-		predio_enqueue(&f->fcmh_fg, bno, rw, off, tpages);
+		predio_enqueue(&f->fcmh_fg, bno, rw, raoff, tpages);
 	}
 
-	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + off;
+	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + raoff;
 
  out:
 	MFH_ULOCK(mfh);
@@ -2073,11 +2088,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_bmapno_t bno;
-	uint32_t aoff;
+	uint32_t aoff, alen;
 	uint64_t fsz;
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
+	psclog_max("%s: FID = "SLPRI_FID", offset = %ld, size = %zd", 
+	    rw == SL_READ ? "read": "write", fcmh_2_fid(f), off, size);
 
 	/* XXX EBADF if fd is not open for writing */
 
@@ -2137,7 +2154,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	rc = 0;
 	tsize = size;
 
-	/* Relativize the length and offset (roff is not aligned). */
+	/* 
+	 * Relativize the offset and length within the bmap. Note that
+	 * roff is not necessarily page-aligned.
+	 */
 	roff = off - (start * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
 
@@ -2201,6 +2221,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
 
+		bno = b->bcm_bmapno;
 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		bmap_op_done(b);
 
@@ -2223,24 +2244,28 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
-	/* Note that i can only be 0 or 1 after the above loop. */
+	/* 
+	 * Note that i can only be 0 or 1 after the above loop.
+	 *
+	 * At the very start, roff is not necessarily aligned 
+	 * to a page, but it is made relative to the start of
+	 * bmap. aoff probably means page aligned offset.
+	 */ 
 	if (i == 1) {
 		psc_assert(roff == SLASH_BMAP_SIZE);
 		roff = 0;
 	}
 
 	/* Calculate predictive I/O offset. */
-	bno = b->bcm_bmapno;
 	aoff = roff + tlen;
-	if (aoff & BMPC_BUFMASK) {
-		aoff += BMPC_BUFSZ;
-		aoff &= ~BMPC_BUFMASK;
-	}
-	if (aoff >= SLASH_BMAP_SIZE) {
-		aoff -= SLASH_BMAP_SIZE;
-		bno++;
-	}
-	npages = howmany(size, BMPC_BUFSZ);
+
+	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
+
+	/* Adjust alen accordingly if roff is not page-aligned */
+	alen = tlen + (roff & BMPC_BUFMASK);
+	npages = alen / BMPC_BUFSZ;
+	if (alen % BMPC_BUFSZ)
+		npages++;
 
 	msl_issue_predio(mfh, bno, rw, aoff, npages);
 
