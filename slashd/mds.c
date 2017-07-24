@@ -1256,6 +1256,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			/*
  			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
  			 * bmi_seq = -1, and bml_flags = 101000010.
+ 			 *
+ 			 * Looks like this is because we assign BMAPSEQ_ANY at
+ 			 * reattach time.  The flags above shows this is during
+ 			 * recovery.
  			 */
 			if (bia->bia_seq !=  bmi->bmi_seq) {
 				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
