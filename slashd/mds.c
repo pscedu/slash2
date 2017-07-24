@@ -1027,6 +1027,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		/*
 		 * Drop the lock prior to doing disk and possibly
 		 * network I/O.
+		 *
+		 * This flag allows us to drop bmap lock without
+		 * any interfering from others.
 		 */
 		b->bcm_flags |= BMAPF_IOSASSIGNED;
 
