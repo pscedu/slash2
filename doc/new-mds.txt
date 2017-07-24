@@ -24,6 +24,8 @@ Motivation:
 	* After removing a huge number of files in a directory, the ls performance of
 	  that directory never recovers (after reboot, etc).  Sounds like a performance bug.
 
+	* No more ZFS-fuse crashes.
+
 Feasibility:
 
 	* We can always create links in the user space, but the open-by-handle feature
