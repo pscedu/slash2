@@ -825,6 +825,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 		tmp = tmp->bml_chain;
 	} while (tmp != bml);
 
+	/* Return the lease on the list if any. */
 	return (bml);
 }
 
