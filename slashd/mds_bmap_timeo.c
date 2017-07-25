@@ -205,10 +205,16 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			seq = bml->bml_seq;
 
 	} else {
+		/*
+ 		 * Don't update bml_seq in the BTE_REATTACH case.
+ 		 * Otherwise, it will be out-of-sync with what is
+ 		 * stored in the odtable and triggers asserts down
+ 		 * the road.
+ 		 */
+		bml->bml_seq = seq;
 		seq = mds_bmap_timeotbl_getnextseq();
 	}
 
-	bml->bml_seq = seq;
 	if (bml->bml_flags & BML_TIMEOQ) {
 		OPSTAT_INCR("bml-move");
 		mds_bmap_timeotbl_remove(bml);
