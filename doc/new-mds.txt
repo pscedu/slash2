@@ -83,6 +83,8 @@ Obstacle:
 			- combine ino and inox, add a version to inode
 			- increase number of IOS per inode from 64 to 1024
 			- get rid of CRC stuff.
+			- use extended attributes to specify the target IO servers
+			  for each file.
 
 		- Add generation number ot each data structure that can be updated atomically
 		  for log replay.
