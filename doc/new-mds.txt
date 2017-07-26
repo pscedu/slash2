@@ -81,8 +81,11 @@ Obstacle:
 		- since we have on-disk format change, we might as well do the following:
 
 			- combine ino and inox, add a version to inode
-			- increase number of IOS per inode from 64 to 128
+			- increase number of IOS per inode from 64 to 1024
 			- get rid of CRC stuff.
+
+		- Add generation number ot each data structure that can be updated atomically
+		  for log replay.
 
 	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
 	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
