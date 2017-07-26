@@ -211,8 +211,8 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
  		 * stored in the odtable and triggers asserts down
  		 * the road.
  		 */
-		bml->bml_seq = seq;
 		seq = mds_bmap_timeotbl_getnextseq();
+		bml->bml_seq = seq;
 	}
 
 	if (bml->bml_flags & BML_TIMEOQ) {
