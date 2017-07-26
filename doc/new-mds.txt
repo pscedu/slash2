@@ -24,7 +24,7 @@ Motivation:
 	* After removing a huge number of files in a directory, the ls performance of
 	  that directory never recovers (after reboot, etc).  Sounds like a performance bug.
 
-	* No more ZFS-fuse crashes.
+	* No more ZFS-fuse crashes and ZFS arc_evict issues.
 
 Feasibility:
 
