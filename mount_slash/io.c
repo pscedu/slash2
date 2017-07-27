@@ -1920,10 +1920,14 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	MFH_LOCK(mfh);
 
-	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
-	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_lastoff)
+	if (mfh->mfh_flags & MFHF_TRACKING_WA)
 		PFL_GOTOERR(out, 0);
-		
+	if (!mfh->mfh_predio_nseq)
+		PFL_GOTOERR(out, 0);
+
+	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
+	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_off)
+		PFL_GOTOERR(out, 0);
 
 	/*
 	 * If the first read starts from offset 0, the following will
