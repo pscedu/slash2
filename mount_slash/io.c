@@ -2309,13 +2309,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 		b = NULL;
 		f = NULL;
 
-		npages = rarq->rarq_npages;
-		if (rarq->rarq_off + npages * BMPC_BUFSZ >
-		    SLASH_BMAP_SIZE)
-			npages = (SLASH_BMAP_SIZE - rarq->rarq_off) /
-			    BMPC_BUFSZ;
-		psc_assert(npages);
-
 		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
 		if (rc)
 			goto end;
@@ -2345,6 +2338,13 @@ msreadaheadthr_main(struct psc_thread *thr)
 		 */
 		if (rarq->rarq_rw == SL_WRITE)
 			goto end;
+
+		npages = rarq->rarq_npages;
+		if (rarq->rarq_off + npages * BMPC_BUFSZ >
+		    SLASH_BMAP_SIZE)
+			npages = (SLASH_BMAP_SIZE - rarq->rarq_off) /
+			    BMPC_BUFSZ;
+		psc_assert(npages);
 
 		r = bmpc_biorq_new(NULL, b, NULL, rarq->rarq_off,
 		    npages * BMPC_BUFSZ, BIORQ_READ | BIORQ_READAHEAD);
