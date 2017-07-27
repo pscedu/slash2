@@ -2317,6 +2317,11 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (b->bcm_flags & BMAPF_DIO)
 			goto next;
 
+		if (!(b->bcm_flags & BMAPF_LOADED)) {
+			lc_add(&msl_readaheadq, rarq);
+			rarq = NULL;
+			goto next;
+		}
 		BMAP_ULOCK(b);
 
 		/*
@@ -2360,7 +2365,8 @@ msreadaheadthr_main(struct psc_thread *thr)
 			fcmh_op_done(f);
 			f = NULL;
 		}
-		psc_pool_return(slc_readaheadrq_pool, rarq);
+		if (rarq)
+			psc_pool_return(slc_readaheadrq_pool, rarq);
 	}
 }
 
