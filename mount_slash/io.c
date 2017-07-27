@@ -2316,17 +2316,16 @@ msreadaheadthr_main(struct psc_thread *thr)
 		if (!rarq->rarq_flag)
 			flags |= BMAPGETF_NONBLOCK;
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
-		if (rc)
+		if (rc || rarq->rarq_rw == SL_WRITE)
 			goto next;
+
+		/*
+ 		 * We only need to wait for readahead.
+ 		 */
 		if (!(b->bcm_flags & BMAPF_LOADED)) {
-			/*
- 			 * We are done if this is for write.
- 			 */
-			if (rarq->rarq_rw == SL_READ) {
-				rarq->rarq_flag = 1;
-				lc_add(&msl_readaheadq, rarq);
-				rarq = NULL;
-			}
+			rarq->rarq_flag = 1;
+			lc_add(&msl_readaheadq, rarq);
+			rarq = NULL;
 			goto next;
 		}
 		if (b->bcm_flags & BMAPF_DIO)
