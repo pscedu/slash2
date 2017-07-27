@@ -270,6 +270,7 @@ struct readaheadrq {
 	struct sl_fidgen		rarq_fg;
 	sl_bmapno_t			rarq_bno;
 	uint32_t			rarq_off;
+	uint32_t			rarq_flag;
 	int				rarq_npages;
 };
 

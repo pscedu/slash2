@@ -211,14 +211,6 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
-struct sli_readaheadrq {
-	struct sl_fidgen	rarq_fg;
-	sl_bmapno_t		rarq_bno;
-	int32_t			rarq_off;
-	int32_t			rarq_size;
-	struct psc_listentry	rarq_lentry;
-};
-
 extern struct psc_poolmgr	*sli_readaheadrq_pool;
 extern struct psc_listcache	 sli_lruslvrs;
 extern struct psc_listcache	 sli_crcqslvrs;

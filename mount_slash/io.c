@@ -167,6 +167,7 @@ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	rarq->rarq_fg = *fgp;
 	rarq->rarq_bno = bno;
 	rarq->rarq_off = off;
+	rarq->rarq_flag = 0;
 	rarq->rarq_npages = npages;
 	lc_add(&msl_readaheadq, rarq);
 }
@@ -2300,7 +2301,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 	struct fidc_membh *f = NULL;
 	struct bmpc_ioreq *r;
 	struct bmap *b = NULL;
-	int i, rc, npages;
+	int i, rc, npages, flags;
 
 	while (pscthr_run(thr)) {
 		rarq = lc_getwait(&msl_readaheadq);
@@ -2310,14 +2311,18 @@ msreadaheadthr_main(struct psc_thread *thr)
 		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
 		if (rc)
 			goto next;
-		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw,
-		    BMAPGETF_CREATE | BMAPGETF_NODIO, &b);
+
+		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
+		if (!rarq->rarq_flag)
+			flags |= BMAPGETF_NONBLOCK;
+		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
 		if (rc)
 			goto next;
 		if (b->bcm_flags & BMAPF_DIO)
 			goto next;
 
 		if (!(b->bcm_flags & BMAPF_LOADED)) {
+			rarq->rarq_flag = 1;
 			lc_add(&msl_readaheadq, rarq);
 			rarq = NULL;
 			goto next;
