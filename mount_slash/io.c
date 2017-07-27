@@ -158,8 +158,11 @@ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 	rarq = psc_pool_tryget(slc_readaheadrq_pool);
-	if (rarq == NULL)
+	if (rarq == NULL) {
+		OPSTAT_INCR("msl.predio-pool-bail");
 		return;
+	}
+	OPSTAT_INCR("msl.predio-enqueue");
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
 	rarq->rarq_rw = rw;
 	rarq->rarq_fg = *fgp;
