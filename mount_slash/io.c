@@ -1903,8 +1903,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * This allows predictive I/O amidst slightly out of order
 	 * (typically because of application threading) or skipped I/Os.
 	 */
-	if (labs(raoff - mfh->mfh_predio_lastoff) <
-	    msl_predio_window_size) {
+	if (off == 0 || 
+	    raoff - mfh->mfh_predio_lastoff) < msl_predio_window_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
 			    mfh->mfh_predio_nseq * 2,
