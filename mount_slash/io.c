@@ -80,8 +80,7 @@ struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 int			 msl_predio_pipe_size = 4 * 1024 * 1024;
-int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
-int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+int			 msl_predio_max_size = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -1844,8 +1843,6 @@ void
 mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
     enum rw rw)
 {
-	size_t prev, curr;
-
 	MFH_LOCK(mfh);
 
 	if (rw == SL_WRITE) {
@@ -1871,15 +1868,6 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 	 */
 	if (mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize == off) {
 		mfh->mfh_predio_nseq++;
-		prev = mfh->mfh_predio_lastoff / SLASH_BMAP_SIZE;
-		curr = off / SLASH_BMAP_SIZE;
-		if (curr > prev && mfh->mfh_predio_nseq > 1)
-			/*
-			 * off can go negative here.  However, we can
-			 * catch the overrun and fix it later in
-			 * msl_getra().
-			 */
-			mfh->mfh_predio_off -= SLASH_BMAP_SIZE;
 	} else {
 		mfh->mfh_predio_off = 0;
 		mfh->mfh_predio_nseq = 0;
@@ -1915,8 +1903,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 {
 	sl_bmapno_t orig_bno = bno;
 	int bsize, tpages, rapages;
-	off_t raoff, newissued;
 	struct fidc_membh *f;
+	off_t raoff;
 
 	MFH_LOCK(mfh);
 
@@ -1939,29 +1927,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
-	rapages = mfh->mfh_predio_nseq;
-
-	/* Note: this can extend past current EOF. */
-	newissued = raoff + rapages * BMPC_BUFSZ;
-	if (newissued < mfh->mfh_predio_issued) {
-		/*
-		 * Our tracking is incoherent; we'll sync up with the
-		 * application now.
-		 */
-	} else {
-		/* Don't issue too soon after a previous issue. */
-		rapages = (newissued - mfh->mfh_predio_issued) /
-		    BMPC_BUFSZ;
-		if (rapages < msl_predio_issue_minpages)
-			PFL_GOTOERR(out, 0);
-		/*
- 		 * XXX: for the first time, this following range
- 		 * will overlap with the orignal read.  It should
- 		 * start _after_ the read request.
- 		 */
-		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
-		raoff = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
-	}
+	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_size);
 
 	f = mfh->mfh_fcmh;
 	psclog_max("readahead: FID = "SLPRI_FID", offset = %ld, size = %d", 
@@ -2255,7 +2221,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
+	if (!msl_predio_max_size || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
 	/* 
