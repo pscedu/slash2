@@ -160,8 +160,10 @@ struct msl_fhent {
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
-	off_t				 mfh_predio_lastoff;	/* last offset */
+	off_t				 mfh_predio_lastoff;	/* last I/O offset */
+	off_t				 mfh_predio_lastsize;	/* last I/O size */
 	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
+	off_t				 mfh_predio_off;	/* last offset */
 	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */

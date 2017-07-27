@@ -1839,6 +1839,58 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 	return (tbytes);
 }
 
+
+void
+mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
+    enum rw rw)
+{
+	size_t prev, curr;
+
+	MFH_LOCK(mfh);
+
+	if (rw == SL_WRITE) {
+		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
+			mfh->mfh_flags |= MFHF_TRACKING_WA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+		}
+	} else {
+		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
+			mfh->mfh_flags |= MFHF_TRACKING_RA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+		}
+	}
+
+	/*
+	 * If the first read starts from offset 0, the following will
+	 * trigger a read-ahead.  This is because as part of the
+	 * msl_fhent structure, the fields are zeroed during allocation.
+	 */
+	if (mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize == off) {
+		mfh->mfh_predio_nseq++;
+		prev = mfh->mfh_predio_lastoff / SLASH_BMAP_SIZE;
+		curr = off / SLASH_BMAP_SIZE;
+		if (curr > prev && mfh->mfh_predio_nseq > 1)
+			/*
+			 * off can go negative here.  However, we can
+			 * catch the overrun and fix it later in
+			 * msl_getra().
+			 */
+			mfh->mfh_predio_off -= SLASH_BMAP_SIZE;
+	} else {
+		mfh->mfh_predio_off = 0;
+		mfh->mfh_predio_nseq = 0;
+	}
+
+	mfh->mfh_predio_lastoff = off;
+	mfh->mfh_predio_lastsize = size;
+
+	MFH_ULOCK(mfh);
+}
+
 /*
  * Calculate the next predictive I/O for an actual I/O request.
  *
@@ -1876,7 +1928,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
 			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
 			mfh->mfh_flags |= MFHF_TRACKING_WA;
-			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_off = 0;
 			mfh->mfh_predio_nseq = 0;
 		} else if ((mfh->mfh_flags & MFHF_TRACKING_WA) == 0) {
 			mfh->mfh_flags |= MFHF_TRACKING_WA;
@@ -1885,7 +1937,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
 			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
 			mfh->mfh_flags |= MFHF_TRACKING_RA;
-			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_off = 0;
 			mfh->mfh_predio_nseq = 0;
 		} else if ((mfh->mfh_flags & MFHF_TRACKING_RA) == 0) {
 			mfh->mfh_flags |= MFHF_TRACKING_RA;
@@ -2115,6 +2167,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (size + (uint64_t)off > fsz)
 			size = fsz - off;
 	}
+
+	mfh_track_predictive_io(mfh, size, off, rw);
 
 	FCMH_ULOCK(f);
 
