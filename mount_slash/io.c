@@ -1909,12 +1909,16 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	struct fidc_membh *f;
 	off_t raoff;
 
+	f = mfh->mfh_fcmh;
 	MFH_LOCK(mfh);
 
-	if (mfh->mfh_flags & MFHF_TRACKING_WA)
-		PFL_GOTOERR(out, 0);
 	if (!mfh->mfh_predio_nseq)
 		PFL_GOTOERR(out, 0);
+
+	if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+		predio_enqueue(&f->fcmh_fg, bno+1, rw, 0, 0);
+		PFL_GOTOERR(out, 0);
+	}
 
 	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
 	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_off) {
@@ -1936,7 +1940,6 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	raoff =  raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_size);
 
-	f = mfh->mfh_fcmh;
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
 
