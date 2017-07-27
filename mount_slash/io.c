@@ -2318,15 +2318,20 @@ msreadaheadthr_main(struct psc_thread *thr)
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
 		if (rc)
 			goto next;
+		if (!(b->bcm_flags & BMAPF_LOADED)) {
+			/*
+ 			 * We are done if this is for write.
+ 			 */
+			if (rarq->rarq_rw == SL_READ) {
+				rarq->rarq_flag = 1;
+				lc_add(&msl_readaheadq, rarq);
+				rarq = NULL;
+			}
+			goto next;
+		}
 		if (b->bcm_flags & BMAPF_DIO)
 			goto next;
 
-		if (!(b->bcm_flags & BMAPF_LOADED)) {
-			rarq->rarq_flag = 1;
-			lc_add(&msl_readaheadq, rarq);
-			rarq = NULL;
-			goto next;
-		}
 		BMAP_ULOCK(b);
 
 		/*
