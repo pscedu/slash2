@@ -80,7 +80,7 @@ struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 int			 msl_predio_pipe_size = 4 * 1024 * 1024;
-int			 msl_predio_max_size = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+int			 msl_predio_max_pages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -1938,7 +1938,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	bno = raoff / SLASH_BMAP_SIZE;
 	raoff =  raoff - bno * SLASH_BMAP_SIZE;
-	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_size);
+	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_pages);
 
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
@@ -2224,7 +2224,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (!msl_predio_max_size || b->bcm_flags & BMAPF_DIO)
+	if (!msl_predio_max_pages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
 	/* 

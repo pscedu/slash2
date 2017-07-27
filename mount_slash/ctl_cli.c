@@ -1015,15 +1015,12 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
-	psc_ctlparam_register_var("sys.predio_window_size",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &msl_predio_window_size);
-	psc_ctlparam_register_var("sys.predio_issue_minpages",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &msl_predio_issue_minpages);
-	psc_ctlparam_register_var("sys.predio_issue_maxpages",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
-	    &msl_predio_issue_maxpages);
+
+	psc_ctlparam_register_var("sys.predio_max_pages",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_max_pages);
+	psc_ctlparam_register_var("sys.predio_pipe_size",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_pipe_size);
+
 	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
