@@ -1920,6 +1920,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	}
 	OPSTAT_INCR("msl.predio-pipe-miss");
 
+	/* Adjust raoff based on our position in the pipe */
 	if (mfh->mfh_predio_off) {
 		if (mfh->mfh_predio_off > raoff)
 			raoff = mfh->mfh_predio_off;
@@ -1927,11 +1928,13 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
+	bno = raoff / SLASH_BMAP_SIZE;
+	raoff =  raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_size);
 
 	f = mfh->mfh_fcmh;
-	psclog_max("readahead: FID = "SLPRI_FID", offset = %ld, size = %d", 
-	    fcmh_2_fid(f), raoff * bno * SLASH_BMAP_SIZE, rapages);
+	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
+	    fcmh_2_fid(f), bno, raoff, rapages);
 
 	/* Now issue an I/O for each bmap in the prediction. */
 	for (; rapages && bno < fcmh_2_nbmaps(f);
