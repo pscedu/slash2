@@ -1920,30 +1920,6 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	MFH_LOCK(mfh);
 
-	/*
-	 * Allow either write I/O tracking or read I/O tracking but not
-	 * both.
-	 */
-	if (rw == SL_WRITE) {
-		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
-			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
-			mfh->mfh_flags |= MFHF_TRACKING_WA;
-			mfh->mfh_predio_off = 0;
-			mfh->mfh_predio_nseq = 0;
-		} else if ((mfh->mfh_flags & MFHF_TRACKING_WA) == 0) {
-			mfh->mfh_flags |= MFHF_TRACKING_WA;
-		}
-	} else {
-		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
-			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
-			mfh->mfh_flags |= MFHF_TRACKING_RA;
-			mfh->mfh_predio_off = 0;
-			mfh->mfh_predio_nseq = 0;
-		} else if ((mfh->mfh_flags & MFHF_TRACKING_RA) == 0) {
-			mfh->mfh_flags |= MFHF_TRACKING_RA;
-		}
-	}
-
 	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
 	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_lastoff)
 		PFL_GOTOERR(out, 0);
