@@ -2311,24 +2311,14 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
 		if (rc)
-			goto end;
+			goto next;
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw,
-		    BMAPGETF_CREATE | BMAPGETF_NONBLOCK |
-		    BMAPGETF_NODIO, &b);
+		    BMAPGETF_CREATE | BMAPGETF_NODIO, &b);
 		if (rc)
-			goto end;
+			goto next;
 		if (b->bcm_flags & BMAPF_DIO)
-			goto end;
-		if ((b->bcm_flags & (BMAPF_LOADING | BMAPF_LOADED)) !=
-		    BMAPF_LOADED) {
-			bmap_op_done(b);
-			fcmh_op_done(f);
-			/*
- 			 * XXX spin when this is the last item on the list.
- 			 */
-			lc_add(&msl_readaheadq, rarq);
-			continue;
-		}
+			goto next;
+
 		BMAP_ULOCK(b);
 
 		/*
@@ -2337,7 +2327,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		 * comes from communicating with the MDS.
 		 */
 		if (rarq->rarq_rw == SL_WRITE)
-			goto end;
+			goto next; 
 
 		npages = rarq->rarq_npages;
 		if (rarq->rarq_off + npages * BMPC_BUFSZ >
@@ -2363,7 +2353,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 			msl_launch_read_rpcs(r);
 		msl_biorq_release(r);
 
- end:
+ next: 
 		if (b)
 			bmap_op_done(b);
 		if (f)
