@@ -1851,6 +1851,8 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 			mfh->mfh_flags |= MFHF_TRACKING_WA;
 			mfh->mfh_predio_off = 0;
 			mfh->mfh_predio_nseq = 0;
+			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_lastsize = 0;
 		}
 	} else {
 		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
@@ -1858,6 +1860,8 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 			mfh->mfh_flags |= MFHF_TRACKING_RA;
 			mfh->mfh_predio_off = 0;
 			mfh->mfh_predio_nseq = 0;
+			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_lastsize = 0;
 		}
 	}
 
