@@ -1925,9 +1925,10 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	/* Adjust raoff based on our position in the pipe */
 	if (mfh->mfh_predio_off) {
-		if (mfh->mfh_predio_off > raoff)
+		if (mfh->mfh_predio_off > raoff) {
+			OPSTAT_INCR("msl.predio-pipe-enlarge");
 			raoff = mfh->mfh_predio_off;
-		else
+		} else
 			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
