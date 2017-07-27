@@ -1901,7 +1901,6 @@ __static void
 msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
     uint32_t off, int npages)
 {
-	sl_bmapno_t orig_bno = bno;
 	int bsize, tpages, rapages;
 	struct fidc_membh *f;
 	off_t raoff;
@@ -1937,37 +1936,30 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	    fcmh_2_fid(f), bno, raoff, rapages);
 
 	/* Now issue an I/O for each bmap in the prediction. */
-	for (; rapages && bno < fcmh_2_nbmaps(f);
-	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (raoff >= SLASH_BMAP_SIZE) {
-			raoff = 0;
-			bno++;
-		}
+	for (; rapages && bno < fcmh_2_nbmaps(f); rapages -= tpages) {
+
 		bsize = SLASH_BMAP_SIZE;
-		/* Trim a readahead that extends past EOF. */
-		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1) {
+		if (bno == fcmh_2_nbmaps(f) - 1) {
 			bsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 			if (bsize == 0 && fcmh_2_fsz(f))
 				bsize = SLASH_BMAP_SIZE;
 		}
-		tpages = howmany(bsize - off, BMPC_BUFSZ);
+		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
 		if (!tpages)
 			break;
 		if (tpages > rapages)
 			tpages = rapages;
 
-		/*
-		 * Write-ahead is only used for acquiring bmap leases
-		 * predictively, not for preparing pages, so skip
-		 * unnecessary work.
-		 */
-		if (rw == SL_WRITE && bno == orig_bno)
-			continue;
-
 		predio_enqueue(&f->fcmh_fg, bno, rw, raoff, tpages);
+
+		raoff += tpages * BMPC_BUFSZ;
+		if (raoff >= SLASH_BMAP_SIZE) {
+			raoff = 0;
+			bno++;
+		}
 	}
 
-	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + raoff;
+	mfh->mfh_predio_off = bno * SLASH_BMAP_SIZE + raoff;
 
  out:
 	MFH_ULOCK(mfh);
