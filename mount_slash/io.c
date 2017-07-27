@@ -2297,17 +2297,15 @@ msreadaheadthr_main(struct psc_thread *thr)
 {
 	struct bmap_pagecache_entry *pg;
 	struct readaheadrq *rarq;
-	struct fidc_membh *f;
+	struct fidc_membh *f = NULL;
 	struct bmpc_ioreq *r;
-	struct bmap *b;
+	struct bmap *b = NULL;
 	int i, rc, npages;
 
 	while (pscthr_run(thr)) {
 		rarq = lc_getwait(&msl_readaheadq);
 		if (rarq == NULL)
 			break;
-		b = NULL;
-		f = NULL;
 
 		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
 		if (rc)
@@ -2354,10 +2352,14 @@ msreadaheadthr_main(struct psc_thread *thr)
 		msl_biorq_release(r);
 
  next: 
-		if (b)
+		if (b) {
 			bmap_op_done(b);
-		if (f)
+			b = NULL;
+		}
+		if (f) {
 			fcmh_op_done(f);
+			f = NULL;
+		}
 		psc_pool_return(slc_readaheadrq_pool, rarq);
 	}
 }
