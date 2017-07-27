@@ -79,7 +79,7 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_window_size = 4 * 1024 * 1024;
+int			 msl_predio_pipe_size = 4 * 1024 * 1024;
 int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
 int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
 
@@ -1893,6 +1893,9 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	}
 
 	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
+	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_lastoff)
+		PFL_GOTOERR(out, 0);
+		
 
 	/*
 	 * If the first read starts from offset 0, the following will
@@ -1904,28 +1907,15 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * (typically because of application threading) or skipped I/Os.
 	 */
 	if (off == 0 || 
-	    raoff - mfh->mfh_predio_lastoff < msl_predio_window_size) {
+	    raoff - mfh->mfh_predio_lastoff < msl_predio_pipe_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
 			    mfh->mfh_predio_nseq * 2,
 			    msl_predio_issue_maxpages);
 		} else
 			mfh->mfh_predio_nseq = npages;
-	} else
+	} else {
 		mfh->mfh_predio_nseq = 0;
-
-	mfh->mfh_predio_lastoff = raoff;
-
-	if (mfh->mfh_predio_nseq)
-		/*
- 		 * XXX If we are within out window, we should
- 		 * not try again. Our read-ahead pages might
- 		 * be evicted due to low memory. If so, we 
- 		 * should not try again to compete with real
- 		 * read requests.
- 		 */
-		OPSTAT_INCR("msl.predio-window-hit");
-	else {
 		OPSTAT_INCR("msl.predio-window-miss");
 		PFL_GOTOERR(out, 0);
 	}
