@@ -1904,7 +1904,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	 * (typically because of application threading) or skipped I/Os.
 	 */
 	if (off == 0 || 
-	    raoff - mfh->mfh_predio_lastoff) < msl_predio_window_size) {
+	    raoff - mfh->mfh_predio_lastoff < msl_predio_window_size) {
 		if (mfh->mfh_predio_nseq) {
 			mfh->mfh_predio_nseq = MIN(
 			    mfh->mfh_predio_nseq * 2,
