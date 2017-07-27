@@ -1926,30 +1926,17 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		PFL_GOTOERR(out, 0);
 
 	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
-	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_off)
+	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_off) {
+		OPSTAT_INCR("msl.predio-pipe-hit");
 		PFL_GOTOERR(out, 0);
+	}
+	OPSTAT_INCR("msl.predio-pipe-miss");
 
-	/*
-	 * If the first read starts from offset 0, the following will
-	 * trigger a read-ahead.  This is because as part of the
-	 * msl_fhent structure, the fields are zeroed during allocation.
-	 *
-	 * Ensure this I/O is within a window from our expectation.
-	 * This allows predictive I/O amidst slightly out of order
-	 * (typically because of application threading) or skipped I/Os.
-	 */
-	if (off == 0 || 
-	    raoff - mfh->mfh_predio_lastoff < msl_predio_pipe_size) {
-		if (mfh->mfh_predio_nseq) {
-			mfh->mfh_predio_nseq = MIN(
-			    mfh->mfh_predio_nseq * 2,
-			    msl_predio_issue_maxpages);
-		} else
-			mfh->mfh_predio_nseq = npages;
-	} else {
-		mfh->mfh_predio_nseq = 0;
-		OPSTAT_INCR("msl.predio-window-miss");
-		PFL_GOTOERR(out, 0);
+	if (mfh->mfh_predio_off) {
+		if (mfh->mfh_predio_off > raoff)
+			raoff = mfh->mfh_predio_off;
+		else
+			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
 	rapages = mfh->mfh_predio_nseq;
