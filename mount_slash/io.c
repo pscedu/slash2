@@ -79,8 +79,8 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_pipe_size = 4 * 1024 * 1024;
-int			 msl_predio_max_pages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+int			 msl_predio_pipe_size = 128;
+int			 msl_predio_max_pages = 128;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -1922,7 +1922,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	}
 
 	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
-	if (raoff + msl_predio_pipe_size < mfh->mfh_predio_off) {
+	if (raoff + msl_predio_pipe_size * BMPC_BUFSZ < mfh->mfh_predio_off) {
 		OPSTAT_INCR("msl.predio-pipe-hit");
 		PFL_GOTOERR(out, 0);
 	}
