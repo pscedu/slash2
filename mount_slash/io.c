@@ -1870,7 +1870,7 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 
 	/*
 	 * If the first read starts from offset 0, the following will
-	 * trigger a read-ahead.  This is because as part of the
+	 * automatically trigger a read-ahead because as part of the
 	 * msl_fhent structure, the fields are zeroed during allocation.
 	 */
 	if (off == mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize) {
@@ -1878,8 +1878,8 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 		mfh->mfh_predio_nseq++;
 		goto out;
 	}
-	if (off <  mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta &&
-	    off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize  - delta) {
+	if (off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta &&
+	    off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
 		OPSTAT_INCR("msl.predio-semi-sequential");
 		mfh->mfh_predio_nseq++;
 		goto out;
