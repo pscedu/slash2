@@ -759,6 +759,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		pfl_fmt_ratio(rbuf, bact, bact + both);
 		printf(" %6d %6d %6s", bact, bact + both, rbuf);
 
+		/* By experiment, we print 129 bmap states per line */
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx +
 			    SL_NBITS_REPLST_BHDR;
