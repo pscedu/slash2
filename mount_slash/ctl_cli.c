@@ -607,6 +607,8 @@ slctlparam_max_pages_set(const char *val)
 	int newval;
 
 	newval = strtol(val, NULL, 0);
+	if (newval < 0 || newval > 2*SLASH_BMAP_SIZE/BMPC_BUFSZ)
+		return (1);
 	msl_predio_max_pages = newval;
 	return (0);
 }
