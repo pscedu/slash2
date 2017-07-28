@@ -595,6 +595,22 @@ msctlparam_prefios_set(const char *val)
 	return (0);
 }
 
+void
+slctlparam_max_pages_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", msl_predio_max_pages);
+}
+
+int
+slctlparam_max_pages_set(const char *val)
+{
+	int newval;
+
+	newval = strtol(val, NULL, 0);
+	msl_predio_max_pages = newval;
+	return (0);
+}
+
 int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
@@ -1016,8 +1032,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
 
-	psc_ctlparam_register_var("sys.predio_max_pages",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_max_pages);
+	psc_ctlparam_register_simple("sys.predio_max_pages",
+	    slctlparam_max_pages_get, slctlparam_max_pages_set);
 	psc_ctlparam_register_var("sys.predio_pipe_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_pipe_size);
 
