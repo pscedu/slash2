@@ -3332,7 +3332,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lc_kill(&msl_bmapflushq);
 	lc_kill(&msl_bmaptimeoutq);
 	lc_kill(&msl_attrtimeoutq);
-	lc_kill(&msl_readaheadq);
+	lc_kill(&msl_predioq);
 	lc_kill(&msl_attrtimeoutq);
 
 	pscthr_setdead(sl_freapthr, 1);
@@ -3344,8 +3344,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	    lc_nitems(&msl_bmaptimeoutq));
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_attrtimeoutq,
 	    lc_nitems(&msl_attrtimeoutq));
-	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
-	    lc_nitems(&msl_readaheadq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_predioq,
+	    lc_nitems(&msl_predioq));
 
 	/* XXX force flush */
 
@@ -3430,7 +3430,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_attrtimeoutq);
 	pfl_listcache_destroy_registered(&msl_bmapflushq);
 	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
-	pfl_listcache_destroy_registered(&msl_readaheadq);
+	pfl_listcache_destroy_registered(&msl_predioq);
 	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
 

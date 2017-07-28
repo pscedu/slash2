@@ -89,7 +89,7 @@ struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 
 struct psc_poolmaster	 slc_prediorq_poolmaster;
 struct psc_poolmgr	*slc_prediorq_pool;
-struct psc_listcache	 slc_predio_q;
+struct psc_listcache	 msl_predioq;
 
 int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
@@ -169,7 +169,7 @@ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	rarq->rarq_off = off;
 	rarq->rarq_flag = 0;
 	rarq->rarq_npages = npages;
-	lc_add(&slc_predio_q, rarq);
+	lc_add(&msl_predioq, rarq);
 }
 
 /*
@@ -2304,7 +2304,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 	int i, rc, npages, flags;
 
 	while (pscthr_run(thr)) {
-		rarq = lc_getwait(&slc_predio_q);
+		rarq = lc_getwait(&msl_predioq);
 		if (rarq == NULL)
 			break;
 
@@ -2324,7 +2324,7 @@ msreadaheadthr_main(struct psc_thread *thr)
  		 */
 		if (!(b->bcm_flags & BMAPF_LOADED)) {
 			rarq->rarq_flag = 1;
-			lc_add(&slc_predio_q, rarq);
+			lc_add(&msl_predioq, rarq);
 			rarq = NULL;
 			goto next;
 		}
@@ -2392,7 +2392,7 @@ msreadaheadthr_spawn(void)
 	slc_prediorq_pool = psc_poolmaster_getmgr(
 	    &slc_prediorq_poolmaster);
 
-	lc_reginit(&slc_predio_q, struct prediorq, rarq_lentry, "predio_q");
+	lc_reginit(&msl_predioq, struct prediorq, rarq_lentry, "predio_q");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
