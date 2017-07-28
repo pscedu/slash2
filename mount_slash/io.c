@@ -1844,6 +1844,8 @@ void
 mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
     enum rw rw)
 {
+	int delta = BMPC_BUFSZ;
+
 	MFH_LOCK(mfh);
 
 	if (rw == SL_WRITE) {
@@ -1871,13 +1873,22 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 	 * trigger a read-ahead.  This is because as part of the
 	 * msl_fhent structure, the fields are zeroed during allocation.
 	 */
-	if (mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize == off) {
+	if (off == mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize) {
+		OPSTAT_INCR("msl.predio-sequential");
 		mfh->mfh_predio_nseq++;
-	} else {
-		mfh->mfh_predio_off = 0;
-		mfh->mfh_predio_nseq = 0;
+		goto out;
+	}
+	if (off <  mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta &&
+	    off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize  - delta) {
+		OPSTAT_INCR("msl.predio-semi-sequential");
+		mfh->mfh_predio_nseq++;
+		goto out;
 	}
 
+	mfh->mfh_predio_off = 0;
+	mfh->mfh_predio_nseq = 0;
+
+ out:
 	mfh->mfh_predio_lastoff = off;
 	mfh->mfh_predio_lastsize = size;
 
