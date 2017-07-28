@@ -87,8 +87,8 @@ struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
 struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
 struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 
-struct psc_poolmaster	 slc_predioq_poolmaster;
-struct psc_poolmgr	*slc_predioq_pool;
+struct psc_poolmaster	 slc_prediorq_poolmaster;
+struct psc_poolmgr	*slc_prediorq_pool;
 struct psc_listcache	 msl_readaheadq;
 
 int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
@@ -153,10 +153,10 @@ void
 predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
     enum rw rw, uint32_t off, int npages)
 {
-	struct predioq *rarq;
+	struct prediorq *rarq;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
-	rarq = psc_pool_tryget(slc_predioq_pool);
+	rarq = psc_pool_tryget(slc_prediorq_pool);
 	if (rarq == NULL) {
 		OPSTAT_INCR("msl.predio-pool-bail");
 		return;
@@ -2297,7 +2297,7 @@ void
 msreadaheadthr_main(struct psc_thread *thr)
 {
 	struct bmap_pagecache_entry *pg;
-	struct predioq *rarq;
+	struct prediorq *rarq;
 	struct fidc_membh *f = NULL;
 	struct bmpc_ioreq *r;
 	struct bmap *b = NULL;
@@ -2375,7 +2375,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 			f = NULL;
 		}
 		if (rarq)
-			psc_pool_return(slc_predioq_pool, rarq);
+			psc_pool_return(slc_prediorq_pool, rarq);
 	}
 }
 
@@ -2386,13 +2386,13 @@ msreadaheadthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	psc_poolmaster_init(&slc_predioq_poolmaster,
-	    struct predioq, rarq_lentry, PPMF_AUTO, 4096, 4096,
-	    4096, NULL, "predioq");
-	slc_predioq_pool = psc_poolmaster_getmgr(
-	    &slc_predioq_poolmaster);
+	psc_poolmaster_init(&slc_prediorq_poolmaster,
+	    struct prediorq, rarq_lentry, PPMF_AUTO, 4096, 4096,
+	    4096, NULL, "prediorq");
+	slc_prediorq_pool = psc_poolmaster_getmgr(
+	    &slc_prediorq_poolmaster);
 
-	lc_reginit(&msl_readaheadq, struct predioq, rarq_lentry,
+	lc_reginit(&msl_readaheadq, struct prediorq, rarq_lentry,
 	    "readaheadq");
 
 	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
@@ -2408,5 +2408,5 @@ msreadaheadthr_spawn(void)
 void
 msl_readahead_svc_destroy(void)
 {
-	pfl_poolmaster_destroy(&slc_predioq_poolmaster);
+	pfl_poolmaster_destroy(&slc_prediorq_poolmaster);
 }

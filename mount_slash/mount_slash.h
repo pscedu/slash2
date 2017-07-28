@@ -264,7 +264,7 @@ resm2rmci(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-struct readaheadrq {
+struct prediorq {
 	struct psc_listentry		rarq_lentry;
 	enum rw				rarq_rw;
 	struct sl_fidgen		rarq_fg;
