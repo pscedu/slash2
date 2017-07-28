@@ -1917,7 +1917,9 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		PFL_GOTOERR(out, 0);
 
 	if (mfh->mfh_flags & MFHF_TRACKING_WA) {
-		predio_enqueue(&f->fcmh_fg, bno+1, rw, 0, 0);
+		if (off + npages * BMPC_BUFSZ >= 
+		    SLASH_BMAP_SIZE - BMPC_BUFSZ * msl_predio_pipe_size)
+			predio_enqueue(&f->fcmh_fg, bno+1, rw, 0, 0);
 		PFL_GOTOERR(out, 0);
 	}
 
