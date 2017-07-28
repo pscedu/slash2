@@ -4278,7 +4278,7 @@ msl_opt_lookup(const char *opt)
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
-					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
+					LOOKUP_TYPE_INT,	&msl_predio_max_pages},
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }
