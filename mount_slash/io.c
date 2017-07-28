@@ -1939,7 +1939,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	bno = raoff / SLASH_BMAP_SIZE;
 	raoff =  raoff - bno * SLASH_BMAP_SIZE;
-	rapages = MIN(mfh->mfh_predio_nseq*2, msl_predio_max_pages);
+	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
 
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
