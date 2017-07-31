@@ -62,8 +62,8 @@ int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
 int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
-int				 sli_predio_pipe_size = 64;
-int				 sli_predio_max_slivers = 32;
+int				 sli_predio_pipe_size = 32;
+int				 sli_predio_max_slivers = 8;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -155,10 +155,11 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 }
 
 void
-readahead_enqueue(struct fidc_membh *f, off_t off, uint32_t size)
+readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
 {
 	struct sli_readaheadrq *rarq;
 
+	psclog_max("readahead: offset = %ld, size = %ld\n", off, size);
 	rarq = psc_pool_get(sli_readaheadrq_pool);
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
 	rarq->rarq_fg = f->fcmh_fg;
@@ -474,11 +475,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fii = fcmh_2_fii(f);
 
 	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
-	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize)
+	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
 		fii->fii_predio_nseq++;
-	else {
+		OPSTAT_INCR("readahead-increase");
+	} else {
 	    	fii->fii_predio_off = 0;
 		fii->fii_predio_nseq = 0;
+		OPSTAT_INCR("readahead-reset");
 	}
 
 	fii->fii_predio_lastoff = off;
@@ -492,6 +495,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	raoff = mq->offset + mq->size;
 	if (raoff + sli_predio_pipe_size * SLASH_SLVR_SIZE < 
 	    fii->fii_predio_off) {
+		OPSTAT_INCR("readahead-pipe");
 		FCMH_ULOCK(f);
 		goto out1;
 	}
@@ -500,12 +504,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out1;
 	}
 	if (fii->fii_predio_off) {
-		if (fii->fii_predio_off > raoff)
+		if (fii->fii_predio_off > raoff) {
+			OPSTAT_INCR("readahead-skip");
 			raoff = fii->fii_predio_off;
+		}
 	}
 
-	rasize = MIN(fii->fii_predio_nseq * 2, sli_predio_max_slivers);
-	rasize = rasize * SLASH_SLVR_SIZE;
+	rasize = MAX(SLASH_SLVR_SIZE * fii->fii_predio_nseq * 2, mq->size);
+	rasize = MIN(rasize, sli_predio_max_slivers * SLASH_SLVR_SIZE);
 	rasize = MIN(rasize, f->fcmh_sstb.sst_size - raoff);
 
 	readahead_enqueue(f, raoff, rasize);
