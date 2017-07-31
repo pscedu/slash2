@@ -479,12 +479,15 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	else {
 	    	fii->fii_predio_off = 0;
 		fii->fii_predio_nseq = 0;
-		FCMH_ULOCK(f);
-		goto out1;
 	}
 
 	fii->fii_predio_lastoff = off;
 	fii->fii_predio_lastsize = mq->size;
+
+	if (!fii->fii_predio_nseq) {
+		FCMH_ULOCK(f);
+		goto out1;
+	}
 		
 	raoff = mq->offset + mq->size;
 	if (raoff + sli_predio_pipe_size * SLASH_SLVR_SIZE < 
