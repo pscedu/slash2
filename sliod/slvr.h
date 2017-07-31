@@ -215,9 +215,8 @@ void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;
-	sl_bmapno_t		rarq_bno;
-	int32_t			rarq_off;
-	int32_t			rarq_size;
+	off_t			rarq_off;
+	off_t			rarq_size;
 	struct psc_listentry	rarq_lentry;
 };
 

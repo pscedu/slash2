@@ -1129,7 +1129,7 @@ slirathr_main(struct psc_thread *thr)
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	struct slvr *s;
-	int i, rc, slvrno;
+	int i, rc, slvrno, nslvr;
 	sl_bmapno_t bno;
 
 	while (pscthr_run(thr)) {
@@ -1143,10 +1143,11 @@ slirathr_main(struct psc_thread *thr)
 		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
 			goto skip;
 
-		bno = rarq->rarq_bno;
-		slvrno = rarq->rarq_off / SLASH_SLVR_SIZE;
+		bno = rarq->rarq_off / SLASH_BMAP_SIZE;
+		slvrno = (rarq->rarq_off % SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+		nslvr = rarq->rarq_size / SLASH_SLVR_SIZE;
 
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < nslvr; i++) {
 			if (i + slvrno >= SLASH_SLVRS_PER_BMAP) {
 				bno++;
 				slvrno = 0;
