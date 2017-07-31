@@ -152,21 +152,17 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 }
 
 void
-readahead_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
+readahead_enqueue(struct fidc_membh *f, sl_bmapno_t bno,
     uint32_t off, uint32_t size)
 {
 	struct sli_readaheadrq *rarq;
 
-	if (off >= SLASH_BMAP_SIZE)
+	if ((uint64_t)bno * SLASH_BMAP_SIZE + off >= f->fcmh_sstb.sst_size)
 		return;
-
-//	if (lastbno &&
-//	    off >= f->fcmh_sstb.sst_size % SLASH_SLVR_SIZE)
-//		return;
 
 	rarq = psc_pool_get(sli_readaheadrq_pool);
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
-	rarq->rarq_fg = *fgp;
+	rarq->rarq_fg = f->fcmh_fg;
 	rarq->rarq_bno = bno;
 	rarq->rarq_off = off;
 	rarq->rarq_size = size;
@@ -478,8 +474,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 //	     fii->fii_predio_boff == mq->offset) ||
 //	    mq->offset == 0) {
 //		fii->fii_predio_nseq++;
-		readahead_enqueue(&f->fcmh_fg, bmapno, mq->offset +
-		    mq->size, mq->size);
+		readahead_enqueue(f, bmapno, mq->offset + mq->size, mq->size);
 //	} else
 //		fii->fii_predio_nseq = 0;
 	fii->fii_predio_boff = mq->offset + mq->size;
