@@ -365,6 +365,7 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	memset(mfh, 0, sizeof(*mfh));
 	mfh->mfh_refcnt = 1;
 	mfh->mfh_fcmh = f;
+	mfh->mfh_flags = MFHF_TRACKING_RA;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	mfh->mfh_sid = getsid(mfh->mfh_pid);
 	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
