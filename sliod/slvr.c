@@ -1146,6 +1146,8 @@ slirathr_main(struct psc_thread *thr)
 		bno = rarq->rarq_off / SLASH_BMAP_SIZE;
 		slvrno = (rarq->rarq_off % SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
 		nslvr = rarq->rarq_size / SLASH_SLVR_SIZE;
+		if (rarq->rarq_size % SLASH_SLVR_SIZE)
+			nslvr++;
 
 		for (i = 0; i < nslvr; i++) {
 			if (i + slvrno >= SLASH_SLVRS_PER_BMAP) {
