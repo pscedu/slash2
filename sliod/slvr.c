@@ -50,11 +50,14 @@
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
+struct psc_poolmaster	 sli_readaheadrq_poolmaster;
 
 struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
+struct psc_poolmgr	*sli_readaheadrq_pool;
 
+struct psc_listcache	 sli_readaheadq;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
@@ -653,8 +656,8 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
  * @flags: operational flags.
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
-    __unusedx int flags)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw, 
+    int readahead)
 {
 	struct bmap *b = slvr_2_bmap(s);
 	ssize_t rc = 0;
@@ -683,8 +686,11 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	s->slvr_flags |= SLVRF_FAULTING;
 
-	if (s->slvr_flags & SLVRF_DATARDY)
+	if (s->slvr_flags & SLVRF_DATARDY) {
+		if (!readahead && (s->slvr_flags & SLVRF_READAHEAD)) 
+			OPSTAT_INCR("readahead-hit");
 		goto out1;
+	}
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
@@ -694,6 +700,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		goto out1;
 	}
+	if (readahead)
+		s->slvr_flags |= SLVRF_READAHEAD;
 
 	SLVR_ULOCK(s);
 
@@ -1115,12 +1123,81 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
+slirathr_main(struct psc_thread *thr)
+{
+	struct sli_readaheadrq *rarq;
+	struct bmapc_memb *b;
+	struct fidc_membh *f;
+	struct slvr *s;
+	int i, rc, slvrno;
+	sl_bmapno_t bno;
+
+	while (pscthr_run(thr)) {
+		f = NULL;
+		b = NULL;
+
+		if (slcfg_local->cfg_async_io)
+			break;
+
+		rarq = lc_getwait(&sli_readaheadq);
+		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
+			goto skip;
+
+		bno = rarq->rarq_bno;
+		slvrno = rarq->rarq_off / SLASH_SLVR_SIZE;
+
+		for (i = 0; i < 4; i++) {
+			if (i + slvrno >= SLASH_SLVRS_PER_BMAP) {
+				bno++;
+				slvrno = 0;
+				if (b) {
+					bmap_op_done(b);
+					b = NULL;
+				}
+			}
+			if (!b) {
+				if (bmap_get(f, bno, SL_READ, &b))
+					goto skip;
+			}
+			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
+			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 1);
+			/*
+			 * FixMe: This cause asserts on flags when we
+			 * encounter AIOWAIT. We need a unified way to
+			 * perform I/O done on each sliver instead of
+			 * sprinkling them all over the place.
+			 */
+			slvr_io_done(s, rc);
+			slvr_rio_done(s);
+		}
+
+ skip:
+		if (b)
+			bmap_op_done(b);
+		if (f)
+			fcmh_op_done(f);
+		psc_pool_return(sli_readaheadrq_pool, rarq);
+	}
+}
+
+void
 slvr_cache_init(void)
 {
+	int i;
+
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
 	    SLAB_DEF_COUNT, 0, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+
+	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
+	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, "readaheadrq");
+	sli_readaheadrq_pool = psc_poolmaster_getmgr(
+	    &sli_readaheadrq_poolmaster);
+
+	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
+	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
@@ -1144,6 +1221,10 @@ slvr_cache_init(void)
 
 		pscthr_init(SLITHRT_AIO, sliaiothr_main, 0, "sliaiothr");
 	}
+
+	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
+		pscthr_init(SLITHRT_READAHEAD, slirathr_main, 0,
+		    "slirathr%d", i);
 
 	slab_cache_init();
 	slvr_worker_init();

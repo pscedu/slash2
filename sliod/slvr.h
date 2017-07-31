@@ -78,6 +78,7 @@ struct slvr {
 #define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
 #define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
 #define SLVRF_ACCESSED		(1 <<  6)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead logic */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -211,10 +212,20 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
+
+struct sli_readaheadrq {
+	struct sl_fidgen	rarq_fg;
+	sl_bmapno_t		rarq_bno;
+	int32_t			rarq_off;
+	int32_t			rarq_size;
+	struct psc_listentry	rarq_lentry;
+};
+
 extern struct psc_poolmgr	*sli_readaheadrq_pool;
 extern struct psc_listcache	 sli_lruslvrs;
 extern struct psc_listcache	 sli_crcqslvrs;
 extern struct psc_listcache	 sli_readaheadq;
+
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

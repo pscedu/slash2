@@ -34,7 +34,10 @@ struct fidc_membh;
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
 	int			fii_nwrite;	/* # of sliver writes */
-	struct psclist_head	fii_lentry;	/* fcmh with dirty slivers */
+	uint32_t		fii_predio_boff;/* offset within bmap */
+	sl_bmapno_t		fii_predio_lastbno;
+	int			fii_predio_nseq;/* num sequential io's */
+	struct psclist_head	fii_lentry;	/* all fcmhs with readahead */
 };
 
 /* sliod-specific fcmh_flags */
