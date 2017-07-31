@@ -93,9 +93,16 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 		mds_unreserve_slot(1);
 
 	if (!rc) {
-		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
-
 		FCMH_LOCK(f);
+		/*
+ 		 * The following assert used to be outside of the fcmh lock.
+ 		 * I hit it and gdb shows the two values are identical. So
+ 		 * let us at least move it inside the lock.
+ 		 *
+ 		 * (gdb) p f->fcmh_sstb.sst_fg.fg_fid == sstb_out.sst_fg.fg_fid
+ 		 * 
+ 		 */
+		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
 		f->fcmh_sstb = sstb_out;
 		FCMH_ULOCK(f);
 	}
