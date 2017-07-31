@@ -62,6 +62,9 @@ int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
 int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
+int				 sli_predio_pipe_size = 64;
+int				 sli_predio_max_slivers = 32;
+
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
     int nslvrs)
@@ -152,18 +155,13 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 }
 
 void
-readahead_enqueue(struct fidc_membh *f, sl_bmapno_t bno,
-    uint32_t off, uint32_t size)
+readahead_enqueue(struct fidc_membh *f, off_t off, uint32_t size)
 {
 	struct sli_readaheadrq *rarq;
-
-	if ((uint64_t)bno * SLASH_BMAP_SIZE + off >= f->fcmh_sstb.sst_size)
-		return;
 
 	rarq = psc_pool_get(sli_readaheadrq_pool);
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
 	rarq->rarq_fg = f->fcmh_fg;
-	rarq->rarq_bno = bno;
 	rarq->rarq_off = off;
 	rarq->rarq_size = size;
 	lc_add(&sli_readaheadq, rarq);
@@ -186,6 +184,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct fidc_membh *f;
 	uint64_t seqno;
 	ssize_t rv;
+	off_t off, raoff, rasize;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -470,15 +469,32 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	FCMH_LOCK(f);
 	fii = fcmh_2_fii(f);
-//	if ((fii->fii_predio_lastbno == bmapno &&
-//	     fii->fii_predio_boff == mq->offset) ||
-//	    mq->offset == 0) {
-//		fii->fii_predio_nseq++;
-		readahead_enqueue(f, bmapno, mq->offset + mq->size, mq->size);
-//	} else
-//		fii->fii_predio_nseq = 0;
-	fii->fii_predio_boff = mq->offset + mq->size;
-	fii->fii_predio_lastbno = bmapno;
+
+	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
+	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize)
+		fii->fii_predio_nseq++;
+	else {
+	    	fii->fii_predio_off = 0;
+		fii->fii_predio_nseq = 0;
+	}
+
+	fii->fii_predio_lastoff = off;
+	fii->fii_predio_lastsize = mq->size;
+		
+	raoff = mq->offset + mq->size;
+	if (raoff + sli_predio_pipe_size * SLASH_SLVR_SIZE < 
+	    fii->fii_predio_off) {
+		FCMH_ULOCK(f);
+		goto out1;
+	}
+
+	rasize = MIN(fii->fii_predio_nseq * 2, sli_predio_max_slivers);
+	rasize = rasize * SLASH_SLVR_SIZE;
+	rasize = MIN(rasize, f->fcmh_sstb.sst_size - raoff);
+
+	readahead_enqueue(f, raoff, rasize);
+	fii->fii_predio_off = mq->offset + mq->size;
+
 	FCMH_ULOCK(f);
 
  out1:
