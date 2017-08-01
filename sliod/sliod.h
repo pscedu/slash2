@@ -112,6 +112,7 @@ extern struct pfl_opstats_grad	 sli_iorpc_iostats_wr;
 extern struct pfl_iostats_rw	 sli_backingstore_iostats;
 extern int			 sli_selftest_enable;
 extern int			 sli_selftest_result;
+extern int			 sli_disable_write;
 extern struct srt_bwqueued	 sli_bwqueued;
 extern psc_spinlock_t		 sli_bwqueued_lock;
 extern struct srt_statfs	 sli_ssfb;
