@@ -251,6 +251,9 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
+	struct psc_lockedlist		 bmpc_lru;
+	struct psc_waitq		 bmpc_waitq;
+
 
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
