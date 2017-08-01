@@ -79,8 +79,8 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_pipe_size = 128;
-int			 msl_predio_max_pages = 128;
+int			 msl_predio_pipe_size = 64;
+int			 msl_predio_max_pages = 64;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -169,6 +169,8 @@ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
 	rarq->rarq_off = off;
 	rarq->rarq_flag = 0;
 	rarq->rarq_npages = npages;
+
+	/* feed work to msreadaheadthr_main() */
 	lc_add(&msl_predioq, rarq);
 }
 
@@ -1958,10 +1960,15 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	raoff =  raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
 
+#if 0
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
+#endif
 
-	/* Now issue an I/O for each bmap in the prediction. */
+	/* 
+	 * Now issue an I/O for each bmap in the prediction. This loop
+	 * can handle read-ahead into multiple bmaps.
+	 */
 	for (; rapages && bno < fcmh_2_nbmaps(f); rapages -= tpages) {
 
 		bsize = SLASH_BMAP_SIZE;
@@ -2092,8 +2099,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
+#if 0
 	psclog_max("%s: FID = "SLPRI_FID", offset = %ld, size = %zd", 
 	    rw == SL_READ ? "read": "write", fcmh_2_fid(f), off, size);
+#endif
 
 	/* XXX EBADF if fd is not open for writing */
 

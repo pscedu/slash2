@@ -48,8 +48,8 @@ struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
-int			 msl_bmpces_min = 512;	 	/* 16MiB */
-int			 msl_bmpces_max = 16384; 	/* 512MiB */
+int			 msl_bmpces_min = 16384*2;	/* 16MiB */
+int			 msl_bmpces_max = 16384*4; 	/* 512MiB */
 
 struct psc_listcache	 msl_idle_pages;
 struct psc_listcache	 msl_readahead_pages;
@@ -661,16 +661,11 @@ bmpce_reap(struct psc_poolmgr *m)
 	struct bmap_pagecache_entry *e;
 	int nfreed, i;
 
-	/* 
-	 * XXX A readahead page is not necessarily more valuable
-	 * until it is proven so.
-	 */
-	if (m->ppm_flags & PPMF_DESPERATE)
-		bmpce_reap_list(&a, &msl_readahead_pages,
-		    BMPCEF_READALC, m);
-
 	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
 		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
+
+	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
+		bmpce_reap_list(&a, &msl_readahead_pages, BMPCEF_READALC, m);
 
 	nfreed = psc_dynarray_len(&a);
 
