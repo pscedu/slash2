@@ -561,6 +561,7 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 	LIST_CACHE_ULOCK(lc);
 }
 
+int
 bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 {
 	struct bmap_pagecache_entry *e, *tmp;
