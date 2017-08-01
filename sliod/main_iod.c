@@ -73,6 +73,11 @@ extern const char *__progname;
 int			 sli_selftest_result;
 int			 sli_selftest_enable = 1;
 
+/*
+ * Do not write to this I/O server unless absolutely necessary.
+ */
+int			 sli_disable_write = 0;
+
 struct srt_bwqueued	 sli_bwqueued;
 psc_spinlock_t		 sli_bwqueued_lock = SPINLOCK_INIT;
 struct srt_statfs	 sli_ssfb;
@@ -197,8 +202,11 @@ slihealththr_main(struct psc_thread *thr)
 		}
 		if (!rc)
 			rc = !sli_has_enough_space(NULL, 0, 0, 0);
+		if (!rc)
+			rc = sli_disable_write;
 		if (sli_selftest_result != rc) {
 
+			/* The result is sent to MDS by slconnthr_main() */
 			psclog_warnx("health will be changed from %d to %d "
 			    "(errno=%d)", sli_selftest_result, rc, errno);
 			sli_selftest_result = rc;

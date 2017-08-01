@@ -638,6 +638,9 @@ slictlthr_spawn(const char *fn)
 
 	psc_ctlparam_register_var("sys.bminseqno", PFLCTL_PARAMT_UINT64,
 	    0, &sli_bminseq.bim_minseq);
+	psc_ctlparam_register_var("sys.disable_write",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &sli_disable_write);
+
 	psc_ctlparam_register_var("sys.reclaim_batchno",
 	    PFLCTL_PARAMT_UINT64, 0, &sli_current_reclaim_batchno);
 	psc_ctlparam_register_var("sys.reclaim_xid",
