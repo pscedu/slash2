@@ -560,12 +560,31 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		OPSTAT_INCR("msl.bmpce-reap-spin");
 	LIST_CACHE_ULOCK(lc);
 }
-/*
- * Reap pages from the idle and/or readahead lists.  The readahead list
- * is only considered if we are desperate and unable to reap anything
- * else.  In such situations (i.e. when no pages are readily available),
- * no more readahead should be issued.
- */
+
+bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
+{
+	struct bmap_pagecache_entry *e, *tmp;
+	int freed = 0;
+
+	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
+		if (!BMPCE_TRYLOCK(e))
+			continue;
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		if (e->bmpce_ref) {
+			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
+			BMPCE_ULOCK(e);
+			continue;
+		}
+		OPSTAT_INCR("bmpce_reap");
+		pll_remove(&bmpc->bmpc_lru, e);
+		bmpce_free(e);
+		if (++freed >= nfree)
+			break;
+	}
+	return (freed);
+}
+
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
