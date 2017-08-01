@@ -326,6 +326,9 @@ bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
 
+	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
+	    bmpce_lentry, NULL);
+
 	/* Double check the exclusivity of these lists... */
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
@@ -333,6 +336,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    biorq_exp_lentry, NULL);
 
 	RB_INIT(&bmpc->bmpc_biorqs);
+	
+	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
 	lc_addtail(&bmpcLru, bmpc);
 }
 
