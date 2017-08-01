@@ -227,8 +227,8 @@ bmpce_init(struct bmap_pagecache_entry *e)
 }
 
 int
-_bmpce_lookup(const struct pfl_callerinfo *pci,
-    __unusedx struct bmpc_ioreq *r, struct bmap *b, int flags,
+bmpce_lookup(
+    struct bmpc_ioreq *r, struct bmap *b, int flags,
     uint32_t off, struct psc_waitq *wq,
     struct bmap_pagecache_entry **ep)
 {
