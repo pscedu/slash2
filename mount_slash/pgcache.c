@@ -396,7 +396,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 }
 
 void
-bmpce_release(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
+bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
 	LOCK_ENSURE(&e->bmpce_lock);
 
@@ -420,7 +420,6 @@ bmpce_release(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
 	   !(e->bmpce_flags & BMPCEF_DISCARD)) {
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
-		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCEF_LRU;
 
 		// XXX locking order violation?
@@ -494,7 +493,6 @@ bmpc_freeall(struct bmap *b)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
 
- restart:
 	/*
 	 * Remove any LRU pages still associated with the bmap.
 	 * Only readahead pages can be encountered here. If we
