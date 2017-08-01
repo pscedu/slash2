@@ -302,8 +302,7 @@ struct bmpc_ioreq *
 
 void	 bmpce_init(struct bmap_pagecache_entry *);
 int	 bmpce_lookup(struct bmpc_ioreq *,
-	     struct bmap *, int, uint32_t, struct psc_waitq *,
-	     struct bmap_pagecache_entry **);
+	     struct bmap *, int, uint32_t, struct psc_waitq *);
 void	 bmpce_release(struct bmap_pagecache_entry *);
 
 struct bmpc_write_coalescer *	 bwc_alloc(void);

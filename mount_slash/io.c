@@ -184,7 +184,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 {
 	uint32_t aoff, alen, bmpce_off;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
-	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
 	int i, npages;
 
@@ -228,7 +227,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
 		bmpce_lookup(r, b, 0, bmpce_off,
-		    &b->bcm_fcmh->fcmh_waitq, &e);
+		    &b->bcm_fcmh->fcmh_waitq);
 	}
 	return (r);
 }
@@ -2322,7 +2321,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 void
 msreadaheadthr_main(struct psc_thread *thr)
 {
-	struct bmap_pagecache_entry *pg;
 	struct prediorq *rarq;
 	struct fidc_membh *f = NULL;
 	struct bmpc_ioreq *r;
@@ -2381,7 +2379,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		for (i = 0; i < npages; i++) {
 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
-			    &f->fcmh_waitq, &pg);
+			    &f->fcmh_waitq);
 			if (rc == EALREADY)
 				continue;
 			if (rc)

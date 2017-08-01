@@ -227,10 +227,8 @@ bmpce_init(struct bmap_pagecache_entry *e)
 }
 
 int
-bmpce_lookup(
-    struct bmpc_ioreq *r, struct bmap *b, int flags,
-    uint32_t off, struct psc_waitq *wq,
-    struct bmap_pagecache_entry **ep)
+bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+    uint32_t off, struct psc_waitq *wq)
 {
 	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
 	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
@@ -366,7 +364,6 @@ bmpce_lookup(
 	    "n=%d foff=%"PRIx64, e, psc_dynarray_len(&r->biorq_pages),
 	    off + bmap_foff(b));
 
-	*ep = e;
 	return (0);
 }
 
