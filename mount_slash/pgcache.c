@@ -396,7 +396,7 @@ bmpce_free(struct bmap_pagecache_entry *e)
 }
 
 void
-bmpce_release(struct bmap_pagecache_entry *e)
+bmpce_release(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
 	LOCK_ENSURE(&e->bmpce_lock);
 
@@ -640,10 +640,8 @@ bmpce_reap(struct psc_poolmgr *m)
 
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_debug("bmpc=%p npages=%d age="PSCPRI_TIMESPEC" "
-		    "waiters=%d",
+		psclog_debug("bmpc=%p npages=%d, aiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
-		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
 		    psc_atomic32_read(&m->ppm_nwaiters));
 
 		b = bmpc_2_bmap(bmpc);
