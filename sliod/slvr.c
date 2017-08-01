@@ -1146,7 +1146,7 @@ slirathr_main(struct psc_thread *thr)
 
 		rarq = lc_getwait(&sli_readaheadq);
 		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
-			goto skip;
+			goto next;
 
 		bno = rarq->rarq_off / SLASH_BMAP_SIZE;
 		slvrno = (rarq->rarq_off % SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
@@ -1165,7 +1165,7 @@ slirathr_main(struct psc_thread *thr)
 			}
 			if (!b) {
 				if (bmap_get(f, bno, SL_READ, &b))
-					goto skip;
+					goto next;
 			}
 			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
 			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 1);
@@ -1179,7 +1179,7 @@ slirathr_main(struct psc_thread *thr)
 			slvr_rio_done(s);
 		}
 
- skip:
+ next:
 		if (b)
 			bmap_op_done(b);
 		if (f)

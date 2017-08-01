@@ -165,6 +165,9 @@ readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
 	rarq->rarq_fg = f->fcmh_fg;
 	rarq->rarq_off = off;
 	rarq->rarq_size = size;
+
+
+	/* feed work to slirathr_main() */
 	lc_add(&sli_readaheadq, rarq);
 }
 
@@ -492,7 +495,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out1;
 	}
 		
-	raoff = mq->offset + mq->size;
+	raoff = mq->offset + bmapno * SLASH_BMAP_SIZE + mq->size;
 	if (raoff + sli_predio_pipe_size * SLASH_SLVR_SIZE < 
 	    fii->fii_predio_off) {
 		OPSTAT_INCR("readahead-pipe");
