@@ -656,8 +656,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 					r = q->mfsrq_biorq[i];
 					if (!r)
 						break;
-					biorq_bmpces_setflag(r,
-					    BMPCEF_ACCESSED);
 				}
 
 				piov = q->mfsrq_iovs;
@@ -672,9 +670,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 						break;
 					iov[nio].iov_base = r->biorq_buf;
 					iov[nio].iov_len = r->biorq_len;
-
-					biorq_bmpces_setflag(r,
-					    BMPCEF_ACCESSED);
 				}
 				piov = iov;
 			}
@@ -689,8 +684,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 				r = q->mfsrq_biorq[i];
 				if (!r)
 					break;
-				biorq_bmpces_setflag(r,
-				    BMPCEF_ACCESSED);
 			}
 		}
 		slc_fsreply_write(f, pfr, q->mfsrq_len,

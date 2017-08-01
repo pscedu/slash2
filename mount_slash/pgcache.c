@@ -337,10 +337,6 @@ bmpce_free(struct bmap_pagecache_entry *e)
 	if (!locked)
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 
-	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
-	    BMPCEF_READAHEAD)
-		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
-
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
 
 	msl_pgcache_put(e->bmpce_base);
@@ -457,8 +453,14 @@ bmpc_freeall(struct bmap *b)
 		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCEF_DISCARD;
-		bmpce_release_locked(e, bmpc);
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		psc_assert(!e->bmpce_ref);
+		OPSTAT_INCR("bmpce_bmap_reap");
+		pll_remove(&bmpc->bmpc_lru, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
+
+		bmpce_free(e);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
@@ -519,46 +521,6 @@ bmpc_biorqs_flush(struct bmap *b)
 		    100);
 		BMAP_LOCK(b);
 	}
-}
-
-void
-bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
-    int flag, struct psc_poolmgr *m)
-{
-	struct bmap_pagecache_entry *e, *t;
-
-	LIST_CACHE_LOCK(lc);
-	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
-		/*
-		 * This avoids a deadlock with bmpc_freeall().  In
-		 * general, a background reaper should be nice to other
-		 * uses.
-		 */
-		if (!BMPCE_TRYLOCK(e))
-			continue;
-		/*
- 		 * XXX Checking flags here is bogus, we should assert that
- 		 * the flag is set because it is on the list.  In addition,
- 		 * we should check reference count here.
- 		 */ 
-		if ((e->bmpce_flags & (flag |
-		    BMPCEF_REAPED)) == flag) {
-			e->bmpce_flags &= ~flag;
-			e->bmpce_flags |= BMPCEF_DISCARD | BMPCEF_REAPED;
-			lc_remove(lc, e);
-			psc_dynarray_add(a, e);
-			DEBUG_BMPCE(PLL_DIAG, e, "reaping from %s",
-			    lc->plc_name);
-		}
-		BMPCE_ULOCK(e);
-
-		if (psc_dynarray_len(a) >=
-		    psc_atomic32_read(&m->ppm_nwaiters))
-			break;
-	}
-	if (!psc_dynarray_len(a) && lc_nitems(lc))
-		OPSTAT_INCR("msl.bmpce-reap-spin");
-	LIST_CACHE_ULOCK(lc);
 }
 
 int
@@ -677,10 +639,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCEF_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_REAPED, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_READALC, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
