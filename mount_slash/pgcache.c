@@ -250,6 +250,7 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			if ((e->bmpce_flags & BMPCEF_EIO) ||
 			    (e->bmpce_flags & BMPCEF_TOFREE)) {
 				BMPCE_ULOCK(e);
+				pscthr_yield();
 				continue;
 			}
 
@@ -454,11 +455,11 @@ bmpc_freeall(struct bmap *b)
 
 		BMPCE_LOCK(e);
 
-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 		psc_assert(!e->bmpce_ref);
-		OPSTAT_INCR("bmpce_bmap_reap");
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 		pll_remove(&bmpc->bmpc_lru, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
+		OPSTAT_INCR("bmpce_bmap_reap");
 
 		bmpce_free(e);
 	}
