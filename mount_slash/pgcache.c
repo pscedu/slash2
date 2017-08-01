@@ -229,7 +229,6 @@ int
 bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
     uint32_t off, struct psc_waitq *wq)
 {
-	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
 	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
@@ -278,7 +277,6 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 				e2 = psc_pool_get(bmpce_pool);
 				page = msl_pgcache_get(1);
 			}
-			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
@@ -634,10 +632,6 @@ bmpc_global_init(void)
 	    64, 0, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
-	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
-	    bmpce_lentry, "idlepages");
-	lc_reginit(&msl_readahead_pages, struct bmap_pagecache_entry,
-	    bmpce_lentry, "readapages");
 }
 
 void

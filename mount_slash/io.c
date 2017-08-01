@@ -556,12 +556,6 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		newval = e->bmpce_flags | flag;
-		if (e->bmpce_flags & BMPCEF_READALC) {
-			lc_remove(&msl_readahead_pages, e);
-			lc_add(&msl_idle_pages, e);
-			newval = (newval & ~BMPCEF_READALC) |
-			    BMPCEF_IDLE;
-		}
 		e->bmpce_flags = newval;
 		BMPCE_ULOCK(e);
 	}
