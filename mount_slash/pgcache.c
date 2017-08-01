@@ -652,6 +652,8 @@ bmpc_global_init(void)
 	    64, 0, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
+	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
+	    "bmpclru");
 }
 
 void
