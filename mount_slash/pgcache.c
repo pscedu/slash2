@@ -51,8 +51,7 @@ struct psc_poolmgr	*bwc_pool;
 int			 msl_bmpces_min = 16384*2;	/* 16MiB */
 int			 msl_bmpces_max = 16384*4; 	/* 512MiB */
 
-struct psc_listcache	 msl_idle_pages;
-struct psc_listcache	 msl_readahead_pages;
+struct psc_listcache     bmpcLru;
 
 RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
@@ -635,26 +634,43 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
-	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_pagecache_entry *e;
-	int nfreed, i;
+	struct bmap_pagecache *bmpc;
+	struct bmap *b;
+	int nfreed = 0;
 
-	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
-		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
+	LIST_CACHE_LOCK(&bmpcLru);
+	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
+		psclog_debug("bmpc=%p npages=%d age="PSCPRI_TIMESPEC" "
+		    "waiters=%d",
+		    bmpc, pll_nitems(&bmpc->bmpc_lru),
+		    PSCPRI_TIMESPEC_ARGS(&bmpc->bmpc_oldest),
+		    psc_atomic32_read(&m->ppm_nwaiters));
 
-	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
-		bmpce_reap_list(&a, &msl_readahead_pages, BMPCEF_READALC, m);
+		b = bmpc_2_bmap(bmpc);
+		if (!BMAP_TRYLOCK(b))
+			continue;
 
-	nfreed = psc_dynarray_len(&a);
+		/* First check for LRU items. */
+		if (pll_nitems(&bmpc->bmpc_lru)) {
+			DEBUG_BMAP(PLL_DIAG, b, "try free");
+			nfreed += bmpc_lru_tryfree(bmpc,
+			    psc_atomic32_read(&m->ppm_nwaiters));
+			DEBUG_BMAP(PLL_DIAG, b, "try free done");
+		} else {
+			OPSTAT_INCR("bmpce_reap_spin");
+			psclog_debug("skip bmpc=%p, nothing on lru",
+			    bmpc);
+		}
 
-	DYNARRAY_FOREACH(e, i, &a) {
-		BMPCE_LOCK(e);
-		bmpce_release(e);
+		BMAP_ULOCK(b);
+
+		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+			break;
 	}
+	LIST_CACHE_ULOCK(&bmpcLru);
 
-	psc_dynarray_free(&a);
-
-	OPSTAT_ADD("msl.bmpce-reap", nfreed);
+	psclog_diag("nfreed=%d, waiters=%d", nfreed,
+	    psc_atomic32_read(&m->ppm_nwaiters));
 
 	return (nfreed);
 }
