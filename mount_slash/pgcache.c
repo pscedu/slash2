@@ -248,52 +248,14 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			 * It is possible that the EIO flag can be cleared
 			 * and the page is re-used now.
 			 */
-			if (e->bmpce_flags & BMPCEF_EIO) {
-				if (e->bmpce_flags & BMPCEF_READAHEAD) {
-					e->bmpce_flags &= ~BMPCEF_EIO;
-				} else {
-					DEBUG_BMPCE(PLL_WARN, e,
-					    "skipping an EIO page");
-					OPSTAT_INCR("msl.bmpce-eio");
-					BMPCE_ULOCK(e);
-
- retry:
-					psc_waitq_waitrelf_us(
-					    &b->bcm_fcmh->fcmh_waitq,
-					    PFL_LOCKPRIMT_RWLOCK,
-					    &bci->bci_rwlock, 100);
-					if (wrlock)
-						pfl_rwlock_wrlock(
-						    &bci->bci_rwlock);
-					else
-						pfl_rwlock_rdlock(
-						    &bci->bci_rwlock);
-					continue;
-				}
-			}
-			if (e->bmpce_flags & BMPCEF_TOFREE) {
+			if ((e->bmpce_flags & BMPCEF_EIO) ||
+			    (e->bmpce_flags & BMPCEF_TOFREE)) {
 				BMPCE_ULOCK(e);
-				goto retry;
+				continue;
 			}
 
-			if (e->bmpce_ref == 1 &&
-			    !(e->bmpce_flags & BMPCEF_REAPED)) {
-				if (e->bmpce_flags &
-				    BMPCEF_IDLE) {
-					e->bmpce_flags &=
-					    ~BMPCEF_IDLE;
-					remove_idle = 1;
-				} else if (e->bmpce_flags &
-				    BMPCEF_READALC) {
-					e->bmpce_flags &=
-					    ~BMPCEF_READALC;
-					remove_readalc = 1;
-				} else
-					e->bmpce_ref++;
-			} else
-				e->bmpce_ref++;
-			DEBUG_BMPCE(PLL_DIAG, e,
-			    "add reference");
+			e->bmpce_ref++;
+			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
 			BMPCE_ULOCK(e);
 
 			OPSTAT_INCR("msl.bmpce-cache-hit");
@@ -347,14 +309,6 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		OPSTAT_INCR("msl.bmpce-gratuitous");
 		msl_pgcache_put(page);
 		psc_pool_return(bmpce_pool, e2);
-	}
-
-	if (remove_idle) {
-		DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
-		lc_remove(&msl_idle_pages, e);
-	} else if (remove_readalc) {
-		DEBUG_BMPCE(PLL_DIAG, e, "removing from readalc");
-		lc_remove(&msl_readahead_pages, e);
 	}
 
 	psc_dynarray_add(&r->biorq_pages, e);
