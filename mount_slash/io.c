@@ -225,9 +225,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	 */
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
-
-		bmpce_lookup(r, b, 0, bmpce_off,
-		    &b->bcm_fcmh->fcmh_waitq);
+		bmpce_lookup(r, b, 0, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
 	}
 	return (r);
 }
