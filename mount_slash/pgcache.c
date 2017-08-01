@@ -402,43 +402,6 @@ bmpce_release(struct bmap_pagecache_entry *e)
 	LOCK_ENSURE(&e->bmpce_lock);
 
 	psc_assert(e->bmpce_ref > 0);
-
-	if (e->bmpce_ref == 1 && (e->bmpce_flags & (BMPCEF_DATARDY |
-	    BMPCEF_EIO | BMPCEF_DISCARD)) == BMPCEF_DATARDY) {
-		BMPCE_ULOCK(e);
-
-		/*
-		 * XXX Need to recheck flags after grabbing the lock.
-		 */
-		if ((e->bmpce_flags & (BMPCEF_READAHEAD |
-		    BMPCEF_ACCESSED)) == BMPCEF_READAHEAD) {
-			LIST_CACHE_LOCK(&msl_readahead_pages);
-			BMPCE_LOCK(e);
-			if (e->bmpce_ref == 1) {
-				DEBUG_BMPCE(PLL_DIAG, e,
-				    "add to readahead");
-				lc_add(&msl_readahead_pages, e);
-				e->bmpce_flags |= BMPCEF_READALC;
-				BMPCE_ULOCK(e);
-				LIST_CACHE_ULOCK(&msl_readahead_pages);
-				return;
-			}
-			LIST_CACHE_ULOCK(&msl_readahead_pages);
-		} else {
-			LIST_CACHE_LOCK(&msl_idle_pages);
-			BMPCE_LOCK(e);
-			if (e->bmpce_ref == 1) {
-				DEBUG_BMPCE(PLL_DIAG, e, "add to idle");
-				lc_add(&msl_idle_pages, e);
-				e->bmpce_flags |= BMPCEF_IDLE;
-				BMPCE_ULOCK(e);
-				LIST_CACHE_ULOCK(&msl_idle_pages);
-				return;
-			}
-			LIST_CACHE_ULOCK(&msl_idle_pages);
-		}
-	}
-
 	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
 	if (e->bmpce_ref > 0) {
@@ -449,6 +412,24 @@ bmpce_release(struct bmap_pagecache_entry *e)
 	/* sanity checks */
 	psc_assert(pll_empty(&e->bmpce_pndgaios));
 
+	if (e->bmpce_flags & BMPCEF_LRU) {
+		e->bmpce_flags &= ~BMPCEF_LRU;
+		pll_remove(&bmpc->bmpc_lru, e);
+	}
+
+	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
+	   !(e->bmpce_flags & BMPCEF_EIO) &&
+	   !(e->bmpce_flags & BMPCEF_DISCARD)) {
+		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
+		PFL_GETPTIMESPEC(&e->bmpce_laccess);
+		e->bmpce_flags |= BMPCEF_LRU;
+
+		// XXX locking order violation?
+		pll_add(&bmpc->bmpc_lru, e);
+
+		BMPCE_ULOCK(e);
+		return;
+	}
 	bmpce_free(e);
 }
 
