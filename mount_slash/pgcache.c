@@ -506,22 +506,7 @@ bmpc_freeall(struct bmap *b)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
-		if (e->bmpce_flags & BMPCEF_REAPED) {
-			BMPCE_ULOCK(e);
-			pfl_rwlock_unlock(&bci->bci_rwlock);
-			goto restart;
-		}
-		if (e->bmpce_flags & BMPCEF_IDLE) {
-			DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
-			lc_remove(&msl_idle_pages, e);
-			bmpce_release(e);
-		} else if (e->bmpce_flags & BMPCEF_READALC) {
-			DEBUG_BMPCE(PLL_DIAG, e,
-			    "removing from readalc");
-			lc_remove(&msl_readahead_pages, e);
-			bmpce_release(e);
-		} else
-			psc_fatalx("impossible");
+		bmpce_release_locked(e, bmpc);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
