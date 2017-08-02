@@ -1944,11 +1944,12 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
+	/* convert to bmap relative */
 	bno = raoff / SLASH_BMAP_SIZE;
 	raoff =  raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
 
-#if 0
+#if 1
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
 #endif
@@ -2087,7 +2088,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
-#if 0
+#if 1
 	psclog_max("%s: FID = "SLPRI_FID", offset = %ld, size = %zd", 
 	    rw == SL_READ ? "read": "write", fcmh_2_fid(f), off, size);
 #endif
@@ -2369,8 +2370,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
 			    &f->fcmh_waitq);
-			if (rc == EALREADY)
-				continue;
 			if (rc)
 				break;
 		}
