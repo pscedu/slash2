@@ -48,8 +48,8 @@ struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
-int			 msl_bmpces_min = 16384*2;	/* 16MiB */
-int			 msl_bmpces_max = 16384*4; 	/* 512MiB */
+int			 msl_bmpces_min = 512;		/* 16MiB */
+int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
 struct psc_listcache     bmpcLru;
 
@@ -328,6 +328,8 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 
 	psc_assert(e->bmpce_ref == 0);
 	e->bmpce_flags |= BMPCEF_TOFREE;
+	if (e->bmpce_flags & BMPCEF_READAHEAD)
+		OPSTAT_INCR("msl.readahead-waste");
 
 	BMPCE_ULOCK(e);
 

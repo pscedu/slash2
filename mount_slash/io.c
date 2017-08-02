@@ -124,6 +124,10 @@ _msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 		}
 
 		if (e->bmpce_flags & BMPCEF_DATARDY) {
+			if (e->bmpce_flags & BMPCEF_READAHEAD) {
+				e->bmpce_flags &= ~BMPCEF_READAHEAD;
+				OPSTAT_INCR("msl.readahead-hit");
+			}
 			if (accounting)
 				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
 
