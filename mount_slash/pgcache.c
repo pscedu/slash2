@@ -360,6 +360,10 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	/* sanity checks */
 	psc_assert(pll_empty(&e->bmpce_pndgaios));
 
+	/*
+ 	 * This has the side effect of putting the page
+ 	 * to the end of the list.
+ 	 */
 	if (e->bmpce_flags & BMPCEF_LRU) {
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		pll_remove(&bmpc->bmpc_lru, e);
@@ -371,7 +375,10 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		e->bmpce_flags |= BMPCEF_LRU;
 
-		// XXX locking order violation?
+		/*
+ 		 * The other side must use trylock to
+ 		 * avoid a deadlock.
+ 		 */
 		pll_add(&bmpc->bmpc_lru, e);
 
 		BMPCE_ULOCK(e);
