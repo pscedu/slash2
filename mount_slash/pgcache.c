@@ -229,15 +229,22 @@ int
 bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
     uint32_t off, struct psc_waitq *wq)
 {
+	int wrlock = 0;
 	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
 	void *page;
+	struct timespec tm;
 
 	bmpc = bmap_2_bmpc(b);
 	q.bmpce_off = off;
 
-	pfl_rwlock_rdlock(&bci->bci_rwlock);
+ restart:
+
+	if (wrlock)
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
+	else
+		pfl_rwlock_rdlock(&bci->bci_rwlock);
 
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
@@ -250,8 +257,11 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			if ((e->bmpce_flags & BMPCEF_EIO) ||
 			    (e->bmpce_flags & BMPCEF_TOFREE)) {
 				BMPCE_ULOCK(e);
-				pscthr_yield();
-				continue;
+				pfl_rwlock_unlock(&bci->bci_rwlock);
+				tm.tv_sec = 0;
+				tm.tv_nsec = 100000;
+				nanosleep(&tm, NULL);
+				goto restart;
 			}
 
 			e->bmpce_ref++;
@@ -278,6 +288,7 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 				e2 = psc_pool_get(bmpce_pool);
 				page = msl_pgcache_get(1);
 			}
+			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
 			continue;
 		} else {
