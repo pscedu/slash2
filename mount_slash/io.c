@@ -2377,8 +2377,10 @@ msreadaheadthr_main(struct psc_thread *thr)
 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
 			    &f->fcmh_waitq);
-			if (rc)
+			if (rc) {
+				OPSTAT_INCR("msl.readahead-bail");
 				break;
+			}
 		}
 		if (psc_dynarray_len(&r->biorq_pages))
 			msl_launch_read_rpcs(r);
