@@ -2326,8 +2326,15 @@ msreadaheadthr_main(struct psc_thread *thr)
 			goto next;
 
 		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
+
+#if 0
+		/*
+  		 * If we do this, we could issue the read-ahead requests
+		 * out-of-order and confuse our I/O server.
+		 */
 		if (!rarq->rarq_flag)
 			flags |= BMAPGETF_NONBLOCK;
+#endif
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
 		if (rc || rarq->rarq_rw == SL_WRITE)
 			goto next;
