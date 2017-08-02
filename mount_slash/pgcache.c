@@ -428,6 +428,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 void
 bmpc_freeall(struct bmap *b)
 {
+	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
@@ -436,8 +437,6 @@ bmpc_freeall(struct bmap *b)
 
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
-		struct bmpc_ioreq *r;
-
 		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
@@ -449,10 +448,9 @@ bmpc_freeall(struct bmap *b)
 	 * go away some day.
 	 */
 	pfl_rwlock_wrlock(&bci->bci_rwlock);
-	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
-	    e = next) {
-		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e; e = next) {
 
+		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 		BMPCE_LOCK(e);
 
 		psc_assert(!e->bmpce_ref);
@@ -542,6 +540,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		}
 		OPSTAT_INCR("bmpce_reap");
 		pll_remove(&bmpc->bmpc_lru, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
 		bmpce_free(e);
 		if (++freed >= nfree)
 			break;
