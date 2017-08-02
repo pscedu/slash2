@@ -814,7 +814,7 @@ msl_bmap_cache_rls(struct bmap *b)
 	pfl_rwlock_rdlock(&bci->bci_rwlock);
 	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCEF_DISCARD;
+		e->bmpce_flags |= BMPCEF_TOFREE;
 		BMPCE_ULOCK(e);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);

@@ -367,7 +367,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
-	   !(e->bmpce_flags & BMPCEF_DISCARD)) {
+	   !(e->bmpce_flags & BMPCEF_TOFREE)) {
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		e->bmpce_flags |= BMPCEF_LRU;
 
@@ -637,7 +637,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCEF_TOFREE, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_EIO, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);

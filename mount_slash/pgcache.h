@@ -88,8 +88,7 @@ struct bmap_page_entry {
 #define BMPCEF_LRU		(1 <<  3)	/* eviction in progress */
 #define BMPCEF_EIO		(1 <<  4)	/* I/O error */
 #define BMPCEF_AIOWAIT		(1 <<  5)	/* wait on async read */
-#define BMPCEF_DISCARD		(1 <<  6)	/* don't cache after I/O is done */
-#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
+#define BMPCEF_READAHEAD	(1 <<  6)	/* populated from readahead */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -122,7 +121,7 @@ struct bmap_page_entry {
 #define DEBUG_BMPCE(level, pg, fmt, ...)				\
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
-	    "fl=%#x:%s%s%s%s%s%s%s "					\
+	    "fl=%#x:%s%s%s%s%s%s "					\
 	    "off=%#09x base=%p ref=%u : " fmt,				\
 	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
 	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
@@ -131,7 +130,6 @@ struct bmap_page_entry {
 	    (pg)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_EIO		? "e" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_AIOWAIT		? "w" : "",	\
-	    (pg)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_READAHEAD	? "r" : "",	\
 	    (pg)->bmpce_off, (pg)->bmpce_base,				\
 	    (pg)->bmpce_ref, ## __VA_ARGS__)
