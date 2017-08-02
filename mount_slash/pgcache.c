@@ -320,10 +320,10 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 }
 
 void
-bmpce_free(struct bmap_pagecache_entry *e)
+bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(e->bmpce_bmap);
-	struct bmap_cli_info *bci = bmap_2_bci(e->bmpce_bmap);
+	struct bmap *b = bmpc_2_bmap(bmpc);
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	int locked;
 
 	psc_assert(e->bmpce_ref == 0);
@@ -384,7 +384,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		BMPCE_ULOCK(e);
 		return;
 	}
-	bmpce_free(e);
+	bmpce_free(e, bmpc);
 }
 
 struct bmpc_ioreq *
@@ -466,7 +466,7 @@ bmpc_freeall(struct bmap *b)
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		OPSTAT_INCR("bmpce_bmap_reap");
 
-		bmpce_free(e);
+		bmpce_free(e, bmpc);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
@@ -548,7 +548,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		OPSTAT_INCR("bmpce_reap");
 		pll_remove(&bmpc->bmpc_lru, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
-		bmpce_free(e);
+		bmpce_free(e, bmpc);
 		if (++freed >= nfree)
 			break;
 	}
