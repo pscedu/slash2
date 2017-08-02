@@ -56,7 +56,7 @@ struct msl_fsrqinfo;
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
 struct bmap_pagecache_entry {
-	struct bmap		*bmpce_bmap;
+	struct bmap		*bmpce_bmap;	/* XXX pointer without a reference */
 	int16_t			 bmpce_rc;	/* unused now, will purge */
 	int16_t			 bmpce_ref;	/* reference count */
 	uint16_t		 bmpce_flags;	/* BMPCEF_* flag bits */
