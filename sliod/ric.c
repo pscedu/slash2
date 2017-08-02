@@ -63,7 +63,7 @@ int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
 int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
 int				 sli_predio_pipe_size = 32;
-int				 sli_predio_max_slivers = 8;
+int				 sli_predio_max_slivers = 4;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
