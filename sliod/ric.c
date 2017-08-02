@@ -475,8 +475,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out1;
 
 	FCMH_LOCK(f);
-	fii = fcmh_2_fii(f);
 
+	fii = fcmh_2_fii(f);
+#if 0
 	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
 	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
 		fii->fii_predio_nseq++;
@@ -519,6 +520,19 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	readahead_enqueue(f, raoff, rasize);
 	fii->fii_predio_off = raoff;
+#else
+	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
+	raoff = off + mq->size;
+	if (raoff >= (off_t)f->fcmh_sstb.sst_size) {
+		FCMH_ULOCK(f);
+		goto out1;
+	}
+	rasize = sli_predio_max_slivers * SLASH_SLVR_SIZE;
+	rasize = MIN(rasize, f->fcmh_sstb.sst_size - raoff);
+
+	readahead_enqueue(f, raoff, rasize);
+
+#endif
 
 	FCMH_ULOCK(f);
 
