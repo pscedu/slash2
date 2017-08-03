@@ -2328,7 +2328,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
 
-#if 0
+#if 1
 		/*
   		 * If we do this, we could issue the read-ahead requests
 		 * out-of-order and confuse our I/O server.
