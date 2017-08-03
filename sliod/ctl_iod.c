@@ -668,5 +668,9 @@ slictlthr_spawn(const char *fn)
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &sli_sync_max_writes);
 
+	psc_ctlparam_register_var("sys.max_readahead",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &sli_predio_max_slivers);
+
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), 0, SLITHRT_CTLAC);
 }
