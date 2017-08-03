@@ -79,8 +79,8 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_pipe_size = 64;
-int			 msl_predio_max_pages = 128;
+int			 msl_predio_pipe_size = 128;
+int			 msl_predio_max_pages = 64;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -2345,6 +2345,7 @@ msreadaheadthr_main(struct psc_thread *thr)
  		 */
 		if (!(b->bcm_flags & BMAPF_LOADED)) {
 			rarq->rarq_flag = 1;
+			OPSTAT_INCR("msl.readahead-nonblock");
 			lc_add(&msl_predioq, rarq);
 			rarq = NULL;
 			goto next;
