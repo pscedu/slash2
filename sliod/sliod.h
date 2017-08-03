@@ -122,6 +122,7 @@ extern struct psc_listcache	 sli_fcmh_dirty;
 extern int			 sli_sync_max_writes;
 extern int			 sli_min_space_reserve_gb;
 extern int			 sli_min_space_reserve_pct;
+extern int			 sli_predio_max_slivers;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 sli_current_reclaim_xid;
