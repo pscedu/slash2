@@ -278,16 +278,13 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 
 		if (e2 == NULL) {
 			pfl_rwlock_unlock(&bci->bci_rwlock);
-
 			if (flags & BMPCEF_READAHEAD) {
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL) {
-					pfl_rwlock_unlock(&bci->bci_rwlock);
 					return (EAGAIN);
 				}
 				page = msl_pgcache_get(0);
 				if (page == NULL) {
-					pfl_rwlock_unlock(&bci->bci_rwlock);
 					psc_pool_return(bmpce_pool, e2);
 					return (EAGAIN);
 				}
