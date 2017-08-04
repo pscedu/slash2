@@ -1969,6 +1969,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
 		if (!tpages)
 			break;
+		if (tpages > BMPC_MAXBUFSRPC)
+			tpages = BMPC_MAXBUFSRPC;
 		if (tpages > rapages)
 			tpages = rapages;
 
