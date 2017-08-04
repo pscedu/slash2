@@ -249,6 +249,10 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
+			if (flags & BMPCEF_READAHEAD) {
+				pfl_rwlock_unlock(&bci->bci_rwlock);
+				return (EEXIST);
+			}
 			BMPCE_LOCK(e);
 			/*
 			 * It is possible that the EIO flag can be cleared
@@ -274,11 +278,11 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 
 		if (e2 == NULL) {
 			pfl_rwlock_unlock(&bci->bci_rwlock);
-
 			if (flags & BMPCEF_READAHEAD) {
 				e2 = psc_pool_shallowget(bmpce_pool);
-				if (e2 == NULL)
+				if (e2 == NULL) {
 					return (EAGAIN);
+				}
 				page = msl_pgcache_get(0);
 				if (page == NULL) {
 					psc_pool_return(bmpce_pool, e2);

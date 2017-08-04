@@ -1969,6 +1969,8 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
 		if (!tpages)
 			break;
+		if (tpages > BMPC_MAXBUFSRPC)
+			tpages = BMPC_MAXBUFSRPC;
 		if (tpages > rapages)
 			tpages = rapages;
 
@@ -2328,7 +2330,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
 
-#if 0
+#if 1
 		/*
   		 * If we do this, we could issue the read-ahead requests
 		 * out-of-order and confuse our I/O server.
@@ -2345,6 +2347,7 @@ msreadaheadthr_main(struct psc_thread *thr)
  		 */
 		if (!(b->bcm_flags & BMAPF_LOADED)) {
 			rarq->rarq_flag = 1;
+			OPSTAT_INCR("msl.readahead-nonblock");
 			lc_add(&msl_predioq, rarq);
 			rarq = NULL;
 			goto next;
@@ -2377,8 +2380,10 @@ msreadaheadthr_main(struct psc_thread *thr)
 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
 			    &f->fcmh_waitq);
-			if (rc)
+			if (rc) {
+				OPSTAT_INCR("msl.readahead-bail");
 				break;
+			}
 		}
 		if (psc_dynarray_len(&r->biorq_pages))
 			msl_launch_read_rpcs(r);
