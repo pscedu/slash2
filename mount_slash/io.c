@@ -724,6 +724,9 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (q == NULL)
 		return;
 
+	psclog_max("complete rq = %p, flags = %x, off = %u, bno = %d\n", 
+		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+
 	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
 	/* ensure biorq is in fsrq */
@@ -1461,6 +1464,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	struct psc_dynarray pages = DYNARRAY_INIT;
 	struct bmap_pagecache_entry *e;
 	uint32_t off = 0;
+
+	psclog_max("launch rq = %p, flags = %x, off = %u, bno = %d\n", 
+		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
@@ -2385,8 +2391,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 				break;
 			}
 		}
-		if (psc_dynarray_len(&r->biorq_pages))
+		if (psc_dynarray_len(&r->biorq_pages)) {
 			msl_launch_read_rpcs(r);
+		}
 		msl_biorq_release(r);
 
  next: 
