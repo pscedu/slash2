@@ -333,6 +333,10 @@ void
 msl_biorq_release(struct bmpc_ioreq *r)
 {
 	BIORQ_LOCK(r);
+	
+	if (r->biorq_flags & BIORQ_READAHEAD)
+		DEBUG_BIORQ(PLL_DIAG, r, "decref");
+
 	if (r->biorq_ref == 1 &&
 	    ((r->biorq_flags & BIORQ_READ) ||
 	    !(r->biorq_flags & BIORQ_FLUSHRDY))) {
@@ -721,11 +725,11 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	r->biorq_fsrqi = NULL;
 	BIORQ_ULOCK(r);
 
-	if (q == NULL)
-		return;
-
 	psclog_max("complete rq = %p, flags = %x, off = %u, bno = %d\n", 
 		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+
+	if (q == NULL)
+		return;
 
 	DEBUG_BIORQ(PLL_DIAG, r, "copying");
 
@@ -1511,6 +1515,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		BMPCE_ULOCK(e);
 		needflush = 1;
 	}
+
+	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
+		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno, 
+		psc_dynarray_len(&pages));
 
 	/*
 	 * We must flush any pending writes first before reading from

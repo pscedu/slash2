@@ -575,12 +575,12 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
-	struct bmap_pagecache *bmpc;
+	struct bmap_pagecache *bmpc, *tmp;
 	struct bmap *b;
 	int nfreed = 0;
 
 	LIST_CACHE_LOCK(&bmpcLru);
-	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
+	LIST_CACHE_FOREACH_SAFE(bmpc, tmp, &bmpcLru) {
 		psclog_debug("bmpc=%p npages=%d, aiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    psc_atomic32_read(&m->ppm_nwaiters));
