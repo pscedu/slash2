@@ -328,7 +328,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	RB_INIT(&bmpc->bmpc_biorqs);
 	
 	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
-	lc_addtail(&bmpcLru, bmpc);
+	//lc_addtail(&bmpcLru, bmpc);
 }
 
 #endif /* _MSL_PGCACHE_H_ */

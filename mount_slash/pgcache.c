@@ -596,7 +596,9 @@ bmpce_reap(struct psc_poolmgr *m)
 			    psc_atomic32_read(&m->ppm_nwaiters));
 			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else {
-			OPSTAT_INCR("bmpce_reap_spin");
+			lc_remove(&bmpcLru, bmpc);
+			b->bcm_flags &= ~BMAPF_LRU;
+			OPSTAT_INCR("bmpce-reap-del");
 			psclog_debug("skip bmpc=%p, nothing on lru",
 			    bmpc);
 		}

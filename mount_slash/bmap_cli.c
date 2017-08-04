@@ -1206,7 +1206,8 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 
-	lc_remove(&bmpcLru, bmpc);
+	if (b->bcm_flags & BMAPF_LRU)
+		lc_remove(&bmpcLru, bmpc);
 	/*
 	 * Assert that this bmap can no longer be scheduled by the write
 	 * back cache thread.
