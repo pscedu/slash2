@@ -805,6 +805,9 @@ slvr_remove_all(struct fidc_membh *f)
 	 * Use two loops to avoid entanglement with some background
 	 * operations.
 	 */
+
+ restart:
+
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
@@ -833,13 +836,19 @@ slvr_remove_all(struct fidc_membh *f)
 				BII_LOCK(bii);
 				continue;
 			}
+			/*
+ 			 * Our reaper could drop a sliver and then its
+ 			 * associated bmap.  And bmap_remove() needs to
+ 			 * take fcmh_rwlock. It is not pretty. Let us
+ 			 * restart if so.
+ 			 */
 			if (s->slvr_refcnt || (s->slvr_flags &
 			    (SLVRF_FREEING | SLVRF_FAULTING))) {
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
+				pfl_rwlock_unlock(&f->fcmh_rwlock);
 				pscthr_yield();
-				BII_LOCK(bii);
-				continue;
+				goto restart;
 			}
 			s->slvr_flags |= SLVRF_FREEING;
 
