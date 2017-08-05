@@ -241,7 +241,6 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
-	struct psc_lockedlist		 bmpc_lru;
 	struct psc_waitq		 bmpc_waitq;
 
 
@@ -314,9 +313,6 @@ static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
-
-	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
-	    bmpce_lentry, NULL);
 
 	/* Double check the exclusivity of these lists... */
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,

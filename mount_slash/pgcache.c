@@ -479,9 +479,9 @@ bmpc_freeall(struct bmap *b)
 
 		psc_assert(!e->bmpce_ref);
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-		pll_remove(&bmpc->bmpc_lru, e);
+
+		lc_remove(&msl_lru_pages, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
-		OPSTAT_INCR("bmpce_bmap_reap");
 
 		bmpce_free(e, bmpc);
 	}
