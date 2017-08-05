@@ -582,7 +582,7 @@ bmpce_reap(struct psc_poolmgr *m)
  		bmpc = bmap_2_bmpc(e->bmpce_bmap);
 		bmpce_release_locked(e, bmpc);
 	}
-	if (nfreed &lc_nitems(&msl_lru_pages)) {
+	if (!nfreed && lc_nitems(&msl_lru_pages)) {
 		pscthr_yield();
 		goto restart;
 	}
