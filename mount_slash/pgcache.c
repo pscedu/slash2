@@ -553,6 +553,7 @@ bmpce_reap(struct psc_poolmgr *m)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache_entry *e, *t;
 	struct bmap_pagecache *bmpc;
+	struct bmap *b;
 
  restart:
 
@@ -579,9 +580,10 @@ bmpce_reap(struct psc_poolmgr *m)
 	nfreed = psc_dynarray_len(&a);
 	DYNARRAY_FOREACH(e, i, &a) {
 		BMPCE_LOCK(e);
- 		bmpc = bmap_2_bmpc(e->bmpce_bmap);
+ 		b = e->bmpce_bmap;
+ 		bmpc = bmap_2_bmpc(b);
 		bmpce_release_locked(e, bmpc);
-		bmap_op_done_type(e->bmpce_bmap, BMAP_OPCNT_BMPCE);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 	if (!nfreed && lc_nitems(&msl_lru_pages)) {
 		pscthr_yield();
