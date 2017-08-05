@@ -546,6 +546,7 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
+/* called from psc_pool_reap() */
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
