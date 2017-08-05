@@ -1585,19 +1585,22 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
  * read-ahead pages to complete.
  */
 int
-msl_pages_fetch(struct bmpc_ioreq *r)
+msl_fetch_pages(struct bmpc_ioreq *r)
 {
-	int i, rc = 0, aiowait = 0, perfect_ra = 0;
-	struct bmap_pagecache_entry *e;
-	struct timespec ts0, ts1, tsd;
+	int rc = 0;
 
 	/* read-before-write will kill performance */
-	if (r->biorq_flags & BIORQ_READ) {
-		perfect_ra = 1;
+	if (r->biorq_flags & BIORQ_READ)
 		rc = msl_launch_read_rpcs(r);
-		if (rc)
-			PFL_GOTOERR(out, rc);
-	}
+	return (rc);
+
+}
+int
+msl_wait_pages(struct bmpc_ioreq *r)
+{
+	int i, rc = 0, aiowait = 0;
+	struct bmap_pagecache_entry *e;
+	struct timespec ts0, ts1, tsd;
 
 	PFL_GETTIMESPEC(&ts0);
 
@@ -1613,7 +1616,6 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
-			perfect_ra = 0;
 		}
 		/*
 		 * We can't read/write page in this state.
@@ -1635,8 +1637,7 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 				 */
 				OPSTAT2_ADD("msl.readahead-hit",
 				    BMPC_BUFSZ);
-		} else
-			perfect_ra = 0;
+		}
 
 		/*
  		 * Read error should be catched in the callback.
@@ -1669,10 +1670,6 @@ msl_pages_fetch(struct bmpc_ioreq *r)
 	OPSTAT_ADD("msl.biorq-fetch-wait-usecs",
 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
-	if (rc == 0 && !aiowait && perfect_ra)
-		OPSTAT2_ADD("msl.readahead-perfect", r->biorq_len);
-
- out:
 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
 	return (rc);
 }
@@ -1987,8 +1984,10 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
 		if (!tpages)
 			break;
+#if 0
 		if (tpages > BMPC_MAXBUFSRPC)
 			tpages = BMPC_MAXBUFSRPC;
+#endif
 		if (tpages > rapages)
 			tpages = rapages;
 
@@ -2095,7 +2094,7 @@ void
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     size_t size, const off_t off, enum rw rw)
 {
-	int nr, i, rc, npages;
+	int nr, i, rc, npages, predio;
 	size_t start, end, tlen, tsize;
 	struct msl_fsrqinfo *q = NULL;
 	struct timespec ts0, ts1, tsd;
@@ -2260,8 +2259,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (!msl_predio_max_pages || b->bcm_flags & BMAPF_DIO)
+	predio = 1;
+	if (!msl_predio_max_pages || b->bcm_flags & BMAPF_DIO) {
+		predio = 0;
 		goto out1;
+	}
 
 	/* 
 	 * Note that i can only be 0 or 1 after the above loop.
@@ -2286,8 +2288,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (alen % BMPC_BUFSZ)
 		npages++;
 
-	msl_issue_predio(mfh, bno, rw, aoff, npages);
-
  out1:
 	/* Step 3: launch biorqs (if necessary). */
 	for (i = 0; i < nr; i++) {
@@ -2296,11 +2296,25 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
 		else
-			rc = msl_pages_fetch(r);
+			rc = msl_fetch_pages(r);
+		if (rc)
+			goto out2;
+	}
+
+	/* Launch read-ahead after the original read request */
+	if (predio)
+		msl_issue_predio(mfh, bno, rw, aoff, npages);
+
+	for (i = 0; i < nr; i++) {
+		r = q->mfsrq_biorq[i];
+
+		if (r->biorq_flags & BIORQ_DIO)
+			continue;
+
+		rc = msl_wait_pages(r);
 		if (rc)
 			break;
 	}
-
  out2:
 	/*
 	 * Step 4: finish up biorqs.  Copy to satisfy READ back to user
