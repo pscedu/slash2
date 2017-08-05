@@ -248,10 +248,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
 	}
-	if (!(b->bcm_flags & BMAPF_LRU) && pll_nitems(&bmpc->bmpc_lru)) {
-		b->bcm_flags |= BMAPF_LRU;
-		lc_add(&bmpcLru, bmpc);
-	}
 	psc_dynarray_free(&r->biorq_pages);
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);

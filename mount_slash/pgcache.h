@@ -307,7 +307,6 @@ void				 bwc_free(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;
-extern struct psc_listcache	 bmpcLru;
 
 extern struct timespec		 msl_bflush_maxage;
 
