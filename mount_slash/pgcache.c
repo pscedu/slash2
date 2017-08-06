@@ -548,7 +548,7 @@ bmpc_biorqs_flush(struct bmap *b)
 
 /* called from psc_pool_reap() */
 __static int
-bmpce_reap(struct psc_poolmgr *m)
+bmpce_reaper(struct psc_poolmgr *m)
 {
 	int i, nfreed = 0;
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -579,16 +579,20 @@ bmpce_reap(struct psc_poolmgr *m)
 	LIST_CACHE_ULOCK(&msl_lru_pages);
 
 	nfreed = psc_dynarray_len(&a);
+	if (!nfreed && lc_nitems(&msl_lru_pages)) {
+		pscthr_yield();
+		goto restart;
+	}
+
+	/*
+ 	 * XXX Need to ensure I got what I have reaped.
+ 	 */
 	DYNARRAY_FOREACH(e, i, &a) {
 		BMPCE_LOCK(e);
  		b = e->bmpce_bmap;
  		bmpc = bmap_2_bmpc(b);
 		bmpce_release_locked(e, bmpc);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
-	}
-	if (!nfreed && lc_nitems(&msl_lru_pages)) {
-		pscthr_yield();
-		goto restart;
 	}
 
 	psc_dynarray_free(&a);
@@ -613,7 +617,7 @@ bmpc_global_init(void)
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
-	    bmpce_reap, "bmpce");
+	    bmpce_reaper, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
 	msl_pgcache_init();
