@@ -247,7 +247,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
-		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 	psc_dynarray_free(&r->biorq_pages);
 
