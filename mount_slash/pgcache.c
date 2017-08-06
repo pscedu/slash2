@@ -388,6 +388,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		lc_remove(&msl_lru_pages, e);
 	}
+	if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters))
+		goto out;
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
@@ -404,6 +406,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		BMPCE_ULOCK(e);
 		return;
 	}
+ out:
 	bmpce_free(e, bmpc);
 }
 
@@ -549,7 +552,7 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
-/* called from psc_pool_reap() */
+/* Called from psc_pool_reap() */
 __static int
 bmpce_reaper(struct psc_poolmgr *m)
 {
