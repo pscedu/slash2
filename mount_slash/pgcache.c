@@ -568,7 +568,14 @@ bmpce_reaper(struct psc_poolmgr *m)
 		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
+
+		psc_assert(!e->bmpce_ref);
 		e->bmpce_flags |= BMPCEF_TOFREE;
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		lc_remove(&msl_lru_pages, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
+
 		psc_dynarray_add(&a, e);
 		BMPCE_ULOCK(e);
 
@@ -591,7 +598,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		BMPCE_LOCK(e);
  		b = e->bmpce_bmap;
  		bmpc = bmap_2_bmpc(b);
-		bmpce_release_locked(e, bmpc);
+		bmpce_free(e, bmpc);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 
