@@ -354,9 +354,14 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	if (!locked)
 		pfl_rwlock_wrlock(&bci->bci_rwlock);
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
-	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	if (!locked)
 		pfl_rwlock_unlock(&bci->bci_rwlock);
+
+	/*
+ 	 * This could be the last reference to the bmap if we are called
+ 	 * from reaper.
+ 	 */
+	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
 
