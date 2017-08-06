@@ -313,6 +313,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 
+			bmap_op_start_type(b, BMAP_OPCNT_BMPCE);
+
 			DEBUG_BMPCE(PLL_DIAG, e, "creating");
 			break;
 		}

@@ -230,7 +230,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 		bmpce_lookup(r, b, 0, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
-		bmap_op_start_type(b, BMAP_OPCNT_BMPCE);
 	}
 	return (r);
 }
@@ -2414,7 +2413,6 @@ msreadaheadthr_main(struct psc_thread *thr)
 				OPSTAT_INCR("msl.readahead-bail");
 				break;
 			}
-			bmap_op_start_type(b, BMAP_OPCNT_BMPCE);
 		}
 		if (psc_dynarray_len(&r->biorq_pages)) {
 			msl_launch_read_rpcs(r);
