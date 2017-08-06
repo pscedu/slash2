@@ -60,6 +60,8 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 struct psc_listcache	 page_buffers;
 int			 page_buffers_count;	/* total, including free */
 
+__static int		 bmpce_reaper(struct psc_poolmgr *);
+
 void
 msl_pgcache_init(void)
 {
@@ -357,16 +359,16 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	if (!locked)
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 
+	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
+
+	msl_pgcache_put(e->bmpce_base);
+	psc_pool_return(bmpce_pool, e);
+
 	/*
  	 * This could be the last reference to the bmap if we are called
  	 * from reaper.
  	 */
 	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
-
-	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
-
-	msl_pgcache_put(e->bmpce_base);
-	psc_pool_return(bmpce_pool, e);
 }
 
 void
@@ -568,7 +570,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct bmap_pagecache *bmpc;
 	struct bmap *b;
 
- restart:
 
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
@@ -598,11 +599,13 @@ bmpce_reaper(struct psc_poolmgr *m)
 	LIST_CACHE_ULOCK(&msl_lru_pages);
 
 	nfreed = psc_dynarray_len(&a);
+
+#if 0
 	if (!nfreed && lc_nitems(&msl_lru_pages)) {
 		pscthr_yield();
 		goto restart;
 	}
-
+#endif
 	/*
  	 * XXX Need to ensure I got what I have reaped.
  	 */
