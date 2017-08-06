@@ -242,13 +242,13 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	int i;
 
-	BMAP_LOCK(b);
-
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
 	}
 	psc_dynarray_free(&r->biorq_pages);
+
+	BMAP_LOCK(b);
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
