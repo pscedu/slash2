@@ -388,8 +388,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		lc_remove(&msl_lru_pages, e);
 	}
-	if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters))
-		goto out;
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
@@ -404,10 +402,13 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		lc_add(&msl_lru_pages, e);
 
 		BMPCE_ULOCK(e);
-		return;
+		e = NULL;
 	}
- out:
-	bmpce_free(e, bmpc);
+	if (e)
+		bmpce_free(e, bmpc);
+
+	if (!bmpce_pool->ppm_nfree)
+		bmpce_reaper(&bmpce_pool);
 }
 
 struct bmpc_ioreq *
