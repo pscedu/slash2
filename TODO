@@ -5968,3 +5968,8 @@ pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
 * Investigate why read does not time out when an I/O server is down.
 
 * Explore options to turn off or optimize hash for each RPC.
+
+08/05/2017
+----------
+
+Add an RPC from MDS to sliods so that you can sync up quickly (write-disable + min leases).
