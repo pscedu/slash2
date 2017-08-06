@@ -415,7 +415,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		bmpce_free(e, bmpc);
 
 	if (!bmpce_pool->ppm_nfree)
-		bmpce_reaper(&bmpce_pool);
+		bmpce_reaper(bmpce_pool);
 }
 
 struct bmpc_ioreq *
@@ -466,19 +466,28 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 void
 bmpc_freeall(struct bmap *b)
 {
-	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+#if 0
+	struct bmpc_ioreq *r;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
+#endif
 
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 
+#if 1
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+#else
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
 		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
+#endif
 
+#if 1
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
+#else
 	/*
 	 * Remove any LRU pages still associated with the bmap.
 	 * Only readahead pages can be encountered here. If we
@@ -500,6 +509,8 @@ bmpc_freeall(struct bmap *b)
 		bmpce_free(e, bmpc);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
+#endif
+
 }
 
 
