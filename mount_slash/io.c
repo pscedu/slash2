@@ -1384,6 +1384,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
+		r, r->biorq_flags, off, r->biorq_bmap->bcm_bmapno, 
+		npages);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1516,9 +1520,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		needflush = 1;
 	}
 
+#if 0
 	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
 		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno, 
 		psc_dynarray_len(&pages));
+#endif
 
 	/*
 	 * We must flush any pending writes first before reading from
@@ -1880,15 +1886,14 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 		mfh->mfh_predio_nseq++;
 		goto out;
 	}
-	if (off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta &&
-	    off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
-		OPSTAT_INCR("msl.predio-semi-sequential");
-		mfh->mfh_predio_nseq++;
+	if (off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta ||
+	    off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
+		OPSTAT_INCR("msl.predio-reset");
+		mfh->mfh_predio_off = 0;
+		mfh->mfh_predio_nseq = 0;
 		goto out;
 	}
-
-	mfh->mfh_predio_off = 0;
-	mfh->mfh_predio_nseq = 0;
+	OPSTAT_INCR("msl.predio-semi-sequential");
 
  out:
 	mfh->mfh_predio_lastoff = off;
@@ -2358,7 +2363,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
 
-#if 1
+#if 0
 		/*
   		 * If we do this, we could issue the read-ahead requests
 		 * out-of-order and confuse our I/O server.
