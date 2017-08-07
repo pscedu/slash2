@@ -63,7 +63,7 @@ int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
 int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
 int				 sli_predio_pipe_size = 32;
-int				 sli_predio_max_slivers = 4;
+int				 sli_predio_max_slivers = 16;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -175,7 +175,7 @@ __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	sl_bmapno_t bmapno, slvrno;
-	int rc, nslvrs = 0, i, needaio = 0;
+	int rc, nslvrs = 0, i, delta, needaio = 0;
 	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
@@ -344,6 +344,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
+	psclog_max("read/write: offset = %d, bmap = %d, size = %d\n", 
+	    mq->offset, bmapno, mq->size);
+
 	/*
 	 * This loop assumes that nslvrs is always no larger than
 	 * RIC_MAX_SLVRS_PER_IO.
@@ -477,12 +480,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	FCMH_LOCK(f);
 
 	fii = fcmh_2_fii(f);
-#if 0
+#if 1
+	delta = SLASH_SLVR_SIZE * 2;
 	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
 	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
 		fii->fii_predio_nseq++;
 		OPSTAT_INCR("readahead-increase");
-	} else {
+	} if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
+	      off < fii->fii_predio_lastoff + fii->fii_predio_lastsize - delta) {
 	    	fii->fii_predio_off = 0;
 		fii->fii_predio_nseq = 0;
 		OPSTAT_INCR("readahead-reset");
@@ -521,7 +526,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	readahead_enqueue(f, raoff, rasize);
 	fii->fii_predio_off = raoff;
 #else
-	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
+	delta = 0;	/* make gcc happy */
+	off = mq->offset + bmapno * SLASH_BMAP_SIZE + delta;
 	raoff = off + mq->size;
 	if (raoff >= (off_t)f->fcmh_sstb.sst_size) {
 		FCMH_ULOCK(f);
