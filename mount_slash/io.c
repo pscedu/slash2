@@ -79,8 +79,8 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_pipe_size = 256;
-int			 msl_predio_max_pages = 64;
+int			 msl_predio_pipe_size = 64;
+int			 msl_predio_max_pages = 128;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -1384,6 +1384,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
+		r, r->biorq_flags, off, r->biorq_bmap->bcm_bmapno, 
+		npages);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1516,9 +1520,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		needflush = 1;
 	}
 
+#if 0
 	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
 		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno, 
 		psc_dynarray_len(&pages));
+#endif
 
 	/*
 	 * We must flush any pending writes first before reading from
@@ -1880,15 +1886,14 @@ mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
 		mfh->mfh_predio_nseq++;
 		goto out;
 	}
-	if (off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta &&
-	    off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
-		OPSTAT_INCR("msl.predio-semi-sequential");
-		mfh->mfh_predio_nseq++;
+	if (off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta ||
+	    off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
+		OPSTAT_INCR("msl.predio-reset");
+		mfh->mfh_predio_off = 0;
+		mfh->mfh_predio_nseq = 0;
 		goto out;
 	}
-
-	mfh->mfh_predio_off = 0;
-	mfh->mfh_predio_nseq = 0;
+	OPSTAT_INCR("msl.predio-semi-sequential");
 
  out:
 	mfh->mfh_predio_lastoff = off;
