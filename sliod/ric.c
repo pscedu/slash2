@@ -484,17 +484,21 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	delta = SLASH_SLVR_SIZE * 2;
 	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
 	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
+
 		fii->fii_predio_nseq++;
+		fii->fii_predio_lastoff = off;
+		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-increase");
+
 	} if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
 	      off < fii->fii_predio_lastoff + fii->fii_predio_lastsize - delta) {
+
 	    	fii->fii_predio_off = 0;
 		fii->fii_predio_nseq = 0;
+		fii->fii_predio_lastoff = off;
+		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-reset");
 	}
-
-	fii->fii_predio_lastoff = off;
-	fii->fii_predio_lastsize = mq->size;
 
 	if (!fii->fii_predio_nseq) {
 		FCMH_ULOCK(f);
