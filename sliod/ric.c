@@ -490,7 +490,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-increase");
 
-	} if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
+	} else if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
 	      off < fii->fii_predio_lastoff + fii->fii_predio_lastsize - delta) {
 
 	    	fii->fii_predio_off = 0;
@@ -498,6 +498,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fii->fii_predio_lastoff = off;
 		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-reset");
+	} else {
+		/* tolerate out-of-order arrivals */
 	}
 
 	if (!fii->fii_predio_nseq) {
