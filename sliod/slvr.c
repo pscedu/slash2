@@ -693,6 +693,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		}
 		goto out1;
 	}
+	if (!readahead && rw == SL_READ)
+		OPSTAT_INCR("readahead-miss");
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
@@ -702,10 +704,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		goto out1;
 	}
-	/* XXX what if the following read fails? */
-	if (readahead)
-		s->slvr_flags |= SLVRF_READAHEAD;
-
 	SLVR_ULOCK(s);
 
 	/*
@@ -713,6 +711,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * lock.  All should be protected by the FAULTING bit.
 	 */
 	rc = slvr_fsbytes_rio(s, off, len);
+	if (!rc && readahead)
+		s->slvr_flags |= SLVRF_READAHEAD;
 	goto out2;
 
  out1:
