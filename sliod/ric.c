@@ -62,8 +62,8 @@ int				 sli_sync_max_writes = MAX_WRITE_PER_FILE;
 int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
 int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 
-int				 sli_predio_pipe_size = 32;
-int				 sli_predio_max_slivers = 16;
+int				 sli_predio_pipe_size = 16;
+int				 sli_predio_max_slivers = 4;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -486,8 +486,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
 
 		fii->fii_predio_nseq++;
-		fii->fii_predio_lastoff = off;
-		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-increase");
 
 	} else if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
@@ -495,12 +493,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	    	fii->fii_predio_off = 0;
 		fii->fii_predio_nseq = 0;
-		fii->fii_predio_lastoff = off;
-		fii->fii_predio_lastsize = mq->size;
 		OPSTAT_INCR("readahead-reset");
 	} else {
 		/* tolerate out-of-order arrivals */
 	}
+
+	fii->fii_predio_lastoff = off;
+	fii->fii_predio_lastsize = mq->size;
 
 	if (!fii->fii_predio_nseq) {
 		FCMH_ULOCK(f);
