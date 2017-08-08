@@ -598,8 +598,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
+		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
 
-		psc_assert(!e->bmpce_ref);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
