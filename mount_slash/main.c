@@ -1231,6 +1231,8 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct fcmh_cli_info *fci;
+	char *sillyname;
+	uint64_t pino;
 	int rc;
 
 	if (!msl_enable_sillyrename) {
@@ -1239,8 +1241,10 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 
 	/*
-	 * What if the open is opened and closed quickly while the cleanup
-	 * is still in progress?  Perhaps adding a busy flag?
+ 	 * Note that at this point, we might still have references to the
+ 	 * fcmh. And this file can be opened/unlinked/closed while our
+ 	 * unlink RPC is in transit. So let us clean up our side first 
+ 	 * in an atomic way.
 	 */
 	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_nopen > 0);
@@ -1251,18 +1255,33 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 	psc_assert(fci->fci_pino);
 	psc_assert(fci->fci_name);
+
+	pino = fci->fci_pino;
+	sillyname = fci->fci_name;
+
+	fci->fci_pino = 0;
+	fci->fci_name = NULL;
+	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
+
 	FCMH_ULOCK(f);
 
-	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
+	/* 
+	 * It is Okay if the following fails, we just forget about the
+ 	 * old silly name.
+ 	 */
+	rc = msl_load_fcmh(NULL, pino, &p);
 	if (rc)
 		goto out;
+
+	msl_invalidate_readdir(p);
+	dircache_delete(p, sillyname);
 
 	MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
-	mq->pfid = fci->fci_pino;
-	strlcpy(mq->name, fci->fci_name, sizeof(mq->name));
+	mq->pfid = pino;
+	strlcpy(mq->name, sillyname, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
@@ -1274,22 +1293,14 @@ msl_remove_sillyname(struct fidc_membh *f)
 		 */
 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
-		    fci->fci_pino, fci->fci_name, rc);
+		    pino, sillyname, rc);
 		OPSTAT_INCR("msl.sillyname-del-err");
 	} else
 		OPSTAT_INCR("msl.sillyname-del-ok");
 
-	msl_invalidate_readdir(p);
-	dircache_delete(p, fci->fci_name);
-
-	FCMH_LOCK(f);
-	PSCFREE(fci->fci_name);
-	fci->fci_pino = 0;
-	fci->fci_name = NULL;
-	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
-	FCMH_ULOCK(f);
-
  out:
+
+	PSCFREE(sillyname);
 	if (p)
 		fcmh_op_done(p);
 
