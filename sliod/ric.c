@@ -166,7 +166,6 @@ readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
 	rarq->rarq_off = off;
 	rarq->rarq_size = size;
 
-
 	/* feed work to slirathr_main() */
 	lc_add(&sli_readaheadq, rarq);
 }
@@ -480,8 +479,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	FCMH_LOCK(f);
 
 	fii = fcmh_2_fii(f);
-#if 1
-	delta = SLASH_SLVR_SIZE * 2;
+#if 0
+	delta = SLASH_SLVR_SIZE * 4;
 	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
 	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
 

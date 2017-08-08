@@ -5973,3 +5973,8 @@ pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
 ----------
 
 Add an RPC from MDS to sliods so that you can sync up quickly (write-disable + min leases).
+
+08/08/2017
+----------
+
+Explore race: replicate a large file and use repl-remove to remove some block maps immediately.
