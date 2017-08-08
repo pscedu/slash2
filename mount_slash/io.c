@@ -1962,7 +1962,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 
 	/* convert to bmap relative */
 	bno = raoff / SLASH_BMAP_SIZE;
-	raoff =  raoff - bno * SLASH_BMAP_SIZE;
+	raoff = raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
 
 #if 1
