@@ -910,6 +910,9 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 */
 	lc_move2tail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
+
+	if (!slab_pool->ppm_nfree)
+		psc_pool_reap(slab_pool, 0);
 }
 
 void
@@ -1054,13 +1057,14 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
-slab_cache_reap(struct psc_poolmgr *m)
+slab_cache_reap(__unusedx struct psc_poolmgr *m)
 {
 	static struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
-	int i;
+	int i, nitems;
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
+	nitems = lc_nitems(&sli_lruslvrs) / 5;
 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
@@ -1087,8 +1091,7 @@ slab_cache_reap(struct psc_poolmgr *m)
 		s->slvr_flags |= SLVRF_FREEING;
 		SLVR_ULOCK(s);
 
-		if (psc_dynarray_len(&a) >=
-		    psc_atomic32_read(&m->ppm_nwaiters))
+		if (psc_dynarray_len(&a) >= nitems)
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
