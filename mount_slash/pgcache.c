@@ -578,7 +578,7 @@ bmpc_biorqs_flush(struct bmap *b)
 
 /* Called from psc_pool_reap() */
 __static int
-bmpce_reaper(struct psc_poolmgr *m)
+bmpce_reaper(__unusedx struct psc_poolmgr *m)
 {
 	int i, nitems, nfreed = 0;
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -586,10 +586,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct bmap_pagecache *bmpc;
 	struct bmap *b;
 
-
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
 	nitems = lc_nitems(&msl_lru_pages) / 5;
+	if (nitems < 5)
+		nitems = 5;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
 		/*
 		 * This avoids a deadlock with bmpc_freeall().  In
@@ -612,8 +613,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		psc_dynarray_add(&a, e);
 		BMPCE_ULOCK(e);
 
-		if (psc_dynarray_len(&a) >= nitems &&
-		    psc_atomic32_read(&m->ppm_nwaiters))
+		if (psc_dynarray_len(&a) >= nitems)
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_lru_pages);
