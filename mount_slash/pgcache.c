@@ -498,32 +498,7 @@ bmpc_freeall(struct bmap *b)
 	}
 #endif
 
-#if 1
 	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
-#else
-	/*
-	 * Remove any LRU pages still associated with the bmap.
-	 * Only readahead pages can be encountered here. If we
-	 * don't treat readahead pages specially, this code can
-	 * go away some day.
-	 */
-	pfl_rwlock_wrlock(&bci->bci_rwlock);
-	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e; e = next) {
-
-		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
-		BMPCE_LOCK(e);
-
-		psc_assert(!e->bmpce_ref);
-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-
-		lc_remove(&msl_lru_pages, e);
-		e->bmpce_flags &= ~BMPCEF_LRU;
-
-		bmpce_free(e, bmpc);
-	}
-	pfl_rwlock_unlock(&bci->bci_rwlock);
-#endif
-
 }
 
 
@@ -608,11 +583,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (nitems < 5)
 		nitems = 5;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
-		/*
-		 * This avoids a deadlock with bmpc_freeall().  In
-		 * general, a background reaper should be nice to 
-		 * other uses.
-		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
 		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
