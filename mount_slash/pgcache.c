@@ -171,6 +171,7 @@ msl_pgcache_reap(void)
 	}
 	if (!bmpce_reaper(bmpce_pool))
 		return;
+
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
@@ -178,7 +179,6 @@ msl_pgcache_reap(void)
 		return;
 
 	nfree = lc_nitems(&page_buffers) - bmpce_pool->ppm_total;
-
 	for (i = 0; i < nfree; i++) {
 		p = lc_getnb(&page_buffers);
 		if (!p)
