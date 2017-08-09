@@ -169,6 +169,11 @@ msl_pgcache_reap(void)
 		last = curr;
 		return;
 	}
+
+	POOL_LOCK(bmpce_pool);
+	bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
+	POOL_ULOCK(bmpce_pool);
+
 	if (!bmpce_reaper(bmpce_pool))
 		return;
 
@@ -581,17 +586,25 @@ bmpc_biorqs_flush(struct bmap *b)
 
 /* Called from psc_pool_reap() */
 __static int
-bmpce_reaper(__unusedx struct psc_poolmgr *m)
+bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, nitems, nfreed = 0;
+	int i, idle, nitems, nfreed = 0;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache_entry *e, *t;
 	struct bmap_pagecache *bmpc;
 	struct bmap *b;
 
+	POOL_LOCK(bmpce_pool);
+	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
+	bmpce_pool->ppm_flags &= ~PPMF_IDLEREAP;
+	POOL_ULOCK(bmpce_pool);
+
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
-	nitems = lc_nitems(&msl_lru_pages) / 5;
+	if (idle)
+		nitems = lc_nitems(&msl_lru_pages) / 10;
+	else
+		nitems = lc_nitems(&msl_lru_pages) / 5;
 	if (nitems < 5)
 		nitems = 5;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
