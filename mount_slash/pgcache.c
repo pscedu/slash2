@@ -172,10 +172,10 @@ msl_pgcache_reap(void)
 		count = curr;
 		return;
 	}
-	if (curr <= bmpce_pool->ppm_min)
+	if (curr <= bmpce_pool->ppm_total)
 		return;
 
-	nfree = (curr - bmpce_pool->ppm_min) / 2;
+	nfree = (curr - bmpce_pool->ppm_total) / 2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
