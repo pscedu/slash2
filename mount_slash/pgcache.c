@@ -174,9 +174,10 @@ msl_pgcache_reap(void)
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
-	LIST_CACHE_LOCK(&page_buffers);
-	nfree = page_buffers_count - bmpce_pool->ppm_total;
-	LIST_CACHE_ULOCK(&page_buffers);
+	if (lc_nitems(&page_buffers) <= bmpce_pool->ppm_total)
+		return;
+
+	nfree = lc_nitems(&page_buffers) - bmpce_pool->ppm_total;
 
 	for (i = 0; i < nfree; i++) {
 		p = lc_getnb(&page_buffers);
