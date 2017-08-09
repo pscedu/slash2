@@ -589,7 +589,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
-	nitems = lc_nitems(&msl_lru_pages) / 10;
+	nitems = lc_nitems(&msl_lru_pages) / 15;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
 		/*
 		 * This avoids a deadlock with bmpc_freeall().  In
