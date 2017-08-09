@@ -52,6 +52,7 @@ int			 msl_bmpces_min = 512;		/* 16MiB */
 int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
 struct psc_listcache     msl_lru_pages;
+int			 msl_lru_pages_gen;
 
 RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
@@ -160,24 +161,23 @@ void
 msl_pgcache_reap(void)
 {
 	void *p;
+	static int last = 0;
 	int i, rc, curr, nfree;
-	static int count = 0;		/* this assume one reaper */
 
-	/* 
-	 * We don't reap if the number of free buffers keeps growing. 
-	 * This greatly cuts down the number of mmap() calls.
-	 */
-	curr = lc_nitems(&page_buffers);
-	if (!count || count != curr) {
-		count = curr;
+	curr = msl_lru_pages_gen;
+	if (!last || last != curr) {
+		last = curr;
 		return;
 	}
-	if (curr <= bmpce_pool->ppm_total)
+	if (!bmpce_reaper(bmpce_pool))
 		return;
+	nfree = bmpce_pool->ppm_nfree; 
+	psc_pool_try_shrink(bmpce_pool, nfree);
 
-	nfree = (curr - bmpce_pool->ppm_total) / 2;
-	if (!nfree)
-		nfree = 1;
+	LIST_CACHE_LOCK(&page_buffers);
+	nfree = page_buffers_count - bmpce_pool->ppm_total;
+	LIST_CACHE_ULOCK(&page_buffers);
+
 	for (i = 0; i < nfree; i++) {
 		p = lc_getnb(&page_buffers);
 		if (!p)
@@ -394,6 +394,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	if (e->bmpce_flags & BMPCEF_LRU) {
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		lc_remove(&msl_lru_pages, e);
+		msl_lru_pages_gen++;
 	}
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
@@ -407,6 +408,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
  		 * avoid a deadlock.
  		 */
 		lc_add(&msl_lru_pages, e);
+		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
 		e = NULL;
@@ -607,6 +609,7 @@ bmpce_reaper(__unusedx struct psc_poolmgr *m)
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		msl_lru_pages_gen++;
 		lc_remove(&msl_lru_pages, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
 
