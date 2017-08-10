@@ -425,8 +425,9 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 
 		BMPCE_ULOCK(e);
 		/*
-	 	 * Someone might be waiting. If not, we can let the next
- 		 * one grab an item quickly.
+	 	 * Someone might be waiting. If not, we 
+	 	 * can let the next one grab an item 
+	 	 * quickly.
  		 */
 		if (!bmpce_pool->ppm_nfree)
 			bmpce_reaper(bmpce_pool);

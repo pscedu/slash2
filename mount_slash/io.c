@@ -1971,7 +1971,7 @@ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
 	raoff = raoff - bno * SLASH_BMAP_SIZE;
 	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
 
-#if 1
+#ifdef MYDEBUG
 	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
 	    fcmh_2_fid(f), bno, raoff, rapages);
 #endif
@@ -2114,7 +2114,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
-#if 1
+
+#ifdef MYDEBUG
 	psclog_max("%s: FID = "SLPRI_FID", offset = %ld, size = %zd", 
 	    rw == SL_READ ? "read": "write", fcmh_2_fid(f), off, size);
 #endif
@@ -2369,14 +2370,13 @@ msreadaheadthr_main(struct psc_thread *thr)
 
 		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
 
-#if 1
 		/*
   		 * If we do this, we could issue the read-ahead requests
 		 * out-of-order and confuse our I/O server.
 		 */
 		if (!rarq->rarq_flag)
 			flags |= BMAPGETF_NONBLOCK;
-#endif
+
 		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
 		if (rc || rarq->rarq_rw == SL_WRITE)
 			goto next;
