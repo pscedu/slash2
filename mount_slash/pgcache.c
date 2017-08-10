@@ -237,11 +237,11 @@ int
 bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
     uint32_t off, struct psc_waitq *wq)
 {
-	int wrlock = 0;
-	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
+	int rc = 0, wrlock = 0;
+	struct bmap_pagecache_entry q, *e, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
-	void *page;
+	void *page = NULL;
 	struct timespec tm;
 
 	bmpc = bmap_2_bmpc(b);
@@ -259,7 +259,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		if (e) {
 			if (flags & BMPCEF_READAHEAD) {
 				pfl_rwlock_unlock(&bci->bci_rwlock);
-				return (EEXIST);
+				rc = EEXIST;
+				break;
 			}
 			BMPCE_LOCK(e);
 			/*
@@ -289,12 +290,13 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			if (flags & BMPCEF_READAHEAD) {
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL) {
-					return (EAGAIN);
+					rc = EAGAIN;
+					break;
 				}
 				page = msl_pgcache_get(0);
 				if (page == NULL) {
-					psc_pool_return(bmpce_pool, e2);
-					return (EAGAIN);
+					rc = EAGAIN;
+					break;
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
@@ -307,7 +309,6 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			OPSTAT_INCR("msl.bmpce-cache-miss");
 
 			e = e2;
-			e2 = NULL;
 			bmpce_init(e);
 			e->bmpce_off = off;
 			e->bmpce_ref = 1;
@@ -317,6 +318,9 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			e->bmpce_flags = flags;
 			e->bmpce_bmap = b;
 			e->bmpce_base = page;
+
+			e2 = NULL;
+			page = NULL;
 
 			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
@@ -331,17 +335,19 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		msl_pgcache_put(page);
+		if (page)
+			msl_pgcache_put(page);
 		psc_pool_return(bmpce_pool, e2);
 	}
 
-	psc_dynarray_add(&r->biorq_pages, e);
+	if (!rc)
+		psc_dynarray_add(&r->biorq_pages, e);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
-	    "n=%d foff=%"PRIx64, e, psc_dynarray_len(&r->biorq_pages),
-	    off + bmap_foff(b));
+	    "n=%d foff=%"PRIx64" rc = %d", 
+	    e, psc_dynarray_len(&r->biorq_pages), off + bmap_foff(b), rc);
 
-	return (0);
+	return (rc);
 }
 
 void
