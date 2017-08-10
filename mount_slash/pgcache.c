@@ -258,7 +258,6 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
 			if (flags & BMPCEF_READAHEAD) {
-				pfl_rwlock_unlock(&bci->bci_rwlock);
 				rc = EEXIST;
 				break;
 			}
@@ -291,12 +290,12 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 				e2 = psc_pool_shallowget(bmpce_pool);
 				if (e2 == NULL) {
 					rc = EAGAIN;
-					break;
+					goto out;
 				}
 				page = msl_pgcache_get(0);
 				if (page == NULL) {
 					rc = EAGAIN;
-					break;
+					goto out;
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
@@ -332,6 +331,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		}
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
+
+ out:
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
