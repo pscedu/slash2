@@ -1217,13 +1217,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
 
-	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
-
-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
-
-#if 1
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-#else
+#if 0
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
 		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
