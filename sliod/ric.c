@@ -159,7 +159,9 @@ readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
 {
 	struct sli_readaheadrq *rarq;
 
+#ifdef MYDEBUG
 	psclog_max("readahead: offset = %ld, size = %ld\n", off, size);
+#endif
 	rarq = psc_pool_get(sli_readaheadrq_pool);
 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
 	rarq->rarq_fg = f->fcmh_fg;
@@ -343,8 +345,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
+#ifdef MYDEBUG
 	psclog_max("read/write: offset = %d, bmap = %d, size = %d\n", 
 	    mq->offset, bmapno, mq->size);
+#endif
 
 	/*
 	 * This loop assumes that nslvrs is always no larger than
