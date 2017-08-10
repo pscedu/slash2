@@ -635,7 +635,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 
 	psc_dynarray_free(&a);
 
-	psclog_warnx("nfreed=%d, waiters=%d", nfreed,
+	psclog_diag("nfreed=%d, waiters=%d", nfreed,
 	    psc_atomic32_read(&m->ppm_nwaiters));
 
 	return (nfreed);
