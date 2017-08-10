@@ -567,6 +567,7 @@ bmap_flushable(struct bmap *b)
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
 		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_etime */
 		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 			OPSTAT_INCR("msl.flush-skip-expire");
