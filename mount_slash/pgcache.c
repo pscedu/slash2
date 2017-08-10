@@ -424,18 +424,15 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		e = NULL;
-	}
-	if (e) 
-		bmpce_free(e, bmpc);
-	else {
 		/*
-	 	 * Some one might be waiting. If not, we will let the next
+	 	 * Someone might be waiting. If not, we can let the next
  		 * one grab an item quickly.
  		 */
 		if (!bmpce_pool->ppm_nfree)
 			bmpce_reaper(bmpce_pool);
+		return;
 	}
+	bmpce_free(e, bmpc);
 }
 
 struct bmpc_ioreq *
