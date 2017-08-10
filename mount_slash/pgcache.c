@@ -593,7 +593,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-		msl_lru_pages_gen++;
+
+		if (!idle)
+			msl_lru_pages_gen++;
+
 		lc_remove(&msl_lru_pages, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
 
