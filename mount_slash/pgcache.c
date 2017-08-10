@@ -617,12 +617,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 
 	nfreed = psc_dynarray_len(&a);
 
-#if 0
-	if (!nfreed && lc_nitems(&msl_lru_pages)) {
-		pscthr_yield();
-		goto restart;
-	}
-#endif
 	/*
  	 * XXX Need to ensure I got what I have reaped.
  	 */
