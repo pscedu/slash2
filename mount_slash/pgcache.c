@@ -563,7 +563,7 @@ bmpc_biorqs_flush(struct bmap *b)
 __static int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, idle, nitems, nfreed = 0;
+	int i, idle, nitems, nfreed;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache_entry *e, *t;
 	struct bmap_pagecache *bmpc;
