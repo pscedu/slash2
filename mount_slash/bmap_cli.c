@@ -1208,12 +1208,13 @@ msl_bmap_final_cleanup(struct bmap *b)
 
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 
 	/*
-	 * Assert that this bmap can no longer be scheduled by the write
-	 * back cache thread.
+	 * Assert that this bmap can no longer be scheduled by the 
+	 * write back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
 
@@ -1224,8 +1225,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
 #endif
-
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
