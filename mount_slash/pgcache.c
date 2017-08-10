@@ -577,7 +577,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
 	if (idle)
-		nitems = lc_nitems(&msl_lru_pages) / 10;
+		nitems = lc_nitems(&msl_lru_pages) / 15;
 	else
 		nitems = lc_nitems(&msl_lru_pages) / 5;
 	if (nitems < 5)
