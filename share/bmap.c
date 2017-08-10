@@ -101,8 +101,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and
 		 * msl_bmap_final_cleanup().
 		 */
-		if (sl_bmap_ops.bmo_final_cleanupf)
-			sl_bmap_ops.bmo_final_cleanupf(b);
+		sl_bmap_ops.bmo_final_cleanupf(b);
 
 		bmap_remove(b);
 	} else {
