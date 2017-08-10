@@ -582,11 +582,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&msl_lru_pages);
 
-	nfreed = psc_dynarray_len(&a);
-
-	/*
- 	 * XXX Need to ensure I got what I have reaped.
- 	 */
 	DYNARRAY_FOREACH(e, i, &a) {
 		BMPCE_LOCK(e);
  		b = e->bmpce_bmap;
@@ -594,6 +589,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		bmpce_free(e, bmpc);
 	}
 
+	nfreed = psc_dynarray_len(&a);
 	psc_dynarray_free(&a);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
