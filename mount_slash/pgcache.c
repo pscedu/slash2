@@ -478,37 +478,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	return (r);
 }
 
-/*
- * Called when a bmap is being released.  Iterate across the tree
- * freeing each bmpce.  Prior to being invoked, all bmpce's must be idle
- * (i.e. have zero refcnts).
- */
-void
-bmpc_freeall(struct bmap *b)
-{
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-#if 0
-	struct bmpc_ioreq *r;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct bmap_pagecache_entry *e, *next;
-#endif
-
-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
-
-#if 1
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-#else
-	/* DIO rq's are allowed since no cached pages are involved. */
-	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
-		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-			psc_assert(r->biorq_flags & BIORQ_DIO);
-	}
-#endif
-
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
-}
-
-
 void
 bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 {
