@@ -725,8 +725,10 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	r->biorq_fsrqi = NULL;
 	BIORQ_ULOCK(r);
 
+#ifdef MYDEBUG
 	psclog_max("complete rq = %p, flags = %x, off = %u, bno = %d\n", 
 		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+#endif
 
 	if (q == NULL)
 		return;
@@ -1384,9 +1386,11 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+#ifdef MYDEBUG
 	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
 		r, r->biorq_flags, off, r->biorq_bmap->bcm_bmapno, 
 		npages);
+#endif
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1473,8 +1477,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	uint32_t off = 0;
 
+#ifdef MYDEBUG
 	psclog_max("launch rq = %p, flags = %x, off = %u, bno = %d\n", 
 		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+#endif
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
