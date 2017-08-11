@@ -390,6 +390,13 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 
 	/* ignore all errors for this background operation */
 	if (!rc) {
+		/*
+ 		 * 08/10/2017:
+ 		 *
+ 		 * A down I/O server will cause MDS to return -1010
+ 		 * to us.  As a result, we can't flush because the 
+ 		 * lease has expired, and we hang on flush.
+ 		 */
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	}
