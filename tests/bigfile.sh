@@ -106,7 +106,7 @@ then
     exit 1
 fi
 
-./bigfile3 -s  5555 -t 17 -b 114129  -n 280112 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
+./bigfile3 -s  5555 -t 17 -b 114129  -n  80112 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
 if [ $? -eq 1 ]
 then
     exit 1
