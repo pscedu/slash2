@@ -581,8 +581,8 @@ main(int argc, char *argv[])
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
-	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
-	    2048, 0, NULL, "bmplease");
+	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 
+	    MDS_BMAP_COUNT, MDS_BMAP_COUNT, 0, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();
