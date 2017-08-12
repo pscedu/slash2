@@ -713,6 +713,21 @@ msbwatchthr_main(struct psc_thread *thr)
 		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
 		 * It is taken off the msl_bmapflushq after all its biorqs 
 		 * are flushed if any.
+		 *
+		 * 08/11/2017
+		 *
+		 * We need to extend read bmap leases to protect cached pages
+		 * as well. So we should walk the timeout list instead of this
+		 * list.  Otherwise, if we want to write a cached page, and
+		 * update the bmap from read to write, the MDS might not find
+		 * the bmap lease and return ENOENT.  I have just seen this 
+		 * with my bigfile test suite.
+		 *
+		 * This was not an issue because we throw away bmap and its pages
+		 * as soon as the bmap's reference count drops to zero. Now,
+		 * our pages hold a reference to bmaps as well.  We probably need
+		 * a longer lifetime for at least the read lease.  And we should
+		 * free pages if we can't renew a lease.
 		 */
 		LIST_CACHE_LOCK(&msl_bmapflushq);
 		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {
