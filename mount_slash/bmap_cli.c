@@ -984,6 +984,10 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
+			/*
+			 * We should only extend lease of a bmap if
+			 * someone is interested in this bmap.
+			 */
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
