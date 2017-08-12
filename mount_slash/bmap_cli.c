@@ -482,6 +482,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	/* see you in slm_rmc_handle_extendbmapls() */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
