@@ -28,6 +28,8 @@ cc -o bigfile1 bigfile1.c
 cc -o bigfile2 bigfile2.c
 cc -o bigfile3 bigfile3.c -lpthread
 
+set -o pipefail
+
 ./bigfile1                                     $mypath/$myhost.bigfile1-1.dat | tee $myhost.bigfile1-1.log
 if [ $? -eq 1 ]
 then
@@ -112,6 +114,7 @@ then
     exit 1
 fi
 
+set +o pipefail
 
 END=`date +%s%N`
 ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
