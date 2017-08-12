@@ -272,6 +272,10 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	/*
+	 * XXX if the above returns ENOENT, should we renew here?
+	 */
+
 	bmi = bmap_2_bmi(b);
 
 	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq,
