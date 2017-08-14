@@ -984,22 +984,24 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
-			/*
- 			 * Cache it if not expired.
- 			 */
-			if (timespeccmp(&curtime, &bci->bci_etime, <))
-				continue;
+			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
+			/*
+ 			 * Continue to cache the bmap if not expired.
+ 			 */
+			if (timespeccmp(&curtime, &bci->bci_etime, <)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			/*
 			 * We should only extend lease of a bmap if
 			 * someone is interested in this bmap.
 			 */
-			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-				DEBUG_BMAP(PLL_DIAG, b, "evict due to idle and expire);
+				DEBUG_BMAP(PLL_DIAG, b, "evict due to idle and expire");
 				goto evict;
 			}
 			BMAP_ULOCK(b);
