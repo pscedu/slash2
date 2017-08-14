@@ -226,6 +226,7 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
  		 * long the flush will take.
  		 */
 		b->bcm_flags |= BMAPF_TOFREE; 
+		msl_bmap_cache_rls(b);
 		bmap_op_done(b);
 		fcmh_op_done(f);
 		OPSTAT_INCR("msl.bmap_reclaim");
