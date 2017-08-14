@@ -863,8 +863,9 @@ msbmapthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	pscthr_setready(thr);
+#if 0
+	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
+	    "msbenchthr");
+#endif
 
-//	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
-//	    "msbenchthr");
 }
