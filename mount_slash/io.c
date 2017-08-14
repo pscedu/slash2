@@ -2458,7 +2458,7 @@ msreadaheadthr_spawn(void)
 
 	lc_reginit(&msl_predioq, struct prediorq, rarq_lentry, "predio_q");
 
-	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
+	for (i = 0; i < NUM_READ_AHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
 		    sizeof(*mrat), "msreadaheadthr%d", i);
 		mrat = msreadaheadthr(thr);

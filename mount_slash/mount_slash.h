@@ -111,7 +111,8 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define NUM_NBRQ_THREADS		16
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
-#define NUM_READAHEAD_THREADS		4
+#define NUM_READ_AHEAD_THREADS		4
+#define NUM_BMAP_TIMEOUT_THREADS	4
 
 #define MSL_FIDNS_RPATH			".slfidns"
 
