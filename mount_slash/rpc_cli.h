@@ -138,8 +138,6 @@ msl_getmw(void)
 	switch (thr->pscthr_type) {
 	case MSTHRT_ATTR_FLUSH:
 		return (&msattrflushthr(thr)->maft_mw);
-	case MSTHRT_BRELEASE:
-		return (&msbreleasethr(thr)->mbrt_mw);
 	case MSTHRT_BWATCH:
 		return (&msbwatchthr(thr)->mbwt_mw);
 	case MSTHRT_FLUSH:
