@@ -80,7 +80,7 @@ void	 msl_bmap_lease_reassign(struct bmap *);
 
 void	 bmap_biorq_expire(struct bmap *);
 
-void	 msbreleasethr_main(struct psc_thread *);
+void	 msbwatchthr_main(struct psc_thread *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;

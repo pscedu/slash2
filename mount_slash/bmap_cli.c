@@ -949,7 +949,7 @@ msl_bmap_release(struct sl_resm *resm)
 }
 
 void
-msbreleasethr_main(struct psc_thread *thr)
+msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;

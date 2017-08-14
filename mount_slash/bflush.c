@@ -697,81 +697,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 }
 
 /*
- * Lease watcher thread: issues "lease extension" RPCs for bmaps when
- * deemed appropriate.
- */
-__static void
-msbwatchthr_main(struct psc_thread *thr)
-{
-	struct psc_dynarray bmaps = DYNARRAY_INIT;
-	struct bmap *b, *tmpb;
-	struct timespec ts;
-	int i;
-
-	while (pscthr_run(thr)) {
-		/*
-		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
-		 * It is taken off the msl_bmapflushq after all its biorqs 
-		 * are flushed if any.
-		 *
-		 * 08/11/2017
-		 *
-		 * We need to extend read bmap leases to protect cached pages
-		 * as well. So we should walk the timeout list instead of this
-		 * list.  Otherwise, if we want to write a cached page, and
-		 * update the bmap from read to write, the MDS might not find
-		 * the bmap lease and return ENOENT.  I have just seen this 
-		 * with my bigfile test suite.
-		 *
-		 * This was not an issue because we throw away bmap and its pages
-		 * as soon as the bmap's reference count drops to zero. Now,
-		 * our pages hold a reference to bmaps as well.  We probably need
-		 * a longer lifetime for at least the read lease.  And we should
-		 * free pages if we can't renew a lease.
-		 */
-		LIST_CACHE_LOCK(&msl_bmapflushq);
-		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {
-			LIST_CACHE_ULOCK(&msl_bmapflushq);
-			break;
-		}
-		PFL_GETTIMESPEC(&ts);
-		ts.tv_sec += BMAP_CLI_EXTREQSECS;
-		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
-			if (!BMAP_TRYLOCK(b))
-				continue;
-			DEBUG_BMAP(PLL_DEBUG, b, "begin");
-			if ((b->bcm_flags & BMAPF_TOFREE) ||
-			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
-				BMAP_ULOCK(b);
-				continue;
-			}
-			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
-				bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
-				psc_dynarray_add(&bmaps, b);
-			}
-			BMAP_ULOCK(b);
-		}
-		LIST_CACHE_ULOCK(&msl_bmapflushq);
-
-		if (!psc_dynarray_len(&bmaps)) {
-			usleep(1000);
-			continue;
-		}
-
-		OPSTAT_INCR("msl.lease-refresh");
-
-		DYNARRAY_FOREACH(b, i, &bmaps) {
-			BMAP_LOCK(b);
-			msl_bmap_lease_extend(b, 0);
-			BMAP_LOCK(b);
-			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
-		}
-		psc_dynarray_reset(&bmaps);
-	}
-	psc_dynarray_free(&bmaps);
-}
-
-/*
  * Send out SRMT_WRITE RPCs to the I/O server.
  */
 __static int
@@ -938,10 +863,6 @@ msbmapthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main,
-	    sizeof(struct msbrelease_thread), "msbreleasethr");
-	pfl_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
-	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 //	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
