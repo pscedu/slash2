@@ -946,6 +946,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 * 07/10/2017: Hit a crash with flag 11000010, this indicates that 
  	 * there is a code path that can reach the csvc after its reference 
  	 * count is zero and marked to free.
+ 	 *
+ 	 * Hit again, this comes from the mdscoh_req code path.  The problem
+ 	 * is that bml->bml_exp is not protected by a reference count, which
+ 	 * probably in turn can't ensure the csvc is still there.
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
