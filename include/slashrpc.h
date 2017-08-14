@@ -42,7 +42,7 @@
 struct stat;
 struct statvfs;
 
-#define	SL_RPC_VERSION		1
+#define	SL_RPC_VERSION		2
 
 /* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
