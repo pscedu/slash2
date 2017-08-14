@@ -153,6 +153,9 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	if (!sbd->sbd_seq)
 		psc_fatalx("Zero bmap lease number (%s)", action);
+	if (sbd->sbd_expire < 20)
+		psc_fatalx("Invalid bmap expire time %d (%s)", 
+		    sbd->sbd_expire, action);
 	psc_assert(sbd->sbd_fg.fg_fid);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
@@ -170,8 +173,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	 * expiration time.
 	 */
 	PFL_GETTIMESPEC(&bci->bci_etime);
-	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
-	    &bci->bci_etime);
+	bci->bci_etime.tv_sec += sbd->sbd_expire;
 	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
 
 	*bmap_2_sbd(b) = *sbd;

@@ -1755,6 +1755,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
+	sbd->sbd_expire = bml->bml_expire;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
