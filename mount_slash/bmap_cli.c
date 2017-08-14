@@ -985,36 +985,23 @@ msbreleasethr_main(struct psc_thread *thr)
 				continue;
 
 			/*
+ 			 * Cache it if not expired.
+ 			 */
+			if (timespeccmp(&curtime, &bci->bci_etime, <))
+				continue;
+
+
+			/*
 			 * We should only extend lease of a bmap if
 			 * someone is interested in this bmap.
 			 */
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
-				BMAP_ULOCK(b);
-				continue;
+			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+				DEBUG_BMAP(PLL_DIAG, b, "evict due to idle and expire);
+				goto evict;
 			}
-			if (exiting)
-				goto evict;
-			if (timespeccmp(&curtime, &bci->bci_etime, >=))
-				goto evict;
-
-			/*
-			 * Evict bmaps that are not even expired if
-			 * # of bmaps on timeoutq exceeds 25% of max
-			 * allowed.
-			 */
-			if (nitems > slc_bmap_max_cache / 4)
-				goto evict;
-
-			if (timespeccmp(&bci->bci_etime, &nto, <)) {
-				nto.tv_sec = bci->bci_etime.tv_sec;
-				nto.tv_nsec = bci->bci_etime.tv_nsec;
-			}
-
-			DEBUG_BMAP(PLL_DEBUG, b, "skip due to not expire");
 			BMAP_ULOCK(b);
 			continue;
  evict:
