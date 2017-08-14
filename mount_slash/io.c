@@ -262,10 +262,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		bmpc->bmpc_pndg_writes--;
 		if (!bmpc->bmpc_pndg_writes) {
 			b->bcm_flags &= ~BMAPF_FLUSHQ;
-			// XXX locking violation
 			lc_remove(&msl_bmapflushq, b);
-			DEBUG_BMAP(PLL_DIAG, b,
-			    "remove from msl_bmapflushq");
+			DEBUG_BMAP(PLL_DIAG, b, "remove from msl_bmapflushq");
 		}
 	}
 
