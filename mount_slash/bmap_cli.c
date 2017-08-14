@@ -226,8 +226,8 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
-		/* ignore all errors for this background operation */
 		BMAP_LOCK(b);
+		msl_bmap_cache_rls(b);
 	}
 
 	b->bcm_flags &= ~BMAPF_LOADING;
@@ -521,7 +521,9 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 
 	BMAP_LOCK(b);
 	if (!rc)
-		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
+		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	else
+		msl_bmap_cache_rls(b);
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
