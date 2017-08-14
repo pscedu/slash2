@@ -999,12 +999,13 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * We should only extend lease of a bmap if
 			 * someone is interested in this bmap.
 			 */
-
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
 				DEBUG_BMAP(PLL_DIAG, b, "evict due to idle and expire");
+				b->bcm_flags |= BMAPF_TOFREE;
+				BMAP_ULOCK(b);
 				goto evict;
 			}
-			BMAP_ULOCK(b);
+			msl_bmap_lease_extend(b, 0);
 			continue;
  evict:
 
