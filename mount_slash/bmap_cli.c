@@ -225,9 +225,11 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		msl_bmap_reap_init(b);
 
 		b->bcm_flags |= BMAPF_LOADED;
+		OPSTAT_INCR("bmap-extend-cb-ok");
 	} else {
 		BMAP_LOCK(b);
 		msl_bmap_cache_rls(b);
+		OPSTAT_INCR("bmap-extend-cb-err");
 	}
 
 	b->bcm_flags &= ~BMAPF_LOADING;
@@ -520,10 +522,13 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	}
 
 	BMAP_LOCK(b);
-	if (!rc)
+	if (!rc) {
+		OPSTAT_INCR("bmap-extend-ok");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-	else
+	} else {
+		OPSTAT_INCR("bmap-extend-err");
 		msl_bmap_cache_rls(b);
+	}
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
