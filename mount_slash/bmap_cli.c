@@ -895,10 +895,9 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 
 	for (i = 0; i < mq->nbmaps; i++)
 		psclog(rc ? PLL_ERROR : PLL_DIAG,
-		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
+		    "fid="SLPRI_FID" bmap=%u"
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
-		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
-		    mq->sbd[i].sbd_seq, rc);
+		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_seq, rc);
 
 	sl_csvc_decref(csvc);
 	return (rc);
