@@ -1840,6 +1840,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
+	obml->bml_start = time(NULL);
+	obml->bml_expire = obml->bml_start + slm_max_lease_timeout;
+
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
