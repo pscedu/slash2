@@ -66,6 +66,7 @@ int			slm_max_ios = SL_MAX_REPLICAS;
  */
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
+int			slm_max_lease_timeout = BMAP_TIMEO_MAX;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
@@ -1392,7 +1393,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1470,7 +1471,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
 
 	/*
  	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
