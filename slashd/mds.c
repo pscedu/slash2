@@ -66,6 +66,7 @@ int			slm_max_ios = SL_MAX_REPLICAS;
  */
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
+int			slm_max_lease_timeout = BMAP_TIMEO_DEF;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
@@ -711,7 +712,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_fid = fcmh_2_fid(b->bcm_fcmh);
 	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bia->bia_bmapno = b->bcm_bmapno;
-	bia->bia_start = time(NULL);
+	bia->bia_start = bml->bml_start;
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
 	bmi->bmi_assign = item;
@@ -759,7 +760,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		PSCFREE(bia);
 		return (-1); // errno
 	}
-	bia->bia_start = time(NULL);
+	bia->bia_start = bml->bml_start;
 	/*
  	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
  	 */
@@ -1392,7 +1393,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1470,7 +1471,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
 
 	/*
  	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
@@ -1664,21 +1665,22 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 void
 slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 {
+	int i;
 	struct bmap_mds_info *bmi;
-	int i, locked;
+
+	BMAP_LOCK_ENSURE(b);
 
 	bmi = bmap_2_bmi(b);
-	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
 	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
 			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
 			break;
 		}
-	BMAP_URLOCK(b, locked);
+	}
 }
 
 /*
@@ -1838,6 +1840,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
+	obml->bml_start = time(NULL);
+	obml->bml_expire = obml->bml_start + slm_max_lease_timeout;
+
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
@@ -1846,7 +1851,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bia->bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
 	bia->bia_lastcli = obml->bml_cli_nidpid;
 	bia->bia_ios = resm->resm_res_id;
-	bia->bia_start = time(NULL);
+	bia->bia_start = obml->bml_start;
 
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc)
@@ -1860,6 +1865,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Do some post setup on the modified lease. */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
+	sbd_out->sbd_expire = obml->bml_expire;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 	sbd_out->sbd_ios = obml->bml_ios;
@@ -1921,6 +1927,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
+	sbd_out->sbd_expire = bml->bml_expire;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 

@@ -76,8 +76,7 @@ __static void	msl_update_attributes(struct msl_fsrqinfo *);
 /* Flushing fs threads wait here for I/O completion. */
 struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 
-struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
-struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
+struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_MIN, 0 };
 
 int			 msl_predio_pipe_size = 256;
 int			 msl_predio_max_pages = 64;

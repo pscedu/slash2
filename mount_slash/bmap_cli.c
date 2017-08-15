@@ -983,7 +983,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_max_lease, &nto);
+		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
 
 		nitems = lc_nitems(&msl_bmaptimeoutq);
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
@@ -991,6 +991,10 @@ msbwatchthr_main(struct psc_thread *thr)
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
+			if (b->bcm_flags & BMAPF_TOFREE) {
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -998,7 +1002,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			/*
  			 * Continue to cache the bmap if not expired.
  			 */
-			if (timespeccmp(&curtime, &bci->bci_etime, <)) {
+			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+			    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 				BMAP_ULOCK(b);
 				continue;
 			}

@@ -30,6 +30,8 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
+#define BMAP_TIMEO_MIN		 40		/* keep in sync with the MDS */
+
 /*
  * Private data associated with a bmap used by a SLASH2 client.
  */
@@ -54,10 +56,7 @@ struct bmap_cli_info {
 #define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 5)	/* bmap is on writer flushq */
 #define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 6)	/* on timeout queue */
 
-/* XXX change horribly named flags */
-#define BMAP_CLI_MAX_LEASE	60			/* seconds */
 #define BMAP_CLI_EXTREQSECS	20
-#define BMAP_CLI_TIMEO_INC	1
 
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
@@ -82,7 +81,6 @@ void	 bmap_biorq_expire(struct bmap *);
 
 void	 msbwatchthr_main(struct psc_thread *);
 
-extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
 
 extern int slc_bmap_max_cache;
