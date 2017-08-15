@@ -147,7 +147,8 @@ struct bmap_timeo_table {
  * Longer time allows a client to cache pages longer and reduces RPC traffic
  * needed for lease extension.
  */
-#define BMAP_TIMEO_MAX		600	/* Max bmap lease timeout */
+#define BMAP_TIMEO_DEF		600	/* default bmap lease timeout */
+#define BMAP_TIMEO_MIN		 40	/* minimum bmap lease timeout */
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
