@@ -5978,3 +5978,10 @@ Add an RPC from MDS to sliods so that you can sync up quickly (write-disable + m
 ----------
 
 Explore race: replicate a large file and use repl-remove to remove some block maps immediately.
+
+
+08/15/2017
+----------
+
+rapier@client2 p]$ cp README.md /fstest/rapier/test/
+cp: failed to close ‘/fstest/rapier/test/README.md’: Numerical result out of range
