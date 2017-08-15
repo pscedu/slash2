@@ -991,6 +991,10 @@ msbwatchthr_main(struct psc_thread *thr)
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
+			if (b->bcm_flags & BMAPF_TOFREE) {
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
