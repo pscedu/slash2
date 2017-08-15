@@ -712,7 +712,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_fid = fcmh_2_fid(b->bcm_fcmh);
 	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bia->bia_bmapno = b->bcm_bmapno;
-	bia->bia_start = time(NULL);
+	bia->bia_start = bml->bml_start;
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
 	bmi->bmi_assign = item;
@@ -760,7 +760,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 		PSCFREE(bia);
 		return (-1); // errno
 	}
-	bia->bia_start = time(NULL);
+	bia->bia_start = bml->bml_start;
 	/*
  	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
  	 */
@@ -1848,7 +1848,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bia->bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
 	bia->bia_lastcli = obml->bml_cli_nidpid;
 	bia->bia_ios = resm->resm_res_id;
-	bia->bia_start = time(NULL);
+	bia->bia_start = obml->bml_start;
 
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc)
