@@ -541,7 +541,6 @@ slmctlparam_max_lease_set(const char *val)
 	int rc = 0;
 
 	l = strtol(val, &endp, 0);
-	spinlock(&slm_fid_lock);
 	if (endp == val || *endp)
 		rc = -1;
 	else {
