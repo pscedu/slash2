@@ -1002,7 +1002,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			/*
  			 * Continue to cache the bmap if not expired.
  			 */
-			if (timespeccmp(&curtime, &bci->bci_etime, <)) {
+			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+			    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 				BMAP_ULOCK(b);
 				continue;
 			}
