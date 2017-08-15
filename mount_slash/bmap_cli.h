@@ -30,6 +30,8 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
+#define BMAP_TIMEO_MIN		 40		/* keep in sync with the MDS */
+
 /*
  * Private data associated with a bmap used by a SLASH2 client.
  */
@@ -82,7 +84,6 @@ void	 bmap_biorq_expire(struct bmap *);
 
 void	 msbwatchthr_main(struct psc_thread *);
 
-extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
 
 extern int slc_bmap_max_cache;

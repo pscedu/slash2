@@ -983,7 +983,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_max_lease, &nto);
+		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
 
 		nitems = lc_nitems(&msl_bmaptimeoutq);
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
