@@ -56,10 +56,7 @@ struct bmap_cli_info {
 #define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 5)	/* bmap is on writer flushq */
 #define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 6)	/* on timeout queue */
 
-/* XXX change horribly named flags */
-#define BMAP_CLI_MAX_LEASE	60			/* seconds */
 #define BMAP_CLI_EXTREQSECS	20
-#define BMAP_CLI_TIMEO_INC	1
 
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
