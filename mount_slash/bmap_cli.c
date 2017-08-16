@@ -469,7 +469,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-	if (secs >= BMAP_CLI_EXTREQSECS &&
+	if (secs >= BMAP_TIMEO_MIN / 2 &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
 		if (blocking)
 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
@@ -983,7 +983,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+		timespecadd(&curtime, &msl_bmap_timeo_inc, &curtime);
 
 		nitems = lc_nitems(&msl_bmaptimeoutq);
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
@@ -1074,7 +1074,8 @@ msbwatchthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 
 		PFL_GETTIMESPEC(&curtime);
-		if (timespeccmp(&curtime, &nto, <) && !exiting) {
+		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+		if (!exiting) {
 			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
 			    &msl_bmaptimeoutq.plc_lock, &nto);
