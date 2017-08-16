@@ -500,8 +500,7 @@ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
 		BIORQ_ULOCK(r);
 		wake = 1;
 	}
-	if (wake)
-		bmap_flushq_wake(BMAPFLSH_EXPIRE);
+	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /*
