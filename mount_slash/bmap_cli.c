@@ -966,6 +966,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
+	struct bmap_pagecache *bmpc;
 	struct sl_resm *resm;
 	int exiting, i, nitems;
 
@@ -1018,7 +1019,9 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				goto evict;
 			}
-			msl_bmap_lease_extend(b, 0);
+			bmpc = bmap_2_bmpc(b);
+			if (!RB_EMPTY(&bmpc->bmpc_tree))
+				msl_bmap_lease_extend(b, 0);
 			continue;
  evict:
 
