@@ -967,7 +967,6 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
-	struct bmap_pagecache *bmpc;
 	struct sl_resm *resm;
 	int exiting, i, nitems;
 
@@ -995,7 +994,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			if (b->bcm_flags & BMAPF_TOFREE) {
+			if (b->bcm_flags & BMAPF_BUSY ||
+			    b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1022,9 +1022,9 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				goto evict;
 			}
-			bmpc = bmap_2_bmpc(b);
-			if (!RB_EMPTY(&bmpc->bmpc_tree))
-				msl_bmap_lease_extend(b, 0);
+			psc_dynarray_add(&bmaps, b);
+			b->bcm_flags |= BMAPF_BUSY;
+			BMAP_ULOCK(b);
 			continue;
  evict:
 
@@ -1075,6 +1075,12 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
+
+		DYNARRAY_FOREACH(b, i, &bmaps) {
+			BMAP_LOCK(b);
+			msl_bmap_lease_extend(b, 0);
+			BMAP_LOCK(b);
+		}
 
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
