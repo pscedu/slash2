@@ -961,6 +961,7 @@ msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
+	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct timespec nto, curtime;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
@@ -976,6 +977,8 @@ msbwatchthr_main(struct psc_thread *thr)
 	 */
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
+	psc_dynarray_ensurelen(&bmaps, MAX_BMAP_RELEASE);
+
 	while (pscthr_run(thr)) {
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
@@ -1075,6 +1078,7 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
+		psc_dynarray_reset(&bmaps);
 
 		PFL_GETTIMESPEC(&curtime);
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
@@ -1086,6 +1090,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	}
 	psc_dynarray_free(&rels);
 	psc_dynarray_free(&bcis);
+	psc_dynarray_free(&bmaps);
 }
 
 /*
