@@ -977,6 +977,8 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
 	int exiting, i, nitems;
+	struct bmap_pagecache *bmpc;
+
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -994,11 +996,12 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_timeo_inc, &curtime);
 
-		nitems = lc_nitems(&msl_bmaptimeoutq);
+		nitems = 0;
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
+			if (!nitems)
+				nitems = lc_nitems(&msl_bmaptimeoutq);
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
@@ -1011,30 +1014,41 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			/*
- 			 * Continue to cache the bmap if not expired.
- 			 */
-			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
-			    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
-				BMAP_ULOCK(b);
-				continue;
-			}
-
-			/*
-			 * We should only extend lease of a bmap if
-			 * someone is interested in this bmap.
-			 */
-			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-				DEBUG_BMAP(PLL_DIAG, b, "evict due to idle and expire");
+			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
+			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
 				b->bcm_flags |= BMAPF_TOFREE;
+				msl_bmap_cache_rls(b);
+				OPSTAT_INCR("msl.bmap-expire");
 				BMAP_ULOCK(b);
 				goto evict;
 			}
-			psc_dynarray_add(&bmaps, b);
-			b->bcm_flags |= BMAPF_BUSY;
+			if (nitems > slc_bmap_max_cache * 3/4) {
+				b->bcm_flags |= BMAPF_TOFREE;
+				msl_bmap_cache_rls(b);
+				OPSTAT_INCR("msl.bmap-expel");
+				BMAP_ULOCK(b);
+				goto evict;
+			}
+
+			bmpc = bmap_2_bmpc(b);
+			if (RB_EMPTY(&bmpc->bmpc_tree)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+				
+			/*
+ 			 * If this bmap has cached data, extend the bmap if necesary.
+ 			 */
+			if (bmap_2_bci(b)->bci_etime.tv_sec - curtime.tv_sec < 
+			    BMAP_TIMEO_MIN / 2) {
+				psc_dynarray_add(&bmaps, b);
+				b->bcm_flags |= BMAPF_BUSY;
+				BMAP_ULOCK(b);
+				if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
+					break;
+				continue;
+			}
 			BMAP_ULOCK(b);
-			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
-				break;
 			continue;
  evict:
 
@@ -1044,7 +1058,6 @@ msbwatchthr_main(struct psc_thread *thr)
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-			nitems--;
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
