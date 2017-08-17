@@ -989,16 +989,13 @@ msbwatchthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
 
-		nitems = 0;
+		nitems = lc_nitems(&msl_bmaptimeoutq) / 5;
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
-			if (!nitems)
-				nitems = lc_nitems(&msl_bmaptimeoutq);
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			if (
-			    b->bcm_flags & BMAPF_TOFREE) {
+			if (b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1014,7 +1011,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				goto evict;
 			}
-			if (nitems > slc_bmap_max_cache * 3/4) {
+			if (nitems) {
 				b->bcm_flags |= BMAPF_TOFREE;
 				msl_bmap_cache_rls(b);
 				OPSTAT_INCR("msl.bmap-expel");
@@ -1045,6 +1042,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			continue;
  evict:
 
+			nitems--;
 			/*
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
