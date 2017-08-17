@@ -850,7 +850,6 @@ msl_bmap_reap_init(struct bmap *b)
 	 * Take the reaper ref cnt early and place the bmap onto the
 	 * reap list.
 	 */
-	b->bcm_flags |= BMAPF_TIMEOQ;
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -878,6 +877,7 @@ msl_bmap_reap_init(struct bmap *b)
 	 * XXX hit crash because it is already on the list. Called from
 	 * msl_bmap_retrieve_cb().
 	 */
+	b->bcm_flags |= BMAPF_TIMEOQ;
 	lc_addtail(&msl_bmaptimeoutq, bci);
 }
 
@@ -964,7 +964,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct timespec nto, curtime;
 	struct resm_cli_info *rmci;
-	struct bmap_cli_info *bci;
+	struct bmap_cli_info *bci, *tmp;
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
@@ -991,13 +991,13 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		nitems = 0;
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
-		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
+		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			if (!nitems)
 				nitems = lc_nitems(&msl_bmaptimeoutq);
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			if (b->bcm_flags & BMAPF_BUSY ||
+			if (
 			    b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1033,8 +1033,9 @@ msbwatchthr_main(struct psc_thread *thr)
  			 */
 			if (bmap_2_bci(b)->bci_etime.tv_sec - curtime.tv_sec < 
 			    BMAP_TIMEO_MIN / 2) {
+				b->bcm_flags &= ~BMAPF_TIMEOQ;
+				lc_remove(&msl_bmaptimeoutq, bci);
 				psc_dynarray_add(&bmaps, b);
-				b->bcm_flags |= BMAPF_BUSY;
 				BMAP_ULOCK(b);
 				if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
 					break;
@@ -1050,6 +1051,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
+			b->bcm_flags &= ~BMAPF_TIMEOQ;
+			lc_remove(&msl_bmaptimeoutq, bci);
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
@@ -1058,8 +1061,6 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
-			b->bcm_flags &= ~BMAPF_TIMEOQ;
-			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
 				/* Setup a msg to an ION. */
