@@ -837,8 +837,10 @@ msl_bmap_cache_rls(struct bmap *b)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_TOFREE;
-		if (!e->bmpce_ref)
+		if (!e->bmpce_ref) {
+			OPSTAT_INCR("msl.bmap-release-page");
 			bmpce_free(e, bmpc);
+		}
 		BMPCE_ULOCK(e);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
