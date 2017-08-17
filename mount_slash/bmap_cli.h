@@ -82,7 +82,6 @@ void	 msbwatchthr_main(struct psc_thread *);
 
 extern struct timespec msl_bmap_timeo_inc;
 
-extern int slc_bmap_max_cache;
 
 static __inline struct bmap *
 bci_2_bmap(struct bmap_cli_info *bci)

@@ -995,9 +995,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
 
-	psc_ctlparam_register_var("sys.bmap_max_cache",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
-
 	psc_ctlparam_register_var("sys.bmap_reassign",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_bmap_reassign);
 
