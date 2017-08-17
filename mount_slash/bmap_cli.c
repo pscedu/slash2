@@ -1025,6 +1025,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_dynarray_add(&bmaps, b);
 			b->bcm_flags |= BMAPF_BUSY;
 			BMAP_ULOCK(b);
+			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
+				break;
 			continue;
  evict:
 
