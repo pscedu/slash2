@@ -827,12 +827,18 @@ msl_bmap_cache_rls(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct bmap_pagecache_entry *e;
+	struct bmap_pagecache_entry *e, *next;
 
 	pfl_rwlock_rdlock(&bci->bci_rwlock);
-	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
+	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
+	    e = next) {
+
+		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e); 
+
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_TOFREE;
+		if (!e->bmpce_ref)
+			bmpce_free(e, bmpc);
 		BMPCE_ULOCK(e);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
