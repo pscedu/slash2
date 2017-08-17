@@ -207,6 +207,8 @@ struct bmap {
 		}							\
 	} while (0)
 
+#if 0
+
 #define BMAP_WAIT_BUSY(b)						\
 	do {								\
 		pthread_t _pthr = pthread_self();			\
@@ -236,6 +238,8 @@ struct bmap {
 		psc_assert((b)->bcm_flags & BMAPF_BUSY);		\
 		psc_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
+
+#endif
 
 /*
  * TODO: Convert all callers to lock the bmap before start or done type.
