@@ -41,8 +41,6 @@
 #include "slerr.h"
 
 /* number of bmaps to allow before reaper kicks into gear */
-#define BMAP_CACHE_MAX		1024
-
 /*
  * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
  */
@@ -63,16 +61,10 @@ enum {
 
 void msl_bmap_reap_init(struct bmap *);
 
-int slc_bmap_max_cache = BMAP_CACHE_MAX;
-
 void
 msl_bmap_reap(void)
 {
-	/* XXX force expire and issue a wakeup */
-
-	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&msl_bmaptimeoutq) > slc_bmap_max_cache)
-		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
 /*
