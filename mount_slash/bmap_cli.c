@@ -395,6 +395,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
  		 */
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+		msl_bmap_reap_init(b);
 	}
 
 	/*
@@ -519,6 +520,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	if (!rc) {
 		OPSTAT_INCR("bmap-extend-ok");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+		msl_bmap_reap_init(b);
 	} else {
 		OPSTAT_INCR("bmap-extend-err");
 		msl_bmap_cache_rls(b);
@@ -877,6 +879,7 @@ msl_bmap_reap_init(struct bmap *b)
 	 * XXX hit crash because it is already on the list. Called from
 	 * msl_bmap_retrieve_cb().
 	 */
+	psc_assert(!(b->bcm_flags & BMAPF_TIMEOQ));
 	b->bcm_flags |= BMAPF_TIMEOQ;
 	lc_addtail(&msl_bmaptimeoutq, bci);
 }
