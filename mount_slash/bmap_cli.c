@@ -1080,8 +1080,8 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_BUSY;
 			msl_bmap_lease_extend(b, 0);
-			BMAP_LOCK(b);
 		}
 
 		psc_dynarray_reset(&rels);
