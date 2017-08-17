@@ -51,7 +51,7 @@
 struct fidc_membh;
 struct srt_bmapdesc;
 
-#define	MSL_BMAP_COUNT		128
+#define	MSL_BMAP_COUNT		1024
 #define	SLI_BMAP_COUNT		1024
 #define	MDS_BMAP_COUNT		4096
 
