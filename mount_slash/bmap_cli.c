@@ -971,7 +971,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, nitems;
+	int exiting, i, nitems, skip, didwork;
 	struct bmap_pagecache *bmpc;
 
 
@@ -985,6 +985,8 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
+		skip = 0;
+		didwork = 0;
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
@@ -1002,8 +1004,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
-			if (!BMAP_TRYLOCK(b))
+			if (!BMAP_TRYLOCK(b)) {
+				skip = 1;
 				continue;
+			}
 			if (b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1012,6 +1016,9 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
+			/*
+ 			 * Separate two conditions for easy debugging.
+ 			 */
 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
 			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
 				msl_bmap_cache_rls(b);
@@ -1062,6 +1069,7 @@ msbwatchthr_main(struct psc_thread *thr)
  evict:
 
 			nitems--;
+			didwork = 1;
 			/*
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
@@ -1119,6 +1127,12 @@ msbwatchthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 		psc_dynarray_reset(&bmaps);
 
+		if (skip) {
+			pscthr_yield();
+			continue;
+		}
+		if (didwork)
+			continue;
 		if (nitems)
 			continue;
 
