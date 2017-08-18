@@ -1125,7 +1125,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 		psc_dynarray_reset(&bmaps);
 
-		if (didwork || nitems) {
+		if (didwork) {
 			pscthr_yield();
 			continue;
 		}
