@@ -973,7 +973,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, nitems, skip, didwork;
+	int exiting, i, nitems, didwork;
 	struct bmap_pagecache *bmpc;
 
 
@@ -987,7 +987,6 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-		skip = 0;
 		didwork = 0;
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
@@ -1006,10 +1005,8 @@ msbwatchthr_main(struct psc_thread *thr)
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
-			if (!BMAP_TRYLOCK(b)) {
-				skip = 1;
+			if (!BMAP_TRYLOCK(b))
 				continue;
-			}
 			if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_BUSY)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1128,14 +1125,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 		psc_dynarray_reset(&bmaps);
 
-		if (skip) {
+		if (didwork || nitems) {
 			pscthr_yield();
 			continue;
 		}
-		if (didwork)
-			continue;
-		if (nitems)
-			continue;
 
 		PFL_GETTIMESPEC(&curtime);
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
