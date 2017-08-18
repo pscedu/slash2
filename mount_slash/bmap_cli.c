@@ -984,6 +984,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	psc_dynarray_ensurelen(&bmaps, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
+
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
@@ -992,7 +993,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
 
-		nitems = lc_nitems(&msl_bmaptimeoutq) / 5;
+		nitems = lc_nitems(&msl_bmaptimeoutq);
+		if (nitems > MSL_BMAP_COUNT)
+			nitems = nitems - MSL_BMAP_COUNT;
+
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -1102,6 +1106,9 @@ msbwatchthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 		psc_dynarray_reset(&bmaps);
+
+		if (nitems)
+			continue;
 
 		PFL_GETTIMESPEC(&curtime);
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
