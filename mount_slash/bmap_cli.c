@@ -377,6 +377,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	int rc;
 
 	BMAP_LOCK(b);
@@ -395,7 +396,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
  		 */
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-		msl_bmap_reap_init(b);
+		lc_move2tail(&msl_bmaptimeoutq, bci);
 	}
 
 	/*
@@ -439,6 +440,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct timespec ts;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	int secs, rc;
 
 	thr = pscthr_get();
@@ -520,7 +522,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	if (!rc) {
 		OPSTAT_INCR("bmap-extend-ok");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-		msl_bmap_reap_init(b);
+		lc_move2tail(&msl_bmaptimeoutq, bci);
 	} else {
 		OPSTAT_INCR("bmap-extend-err");
 		msl_bmap_cache_rls(b);
@@ -1008,7 +1010,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				skip = 1;
 				continue;
 			}
-			if (b->bcm_flags & BMAPF_TOFREE) {
+			if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_BUSY)) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1056,10 +1058,10 @@ msbwatchthr_main(struct psc_thread *thr)
  			 */
 			if (bmap_2_bci(b)->bci_etime.tv_sec - curtime.tv_sec < 
 			    BMAP_TIMEO_MIN / 2) {
-				b->bcm_flags &= ~BMAPF_TIMEOQ;
-				lc_remove(&msl_bmaptimeoutq, bci);
+				b->bcm_flags |= BMAPF_BUSY;
 				psc_dynarray_add(&bmaps, b);
 				BMAP_ULOCK(b);
+				didwork = 1;
 				if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
 					break;
 				continue;
@@ -1119,7 +1121,6 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_BUSY;
 			msl_bmap_lease_extend(b, 0);
 		}
 
