@@ -994,7 +994,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		PFL_GETTIMESPEC(&curtime);
 
 		nitems = lc_nitems(&msl_bmaptimeoutq);
-		if (nitems > MSL_BMAP_COUNT)
+		if (nitems > MSL_MAX_BMAP_COUNT)
 			nitems = nitems - MSL_BMAP_COUNT;
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);

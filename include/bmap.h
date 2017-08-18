@@ -55,6 +55,8 @@ struct srt_bmapdesc;
 #define	SLI_BMAP_COUNT		1024
 #define	MDS_BMAP_COUNT		4096
 
+#define MSL_MAX_BMAP_COUNT	MSL_BMAP_COUNT*8
+
 /*
  * Basic information about bmaps shared by all MDS, IOS, and CLI.
  * @bcs_crcstates: bits describing the state of each sliver
