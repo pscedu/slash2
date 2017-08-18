@@ -31,7 +31,7 @@
 #include "slashrpc.h"
 
 #define BMAP_TIMEO_MIN		 40		/* keep in sync with the MDS */
-#define BMAP_TIMEO_TWEAK	  5		/* RPC delay, etc */
+#define BMAP_TIMEO_INC	  	  5		/* RPC delay, etc */
 
 /*
  * Private data associated with a bmap used by a SLASH2 client.

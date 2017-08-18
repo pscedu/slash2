@@ -165,7 +165,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	 * expiration time.
 	 */
 	PFL_GETTIMESPEC(&bci->bci_etime);
-	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_TWEAK);
+	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_INC);
 	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
 
 	*bmap_2_sbd(b) = *sbd;
