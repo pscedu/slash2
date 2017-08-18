@@ -995,7 +995,7 @@ msbwatchthr_main(struct psc_thread *thr)
 
 		nitems = lc_nitems(&msl_bmaptimeoutq);
 		if (nitems > MSL_MAX_BMAP_COUNT)
-			nitems = nitems - MSL_BMAP_COUNT;
+			nitems = nitems - MSL_MAX_BMAP_COUNT;
 		else
 			nitems = 0;
 
