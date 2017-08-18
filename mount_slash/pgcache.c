@@ -356,23 +356,19 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
 	struct bmap *b = bmpc_2_bmap(bmpc);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
-	int locked;
 
 	psc_assert(e->bmpce_ref == 0);
+	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
+
+	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
+
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	if (e->bmpce_flags & BMPCEF_READAHEAD)
 		OPSTAT_INCR("msl.readahead-waste");
 
 	BMPCE_ULOCK(e);
 
-	locked = pfl_rwlock_haswrlock(&bci->bci_rwlock);
-	if (!locked)
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
-	if (!locked)
-		pfl_rwlock_unlock(&bci->bci_rwlock);
-
-	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
 
 	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
