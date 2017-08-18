@@ -387,6 +387,9 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 void
 bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
+	struct bmap *b = e->bmpce_bmap;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+
 	LOCK_ENSURE(&e->bmpce_lock);
 
 	psc_assert(e->bmpce_ref > 0);
@@ -433,7 +436,9 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 			bmpce_reaper(bmpce_pool);
 		return;
 	}
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	bmpce_free(e, bmpc);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
 
 struct bmpc_ioreq *
@@ -542,6 +547,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct bmap_pagecache_entry *e, *t;
 	struct bmap_pagecache *bmpc;
 	struct bmap *b;
+	struct bmap_cli_info *bci;
 
 	POOL_LOCK(bmpce_pool);
 	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
@@ -585,8 +591,12 @@ bmpce_reaper(struct psc_poolmgr *m)
 	DYNARRAY_FOREACH(e, i, &a) {
 		BMPCE_LOCK(e);
  		b = e->bmpce_bmap;
+		bci = bmap_2_bci(b);
  		bmpc = bmap_2_bmpc(b);
+
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
 		bmpce_free(e, bmpc);
+		pfl_rwlock_unlock(&bci->bci_rwlock);
 	}
 
 	nfreed = psc_dynarray_len(&a);

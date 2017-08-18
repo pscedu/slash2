@@ -823,7 +823,7 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e, *next;
 
-	pfl_rwlock_rdlock(&bci->bci_rwlock);
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
 	    e = next) {
 
