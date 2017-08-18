@@ -1014,18 +1014,28 @@ msbwatchthr_main(struct psc_thread *thr)
 
 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
 			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
-				b->bcm_flags |= BMAPF_TOFREE;
 				msl_bmap_cache_rls(b);
 				OPSTAT_INCR("msl.bmap-expire");
-				BMAP_ULOCK(b);
-				goto evict;
+				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+					b->bcm_flags |= BMAPF_TOFREE;
+					BMAP_ULOCK(b);
+					goto evict;
+				} else {
+					BMAP_ULOCK(b);
+					continue;
+				}
 			}
 			if (nitems) {
-				b->bcm_flags |= BMAPF_TOFREE;
 				msl_bmap_cache_rls(b);
 				OPSTAT_INCR("msl.bmap-expel");
-				BMAP_ULOCK(b);
-				goto evict;
+				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+					b->bcm_flags |= BMAPF_TOFREE;
+					BMAP_ULOCK(b);
+					goto evict;
+				} else {
+					BMAP_ULOCK(b);
+					continue;
+				}
 			}
 
 			bmpc = bmap_2_bmpc(b);
