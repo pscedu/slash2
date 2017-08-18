@@ -870,8 +870,6 @@ msl_bmap_reap_init(struct bmap *b)
 			b->bcm_flags |= BMAPF_DIO;
 	}
 
-	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-
 	/*
 	 * Add ourselves here otherwise zero length files will not be
 	 * removed.
@@ -880,8 +878,10 @@ msl_bmap_reap_init(struct bmap *b)
 	 * msl_bmap_retrieve_cb().
 	 */
 	psc_assert(!(b->bcm_flags & BMAPF_TIMEOQ));
+
 	b->bcm_flags |= BMAPF_TIMEOQ;
 	lc_addtail(&msl_bmaptimeoutq, bci);
+	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 }
 
 int
@@ -996,6 +996,8 @@ msbwatchthr_main(struct psc_thread *thr)
 		nitems = lc_nitems(&msl_bmaptimeoutq);
 		if (nitems > MSL_MAX_BMAP_COUNT)
 			nitems = nitems - MSL_BMAP_COUNT;
+		else
+			nitems = 0;
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {

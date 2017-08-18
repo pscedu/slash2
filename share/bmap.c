@@ -140,6 +140,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
+		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_bmpc.bmpc_tree */
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
