@@ -407,7 +407,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	 * failed.
 	 */
 
-	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_BUSY);
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 
@@ -497,7 +497,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+			b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_BUSY);
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
