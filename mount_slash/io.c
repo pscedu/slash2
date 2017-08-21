@@ -1555,6 +1555,10 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		}
 		if (i - j + 1 == BMPC_MAXBUFSRPC ||
 		    i == psc_dynarray_len(&pages) - 1) {
+			/* 
+			 * 08/21/2017: weird segfault 11 in malloc_consolidate() 
+			 * called from here.
+			 */
 			rc = msl_read_rpc_launch(r, &pages, j, i - j + 1);
 			if (rc) {
 				i++;
