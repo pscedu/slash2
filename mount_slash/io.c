@@ -2293,6 +2293,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		r = q->mfsrq_biorq[i];
 
 		if (r->biorq_flags & BIORQ_DIO)
+			/*
+ 			 * This is blocking, do we don't have to worry
+ 			 * about reference count on mfh.
+ 			 */
 			rc = msl_pages_dio_getput(r);
 		else
 			rc = msl_fetch_pages(r);
