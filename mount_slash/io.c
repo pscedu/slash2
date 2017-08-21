@@ -2337,6 +2337,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (r)
 			msl_biorq_release(r);
 	}
+	msl_complete_fsrq(q, 0);
 	return;
 
  out3:
