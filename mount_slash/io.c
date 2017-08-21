@@ -637,6 +637,9 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	q->mfsrq_ref--;
 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
 	if (q->mfsrq_ref) {
+		/*
+ 		 * See commit commit 8f47d5820219f94f7b2543d2bb2d98eac14e2a0f
+ 		 */
 		if (r0)
 			biorq_incref(r0);
 		MFH_ULOCK(mfh);
