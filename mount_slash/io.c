@@ -2222,11 +2222,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
 
 		/*
-		 * Re-relativize the offset if this request spans more
-		 * than 1 bmap.
+		 * Re-relativize the offset if this request spans
+		 * more than 1 bmap.
 		 */
-		r = q->mfsrq_biorq[i];
-
 		BMAP_ULOCK(b);
 
 		/*
