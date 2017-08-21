@@ -2326,12 +2326,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
 		/*
- 		 * We drop the reference here, but keep its value so we
- 		 * can do sanity check in msl_biorq_complete_fsrq().
- 		 *
- 		 * If we did not launch an RPC for the request, it will
- 		 * destroyed here.
+ 		 * If we did not launch an RPC for the request, we have
+ 		 * the only reference. Otherwise, we wait the RPCs for
+ 		 * a request to complete.
  		 */
+		BIORQ_LOCK(r);
+		psc_assert(r->biorq_ref == 1);
+		BIORQ_ULOCK(r);
+
 		r = q->mfsrq_biorq[i];
 		if (r)
 			msl_biorq_release(r);
