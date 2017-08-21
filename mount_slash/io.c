@@ -696,6 +696,9 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 		    abs(q->mfsrq_err));
 	}
 
+	/*
+ 	 * 08/20/2017: Weird double free or corruption called from here.
+ 	 */
 	PSCFREE(oiov);
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
