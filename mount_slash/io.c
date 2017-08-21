@@ -2321,7 +2321,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  out2:
 	/*
 	 * Step 4: finish up biorqs.  Copy to satisfy READ back to user
-	 * occurs in this step.
+	 * occurs in this step. The request is done when all its biorqs
+	 * are gone, which may happen in this thread or some callback.
+	 * The latter should only be possible when AIO is involved.
 	 */
 	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
@@ -2330,19 +2332,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  		 * can do sanity check in msl_biorq_complete_fsrq().
  		 *
  		 * If we did not launch an RPC for the request, it will
- 		 * destroyed here.
+ 		 * be destroyed here.
  		 */
 		r = q->mfsrq_biorq[i];
 		if (r)
 			msl_biorq_release(r);
 	}
-
-	/*
-	 * Step 5: drop our reference to the fsrq.  The last drop will
-	 * reply to the userland file system interface. So we may or 
-	 * may not finish the entire I/O here.
-	 */
-	msl_complete_fsrq(q, 0, NULL);
 	return;
 
  out3:
