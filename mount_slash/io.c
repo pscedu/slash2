@@ -609,8 +609,7 @@ slc_fsreply_write(struct fidc_membh *f, struct pscfs_req *pfr,
 }
 
 void
-msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
-    struct bmpc_ioreq *r0)
+msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 {
 	void *oiov;
 	struct msl_fhent *mfh;
@@ -759,7 +758,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (needflush)
 		msl_pages_schedflush(r);
 
-	msl_complete_fsrq(q, len, r);
+	msl_complete_fsrq(q, len);
 }
 
 /*
