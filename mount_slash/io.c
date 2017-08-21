@@ -612,7 +612,7 @@ void
 msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
     struct bmpc_ioreq *r0)
 {
-	void *oiov = q->mfsrq_iovs;
+	void *oiov;
 	struct msl_fhent *mfh;
 	struct pscfs_req *pfr;
 	struct bmpc_ioreq *r;
@@ -642,6 +642,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 		MFH_ULOCK(mfh);
 		return;
 	}
+	oiov = q->mfsrq_iovs;
 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
 	mfh_decref(mfh);
