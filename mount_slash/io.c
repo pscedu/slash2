@@ -637,11 +637,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 	q->mfsrq_ref--;
 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
 	if (q->mfsrq_ref) {
-		/*
- 		 * See commit commit 8f47d5820219f94f7b2543d2bb2d98eac14e2a0f
- 		 */
-		if (r0)
-			biorq_incref(r0);
 		MFH_ULOCK(mfh);
 		return;
 	}
@@ -703,16 +698,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
  	 * 08/20/2017: Weird double free or corruption called from here.
  	 */
 	PSCFREE(oiov);
-
-	for (i = 0; i < MAX_BMAPS_REQ; i++) {
-		r = q->mfsrq_biorq[i];
-		if (!r)
-			break;
-		if (r == r0)
-			continue;
-		msl_biorq_release(r);
-	}
-
 	psc_pool_return(msl_iorq_pool, q);
 }
 
@@ -2336,6 +2321,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	mfsrq_seterr(q, rc);
 	for (i = 0; i < nr; i++) {
+		/*
+ 		 * We drop the reference here, but keep its value so we
+ 		 * can do sanity check in msl_biorq_complete_fsrq().
+ 		 *
+ 		 * If we did not launch an RPC for the request, it will
+ 		 * destroyed here.
+ 		 */
 		r = q->mfsrq_biorq[i];
 		if (r)
 			msl_biorq_release(r);
