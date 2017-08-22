@@ -585,12 +585,12 @@ bmpce_reaper(struct psc_poolmgr *m)
 	LIST_CACHE_ULOCK(&msl_lru_pages);
 
 	DYNARRAY_FOREACH(e, i, &a) {
-		BMPCE_LOCK(e);
  		b = e->bmpce_bmap;
 		bci = bmap_2_bci(b);
  		bmpc = bmap_2_bmpc(b);
 
 		pfl_rwlock_wrlock(&bci->bci_rwlock);
+		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 	}
