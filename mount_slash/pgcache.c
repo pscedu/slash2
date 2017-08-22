@@ -432,8 +432,12 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 			bmpce_reaper(bmpce_pool);
 		return;
 	}
-	pfl_rwlock_wrlock(&bci->bci_rwlock);
+
 	e->bmpce_flags |= BMPCEF_TOFREE;
+	BMPCE_ULOCK(e);
+
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
+	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
