@@ -342,11 +342,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		psc_pool_return(bmpce_pool, e2);
 	}
 
-	if (!rc) {
-		psclog_max("Get page %p (ref = %d) at %d\n", 
-		    e, e->bmpce_ref, __LINE__);
+	if (!rc)
 		psc_dynarray_add(&r->biorq_pages, e);
-	}
 
 	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
 	    "n=%d foff=%"PRIx64" rc = %d", 
@@ -392,8 +389,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	psc_assert(e->bmpce_ref > 0);
 	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
-	psclog_max("Drop page ref %p (ref = %d) at %d\n", 
-	    e,  e->bmpce_ref, __LINE__);
 	if (e->bmpce_ref > 0) {
 		BMPCE_ULOCK(e);
 		return;
@@ -437,7 +432,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		return;
 	}
 
-	psclog_max("Mark page free %p at %d\n", e, __LINE__);
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	BMPCE_ULOCK(e);
 
@@ -577,7 +571,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 			continue;
 		}
 
-		psclog_max("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 
