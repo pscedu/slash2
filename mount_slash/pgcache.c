@@ -379,12 +379,6 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 
 	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
-
-	/*
- 	 * This could be the last reference to the bmap if we are called
- 	 * from reaper.
- 	 */
-	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 }
 
 void
@@ -451,6 +445,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
 	pfl_rwlock_unlock(&bci->bci_rwlock);
+	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 }
 
 struct bmpc_ioreq *
@@ -609,6 +604,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
 		pfl_rwlock_unlock(&bci->bci_rwlock);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 
 	nfreed = psc_dynarray_len(&a);

@@ -846,6 +846,9 @@ msl_bmap_cache_rls(struct bmap *b)
 
 		bmpce_free(e, bmpc);
 
+		psc_atomic32_dec(&b->bcm_opcnt);
+		psc_assert(psc_atomic32_read(&b->bcm_opcnt));
+
 		OPSTAT_INCR("msl.bmap-release-page");
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
