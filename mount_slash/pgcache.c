@@ -568,7 +568,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 		}
 
 		e->bmpce_flags |= BMPCEF_TOFREE;
-
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 
 		if (!idle)

@@ -840,8 +840,8 @@ msl_bmap_cache_rls(struct bmap *b)
 		if (!e->bmpce_ref) {
 			OPSTAT_INCR("msl.bmap-release-page");
 			bmpce_free(e, bmpc);
-		}
-		BMPCE_ULOCK(e);
+		} else
+			BMPCE_ULOCK(e);
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
