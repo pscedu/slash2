@@ -85,10 +85,11 @@ struct bmap_page_entry {
 #define BMPCEF_DATARDY		(1 <<  0)	/* data loaded in memory */
 #define BMPCEF_FAULTING		(1 <<  1)	/* loading via RPC */
 #define BMPCEF_TOFREE		(1 <<  2)	/* eviction in progress */
-#define BMPCEF_LRU		(1 <<  3)	/* on LRU list */
-#define BMPCEF_EIO		(1 <<  4)	/* I/O error in bmpce_rc */
-#define BMPCEF_AIOWAIT		(1 <<  5)	/* wait on async read */
-#define BMPCEF_READAHEAD	(1 <<  6)	/* populated from readahead */
+#define BMPCEF_DISCARD		(1 <<  3)	/* free me when ref = 0 */
+#define BMPCEF_LRU		(1 <<  4)	/* on LRU list */
+#define BMPCEF_EIO		(1 <<  5)	/* I/O error in bmpce_rc */
+#define BMPCEF_AIOWAIT		(1 <<  6)	/* wait on async read */
+#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
