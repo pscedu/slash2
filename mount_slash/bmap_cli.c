@@ -832,6 +832,10 @@ msl_bmap_cache_rls(struct bmap *b)
 		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e); 
 
 		BMPCE_LOCK(e);
+		if (e->bmpce_flags & BMPCEF_TOFREE) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
 		e->bmpce_flags |= BMPCEF_TOFREE;
 		if (!e->bmpce_ref) {
 			OPSTAT_INCR("msl.bmap-release-page");
