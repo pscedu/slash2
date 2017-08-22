@@ -357,9 +357,12 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	struct bmap *b = bmpc_2_bmap(bmpc);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
+	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
+
+	BMPCE_LOCK(e);
+
 	psc_assert(e->bmpce_ref == 0);
 	psc_assert(e->bmpce_flags & BMPCEF_TOFREE);
-	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
@@ -411,8 +414,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
-	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
-	   !(e->bmpce_flags & BMPCEF_DISCARD)) {
+	   !(e->bmpce_flags & BMPCEF_TOFREE)) { 
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		e->bmpce_flags |= BMPCEF_LRU;
 
@@ -433,16 +435,11 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 			bmpce_reaper(bmpce_pool);
 		return;
 	}
-	if (e->bmpce_flags & BMPCEF_TOFREE) {
-		BMPCE_ULOCK(e);
-		return;
-	}
 
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	BMPCE_ULOCK(e);
 
 	pfl_rwlock_wrlock(&bci->bci_rwlock);
-	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
@@ -599,7 +596,6 @@ bmpce_reaper(struct psc_poolmgr *m)
  		bmpc = bmap_2_bmpc(b);
 
 		pfl_rwlock_wrlock(&bci->bci_rwlock);
-		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 	}
