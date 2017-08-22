@@ -267,7 +267,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			 * and the page is re-used now.
 			 */
 			if ((e->bmpce_flags & BMPCEF_EIO) ||
-			    (e->bmpce_flags & BMPCEF_TOFREE)) {
+			    (e->bmpce_flags & BMPCEF_TOFREE) ||
+			    (e->bmpce_flags & BMPCEF_DISCARD)) {
 				BMPCE_ULOCK(e);
 				pfl_rwlock_unlock(&bci->bci_rwlock);
 				tm.tv_sec = 0;
@@ -341,8 +342,11 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 		psc_pool_return(bmpce_pool, e2);
 	}
 
-	if (!rc)
+	if (!rc) {
+		psclog_max("Get page %p (ref = %d) at %d\n", 
+		    e, e->bmpce_ref, __LINE__);
 		psc_dynarray_add(&r->biorq_pages, e);
+	}
 
 	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
 	    "n=%d foff=%"PRIx64" rc = %d", 
@@ -359,7 +363,7 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 
 	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
 
-	BMPCE_LOCK(e);
+	BMPCE_LOCK_ENSURE(e);
 
 	psc_assert(e->bmpce_ref == 0);
 	psc_assert(e->bmpce_flags & BMPCEF_TOFREE);
@@ -394,6 +398,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	psc_assert(e->bmpce_ref > 0);
 	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
+	psclog_max("Drop page ref %p (ref = %d) at %d\n", 
+	    e,  e->bmpce_ref, __LINE__);
 	if (e->bmpce_ref > 0) {
 		BMPCE_ULOCK(e);
 		return;
@@ -414,7 +420,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
-	   !(e->bmpce_flags & BMPCEF_TOFREE)) { 
+	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
+	   !(e->bmpce_flags & BMPCEF_DISCARD)) { 
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		e->bmpce_flags |= BMPCEF_LRU;
 
@@ -436,10 +443,12 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		return;
 	}
 
+	psclog_max("Mark page free %p at %d\n", e, __LINE__);
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	BMPCE_ULOCK(e);
 
 	pfl_rwlock_wrlock(&bci->bci_rwlock);
+	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 }
@@ -573,6 +582,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 			continue;
 		}
 
+		psclog_max("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 
@@ -596,6 +606,7 @@ bmpce_reaper(struct psc_poolmgr *m)
  		bmpc = bmap_2_bmpc(b);
 
 		pfl_rwlock_wrlock(&bci->bci_rwlock);
+		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 	}

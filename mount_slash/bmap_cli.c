@@ -832,8 +832,19 @@ msl_bmap_cache_rls(struct bmap *b)
 		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e); 
 
 		BMPCE_LOCK(e);
+		e->bmpce_flags |= BMPCEF_DISCARD;
+		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
+		psclog_max("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
-		BMPCE_ULOCK(e);
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		lc_remove(&msl_lru_pages, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
+
+		bmpce_free(e, bmpc);
 
 		OPSTAT_INCR("msl.bmap-release-page");
 	}
