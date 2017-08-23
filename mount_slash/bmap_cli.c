@@ -61,11 +61,20 @@ enum {
 
 void msl_bmap_reap_init(struct bmap *);
 
+/*
+ * Easy debugging with separate lock/wait combo.
+ */
+int				 msl_bmap_low;
+psc_spinlock_t                   msl_bmap_lock = SPINLOCK_INIT;
+struct psc_waitq		 msl_bmap_waitq = PSC_WAITQ_INIT("bwait");
+
 int
-msl_bmap_reap(struct psc_poolmgr *m)
+msl_bmap_reap(__unusedx struct psc_poolmgr *m)
 {
-	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	msl_bmap_low = 1;
+	psc_waitq_wakeall(&msl_bmap_waitq);
 	pscthr_yield();
+	OPSTAT_INCR("bmap-reap");
 	return 0;
 }
 
@@ -1104,7 +1113,6 @@ msbreleasethr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
 
-		nitems = lc_nitems(&msl_bmaptimeoutq);
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
@@ -1130,7 +1138,7 @@ msbreleasethr_main(struct psc_thread *thr)
 				goto evict;
 			}
 			BMAP_ULOCK(b);
-			if (nitems < MSL_MAX_BMAP_COUNT)
+			if (!msl_bmap_low);
 				continue;
  evict:
 
@@ -1186,9 +1194,10 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
 		if (!exiting) {
-			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
-			    &msl_bmaptimeoutq.plc_lock, &nto);
+			spinlock(&msl_bmap_lock);
+			msl_bmap_low = 0;
+			psc_waitq_waitabs(&msl_bmap_waitq, 
+			    &msl_bmap_lock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
