@@ -1083,7 +1083,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, nitems;
+	int exiting, i;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -1101,10 +1101,6 @@ msbreleasethr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-
-		nitems = lc_nitems(&msl_bmaptimeoutq) / 15;
-		if (nitems < 5)
-			nitems = 5;
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
@@ -1131,11 +1127,9 @@ msbreleasethr_main(struct psc_thread *thr)
 				goto evict;
 			}
 			BMAP_ULOCK(b);
-			if (nitems <= 0)
-				continue;
+			continue;
  evict:
 
-			nitems--;
 			/*
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
