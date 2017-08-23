@@ -71,8 +71,11 @@ struct psc_waitq		 msl_bmap_waitq = PSC_WAITQ_INIT("bwait");
 int
 msl_bmap_reap(__unusedx struct psc_poolmgr *m)
 {
+	spinlock(&msl_bmap_lock);
 	msl_bmap_low = 1;
 	psc_waitq_wakeall(&msl_bmap_waitq);
+	freelock(&msl_bmap_lock);
+
 	pscthr_yield();
 	OPSTAT_INCR("bmap-reap");
 	return 0;
@@ -1094,7 +1097,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, nitems;
+	int exiting, i;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -1138,7 +1141,7 @@ msbreleasethr_main(struct psc_thread *thr)
 				goto evict;
 			}
 			BMAP_ULOCK(b);
-			if (!msl_bmap_low);
+			if (!msl_bmap_low)
 				continue;
  evict:
 
