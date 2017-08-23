@@ -976,8 +976,6 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbwatchthr_main(struct psc_thread *thr)
 {
-	struct psc_dynarray rels = DYNARRAY_INIT;
-	struct psc_dynarray bcis = DYNARRAY_INIT;
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct timespec nto, curtime;
 	struct resm_cli_info *rmci;
@@ -993,8 +991,6 @@ msbwatchthr_main(struct psc_thread *thr)
 	 * XXX: just put the resm's in the dynarray.  When pushing out
 	 * the bid's, assume an ion unless resm == msl_rmc_resm.
 	 */
-	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
-	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bmaps, MAX_BMAP_RELEASE);
 
 	while (pscthr_run(thr)) {
@@ -1007,12 +1003,6 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
-
-		nitems = lc_nitems(&msl_bmaptimeoutq);
-		if (nitems > MSL_MAX_BMAP_COUNT)
-			nitems = nitems - MSL_MAX_BMAP_COUNT;
-		else
-			nitems = 0;
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
@@ -1027,33 +1017,10 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			/*
- 			 * Separate two conditions for easy debugging.
- 			 */
-			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
-			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
-				msl_bmap_cache_rls(b);
-				OPSTAT_INCR("msl.bmap-expire");
-				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-					b->bcm_flags |= BMAPF_TOFREE;
-					BMAP_ULOCK(b);
-					goto evict;
-				} else {
-					BMAP_ULOCK(b);
-					continue;
-				}
-			}
-			if (nitems) {
-				msl_bmap_cache_rls(b);
-				OPSTAT_INCR("msl.bmap-expel");
-				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-					b->bcm_flags |= BMAPF_TOFREE;
-					BMAP_ULOCK(b);
-					goto evict;
-				} else {
-					BMAP_ULOCK(b);
-					continue;
-				}
+			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+			    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+				BMAP_ULOCK(b);
+				continue;
 			}
 
 			bmpc = bmap_2_bmpc(b);
@@ -1062,24 +1029,18 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			}
 				
-			/*
- 			 * If this bmap has cached data, extend the bmap if necesary.
- 			 */
-			if (bmap_2_bci(b)->bci_etime.tv_sec - curtime.tv_sec < 
-			    BMAP_TIMEO_MIN / 2) {
-				b->bcm_flags |= BMAPF_BUSY;
-				psc_dynarray_add(&bmaps, b);
+			b->bcm_flags |= BMAPF_BUSY;
+			psc_dynarray_add(&bmaps, b);
+			didwork = 1;
+			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE) {
 				BMAP_ULOCK(b);
-				didwork = 1;
-				if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
-					break;
-				continue;
+				break;
 			}
+
 			BMAP_ULOCK(b);
 			continue;
  evict:
 
-			nitems--;
 			didwork = 1;
 			/*
 			 * A bmap should be taken off the flush queue
@@ -1089,52 +1050,15 @@ msbwatchthr_main(struct psc_thread *thr)
 
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&msl_bmaptimeoutq, bci);
-			psc_dynarray_add(&bcis, bci);
-			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
 		}
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
-
-		DYNARRAY_FOREACH(bci, i, &bcis) {
-			b = bci_2_bmap(bci);
-
-			if (b->bcm_flags & BMAPF_WR) {
-				/* Setup a msg to an ION. */
-				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
-
-				resm = libsl_ios2resm(bmap_2_ios(b));
-				rmci = resm2rmci(resm);
-
-				DEBUG_BMAP(PLL_DIAG, b, "res(%s)",
-				    resm->resm_res->res_name);
-				OPSTAT_INCR("msl.bmap-release-write");
-			} else {
-				fci = fcmh_get_pri(b->bcm_fcmh);
-				resm = fci->fci_resm;
-				rmci = resm2rmci(resm);
-				OPSTAT_INCR("msl.bmap-release-read");
-			}
-
-			memcpy(&rmci->rmci_bmaprls.sbd[rmci->rmci_bmaprls.nbmaps],
-			    &bci->bci_sbd, sizeof(bci->bci_sbd));
-
-			rmci->rmci_bmaprls.nbmaps++;
-			psc_dynarray_add_ifdne(&rels, resm);
-
-			DEBUG_BMAP(PLL_DEBUG, b, "release");
-			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-		}
-
-		DYNARRAY_FOREACH(resm, i, &rels)
-			msl_bmap_release(resm);
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
 		}
 
-		psc_dynarray_reset(&rels);
-		psc_dynarray_reset(&bcis);
 		psc_dynarray_reset(&bmaps);
 
 		if (didwork) {
@@ -1150,8 +1074,6 @@ msbwatchthr_main(struct psc_thread *thr)
 			    &msl_bmaptimeoutq.plc_lock, &nto);
 		}
 	}
-	psc_dynarray_free(&rels);
-	psc_dynarray_free(&bcis);
 	psc_dynarray_free(&bmaps);
 }
 
