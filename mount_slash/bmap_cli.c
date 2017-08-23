@@ -61,10 +61,12 @@ enum {
 
 void msl_bmap_reap_init(struct bmap *);
 
-void
-msl_bmap_reap(void)
+int
+msl_bmap_reap(struct psc_poolmgr *m)
 {
 	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	pscthr_yield();
+	return 0;
 }
 
 /*
