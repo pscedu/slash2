@@ -59,6 +59,13 @@ struct srt_bmapdesc;
 #define MSL_MAX_BMAP_COUNT	MSL_BMAP_COUNT*8
 
 /*
+ * Longer time allows a client to cache pages longer and reduces RPC traffic
+ * needed for lease extension.
+ */
+#define BMAP_TIMEO_MAX		600	/* default bmap lease timeout */
+#define BMAP_TIMEO_MIN		 40	/* minimum bmap lease timeout */
+
+/*
  * Basic information about bmaps shared by all MDS, IOS, and CLI.
  * @bcs_crcstates: bits describing the state of each sliver
  *	(BMAP_SLVR_DATA, etc).

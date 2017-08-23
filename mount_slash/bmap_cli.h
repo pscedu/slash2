@@ -30,7 +30,6 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
-#define BMAP_TIMEO_MIN		 40		/* keep in sync with the MDS */
 #define BMAP_TIMEO_INC	  	  5		/* RPC delay, etc */
 
 /*
