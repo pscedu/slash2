@@ -1022,7 +1022,8 @@ msbwatchthr_main(struct psc_thread *thr)
 				skip++;
 				continue;
 			}
-			if (b->bcm_flags & BMAPF_TOFREE) {
+			if (b->bcm_flags & BMAPF_TOFREE ||
+			    b->bcm_flags & BMAPF_REASSIGNREQ) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1066,6 +1067,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			continue;
 		}
 		if (skip) {
+			OPSTAT_INCR("bmap-watch-retry");
 			psc_dynarray_reset(&bmaps);
 			usleep(1000);
 			continue;
