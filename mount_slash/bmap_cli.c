@@ -1111,7 +1111,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_BUSY)) {
+			if (b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1130,12 +1130,9 @@ msbreleasethr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				goto evict;
 			}
-			if (nitems) {
-				BMAP_ULOCK(b);
-				goto evict;
-			}
 			BMAP_ULOCK(b);
-			continue;
+			if (nitems <= 0)
+				continue;
  evict:
 
 			nitems--;
@@ -1145,8 +1142,6 @@ msbreleasethr_main(struct psc_thread *thr)
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-			b->bcm_flags &= ~BMAPF_TIMEOQ;
-			lc_remove(&msl_bmaptimeoutq, bci);
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
@@ -1155,6 +1150,8 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
+			b->bcm_flags &= ~BMAPF_TIMEOQ;
+			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
 				/* Setup a msg to an ION. */
