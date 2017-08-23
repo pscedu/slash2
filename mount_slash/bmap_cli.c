@@ -1155,6 +1155,17 @@ msbwatchthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&bmaps);
 }
 
+void
+msbreleasethr_main(struct psc_thread *thr)
+{
+	 while (pscthr_run(thr)) {
+
+
+
+
+	}
+}
+
 /*
  * Given a bmap, perform a series of lookups to locate the ION csvc.
  * The ION was chosen by the MDS and returned in the msl_bmap_retrieve

@@ -859,13 +859,14 @@ msbmapthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	for (i = 0; i < NUM_BMAP_TIMEOUT_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
-		    sizeof(struct msbwatch_thread), "msbwatchthr%d", i);
-		pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
-		    thr->pscthr_name);
-		pscthr_setready(thr);
-	}
+	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
+	    sizeof(struct msbwatch_thread), "msbwatchthr");
+	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
+
+	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main,
+	    sizeof(struct msbrelease_thread), "msbreleasethr");
 
 #if 0
 	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,

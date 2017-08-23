@@ -52,6 +52,7 @@ enum {
 	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BWATCH,			/* bmap lease watcher */
+	MSTHRT_BRELEASE,		/* bmap lease releaser */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_REAP,			/* pool reap thread */
@@ -82,6 +83,10 @@ struct msbwatch_thread {
 	struct pfl_multiwait		 mbwt_mw;
 };
 
+struct msbrelease_thread {
+	struct pfl_multiwait             mbrt_mw;
+};
+
 struct msflush_thread {
 	int				 mflt_failcnt;
 	struct pfl_multiwait		 mflt_mw;
@@ -103,6 +108,7 @@ struct msreadahead_thread {
 
 PSCTHR_MKCAST(msattrflushthr, msattrflush_thread, MSTHRT_ATTR_FLUSH);
 PSCTHR_MKCAST(msflushthr, msflush_thread, MSTHRT_FLUSH);
+PSCTHR_MKCAST(msbreleasethr, msbrelease_thread, MSTHRT_BRELEASE);
 PSCTHR_MKCAST(msbwatchthr, msbwatch_thread, MSTHRT_BWATCH);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
