@@ -158,7 +158,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 		b->bcm_flags |= BMAPF_DIO;
 
 	/*
-	 * Record the start time.
+	 * Record the expiration time.
 	 *
 	 * XXX the directio status of the bmap needs to be
 	 *     returned by the MDS so we can set the proper
