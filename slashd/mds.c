@@ -66,7 +66,7 @@ int			slm_max_ios = SL_MAX_REPLICAS;
  */
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
-int			slm_max_lease_timeout = BMAP_TIMEO_DEF;
+int			slm_max_lease_timeout = BMAP_TIMEO_MAX;
 
 __static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 

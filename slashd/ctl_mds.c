@@ -544,7 +544,7 @@ slmctlparam_max_lease_set(const char *val)
 	if (endp == val || *endp)
 		rc = -1;
 	else {
-		if (l >= BMAP_TIMEO_MIN)
+		if (l >= BMAP_TIMEO_MIN && l <= BMAP_TIMEO_MAX)
 			slm_max_lease_timeout = l;
 		else
 			rc = -1;
