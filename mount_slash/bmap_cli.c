@@ -1138,21 +1138,21 @@ msbreleasethr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
-			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
-				BMAP_ULOCK(b);
-				goto evict;
-			}
-			BMAP_ULOCK(b);
-			if (!msl_bmap_low)
-				continue;
- evict:
-
 			/*
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+
+			if (msl_bmap_low ||
+			    timespeccmp(&curtime, &bci->bci_etime, >) ||
+			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
+				BMAP_ULOCK(b);
+				goto evict;
+			}
+			BMAP_ULOCK(b);
+			continue;
+ evict:
 
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
