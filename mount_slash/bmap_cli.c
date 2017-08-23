@@ -978,14 +978,10 @@ msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 	struct timespec nto, curtime;
-	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci, *tmp;
-	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
-	struct sl_resm *resm;
-	int exiting, i, nitems, didwork;
+	int exiting, i, skip;
 	struct bmap_pagecache *bmpc;
-
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -995,7 +991,6 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
-		didwork = 0;
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
@@ -1004,12 +999,15 @@ msbwatchthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
 
+		skip = 0;
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
-			if (!BMAP_TRYLOCK(b))
+			if (!BMAP_TRYLOCK(b)) {
+				skip++;
 				continue;
-			if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_BUSY)) {
+			}
+			if (b->bcm_flags & BMAPF_TOFREE) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1023,33 +1021,19 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			}
 
+			/*
+			 * Do not extend if we don't have any data.
+			 */
 			bmpc = bmap_2_bmpc(b);
 			if (RB_EMPTY(&bmpc->bmpc_tree)) {
 				BMAP_ULOCK(b);
 				continue;
 			}
-				
-			b->bcm_flags |= BMAPF_BUSY;
 			psc_dynarray_add(&bmaps, b);
-			didwork = 1;
-			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE) {
-				BMAP_ULOCK(b);
-				break;
-			}
-
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 			BMAP_ULOCK(b);
-			continue;
- evict:
 
-			didwork = 1;
-			/*
-			 * A bmap should be taken off the flush queue
-			 * after all its biorq are finished.
-			 */
-			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
-
-			b->bcm_flags &= ~BMAPF_TIMEOQ;
-			lc_remove(&msl_bmaptimeoutq, bci);
+			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
 				break;
 		}
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
@@ -1057,14 +1041,22 @@ msbwatchthr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
+			BMAP_LOCK(b);
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		}
 
-		psc_dynarray_reset(&bmaps);
-
-		if (didwork) {
+		if (psc_dynarray_len(&bmaps)) {
+			psc_dynarray_reset(&bmaps);
 			pscthr_yield();
 			continue;
 		}
+		if (skip) {
+			psc_dynarray_reset(&bmaps);
+			usleep(1000);
+			continue;
+		}
+
+		psc_dynarray_reset(&bmaps);
 
 		PFL_GETTIMESPEC(&curtime);
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
