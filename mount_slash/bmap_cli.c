@@ -999,7 +999,7 @@ msbwatchthr_main(struct psc_thread *thr)
 	struct timespec nto, curtime;
 	struct bmap_cli_info *bci, *tmp;
 	struct bmapc_memb *b;
-	int exiting, i, skip;
+	int exiting, i;
 	struct bmap_pagecache *bmpc;
 
 	/*
@@ -1018,14 +1018,15 @@ msbwatchthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
 
-		skip = 0;
+		/*
+		 * We always check for lease before accessing cached pages.
+		 * So it is okay if we can't extend lease in time here.
+		 */
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
-			if (!BMAP_TRYLOCK(b)) {
-				skip++;
+			if (!BMAP_TRYLOCK(b))
 				continue;
-			}
 			if (b->bcm_flags & BMAPF_TOFREE ||
 			    b->bcm_flags & BMAPF_REASSIGNREQ ||
 			    b->bcm_flags & BMAPF_LEASEEXTEND) {
@@ -1073,13 +1074,6 @@ msbwatchthr_main(struct psc_thread *thr)
 			pscthr_yield();
 			continue;
 		}
-		if (skip) {
-			OPSTAT_INCR("bmap-watch-retry");
-			psc_dynarray_reset(&bmaps);
-			usleep(1000);
-			continue;
-		}
-
 		psc_dynarray_reset(&bmaps);
 
 		PFL_GETTIMESPEC(&curtime);
