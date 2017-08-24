@@ -372,7 +372,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
+		DEBUG_BMAP(PLL_WARN, b, "retrieve bmap failed: rc=%d",
 		    rc);
 		BMAP_LOCK(b);
 	}
@@ -412,6 +412,10 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 		lc_move2tail(&msl_bmaptimeoutq, bci);
+		OPSTAT_INCR("bmap-extend-cb-ok");
+	} else {
+		msl_bmap_cache_rls(b);
+		OPSTAT_INCR("bmap-extend-cb-ok");
 	}
 
 	/*
