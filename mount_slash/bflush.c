@@ -859,6 +859,11 @@ msbmapthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
+	/*
+ 	 * We have one lease watcher and one lease release thread.
+ 	 * The code is thread-safe though. So we can add more if 
+ 	 * need be.
+ 	 */
 	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
 	    sizeof(struct msbwatch_thread), "msbwatchthr");
 	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
