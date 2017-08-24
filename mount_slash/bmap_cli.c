@@ -856,7 +856,7 @@ msl_bmap_cache_rls(struct bmap *b)
 			BMPCE_ULOCK(e);
 			continue;
 		}
-		psclog_max("Mark page free %p at %d\n", e, __LINE__);
+		psclog_diag("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
@@ -1151,6 +1151,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			if (msl_bmap_low ||
 			    timespeccmp(&curtime, &bci->bci_etime, >) ||
 			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
+				b->bcm_flags |= BMAPF_TOFREE;
 				BMAP_ULOCK(b);
 				goto evict;
 			}
@@ -1165,6 +1166,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
+			BMAP_LOCK(b);
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&msl_bmaptimeoutq, bci);
