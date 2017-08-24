@@ -234,11 +234,11 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		msl_bmap_reap_init(b);
 
 		b->bcm_flags |= BMAPF_LOADED;
-		OPSTAT_INCR("bmap-extend-cb-ok");
+		OPSTAT_INCR("bmap-retrieve-cb-ok");
 	} else {
 		BMAP_LOCK(b);
 		msl_bmap_cache_rls(b);
-		OPSTAT_INCR("bmap-extend-cb-err");
+		OPSTAT_INCR("bmap-retrieve-cb-err");
 	}
 
 	b->bcm_flags &= ~BMAPF_LOADING;
