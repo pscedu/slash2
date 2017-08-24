@@ -422,13 +422,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		/*
-	 	 * Someone might be waiting. If not, we 
-	 	 * can let the next one grab an item 
-	 	 * quickly.
- 		 */
-		if (!bmpce_pool->ppm_nfree)
-			bmpce_reaper(bmpce_pool);
 		return;
 	}
 
@@ -558,9 +551,9 @@ bmpce_reaper(struct psc_poolmgr *m)
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
 	if (idle)
-		nitems = lc_nitems(&msl_lru_pages) / 15;
+		nitems = lc_nitems(&msl_lru_pages) / 20;
 	else
-		nitems = lc_nitems(&msl_lru_pages) / 5;
+		nitems = lc_nitems(&msl_lru_pages) / 10;
 	if (nitems < 5)
 		nitems = 5;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
