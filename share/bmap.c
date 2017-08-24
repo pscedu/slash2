@@ -241,6 +241,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 	if (flags & BMAPGETF_NONBLOCK) {
+		/*
+ 		 * If want to change this to return EWOULDBLOCK, 
+ 		 * just be careful.
+ 		 */
 		if (b->bcm_flags & BMAPF_LOADING)
 			goto out;
 	} else
