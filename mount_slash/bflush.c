@@ -867,6 +867,9 @@ msbmapthr_spawn(void)
 
 	thr = pscthr_init(MSTHRT_BRELEASE, msbreleasethr_main,
 	    sizeof(struct msbrelease_thread), "msbreleasethr");
+	pfl_multiwait_init(&msbreleasethr(thr)->mbrt_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
 
 #if 0
 	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
