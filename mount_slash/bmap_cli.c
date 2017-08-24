@@ -1169,8 +1169,8 @@ msbreleasethr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
-			BMAP_LOCK(b);
 			b = bci_2_bmap(bci);
+			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&msl_bmaptimeoutq, bci);
 
