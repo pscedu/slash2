@@ -317,8 +317,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	BMAP_LOCK(b);
 
 	if (rc == -PFLERR_KEYEXPIRED) {				/* 501 */
-		OPSTAT_INCR("msl.bmap-flush-expired");
-		b->bcm_flags |= BMAPF_LEASEEXPIRED;
+		OPSTAT_INCR("msl.bmap-flush-expire");
+		b->bcm_flags |= BMAPF_LEASEEXPIRE;
 	}
 	if (rc == -PFLERR_TIMEDOUT)				/* 511 */
 		OPSTAT_INCR("msl.bmap-flush-timedout");
@@ -571,7 +571,7 @@ bmap_flushable(struct bmap *b)
 			OPSTAT_INCR("msl.flush-skip-expire-time");
 			flush = 0;
 		}
-		if (b->bcm_flags & BMAPF_LEASEEXPIRED) {
+		if (b->bcm_flags & BMAPF_LEASEEXPIRE) {
 			OPSTAT_INCR("msl.flush-skip-expire-flag");
 			flush = 0;
 		}

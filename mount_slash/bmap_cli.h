@@ -51,7 +51,7 @@ struct bmap_cli_info {
 
 #define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* requesting a lease ext */
 #define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)
-#define BMAPF_LEASEEXPIRED	(_BMAPF_SHIFT << 2)	/* lease has expired, new one is needed */
+#define BMAPF_LEASEEXPIRE	(_BMAPF_SHIFT << 2)	/* lease has expired, new one is needed */
 #define BMAPF_LEASEEXTEND	(_BMAPF_SHIFT << 3)	/* lease will be extend */
 
 #define BMAPF_SCHED		(_BMAPF_SHIFT << 4)	/* bmap flush in progress */

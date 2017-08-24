@@ -181,7 +181,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	 */
 	PFL_GETTIMESPEC(&bci->bci_etime);
 	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_INC);
-	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
+	b->bcm_flags &= ~BMAPF_LEASEEXPIRE;
 
 	*bmap_2_sbd(b) = *sbd;
 
@@ -484,7 +484,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	PFL_GETTIMESPEC(&ts);
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 	if (secs >= BMAP_TIMEO_MIN / 2 &&
-	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 		if (blocking)
 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
 		BMAP_ULOCK(b);
@@ -1027,6 +1027,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			}
 			if (b->bcm_flags & BMAPF_TOFREE ||
+			    b->bcm_flags & BMAPF_REASSIGNREQ ||
 			    b->bcm_flags & BMAPF_LEASEEXTEND) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1036,7 +1037,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
-			    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1152,7 +1153,7 @@ msbreleasethr_main(struct psc_thread *thr)
 
 			if (msl_bmap_low ||
 			    timespeccmp(&curtime, &bci->bci_etime, >) ||
-			    b->bcm_flags & BMAPF_LEASEEXPIRED) {
+			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
 				b->bcm_flags |= BMAPF_TOFREE;
 				BMAP_ULOCK(b);
 				goto evict;
@@ -1389,7 +1390,7 @@ dump_bmap_flags(uint32_t flags)
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAPF_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAPF_REASSIGNREQ, &flags, &seq);
-	PFL_PRFLAG(BMAPF_LEASEEXPIRED, &flags, &seq);
+	PFL_PRFLAG(BMAPF_LEASEEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAPF_SCHED, &flags, &seq);
 	PFL_PRFLAG(BMAPF_BENCH, &flags, &seq);
 	PFL_PRFLAG(BMAPF_FLUSHQ, &flags, &seq);
