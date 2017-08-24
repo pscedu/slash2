@@ -1107,7 +1107,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, expire;
+	int exiting, i, expire, nevict;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -1212,10 +1212,11 @@ msbreleasethr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
+		nevict = psc_dynarray_len(&bcis);
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 
-		if (expire)
+		if (expire && nevict == expire)
 			goto again;
 
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
