@@ -1027,7 +1027,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			}
 			if (b->bcm_flags & BMAPF_TOFREE ||
-			    b->bcm_flags & BMAPF_REASSIGNREQ) {
+			    b->bcm_flags & BMAPF_LEASEEXTEND) {
 				BMAP_ULOCK(b);
 				continue;
 			}
@@ -1049,6 +1049,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			b->bcm_flags |= BMAPF_LEASEEXTEND;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
 			BMAP_ULOCK(b);
@@ -1062,6 +1063,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
 			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_LEASEEXTEND;
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 		}
 
