@@ -49,9 +49,9 @@ struct bmap_cli_info {
 
 /* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  9) */
 
-#define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* requesting a lease ext */
-#define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)
-#define BMAPF_LEASEEXPIRE	(_BMAPF_SHIFT << 2)	/* lease has expired, new one is needed */
+#define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* lease request RPC in prog */
+#define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)	/* lease re-assign */
+#define BMAPF_LEASEEXPIRE	(_BMAPF_SHIFT << 2)	/* lease has expired */
 #define BMAPF_LEASEEXTEND	(_BMAPF_SHIFT << 3)	/* lease will be extend */
 
 #define BMAPF_SCHED		(_BMAPF_SHIFT << 4)	/* bmap flush in progress */
