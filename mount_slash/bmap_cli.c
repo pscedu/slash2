@@ -1103,7 +1103,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct psc_dynarray bcis = DYNARRAY_INIT;
 	struct timespec nto, curtime;
 	struct resm_cli_info *rmci;
-	struct bmap_cli_info *bci, *tmp;
+	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
@@ -1127,7 +1127,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		PFL_GETTIMESPEC(&curtime);
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
-		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
+		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
