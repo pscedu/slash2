@@ -168,6 +168,8 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	if (b->bcm_flags & BMAPF_WR)
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+	else
+		psc_assert(sbd->sbd_ios == IOS_ID_ANY);
 
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
