@@ -702,7 +702,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
-		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
+		b->bcm_flags &= ~BMAPF_RD;
+		b->bcm_flags |=  BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
 			/*
