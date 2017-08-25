@@ -593,10 +593,10 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	BMAP_LOCK(b);
 	/* ignore all errors for this background operation */
 	if (!rc) {
-		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags &= ~BMAPF_RD;
 		b->bcm_flags |=  BMAPF_WR;
+		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
 			/*
@@ -723,10 +723,10 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	if (!rc) {
 		OPSTAT_INCR("bmap-modeset-ok");
 		BMAP_LOCK(b);
-		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags &= ~BMAPF_RD;
 		b->bcm_flags |=  BMAPF_WR;
+		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
 			/*
