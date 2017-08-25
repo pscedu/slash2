@@ -495,6 +495,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	sbd = bmap_2_sbd(b);
 	if (b->bcm_flags & BMAPF_WR)
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+	else
+		psc_assert(sbd->sbd_ios == IOS_ID_ANY);
 
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 	BMAP_ULOCK(b);
