@@ -537,6 +537,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 			sl_csvc_decref(csvc);
 			csvc = NULL;
 		}
+		OPSTAT_INCR("bmap-extend-retry");
 		goto retry;
 	}
 
