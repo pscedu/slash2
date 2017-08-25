@@ -491,10 +491,13 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		return (0);
 	}
 	b->bcm_flags |= BMAPF_LEASEEXTREQ;
-	BMAP_ULOCK(b);
 
 	sbd = bmap_2_sbd(b);
+	if (b->bcm_flags & BMAPF_WR)
+		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+	BMAP_ULOCK(b);
 
  retry:
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
