@@ -588,7 +588,9 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 			msl_bmap_cache_rls(b);
 			BMAP_LOCK(b);
 		}
-	}
+		OPSTAT_INCR("bmap-modeset-cb-ok");
+	} else
+		OPSTAT_INCR("bmap-modeset-cb-err");
 
 	b->bcm_flags &= ~BMAPF_MODECHNG;
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
@@ -617,6 +619,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
+	struct sl_resource *r;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -697,8 +700,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 
 	if (!rc) {
-		struct sl_resource *r;
-
+		OPSTAT_INCR("bmap-modeset-ok");
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
@@ -717,6 +719,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			BMAP_LOCK(b);
 		}
 	} else {
+		OPSTAT_INCR("bmap-modeset-err");
 		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
 		BMAP_LOCK(b);
 	}
