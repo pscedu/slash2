@@ -184,8 +184,6 @@ struct bmpc_ioreq {
 
 #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
-#define BIORQ_RLOCK(r)		reqlock(&(r)->biorq_lock)
-#define BIORQ_URLOCK(r, lk)	ureqlock(&(r)->biorq_lock, (lk))
 #define BIORQ_LOCK_ENSURE(r)	LOCK_ENSURE(&(r)->biorq_lock)
 
 #define BIORQ_SETATTR(r, fl)	SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))

@@ -318,12 +318,9 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 void
 _biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 {
-	int locked;
-
-	locked = BIORQ_RLOCK(r);
+	BIORQ_LOCK_ENSURE(r);
 	r->biorq_ref++;
 	DEBUG_BIORQ(PLL_DIAG, r, "incref");
-	BIORQ_URLOCK(r, locked);
 }
 
 void
@@ -1398,7 +1395,9 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_IOVS] = iovs;
 	rq->rq_interpret_reply = msl_read_cb;
 
+	BIORQ_LOCK(r);
 	biorq_incref(r);
+	BIORQ_ULOCK(r);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
