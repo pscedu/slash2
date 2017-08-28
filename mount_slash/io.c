@@ -303,6 +303,8 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
+	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
+
 	OPSTAT_INCR("msl.biorq-destroy");
 	psc_pool_return(msl_biorq_pool, r);
 }
