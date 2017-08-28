@@ -337,7 +337,7 @@ msl_biorq_release(struct bmpc_ioreq *r)
 		BIORQ_ULOCK(r);
 		/*
 		 * A request can be split into several RPCs so we 
-		 * can't * declare it as complete until after its
+		 * can't declare it as complete until after its
 		 * reference count drops to zero.
 		 *
 		 * If we already have a failure, we won't flush a
