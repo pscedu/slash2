@@ -602,6 +602,8 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 	struct bmpc_ioreq *r;
 	struct fidc_membh *f;
 	int i;
+	struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
+	int nio = 0, rc = 0;
 
 	pfr = mfsrq_2_pfr(q);
 	mfh = q->mfsrq_mfh;
@@ -630,8 +632,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 	mfh_decref(mfh);
 
 	if (q->mfsrq_flags & MFSRQ_READ) {
-		struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
-		int nio = 0, rc = 0;
 
 		if (q->mfsrq_err) {
 			rc = abs(q->mfsrq_err);
@@ -651,8 +651,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 			} else {
 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
 
-				for (i = 0; i < MAX_BMAPS_REQ; i++,
-				    nio++) {
+				for (i = 0; i < MAX_BMAPS_REQ; i++, nio++) {
 					r = q->mfsrq_biorq[i];
 					if (!r)
 						break;
