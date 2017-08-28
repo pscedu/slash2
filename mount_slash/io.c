@@ -297,6 +297,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 
 	psc_assert(r->biorq_ref == 0);
+	psc_assert(r->biorq_fsrqi = NULL);
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
