@@ -205,8 +205,8 @@ int main(int argc, char *argv[])
 				random_r(&rand_state, &result);
 				if (buf[k] != (unsigned char)result & 0xff) {
 					error++;
-					printf("%4d: File corrupted (%d:%d): %2x vs %2x\n", 
-						error, i*j, k, buf[k], result & 0xff);
+					printf("%4d: File corrupted (%d:%d:%d): %02x vs %02x\n", 
+						error, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
 				}
 			}
