@@ -209,6 +209,7 @@ bwc_alloc(void)
 
 	bwc = psc_pool_get(bwc_pool);
 	memset(bwc, 0, sizeof(*bwc));
+	psc_dynarray_init(&bwc->bwc_biorqs);
 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
 	return (bwc);
 }
