@@ -408,9 +408,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 	}
 
-	if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters))
-		goto out;
-
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
 	   !(e->bmpce_flags & BMPCEF_EIO) &&
 	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
@@ -426,10 +423,11 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
+		if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters))
+			bmpce_reaper(bmpce_pool);
 		return;
 	}
 
- out:
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	BMPCE_ULOCK(e);
 
