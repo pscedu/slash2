@@ -105,19 +105,19 @@ then
     bail
 fi
 
-./bigfile3 -s  1234 -t 25 -b  21029  -n  10052 $mypath/$myhost.bigfile3-7.dat | tee $myhost-bigfile3-7.log
+./bigfile3 -s  1234 -t 25 -b  21029  -n  10052 $mypath/$myhost.bigfile3-7.dat | tee $myhost.bigfile3-7.log
 if [ $? -eq 1 ]
 then
     bail
 fi
 
-./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.dat | tee $myhost-bigfile3-8.log
+./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.dat | tee $myhost.bigfile3-8.log
 if [ $? -eq 1 ]
 then
     bail
 fi
 
-./bigfile3 -s  5555 -t 17 -b 114129  -n  80112 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
+./bigfile3 -s  5555 -t 17 -b 114129  -n  80112 $mypath/$myhost.bigfile3-9.dat | tee $myhost.bigfile3-9.log
 if [ $? -eq 1 ]
 then
     bail
