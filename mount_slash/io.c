@@ -233,13 +233,47 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	return (r);
 }
 
-__static void
-msl_biorq_del(struct bmpc_ioreq *r)
+
+void
+msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
+{
+	struct bmap_pagecache_entry *e;
+	int i;
+
+	if (!(r->biorq_flags & BIORQ_WRITE))
+		return;
+
+	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+		BMPCE_LOCK(e);
+		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCEF_EIO");
+		e->bmpce_rc = rc;
+		e->bmpce_flags |= BMPCEF_EIO;
+		BMPCE_WAKE(e);
+		BMPCE_ULOCK(e);
+	}
+}
+
+void
+msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_pagecache_entry *e;
 	int i;
+
+	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
+
+	psc_assert(r->biorq_ref == 0);
+	psc_assert(r->biorq_fsrqi = NULL);
+	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+	r->biorq_flags |= BIORQ_DESTROY;
+
+	/*
+	 * DIO mode doesn't copy data as the address is used directly
+	 * and as such doesn't need freed by us.
+	 */
+	if (r->biorq_flags & BIORQ_FREEBUF)
+		PSCFREE(r->biorq_buf);
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
@@ -268,47 +302,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
 	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
-
-	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
-}
-
-void
-msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
-{
-	struct bmap_pagecache_entry *e;
-	int i;
-
-	if (!(r->biorq_flags & BIORQ_WRITE))
-		return;
-
-	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-		BMPCE_LOCK(e);
-		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCEF_EIO");
-		e->bmpce_rc = rc;
-		e->bmpce_flags |= BMPCEF_EIO;
-		BMPCE_WAKE(e);
-		BMPCE_ULOCK(e);
-	}
-}
-
-void
-msl_biorq_destroy(struct bmpc_ioreq *r)
-{
-	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
-
-	psc_assert(r->biorq_ref == 0);
-	psc_assert(r->biorq_fsrqi = NULL);
-	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
-	r->biorq_flags |= BIORQ_DESTROY;
-
-	/*
-	 * DIO mode doesn't copy data as the address is used directly
-	 * and as such doesn't need freed by us.
-	 */
-	if (r->biorq_flags & BIORQ_FREEBUF)
-		PSCFREE(r->biorq_buf);
-
-	msl_biorq_del(r);
 
 	OPSTAT_INCR("msl.biorq-destroy");
 	psc_pool_return(msl_biorq_pool, r);
