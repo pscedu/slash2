@@ -1545,8 +1545,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	/*
 	 * Clean up remaining pages that were not launched.  Note that
-	 * msl_read_rpc_launch() cleans up pages on its own in case of a
-	 * failure.
+	 * msl_read_rpc_launch() cleans up pages on its own in case of
+	 * a failure.
 	 */
 	DYNARRAY_FOREACH_CONT(e, i, &pages) {
 		BMPCE_LOCK(e);
