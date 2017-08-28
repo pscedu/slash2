@@ -527,21 +527,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 }
 
 void
-mfsrq_clrerr(struct msl_fsrqinfo *q)
-{
-	int lk;
-
-	lk = MFH_RLOCK(q->mfsrq_mfh);
-	if (q->mfsrq_err) {
-		DPRINTF_MFSRQ(PLL_WARN, q, "clearing err=%d",
-		    q->mfsrq_err);
-		q->mfsrq_err = 0;
-		OPSTAT_INCR("msl.offline-retry-clear-err");
-	}
-	MFH_URLOCK(q->mfsrq_mfh, lk);
-}
-
-void
 mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 {
 	MFH_LOCK(q->mfsrq_mfh);
