@@ -432,7 +432,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		sl_csvc_decref(csvc);
 
 	bwc_free(bwc);
-	OPSTAT_INCR("msl.bmap-flush-rpc-fail");
+	OPSTAT_INCR("msl.bmap-flush-rpc-err");
 	return (rc);
 }
 
