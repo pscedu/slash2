@@ -423,8 +423,10 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters))
+		if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters)) {
+			OPSTAT_INCR("msl.bmpce-wait-reap");
 			bmpce_reaper(bmpce_pool);
+		}
 		return;
 	}
 
