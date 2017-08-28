@@ -14,7 +14,7 @@ function bail {
     END=`date +%s%N`
     ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
     echo
-    echo "Test failed. Total elapsed time $ELAPSED seconds"
+    echo "Some tests have failed. Total elapsed time: $ELAPSED seconds."
     exit 0
 }
 
@@ -131,4 +131,4 @@ set +o pipefail
 END=`date +%s%N`
 ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
 echo
-echo "All tests have passed successfully! Total time $ELAPSED seconds"
+echo "All tests have passed successfully! Total elapsed time: $ELAPSED seconds."
