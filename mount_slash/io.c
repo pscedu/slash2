@@ -1719,6 +1719,13 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
+ 
+		/*
+ 		 * If the page is already valid, there is no need to track
+ 		 * which region is valid.
+ 		 */
+		if (e->bmpce_flags & BMPCEF_DATARDY)
+			goto skip;
 
 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
 			e->bmpce_flags |= BMPCEF_DATARDY;
@@ -1737,6 +1744,8 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			e->bmpce_len = end - start;
 			psc_assert(e->bmpce_len <= BMPC_BUFSZ);
 		}
+
+ skip:
 
 		DEBUG_BMPCE(PLL_DIAG, e,
 		    "tsize=%u nbytes=%u toff=%u start=%u len=%u",
