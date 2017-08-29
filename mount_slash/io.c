@@ -1715,6 +1715,8 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 		}
 
+		psc_assert(!nbytes);
+
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
 
