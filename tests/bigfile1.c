@@ -186,9 +186,9 @@ write_file(int i)
 		buf = files[i].buf + offset;
 		for (j = 0; j < tmp1; j++) {
 			if (setvalue)
-				buf[j] = (char)random();
-			else
 				buf[j] = (char)value;
+			else
+				buf[j] = (char)random();
 		}
 
 		if (verbose)
