@@ -5,6 +5,9 @@ Motivation:
 
 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
 
+		<-- might take advantage of the new features of kernel resident file system
+		    such as quota.
+
 	* All metadata are user visible files.
 
 	* Help MDS run as non-root.
