@@ -140,9 +140,10 @@ read_file(int i)
 			printf("Compare fail: file = %d, offset = %d, size = %d\n", i, j, size);
 			tmp1 = 0;
 			for (k = j; k < size; k++) {
-				if (tmp1++ > 100)
+				if (tmp1++ > 256)
 					break;
-				printf("%08x: %08x - %08x\n", k, scratch[k], files[i].buf[offset + k]);
+				printf("%08x: %#02x - %#02x\n", offset + k, 
+					scratch[k], files[i].buf[offset + k]);
 			}
 			exit (1);
 		}
