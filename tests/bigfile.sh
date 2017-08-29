@@ -46,8 +46,6 @@ then
     bail
 fi
 
-bail
-
 ./bigfile2                                     $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
 if [ $? -eq 1 ]
 then
