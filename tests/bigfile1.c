@@ -137,7 +137,8 @@ read_file(int i)
 
 	for (j = 0; j < size; j++) {
 		if (scratch[j] != files[i].buf[offset + j]) {
-			printf("Compare fail: file = %d, offset = %d, size = %d\n", i, j, size);
+			printf("Data mismatch: file = %s, offset = %d, size = %d\n", 
+				files[i].name, offset, size);
 			tmp1 = 0;
 			for (k = j; k < size; k++) {
 				if (tmp1++ > 256)
