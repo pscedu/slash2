@@ -207,9 +207,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		return (r);
 
 	/*
-	 * Align the offset and length to the start of a page.  Note
-	 * that roff is already made relative to the start of the given
-	 * bmap.
+	 * Align the offset to the start of a page and adjust len
+	 * accordingly.  Note that roff is already made relative
+	 * to the start of the given bmap.
 	 */
 	aoff = roff & ~BMPC_BUFMASK;
 	alen = len + (roff & BMPC_BUFMASK);
