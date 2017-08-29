@@ -1814,6 +1814,9 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 
+		psc_assert(nbytes);
+		psc_assert(e->bmpce_flags & BMPCEF_DATARDY);
+
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
