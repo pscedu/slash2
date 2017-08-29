@@ -95,7 +95,7 @@ msl_pgcache_get(int wait)
 
 	p = lc_getnb(&page_buffers);
 	if (p)
-		return p;
+		goto out;
  again:
 
 	LIST_CACHE_LOCK(&page_buffers);
@@ -107,7 +107,7 @@ msl_pgcache_get(int wait)
 			OPSTAT_INCR("mmap-success");
 			page_buffers_count++;
 			LIST_CACHE_ULOCK(&page_buffers);
-			return (p);
+			goto out;
 		}
 		failed = 1;
 		OPSTAT_INCR("mmap-failure");
@@ -132,6 +132,7 @@ msl_pgcache_get(int wait)
 		}
 	} else
 		p = lc_getnb(&page_buffers);
+ out:
 	return (p);
 }
 
