@@ -133,10 +133,14 @@ msl_pgcache_get(int wait)
 	} else
 		p = lc_getnb(&page_buffers);
  out:
+
+#if 0
 	/*
  	 * For security and detecting data corruption bugs.
  	 */
 	memset(p, 0, BMPC_BUFSZ);
+#endif
+
 	return (p);
 }
 
