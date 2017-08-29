@@ -225,6 +225,7 @@ int main(int argc, char *argv[])
 				break;
                         case 'v':
 				verbose = 1;
+				break;
                         case 'V':
 				setvalue = 1;
 				value = atoi(optarg);
