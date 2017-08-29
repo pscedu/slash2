@@ -35,7 +35,10 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
+int value;
 int verbose;
+int setvalue;
+
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -182,7 +185,10 @@ write_file(int i)
 		/* always tweak some data on each write */
 		buf = files[i].buf + offset;
 		for (j = 0; j < tmp1; j++) {
-			buf[j] = (char)random();
+			if (setvalue)
+				buf[j] = (char)random();
+			else
+				buf[j] = (char)value;
 		}
 
 		if (verbose)
@@ -208,7 +214,7 @@ int main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 
 	gettimeofday(&t1, NULL);
-	while ((c = getopt(argc, argv, "s:n:v")) != -1) {
+	while ((c = getopt(argc, argv, "s:n:vV:")) != -1) {
 		switch (c) {
 			case 's':
 				seed = atoi(optarg);
@@ -218,12 +224,17 @@ int main(int argc, char *argv[])
 				break;
                         case 'v':
 				verbose = 1;
+                        case 'V':
+				setvalue = 1;
+				value = atoi(optarg);
 				break;
 		}   
 	}
 	if (optind > argc - 1) {
+#if 0
 		printf("optind = %d, argc - 1 = %d\n", optind, argc - 1);
-		printf("Usage: a.out [-v] [-s seed] [-n count] name\n");
+#endif
+		printf("Usage: a.out [-v] [-s seed] [-V value ] [-n count] name\n");
 		exit (1);
 	}   
 
@@ -235,8 +246,12 @@ int main(int argc, char *argv[])
 	srandom(seed);
 	nfile = sizeof(files)/sizeof(struct testfile);
 
-	printf("Base name = %s, file count = %d, seed = %u, loop = %d.\n\n", 
-		argv[optind], nfile, seed, times);
+	if (setvalue)
+		printf("Base name = %s, file count = %d, seed = %u, value = %02x, loop = %d.\n\n", 
+			argv[optind], nfile, seed, value, times);
+	else
+		printf("Base name = %s, file count = %d, seed = %u, loop = %d.\n\n", 
+			argv[optind], nfile, seed, times);
 
 	for (i = 0; i < nfile; i++) {
 
@@ -251,8 +266,12 @@ int main(int argc, char *argv[])
 			exit (1);
 		}
 
-		for (j = 0; j < files[i].size; j++)
-			files[i].buf[j] = (char)random();
+		for (j = 0; j < files[i].size; j++) {
+			if (setvalue)
+				files[i].buf[j] = (char)value;
+			else
+				files[i].buf[j] = (char)random();
+		}
 	}
 	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
 	fflush(stdout);
