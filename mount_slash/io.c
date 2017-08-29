@@ -1504,7 +1504,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 
 	/*
 	 * We must flush any pending writes first before reading from
-	 * the storage.
+	 * the storage. In theory, we only need to flush pages that
+	 * are touched by this request, but it is simpler this way.
 	 */
 	if (needflush) {
 		/* XXX make this interruptible */
