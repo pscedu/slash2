@@ -143,7 +143,7 @@ read_file(int i)
 			for (k = j; k < size; k++) {
 				if (tmp1++ > 512)
 					break;
-				printf("%d: %#02x - %#02x\n", offset + k, 
+				printf("%5d: %#02x - %#02x\n", offset + k, 
 					(unsigned char)scratch[k], 
 					(unsigned char)files[i].buf[offset + k]);
 			}
