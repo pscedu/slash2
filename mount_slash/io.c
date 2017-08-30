@@ -1726,6 +1726,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			    toff + nbytes : e->bmpce_start + e->bmpce_len;
 			e->bmpce_start = start;
 			e->bmpce_len = end - start;
+			psc_assert(e->bmpce_len > 0);
 			psc_assert(e->bmpce_len <= BMPC_BUFSZ);
 		}
 
