@@ -137,14 +137,15 @@ read_file(int i)
 
 	for (j = 0; j < size; j++) {
 		if (scratch[j] != files[i].buf[offset + j]) {
-			printf("Data mismatch: file = %s, offset = %d, size = %d\n", 
+			printf("Data mismatch: file = %s, offset = %d, size = %d\n\n", 
 				files[i].name, offset, size);
 			tmp1 = 0;
 			for (k = j; k < size; k++) {
-				if (tmp1++ > 256)
+				if (tmp1++ > 512)
 					break;
-				printf("%08x: %#02x - %#02x\n", offset + k, 
-					scratch[k], files[i].buf[offset + k]);
+				printf("%d: %#02x - %#02x\n", offset + k, 
+					(unsigned char)scratch[k], 
+					(unsigned char)files[i].buf[offset + k]);
 			}
 			exit (1);
 		}
