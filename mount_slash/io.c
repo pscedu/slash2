@@ -176,7 +176,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	uint32_t aoff, alen, bmpce_off;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmpc_ioreq *r;
-	int i, npages;
+	int i, flag, npages;
 
 	DEBUG_BMAP(PLL_DIAG, b,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -211,12 +211,15 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (alen % BMPC_BUFSZ)
 		npages++;
 
+	/* debug */
+	flag = (op == BIORQ_READ) ? BMPCEF_READ : BMPCEF_WRITE;
+
 	/*
 	 * Now populate pages which correspond to this request.
 	 */
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
-		bmpce_lookup(r, b, 0, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
+		bmpce_lookup(r, b, flag, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
 	}
 	return (r);
 }
