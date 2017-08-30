@@ -92,14 +92,8 @@ struct psc_listcache	 msl_predioq;
 
 int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
-#define msl_biorq_page_valid_accounting(r, idx)				\
-	_msl_biorq_page_valid((r), (idx), 1)
-
-#define msl_biorq_page_valid(r, idx)					\
-	_msl_biorq_page_valid((r), (idx), 0)
-
 __static int
-_msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
+msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 {
 	struct bmap_pagecache_entry *e;
 	uint32_t toff, tsize, nbytes;
@@ -1469,7 +1463,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		 * XXX If I don't make a valid page as FAULTING, a 
 		 * write could sneak it...
 		 */
-		if (msl_biorq_page_valid(r, i)) {
+		if (msl_biorq_page_valid(r, i, 0)) {
 			BMPCE_ULOCK(e);
 			if (r->biorq_flags & BIORQ_READAHEAD)
 				OPSTAT_INCR("msl.readahead-gratuitous");
@@ -1821,7 +1815,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
-		msl_biorq_page_valid_accounting(r, i);
+		msl_biorq_page_valid(r, i, 1);
 
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r, i));
 
