@@ -776,12 +776,8 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 	}
 }
 
-#define msl_bmpce_read_rpc_done(e, rc)					\
-	_msl_bmpce_read_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
-
 __static void
-_msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
-    struct bmap_pagecache_entry *e, int rc)
+msl_bmpce_read_rpc_done(struct bmap_pagecache_entry *e, int rc)
 {
 	BMPCE_LOCK(e);
 	psc_assert(e->bmpce_waitq);
@@ -1389,7 +1385,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	if (rc) {
 		msl_biorq_release(r);
 
-		OPSTAT_INCR("msl.read-add-req-fail");
+		OPSTAT_INCR("msl.read-add-req-err");
 		PFL_GOTOERR(out, rc);
 	}
 
