@@ -92,14 +92,8 @@ struct psc_listcache	 msl_predioq;
 
 int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
-#define msl_biorq_page_valid_accounting(r, idx)				\
-	_msl_biorq_page_valid((r), (idx), 1)
-
-#define msl_biorq_page_valid(r, idx)					\
-	_msl_biorq_page_valid((r), (idx), 0)
-
 __static int
-_msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
+msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 {
 	struct bmap_pagecache_entry *e;
 	uint32_t toff, tsize, nbytes;
@@ -127,23 +121,16 @@ _msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
 				e->bmpce_flags &= ~BMPCEF_READAHEAD;
 				OPSTAT_INCR("msl.readahead-hit");
 			}
-			if (accounting)
-				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
-
+			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
 			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
-			if (accounting) {
-				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
-				OPSTAT_INCR("msl.read-part-valid");
-			}
+			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
+			OPSTAT_INCR("msl.read-part-valid");
 			return (1);
 		}
-		if (accounting)
-			psc_fatalx("biorq %p does not valid data", r);
-
 		return (0);
 	}
 	psc_fatalx("biorq %p does not have page %d", r, idx);
@@ -1821,7 +1808,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
-		msl_biorq_page_valid_accounting(r, i);
+		psc_assert(msl_biorq_page_valid(r, i));
 
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r, i));
 
