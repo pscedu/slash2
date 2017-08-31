@@ -95,9 +95,7 @@ struct bmap_page_entry {
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
-#define BMPCE_RLOCK(e)		reqlock(&(e)->bmpce_lock)
 #define BMPCE_TRYLOCK(e)	trylock(&(e)->bmpce_lock)
-#define BMPCE_URLOCK(e, lk)	ureqlock(&(e)->bmpce_lock, (lk))
 #define BMPCE_LOCK_ENSURE(e)	LOCK_ENSURE(&(e)->bmpce_lock)
 
 #define BMPCE_WAIT(e)		psc_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
