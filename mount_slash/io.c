@@ -123,11 +123,13 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 				OPSTAT_INCR("msl.readahead-hit");
 			}
 			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
+			OPSTAT_INCR("msl.read-whole-valid");
 			return (1);
 		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
+			psc_assert(e->bmpce_len);
 			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
 			OPSTAT_INCR("msl.read-part-valid");
 			return (1);
