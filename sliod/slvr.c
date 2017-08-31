@@ -973,8 +973,7 @@ slvr_wio_done(struct slvr *s, int repl)
  * freed.
  */
 struct slvr *
-_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
-    struct bmap_iod_info *bii)
+slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
 	struct slab *tmp2 = NULL;
