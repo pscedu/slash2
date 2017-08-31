@@ -93,10 +93,12 @@ create_file(int i)
 			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
 			exit (1);
 		}
-		if (tmp1 == tmp2)
-			return;
-		tmp1 = tmp1 - tmp2;	
 		j++;
+		if (tmp1 == tmp2) {
+			printf("File %s has been created with %d attempts\n", files[i].name, j);
+			return;
+		}
+		tmp1 = tmp1 - tmp2;	
 	}
 	printf("Can't finish creating file %s within 20 attempts\n", files[i].name);
 	exit (1);
@@ -290,7 +292,7 @@ int main(int argc, char *argv[])
 
 	        close(files[i].fd);
 	}
-	printf("Initial %d files have been created successfully.\n\n", nfile);
+	printf("\nInitial %d files have been created successfully.\n\n", nfile);
 	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
