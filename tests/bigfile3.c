@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 	int i, j, k, fd, ret, error, nthreads, readonly;
 	struct random_data rand_state;
-	size_t c, seed, size, bsize, nblocks;
+	size_t c, off, seed, size, bsize, nblocks;
 
 	error = 0;
 	readonly = 0;
@@ -205,7 +205,8 @@ int main(int argc, char *argv[])
 				random_r(&rand_state, &result);
 				if (buf[k] != (unsigned char)result & 0xff) {
 					error++;
-					printf("%4d: File corrupted (%d:%d:%d): %02x vs %02x\n", 
+					off = (size_t) i * (size_t) j * (size_t)k;
+					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
 						error, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
 				}
