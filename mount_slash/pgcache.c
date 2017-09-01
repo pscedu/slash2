@@ -324,7 +324,7 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			e->bmpce_len = 0;
 			e->bmpce_start = off;
 			e->bmpce_waitq = wq;
-			e->bmpce_flags = flags;
+			e->bmpce_flags = flags | BMPCEF_NEW;
 			e->bmpce_bmap = b;
 			e->bmpce_base = page;
 

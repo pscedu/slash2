@@ -793,6 +793,7 @@ msl_bmpce_read_rpc_done(struct bmap_pagecache_entry *e, int rc)
 		e->bmpce_flags &= ~BMPCEF_EIO;
 		e->bmpce_flags |= BMPCEF_DATARDY;
 	}
+	e->bmpce_flags &= ~BMPCEF_NEW;
 
 	DEBUG_BMPCE(PLL_DEBUG, e, "rpc_done");
 
@@ -1709,6 +1710,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
  		 */
 		if (e->bmpce_flags & BMPCEF_DATARDY)
 			goto skip;
+		e->bmpce_flags &= ~BMPCEF_NEW;
 
 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
 			e->bmpce_flags |= BMPCEF_DATARDY;
@@ -1801,6 +1803,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		psc_assert(nbytes);
 		psc_assert(msl_biorq_page_valid(r, i));
 
+		psc_assert(!e->bmpce_flags & BMPCEF_NEW);
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
