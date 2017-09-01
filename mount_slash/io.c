@@ -1803,7 +1803,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		psc_assert(nbytes);
 		psc_assert(msl_biorq_page_valid(r, i));
 
-		psc_assert(!e->bmpce_flags & BMPCEF_NEW);
+		psc_assert(!(e->bmpce_flags & BMPCEF_NEW));
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
