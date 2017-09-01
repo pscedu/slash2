@@ -2342,6 +2342,10 @@ msreadaheadthr_main(struct psc_thread *thr)
 	int i, rc, npages, flags;
 
 	while (pscthr_run(thr)) {
+
+		/*
+ 		 * XXX Purge read-ahead list if a read-ahead happens.
+ 		 */
 		rarq = lc_getwait(&msl_predioq);
 		if (rarq == NULL)
 			break;
