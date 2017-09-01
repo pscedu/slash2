@@ -84,6 +84,7 @@ struct testfile files[TOTAL_NUM_FILES] = {
 create_file(int i)
 {
 	int j = 0;
+	off_t offset = 0;
 	size_t tmp1, tmp2;
 
 	tmp1 = files[i].size;
@@ -92,7 +93,7 @@ create_file(int i)
 		return;
 
 	while (j < 20) {
-		tmp2 = write(files[i].fd, files[i].buf, tmp1);
+		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp2 < 0) {
 			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
 			exit (1);
@@ -102,6 +103,7 @@ create_file(int i)
 			printf("File %s has been created with %d attempts\n", files[i].name, j);
 			return;
 		}
+		offset += tmp2;
 		tmp1 = tmp1 - tmp2;	
 	}
 	printf("Can't finish creating file %s within 20 attempts\n", files[i].name);
@@ -136,7 +138,7 @@ read_file(int i)
 
 	tmp1 = size;
 	if (verbose || dryrun)
-		printf("Read %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
+		printf("Read  %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
 
 	if (dryrun)
 		return;
