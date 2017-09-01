@@ -127,6 +127,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 			return (1);
 		}
 
+#if 0
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			psc_assert(e->bmpce_len);
@@ -134,6 +135,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 			OPSTAT_INCR("msl.read-part-valid");
 			return (1);
 		}
+#endif
 		return (0);
 	}
 	psc_fatalx("biorq %p does not have page %d", r, idx);
@@ -302,16 +304,6 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	psc_pool_return(msl_biorq_pool, r);
 }
 
-#define biorq_incref(r)		_biorq_incref(PFL_CALLERINFO(), (r))
-
-void
-_biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
-{
-	BIORQ_LOCK_ENSURE(r);
-	r->biorq_ref++;
-	DEBUG_BIORQ(PLL_DIAG, r, "incref");
-}
-
 void
 msl_biorq_release(struct bmpc_ioreq *r)
 {
@@ -434,7 +426,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
-		biorq_incref(r);
+		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
 		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p", e);
 		pll_add(&e->bmpce_pndgaios, r);
@@ -1134,7 +1126,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		refs++;
-		biorq_incref(r);
+		r->biorq_ref++;
 
 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
 		if (rc) {
@@ -1242,7 +1234,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 * processed prematurely.
 	 */
 	BIORQ_LOCK(r);
-	biorq_incref(r);
+	r->biorq_ref++;
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
 	bmpc->bmpc_pndg_writes++;
 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
@@ -1384,7 +1376,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 	rq->rq_interpret_reply = msl_read_cb;
 
 	BIORQ_LOCK(r);
-	biorq_incref(r);
+	r->biorq_ref++;
+	DEBUG_BIORQ(PLL_DIAG, r, "incref");
 	BIORQ_ULOCK(r);
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
@@ -2288,9 +2281,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto out2;
 	}
 
+#if 0
+
 	/* Launch read-ahead after the original read request */
 	if (predio)
 		msl_issue_predio(mfh, bno, rw, aoff, npages);
+#endif
 
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
