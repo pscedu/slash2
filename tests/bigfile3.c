@@ -230,8 +230,9 @@ int main(int argc, char *argv[])
 		error ? "Test failed" : "Test succeeded", 
 		t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 
-	if (error)
+	if (error) {
+		printf("Please check file %s.\n", filename);
 		exit(1);
-	else
-		exit(0);
+	}
+	exit(0);
 }
