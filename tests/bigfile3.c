@@ -194,6 +194,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
+	off = 0;
 	for (i = 0; i < nthreads; i++) {
 		for (j = 0; j < nblocks; j++) {
 			ret = read(fd, buf, bsize);
@@ -205,12 +206,12 @@ int main(int argc, char *argv[])
 				random_r(&rand_state, &result);
 				if (buf[k] != (unsigned char)result & 0xff) {
 					error++;
-					off = (size_t) i * (size_t) j * (size_t)k;
 					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
-						error, i, j, k, buf[k], result & 0xff);
+						error, off, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
 				}
 			}
+			off += bsize;
 		}
 	}
 	close(fd);
