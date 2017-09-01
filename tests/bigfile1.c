@@ -36,6 +36,7 @@
 #define BASE_NAME_SUFFIX	10
 
 int value;
+int dryrun;
 int verbose;
 int setvalue;
 
@@ -87,6 +88,9 @@ create_file(int i)
 
 	tmp1 = files[i].size;
 
+	if (dryrun)
+		return;
+
 	while (j < 20) {
 		tmp2 = write(files[i].fd, files[i].buf, tmp1);
 		if (tmp2 < 0) {
@@ -114,10 +118,12 @@ read_file(int i)
 	if (offset == files[i].size)
 		offset--;
 	
-	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
-	if (tmp1 != offset) {
-		printf("Seek fail: file = %d, offset = %d\n", i, j);
-		exit (1);
+	if (!dryrun) {
+		tmp1 = lseek(files[i].fd, offset, SEEK_SET);
+		if (tmp1 != offset) {
+			printf("Seek fail: file = %d, offset = %d\n", i, j);
+			exit (1);
+		}
 	}
 
 	if (files[i].size - offset > MAX_BUF_LEN) {
@@ -129,8 +135,12 @@ read_file(int i)
 	}
 
 	tmp1 = size;
-	if (verbose)
+	if (verbose || dryrun)
 		printf("Read %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
+
+	if (dryrun)
+		return;
+
 	tmp2 = read(files[i].fd, scratch, tmp1);
 	if (tmp1 != tmp2) {
 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
@@ -156,17 +166,19 @@ read_file(int i)
 
 write_file(int i)
 {
-	char *buf;
 	off_t offset;
+	char *buf, ch;
 	size_t j, size, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
 	
-	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
-	if (tmp1 != offset) {
-		printf("Seek fail: file = %d, offset = %d\n", i, offset);
-		exit (1);
+	if (!dryrun) {
+		tmp1 = lseek(files[i].fd, offset, SEEK_SET);
+		if (tmp1 != offset) {
+			printf("Seek fail: file = %d, offset = %d\n", i, offset);
+			exit (1);
+		}
 	}
 
 	size = random();
@@ -187,23 +199,30 @@ write_file(int i)
 		if (tmp1 == 0)
 			tmp1 = 1;
 
+		if (verbose || dryrun)
+			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
+
 		/* always tweak some data on each write */
 		buf = files[i].buf + offset;
 		for (j = 0; j < tmp1; j++) {
 			if (setvalue)
-				buf[j] = (char)value;
+				ch = (char)value;
 			else
-				buf[j] = (char)random();
+				ch = (char)random();
+			if (!dryrun)
+				buf[j] = ch;
 		}
 
-		if (verbose)
-			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
+		if (dryrun)
+			goto skip;
+
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp1 != tmp2) {
 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
 			exit (1);
 		}
 			
+ skip:
 		offset += tmp1;
 		size -= tmp1;
 	}
@@ -211,7 +230,7 @@ write_file(int i)
 
 int main(int argc, char *argv[])
 {
-	char *name;
+	char *name, ch;
 	size_t tmp;
 	int times = 10;
 	unsigned int seed = 1234;
@@ -219,7 +238,7 @@ int main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 
 	gettimeofday(&t1, NULL);
-	while ((c = getopt(argc, argv, "s:n:vV:")) != -1) {
+	while ((c = getopt(argc, argv, "ds:n:vV:")) != -1) {
 		switch (c) {
 			case 's':
 				seed = atoi(optarg);
@@ -233,6 +252,8 @@ int main(int argc, char *argv[])
                         case 'V':
 				setvalue = 1;
 				value = atoi(optarg);
+                        case 'd':
+				dryrun = 1;
 				break;
 		}   
 	}
@@ -265,24 +286,33 @@ int main(int argc, char *argv[])
 		printf("Try to allocate %12ld bytes of working memory for file %s\n", 
 			files[i].size, files[i].name); 
 
+
 		fflush(stdout);
-		files[i].buf = malloc(files[i].size);
-		if (!files[i].buf) {
-			printf("Fail to allocate memory, errno = %d\n", errno);
-			exit (1);
+		if (!dryrun) {
+			files[i].buf = malloc(files[i].size);
+			if (!files[i].buf) {
+				printf("Fail to allocate memory, errno = %d\n", errno);
+				exit (1);
+			}
 		}
 
 		for (j = 0; j < files[i].size; j++) {
 			if (setvalue)
-				files[i].buf[j] = (char)value;
+				ch = (char)value;
 			else
-				files[i].buf[j] = (char)random();
+				ch = (char)random();
+			if (!dryrun)
+				files[i].buf[j] = ch;
 		}
 	}
 	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
 	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
+
+		if (dryrun)
+			continue;
+
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
 		if (files[i].fd < 0) {
 			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
@@ -296,6 +326,10 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 
 	for (i = 0; i < nfile; i++) {
+
+		if (dryrun)
+			continue;
+
         	files[i].fd = open(files[i].name, O_RDWR);
 		if (files[i].fd < 0) {
 			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
