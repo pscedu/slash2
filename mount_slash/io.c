@@ -1756,7 +1756,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 {
 	size_t nbytes, tbytes = 0, rflen;
 	struct bmap_pagecache_entry *e;
-	int i, npages, tsize;
+	int i, j, npages, tsize;
 	char *dest, *src;
 	off_t toff;
 
@@ -1812,6 +1812,9 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
 		q->mfsrq_iovs[q->mfsrq_niov].iov_base = src;
 		q->mfsrq_niov++;
+
+		for (j = 0; j < nbytes; j++)
+			psc_assert(*src++);
 
 		BMPCE_ULOCK(e);
 
