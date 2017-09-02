@@ -911,6 +911,9 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	lc_move2tail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
+	/*
+ 	 * XXX deadlock in my big file test.
+ 	 */
 	if (!slab_pool->ppm_nfree)
 		psc_pool_reap(slab_pool, 0);
 }
