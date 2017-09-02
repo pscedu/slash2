@@ -211,6 +211,10 @@ write_file(int i)
 				ch = (char)value;
 			else
 				ch = (char)random();
+
+			if (ch == 0)
+				ch = 0x55;
+
 			if (!dryrun)
 				buf[j] = ch;
 		}
@@ -303,6 +307,10 @@ int main(int argc, char *argv[])
 				ch = (char)value;
 			else
 				ch = (char)random();
+
+			if (ch == 0)
+				ch = 0x55;
+
 			if (!dryrun)
 				files[i].buf[j] = ch;
 		}
