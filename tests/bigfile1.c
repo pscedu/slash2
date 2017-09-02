@@ -212,8 +212,10 @@ write_file(int i)
 			else
 				ch = (char)random();
 
+#ifdef NOZERO
 			if (ch == 0)
 				ch = 0x55;
+#endif
 
 			if (!dryrun)
 				buf[j] = ch;
@@ -308,8 +310,10 @@ int main(int argc, char *argv[])
 			else
 				ch = (char)random();
 
+#ifdef NOZERO
 			if (ch == 0)
 				ch = 0x55;
+#endif
 
 			if (!dryrun)
 				files[i].buf[j] = ch;
