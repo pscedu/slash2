@@ -74,8 +74,8 @@ slibreapthr_main(struct psc_thread *thr)
 		psc_pool_reap(slab_pool, 0);
 
 		spinlock(&sli_slab_lock);
-		spc_waitq_waitrel_ts(&sli_slab_waitq,
-		    sli_slab_lock, &sli_slab_timeout);
+		psc_waitq_waitrel_ts(&sli_slab_waitq,
+		    &sli_slab_lock, &sli_slab_timeout);
 	}
 }
 
