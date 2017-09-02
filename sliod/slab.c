@@ -44,6 +44,10 @@
 struct psc_poolmaster	 slab_poolmaster;
 struct psc_poolmgr	*slab_pool;
 
+struct timespec		 sli_slab_timeout = { 30, 0L };
+struct psc_waitq	 sli_slab_waitq = PSC_WAITQ_INIT("slab");
+psc_spinlock_t		 sli_slab_lock = SPINLOCK_INIT;
+
 struct slab *
 slab_alloc(void)
 {
@@ -68,9 +72,10 @@ slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
 		psc_pool_reap(slab_pool, 0);
-		thr->pscthr_waitq = "sleep 30";
-		sleep(30);
-		thr->pscthr_waitq = NULL;
+
+		spinlock(&sli_slab_lock);
+		spc_waitq_waitrel_ts(&sli_slab_waitq,
+		    sli_slab_lock, &sli_slab_timeout);
 	}
 }
 

@@ -68,6 +68,8 @@ struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have thei
 
 struct psc_listcache	 sli_fcmh_dirty;
 
+extern struct psc_waitq	 sli_slab_waitq;
+
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 /*
@@ -911,11 +913,10 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	lc_move2tail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
-	/*
- 	 * XXX deadlock in my big file test.
- 	 */
-	if (!slab_pool->ppm_nfree)
-		psc_pool_reap(slab_pool, 0);
+	if (psc_atomic32_read(&slab_pool->ppm_nwaiters)) {
+		OPSTAT_INCR("slab-wakeone");
+		psc_waitq_wakeone(&sli_slab_waitq);
+	}
 }
 
 void
