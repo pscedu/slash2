@@ -127,7 +127,6 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 			return (1);
 		}
 
-#if 0
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			psc_assert(e->bmpce_len);
@@ -135,7 +134,6 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 			OPSTAT_INCR("msl.read-part-valid");
 			return (1);
 		}
-#endif
 		return (0);
 	}
 	psc_fatalx("biorq %p does not have page %d", r, idx);
@@ -2306,12 +2304,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto out2;
 	}
 
-#if 0
 
 	/* Launch read-ahead after the original read request */
 	if (predio)
 		msl_issue_predio(mfh, bno, rw, aoff, npages);
-#endif
 
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
