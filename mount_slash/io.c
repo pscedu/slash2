@@ -178,7 +178,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	uint32_t aoff, alen, bmpce_off;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmpc_ioreq *r;
-	int i, flag, npages;
+	int i, npages;
 
 	DEBUG_BMAP(PLL_DIAG, b,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -213,15 +213,12 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (alen % BMPC_BUFSZ)
 		npages++;
 
-	/* debug */
-	flag = (op == BIORQ_READ) ? BMPCEF_READ : BMPCEF_WRITE;
-
 	/*
 	 * Now populate pages which correspond to this request.
 	 */
 	for (i = 0; i < npages; i++) {
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
-		bmpce_lookup(r, b, flag, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
+		bmpce_lookup(r, b, 0, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
 	}
 	return (r);
 }
@@ -810,7 +807,6 @@ msl_bmpce_read_rpc_done(struct bmap_pagecache_entry *e, int rc)
 		e->bmpce_flags &= ~BMPCEF_EIO;
 		e->bmpce_flags |= BMPCEF_DATARDY;
 	}
-	e->bmpce_flags &= ~BMPCEF_NEW;
 
 	DEBUG_BMPCE(PLL_DEBUG, e, "rpc_done");
 
@@ -1727,7 +1723,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
  		 */
 		if (e->bmpce_flags & BMPCEF_DATARDY)
 			goto skip;
-		e->bmpce_flags &= ~BMPCEF_NEW;
 
 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
 			e->bmpce_flags |= BMPCEF_DATARDY;
@@ -1773,7 +1768,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 {
 	size_t nbytes, tbytes = 0, rflen;
 	struct bmap_pagecache_entry *e;
-	int i, j, npages, tsize;
+	int i, npages, tsize;
 	char *dest, *src;
 	off_t toff;
 
@@ -1820,7 +1815,6 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		psc_assert(nbytes);
 		psc_assert(msl_biorq_page_valid(r, i));
 
-		psc_assert(!(e->bmpce_flags & BMPCEF_NEW));
 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
@@ -1829,9 +1823,6 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
 		q->mfsrq_iovs[q->mfsrq_niov].iov_base = src;
 		q->mfsrq_niov++;
-
-		for (j = 0; j < nbytes; j++)
-			psc_assert(*src++);
 
 		BMPCE_ULOCK(e);
 

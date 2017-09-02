@@ -89,10 +89,7 @@ struct bmap_page_entry {
 #define BMPCEF_LRU		(1 <<  4)	/* on LRU list */
 #define BMPCEF_EIO		(1 <<  5)	/* I/O error in bmpce_rc */
 #define BMPCEF_AIOWAIT		(1 <<  6)	/* wait on async read */
-#define BMPCEF_NEW		(1 <<  7)	/* debug */
-#define BMPCEF_READ		(1 <<  8)	/* debug */
-#define BMPCEF_WRITE		(1 <<  9)	/* debug */
-#define BMPCEF_READAHEAD	(1 <<  10)	/* populated from readahead */
+#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
