@@ -913,6 +913,10 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	lc_move2tail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
+	/*
+ 	 * I am holding the bmap lock here, do don't call reaper 
+ 	 * directly to avoid a potential deadlock.
+ 	 */
 	if (psc_atomic32_read(&slab_pool->ppm_nwaiters)) {
 		OPSTAT_INCR("slab-wakeone");
 		psc_waitq_wakeone(&sli_slab_waitq);
