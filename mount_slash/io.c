@@ -575,7 +575,7 @@ slc_fsreply_write(struct fidc_membh *f, struct pscfs_req *pfr,
 }
 
 void
-msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
+msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len, struct bmpc_ioreq *r0)
 {
 	void *oiov;
 	struct msl_fhent *mfh;
@@ -604,6 +604,16 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 	q->mfsrq_ref--;
 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
 	if (q->mfsrq_ref) {
+		if (r0) {
+			/*
+ 			 * This holds on to biorq, which in turns holds on to
+ 			 * pages untile we have copied out their contents below.
+ 			 * In theory, we only need this for a read request.
+ 			 */
+			BIORQ_LOCK(r0);
+			r0->biorq_ref++;
+			BIORQ_ULOCK(r0);
+		}
 		MFH_ULOCK(mfh);
 		return;
 	}
@@ -656,6 +666,15 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len)
 		}
 		slc_fsreply_write(f, pfr, q->mfsrq_len,
 		    abs(q->mfsrq_err));
+	}
+
+	for (i = 0; i < MAX_BMAPS_REQ; i++) {
+		r = q->mfsrq_biorq[i];
+		if (!r)
+			break;
+		if (r == r0)
+			continue;
+		msl_biorq_release(r);
 	}
 
 	/*
@@ -723,7 +742,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r)
 	if (needflush)
 		msl_pages_schedflush(r);
 
-	msl_complete_fsrq(q, len);
+	msl_complete_fsrq(q, len, r);
 }
 
 /*
@@ -2324,7 +2343,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (r)
 			msl_biorq_release(r);
 	}
-	msl_complete_fsrq(q, 0);
+	msl_complete_fsrq(q, 0, NULL);
 	return;
 
  out3:
