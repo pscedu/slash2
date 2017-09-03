@@ -54,8 +54,9 @@ slab_alloc(void)
 	struct slab *slb;
 
 	slb = psc_pool_get(slab_pool);
-	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
+	/* XXX ENOMEM */
+	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 
 	return (slb);
 }
