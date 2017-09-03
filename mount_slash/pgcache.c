@@ -136,10 +136,12 @@ msl_pgcache_get(int wait)
 
 	/*
  	 * For security and avoiding data corruption at the last
- 	 * page of a file (zeros versus random bytes).
+ 	 * page of a file (zeros versus random bytes), we should
+ 	 * zero a new page. Luckily, our friendly sliod has already
+ 	 * zero the buffer for us and we always read in full page
+ 	 * size, which means any bytes after EOF are also zeroed
+ 	 * by sliod as well.
  	 */
-	memset(p, 0, BMPC_BUFSZ);
-
 	return (p);
 }
 
