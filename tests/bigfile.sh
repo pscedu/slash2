@@ -88,13 +88,13 @@ then
     bail
 fi
 
-./bigfile3 -s  3805 -t  9 -b   1785  -n 443957 $mypath/$myhost.bigfile3-4.$pid.dat | tee $myhost.bigfile3-4.$pid.log
+./bigfile3 -s  3805 -t  9 -b   1785  -n 413957 $mypath/$myhost.bigfile3-4.$pid.dat | tee $myhost.bigfile3-4.$pid.log
 if [ $? -eq 1 ]
 then
     bail
 fi
   
-./bigfile3 -s  9805 -t  3 -b 111785  -n 143206 $mypath/$myhost.bigfile3-5.$pid.dat | tee $myhost.bigfile3-5.$pid.log
+./bigfile3 -s  9805 -t  3 -b 111785  -n 133296 $mypath/$myhost.bigfile3-5.$pid.dat | tee $myhost.bigfile3-5.$pid.log
 if [ $? -eq 1 ]
 then
     bail
@@ -112,13 +112,13 @@ then
     bail
 fi
 
-./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.$pid.dat | tee $myhost.bigfile3-8.$pid.log
+./bigfile3 -s 91234 -t 13 -b  51029  -n 207052 $mypath/$myhost.bigfile3-8.$pid.dat | tee $myhost.bigfile3-8.$pid.log
 if [ $? -eq 1 ]
 then
     bail
 fi
 
-./bigfile3 -s  5555 -t 17 -b 114129  -n  80112 $mypath/$myhost.bigfile3-9.$pid.dat | tee $myhost.bigfile3-9.$pid.log
+./bigfile3 -s  5555 -t 17 -b 114129  -n  77112 $mypath/$myhost.bigfile3-9.$pid.dat | tee $myhost.bigfile3-9.$pid.log
 if [ $? -eq 1 ]
 then
     bail
