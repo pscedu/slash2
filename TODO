@@ -5985,3 +5985,8 @@ Explore race: replicate a large file and use repl-remove to remove some block ma
 
 rapier@client2 p]$ cp README.md /fstest/rapier/test/
 cp: failed to close ‘/fstest/rapier/test/README.md’: Numerical result out of range
+
+09/02/2017
+----------
+
+Don't shrink some pools - biorq, bmpce, slab etc.
