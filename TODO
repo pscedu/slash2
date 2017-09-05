@@ -5990,3 +5990,8 @@ cp: failed to close ‘/fstest/rapier/test/README.md’: Numerical result out of
 ----------
 
 Don't shrink some pools - biorq, bmpce, slab etc.
+
+09/04/2017
+----------
+
+bigfile.sh does not handle ENOSPC or slash2 lied?
