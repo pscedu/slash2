@@ -568,7 +568,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (idle)
 		nitems = lc_nitems(&msl_lru_pages) / 20;
 	else
-		nitems = lc_nitems(&msl_lru_pages) / 10;
+		nitems = lc_nitems(&msl_lru_pages) / 5;
 	if (nitems < 5)
 		nitems = 5;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
