@@ -79,8 +79,7 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_INC, 0 };
 
 int			 msl_predio_pipe_size = 256;
-//int			 msl_predio_max_pages = 64;
-int			 msl_predio_max_pages = 0;
+int			 msl_predio_max_pages = 64;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
