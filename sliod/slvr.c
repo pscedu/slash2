@@ -916,8 +916,11 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	/*
  	 * I am holding the bmap lock here, do don't call reaper 
  	 * directly to avoid a potential deadlock.
+ 	 *
+ 	 * We reap proactively instead of on demand to avoid ENOMEM
+ 	 * situation, which we don't handle gracefully right now.
  	 */
-	if (psc_atomic32_read(&slab_pool->ppm_nwaiters)) {
+	if (!slab_pool->ppm_nfree) {
 		OPSTAT_INCR("slab-wakeone");
 		psc_waitq_wakeone(&sli_slab_waitq);
 	}
