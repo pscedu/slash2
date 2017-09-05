@@ -209,12 +209,16 @@ int main(int argc, char *argv[])
 					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
 						error, off, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
+					if (error > 2048)
+						goto out;
 				}
 			}
 			off += bsize;
 		}
 	}
 	close(fd);
+
+ out:
 
 	gettimeofday(&t2, NULL);
 
