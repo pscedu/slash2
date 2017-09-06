@@ -40,7 +40,7 @@ main(int argc, char *argv[])
 	seed = 4456;
 	gettimeofday(&t1, NULL);
 
-	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
+	while ((c = getopt(argc, argv, "b:s:n:rd")) != -1) {
 		switch (c) {
 			case 'b':
 				bsize = atoi(optarg);

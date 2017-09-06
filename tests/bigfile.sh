@@ -64,7 +64,7 @@ then
     bail
 fi
 
-./bigfile2 -r -s 4499 -b 7790                  $mypath/$myhost.bigfile2-2.$pid.dat | tee $myhost.bigfile2-2.$pid.log
+./bigfile2 -r -d -s 4499 -b 7790               $mypath/$myhost.bigfile2-2.$pid.dat | tee $myhost.bigfile2-2.$pid.log
 if [ $? -eq 1 ]
 then
     bail
