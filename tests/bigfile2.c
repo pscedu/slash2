@@ -32,7 +32,7 @@ main(int argc, char *argv[])
 	struct stat stbuf;
 	unsigned char *buf;
 	struct timeval t1, t2, t3;
-	int fd, error = 0, readonly = 0;
+	int fd, error = 0, readonly = 0, delete = 0;
 	size_t i, j, c, seed, size, bsize, nblocks, remainder = 0;
 
 	bsize = 5678;
@@ -53,6 +53,9 @@ main(int argc, char *argv[])
 				break;
                         case 'r':
 				readonly = 1;
+				break;
+                        case 'd':
+				delete = 1;
 				break;
 		}   
 	}
@@ -159,6 +162,13 @@ main(int argc, char *argv[])
 			printf("Fail to fsync file, errno = %d.\007\n", errno);
 	}
         close(fd);
+	if (!error && delete) {
+		error = unlink(filename);
+		if (!error)
+			printf("File has been deleted successfully.\007\n");
+		else
+			printf("Fail to delete file, errno = %d.\007\n", errno);
+	}
 
 	gettimeofday(&t2, NULL);
 
