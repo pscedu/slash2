@@ -92,11 +92,12 @@ int main(int argc, char *argv[])
 	struct stat stb;
 	char rand_statebuf[32];
 	struct timeval t1, t2, t3;
-	int i, j, k, fd, ret, error, nthreads, readonly;
+	int i, j, k, fd, ret, error, nthreads, readonly, delete;
 	struct random_data rand_state;
 	size_t c, off, seed, size, bsize, nblocks;
 
 	error = 0;
+	delete = 0;
 	readonly = 0;
 	bsize = 71781;
 	nthreads = 5;
@@ -104,10 +105,13 @@ int main(int argc, char *argv[])
 	seed = 35438;
 	gettimeofday(&t1, NULL);
 
-	while ((c = getopt(argc, argv, "rb:s:n:t:")) != -1) {
+	while ((c = getopt(argc, argv, "rdb:s:n:t:")) != -1) {
 		switch (c) {
 			case 'r':
 				readonly = 1;
+				break;
+			case 'd':
+				delete = 1;
 				break;
 			case 'b':
 				bsize = atoi(optarg);
@@ -219,6 +223,13 @@ int main(int argc, char *argv[])
 	close(fd);
 
  out:
+	if (!error && delete) {
+		error = unlink(filename);
+		if (error)
+			printf("Fail to delete file %s\n", filename);
+		else
+			printf("File %s has been deleted successfully\n", filename);
+	}
 
 	gettimeofday(&t2, NULL);
 
@@ -230,7 +241,7 @@ int main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	printf("\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
+	printf("\n\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
 		error ? "Test failed" : "Test succeeded", 
 		t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 
