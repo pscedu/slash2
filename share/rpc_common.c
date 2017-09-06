@@ -514,6 +514,11 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
  	 */
 	if (!locked)
 		CSVC_LOCK(csvc);
+
+	/*
+ 	 * 09/07/2017: pscrpc_drop_conns() --> pscrpc_fail_import()
+ 	 * sl_imp_hldrop_cli() makes rc = -1.
+ 	 */
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
@@ -950,6 +955,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 * Hit again, this comes from the mdscoh_req code path.  The problem
  	 * is that bml->bml_exp is not protected by a reference count, which
  	 * probably in turn can't ensure the csvc is still there.
+ 	 *
+ 	 * Hit again from slm_ptrunc_prepare().
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
