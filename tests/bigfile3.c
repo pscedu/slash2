@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 				if (buf[k] != (unsigned char)result & 0xff) {
 					error++;
 					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
-						error, off, i, j, k, buf[k], result & 0xff);
+						error, off+k, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
 					if (error > 2048)
 						goto out;
