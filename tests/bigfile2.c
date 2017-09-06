@@ -167,7 +167,7 @@ main(int argc, char *argv[])
 		if (!error)
 			printf("File has been deleted successfully.\007\n");
 		else
-			printf("Fail to delete file, errno = %d.\007\n", errno);
+			printf("Fail to delete file %s, errno = %d.\007\n", filename, errno);
 	}
 
 	gettimeofday(&t2, NULL);
