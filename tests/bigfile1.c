@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 {
 	char *name, ch;
 	size_t tmp;
-	int times = 10;
+	int rc, times = 10;
 	unsigned int seed = 1234;
 	size_t i, j, c, fd, nfile;
 	struct timeval t1, t2, t3;
@@ -362,8 +362,15 @@ int main(int argc, char *argv[])
 		fflush(stdout);
 	}
 
+	printf("\n");
 	for (i = 0; i < nfile; i++) {
 	        close(files[i].fd);
+        	rc = unlink(files[i].name);
+		if (rc < 0) {
+			printf("Fail to unlink file %s, errno = %d\n", files[i].name, errno);
+			exit (1);
+		}
+		printf("Test file %s has been removed successfully...\n", files[i].name);
 	}
 	gettimeofday(&t2, NULL);
 
