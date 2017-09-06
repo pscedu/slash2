@@ -514,6 +514,11 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
  	 */
 	if (!locked)
 		CSVC_LOCK(csvc);
+
+	/*
+ 	 * 09/07/2017: pscrpc_drop_conns() --> pscrpc_fail_import()
+ 	 * sl_imp_hldrop_cli() makes rc = -1.
+ 	 */
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
 	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
