@@ -955,6 +955,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 * Hit again, this comes from the mdscoh_req code path.  The problem
  	 * is that bml->bml_exp is not protected by a reference count, which
  	 * probably in turn can't ensure the csvc is still there.
+ 	 *
+ 	 * Hit again from slm_ptrunc_prepare().
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
