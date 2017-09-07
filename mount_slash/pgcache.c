@@ -433,7 +433,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree) {
+		if (bmpce_pool->ppm_nfree < 3) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 			bmpce_reaper(bmpce_pool);
 		}

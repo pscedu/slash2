@@ -920,7 +920,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 * We reap proactively instead of on demand to avoid ENOMEM
  	 * situation, which we don't handle gracefully right now.
  	 */
-	if (!slvr_pool->ppm_nfree) {
+	if (slvr_pool->ppm_nfree < 3) {
 		OPSTAT_INCR("slvr-wakeone");
 		psc_waitq_wakeone(&sli_slvr_waitq);
 	}
