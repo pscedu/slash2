@@ -433,8 +433,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		if (psc_atomic32_read(&bmpce_pool->ppm_nwaiters)) {
-			OPSTAT_INCR("msl.bmpce-wait-reap");
+		if (bmpce_pool->ppm_nfree) {
+			OPSTAT_INCR("msl.bmpce-nfree-reap");
 			bmpce_reaper(bmpce_pool);
 		}
 		return;
@@ -558,6 +558,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct bmap *b;
 	struct bmap_cli_info *bci;
 
+	psc_assert(m == bmpce_pool);
+
 	POOL_LOCK(bmpce_pool);
 	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
 	bmpce_pool->ppm_flags &= ~PPMF_IDLEREAP;
@@ -633,6 +635,7 @@ bmpc_global_init(void)
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
 	    bmpce_reaper, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
+	bmpce_pool->ppm_flags |= PPMF_NOPREEMPT;
 
 	msl_pgcache_init();
 
