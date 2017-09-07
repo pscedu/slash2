@@ -1099,10 +1099,10 @@ slab_cache_reap(__unusedx struct psc_poolmgr *m)
 			continue;
 		}
 
-		psc_dynarray_add(&a, s);
 		s->slvr_flags |= SLVRF_FREEING;
 		SLVR_ULOCK(s);
 
+		psc_dynarray_add(&a, s);
 		if (psc_dynarray_len(&a) >= nitems)
 			break;
 	}
