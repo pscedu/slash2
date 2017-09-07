@@ -1063,15 +1063,17 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 }
 
 /*
- * The reclaim function for slab_pool.  Note that our caller
+ * The reclaim function for slvr_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
-slab_cache_reap(__unusedx struct psc_poolmgr *m)
+slab_cache_reap(struct psc_poolmgr *m)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
 	int i, nitems;
+
+	psc_assert(m == slvr_pool);
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
 	nitems = lc_nitems(&sli_lruslvrs) / 5;
