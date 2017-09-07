@@ -1216,11 +1216,19 @@ slirathr_main(struct psc_thread *thr)
 void
 slvr_cache_init(void)
 {
-	int i;
+	int i, nbuf;
+
+	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
+
+	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
+		psc_fatalx("invalid slab_cache_size setting; "
+		    "minimum allowed is %zu", SLAB_MIN_CACHE);
+
+	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
-	    SLAB_DEF_COUNT, 0, NULL, "slvr");
+	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
+	    nbuf, nbuf, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
@@ -1259,7 +1267,7 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_READAHEAD, slirathr_main, 0,
 		    "slirathr%d", i);
 
-	slab_cache_init();
+	slab_cache_init(nbuf);
 	slvr_worker_init();
 }
 
