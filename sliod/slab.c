@@ -41,12 +41,14 @@
 #include "sliod.h"
 #include "slvr.h"
 
+extern struct psc_poolmgr	*slvr_pool;
+
 struct psc_poolmaster	 slab_poolmaster;
 struct psc_poolmgr	*slab_pool;
 
-struct timespec		 sli_slab_timeout = { 30, 0L };
-struct psc_waitq	 sli_slab_waitq = PSC_WAITQ_INIT("slab");
-psc_spinlock_t		 sli_slab_lock = SPINLOCK_INIT;
+struct timespec		 sli_slvr_timeout = { 30, 0L };
+struct psc_waitq	 sli_slvr_waitq = PSC_WAITQ_INIT("slvr");
+psc_spinlock_t		 sli_slvr_lock = SPINLOCK_INIT;
 
 struct slab *
 slab_alloc(void)
@@ -72,11 +74,11 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_pool_reap(slab_pool, 0);
+		psc_pool_reap(slvr_pool, 0);
 
-		spinlock(&sli_slab_lock);
-		psc_waitq_waitrel_ts(&sli_slab_waitq,
-		    &sli_slab_lock, &sli_slab_timeout);
+		spinlock(&sli_slvr_lock);
+		psc_waitq_waitrel_ts(&sli_slvr_waitq,
+		    &sli_slvr_lock, &sli_slvr_timeout);
 	}
 }
 
