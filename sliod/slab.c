@@ -85,11 +85,11 @@ slab_cache_init(int nbuf)
 {
 	psc_poolmaster_init(&slab_poolmaster, struct slab,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    slab_cache_reap, "slab", NULL);
+	    NULL, "slab", NULL);
 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 
 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
 
-	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %zd bufs", 
+	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %d bufs", 
 	    slcfg_local->cfg_slab_cache_size, nbuf);
 }

@@ -1228,7 +1228,7 @@ slvr_cache_init(void)
 
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
-	    nbuf, nbuf, NULL, "slvr");
+	    nbuf, nbuf, slab_cache_reap, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
