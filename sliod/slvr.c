@@ -68,7 +68,7 @@ struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have thei
 
 struct psc_listcache	 sli_fcmh_dirty;
 
-extern struct psc_waitq	 sli_slab_waitq;
+extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
@@ -920,9 +920,9 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 * We reap proactively instead of on demand to avoid ENOMEM
  	 * situation, which we don't handle gracefully right now.
  	 */
-	if (!slab_pool->ppm_nfree) {
-		OPSTAT_INCR("slab-wakeone");
-		psc_waitq_wakeone(&sli_slab_waitq);
+	if (!slvr_pool->ppm_nfree) {
+		OPSTAT_INCR("slvr-wakeone");
+		psc_waitq_wakeone(&sli_slvr_waitq);
 	}
 }
 
