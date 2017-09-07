@@ -1069,7 +1069,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 int
 slab_cache_reap(__unusedx struct psc_poolmgr *m)
 {
-	static struct psc_dynarray a = DYNARRAY_INIT;
+	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
 	int i, nitems;
 
