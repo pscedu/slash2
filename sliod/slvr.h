@@ -85,8 +85,6 @@ struct slvr {
 /*
  * Think twice if you ever want to use recursive lock.
  */
-#define SLVR_RLOCK(s)		reqlock(&(s)->slvr_lock)
-#define SLVR_URLOCK(s, lk)	ureqlock(&(s)->slvr_lock, (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(&(s)->slvr_lock)
 #define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
 #define SLVR_TRYRLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
