@@ -382,34 +382,28 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		 * and we have fcmh update in bewteen?
 		 */
 		rc = sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
-		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL, &f, NULL); 
+		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
+		    &f, NULL); 
 
 		if (rc) {
 			OPSTAT_INCR("msl.readdir-fcmh-exist");
 			continue;
 		}
-		FCMH_LOCK(f);
-		/*
-		 * We did not load attributes above, if it has attributes now,
-		 * then we lose the race.
-		 */
-		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
-			OPSTAT_INCR("msl.readdir-fcmh");
-			slc_fcmh_setattr_locked(f, &e->sstb);
+		OPSTAT_INCR("msl.readdir-fcmh");
+		slc_fcmh_setattr_locked(f, &e->sstb);
 
 #if 0
-			/*
-			 * Race: entry was entered into namecache, file
-			 * system unlink occurred, then we tried to
-			 * refresh stat(2) attributes.  This is OK
-			 * however, since namecache is synchronized with
-			 * unlink, we just did extra work here.
-			 */
-			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+		/*
+		 * Race: entry was entered into namecache, file
+		 * system unlink occurred, then we tried to
+		 * refresh stat(2) attributes.  This is OK
+		 * however, since namecache is synchronized with
+		 * unlink, we just did extra work here.
+		 */
+		psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
 #endif
 
-			msl_fcmh_stash_xattrsize(f, e->xattrsize);
-		}
+		msl_fcmh_stash_xattrsize(f, e->xattrsize);
 		fcmh_op_done(f);
 	}
 

@@ -41,7 +41,6 @@
 #include "pfl/crc.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
-#include "pfl/pool.h"
 #include "pfl/tree.h"
 
 #include "cache_params.h"
@@ -52,18 +51,9 @@
 struct fidc_membh;
 struct srt_bmapdesc;
 
-#define	MSL_BMAP_COUNT		1024
+#define	MSL_BMAP_COUNT		64
 #define	SLI_BMAP_COUNT		1024
 #define	MDS_BMAP_COUNT		4096
-
-#define MSL_MAX_BMAP_COUNT	MSL_BMAP_COUNT*8
-
-/*
- * Longer time allows a client to cache pages longer and reduces RPC traffic
- * needed for lease extension.
- */
-#define BMAP_TIMEO_MAX		240	/* default bmap lease timeout */
-#define BMAP_TIMEO_MIN		 40	/* minimum bmap lease timeout */
 
 /*
  * Basic information about bmaps shared by all MDS, IOS, and CLI.
@@ -217,8 +207,6 @@ struct bmap {
 		}							\
 	} while (0)
 
-#if 0
-
 #define BMAP_WAIT_BUSY(b)						\
 	do {								\
 		pthread_t _pthr = pthread_self();			\
@@ -248,8 +236,6 @@ struct bmap {
 		psc_assert((b)->bcm_flags & BMAPF_BUSY);		\
 		psc_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
-
-#endif
 
 /*
  * TODO: Convert all callers to lock the bmap before start or done type.
@@ -355,7 +341,7 @@ struct bmap {
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
 
 int	 bmap_cmp(const void *, const void *);
-void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
+void	 bmap_cache_init(size_t, int);
 void	 bmap_cache_destroy(void);
 void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmap *);
@@ -390,7 +376,6 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
 	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
 	BMAP_OPCNT_BIORQ,		/* all: IO request */
-	BMAP_OPCNT_BMPCE,		/* CLI: page */
 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
 	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
@@ -407,6 +392,7 @@ RB_HEAD(bmaptree, bmap);
 RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
+	void	(*bmo_reapf)(void);
 	void	(*bmo_init_privatef)(struct bmap *);
 	int	(*bmo_retrievef)(struct bmap *, int);
 	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);

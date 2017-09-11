@@ -595,24 +595,6 @@ msctlparam_prefios_set(const char *val)
 	return (0);
 }
 
-void
-slctlparam_max_pages_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d", msl_predio_max_pages);
-}
-
-int
-slctlparam_max_pages_set(const char *val)
-{
-	int newval;
-
-	newval = strtol(val, NULL, 0);
-	if (newval < 0 || newval > 2*SLASH_BMAP_SIZE/BMPC_BUFSZ)
-		return (1);
-	msl_predio_max_pages = newval;
-	return (0);
-}
-
 int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
@@ -995,6 +977,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
 
+	psc_ctlparam_register_var("sys.bmap_max_cache",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
+
 	psc_ctlparam_register_var("sys.bmap_reassign",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_bmap_reassign);
 
@@ -1030,12 +1015,15 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
-
-	psc_ctlparam_register_simple("sys.predio_max_pages",
-	    slctlparam_max_pages_get, slctlparam_max_pages_set);
-	psc_ctlparam_register_var("sys.predio_pipe_size",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_pipe_size);
-
+	psc_ctlparam_register_var("sys.predio_window_size",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_predio_window_size);
+	psc_ctlparam_register_var("sys.predio_issue_minpages",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_predio_issue_minpages);
+	psc_ctlparam_register_var("sys.predio_issue_maxpages",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+	    &msl_predio_issue_maxpages);
 	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,

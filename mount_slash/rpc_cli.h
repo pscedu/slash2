@@ -138,10 +138,10 @@ msl_getmw(void)
 	switch (thr->pscthr_type) {
 	case MSTHRT_ATTR_FLUSH:
 		return (&msattrflushthr(thr)->maft_mw);
-	case MSTHRT_BWATCH:
-		return (&msbwatchthr(thr)->mbwt_mw);
 	case MSTHRT_BRELEASE:
 		return (&msbreleasethr(thr)->mbrt_mw);
+	case MSTHRT_BWATCH:
+		return (&msbwatchthr(thr)->mbwt_mw);
 	case MSTHRT_FLUSH:
 		return (&msflushthr(thr)->mflt_mw);
 	case PFL_THRT_FS:
@@ -158,7 +158,7 @@ msl_getmw(void)
 	case PFL_THRT_CTL:
 		return (NULL);
 	}
-	psc_fatalx("unknown thread type: %d", thr->pscthr_type);
+	psc_fatalx("unknown thread type");
 }
 
 #endif /* _RPC_CLI_H_ */

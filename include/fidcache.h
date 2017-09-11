@@ -218,7 +218,6 @@ struct fidc_membh {
 #define FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
 #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
 #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
-#define FCMH_OPCNT_KEEP_LOCK		11	/* IOD: sync ahead */
 #define FCMH_OPCNT_MAXTYPE		12
 
 void	fidc_init(int);
@@ -237,7 +236,8 @@ void	sl_freapthr_spawn(int, const char *);
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* create if not present */
 #define FIDC_LOOKUP_LOAD		(1 << 1)	/* use external fetching mechanism */
-#define FIDC_LOOKUP_EXCL		(1 << 2)	/* ensure that this call creates */
+#define FIDC_LOOKUP_LOCK		(1 << 2)	/* leave locked upon return */
+#define FIDC_LOOKUP_EXCL		(1 << 4)	/* ensure that this call creates */
 
 int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
 	    int, struct fidc_membh **, void *);
@@ -268,11 +268,18 @@ int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
+#define fcmh_op_start_type(f, type)					\
+	_fcmh_op_start_type(FCMH_PCI, (f), (type))
+#define fcmh_op_done_type(f, type)					\
+	_fcmh_op_done_type(FCMH_PCI, (f), (type), 0)
+
 #define fcmh_op_done(f)							\
     fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
 
-void	fcmh_op_start_type(struct fidc_membh *, int);
-void	fcmh_op_done_type(struct fidc_membh *, int);
+void	_fcmh_op_start_type(const struct pfl_callerinfo *,
+	    struct fidc_membh *, int);
+void	_fcmh_op_done_type(const struct pfl_callerinfo *,
+	    struct fidc_membh *, int, int);
 
 void	_dump_fcmh_flags_common(int *, int *);
 

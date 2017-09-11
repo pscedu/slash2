@@ -759,7 +759,6 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		pfl_fmt_ratio(rbuf, bact, bact + both);
 		printf(" %6d %6d %6s", bact, bact + both, rbuf);
 
-		/* By experiment, we print 129 bmap states per line */
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx +
 			    SL_NBITS_REPLST_BHDR;
@@ -871,7 +870,7 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d %3d "
 	    "%4d %7x %7x "
-	    "%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %3d "
 	    "%8"PRIx64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
@@ -881,7 +880,12 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    mpce->mpce_flags & BMPCEF_TOFREE	? 't' : '-',
 	    mpce->mpce_flags & BMPCEF_EIO	? 'e' : '-',
 	    mpce->mpce_flags & BMPCEF_AIOWAIT	? 'w' : '-',
+	    mpce->mpce_flags & BMPCEF_DISCARD	? 'D' : '-',
 	    mpce->mpce_flags & BMPCEF_READAHEAD	? 'r' : '-',
+	    mpce->mpce_flags & BMPCEF_ACCESSED	? 'a' : '-',
+	    mpce->mpce_flags & BMPCEF_IDLE	? 'i' : '-',
+	    mpce->mpce_flags & BMPCEF_REAPED	? 'X' : '-',
+	    mpce->mpce_flags & BMPCEF_READALC	? 'R' : '-',
 	    mpce->mpce_nwaiters, mpce->mpce_npndgaios,
 	    mpce->mpce_laccess.tv_sec);
 }

@@ -51,8 +51,8 @@ extern struct psc_thread *slcconnthr;
 enum {
 	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
 	MSTHRT_BENCH,			/* I/O benchmarking thread */
-	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_BRELEASE,		/* bmap lease releaser */
+	MSTHRT_BWATCH,			/* bmap lease watcher */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
 	MSTHRT_REAP,			/* pool reap thread */
@@ -79,12 +79,12 @@ struct msattrflush_thread {
 	struct pfl_multiwait		 maft_mw;
 };
 
-struct msbwatch_thread {
-	struct pfl_multiwait		 mbwt_mw;
+struct msbrelease_thread {
+	struct pfl_multiwait		 mbrt_mw;
 };
 
-struct msbrelease_thread {
-	struct pfl_multiwait             mbrt_mw;
+struct msbwatch_thread {
+	struct pfl_multiwait		 mbwt_mw;
 };
 
 struct msflush_thread {
@@ -117,8 +117,7 @@ PSCTHR_MKCAST(msreadaheadthr, msreadahead_thread, MSTHRT_READAHEAD);
 #define NUM_NBRQ_THREADS		16
 #define NUM_BMAP_FLUSH_THREADS		16
 #define NUM_ATTR_FLUSH_THREADS		4
-#define NUM_READ_AHEAD_THREADS		4
-#define NUM_BMAP_TIMEOUT_THREADS	4
+#define NUM_READAHEAD_THREADS		4
 
 #define MSL_FIDNS_RPATH			".slfidns"
 
@@ -161,9 +160,8 @@ struct msl_fhent {
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
-	off_t				 mfh_predio_lastoff;	/* last I/O offset */
-	off_t				 mfh_predio_lastsize;	/* last I/O size */
-	off_t				 mfh_predio_off;	/* next predio I/O offset */
+	off_t				 mfh_predio_lastoff;	/* last offset */
+	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
 	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */
@@ -178,6 +176,8 @@ struct msl_fhent {
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
+#define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
+#define MFH_URLOCK(m, lk)		ureqlock(&(m)->mfh_lock, (lk))
 #define MFH_LOCK_ENSURE(m)		LOCK_ENSURE(&(m)->mfh_lock)
 
 /*
@@ -263,13 +263,12 @@ resm2rmci(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-struct prediorq {
+struct readaheadrq {
 	struct psc_listentry		rarq_lentry;
 	enum rw				rarq_rw;
 	struct sl_fidgen		rarq_fg;
 	sl_bmapno_t			rarq_bno;
 	uint32_t			rarq_off;
-	uint32_t			rarq_flag;
 	int				rarq_npages;
 };
 
@@ -375,7 +374,7 @@ extern struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
 extern struct psc_listcache	 msl_attrtimeoutq;
 extern struct psc_listcache	 msl_bmapflushq;
 extern struct psc_listcache	 msl_bmaptimeoutq;
-extern struct psc_listcache	 msl_predioq;
+extern struct psc_listcache	 msl_readaheadq;
 
 extern struct psc_poolmgr	*msl_iorq_pool;
 extern struct psc_poolmgr	*msl_async_req_pool;
@@ -393,8 +392,9 @@ extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
-extern int			 msl_predio_max_pages;
-extern int			 msl_predio_pipe_size;
+extern int			 msl_predio_issue_maxpages;
+extern int			 msl_predio_issue_minpages;
+extern int			 msl_predio_window_size;
 extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_repl_enable;

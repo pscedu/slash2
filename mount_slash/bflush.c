@@ -57,7 +57,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-struct timespec			 msl_bflush_timeout = { 1, 0L };
+struct timespec			 msl_bflush_timeout = { 2, 0L };
 struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 msl_bmapflushq;
 struct psc_listcache		 msl_bmaptimeoutq;
@@ -317,8 +317,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	BMAP_LOCK(b);
 
 	if (rc == -PFLERR_KEYEXPIRED) {				/* 501 */
-		OPSTAT_INCR("msl.bmap-flush-expire");
-		b->bcm_flags |= BMAPF_LEASEEXPIRE;
+		OPSTAT_INCR("msl.bmap-flush-expired");
+		b->bcm_flags |= BMAPF_LEASEEXPIRED;
 	}
 	if (rc == -PFLERR_TIMEDOUT)				/* 511 */
 		OPSTAT_INCR("msl.bmap-flush-timedout");
@@ -432,7 +432,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		sl_csvc_decref(csvc);
 
 	bwc_free(bwc);
-	OPSTAT_INCR("msl.bmap-flush-rpc-err");
+	OPSTAT_INCR("msl.bmap-flush-rpc-fail");
 	return (rc);
 }
 
@@ -566,13 +566,10 @@ bmap_flushable(struct bmap *b)
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
-		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_etime */
-		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
-			OPSTAT_INCR("msl.flush-skip-expire-time");
-			flush = 0;
-		}
-		if (b->bcm_flags & BMAPF_LEASEEXPIRE) {
-			OPSTAT_INCR("msl.flush-skip-expire-flag");
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
+		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+			OPSTAT_INCR("msl.flush-skip-expire");
 			flush = 0;
 		}
 	}
@@ -615,7 +612,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		/*
 		 * If any member is expired then we'll push everything
-		 * out. See msl_bflush_maxage.
+		 * out.
 		 */
 		if (!expired)
 			expired = bmap_flush_biorq_expired(curr, 1);
@@ -696,6 +693,66 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	*indexp += idx;
 
 	return (bwc);
+}
+
+/*
+ * Lease watcher thread: issues "lease extension" RPCs for bmaps when
+ * deemed appropriate.
+ */
+__static void
+msbwatchthr_main(struct psc_thread *thr)
+{
+	struct psc_dynarray bmaps = DYNARRAY_INIT;
+	struct bmap *b, *tmpb;
+	struct timespec ts;
+	int i;
+
+	while (pscthr_run(thr)) {
+		/*
+		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
+		 * It is taken off the msl_bmapflushq after all its biorqs 
+		 * are flushed if any.
+		 */
+		LIST_CACHE_LOCK(&msl_bmapflushq);
+		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_bmapflushq);
+			break;
+		}
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
+			if (!BMAP_TRYLOCK(b))
+				continue;
+			DEBUG_BMAP(PLL_DEBUG, b, "begin");
+			if ((b->bcm_flags & BMAPF_TOFREE) ||
+			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
+				bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+				psc_dynarray_add(&bmaps, b);
+			}
+			BMAP_ULOCK(b);
+		}
+		LIST_CACHE_ULOCK(&msl_bmapflushq);
+
+		if (!psc_dynarray_len(&bmaps)) {
+			usleep(1000);
+			continue;
+		}
+
+		OPSTAT_INCR("msl.lease-refresh");
+
+		DYNARRAY_FOREACH(b, i, &bmaps) {
+			BMAP_LOCK(b);
+			msl_bmap_lease_extend(b, 0);
+			BMAP_LOCK(b);
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+		}
+		psc_dynarray_reset(&bmaps);
+	}
+	psc_dynarray_free(&bmaps);
 }
 
 /*
@@ -859,11 +916,6 @@ msbmapthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	/*
- 	 * We have one lease watcher and one lease release thread.
- 	 * The code is thread-safe though. So we can add more if 
- 	 * need be.
- 	 */
 	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
 	    sizeof(struct msbwatch_thread), "msbwatchthr");
 	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
@@ -876,9 +928,6 @@ msbmapthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-#if 0
-	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
-	    "msbenchthr");
-#endif
-
+//	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
+//	    "msbenchthr");
 }

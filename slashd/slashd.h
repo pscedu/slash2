@@ -48,8 +48,6 @@ struct srt_stat;
 struct slm_sth;
 struct bmap_mds_lease;
 
-extern int slm_max_lease_timeout;
-
 extern sqlite3	*db_handle;
 
 /* MDS thread types. */

@@ -241,7 +241,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {
 			freelock(&slm_bmap_leases.btt_lock);
-			nsecs = slm_max_lease_timeout;
+			nsecs = BMAP_TIMEO_MAX;
 			goto out;
 		}
 		b = bml_2_bmap(bml);

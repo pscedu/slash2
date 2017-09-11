@@ -35,7 +35,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
-#include "pfl/pool.h"
 #include "pfl/thread.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
@@ -102,7 +101,8 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and
 		 * msl_bmap_final_cleanup().
 		 */
-		sl_bmap_ops.bmo_final_cleanupf(b);
+		if (sl_bmap_ops.bmo_final_cleanupf)
+			sl_bmap_ops.bmo_final_cleanupf(b);
 
 		bmap_remove(b);
 	} else {
@@ -141,7 +141,6 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
-		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_bmpc.bmpc_tree */
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
@@ -169,6 +168,10 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	}
 	if (bnew == NULL) {
 		pfl_rwlock_unlock(&f->fcmh_rwlock);
+
+		if (sl_bmap_ops.bmo_reapf)
+			sl_bmap_ops.bmo_reapf();
+
 		bnew = psc_pool_get(bmap_pool);
 		goto restart;
 	}
@@ -241,10 +244,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 	if (flags & BMAPGETF_NONBLOCK) {
-		/*
- 		 * If want to change this to return EWOULDBLOCK, 
- 		 * just be careful.
- 		 */
 		if (b->bcm_flags & BMAPF_LOADING)
 			goto out;
 	} else
@@ -338,13 +337,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 }
 
 void
-bmap_cache_init(size_t priv_size, int count, 
-    int (*reclaimcb)(struct psc_poolmgr *))
+bmap_cache_init(size_t priv_size, int count)
 {
 	_psc_poolmaster_init(&bmap_poolmaster,
 	    sizeof(struct bmap) + priv_size,
 	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, count, count, 0, NULL, reclaimcb, "bmap");
+	    PPMF_AUTO, count, count, 0, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 

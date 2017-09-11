@@ -1231,8 +1231,6 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct fcmh_cli_info *fci;
-	char *sillyname;
-	uint64_t pino;
 	int rc;
 
 	if (!msl_enable_sillyrename) {
@@ -1241,10 +1239,8 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 
 	/*
- 	 * Note that at this point, we might still have references to the
- 	 * fcmh. And this file can be opened/unlinked/closed while our
- 	 * unlink RPC is in transit. So let us clean up our side first 
- 	 * in an atomic way.
+	 * What if the open is opened and closed quickly while the cleanup
+	 * is still in progress?  Perhaps adding a busy flag?
 	 */
 	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_nopen > 0);
@@ -1255,33 +1251,18 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 	psc_assert(fci->fci_pino);
 	psc_assert(fci->fci_name);
-
-	pino = fci->fci_pino;
-	sillyname = fci->fci_name;
-
-	fci->fci_pino = 0;
-	fci->fci_name = NULL;
-	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
-
 	FCMH_ULOCK(f);
 
-	/* 
-	 * It is Okay if the following fails, we just forget about the
- 	 * old silly name.
- 	 */
-	rc = msl_load_fcmh(NULL, pino, &p);
+	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
 	if (rc)
 		goto out;
-
-	msl_invalidate_readdir(p);
-	dircache_delete(p, sillyname);
 
 	MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
-	mq->pfid = pino;
-	strlcpy(mq->name, sillyname, sizeof(mq->name));
+	mq->pfid = fci->fci_pino;
+	strlcpy(mq->name, fci->fci_name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
@@ -1293,14 +1274,22 @@ msl_remove_sillyname(struct fidc_membh *f)
 		 */
 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
-		    pino, sillyname, rc);
+		    fci->fci_pino, fci->fci_name, rc);
 		OPSTAT_INCR("msl.sillyname-del-err");
 	} else
 		OPSTAT_INCR("msl.sillyname-del-ok");
 
- out:
+	msl_invalidate_readdir(p);
+	dircache_delete(p, fci->fci_name);
 
-	PSCFREE(sillyname);
+	FCMH_LOCK(f);
+	PSCFREE(fci->fci_name);
+	fci->fci_pino = 0;
+	fci->fci_name = NULL;
+	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
+	FCMH_ULOCK(f);
+
+ out:
 	if (p)
 		fcmh_op_done(p);
 
@@ -1495,14 +1484,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 	slc_fcmh_setattr(p, &mp->pattr);
 
-	/*
- 	 * I don't see the reason why should we make lookup and update
- 	 * attributes atomic. We used to return a fcmh locked.
- 	 */
-	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
+	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
+	    FIDC_LOOKUP_LOCK, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");
 	else {
-		FCMH_LOCK(c);
 		if (mp->valid) {
 			slc_fcmh_setattr_locked(c, &mp->cattr);
 		} else {
@@ -2674,17 +2659,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 	/*
 	 * Refresh clobbered file's attributes.  This file might have
-	 * additional links and may not be completely destroyed so we
-	 * don't evict it.
-	 *
-	 * We used to keep the fcmh locked upon returning from lookup.
-	 * Now we do FCMH_LOCK() by ourselve. I don't see the reason
-	 * to make the two steps atomic.
+	 * additional links and may not be completely destroyed so don't
+	 * evict.
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
-	    0, &ch, pfr) == 0) {
-		FCMH_LOCK(ch);
+	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
 		if (!mp->srr_clattr.sst_nlink) {
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
@@ -3343,7 +3323,7 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	lc_kill(&msl_bmapflushq);
 	lc_kill(&msl_bmaptimeoutq);
 	lc_kill(&msl_attrtimeoutq);
-	lc_kill(&msl_predioq);
+	lc_kill(&msl_readaheadq);
 	lc_kill(&msl_attrtimeoutq);
 
 	pscthr_setdead(sl_freapthr, 1);
@@ -3355,8 +3335,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	    lc_nitems(&msl_bmaptimeoutq));
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_attrtimeoutq,
 	    lc_nitems(&msl_attrtimeoutq));
-	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_predioq,
-	    lc_nitems(&msl_predioq));
+	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
+	    lc_nitems(&msl_readaheadq));
 
 	/* XXX force flush */
 
@@ -3441,7 +3421,9 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_attrtimeoutq);
 	pfl_listcache_destroy_registered(&msl_bmapflushq);
 	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
-	pfl_listcache_destroy_registered(&msl_predioq);
+	pfl_listcache_destroy_registered(&msl_readaheadq);
+	pfl_listcache_destroy_registered(&msl_idle_pages);
+	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);
 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_wr);
@@ -3959,12 +3941,25 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
+	int curr, last = 0;
 	while (pscthr_run(thr)) {
-
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
+		POOL_LOCK(bmpce_pool);
+		curr = bmpce_pool->ppm_nfree;
+		POOL_ULOCK(bmpce_pool);
+
+		if (last && curr >= last)
+			psc_pool_try_shrink(bmpce_pool, curr);
+
+		POOL_LOCK(bmpce_pool);
+		last = bmpce_pool->ppm_nfree;
+		POOL_ULOCK(bmpce_pool);
+
 		msl_pgcache_reap();
+
 		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+
 	}
 }
 
@@ -4132,7 +4127,7 @@ msl_init(void)
 	libsl_init(4096);//2 * (SRCI_NBUFS + SRCM_NBUFS));
 	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
-	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT, msl_bmap_reap);
+	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT);
 	dircache_mgr_init();
 
 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
@@ -4274,7 +4269,7 @@ msl_opt_lookup(const char *opt)
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
-					LOOKUP_TYPE_INT,	&msl_predio_max_pages},
+					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }

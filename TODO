@@ -5962,36 +5962,3 @@ pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
 [1498719149.59035000 msnbrqthr8:7ffefc7f1700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe540bd2e0 x32406078/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
 [1498719149.59042200 msnbrqthr5:7ffefd3f4700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6c0bb980 x32406084/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
 
-08/02/2017
-----------
-
-* Investigate why read does not time out when an I/O server is down.
-
-* Explore options to turn off or optimize hash for each RPC.
-
-08/05/2017
-----------
-
-Add an RPC from MDS to sliods so that you can sync up quickly (write-disable + min leases).
-
-08/08/2017
-----------
-
-Explore race: replicate a large file and use repl-remove to remove some block maps immediately.
-
-
-08/15/2017
-----------
-
-rapier@client2 p]$ cp README.md /fstest/rapier/test/
-cp: failed to close ‘/fstest/rapier/test/README.md’: Numerical result out of range
-
-09/02/2017
-----------
-
-Don't shrink some pools - biorq, bmpce, slab etc.
-
-09/04/2017
-----------
-
-bigfile.sh does not handle ENOSPC or slash2 lied?

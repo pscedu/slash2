@@ -250,7 +250,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 			f->fcmh_flags |= FCMH_TOFREE;
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		} else {
-			FCMH_ULOCK(f);
+			if ((flags & FIDC_LOOKUP_LOCK) == 0)
+				FCMH_ULOCK(f);
 			*fp = f;
 		}
 		OPSTAT_INCR("fidcache.hit");
@@ -340,7 +341,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		*fp = f;
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
+	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), f,
+	    FCMH_OPCNT_NEW, flags & FIDC_LOOKUP_LOCK);
 	return (rc);
 }
 
@@ -394,7 +396,8 @@ fcmh_getsize_locked(struct fidc_membh *f)
 }
 
 void
-fcmh_op_start_type(struct fidc_membh *f, int type)
+_fcmh_op_start_type(const struct pfl_callerinfo *pci,
+    struct fidc_membh *f, int type)
 {
 	int locked;
 
@@ -419,7 +422,8 @@ fcmh_op_start_type(struct fidc_membh *f, int type)
 }
 
 void
-fcmh_op_done_type(struct fidc_membh *f, int type)
+_fcmh_op_done_type(const struct pfl_callerinfo *pci,
+    struct fidc_membh *f, int type, int keep_locked)
 {
 	int rc;
 
@@ -469,7 +473,8 @@ fcmh_op_done_type(struct fidc_membh *f, int type)
 		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
 	}
 	fcmh_wake_locked(f);
-	FCMH_ULOCK(f);
+	if (!keep_locked)
+		FCMH_ULOCK(f);
 }
 
 void
@@ -491,6 +496,29 @@ sl_freapthr_spawn(int thrtype, const char *name)
 }
 
 #if PFL_DEBUG > 0
+void
+dump_fcmh(struct fidc_membh *f)
+{
+	int locked;
+
+	locked = FCMH_RLOCK(f);
+	DEBUG_FCMH(PLL_MAX, f, "");
+	FCMH_URLOCK(f, locked);
+}
+
+void
+dump_fidcache(void)
+{
+	struct psc_hashbkt *bkt;
+	struct fidc_membh *tmp;
+
+	PSC_HASHTBL_FOREACH_BUCKET(bkt, &sl_fcmh_hashtbl) {
+		psc_hashbkt_lock(bkt);
+		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, bkt)
+			dump_fcmh(tmp);
+		psc_hashbkt_unlock(bkt);
+	}
+}
 
 void
 _dump_fcmh_flags_common(int *flags, int *seq)

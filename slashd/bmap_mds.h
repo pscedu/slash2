@@ -143,6 +143,8 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
+#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
+
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
 	int32_t		  	  bml_refcnt;
@@ -152,7 +154,7 @@ struct bmap_mds_lease {
 	time_t			  bml_start;
 	time_t			  bml_expire;
 	struct bmap_mds_info	 *bml_bmi;
-	struct pscrpc_export	 *bml_exp;		/* XXX should take a refcount */
+	struct pscrpc_export	 *bml_exp;
 	struct psc_listentry	  bml_bmi_lentry;
 	struct psc_listentry	  bml_timeo_lentry;
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
