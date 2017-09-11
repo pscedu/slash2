@@ -52,7 +52,7 @@ then
     bail
 fi
 
-./bigfile2 -r                                  $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
+./bigfile2 -r -d                               $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
 if [ $? -eq 1 ]
 then
     bail
