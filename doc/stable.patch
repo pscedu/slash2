@@ -1,0 +1,5820 @@
+diff -dru -x .git tree1/pfl/alloc.c tree2/pfl/alloc.c
+--- tree1/pfl/alloc.c	2017-09-11 10:12:00.355827974 -0400
++++ tree2/pfl/alloc.c	2017-09-11 09:47:25.471147406 -0400
+@@ -283,7 +283,6 @@
+ 			psclog_error("malloc/realloc");
+ 			return (NULL);
+ 		}
+-		/* 09/05/2017: Hit this on sliod */
+ 		err(1, "malloc/realloc");
+ 	}
+ 
+diff -dru -x .git tree1/pfl/bitflag.h tree2/pfl/bitflag.h
+--- tree1/pfl/bitflag.h	2017-09-11 10:12:00.361827678 -0400
++++ tree2/pfl/bitflag.h	2017-09-11 09:47:25.476147161 -0400
+@@ -133,8 +133,6 @@
+  *
+  * XXX 32-bit architectures should use 32-bit values instead of 64-bit
+  * since the wordsize will be faster.
+- * 
+- * Called by fnstat_prdat().
+  */
+ static __inline void
+ pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
+diff -dru -x .git tree1/pfl/hashtbl.c tree2/pfl/hashtbl.c
+--- tree1/pfl/hashtbl.c	2017-09-11 10:12:00.435824050 -0400
++++ tree2/pfl/hashtbl.c	2017-09-11 09:47:25.552143435 -0400
+@@ -197,12 +197,6 @@
+  retry: 
+ 	b = GETBKT(t, t->pht_buckets, t->pht_nbuckets, key);
+ 
+-	/*
+- 	 * 08/08/2017: Some unusual replication add/removal tests
+- 	 * shows we are stuck here with the original thread taking
+- 	 * the lock is gone. Time to get rid of recursive locking
+- 	 * in this area.
+- 	 */
+ 	psc_hashbkt_reqlock(b);
+ 	b->phb_refcnt++;
+ 	if (t->pht_gen != b->phb_gen) {
+diff -dru -x .git tree1/pfl/pool.c tree2/pfl/pool.c
+--- tree1/pfl/pool.c	2017-09-11 10:12:00.478821942 -0400
++++ tree2/pfl/pool.c	2017-09-11 09:47:25.595141326 -0400
+@@ -49,8 +49,6 @@
+ #include "pfl/waitq.h"
+ #include "pfl/workthr.h"
+ 
+-/* See psc_ctlmsg_pool_prdat() on how to print out pool statistics */
+-
+ #if PFL_DEBUG > 1
+ #  define _POOL_SETPROT(p, m, prot)					\
+ 	psc_mprotect((void *)(((uintptr_t)(p)) &			\
+@@ -531,13 +529,29 @@
+ 	_psc_poolset_reap(&psc_poolset_main, NULL, size);
+ }
+ 
+-int
++void
+ psc_pool_reap(struct psc_poolmgr *m, int desperate)
+ {
+-	int reaped;
++	int need;
+ 
+-	reaped = m->ppm_reclaimcb(m);
+-	return (reaped);
++	/*
++	 * We use atomics to register additional waiters while one
++	 * thread is already reaping, lessening the expense of "deep"
++	 * reap processing.
++	 */
++	need = psc_atomic32_inc_getnew(&m->ppm_nwaiters);
++	if (need == 1)
++		psc_atomic32_inc(&m->ppm_nwaiters);
++	psc_mutex_lock(&m->ppm_reclaim_mutex);
++	if (desperate)
++		m->ppm_flags |= PPMF_DESPERATE;
++	m->ppm_reclaimcb(m);
++	if (desperate)
++		m->ppm_flags &= ~PPMF_DESPERATE;
++	psc_atomic32_dec(&m->ppm_nwaiters);
++	if (need == 1)
++		psc_atomic32_dec(&m->ppm_nwaiters);
++	psc_mutex_unlock(&m->ppm_reclaim_mutex);
+ }
+ 
+ int
+@@ -560,31 +574,19 @@
+ void *
+ _psc_pool_get(struct psc_poolmgr *m, int flags)
+ {
+-	int desperate = 0, reaped = 0, locked, n;
++	int desperate = 0, locked, n;
+ 	void *p;
+ 
+ 	POOL_LOCK(m);
+-	/* (gdb) p m.ppm_u.ppmu_explist.pexl_pll */
+ 	p = POOL_TRYGETOBJ(m);
+ 	if (p || (flags & PPGF_NONBLOCK))
+ 		PFL_GOTOERR(gotitem, 0);
+ 
+-	n = 0;
+-
+-	/* If total < min, try to grow the pool. */
+-	if (m->ppm_min > m->ppm_total) {
+-		n = m->ppm_min - m->ppm_total;
+-		goto grow;
+-	}
+-	if (m->ppm_max) {
+-		n = MIN(2, m->ppm_max - m->ppm_total);
+-		goto grow;
+-	}
+-
+- grow:
+-	if (n > 0) {
++	/* If this pool has a reclaimer routine, try that. */
++	if (m->ppm_reclaimcb) {
++ tryreclaim:
+ 		POOL_ULOCK(m);
+-		psc_pool_try_grow(m, n);
++		psc_pool_reap(m, desperate);
+ 		POOL_LOCK(m);
+ 
+ 		p = POOL_TRYGETOBJ(m);
+@@ -592,13 +594,11 @@
+ 			PFL_GOTOERR(gotitem, 0);
+ 	}
+ 
+- reclaim:
+-
+-	/* If this pool has a reclaimer routine, try that. */
+-	if (m->ppm_reclaimcb) {
+-
++	/* If total < min, try to grow the pool. */
++	n = m->ppm_min - m->ppm_total;
++	if (n > 0) {
+ 		POOL_ULOCK(m);
+-		reaped = psc_pool_reap(m, desperate);
++		psc_pool_try_grow(m, n);
+ 		POOL_LOCK(m);
+ 
+ 		p = POOL_TRYGETOBJ(m);
+@@ -606,7 +606,6 @@
+ 			PFL_GOTOERR(gotitem, 0);
+ 	}
+ 
+-
+ 	/* If autoresizable, try to grow the pool. */
+ 	while (m->ppm_flags & PPMF_AUTO) {
+ 		/*
+@@ -667,15 +666,53 @@
+ 		PFL_GOTOERR(gotitem, 0);
+ 	}
+ 
+-	if (reaped && !m->ppm_nfree) {
+-		reaped = 0;
+-		goto reclaim;
++	/*
++	 * If there is a reclaimer routine, invoke it consecutively
++	 * until at least one item is reclaimed and available for us.
++	 */
++	if (m->ppm_reclaimcb) {
++		if (flags & PPGF_SHALLOW) {
++			/*
++			 * Best effort service: we tried a bunch of
++			 * stuff and nothing worked so give up.
++			 */
++			p = POOL_TRYGETOBJ(m);
++			PFL_GOTOERR(gotitem, 0);
++		}
++
++		if (!desperate) {
++			desperate = 1;
++			goto tryreclaim;
++		}
++
++		p = POOL_TRYGETOBJ(m);
++		if (p)
++			PFL_GOTOERR(gotitem, 0);
++
++		/*
++		 * Before blindly retrying reclaim, sleep to reduce busy
++		 * waiting (unless someone returns a pool item during
++		 * our sleep).
++		 */
++		psc_atomic32_inc(&m->ppm_nwaiters);
++		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
++		    &m->ppm_lc.plc_lock, 100);
++		psc_atomic32_dec(&m->ppm_nwaiters);
++
++		/*
++ 		 * We only get by this because no pool uses an external lock
++ 		 * So m->ppm_lc.plc_lock is the same as POOL_LOCK(m).
++ 		 */
++		POOL_LOCK(m);
++		p = POOL_TRYGETOBJ(m);
++		if (p)
++			PFL_GOTOERR(gotitem, 0);
++
++		goto tryreclaim;
+ 	}
+ 
+ 	/* Nothing else we can do; wait for an item to return. */
+-	psc_atomic32_inc(&m->ppm_nwaiters);
+ 	p = lc_getwait(&m->ppm_lc);
+-	psc_atomic32_dec(&m->ppm_nwaiters);
+ 	POOL_ULOCK(m);
+ 	return (p);
+ 
+diff -dru -x .git tree1/pfl/pool.h tree2/pfl/pool.h
+--- tree1/pfl/pool.h	2017-09-11 10:12:00.480821843 -0400
++++ tree2/pfl/pool.h	2017-09-11 09:47:25.596141277 -0400
+@@ -138,7 +138,6 @@
+ #define PPMF_ALIGN		(1 << 5)	/* align to system page boundaries */
+ #define PPMF_NOPREEMPT		(1 << 6)	/* do reactive reaping */
+ #define PPMF_PREEMPTQ		(1 << 7)	/* queued for preemptive reaping */
+-#define PPMF_IDLEREAP		(1 << 8)	/* idle reaping */
+ 
+ #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
+ #define POOL_LOCK_ENSURE(m)	PLL_LOCK_ENSURE(&(m)->ppm_pll)
+@@ -183,6 +182,12 @@
+ 	    (flags), (total), (min), (max),				\
+ 	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
+ 
++#define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
++	    reclaimcb, mlcarg, namefmt, ...)				\
++	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
++	    (flags) | PPMF_MLIST, (total), (min), (max),		\
++	    (reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
++
+ #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
+ 
+ 
+@@ -249,7 +254,7 @@
+ int	  psc_pool_gettotal(struct psc_poolmgr *);
+ int	  psc_pool_inuse(struct psc_poolmgr *);
+ int	  psc_pool_nfree(struct psc_poolmgr *);
+-int	  psc_pool_reap(struct psc_poolmgr *, int);
++void	  psc_pool_reap(struct psc_poolmgr *, int);
+ void	  psc_pool_reapmem(size_t);
+ void	  psc_pool_resize(struct psc_poolmgr *);
+ void	 _psc_pool_return(struct psc_poolmgr *, void *);
+diff -dru -x .git tree1/pfl/pthrutil.c tree2/pfl/pthrutil.c
+--- tree1/pfl/pthrutil.c	2017-09-11 10:12:00.485821597 -0400
++++ tree2/pfl/pthrutil.c	2017-09-11 09:47:25.602140983 -0400
+@@ -249,12 +249,6 @@
+ 	p = pthread_self();
+ 	psc_assert(rw->pr_writer != p);
+ 
+-	/* 
+-	 * If a thread already has a read lock and request for a write
+-	 * lock, we will deadlock.
+-	 *
+-	 * (gdb) p/x *(pthread_t *)rw->pr_readers.pda_items[0]
+-	 */
+ 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
+ 	if (rc)
+ 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
+diff -dru -x .git tree1/pfl/pthrutil.h tree2/pfl/pthrutil.h
+--- tree1/pfl/pthrutil.h	2017-09-11 10:12:00.486821548 -0400
++++ tree2/pfl/pthrutil.h	2017-09-11 09:47:25.603140934 -0400
+@@ -99,7 +99,10 @@
+ #endif
+ 
+ #define pfl_rwlock_rdlock(rw)		_pfl_rwlock_rdlock(PFL_CALLERINFO(), (rw))
++#define pfl_rwlock_reqrdlock(rw)	_pfl_rwlock_reqrdlock(PFL_CALLERINFO(), (rw))
++#define pfl_rwlock_reqwrlock(rw)	_pfl_rwlock_reqwrlock(PFL_CALLERINFO(), (rw))
+ #define pfl_rwlock_unlock(rw)		_pfl_rwlock_unlock(PFL_CALLERINFO(), (rw))
++#define pfl_rwlock_ureqlock(rw, lk)	_pfl_rwlock_ureqlock(PFL_CALLERINFO(), (rw), (lk))
+ #define pfl_rwlock_wrlock(rw)		_pfl_rwlock_wrlock(PFL_CALLERINFO(), (rw))
+ 
+ void	 pfl_rwlock_destroy(struct pfl_rwlock *);
+diff -dru -x .git tree1/pfl/rlimit.c tree2/pfl/rlimit.c
+--- tree1/pfl/rlimit.c	2017-09-11 10:12:00.491821303 -0400
++++ tree2/pfl/rlimit.c	2017-09-11 09:47:25.608140689 -0400
+@@ -65,8 +65,6 @@
+ 	return (rc);
+ }
+ 
+-#ifdef NOT_USED
+-
+ int
+ psc_rlim_adj(int field, int adjv)
+ {
+@@ -86,5 +84,3 @@
+ 	freelock(&psc_rlimit_lock);
+ 	return (rc == 0);
+ }
+-
+-#endif
+diff -dru -x .git tree1/pfl/stat.h tree2/pfl/stat.h
+--- tree1/pfl/stat.h	2017-09-11 10:12:00.506820568 -0400
++++ tree2/pfl/stat.h	2017-09-11 09:47:25.621140052 -0400
+@@ -100,12 +100,7 @@
+ #define ALLPERMS	(S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)
+ #endif
+ 
+-/* 
+- * XXX we should be careful here.
+- *
+- * If there is a definition conflict, please remove pickle files
+- * under the mk directory and retry.
+- */
++/* XXX we should be careful here */
+ #ifndef HAVE_BLKSIZE_T
+ typedef uint64_t blksize_t;
+ typedef uint64_t blkcnt_t;
+diff -dru -x .git tree1/slash2/doc/new-mds.txt tree2/slash2/doc/new-mds.txt
+--- tree1/slash2/doc/new-mds.txt	2017-09-11 10:12:35.104123965 -0400
++++ tree2/slash2/doc/new-mds.txt	2017-09-11 09:47:25.809130836 -0400
+@@ -5,9 +5,6 @@
+ 
+ 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
+ 
+-		<-- might take advantage of the new features of kernel resident file system
+-		    such as quota.
+-
+ 	* All metadata are user visible files.
+ 
+ 	* Help MDS run as non-root.
+@@ -27,8 +24,6 @@
+ 	* After removing a huge number of files in a directory, the ls performance of
+ 	  that directory never recovers (after reboot, etc).  Sounds like a performance bug.
+ 
+-	* No more ZFS-fuse crashes and ZFS arc_evict issues.
+-
+ Feasibility:
+ 
+ 	* We can always create links in the user space, but the open-by-handle feature
+@@ -84,15 +79,8 @@
+ 		- since we have on-disk format change, we might as well do the following:
+ 
+ 			- combine ino and inox, add a version to inode
+-			- increase number of IOS per inode from 64 to 1024
++			- increase number of IOS per inode from 64 to 128
+ 			- get rid of CRC stuff.
+-			- use extended attributes to specify the target IO servers
+-			  for each file.
+-
+-		- Add generation number ot each data structure that can be updated atomically
+-		  for log replay.
+-
+-		- Add version number to each data structures to allow piece meal upgrade.
+ 
+ 	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
+ 	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
+diff -dru -x .git tree1/slash2/include/bmap.h tree2/slash2/include/bmap.h
+--- tree1/slash2/include/bmap.h	2017-09-11 10:12:35.124122985 -0400
++++ tree2/slash2/include/bmap.h	2017-09-11 09:47:25.830129805 -0400
+@@ -41,7 +41,6 @@
+ #include "pfl/crc.h"
+ #include "pfl/list.h"
+ #include "pfl/lock.h"
+-#include "pfl/pool.h"
+ #include "pfl/tree.h"
+ 
+ #include "cache_params.h"
+@@ -52,19 +51,10 @@
+ struct fidc_membh;
+ struct srt_bmapdesc;
+ 
+-#define	MSL_BMAP_COUNT		1024
++#define	MSL_BMAP_COUNT		64
+ #define	SLI_BMAP_COUNT		1024
+ #define	MDS_BMAP_COUNT		4096
+ 
+-#define MSL_MAX_BMAP_COUNT	MSL_BMAP_COUNT*8
+-
+-/*
+- * Longer time allows a client to cache pages longer and reduces RPC traffic
+- * needed for lease extension.
+- */
+-#define BMAP_TIMEO_MAX		240	/* default bmap lease timeout */
+-#define BMAP_TIMEO_MIN		 40	/* minimum bmap lease timeout */
+-
+ /*
+  * Basic information about bmaps shared by all MDS, IOS, and CLI.
+  * @bcs_crcstates: bits describing the state of each sliver
+@@ -217,8 +207,6 @@
+ 		}							\
+ 	} while (0)
+ 
+-#if 0
+-
+ #define BMAP_WAIT_BUSY(b)						\
+ 	do {								\
+ 		pthread_t _pthr = pthread_self();			\
+@@ -249,8 +237,6 @@
+ 		psc_assert((b)->bcm_owner == pthread_self());		\
+ 	} while (0)
+ 
+-#endif
+-
+ /*
+  * TODO: Convert all callers to lock the bmap before start or done type.
+  */
+@@ -355,7 +341,7 @@
+ #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
+ 
+ int	 bmap_cmp(const void *, const void *);
+-void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
++void	 bmap_cache_init(size_t, int);
+ void	 bmap_cache_destroy(void);
+ void	 bmap_free_all_locked(struct fidc_membh *);
+ void	 bmap_biorq_waitempty(struct bmap *);
+@@ -390,7 +376,6 @@
+ 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
+ 	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
+ 	BMAP_OPCNT_BIORQ,		/* all: IO request */
+-	BMAP_OPCNT_BMPCE,		/* CLI: page */
+ 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
+ 	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
+ 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
+@@ -407,6 +392,7 @@
+ RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
+ 
+ struct bmap_ops {
++	void	(*bmo_reapf)(void);
+ 	void	(*bmo_init_privatef)(struct bmap *);
+ 	int	(*bmo_retrievef)(struct bmap *, int);
+ 	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);
+diff -dru -x .git tree1/slash2/include/fidcache.h tree2/slash2/include/fidcache.h
+--- tree1/slash2/include/fidcache.h	2017-09-11 10:12:35.130122691 -0400
++++ tree2/slash2/include/fidcache.h	2017-09-11 09:47:25.837129462 -0400
+@@ -218,7 +218,6 @@
+ #define FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
+ #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
+ #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
+-#define FCMH_OPCNT_KEEP_LOCK		11	/* IOD: sync ahead */
+ #define FCMH_OPCNT_MAXTYPE		12
+ 
+ void	fidc_init(int);
+@@ -237,7 +236,8 @@
+ /* fidc_lookup() flags */
+ #define FIDC_LOOKUP_CREATE		(1 << 0)	/* create if not present */
+ #define FIDC_LOOKUP_LOAD		(1 << 1)	/* use external fetching mechanism */
+-#define FIDC_LOOKUP_EXCL		(1 << 2)	/* ensure that this call creates */
++#define FIDC_LOOKUP_LOCK		(1 << 2)	/* leave locked upon return */
++#define FIDC_LOOKUP_EXCL		(1 << 4)	/* ensure that this call creates */
+ 
+ int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
+ 	    int, struct fidc_membh **, void *);
+@@ -268,11 +268,18 @@
+ 
+ ssize_t	 fcmh_getsize(struct fidc_membh *);
+ 
++#define fcmh_op_start_type(f, type)					\
++	_fcmh_op_start_type(FCMH_PCI, (f), (type))
++#define fcmh_op_done_type(f, type)					\
++	_fcmh_op_done_type(FCMH_PCI, (f), (type), 0)
++
+ #define fcmh_op_done(f)							\
+     fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
+ 
+-void	fcmh_op_start_type(struct fidc_membh *, int);
+-void	fcmh_op_done_type(struct fidc_membh *, int);
++void	_fcmh_op_start_type(const struct pfl_callerinfo *,
++	    struct fidc_membh *, int);
++void	_fcmh_op_done_type(const struct pfl_callerinfo *,
++	    struct fidc_membh *, int, int);
+ 
+ void	_dump_fcmh_flags_common(int *, int *);
+ 
+diff -dru -x .git tree1/slash2/include/slashrpc.h tree2/slash2/include/slashrpc.h
+--- tree1/slash2/include/slashrpc.h	2017-09-11 10:12:35.133122544 -0400
++++ tree2/slash2/include/slashrpc.h	2017-09-11 09:47:25.840129315 -0400
+@@ -42,15 +42,13 @@
+ struct stat;
+ struct statvfs;
+ 
+-#define	SL_RPC_VERSION		2
+-
+ /* RPC channel to MDS from CLI. */
+ #define SRMC_REQ_PORTAL		10
+ #define SRMC_REP_PORTAL		11
+ #define SRMC_BULK_PORTAL	12
+ #define SRMC_CTL_PORTAL		13
+ 
+-#define SRMC_VERSION		SL_RPC_VERSION
++#define SRMC_VERSION		1
+ #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
+ 
+ /* RPC channel to MDS from MDS. */
+@@ -59,7 +57,7 @@
+ #define SRMM_BULK_PORTAL	17
+ #define SRMM_CTL_PORTAL		18
+ 
+-#define SRMM_VERSION		SL_RPC_VERSION
++#define SRMM_VERSION		1
+ #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
+ 
+ /* RPC channel to MDS from ION. */
+@@ -68,7 +66,7 @@
+ #define SRMI_BULK_PORTAL	22
+ #define SRMI_CTL_PORTAL		23
+ 
+-#define SRMI_VERSION		SL_RPC_VERSION
++#define SRMI_VERSION		1
+ #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
+ 
+ /* RPC channel to CLI from MDS. */
+@@ -77,7 +75,7 @@
+ #define SRCM_BULK_PORTAL	27
+ #define SRCM_CTL_PORTAL		28
+ 
+-#define SRCM_VERSION		SL_RPC_VERSION
++#define SRCM_VERSION		1
+ #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
+ 
+ /* RPC channel to ION from CLI. */
+@@ -86,7 +84,7 @@
+ #define SRIC_BULK_PORTAL	32
+ #define SRIC_CTL_PORTAL		33
+ 
+-#define SRIC_VERSION		SL_RPC_VERSION
++#define SRIC_VERSION		1
+ #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
+ 
+ /* RPC channel to ION from ION. */
+@@ -95,7 +93,7 @@
+ #define SRII_BULK_PORTAL	37
+ #define SRII_CTL_PORTAL		38
+ 
+-#define SRII_VERSION		SL_RPC_VERSION
++#define SRII_VERSION		1
+ #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
+ 
+ /* RPC channel to ION from MDS. */
+@@ -104,7 +102,7 @@
+ #define SRIM_BULK_PORTAL	42
+ #define SRIM_CTL_PORTAL		43
+ 
+-#define SRIM_VERSION		SL_RPC_VERSION
++#define SRIM_VERSION		1
+ #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
+ 
+ /* RPC channel to CLI from ION. */
+@@ -113,7 +111,7 @@
+ #define SRCI_BULK_PORTAL	47
+ #define SRCI_CTL_PORTAL		48
+ 
+-#define SRCI_VERSION		SL_RPC_VERSION
++#define SRCI_VERSION		1
+ #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
+ 
+ /* sizeof(pscrpc_msg) + hdr + sizeof(authbuf_footer) */
+@@ -266,14 +264,14 @@
+ 
+ struct srt_bmapdesc {
+ 	struct sl_fidgen	sbd_fg;
+-	sl_bmapno_t		sbd_bmapno;
+ 	uint64_t		sbd_seq;
++	uint64_t		sbd_key;
+ 
+ 	uint64_t		sbd_nid;	/* XXX go away */
+ 	uint32_t		sbd_pid;	/* XXX go away */
+-	int32_t			sbd_expire;
+ 
+ 	sl_ios_id_t		sbd_ios;
++	sl_bmapno_t		sbd_bmapno;
+ 	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
+ } __packed;
+ 
+diff -dru -x .git tree1/slash2/mount_slash/bflush.c tree2/slash2/mount_slash/bflush.c
+--- tree1/slash2/mount_slash/bflush.c	2017-09-11 10:12:35.147121856 -0400
++++ tree2/slash2/mount_slash/bflush.c	2017-09-11 09:47:25.854128629 -0400
+@@ -57,7 +57,7 @@
+ #include "slashrpc.h"
+ #include "slconfig.h"
+ 
+-struct timespec			 msl_bflush_timeout = { 1, 0L };
++struct timespec			 msl_bflush_timeout = { 2, 0L };
+ struct timespec			 msl_bflush_maxage = { 0, 10000000L };	/* 10 milliseconds */
+ struct psc_listcache		 msl_bmapflushq;
+ struct psc_listcache		 msl_bmaptimeoutq;
+@@ -317,8 +317,8 @@
+ 	BMAP_LOCK(b);
+ 
+ 	if (rc == -PFLERR_KEYEXPIRED) {				/* 501 */
+-		OPSTAT_INCR("msl.bmap-flush-expire");
+-		b->bcm_flags |= BMAPF_LEASEEXPIRE;
++		OPSTAT_INCR("msl.bmap-flush-expired");
++		b->bcm_flags |= BMAPF_LEASEEXPIRED;
+ 	}
+ 	if (rc == -PFLERR_TIMEDOUT)				/* 511 */
+ 		OPSTAT_INCR("msl.bmap-flush-timedout");
+@@ -432,7 +432,7 @@
+ 		sl_csvc_decref(csvc);
+ 
+ 	bwc_free(bwc);
+-	OPSTAT_INCR("msl.bmap-flush-rpc-err");
++	OPSTAT_INCR("msl.bmap-flush-rpc-fail");
+ 	return (rc);
+ }
+ 
+@@ -566,13 +566,10 @@
+ 
+ 	if (flush) {
+ 		PFL_GETTIMESPEC(&ts);
+-		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_etime */
+-		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
+-			OPSTAT_INCR("msl.flush-skip-expire-time");
+-			flush = 0;
+-		}
+-		if (b->bcm_flags & BMAPF_LEASEEXPIRE) {
+-			OPSTAT_INCR("msl.flush-skip-expire-flag");
++		ts.tv_sec += BMAP_CLI_EXTREQSECS;
++		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
++		    (b->bcm_flags & BMAPF_LEASEEXPIRED)) {
++			OPSTAT_INCR("msl.flush-skip-expire");
+ 			flush = 0;
+ 		}
+ 	}
+@@ -615,7 +612,7 @@
+ 
+ 		/*
+ 		 * If any member is expired then we'll push everything
+-		 * out. See msl_bflush_maxage.
++		 * out.
+ 		 */
+ 		if (!expired)
+ 			expired = bmap_flush_biorq_expired(curr, 1);
+@@ -699,6 +696,66 @@
+ }
+ 
+ /*
++ * Lease watcher thread: issues "lease extension" RPCs for bmaps when
++ * deemed appropriate.
++ */
++__static void
++msbwatchthr_main(struct psc_thread *thr)
++{
++	struct psc_dynarray bmaps = DYNARRAY_INIT;
++	struct bmap *b, *tmpb;
++	struct timespec ts;
++	int i;
++
++	while (pscthr_run(thr)) {
++		/*
++		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
++		 * It is taken off the msl_bmapflushq after all its biorqs 
++		 * are flushed if any.
++		 */
++		LIST_CACHE_LOCK(&msl_bmapflushq);
++		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {
++			LIST_CACHE_ULOCK(&msl_bmapflushq);
++			break;
++		}
++		PFL_GETTIMESPEC(&ts);
++		ts.tv_sec += BMAP_CLI_EXTREQSECS;
++		LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
++			if (!BMAP_TRYLOCK(b))
++				continue;
++			DEBUG_BMAP(PLL_DEBUG, b, "begin");
++			if ((b->bcm_flags & BMAPF_TOFREE) ||
++			    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
++				BMAP_ULOCK(b);
++				continue;
++			}
++			if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <)) {
++				bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
++				psc_dynarray_add(&bmaps, b);
++			}
++			BMAP_ULOCK(b);
++		}
++		LIST_CACHE_ULOCK(&msl_bmapflushq);
++
++		if (!psc_dynarray_len(&bmaps)) {
++			usleep(1000);
++			continue;
++		}
++
++		OPSTAT_INCR("msl.lease-refresh");
++
++		DYNARRAY_FOREACH(b, i, &bmaps) {
++			BMAP_LOCK(b);
++			msl_bmap_lease_extend(b, 0);
++			BMAP_LOCK(b);
++			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
++		}
++		psc_dynarray_reset(&bmaps);
++	}
++	psc_dynarray_free(&bmaps);
++}
++
++/*
+  * Send out SRMT_WRITE RPCs to the I/O server.
+  */
+ __static int
+@@ -859,11 +916,6 @@
+ 		pscthr_setready(thr);
+ 	}
+ 
+-	/*
+- 	 * We have one lease watcher and one lease release thread.
+- 	 * The code is thread-safe though. So we can add more if 
+- 	 * need be.
+- 	 */
+ 	thr = pscthr_init(MSTHRT_BWATCH, msbwatchthr_main, 
+ 	    sizeof(struct msbwatch_thread), "msbwatchthr");
+ 	pfl_multiwait_init(&msbwatchthr(thr)->mbwt_mw, "%s",
+@@ -876,9 +928,6 @@
+ 	    thr->pscthr_name);
+ 	pscthr_setready(thr);
+ 
+-#if 0
+-	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
+-	    "msbenchthr");
+-#endif
+-
++//	pscthr_init(MSTHRT_BENCH, msbenchthr_main, NULL, 0,
++//	    "msbenchthr");
+ }
+diff -dru -x .git tree1/slash2/mount_slash/bmap_cli.c tree2/slash2/mount_slash/bmap_cli.c
+--- tree1/slash2/mount_slash/bmap_cli.c	2017-09-11 10:12:35.148121807 -0400
++++ tree2/slash2/mount_slash/bmap_cli.c	2017-09-11 09:47:25.855128580 -0400
+@@ -41,6 +41,8 @@
+ #include "slerr.h"
+ 
+ /* number of bmaps to allow before reaper kicks into gear */
++#define BMAP_CACHE_MAX		1024
++
+ /*
+  * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
+  */
+@@ -61,24 +63,16 @@
+ 
+ void msl_bmap_reap_init(struct bmap *);
+ 
+-/*
+- * Easy debugging with separate lock/wait combo.
+- */
+-int				 msl_bmap_low;
+-psc_spinlock_t                   msl_bmap_lock = SPINLOCK_INIT;
+-struct psc_waitq		 msl_bmap_waitq = PSC_WAITQ_INIT("bwait");
++int slc_bmap_max_cache = BMAP_CACHE_MAX;
+ 
+-int
+-msl_bmap_reap(__unusedx struct psc_poolmgr *m)
++void
++msl_bmap_reap(void)
+ {
+-	spinlock(&msl_bmap_lock);
+-	msl_bmap_low = 1;
+-	psc_waitq_wakeall(&msl_bmap_waitq);
+-	freelock(&msl_bmap_lock);
++	/* XXX force expire and issue a wakeup */
+ 
+-	pscthr_yield();
+-	OPSTAT_INCR("bmap-reap");
+-	return 0;
++	/* wake up the reaper if we are out of resources */
++	if (lc_nitems(&msl_bmaptimeoutq) > slc_bmap_max_cache)
++		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+ }
+ 
+ /*
+@@ -159,31 +153,26 @@
+ 
+ 	if (!sbd->sbd_seq)
+ 		psc_fatalx("Zero bmap lease number (%s)", action);
+-	if (sbd->sbd_expire < BMAP_TIMEO_MIN || 
+-	    sbd->sbd_expire > BMAP_TIMEO_MAX)
+-		psc_fatalx("Invalid bmap expire time %d (%s)", 
+-		    sbd->sbd_expire, action);
+ 	psc_assert(sbd->sbd_fg.fg_fid);
+ 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+ 
+ 	if (b->bcm_flags & BMAPF_WR)
+ 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+-	else
+-		psc_assert(sbd->sbd_ios == IOS_ID_ANY);
+ 
+ 	if (msl_force_dio)
+ 		b->bcm_flags |= BMAPF_DIO;
+ 
+ 	/*
+-	 * Record the expiration time.
++	 * Record the start time.
+ 	 *
+ 	 * XXX the directio status of the bmap needs to be
+ 	 *     returned by the MDS so we can set the proper
+ 	 * expiration time.
+ 	 */
+ 	PFL_GETTIMESPEC(&bci->bci_etime);
+-	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_INC);
+-	b->bcm_flags &= ~BMAPF_LEASEEXPIRE;
++	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
++	    &bci->bci_etime);
++	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
+ 
+ 	*bmap_2_sbd(b) = *sbd;
+ 
+@@ -236,11 +225,9 @@
+ 		msl_bmap_reap_init(b);
+ 
+ 		b->bcm_flags |= BMAPF_LOADED;
+-		OPSTAT_INCR("bmap-retrieve-cb-ok");
+ 	} else {
++		/* ignore all errors for this background operation */
+ 		BMAP_LOCK(b);
+-		msl_bmap_cache_rls(b);
+-		OPSTAT_INCR("bmap-retrieve-cb-err");
+ 	}
+ 
+ 	b->bcm_flags &= ~BMAPF_LOADING;
+@@ -374,7 +361,7 @@
+ 
+ 		b->bcm_flags |= BMAPF_LOADED;
+ 	} else {
+-		DEBUG_BMAP(PLL_WARN, b, "retrieve bmap failed: rc=%d",
++		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
+ 		    rc);
+ 		BMAP_LOCK(b);
+ 	}
+@@ -394,42 +381,17 @@
+ 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+ 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+ 	struct srm_leasebmapext_rep *mp;
+-	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 	int rc;
+ 
+ 	BMAP_LOCK(b);
+ 	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
+ 
+-	/*
+- 	 * To get the original request:
+- 	 *
+- 	 * (gdb) p &((struct pscrpc_msg *)0)->buflens[2]
+- 	 * $23 = (uint32_t *) 0x48
+- 	 * (gdb) p *(struct srm_leasebmapext_req *)((char *)rq->rq_reqmsg + 0x48)
+- 	 * $24 = {sbd = {sbd_fg = {fg_fid = 327636872892953958, fg_gen = 0}, \
+- 	 * sbd_bmapno = 0, sbd_seq = 10681986, sbd_nid = 562995062530997, \
+- 	 * sbd_pid = 2147503903, sbd_expire = 600, sbd_ios = 4294967295, \
+- 	 * sbd_flags = 4}}
+- 	 *
+- 	 */
+ 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
+ 
+ 	/* ignore all errors for this background operation */
+ 	if (!rc) {
+-		/*
+- 		 * 08/10/2017:
+- 		 *
+- 		 * A down I/O server will cause MDS to return -1010
+- 		 * to us.  As a result, we can't flush because the 
+- 		 * lease has expired, and we hang on flush.
+- 		 */
+ 		OPSTAT_INCR("msl.extend-success-nonblocking");
+ 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+-		lc_move2tail(&msl_bmaptimeoutq, bci);
+-		OPSTAT_INCR("bmap-extend-cb-ok");
+-	} else {
+-		msl_bmap_cache_rls(b);
+-		OPSTAT_INCR("bmap-extend-cb-ok");
+ 	}
+ 
+ 	/*
+@@ -473,7 +435,6 @@
+ 	struct psc_thread *thr;
+ 	struct pfl_fsthr *pft;
+ 	struct timespec ts;
+-	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 	int secs, rc;
+ 
+ 	thr = pscthr_get();
+@@ -497,30 +458,23 @@
+ 	/* if we aren't in the expiry window, bail */
+ 	PFL_GETTIMESPEC(&ts);
+ 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+-	if (secs >= BMAP_TIMEO_MIN / 2 &&
+-	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
++	if (secs >= BMAP_CLI_EXTREQSECS &&
++	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+ 		if (blocking)
+ 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
+ 		BMAP_ULOCK(b);
+ 		return (0);
+ 	}
+ 	b->bcm_flags |= BMAPF_LEASEEXTREQ;
++	BMAP_ULOCK(b);
+ 
+ 	sbd = bmap_2_sbd(b);
+-	if (b->bcm_flags & BMAPF_WR)
+-		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+-	else
+-		psc_assert(sbd->sbd_ios == IOS_ID_ANY);
+-
+ 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+-	BMAP_ULOCK(b);
+ 
+  retry:
+ 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+-
+-	/* see you in slm_rmc_handle_extendbmapls() */
+ 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+@@ -553,19 +507,12 @@
+ 			sl_csvc_decref(csvc);
+ 			csvc = NULL;
+ 		}
+-		OPSTAT_INCR("bmap-extend-retry");
+ 		goto retry;
+ 	}
+ 
+ 	BMAP_LOCK(b);
+-	if (!rc) {
+-		OPSTAT_INCR("bmap-extend-ok");
+-		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+-		lc_move2tail(&msl_bmaptimeoutq, bci);
+-	} else {
+-		OPSTAT_INCR("bmap-extend-err");
+-		msl_bmap_cache_rls(b);
+-	}
++	if (!rc)
++		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
+ 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+ 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+ 	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+@@ -593,10 +540,9 @@
+ 	BMAP_LOCK(b);
+ 	/* ignore all errors for this background operation */
+ 	if (!rc) {
+-		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
+-		b->bcm_flags &= ~BMAPF_RD;
+-		b->bcm_flags |=  BMAPF_WR;
+ 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
++		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
++		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
+ 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
+ 		if (r->res_type == SLREST_ARCHIVAL_FS) {
+ 			/*
+@@ -609,9 +555,7 @@
+ 			msl_bmap_cache_rls(b);
+ 			BMAP_LOCK(b);
+ 		}
+-		OPSTAT_INCR("bmap-modeset-cb-ok");
+-	} else
+-		OPSTAT_INCR("bmap-modeset-cb-err");
++	}
+ 
+ 	b->bcm_flags &= ~BMAPF_MODECHNG;
+ 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+@@ -640,7 +584,6 @@
+ 	struct psc_thread *thr;
+ 	struct pfl_fsthr *pft;
+ 	struct fidc_membh *f;
+-	struct sl_resource *r;
+ 
+ 	thr = pscthr_get();
+ 	if (thr->pscthr_type == PFL_THRT_FS) {
+@@ -721,12 +664,12 @@
+ 	}
+ 
+ 	if (!rc) {
+-		OPSTAT_INCR("bmap-modeset-ok");
++		struct sl_resource *r;
++
+ 		BMAP_LOCK(b);
+-		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
+-		b->bcm_flags &= ~BMAPF_RD;
+-		b->bcm_flags |=  BMAPF_WR;
+ 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
++		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
++		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
+ 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
+ 		if (r->res_type == SLREST_ARCHIVAL_FS) {
+ 			/*
+@@ -740,7 +683,6 @@
+ 			BMAP_LOCK(b);
+ 		}
+ 	} else {
+-		OPSTAT_INCR("bmap-modeset-err");
+ 		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
+ 		BMAP_LOCK(b);
+ 	}
+@@ -867,33 +809,13 @@
+ {
+ 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+ 	struct bmap_cli_info *bci = bmap_2_bci(b);
+-	struct bmap_pagecache_entry *e, *next;
+-
+-	pfl_rwlock_wrlock(&bci->bci_rwlock);
+-	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
+-	    e = next) {
+-
+-		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e); 
++	struct bmap_pagecache_entry *e;
+ 
++	pfl_rwlock_rdlock(&bci->bci_rwlock);
++	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
+ 		BMPCE_LOCK(e);
+ 		e->bmpce_flags |= BMPCEF_DISCARD;
+-		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+-			BMPCE_ULOCK(e);
+-			continue;
+-		}
+-		psclog_diag("Mark page free %p at %d\n", e, __LINE__);
+-		e->bmpce_flags |= BMPCEF_TOFREE;
+-
+-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+-		lc_remove(&msl_lru_pages, e);
+-		e->bmpce_flags &= ~BMPCEF_LRU;
+-
+-		bmpce_free(e, bmpc);
+-
+-		psc_atomic32_dec(&b->bcm_opcnt);
+-		psc_assert(psc_atomic32_read(&b->bcm_opcnt));
+-
+-		OPSTAT_INCR("msl.bmap-release-page");
++		BMPCE_ULOCK(e);
+ 	}
+ 	pfl_rwlock_unlock(&bci->bci_rwlock);
+ }
+@@ -901,7 +823,6 @@
+ void
+ msl_bmap_reap_init(struct bmap *b)
+ {
+-	struct sl_resource *r;
+ 	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 	struct srt_bmapdesc *sbd = bmap_2_sbd(b);
+ 
+@@ -911,6 +832,7 @@
+ 	 * Take the reaper ref cnt early and place the bmap onto the
+ 	 * reap list.
+ 	 */
++	b->bcm_flags |= BMAPF_TIMEOQ;
+ 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
+ 		b->bcm_flags |= BMAPF_DIO;
+ 
+@@ -919,7 +841,8 @@
+ 	 * DIO.
+ 	 */
+ 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAPF_DIO)) {
+-		r = libsl_id2res(sbd->sbd_ios);
++		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
++
+ 		if (!r)
+ 			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
+ 		psc_assert(b->bcm_flags & BMAPF_WR);
+@@ -928,6 +851,8 @@
+ 			b->bcm_flags |= BMAPF_DIO;
+ 	}
+ 
++	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
++
+ 	/*
+ 	 * Add ourselves here otherwise zero length files will not be
+ 	 * removed.
+@@ -935,11 +860,7 @@
+ 	 * XXX hit crash because it is already on the list. Called from
+ 	 * msl_bmap_retrieve_cb().
+ 	 */
+-	psc_assert(!(b->bcm_flags & BMAPF_TIMEOQ));
+-
+-	b->bcm_flags |= BMAPF_TIMEOQ;
+ 	lc_addtail(&msl_bmaptimeoutq, bci);
+-	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+ }
+ 
+ int
+@@ -958,9 +879,10 @@
+ 
+ 	for (i = 0; i < mq->nbmaps; i++)
+ 		psclog(rc ? PLL_ERROR : PLL_DIAG,
+-		    "fid="SLPRI_FID" bmap=%u"
++		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
+ 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
+-		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_seq, rc);
++		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
++		    mq->sbd[i].sbd_seq, rc);
+ 
+ 	sl_csvc_decref(csvc);
+ 	return (rc);
+@@ -1018,104 +940,6 @@
+ }
+ 
+ void
+-msbwatchthr_main(struct psc_thread *thr)
+-{
+-	struct psc_dynarray bmaps = DYNARRAY_INIT;
+-	struct timespec nto, curtime;
+-	struct bmap_cli_info *bci, *tmp;
+-	struct bmapc_memb *b;
+-	int exiting, i;
+-	struct bmap_pagecache *bmpc;
+-
+-	/*
+-	 * XXX: just put the resm's in the dynarray.  When pushing out
+-	 * the bid's, assume an ion unless resm == msl_rmc_resm.
+-	 */
+-	psc_dynarray_ensurelen(&bmaps, MAX_BMAP_RELEASE);
+-
+-	while (pscthr_run(thr)) {
+-
+-		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+-		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+-			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+-			break;
+-		}
+-		OPSTAT_INCR("msl.release-wakeup");
+-		PFL_GETTIMESPEC(&curtime);
+-
+-		/*
+-		 * We always check for lease before accessing cached pages.
+-		 * So it is okay if we can't extend lease in time here.
+-		 */
+-		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+-		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
+-			b = bci_2_bmap(bci);
+-			if (!BMAP_TRYLOCK(b))
+-				continue;
+-			if (b->bcm_flags & BMAPF_TOFREE ||
+-			    b->bcm_flags & BMAPF_REASSIGNREQ ||
+-			    b->bcm_flags & BMAPF_LEASEEXTEND) {
+-				BMAP_ULOCK(b);
+-				continue;
+-			}
+-
+-			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+-
+-			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+-			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
+-				BMAP_ULOCK(b);
+-				continue;
+-			}
+-
+-			/*
+-			 * Do not extend if we don't have any data.
+-			 */
+-			bmpc = bmap_2_bmpc(b);
+-			if (RB_EMPTY(&bmpc->bmpc_tree)) {
+-				BMAP_ULOCK(b);
+-				continue;
+-			}
+-			b->bcm_flags |= BMAPF_LEASEEXTEND;
+-			psc_dynarray_add(&bmaps, b);
+-			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+-			BMAP_ULOCK(b);
+-
+-			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
+-				break;
+-		}
+-		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+-
+-		DYNARRAY_FOREACH(b, i, &bmaps) {
+-			BMAP_LOCK(b);
+-			msl_bmap_lease_extend(b, 0);
+-			BMAP_LOCK(b);
+-			b->bcm_flags &= ~BMAPF_LEASEEXTEND;
+-			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+-		}
+-
+-		if (psc_dynarray_len(&bmaps)) {
+-			psc_dynarray_reset(&bmaps);
+-			pscthr_yield();
+-			continue;
+-		}
+-		psc_dynarray_reset(&bmaps);
+-
+-		PFL_GETTIMESPEC(&curtime);
+-		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+-		if (!exiting) {
+-			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+-			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+-			    &msl_bmaptimeoutq.plc_lock, &nto);
+-		}
+-	}
+-	psc_dynarray_free(&bmaps);
+-}
+-
+-/*
+- * Release bmap that are no longer needed.
+- */
+-void
+ msbreleasethr_main(struct psc_thread *thr)
+ {
+ 	struct psc_dynarray rels = DYNARRAY_INIT;
+@@ -1126,7 +950,7 @@
+ 	struct fcmh_cli_info *fci;
+ 	struct bmapc_memb *b;
+ 	struct sl_resm *resm;
+-	int exiting, i, expire, nevict;
++	int exiting, i, nitems;
+ 
+ 	/*
+ 	 * XXX: just put the resm's in the dynarray.  When pushing out
+@@ -1134,29 +958,22 @@
+ 	 */
+ 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
+ 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
+-
+ 	while (pscthr_run(thr)) {
+-
+- again:
+ 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+ 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+ 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+ 			break;
+ 		}
+ 		OPSTAT_INCR("msl.release-wakeup");
+-
+-		expire = 0;
+ 		PFL_GETTIMESPEC(&curtime);
++		timespecadd(&curtime, &msl_bmap_max_lease, &nto);
+ 
++		nitems = lc_nitems(&msl_bmaptimeoutq);
+ 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+ 		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
+ 			b = bci_2_bmap(bci);
+ 			if (!BMAP_TRYLOCK(b))
+ 				continue;
+-			if (b->bcm_flags & BMAPF_TOFREE) {
+-				BMAP_ULOCK(b);
+-				continue;
+-			}
+ 
+ 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+ 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+@@ -1166,29 +983,36 @@
+ 				BMAP_ULOCK(b);
+ 				continue;
+ 			}
++			if (exiting)
++				goto evict;
++			if (timespeccmp(&curtime, &bci->bci_etime, >=))
++				goto evict;
+ 
+ 			/*
+-			 * A bmap should be taken off the flush queue
+-			 * after all its biorq are finished.
++			 * Evict bmaps that are not even expired if
++			 * # of bmaps on timeoutq exceeds 25% of max
++			 * allowed.
+ 			 */
+-			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+-
+-			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
+-			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
+-				expire++;
+-				b->bcm_flags |= BMAPF_TOFREE;
+-				BMAP_ULOCK(b);
+-				goto evict;
+-			}
+-			if (msl_bmap_low) {
+-				b->bcm_flags |= BMAPF_TOFREE;
+-				BMAP_ULOCK(b);
++			if (nitems > slc_bmap_max_cache / 4)
+ 				goto evict;
++
++			if (timespeccmp(&bci->bci_etime, &nto, <)) {
++				nto.tv_sec = bci->bci_etime.tv_sec;
++				nto.tv_nsec = bci->bci_etime.tv_nsec;
+ 			}
++
++			DEBUG_BMAP(PLL_DEBUG, b, "skip due to not expire");
+ 			BMAP_ULOCK(b);
+ 			continue;
+  evict:
+ 
++			/*
++			 * A bmap should be taken off the flush queue
++			 * after all its biorq are finished.
++			 */
++			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
++
++			nitems--;
+ 			psc_dynarray_add(&bcis, bci);
+ 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
+ 				break;
+@@ -1197,7 +1021,6 @@
+ 
+ 		DYNARRAY_FOREACH(bci, i, &bcis) {
+ 			b = bci_2_bmap(bci);
+-			BMAP_LOCK(b);
+ 			b->bcm_flags &= ~BMAPF_TIMEOQ;
+ 			lc_remove(&msl_bmaptimeoutq, bci);
+ 
+@@ -1231,24 +1054,18 @@
+ 		DYNARRAY_FOREACH(resm, i, &rels)
+ 			msl_bmap_release(resm);
+ 
+-		nevict = psc_dynarray_len(&bcis);
+ 		psc_dynarray_reset(&rels);
+ 		psc_dynarray_reset(&bcis);
+ 
+-		if (expire && nevict == expire)
+-			goto again;
+-
+-		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+-		if (!exiting) {
+-			spinlock(&msl_bmap_lock);
+-			msl_bmap_low = 0;
+-			psc_waitq_waitabs(&msl_bmap_waitq, 
+-			    &msl_bmap_lock, &nto);
++		PFL_GETTIMESPEC(&curtime);
++		if (timespeccmp(&curtime, &nto, <) && !exiting) {
++			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
++			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
++			    &msl_bmaptimeoutq.plc_lock, &nto);
+ 		}
+ 	}
+ 	psc_dynarray_free(&rels);
+ 	psc_dynarray_free(&bcis);
+-
+ }
+ 
+ /*
+@@ -1383,31 +1200,22 @@
+ msl_bmap_final_cleanup(struct bmap *b)
+ {
+ 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+-#if 0
+-	struct bmpc_ioreq *r;
+-	struct bmap_cli_info *bci = bmap_2_bci(b);
+-	struct bmap_pagecache_entry *e, *next;
+-#endif
+ 
+ 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+ 
+-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
+-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+ 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
++	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+ 
+ 	/*
+-	 * Assert that this bmap can no longer be scheduled by the 
+-	 * write back cache thread.
++	 * Assert that this bmap can no longer be scheduled by the write
++	 * back cache thread.
+ 	 */
+ 	psc_assert(psclist_disjoint(&b->bcm_lentry));
+ 
+-#if 0
+-	/* DIO rq's are allowed since no cached pages are involved. */
+-	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
+-		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
+-			psc_assert(r->biorq_flags & BIORQ_DIO);
+-	}
+-#endif
++	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
++
++	bmpc_freeall(b);
++	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
+ 
+ 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
+ }
+@@ -1421,7 +1229,7 @@
+ 	_dump_bmap_flags_common(&flags, &seq);
+ 	PFL_PRFLAG(BMAPF_LEASEEXTREQ, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_REASSIGNREQ, &flags, &seq);
+-	PFL_PRFLAG(BMAPF_LEASEEXPIRE, &flags, &seq);
++	PFL_PRFLAG(BMAPF_LEASEEXPIRED, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_SCHED, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_BENCH, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_FLUSHQ, &flags, &seq);
+@@ -1433,6 +1241,7 @@
+ #endif
+ 
+ struct bmap_ops sl_bmap_ops = {
++	msl_bmap_reap,			/* bmo_reapf() */
+ 	msl_bmap_init,			/* bmo_init_privatef() */
+ 	msl_bmap_retrieve,		/* bmo_retrievef() */
+ 	msl_bmap_modeset,		/* bmo_mode_chngf() */
+diff -dru -x .git tree1/slash2/mount_slash/bmap_cli.h tree2/slash2/mount_slash/bmap_cli.h
+--- tree1/slash2/mount_slash/bmap_cli.h	2017-09-11 10:12:35.149121758 -0400
++++ tree2/slash2/mount_slash/bmap_cli.h	2017-09-11 09:47:25.856128531 -0400
+@@ -30,8 +30,6 @@
+ #include "pgcache.h"
+ #include "slashrpc.h"
+ 
+-#define BMAP_TIMEO_INC	  	  5		/* RPC delay, etc */
+-
+ /*
+  * Private data associated with a bmap used by a SLASH2 client.
+  */
+@@ -48,16 +46,18 @@
+ };
+ 
+ /* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  9) */
++#define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* requesting a lease ext */
++#define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)
++#define BMAPF_LEASEEXPIRED	(_BMAPF_SHIFT << 2)	/* lease has expired, new one is needed */
++#define BMAPF_SCHED		(_BMAPF_SHIFT << 3)	/* bmap flush in progress */
++#define BMAPF_BENCH		(_BMAPF_SHIFT << 4)	/* generated by benchmarker */
++#define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 5)	/* bmap is on writer flushq */
++#define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 6)	/* on timeout queue */
+ 
+-#define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* lease request RPC in prog */
+-#define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)	/* lease re-assign */
+-#define BMAPF_LEASEEXPIRE	(_BMAPF_SHIFT << 2)	/* lease has expired */
+-#define BMAPF_LEASEEXTEND	(_BMAPF_SHIFT << 3)	/* lease will be extend */
+-
+-#define BMAPF_SCHED		(_BMAPF_SHIFT << 4)	/* bmap flush in progress */
+-#define BMAPF_BENCH		(_BMAPF_SHIFT << 5)	/* generated by benchmarker */
+-#define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 6)	/* bmap is on writer flushq */
+-#define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 7)	/* on timeout queue */
++/* XXX change horribly named flags */
++#define BMAP_CLI_MAX_LEASE	60			/* seconds */
++#define BMAP_CLI_EXTREQSECS	20
++#define BMAP_CLI_TIMEO_INC	1
+ 
+ static __inline struct bmap_cli_info *
+ bmap_2_bci(struct bmap *b)
+@@ -80,13 +80,12 @@
+ 
+ void	 bmap_biorq_expire(struct bmap *);
+ 
+-void	 msbwatchthr_main(struct psc_thread *);
+ void	 msbreleasethr_main(struct psc_thread *);
+ 
+-int	 msl_bmap_reap(struct psc_poolmgr *);
+-
++extern struct timespec msl_bmap_max_lease;
+ extern struct timespec msl_bmap_timeo_inc;
+ 
++extern int slc_bmap_max_cache;
+ 
+ static __inline struct bmap *
+ bci_2_bmap(struct bmap_cli_info *bci)
+diff -dru -x .git tree1/slash2/mount_slash/ctl_cli.c tree2/slash2/mount_slash/ctl_cli.c
+--- tree1/slash2/mount_slash/ctl_cli.c	2017-09-11 10:12:35.152121611 -0400
++++ tree2/slash2/mount_slash/ctl_cli.c	2017-09-11 09:47:25.859128384 -0400
+@@ -595,24 +595,6 @@
+ 	return (0);
+ }
+ 
+-void
+-slctlparam_max_pages_get(char *val)
+-{
+-	snprintf(val, PCP_VALUE_MAX, "%d", msl_predio_max_pages);
+-}
+-
+-int
+-slctlparam_max_pages_set(const char *val)
+-{
+-	int newval;
+-
+-	newval = strtol(val, NULL, 0);
+-	if (newval < 0 || newval > 2*SLASH_BMAP_SIZE/BMPC_BUFSZ)
+-		return (1);
+-	msl_predio_max_pages = newval;
+-	return (0);
+-}
+-
+ int
+ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
+     struct slctlmsg_bmap *scb, struct bmap *b)
+@@ -995,6 +977,9 @@
+ 	psc_ctlparam_register_simple("sys.version",
+ 	    slctlparam_version_get, NULL);
+ 
++	psc_ctlparam_register_var("sys.bmap_max_cache",
++	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
++
+ 	psc_ctlparam_register_var("sys.bmap_reassign",
+ 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_bmap_reassign);
+ 
+@@ -1030,12 +1015,15 @@
+ 
+ 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
+ 	    &pfl_pid);
+-
+-	psc_ctlparam_register_simple("sys.predio_max_pages",
+-	    slctlparam_max_pages_get, slctlparam_max_pages_set);
+-	psc_ctlparam_register_var("sys.predio_pipe_size",
+-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_pipe_size);
+-
++	psc_ctlparam_register_var("sys.predio_window_size",
++	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
++	    &msl_predio_window_size);
++	psc_ctlparam_register_var("sys.predio_issue_minpages",
++	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
++	    &msl_predio_issue_minpages);
++	psc_ctlparam_register_var("sys.predio_issue_maxpages",
++	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
++	    &msl_predio_issue_maxpages);
+ 	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
+ 	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
+ 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
+diff -dru -x .git tree1/slash2/mount_slash/dircache.c tree2/slash2/mount_slash/dircache.c
+--- tree1/slash2/mount_slash/dircache.c	2017-09-11 10:12:35.154121513 -0400
++++ tree2/slash2/mount_slash/dircache.c	2017-09-11 09:47:25.861128286 -0400
+@@ -382,34 +382,28 @@
+ 		 * and we have fcmh update in bewteen?
+ 		 */
+ 		rc = sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
+-		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL, &f, NULL); 
++		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
++		    &f, NULL); 
+ 
+ 		if (rc) {
+ 			OPSTAT_INCR("msl.readdir-fcmh-exist");
+ 			continue;
+ 		}
+-		FCMH_LOCK(f);
+-		/*
+-		 * We did not load attributes above, if it has attributes now,
+-		 * then we lose the race.
+-		 */
+-		if (!(f->fcmh_flags & FCMH_HAVE_ATTRS)) {
+-			OPSTAT_INCR("msl.readdir-fcmh");
+-			slc_fcmh_setattr_locked(f, &e->sstb);
++		OPSTAT_INCR("msl.readdir-fcmh");
++		slc_fcmh_setattr_locked(f, &e->sstb);
+ 
+ #if 0
+-			/*
+-			 * Race: entry was entered into namecache, file
+-			 * system unlink occurred, then we tried to
+-			 * refresh stat(2) attributes.  This is OK
+-			 * however, since namecache is synchronized with
+-			 * unlink, we just did extra work here.
+-			 */
+-			psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
++		/*
++		 * Race: entry was entered into namecache, file
++		 * system unlink occurred, then we tried to
++		 * refresh stat(2) attributes.  This is OK
++		 * however, since namecache is synchronized with
++		 * unlink, we just did extra work here.
++		 */
++		psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+ #endif
+ 
+-			msl_fcmh_stash_xattrsize(f, e->xattrsize);
+-		}
++		msl_fcmh_stash_xattrsize(f, e->xattrsize);
+ 		fcmh_op_done(f);
+ 	}
+ 
+diff -dru -x .git tree1/slash2/mount_slash/dircache.h tree2/slash2/mount_slash/dircache.h
+--- tree1/slash2/mount_slash/dircache.h	2017-09-11 10:12:35.155121464 -0400
++++ tree2/slash2/mount_slash/dircache.h	2017-09-11 09:47:25.862128237 -0400
+@@ -99,6 +99,8 @@
+ #define DIRCACHEPGF_FREEING	(1 << 5)	/* a thread is trying to free */
+ 
+ #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
++#define DIRCACHE_REQWRLOCK(d)	pfl_rwlock_reqwrlock(fcmh_2_dc_rwlock(d))
++#define DIRCACHE_UREQLOCK(d, l)	pfl_rwlock_ureqlock(fcmh_2_dc_rwlock(d), (l))
+ #define DIRCACHE_RDLOCK(d)	pfl_rwlock_rdlock(fcmh_2_dc_rwlock(d))
+ #define DIRCACHE_ULOCK(d)	pfl_rwlock_unlock(fcmh_2_dc_rwlock(d))
+ #define DIRCACHE_WR_ENSURE(d)	psc_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
+diff -dru -x .git tree1/slash2/mount_slash/io.c tree2/slash2/mount_slash/io.c
+--- tree1/slash2/mount_slash/io.c	2017-09-11 10:12:35.158121317 -0400
++++ tree2/slash2/mount_slash/io.c	2017-09-11 09:47:25.866128041 -0400
+@@ -76,24 +76,32 @@
+ /* Flushing fs threads wait here for I/O completion. */
+ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
+ 
+-struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_INC, 0 };
++struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
++struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
+ 
+-int			 msl_predio_pipe_size = 256;
+-int			 msl_predio_max_pages = 64;
++int			 msl_predio_window_size = 4 * 1024 * 1024;
++int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
++int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+ 
+ struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
+ struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
+ struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
+ struct pfl_opstats_grad	 slc_iorpc_iostats_wr;
+ 
+-struct psc_poolmaster	 slc_prediorq_poolmaster;
+-struct psc_poolmgr	*slc_prediorq_pool;
+-struct psc_listcache	 msl_predioq;
++struct psc_poolmaster	 slc_readaheadrq_poolmaster;
++struct psc_poolmgr	*slc_readaheadrq_pool;
++struct psc_listcache	 msl_readaheadq;
+ 
+ int msl_read_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+ 
++#define msl_biorq_page_valid_accounting(r, idx)				\
++	_msl_biorq_page_valid((r), (idx), 1)
++
++#define msl_biorq_page_valid(r, idx)					\
++	_msl_biorq_page_valid((r), (idx), 0)
++
+ __static int
+-msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
++_msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int accounting)
+ {
+ 	struct bmap_pagecache_entry *e;
+ 	uint32_t toff, tsize, nbytes;
+@@ -117,22 +125,23 @@
+ 		}
+ 
+ 		if (e->bmpce_flags & BMPCEF_DATARDY) {
+-			if (e->bmpce_flags & BMPCEF_READAHEAD) {
+-				e->bmpce_flags &= ~BMPCEF_READAHEAD;
+-				OPSTAT_INCR("msl.readahead-hit");
+-			}
+-			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
+-			OPSTAT_INCR("msl.read-whole-valid");
++			if (accounting)
++				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
++
+ 			return (1);
+ 		}
+ 
+ 		if (toff >= e->bmpce_start &&
+ 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
+-			psc_assert(e->bmpce_len);
+-			OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
+-			OPSTAT_INCR("msl.read-part-valid");
++			if (accounting) {
++				OPSTAT2_ADD("msl.rd-cache-hit", nbytes);
++				OPSTAT_INCR("msl.read-part-valid");
++			}
+ 			return (1);
+ 		}
++		if (accounting)
++			psc_fatalx("biorq %p does not valid data", r);
++
+ 		return (0);
+ 	}
+ 	psc_fatalx("biorq %p does not have page %d", r, idx);
+@@ -145,25 +154,19 @@
+ predio_enqueue(const struct sl_fidgen *fgp, sl_bmapno_t bno,
+     enum rw rw, uint32_t off, int npages)
+ {
+-	struct prediorq *rarq;
++	struct readaheadrq *rarq;
+ 
+ 	psc_assert(rw == SL_READ || rw == SL_WRITE);
+-	rarq = psc_pool_tryget(slc_prediorq_pool);
+-	if (rarq == NULL) {
+-		OPSTAT_INCR("msl.predio-pool-bail");
++	rarq = psc_pool_tryget(slc_readaheadrq_pool);
++	if (rarq == NULL)
+ 		return;
+-	}
+-	OPSTAT_INCR("msl.predio-enqueue");
+ 	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+ 	rarq->rarq_rw = rw;
+ 	rarq->rarq_fg = *fgp;
+ 	rarq->rarq_bno = bno;
+ 	rarq->rarq_off = off;
+-	rarq->rarq_flag = 0;
+ 	rarq->rarq_npages = npages;
+-
+-	/* feed work to msreadaheadthr_main() */
+-	lc_add(&msl_predioq, rarq);
++	lc_add(&msl_readaheadq, rarq);
+ }
+ 
+ /*
+@@ -176,6 +179,7 @@
+ {
+ 	uint32_t aoff, alen, bmpce_off;
+ 	struct msl_fhent *mfh = q->mfsrq_mfh;
++	struct bmap_pagecache_entry *e;
+ 	struct bmpc_ioreq *r;
+ 	int i, npages;
+ 
+@@ -196,9 +200,9 @@
+ 		return (r);
+ 
+ 	/*
+-	 * Align the offset to the start of a page and adjust len
+-	 * accordingly.  Note that roff is already made relative
+-	 * to the start of the given bmap.
++	 * Align the offset and length to the start of a page.  Note
++	 * that roff is already made relative to the start of the given
++	 * bmap.
+ 	 */
+ 	aoff = roff & ~BMPC_BUFMASK;
+ 	alen = len + (roff & BMPC_BUFMASK);
+@@ -217,11 +221,53 @@
+ 	 */
+ 	for (i = 0; i < npages; i++) {
+ 		bmpce_off = aoff + (i * BMPC_BUFSZ);
+-		bmpce_lookup(r, b, 0, bmpce_off, &b->bcm_fcmh->fcmh_waitq);
++
++		bmpce_lookup(r, b, 0, bmpce_off,
++		    &b->bcm_fcmh->fcmh_waitq, &e);
+ 	}
+ 	return (r);
+ }
+ 
++__static void
++msl_biorq_del(struct bmpc_ioreq *r)
++{
++	struct bmap *b = r->biorq_bmap;
++	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
++	struct bmap_pagecache_entry *e;
++	int i;
++
++	BMAP_LOCK(b);
++
++	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
++		BMPCE_LOCK(e);
++		bmpce_release(e);
++	}
++	psc_dynarray_free(&r->biorq_pages);
++
++	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
++
++	if (r->biorq_flags & BIORQ_ONTREE)
++		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
++
++	if (r->biorq_flags & BIORQ_FLUSHRDY) {
++		pll_remove(&bmpc->bmpc_biorqs_exp, r);
++		psc_assert(bmpc->bmpc_pndg_writes > 0);
++		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
++		bmpc->bmpc_pndg_writes--;
++		if (!bmpc->bmpc_pndg_writes) {
++			b->bcm_flags &= ~BMAPF_FLUSHQ;
++			// XXX locking violation
++			lc_remove(&msl_bmapflushq, b);
++			DEBUG_BMAP(PLL_DIAG, b,
++			    "remove from msl_bmapflushq");
++		}
++	}
++
++	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
++	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
++
++	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
++}
+ 
+ void
+ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
+@@ -245,15 +291,9 @@
+ void
+ msl_biorq_destroy(struct bmpc_ioreq *r)
+ {
+-	struct bmap *b = r->biorq_bmap;
+-	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+-	struct bmap_pagecache_entry *e;
+-	int i;
+-
+ 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
+ 
+ 	psc_assert(r->biorq_ref == 0);
+-	psc_assert(r->biorq_fsrqi == NULL);
+ 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+ 	r->biorq_flags |= BIORQ_DESTROY;
+ 
+@@ -264,59 +304,37 @@
+ 	if (r->biorq_flags & BIORQ_FREEBUF)
+ 		PSCFREE(r->biorq_buf);
+ 
+-	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+-		BMPCE_LOCK(e);
+-		bmpce_release_locked(e, bmpc);
+-	}
+-	psc_dynarray_free(&r->biorq_pages);
+-
+-	BMAP_LOCK(b);
+-
+-	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+-
+-	if (r->biorq_flags & BIORQ_ONTREE)
+-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
++	msl_biorq_del(r);
+ 
+-	if (r->biorq_flags & BIORQ_FLUSHRDY) {
+-		pll_remove(&bmpc->bmpc_biorqs_exp, r);
+-		psc_assert(bmpc->bmpc_pndg_writes > 0);
+-		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+-		bmpc->bmpc_pndg_writes--;
+-		if (!bmpc->bmpc_pndg_writes) {
+-			b->bcm_flags &= ~BMAPF_FLUSHQ;
+-			lc_remove(&msl_bmapflushq, b);
+-			DEBUG_BMAP(PLL_DIAG, b, "remove from msl_bmapflushq");
+-		}
+-	}
++	OPSTAT_INCR("msl.biorq-destroy");
++	psc_pool_return(msl_biorq_pool, r);
++}
+ 
+-	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg=%d",
+-	    r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
++#define biorq_incref(r)		_biorq_incref(PFL_CALLERINFO(), (r))
+ 
+-	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
++void
++_biorq_incref(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
++{
++	int locked;
+ 
+-	OPSTAT_INCR("msl.biorq-destroy");
+-	psc_pool_return(msl_biorq_pool, r);
++	locked = BIORQ_RLOCK(r);
++	r->biorq_ref++;
++	DEBUG_BIORQ(PLL_DIAG, r, "incref");
++	BIORQ_URLOCK(r, locked);
+ }
+ 
+ void
+ msl_biorq_release(struct bmpc_ioreq *r)
+ {
+ 	BIORQ_LOCK(r);
+-	
+-	if (r->biorq_flags & BIORQ_READAHEAD)
+-		DEBUG_BIORQ(PLL_DIAG, r, "decref");
+-
+ 	if (r->biorq_ref == 1 &&
+ 	    ((r->biorq_flags & BIORQ_READ) ||
+ 	    !(r->biorq_flags & BIORQ_FLUSHRDY))) {
+ 		BIORQ_ULOCK(r);
+ 		/*
+-		 * A request can be split into several RPCs so we 
+-		 * can't declare it as complete until after its
+-		 * reference count drops to zero.
+-		 *
+-		 * If we already have a failure, we won't flush a
+-		 * write request, and it will be destroyed below.
++		 * A request can be split into several RPCs so we can't
++		 * declare it as complete until after its reference
++		 * count drops to zero.
+ 		 */
+ 		msl_biorq_complete_fsrq(r);
+ 		BIORQ_LOCK(r);
+@@ -344,7 +362,6 @@
+ 	memset(mfh, 0, sizeof(*mfh));
+ 	mfh->mfh_refcnt = 1;
+ 	mfh->mfh_fcmh = f;
+-	mfh->mfh_flags = MFHF_TRACKING_RA;
+ 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
+ 	mfh->mfh_sid = getsid(mfh->mfh_pid);
+ 	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
+@@ -420,7 +437,7 @@
+ 
+ 	BIORQ_LOCK(r);
+ 	if (!(r->biorq_flags & BIORQ_WAIT)) {
+-		r->biorq_ref++;
++		biorq_incref(r);
+ 		r->biorq_flags |= BIORQ_WAIT;
+ 		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p", e);
+ 		pll_add(&e->bmpce_pndgaios, r);
+@@ -502,6 +519,21 @@
+ }
+ 
+ void
++mfsrq_clrerr(struct msl_fsrqinfo *q)
++{
++	int lk;
++
++	lk = MFH_RLOCK(q->mfsrq_mfh);
++	if (q->mfsrq_err) {
++		DPRINTF_MFSRQ(PLL_WARN, q, "clearing err=%d",
++		    q->mfsrq_err);
++		q->mfsrq_err = 0;
++		OPSTAT_INCR("msl.offline-retry-clear-err");
++	}
++	MFH_URLOCK(q->mfsrq_mfh, lk);
++}
++
++void
+ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
+ {
+ 	MFH_LOCK(q->mfsrq_mfh);
+@@ -521,6 +553,12 @@
+ 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+ 		BMPCE_LOCK(e);
+ 		newval = e->bmpce_flags | flag;
++		if (e->bmpce_flags & BMPCEF_READALC) {
++			lc_remove(&msl_readahead_pages, e);
++			lc_add(&msl_idle_pages, e);
++			newval = (newval & ~BMPCEF_READALC) |
++			    BMPCEF_IDLE;
++		}
+ 		e->bmpce_flags = newval;
+ 		BMPCE_ULOCK(e);
+ 	}
+@@ -569,16 +607,15 @@
+ }
+ 
+ void
+-msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len, struct bmpc_ioreq *r0)
++msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
++    struct bmpc_ioreq *r0)
+ {
+-	void *oiov;
++	void *oiov = q->mfsrq_iovs;
+ 	struct msl_fhent *mfh;
+ 	struct pscfs_req *pfr;
+ 	struct bmpc_ioreq *r;
+ 	struct fidc_membh *f;
+ 	int i;
+-	struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
+-	int nio = 0, rc = 0;
+ 
+ 	pfr = mfsrq_2_pfr(q);
+ 	mfh = q->mfsrq_mfh;
+@@ -598,25 +635,18 @@
+ 	q->mfsrq_ref--;
+ 	DPRINTF_MFSRQ(PLL_DIAG, q, "decref");
+ 	if (q->mfsrq_ref) {
+-		if (r0) {
+-			/*
+- 			 * This holds on to biorq, which in turns holds on to
+- 			 * pages untile we have copied out their contents below.
+- 			 * In theory, we only need this for a read request.
+- 			 */
+-			BIORQ_LOCK(r0);
+-			r0->biorq_ref++;
+-			BIORQ_ULOCK(r0);
+-		}
++		if (r0)
++			biorq_incref(r0);
+ 		MFH_ULOCK(mfh);
+ 		return;
+ 	}
+-	oiov = q->mfsrq_iovs;
+ 	psc_assert((q->mfsrq_flags & MFSRQ_FSREPLIED) == 0);
+ 	q->mfsrq_flags |= MFSRQ_FSREPLIED;
+ 	mfh_decref(mfh);
+ 
+ 	if (q->mfsrq_flags & MFSRQ_READ) {
++		struct iovec *piov = NULL, iov[MAX_BMAPS_REQ];
++		int nio = 0, rc = 0;
+ 
+ 		if (q->mfsrq_err) {
+ 			rc = abs(q->mfsrq_err);
+@@ -629,6 +659,8 @@
+ 					r = q->mfsrq_biorq[i];
+ 					if (!r)
+ 						break;
++					biorq_bmpces_setflag(r,
++					    BMPCEF_ACCESSED);
+ 				}
+ 
+ 				piov = q->mfsrq_iovs;
+@@ -636,12 +668,16 @@
+ 			} else {
+ 				psc_assert(q->mfsrq_flags & MFSRQ_COPIED);
+ 
+-				for (i = 0; i < MAX_BMAPS_REQ; i++, nio++) {
++				for (i = 0; i < MAX_BMAPS_REQ; i++,
++				    nio++) {
+ 					r = q->mfsrq_biorq[i];
+ 					if (!r)
+ 						break;
+ 					iov[nio].iov_base = r->biorq_buf;
+ 					iov[nio].iov_len = r->biorq_len;
++
++					biorq_bmpces_setflag(r,
++					    BMPCEF_ACCESSED);
+ 				}
+ 				piov = iov;
+ 			}
+@@ -656,12 +692,16 @@
+ 				r = q->mfsrq_biorq[i];
+ 				if (!r)
+ 					break;
++				biorq_bmpces_setflag(r,
++				    BMPCEF_ACCESSED);
+ 			}
+ 		}
+ 		slc_fsreply_write(f, pfr, q->mfsrq_len,
+ 		    abs(q->mfsrq_err));
+ 	}
+ 
++	PSCFREE(oiov);
++
+ 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
+ 		r = q->mfsrq_biorq[i];
+ 		if (!r)
+@@ -671,10 +711,6 @@
+ 		msl_biorq_release(r);
+ 	}
+ 
+-	/*
+- 	 * 08/20/2017: Weird double free or corruption called from here.
+- 	 */
+-	PSCFREE(oiov);
+ 	psc_pool_return(msl_iorq_pool, q);
+ }
+ 
+@@ -691,11 +727,6 @@
+ 	r->biorq_fsrqi = NULL;
+ 	BIORQ_ULOCK(r);
+ 
+-#ifdef MYDEBUG
+-	psclog_max("complete rq = %p, flags = %x, off = %u, bno = %d\n", 
+-		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+-#endif
+-
+ 	if (q == NULL)
+ 		return;
+ 
+@@ -787,8 +818,12 @@
+ 	}
+ }
+ 
++#define msl_bmpce_read_rpc_done(e, rc)					\
++	_msl_bmpce_read_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
++
+ __static void
+-msl_bmpce_read_rpc_done(struct bmap_pagecache_entry *e, int rc)
++_msl_bmpce_read_rpc_done(const struct pfl_callerinfo *pci,
++    struct bmap_pagecache_entry *e, int rc)
+ {
+ 	BMPCE_LOCK(e);
+ 	psc_assert(e->bmpce_waitq);
+@@ -938,7 +973,7 @@
+ 	if (rc) {
+ 		if (rc == -PFLERR_KEYEXPIRED) {
+ 			BMAP_LOCK(b);
+-			b->bcm_flags |= BMAPF_LEASEEXPIRE;
++			b->bcm_flags |= BMAPF_LEASEEXPIRED;
+ 			BMAP_ULOCK(b);
+ 			OPSTAT_INCR("msl.bmap-read-expired");
+ 		}
+@@ -1139,7 +1174,7 @@
+ 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
+ 
+ 		refs++;
+-		r->biorq_ref++;
++		biorq_incref(r);
+ 
+ 		rc = SL_NBRQSETX_ADD(nbs, csvc, rq);
+ 		if (rc) {
+@@ -1247,7 +1282,7 @@
+ 	 * processed prematurely.
+ 	 */
+ 	BIORQ_LOCK(r);
+-	r->biorq_ref++;
++	biorq_incref(r);
+ 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_ONTREE;
+ 	bmpc->bmpc_pndg_writes++;
+ 	PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+@@ -1348,12 +1383,6 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-#ifdef MYDEBUG
+-	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
+-		r, r->biorq_flags, off, r->biorq_bmap->bcm_bmapno, 
+-		npages);
+-#endif
+-
+ 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+@@ -1388,16 +1417,13 @@
+ 	rq->rq_async_args.pointer_arg[MSL_CBARG_IOVS] = iovs;
+ 	rq->rq_interpret_reply = msl_read_cb;
+ 
+-	BIORQ_LOCK(r);
+-	r->biorq_ref++;
+-	DEBUG_BIORQ(PLL_DIAG, r, "incref");
+-	BIORQ_ULOCK(r);
++	biorq_incref(r);
+ 
+ 	rc = SL_NBRQSET_ADD(csvc, rq);
+ 	if (rc) {
+ 		msl_biorq_release(r);
+ 
+-		OPSTAT_INCR("msl.read-add-req-err");
++		OPSTAT_INCR("msl.read-add-req-fail");
+ 		PFL_GOTOERR(out, rc);
+ 	}
+ 
+@@ -1442,11 +1468,6 @@
+ 	struct bmap_pagecache_entry *e;
+ 	uint32_t off = 0;
+ 
+-#ifdef MYDEBUG
+-	psclog_max("launch rq = %p, flags = %x, off = %u, bno = %d\n", 
+-		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno);
+-#endif
+-
+ 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+ 
+ 		/*
+@@ -1491,16 +1512,9 @@
+ 		needflush = 1;
+ 	}
+ 
+-#if 0
+-	psclog_max("real launch rq = %p, flags = %x, off = %u, bno = %d, pages = %d\n", 
+-		r, r->biorq_flags, r->biorq_off, r->biorq_bmap->bcm_bmapno, 
+-		psc_dynarray_len(&pages));
+-#endif
+-
+ 	/*
+ 	 * We must flush any pending writes first before reading from
+-	 * the storage. In theory, we only need to flush pages that
+-	 * are touched by this request, but it is simpler this way.
++	 * the storage.
+ 	 */
+ 	if (needflush) {
+ 		/* XXX make this interruptible */
+@@ -1523,10 +1537,6 @@
+ 		}
+ 		if (i - j + 1 == BMPC_MAXBUFSRPC ||
+ 		    i == psc_dynarray_len(&pages) - 1) {
+-			/* 
+-			 * 08/21/2017: weird segfault 11 in malloc_consolidate() 
+-			 * called from here.
+-			 */
+ 			rc = msl_read_rpc_launch(r, &pages, j, i - j + 1);
+ 			if (rc) {
+ 				i++;
+@@ -1539,8 +1549,8 @@
+ 
+ 	/*
+ 	 * Clean up remaining pages that were not launched.  Note that
+-	 * msl_read_rpc_launch() cleans up pages on its own in case of
+-	 * a failure.
++	 * msl_read_rpc_launch() cleans up pages on its own in case of a
++	 * failure.
+ 	 */
+ 	DYNARRAY_FOREACH_CONT(e, i, &pages) {
+ 		BMPCE_LOCK(e);
+@@ -1563,22 +1573,19 @@
+  * read-ahead pages to complete.
+  */
+ int
+-msl_fetch_pages(struct bmpc_ioreq *r)
++msl_pages_fetch(struct bmpc_ioreq *r)
+ {
+-	int rc = 0;
++	int i, rc = 0, aiowait = 0, perfect_ra = 0;
++	struct bmap_pagecache_entry *e;
++	struct timespec ts0, ts1, tsd;
+ 
+ 	/* read-before-write will kill performance */
+-	if (r->biorq_flags & BIORQ_READ)
++	if (r->biorq_flags & BIORQ_READ) {
++		perfect_ra = 1;
+ 		rc = msl_launch_read_rpcs(r);
+-	return (rc);
+-
+-}
+-int
+-msl_wait_pages(struct bmpc_ioreq *r)
+-{
+-	int i, rc = 0, aiowait = 0;
+-	struct bmap_pagecache_entry *e;
+-	struct timespec ts0, ts1, tsd;
++		if (rc)
++			PFL_GOTOERR(out, rc);
++	}
+ 
+ 	PFL_GETTIMESPEC(&ts0);
+ 
+@@ -1594,6 +1601,7 @@
+ 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
+ 			BMPCE_WAIT(e);
+ 			BMPCE_LOCK(e);
++			perfect_ra = 0;
+ 		}
+ 		/*
+ 		 * We can't read/write page in this state.
+@@ -1615,7 +1623,8 @@
+ 				 */
+ 				OPSTAT2_ADD("msl.readahead-hit",
+ 				    BMPC_BUFSZ);
+-		}
++		} else
++			perfect_ra = 0;
+ 
+ 		/*
+  		 * Read error should be catched in the callback.
+@@ -1648,6 +1657,10 @@
+ 	OPSTAT_ADD("msl.biorq-fetch-wait-usecs",
+ 	    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
+ 
++	if (rc == 0 && !aiowait && perfect_ra)
++		OPSTAT2_ADD("msl.readahead-perfect", r->biorq_len);
++
++ out:
+ 	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
+ 	return (rc);
+ }
+@@ -1711,17 +1724,8 @@
+ 			nbytes = MIN(BMPC_BUFSZ, tsize);
+ 		}
+ 
+-		psc_assert(nbytes);
+-
+ 		/* Do the deed. */
+ 		memcpy(dest, src, nbytes);
+- 
+-		/*
+- 		 * If the page is already valid, there is no need to track
+- 		 * which region is valid.
+- 		 */
+-		if (e->bmpce_flags & BMPCEF_DATARDY)
+-			goto skip;
+ 
+ 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
+ 			e->bmpce_flags |= BMPCEF_DATARDY;
+@@ -1738,12 +1742,9 @@
+ 			    toff + nbytes : e->bmpce_start + e->bmpce_len;
+ 			e->bmpce_start = start;
+ 			e->bmpce_len = end - start;
+-			psc_assert(e->bmpce_len > 0);
+ 			psc_assert(e->bmpce_len <= BMPC_BUFSZ);
+ 		}
+ 
+- skip:
+-
+ 		DEBUG_BMPCE(PLL_DIAG, e,
+ 		    "tsize=%u nbytes=%u toff=%u start=%u len=%u",
+ 		    tsize, nbytes, toff, e->bmpce_start, e->bmpce_len);
+@@ -1811,12 +1812,11 @@
+ 		} else
+ 			nbytes = MIN(BMPC_BUFSZ, tsize);
+ 
+-		psc_assert(nbytes);
+-		psc_assert(msl_biorq_page_valid(r, i));
+-
+ 		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
+ 		    PSCPRIdOFFT, tsize, nbytes, toff);
+ 
++		msl_biorq_page_valid_accounting(r, i);
++
+ 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r, i));
+ 
+ 		q->mfsrq_iovs[q->mfsrq_niov].iov_len = nbytes;
+@@ -1836,61 +1836,6 @@
+ 	return (tbytes);
+ }
+ 
+-
+-void
+-mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
+-    enum rw rw)
+-{
+-	int delta = BMPC_BUFSZ;
+-
+-	MFH_LOCK(mfh);
+-
+-	if (rw == SL_WRITE) {
+-		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
+-			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
+-			mfh->mfh_flags |= MFHF_TRACKING_WA;
+-			mfh->mfh_predio_off = 0;
+-			mfh->mfh_predio_nseq = 0;
+-			mfh->mfh_predio_lastoff = 0;
+-			mfh->mfh_predio_lastsize = 0;
+-		}
+-	} else {
+-		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+-			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
+-			mfh->mfh_flags |= MFHF_TRACKING_RA;
+-			mfh->mfh_predio_off = 0;
+-			mfh->mfh_predio_nseq = 0;
+-			mfh->mfh_predio_lastoff = 0;
+-			mfh->mfh_predio_lastsize = 0;
+-		}
+-	}
+-
+-	/*
+-	 * If the first read starts from offset 0, the following will
+-	 * automatically trigger a read-ahead because as part of the
+-	 * msl_fhent structure, the fields are zeroed during allocation.
+-	 */
+-	if (off == mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize) {
+-		OPSTAT_INCR("msl.predio-sequential");
+-		mfh->mfh_predio_nseq++;
+-		goto out;
+-	}
+-	if (off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta ||
+-	    off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
+-		OPSTAT_INCR("msl.predio-reset");
+-		mfh->mfh_predio_off = 0;
+-		mfh->mfh_predio_nseq = 0;
+-		goto out;
+-	}
+-	OPSTAT_INCR("msl.predio-semi-sequential");
+-
+- out:
+-	mfh->mfh_predio_lastoff = off;
+-	mfh->mfh_predio_lastsize = size;
+-
+-	MFH_ULOCK(mfh);
+-}
+-
+ /*
+  * Calculate the next predictive I/O for an actual I/O request.
+  *
+@@ -1913,84 +1858,120 @@
+ msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
+     uint32_t off, int npages)
+ {
++	sl_bmapno_t orig_bno = bno;
+ 	int bsize, tpages, rapages;
++	off_t absoff, newissued;
+ 	struct fidc_membh *f;
+-	off_t raoff;
+ 
+-	f = mfh->mfh_fcmh;
+ 	MFH_LOCK(mfh);
+ 
+-	if (!mfh->mfh_predio_nseq)
+-		PFL_GOTOERR(out, 0);
+-
+-	if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+-		if (BMPC_BUFSZ * msl_predio_pipe_size >= SLASH_BMAP_SIZE ||
+-		    off + npages * BMPC_BUFSZ >= 
+-		    SLASH_BMAP_SIZE - BMPC_BUFSZ * msl_predio_pipe_size) {
+-			OPSTAT_INCR("msl.predio-write-enqueue");
+-			predio_enqueue(&f->fcmh_fg, bno+1, rw, 0, 0);
++	/*
++	 * Allow either write I/O tracking or read I/O tracking but not
++	 * both.
++	 */
++	if (rw == SL_WRITE) {
++		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
++			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
++			mfh->mfh_flags |= MFHF_TRACKING_WA;
++			mfh->mfh_predio_lastoff = 0;
++			mfh->mfh_predio_nseq = 0;
++		} else if ((mfh->mfh_flags & MFHF_TRACKING_WA) == 0) {
++			mfh->mfh_flags |= MFHF_TRACKING_WA;
++		}
++	} else {
++		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
++			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
++			mfh->mfh_flags |= MFHF_TRACKING_RA;
++			mfh->mfh_predio_lastoff = 0;
++			mfh->mfh_predio_nseq = 0;
++		} else if ((mfh->mfh_flags & MFHF_TRACKING_RA) == 0) {
++			mfh->mfh_flags |= MFHF_TRACKING_RA;
+ 		}
+-		PFL_GOTOERR(out, 0);
+ 	}
+ 
+-	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
+-	if (raoff + msl_predio_pipe_size * BMPC_BUFSZ < mfh->mfh_predio_off) {
+-		OPSTAT_INCR("msl.predio-pipe-hit");
+-		PFL_GOTOERR(out, 0);
+-	}
+-	OPSTAT_INCR("msl.predio-pipe-miss");
++	absoff = bno * SLASH_BMAP_SIZE + off;
+ 
+-	/* Adjust raoff based on our position in the pipe */
+-	if (mfh->mfh_predio_off) {
+-		if (mfh->mfh_predio_off > raoff) {
+-			OPSTAT_INCR("msl.predio-pipe-enlarge");
+-			raoff = mfh->mfh_predio_off;
++	/*
++	 * If the first read starts from offset 0, the following will
++	 * trigger a read-ahead.  This is because as part of the
++	 * msl_fhent structure, the fields are zeroed during allocation.
++	 *
++	 * Ensure this I/O is within a window from our expectation.
++	 * This allows predictive I/O amidst slightly out of order
++	 * (typically because of application threading) or skipped I/Os.
++	 */
++	if (labs(absoff - mfh->mfh_predio_lastoff) <
++	    msl_predio_window_size) {
++		if (mfh->mfh_predio_nseq) {
++			mfh->mfh_predio_nseq = MIN(
++			    mfh->mfh_predio_nseq * 2,
++			    msl_predio_issue_maxpages);
+ 		} else
+-			OPSTAT_INCR("msl.predio-pipe-overrun");
+-	}
++			mfh->mfh_predio_nseq = npages;
++	} else
++		mfh->mfh_predio_nseq = 0;
+ 
+-	/* convert to bmap relative */
+-	bno = raoff / SLASH_BMAP_SIZE;
+-	raoff = raoff - bno * SLASH_BMAP_SIZE;
+-	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
++	mfh->mfh_predio_lastoff = absoff;
+ 
+-#ifdef MYDEBUG
+-	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
+-	    fcmh_2_fid(f), bno, raoff, rapages);
+-#endif
++	if (mfh->mfh_predio_nseq)
++		OPSTAT_INCR("msl.predio-window-hit");
++	else {
++		OPSTAT_INCR("msl.predio-window-miss");
++		PFL_GOTOERR(out, 0);
++	}
+ 
+-	/* 
+-	 * Now issue an I/O for each bmap in the prediction. This loop
+-	 * can handle read-ahead into multiple bmaps.
+-	 */
+-	for (; rapages && bno < fcmh_2_nbmaps(f); rapages -= tpages) {
++	rapages = mfh->mfh_predio_nseq;
++
++	/* Note: this can extend past current EOF. */
++	newissued = absoff + rapages * BMPC_BUFSZ;
++	if (newissued < mfh->mfh_predio_issued) {
++		/*
++		 * Our tracking is incoherent; we'll sync up with the
++		 * application now.
++		 */
++	} else {
++		/* Don't issue too soon after a previous issue. */
++		rapages = (newissued - mfh->mfh_predio_issued) /
++		    BMPC_BUFSZ;
++		if (rapages < msl_predio_issue_minpages)
++			PFL_GOTOERR(out, 0);
++		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
++		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
++	}
+ 
++	f = mfh->mfh_fcmh;
++	/* Now issue an I/O for each bmap in the prediction. */
++	for (; rapages && bno < fcmh_2_nbmaps(f);
++	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
++		if (off >= SLASH_BMAP_SIZE) {
++			off = 0;
++			bno++;
++		}
+ 		bsize = SLASH_BMAP_SIZE;
+-		if (bno == fcmh_2_nbmaps(f) - 1) {
++		/* Trim a readahead that extends past EOF. */
++		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1) {
+ 			bsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+ 			if (bsize == 0 && fcmh_2_fsz(f))
+ 				bsize = SLASH_BMAP_SIZE;
+ 		}
+-		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
++		tpages = howmany(bsize - off, BMPC_BUFSZ);
+ 		if (!tpages)
+ 			break;
+-#if 0
+-		if (tpages > BMPC_MAXBUFSRPC)
+-			tpages = BMPC_MAXBUFSRPC;
+-#endif
+ 		if (tpages > rapages)
+ 			tpages = rapages;
+ 
+-		predio_enqueue(&f->fcmh_fg, bno, rw, raoff, tpages);
++		/*
++		 * Write-ahead is only used for acquiring bmap leases
++		 * predictively, not for preparing pages, so skip
++		 * unnecessary work.
++		 */
++		if (rw == SL_WRITE && bno == orig_bno)
++			continue;
+ 
+-		raoff += tpages * BMPC_BUFSZ;
+-		if (raoff >= SLASH_BMAP_SIZE) {
+-			raoff = 0;
+-			bno++;
+-		}
++		predio_enqueue(&f->fcmh_fg, bno, rw, off, tpages);
+ 	}
+ 
+-	mfh->mfh_predio_off = bno * SLASH_BMAP_SIZE + raoff;
++	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + off;
+ 
+  out:
+ 	MFH_ULOCK(mfh);
+@@ -2084,7 +2065,7 @@
+ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
+     size_t size, const off_t off, enum rw rw)
+ {
+-	int nr, i, rc, npages, predio;
++	int nr, i, rc, npages;
+ 	size_t start, end, tlen, tsize;
+ 	struct msl_fsrqinfo *q = NULL;
+ 	struct timespec ts0, ts1, tsd;
+@@ -2092,17 +2073,12 @@
+ 	struct fidc_membh *f;
+ 	struct bmap *b;
+ 	sl_bmapno_t bno;
+-	uint32_t aoff, alen;
++	uint32_t aoff;
+ 	uint64_t fsz;
+ 	off_t roff;
+ 
+ 	f = mfh->mfh_fcmh;
+ 
+-#ifdef MYDEBUG
+-	psclog_max("%s: FID = "SLPRI_FID", offset = %ld, size = %zd", 
+-	    rw == SL_READ ? "read": "write", fcmh_2_fid(f), off, size);
+-#endif
+-
+ 	/* XXX EBADF if fd is not open for writing */
+ 
+ 	if (fcmh_isdir(f)) {
+@@ -2130,8 +2106,6 @@
+ 			size = fsz - off;
+ 	}
+ 
+-	mfh_track_predictive_io(mfh, size, off, rw);
+-
+ 	FCMH_ULOCK(f);
+ 
+ 	if (size == 0)
+@@ -2163,10 +2137,7 @@
+ 	rc = 0;
+ 	tsize = size;
+ 
+-	/* 
+-	 * Relativize the offset and length within the bmap. Note that
+-	 * roff is not necessarily page-aligned.
+-	 */
++	/* Relativize the length and offset (roff is not aligned). */
+ 	roff = off - (start * SLASH_BMAP_SIZE);
+ 	psc_assert(roff < SLASH_BMAP_SIZE);
+ 
+@@ -2207,9 +2178,11 @@
+ 		    tsd.tv_sec * 1000000 + tsd.tv_nsec / 1000);
+ 
+ 		/*
+-		 * Re-relativize the offset if this request spans
+-		 * more than 1 bmap.
++		 * Re-relativize the offset if this request spans more
++		 * than 1 bmap.
+ 		 */
++		r = q->mfsrq_biorq[i];
++
+ 		BMAP_ULOCK(b);
+ 
+ 		/*
+@@ -2228,7 +2201,6 @@
+ 
+ 		DPRINTF_MFSRQ(PLL_DIAG, q, "incref");
+ 
+-		bno = b->bcm_bmapno;
+ 		bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
+ 		bmap_op_done(b);
+ 
+@@ -2248,34 +2220,29 @@
+ 	}
+ 
+ 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
+-	predio = 1;
+-	if (!msl_predio_max_pages || b->bcm_flags & BMAPF_DIO) {
+-		predio = 0;
++	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
+ 		goto out1;
+-	}
+ 
+-	/* 
+-	 * Note that i can only be 0 or 1 after the above loop.
+-	 *
+-	 * At the very start, roff is not necessarily aligned 
+-	 * to a page, but it is made relative to the start of
+-	 * bmap. aoff probably means page aligned offset.
+-	 */ 
++	/* Note that i can only be 0 or 1 after the above loop. */
+ 	if (i == 1) {
+ 		psc_assert(roff == SLASH_BMAP_SIZE);
+ 		roff = 0;
+ 	}
+ 
+ 	/* Calculate predictive I/O offset. */
++	bno = b->bcm_bmapno;
+ 	aoff = roff + tlen;
++	if (aoff & BMPC_BUFMASK) {
++		aoff += BMPC_BUFSZ;
++		aoff &= ~BMPC_BUFMASK;
++	}
++	if (aoff >= SLASH_BMAP_SIZE) {
++		aoff -= SLASH_BMAP_SIZE;
++		bno++;
++	}
++	npages = howmany(size, BMPC_BUFSZ);
+ 
+-	aoff = (roff - (i * SLASH_BMAP_SIZE)) & ~BMPC_BUFMASK;
+-
+-	/* Adjust alen accordingly if roff is not page-aligned */
+-	alen = tlen + (roff & BMPC_BUFMASK);
+-	npages = alen / BMPC_BUFSZ;
+-	if (alen % BMPC_BUFSZ)
+-		npages++;
++	msl_issue_predio(mfh, bno, rw, aoff, npages);
+ 
+  out1:
+ 	/* Step 3: launch biorqs (if necessary). */
+@@ -2283,52 +2250,30 @@
+ 		r = q->mfsrq_biorq[i];
+ 
+ 		if (r->biorq_flags & BIORQ_DIO)
+-			/*
+- 			 * This is blocking, do we don't have to worry
+- 			 * about reference count on mfh.
+- 			 */
+ 			rc = msl_pages_dio_getput(r);
+ 		else
+-			rc = msl_fetch_pages(r);
+-		if (rc)
+-			goto out2;
+-	}
+-
+-
+-	/* Launch read-ahead after the original read request */
+-	if (predio)
+-		msl_issue_predio(mfh, bno, rw, aoff, npages);
+-
+-	for (i = 0; i < nr; i++) {
+-		r = q->mfsrq_biorq[i];
+-
+-		if (r->biorq_flags & BIORQ_DIO)
+-			continue;
+-
+-		rc = msl_wait_pages(r);
++			rc = msl_pages_fetch(r);
+ 		if (rc)
+ 			break;
+ 	}
++
+  out2:
+ 	/*
+ 	 * Step 4: finish up biorqs.  Copy to satisfy READ back to user
+-	 * occurs in this step. The request is done when all its biorqs
+-	 * are gone, which may happen in this thread or some callback.
+-	 * The latter should only be possible when AIO is involved.
++	 * occurs in this step.
+ 	 */
+ 	mfsrq_seterr(q, rc);
+ 	for (i = 0; i < nr; i++) {
+-		/*
+- 		 * We drop the reference here, but keep its value so we
+- 		 * can do sanity check in msl_biorq_complete_fsrq().
+- 		 *
+- 		 * If we did not launch an RPC for the request, it will
+- 		 * be destroyed here.
+- 		 */
+ 		r = q->mfsrq_biorq[i];
+ 		if (r)
+ 			msl_biorq_release(r);
+ 	}
++
++	/*
++	 * Step 5: drop our reference to the fsrq.  The last drop will
++	 * reply to the userland file system interface. So we may or 
++	 * may not finish the entire I/O here.
++	 */
+ 	msl_complete_fsrq(q, 0, NULL);
+ 	return;
+ 
+@@ -2342,51 +2287,47 @@
+ void
+ msreadaheadthr_main(struct psc_thread *thr)
+ {
+-	struct prediorq *rarq;
+-	struct fidc_membh *f = NULL;
++	struct bmap_pagecache_entry *pg;
++	struct readaheadrq *rarq;
++	struct fidc_membh *f;
+ 	struct bmpc_ioreq *r;
+-	struct bmap *b = NULL;
+-	int i, rc, npages, flags;
++	struct bmap *b;
++	int i, rc, npages;
+ 
+ 	while (pscthr_run(thr)) {
+-
+-		/*
+- 		 * XXX Purge read-ahead list if a read-ahead happens.
+- 		 */
+-		rarq = lc_getwait(&msl_predioq);
++		rarq = lc_getwait(&msl_readaheadq);
+ 		if (rarq == NULL)
+ 			break;
++		b = NULL;
++		f = NULL;
++
++		npages = rarq->rarq_npages;
++		if (rarq->rarq_off + npages * BMPC_BUFSZ >
++		    SLASH_BMAP_SIZE)
++			npages = (SLASH_BMAP_SIZE - rarq->rarq_off) /
++			    BMPC_BUFSZ;
++		psc_assert(npages);
+ 
+ 		rc = sl_fcmh_peek_fg(&rarq->rarq_fg, &f);
+ 		if (rc)
+-			goto next;
+-
+-		flags = BMAPGETF_CREATE | BMAPGETF_NODIO;
+-
+-		/*
+-  		 * If we do this, we could issue the read-ahead requests
+-		 * out-of-order and confuse our I/O server.
+-		 */
+-		if (!rarq->rarq_flag)
+-			flags |= BMAPGETF_NONBLOCK;
+-
+-		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw, flags, &b);
+-		if (rc || rarq->rarq_rw == SL_WRITE)
+-			goto next;
+-
+-		/*
+- 		 * We only need to wait for readahead.
+- 		 */
+-		if (!(b->bcm_flags & BMAPF_LOADED)) {
+-			rarq->rarq_flag = 1;
+-			OPSTAT_INCR("msl.readahead-nonblock");
+-			lc_add(&msl_predioq, rarq);
+-			rarq = NULL;
+-			goto next;
+-		}
++			goto end;
++		rc = bmap_getf(f, rarq->rarq_bno, rarq->rarq_rw,
++		    BMAPGETF_CREATE | BMAPGETF_NONBLOCK |
++		    BMAPGETF_NODIO, &b);
++		if (rc)
++			goto end;
+ 		if (b->bcm_flags & BMAPF_DIO)
+-			goto next;
+-
++			goto end;
++		if ((b->bcm_flags & (BMAPF_LOADING | BMAPF_LOADED)) !=
++		    BMAPF_LOADED) {
++			bmap_op_done(b);
++			fcmh_op_done(f);
++			/*
++ 			 * XXX spin when this is the last item on the list.
++ 			 */
++			lc_add(&msl_readaheadq, rarq);
++			continue;
++		}
+ 		BMAP_ULOCK(b);
+ 
+ 		/*
+@@ -2395,14 +2336,7 @@
+ 		 * comes from communicating with the MDS.
+ 		 */
+ 		if (rarq->rarq_rw == SL_WRITE)
+-			goto next; 
+-
+-		npages = rarq->rarq_npages;
+-		if (rarq->rarq_off + npages * BMPC_BUFSZ >
+-		    SLASH_BMAP_SIZE)
+-			npages = (SLASH_BMAP_SIZE - rarq->rarq_off) /
+-			    BMPC_BUFSZ;
+-		psc_assert(npages);
++			goto end;
+ 
+ 		r = bmpc_biorq_new(NULL, b, NULL, rarq->rarq_off,
+ 		    npages * BMPC_BUFSZ, BIORQ_READ | BIORQ_READAHEAD);
+@@ -2411,28 +2345,22 @@
+ 		for (i = 0; i < npages; i++) {
+ 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
+ 			    rarq->rarq_off + i * BMPC_BUFSZ,
+-			    &f->fcmh_waitq);
+-			if (rc) {
+-				OPSTAT_INCR("msl.readahead-bail");
++			    &f->fcmh_waitq, &pg);
++			if (rc == EALREADY)
++				continue;
++			if (rc)
+ 				break;
+-			}
+ 		}
+-		if (psc_dynarray_len(&r->biorq_pages)) {
++		if (psc_dynarray_len(&r->biorq_pages))
+ 			msl_launch_read_rpcs(r);
+-		}
+ 		msl_biorq_release(r);
+ 
+- next: 
+-		if (b) {
++ end:
++		if (b)
+ 			bmap_op_done(b);
+-			b = NULL;
+-		}
+-		if (f) {
++		if (f)
+ 			fcmh_op_done(f);
+-			f = NULL;
+-		}
+-		if (rarq)
+-			psc_pool_return(slc_prediorq_pool, rarq);
++		psc_pool_return(slc_readaheadrq_pool, rarq);
+ 	}
+ }
+ 
+@@ -2443,15 +2371,16 @@
+ 	struct psc_thread *thr;
+ 	int i;
+ 
+-	psc_poolmaster_init(&slc_prediorq_poolmaster,
+-	    struct prediorq, rarq_lentry, PPMF_AUTO, 4096, 4096,
+-	    4096, NULL, "prediorq");
+-	slc_prediorq_pool = psc_poolmaster_getmgr(
+-	    &slc_prediorq_poolmaster);
++	psc_poolmaster_init(&slc_readaheadrq_poolmaster,
++	    struct readaheadrq, rarq_lentry, PPMF_AUTO, 4096, 4096,
++	    4096, NULL, "readaheadrq");
++	slc_readaheadrq_pool = psc_poolmaster_getmgr(
++	    &slc_readaheadrq_poolmaster);
+ 
+-	lc_reginit(&msl_predioq, struct prediorq, rarq_lentry, "predio_q");
++	lc_reginit(&msl_readaheadq, struct readaheadrq, rarq_lentry,
++	    "readaheadq");
+ 
+-	for (i = 0; i < NUM_READ_AHEAD_THREADS; i++) {
++	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
+ 		thr = pscthr_init(MSTHRT_READAHEAD, msreadaheadthr_main,
+ 		    sizeof(*mrat), "msreadaheadthr%d", i);
+ 		mrat = msreadaheadthr(thr);
+@@ -2464,5 +2393,5 @@
+ void
+ msl_readahead_svc_destroy(void)
+ {
+-	pfl_poolmaster_destroy(&slc_prediorq_poolmaster);
++	pfl_poolmaster_destroy(&slc_readaheadrq_poolmaster);
+ }
+diff -dru -x .git tree1/slash2/mount_slash/main.c tree2/slash2/mount_slash/main.c
+--- tree1/slash2/mount_slash/main.c	2017-09-11 10:12:35.161121170 -0400
++++ tree2/slash2/mount_slash/main.c	2017-09-11 09:47:25.869127894 -0400
+@@ -1231,8 +1231,6 @@
+ 	struct srm_unlink_rep *mp = NULL;
+ 	struct srm_unlink_req *mq;
+ 	struct fcmh_cli_info *fci;
+-	char *sillyname;
+-	uint64_t pino;
+ 	int rc;
+ 
+ 	if (!msl_enable_sillyrename) {
+@@ -1241,10 +1239,8 @@
+ 	}
+ 
+ 	/*
+- 	 * Note that at this point, we might still have references to the
+- 	 * fcmh. And this file can be opened/unlinked/closed while our
+- 	 * unlink RPC is in transit. So let us clean up our side first 
+- 	 * in an atomic way.
++	 * What if the open is opened and closed quickly while the cleanup
++	 * is still in progress?  Perhaps adding a busy flag?
+ 	 */
+ 	fci = fcmh_2_fci(f);
+ 	psc_assert(fci->fci_nopen > 0);
+@@ -1255,33 +1251,18 @@
+ 	}
+ 	psc_assert(fci->fci_pino);
+ 	psc_assert(fci->fci_name);
+-
+-	pino = fci->fci_pino;
+-	sillyname = fci->fci_name;
+-
+-	fci->fci_pino = 0;
+-	fci->fci_name = NULL;
+-	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
+-
+ 	FCMH_ULOCK(f);
+ 
+-	/* 
+-	 * It is Okay if the following fails, we just forget about the
+- 	 * old silly name.
+- 	 */
+-	rc = msl_load_fcmh(NULL, pino, &p);
++	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
+ 	if (rc)
+ 		goto out;
+ 
+-	msl_invalidate_readdir(p);
+-	dircache_delete(p, sillyname);
+-
+ 	MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
+ 	if (rc)
+ 		goto out;
+ 
+-	mq->pfid = pino;
+-	strlcpy(mq->name, sillyname, sizeof(mq->name));
++	mq->pfid = fci->fci_pino;
++	strlcpy(mq->name, fci->fci_name, sizeof(mq->name));
+ 
+ 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ 	if (!rc)
+@@ -1293,14 +1274,22 @@
+ 		 */
+ 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
+ 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
+-		    pino, sillyname, rc);
++		    fci->fci_pino, fci->fci_name, rc);
+ 		OPSTAT_INCR("msl.sillyname-del-err");
+ 	} else
+ 		OPSTAT_INCR("msl.sillyname-del-ok");
+ 
+- out:
++	msl_invalidate_readdir(p);
++	dircache_delete(p, fci->fci_name);
+ 
+-	PSCFREE(sillyname);
++	FCMH_LOCK(f);
++	PSCFREE(fci->fci_name);
++	fci->fci_pino = 0;
++	fci->fci_name = NULL;
++	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
++	FCMH_ULOCK(f);
++
++ out:
+ 	if (p)
+ 		fcmh_op_done(p);
+ 
+@@ -1495,14 +1484,10 @@
+ 
+ 	slc_fcmh_setattr(p, &mp->pattr);
+ 
+-	/*
+- 	 * I don't see the reason why should we make lookup and update
+- 	 * attributes atomic. We used to return a fcmh locked.
+- 	 */
+-	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
++	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
++	    FIDC_LOOKUP_LOCK, &c, pfr))
+ 		OPSTAT_INCR("msl.delete-skipped");
+ 	else {
+-		FCMH_LOCK(c);
+ 		if (mp->valid) {
+ 			slc_fcmh_setattr_locked(c, &mp->cattr);
+ 		} else {
+@@ -2674,17 +2659,12 @@
+ 	 */
+ 	/*
+ 	 * Refresh clobbered file's attributes.  This file might have
+-	 * additional links and may not be completely destroyed so we
+-	 * don't evict it.
+-	 *
+-	 * We used to keep the fcmh locked upon returning from lookup.
+-	 * Now we do FCMH_LOCK() by ourselve. I don't see the reason
+-	 * to make the two steps atomic.
++	 * additional links and may not be completely destroyed so don't
++	 * evict.
+ 	 */
+ 	if (mp->srr_clattr.sst_fid != FID_ANY &&
+ 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
+-	    0, &ch, pfr) == 0) {
+-		FCMH_LOCK(ch);
++	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+ 		if (!mp->srr_clattr.sst_nlink) {
+ 			ch->fcmh_flags |= FCMH_DELETED;
+ 			OPSTAT_INCR("msl.clobber");
+@@ -3343,7 +3323,7 @@
+ 	lc_kill(&msl_bmapflushq);
+ 	lc_kill(&msl_bmaptimeoutq);
+ 	lc_kill(&msl_attrtimeoutq);
+-	lc_kill(&msl_predioq);
++	lc_kill(&msl_readaheadq);
+ 	lc_kill(&msl_attrtimeoutq);
+ 
+ 	pscthr_setdead(sl_freapthr, 1);
+@@ -3355,8 +3335,8 @@
+ 	    lc_nitems(&msl_bmaptimeoutq));
+ 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_attrtimeoutq,
+ 	    lc_nitems(&msl_attrtimeoutq));
+-	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_predioq,
+-	    lc_nitems(&msl_predioq));
++	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_readaheadq,
++	    lc_nitems(&msl_readaheadq));
+ 
+ 	/* XXX force flush */
+ 
+@@ -3441,7 +3421,9 @@
+ 	pfl_listcache_destroy_registered(&msl_attrtimeoutq);
+ 	pfl_listcache_destroy_registered(&msl_bmapflushq);
+ 	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
+-	pfl_listcache_destroy_registered(&msl_predioq);
++	pfl_listcache_destroy_registered(&msl_readaheadq);
++	pfl_listcache_destroy_registered(&msl_idle_pages);
++	pfl_listcache_destroy_registered(&msl_readahead_pages);
+ 
+ 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);
+ 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_wr);
+@@ -3959,12 +3941,25 @@
+ void
+ msreapthr_main(struct psc_thread *thr)
+ {
++	int curr, last = 0;
+ 	while (pscthr_run(thr)) {
+-
+ 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+ 
++		POOL_LOCK(bmpce_pool);
++		curr = bmpce_pool->ppm_nfree;
++		POOL_ULOCK(bmpce_pool);
++
++		if (last && curr >= last)
++			psc_pool_try_shrink(bmpce_pool, curr);
++
++		POOL_LOCK(bmpce_pool);
++		last = bmpce_pool->ppm_nfree;
++		POOL_ULOCK(bmpce_pool);
++
+ 		msl_pgcache_reap();
++
+ 		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
++
+ 	}
+ }
+ 
+@@ -4132,7 +4127,7 @@
+ 	libsl_init(4096);//2 * (SRCI_NBUFS + SRCM_NBUFS));
+ 	fidc_init(sizeof(struct fcmh_cli_info));
+ 	bmpc_global_init();
+-	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT, msl_bmap_reap);
++	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT);
+ 	dircache_mgr_init();
+ 
+ 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
+@@ -4274,7 +4269,7 @@
+ 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
+ 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
+ 		{ "predio_issue_maxpages",
+-					LOOKUP_TYPE_INT,	&msl_predio_max_pages},
++					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
+ 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
+ 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
+ 		{ NULL,			0,			NULL }
+diff -dru -x .git tree1/slash2/mount_slash/mount_slash.h tree2/slash2/mount_slash/mount_slash.h
+--- tree1/slash2/mount_slash/mount_slash.h	2017-09-11 10:12:35.163121072 -0400
++++ tree2/slash2/mount_slash/mount_slash.h	2017-09-11 09:47:25.870127845 -0400
+@@ -51,8 +51,8 @@
+ enum {
+ 	MSTHRT_ATTR_FLUSH = _PFL_NTHRT,	/* attr write data flush thread */
+ 	MSTHRT_BENCH,			/* I/O benchmarking thread */
+-	MSTHRT_BWATCH,			/* bmap lease watcher */
+ 	MSTHRT_BRELEASE,		/* bmap lease releaser */
++	MSTHRT_BWATCH,			/* bmap lease watcher */
+ 	MSTHRT_CTL,			/* control processor */
+ 	MSTHRT_CTLAC,			/* control acceptor */
+ 	MSTHRT_REAP,			/* pool reap thread */
+@@ -79,12 +79,12 @@
+ 	struct pfl_multiwait		 maft_mw;
+ };
+ 
+-struct msbwatch_thread {
+-	struct pfl_multiwait		 mbwt_mw;
++struct msbrelease_thread {
++	struct pfl_multiwait		 mbrt_mw;
+ };
+ 
+-struct msbrelease_thread {
+-	struct pfl_multiwait             mbrt_mw;
++struct msbwatch_thread {
++	struct pfl_multiwait		 mbwt_mw;
+ };
+ 
+ struct msflush_thread {
+@@ -117,8 +117,7 @@
+ #define NUM_NBRQ_THREADS		16
+ #define NUM_BMAP_FLUSH_THREADS		16
+ #define NUM_ATTR_FLUSH_THREADS		4
+-#define NUM_READ_AHEAD_THREADS		4
+-#define NUM_BMAP_TIMEOUT_THREADS	4
++#define NUM_READAHEAD_THREADS		4
+ 
+ #define MSL_FIDNS_RPATH			".slfidns"
+ 
+@@ -161,9 +160,8 @@
+ 	int				 mfh_oflags;	/* open(2) flags */
+ 
+ 	/* offsets are file-wise */
+-	off_t				 mfh_predio_lastoff;	/* last I/O offset */
+-	off_t				 mfh_predio_lastsize;	/* last I/O size */
+-	off_t				 mfh_predio_off;	/* next predio I/O offset */
++	off_t				 mfh_predio_lastoff;	/* last offset */
++	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
+ 	int				 mfh_predio_nseq;	/* num sequential IOs */
+ 
+ 	/* stats */
+@@ -178,6 +176,8 @@
+ 
+ #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
+ #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
++#define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
++#define MFH_URLOCK(m, lk)		ureqlock(&(m)->mfh_lock, (lk))
+ #define MFH_LOCK_ENSURE(m)		LOCK_ENSURE(&(m)->mfh_lock)
+ 
+ /*
+@@ -263,13 +263,12 @@
+ 	return (resm_get_pri(resm));
+ }
+ 
+-struct prediorq {
++struct readaheadrq {
+ 	struct psc_listentry		rarq_lentry;
+ 	enum rw				rarq_rw;
+ 	struct sl_fidgen		rarq_fg;
+ 	sl_bmapno_t			rarq_bno;
+ 	uint32_t			rarq_off;
+-	uint32_t			rarq_flag;
+ 	int				rarq_npages;
+ };
+ 
+@@ -375,7 +374,7 @@
+ extern struct psc_listcache	 msl_attrtimeoutq;
+ extern struct psc_listcache	 msl_bmapflushq;
+ extern struct psc_listcache	 msl_bmaptimeoutq;
+-extern struct psc_listcache	 msl_predioq;
++extern struct psc_listcache	 msl_readaheadq;
+ 
+ extern struct psc_poolmgr	*msl_iorq_pool;
+ extern struct psc_poolmgr	*msl_async_req_pool;
+@@ -393,8 +392,9 @@
+ extern int			 msl_ios_max_inflight_rpcs;
+ extern int			 msl_mds_max_inflight_rpcs;
+ extern int			 msl_max_nretries;
+-extern int			 msl_predio_max_pages;
+-extern int			 msl_predio_pipe_size;
++extern int			 msl_predio_issue_maxpages;
++extern int			 msl_predio_issue_minpages;
++extern int			 msl_predio_window_size;
+ extern int			 msl_max_retries;
+ extern int			 msl_root_squash;
+ extern int			 msl_repl_enable;
+diff -dru -x .git tree1/slash2/mount_slash/pgcache.c tree2/slash2/mount_slash/pgcache.c
+--- tree1/slash2/mount_slash/pgcache.c	2017-09-11 10:12:35.165120974 -0400
++++ tree2/slash2/mount_slash/pgcache.c	2017-09-11 09:47:25.873127698 -0400
+@@ -48,11 +48,11 @@
+ struct psc_poolmaster    bwc_poolmaster;
+ struct psc_poolmgr	*bwc_pool;
+ 
+-int			 msl_bmpces_min = 512;		/* 16MiB */
++int			 msl_bmpces_min = 512;	 	/* 16MiB */
+ int			 msl_bmpces_max = 16384; 	/* 512MiB */
+ 
+-struct psc_listcache     msl_lru_pages;
+-int			 msl_lru_pages_gen;
++struct psc_listcache	 msl_idle_pages;
++struct psc_listcache	 msl_readahead_pages;
+ 
+ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
+     bmpce_cmp)
+@@ -61,8 +61,6 @@
+ struct psc_listcache	 page_buffers;
+ int			 page_buffers_count;	/* total, including free */
+ 
+-__static int		 bmpce_reaper(struct psc_poolmgr *);
+-
+ void
+ msl_pgcache_init(void)
+ {
+@@ -95,7 +93,7 @@
+ 
+ 	p = lc_getnb(&page_buffers);
+ 	if (p)
+-		goto out;
++		return p;
+  again:
+ 
+ 	LIST_CACHE_LOCK(&page_buffers);
+@@ -107,7 +105,7 @@
+ 			OPSTAT_INCR("mmap-success");
+ 			page_buffers_count++;
+ 			LIST_CACHE_ULOCK(&page_buffers);
+-			goto out;
++			return (p);
+ 		}
+ 		failed = 1;
+ 		OPSTAT_INCR("mmap-failure");
+@@ -132,16 +130,6 @@
+ 		}
+ 	} else
+ 		p = lc_getnb(&page_buffers);
+- out:
+-
+-	/*
+- 	 * For security and avoiding data corruption at the last
+- 	 * page of a file (zeros versus random bytes), we should
+- 	 * zero a new page. Luckily, our friendly sliod has already
+- 	 * zero the buffer for us and we always read in full page
+- 	 * size, which means any bytes after EOF are also zeroed
+- 	 * by sliod as well.
+- 	 */
+ 	return (p);
+ }
+ 
+@@ -171,29 +159,24 @@
+ msl_pgcache_reap(void)
+ {
+ 	void *p;
+-	static int last = 0;
+ 	int i, rc, curr, nfree;
++	static int count = 0;		/* this assume one reaper */
+ 
+-	curr = msl_lru_pages_gen;
+-	if (!last || last != curr) {
+-		last = curr;
++	/* 
++	 * We don't reap if the number of free buffers keeps growing. 
++	 * This greatly cuts down the number of mmap() calls.
++	 */
++	curr = lc_nitems(&page_buffers);
++	if (!count || count != curr) {
++		count = curr;
+ 		return;
+ 	}
+-
+-	POOL_LOCK(bmpce_pool);
+-	bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
+-	POOL_ULOCK(bmpce_pool);
+-
+-	if (!bmpce_reaper(bmpce_pool))
+-		return;
+-
+-	nfree = bmpce_pool->ppm_nfree; 
+-	psc_pool_try_shrink(bmpce_pool, nfree);
+-
+-	if (lc_nitems(&page_buffers) <= bmpce_pool->ppm_total)
++	if (curr <= bmpce_pool->ppm_min)
+ 		return;
+ 
+-	nfree = lc_nitems(&page_buffers) - bmpce_pool->ppm_total;
++	nfree = (curr - bmpce_pool->ppm_min) / 2;
++	if (!nfree)
++		nfree = 1;
+ 	for (i = 0; i < nfree; i++) {
+ 		p = lc_getnb(&page_buffers);
+ 		if (!p)
+@@ -219,7 +202,6 @@
+ 
+ 	bwc = psc_pool_get(bwc_pool);
+ 	memset(bwc, 0, sizeof(*bwc));
+-	psc_dynarray_init(&bwc->bwc_biorqs);
+ 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
+ 	return (bwc);
+ }
+@@ -245,51 +227,76 @@
+ }
+ 
+ int
+-bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+-    uint32_t off, struct psc_waitq *wq)
++_bmpce_lookup(const struct pfl_callerinfo *pci,
++    __unusedx struct bmpc_ioreq *r, struct bmap *b, int flags,
++    uint32_t off, struct psc_waitq *wq,
++    struct bmap_pagecache_entry **ep)
+ {
+-	int rc = 0, wrlock = 0;
+-	struct bmap_pagecache_entry q, *e, *e2 = NULL;
++	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
++	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
+ 	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 	struct bmap_pagecache *bmpc;
+-	void *page = NULL;
+-	struct timespec tm;
++	void *page;
+ 
+ 	bmpc = bmap_2_bmpc(b);
+ 	q.bmpce_off = off;
+ 
+- restart:
+-
+-	if (wrlock)
+-		pfl_rwlock_wrlock(&bci->bci_rwlock);
+-	else
+-		pfl_rwlock_rdlock(&bci->bci_rwlock);
++	pfl_rwlock_rdlock(&bci->bci_rwlock);
+ 
+ 	for (;;) {
+ 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
+ 		if (e) {
+-			if (flags & BMPCEF_READAHEAD) {
+-				rc = EEXIST;
+-				break;
+-			}
+ 			BMPCE_LOCK(e);
+ 			/*
+ 			 * It is possible that the EIO flag can be cleared
+ 			 * and the page is re-used now.
+ 			 */
+-			if ((e->bmpce_flags & BMPCEF_EIO) ||
+-			    (e->bmpce_flags & BMPCEF_TOFREE) ||
+-			    (e->bmpce_flags & BMPCEF_DISCARD)) {
++			if (e->bmpce_flags & BMPCEF_EIO) {
++				if (e->bmpce_flags & BMPCEF_READAHEAD) {
++					e->bmpce_flags &= ~BMPCEF_EIO;
++				} else {
++					DEBUG_BMPCE(PLL_WARN, e,
++					    "skipping an EIO page");
++					OPSTAT_INCR("msl.bmpce-eio");
++					BMPCE_ULOCK(e);
++
++ retry:
++					psc_waitq_waitrelf_us(
++					    &b->bcm_fcmh->fcmh_waitq,
++					    PFL_LOCKPRIMT_RWLOCK,
++					    &bci->bci_rwlock, 100);
++					if (wrlock)
++						pfl_rwlock_wrlock(
++						    &bci->bci_rwlock);
++					else
++						pfl_rwlock_rdlock(
++						    &bci->bci_rwlock);
++					continue;
++				}
++			}
++			if (e->bmpce_flags & BMPCEF_TOFREE) {
+ 				BMPCE_ULOCK(e);
+-				pfl_rwlock_unlock(&bci->bci_rwlock);
+-				tm.tv_sec = 0;
+-				tm.tv_nsec = 100000;
+-				nanosleep(&tm, NULL);
+-				goto restart;
++				goto retry;
+ 			}
+ 
+-			e->bmpce_ref++;
+-			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
++			if (e->bmpce_ref == 1 &&
++			    !(e->bmpce_flags & BMPCEF_REAPED)) {
++				if (e->bmpce_flags &
++				    BMPCEF_IDLE) {
++					e->bmpce_flags &=
++					    ~BMPCEF_IDLE;
++					remove_idle = 1;
++				} else if (e->bmpce_flags &
++				    BMPCEF_READALC) {
++					e->bmpce_flags &=
++					    ~BMPCEF_READALC;
++					remove_readalc = 1;
++				} else
++					e->bmpce_ref++;
++			} else
++				e->bmpce_ref++;
++			DEBUG_BMPCE(PLL_DIAG, e,
++			    "add reference");
+ 			BMPCE_ULOCK(e);
+ 
+ 			OPSTAT_INCR("msl.bmpce-cache-hit");
+@@ -298,16 +305,15 @@
+ 
+ 		if (e2 == NULL) {
+ 			pfl_rwlock_unlock(&bci->bci_rwlock);
++
+ 			if (flags & BMPCEF_READAHEAD) {
+ 				e2 = psc_pool_shallowget(bmpce_pool);
+-				if (e2 == NULL) {
+-					rc = EAGAIN;
+-					goto out;
+-				}
++				if (e2 == NULL)
++					return (EAGAIN);
+ 				page = msl_pgcache_get(0);
+ 				if (page == NULL) {
+-					rc = EAGAIN;
+-					goto out;
++					psc_pool_return(bmpce_pool, e2);
++					return (EAGAIN);
+ 				}
+ 			} else {
+ 				e2 = psc_pool_get(bmpce_pool);
+@@ -320,6 +326,7 @@
+ 			OPSTAT_INCR("msl.bmpce-cache-miss");
+ 
+ 			e = e2;
++			e2 = NULL;
+ 			bmpce_init(e);
+ 			e->bmpce_off = off;
+ 			e->bmpce_ref = 1;
+@@ -330,74 +337,111 @@
+ 			e->bmpce_bmap = b;
+ 			e->bmpce_base = page;
+ 
+-			e2 = NULL;
+-			page = NULL;
+-
+ 			PSC_RB_XINSERT(bmap_pagecachetree,
+ 			    &bmpc->bmpc_tree, e);
+ 
+-			bmap_op_start_type(b, BMAP_OPCNT_BMPCE);
+-
+ 			DEBUG_BMPCE(PLL_DIAG, e, "creating");
+ 			break;
+ 		}
+ 	}
+ 	pfl_rwlock_unlock(&bci->bci_rwlock);
+ 
+- out:
+-
+ 	if (e2) {
+ 		OPSTAT_INCR("msl.bmpce-gratuitous");
+-		if (page)
+-			msl_pgcache_put(page);
++		msl_pgcache_put(page);
+ 		psc_pool_return(bmpce_pool, e2);
+ 	}
+ 
+-	if (!rc)
+-		psc_dynarray_add(&r->biorq_pages, e);
++	if (remove_idle) {
++		DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
++		lc_remove(&msl_idle_pages, e);
++	} else if (remove_readalc) {
++		DEBUG_BMPCE(PLL_DIAG, e, "removing from readalc");
++		lc_remove(&msl_readahead_pages, e);
++	}
++
++	psc_dynarray_add(&r->biorq_pages, e);
+ 
+ 	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
+-	    "n=%d foff=%"PRIx64" rc = %d", 
+-	    e, psc_dynarray_len(&r->biorq_pages), off + bmap_foff(b), rc);
++	    "n=%d foff=%"PRIx64, e, psc_dynarray_len(&r->biorq_pages),
++	    off + bmap_foff(b));
+ 
+-	return (rc);
++	*ep = e;
++	return (0);
+ }
+ 
+ void
+-bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
++bmpce_free(struct bmap_pagecache_entry *e)
+ {
+-	struct bmap *b = bmpc_2_bmap(bmpc);
+-	struct bmap_cli_info *bci = bmap_2_bci(b);
+-
+-	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
+-
+-	BMPCE_LOCK_ENSURE(e);
++	struct bmap_pagecache *bmpc = bmap_2_bmpc(e->bmpce_bmap);
++	struct bmap_cli_info *bci = bmap_2_bci(e->bmpce_bmap);
++	int locked;
+ 
+ 	psc_assert(e->bmpce_ref == 0);
+-	psc_assert(e->bmpce_flags & BMPCEF_TOFREE);
+-
+-	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
+-
+-	if (e->bmpce_flags & BMPCEF_READAHEAD)
+-		OPSTAT_INCR("msl.readahead-waste");
++	e->bmpce_flags |= BMPCEF_TOFREE;
+ 
+ 	BMPCE_ULOCK(e);
+ 
++	locked = pfl_rwlock_haswrlock(&bci->bci_rwlock);
++	if (!locked)
++		pfl_rwlock_wrlock(&bci->bci_rwlock);
+ 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
++	if (!locked)
++		pfl_rwlock_unlock(&bci->bci_rwlock);
++
++	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
++	    BMPCEF_READAHEAD)
++		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
++
++	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
+ 
+ 	msl_pgcache_put(e->bmpce_base);
+ 	psc_pool_return(bmpce_pool, e);
+ }
+ 
+ void
+-bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
++bmpce_release(struct bmap_pagecache_entry *e)
+ {
+-	struct bmap *b = e->bmpce_bmap;
+-	struct bmap_cli_info *bci = bmap_2_bci(b);
+-
+ 	LOCK_ENSURE(&e->bmpce_lock);
+ 
+ 	psc_assert(e->bmpce_ref > 0);
++
++	if (e->bmpce_ref == 1 && (e->bmpce_flags & (BMPCEF_DATARDY |
++	    BMPCEF_EIO | BMPCEF_DISCARD)) == BMPCEF_DATARDY) {
++		BMPCE_ULOCK(e);
++
++		/*
++		 * XXX Need to recheck flags after grabbing the lock.
++		 */
++		if ((e->bmpce_flags & (BMPCEF_READAHEAD |
++		    BMPCEF_ACCESSED)) == BMPCEF_READAHEAD) {
++			LIST_CACHE_LOCK(&msl_readahead_pages);
++			BMPCE_LOCK(e);
++			if (e->bmpce_ref == 1) {
++				DEBUG_BMPCE(PLL_DIAG, e,
++				    "add to readahead");
++				lc_add(&msl_readahead_pages, e);
++				e->bmpce_flags |= BMPCEF_READALC;
++				BMPCE_ULOCK(e);
++				LIST_CACHE_ULOCK(&msl_readahead_pages);
++				return;
++			}
++			LIST_CACHE_ULOCK(&msl_readahead_pages);
++		} else {
++			LIST_CACHE_LOCK(&msl_idle_pages);
++			BMPCE_LOCK(e);
++			if (e->bmpce_ref == 1) {
++				DEBUG_BMPCE(PLL_DIAG, e, "add to idle");
++				lc_add(&msl_idle_pages, e);
++				e->bmpce_flags |= BMPCEF_IDLE;
++				BMPCE_ULOCK(e);
++				LIST_CACHE_ULOCK(&msl_idle_pages);
++				return;
++			}
++			LIST_CACHE_ULOCK(&msl_idle_pages);
++		}
++	}
++
+ 	e->bmpce_ref--;
+ 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
+ 	if (e->bmpce_ref > 0) {
+@@ -408,46 +452,7 @@
+ 	/* sanity checks */
+ 	psc_assert(pll_empty(&e->bmpce_pndgaios));
+ 
+-	/*
+- 	 * This has the side effect of putting the page
+- 	 * to the end of the list.
+- 	 */
+-	if (e->bmpce_flags & BMPCEF_LRU) {
+-		e->bmpce_flags &= ~BMPCEF_LRU;
+-		lc_remove(&msl_lru_pages, e);
+-		msl_lru_pages_gen++;
+-	}
+-
+-	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
+-	   !(e->bmpce_flags & BMPCEF_EIO) &&
+-	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
+-	   !(e->bmpce_flags & BMPCEF_DISCARD)) { 
+-		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
+-		e->bmpce_flags |= BMPCEF_LRU;
+-
+-		/*
+- 		 * The other side must use trylock to
+- 		 * avoid a deadlock.
+- 		 */
+-		lc_add(&msl_lru_pages, e);
+-		msl_lru_pages_gen++;
+-
+-		BMPCE_ULOCK(e);
+-		if (bmpce_pool->ppm_nfree < 3) {
+-			OPSTAT_INCR("msl.bmpce-nfree-reap");
+-			bmpce_reaper(bmpce_pool);
+-		}
+-		return;
+-	}
+-
+-	e->bmpce_flags |= BMPCEF_TOFREE;
+-	BMPCE_ULOCK(e);
+-
+-	pfl_rwlock_wrlock(&bci->bci_rwlock);
+-	BMPCE_LOCK(e);
+-	bmpce_free(e, bmpc);
+-	pfl_rwlock_unlock(&bci->bci_rwlock);
+-	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
++	bmpce_free(e);
+ }
+ 
+ struct bmpc_ioreq *
+@@ -490,6 +495,63 @@
+ 	return (r);
+ }
+ 
++/*
++ * Called when a bmap is being released.  Iterate across the tree
++ * freeing each bmpce.  Prior to being invoked, all bmpce's must be idle
++ * (i.e. have zero refcnts).
++ */
++void
++bmpc_freeall(struct bmap *b)
++{
++	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
++	struct bmap_cli_info *bci = bmap_2_bci(b);
++	struct bmap_pagecache_entry *e, *next;
++
++	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
++
++	/* DIO rq's are allowed since no cached pages are involved. */
++	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
++		struct bmpc_ioreq *r;
++
++		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
++			psc_assert(r->biorq_flags & BIORQ_DIO);
++	}
++
++ restart:
++	/*
++	 * Remove any LRU pages still associated with the bmap.
++	 * Only readahead pages can be encountered here. If we
++	 * don't treat readahead pages specially, this code can
++	 * go away some day.
++	 */
++	pfl_rwlock_wrlock(&bci->bci_rwlock);
++	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
++	    e = next) {
++		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
++
++		BMPCE_LOCK(e);
++		e->bmpce_flags |= BMPCEF_DISCARD;
++		if (e->bmpce_flags & BMPCEF_REAPED) {
++			BMPCE_ULOCK(e);
++			pfl_rwlock_unlock(&bci->bci_rwlock);
++			goto restart;
++		}
++		if (e->bmpce_flags & BMPCEF_IDLE) {
++			DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
++			lc_remove(&msl_idle_pages, e);
++			bmpce_release(e);
++		} else if (e->bmpce_flags & BMPCEF_READALC) {
++			DEBUG_BMPCE(PLL_DIAG, e,
++			    "removing from readalc");
++			lc_remove(&msl_readahead_pages, e);
++			bmpce_release(e);
++		} else
++			psc_fatalx("impossible");
++	}
++	pfl_rwlock_unlock(&bci->bci_rwlock);
++}
++
++
+ void
+ bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
+ {
+@@ -547,74 +609,79 @@
+ 	}
+ }
+ 
+-/* Called from psc_pool_reap() */
+-__static int
+-bmpce_reaper(struct psc_poolmgr *m)
++void
++bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
++    int flag, struct psc_poolmgr *m)
+ {
+-	int i, idle, nitems, nfreed;
+-	struct psc_dynarray a = DYNARRAY_INIT;
+ 	struct bmap_pagecache_entry *e, *t;
+-	struct bmap_pagecache *bmpc;
+-	struct bmap *b;
+-	struct bmap_cli_info *bci;
+ 
+-	psc_assert(m == bmpce_pool);
+-
+-	POOL_LOCK(bmpce_pool);
+-	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
+-	bmpce_pool->ppm_flags &= ~PPMF_IDLEREAP;
+-	POOL_ULOCK(bmpce_pool);
+-
+-	/* Use two loops to reduce lock contention */
+-	LIST_CACHE_LOCK(&msl_lru_pages);
+-	if (idle)
+-		nitems = lc_nitems(&msl_lru_pages) / 20;
+-	else
+-		nitems = lc_nitems(&msl_lru_pages) / 5;
+-	if (nitems < 5)
+-		nitems = 5;
+-	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
++	LIST_CACHE_LOCK(lc);
++	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
++		/*
++		 * This avoids a deadlock with bmpc_freeall().  In
++		 * general, a background reaper should be nice to other
++		 * uses.
++		 */
+ 		if (!BMPCE_TRYLOCK(e))
+ 			continue;
+-		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+-			BMPCE_ULOCK(e);
+-			continue;
++		/*
++ 		 * XXX Checking flags here is bogus, we should assert that
++ 		 * the flag is set because it is on the list.  In addition,
++ 		 * we should check reference count here.
++ 		 */ 
++		if ((e->bmpce_flags & (flag |
++		    BMPCEF_REAPED)) == flag) {
++			e->bmpce_flags &= ~flag;
++			e->bmpce_flags |= BMPCEF_DISCARD | BMPCEF_REAPED;
++			lc_remove(lc, e);
++			psc_dynarray_add(a, e);
++			DEBUG_BMPCE(PLL_DIAG, e, "reaping from %s",
++			    lc->plc_name);
+ 		}
+-
+-		e->bmpce_flags |= BMPCEF_TOFREE;
+-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+-
+-		if (!idle)
+-			msl_lru_pages_gen++;
+-
+-		lc_remove(&msl_lru_pages, e);
+-		e->bmpce_flags &= ~BMPCEF_LRU;
+-
+-		psc_dynarray_add(&a, e);
+ 		BMPCE_ULOCK(e);
+ 
+-		if (psc_dynarray_len(&a) >= nitems)
++		if (psc_dynarray_len(a) >=
++		    psc_atomic32_read(&m->ppm_nwaiters))
+ 			break;
+ 	}
+-	LIST_CACHE_ULOCK(&msl_lru_pages);
++	if (!psc_dynarray_len(a) && lc_nitems(lc))
++		OPSTAT_INCR("msl.bmpce-reap-spin");
++	LIST_CACHE_ULOCK(lc);
++}
++/*
++ * Reap pages from the idle and/or readahead lists.  The readahead list
++ * is only considered if we are desperate and unable to reap anything
++ * else.  In such situations (i.e. when no pages are readily available),
++ * no more readahead should be issued.
++ */
++__static int
++bmpce_reap(struct psc_poolmgr *m)
++{
++	struct psc_dynarray a = DYNARRAY_INIT;
++	struct bmap_pagecache_entry *e;
++	int nfreed, i;
+ 
+-	DYNARRAY_FOREACH(e, i, &a) {
+- 		b = e->bmpce_bmap;
+-		bci = bmap_2_bci(b);
+- 		bmpc = bmap_2_bmpc(b);
++	/* 
++	 * XXX A readahead page is not necessarily more valuable
++	 * until it is proven so.
++	 */
++	if (m->ppm_flags & PPMF_DESPERATE)
++		bmpce_reap_list(&a, &msl_readahead_pages,
++		    BMPCEF_READALC, m);
+ 
+-		pfl_rwlock_wrlock(&bci->bci_rwlock);
++	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
++		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
++
++	nfreed = psc_dynarray_len(&a);
++
++	DYNARRAY_FOREACH(e, i, &a) {
+ 		BMPCE_LOCK(e);
+-		bmpce_free(e, bmpc);
+-		pfl_rwlock_unlock(&bci->bci_rwlock);
+-		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
++		bmpce_release(e);
+ 	}
+ 
+-	nfreed = psc_dynarray_len(&a);
+ 	psc_dynarray_free(&a);
+ 
+-	psclog_diag("nfreed=%d, waiters=%d", nfreed,
+-	    psc_atomic32_read(&m->ppm_nwaiters));
++	OPSTAT_ADD("msl.bmpce-reap", nfreed);
+ 
+ 	return (nfreed);
+ }
+@@ -633,9 +700,8 @@
+ 	psc_poolmaster_init(&bmpce_poolmaster,
+ 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
+ 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
+-	    bmpce_reaper, "bmpce");
++	    bmpce_reap, "bmpce");
+ 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
+-	bmpce_pool->ppm_flags |= PPMF_NOPREEMPT;
+ 
+ 	msl_pgcache_init();
+ 
+@@ -644,8 +710,10 @@
+ 	    64, 0, NULL, "bwc");
+ 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
+ 
+-	lc_reginit(&msl_lru_pages, struct bmap_pagecache_entry,
+-	    bmpce_lentry, "lru-pages");
++	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
++	    bmpce_lentry, "idlepages");
++	lc_reginit(&msl_readahead_pages, struct bmap_pagecache_entry,
++	    bmpce_lentry, "readapages");
+ }
+ 
+ void
+@@ -667,7 +735,12 @@
+ 	PFL_PRFLAG(BMPCEF_TOFREE, &flags, &seq);
+ 	PFL_PRFLAG(BMPCEF_EIO, &flags, &seq);
+ 	PFL_PRFLAG(BMPCEF_AIOWAIT, &flags, &seq);
++	PFL_PRFLAG(BMPCEF_DISCARD, &flags, &seq);
+ 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
++	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
++	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);
++	PFL_PRFLAG(BMPCEF_REAPED, &flags, &seq);
++	PFL_PRFLAG(BMPCEF_READALC, &flags, &seq);
+ 	if (flags)
+ 		printf(" unknown: %#x", flags);
+ 	printf("\n");
+diff -dru -x .git tree1/slash2/mount_slash/pgcache.h tree2/slash2/mount_slash/pgcache.h
+--- tree1/slash2/mount_slash/pgcache.h	2017-09-11 10:12:35.166120925 -0400
++++ tree2/slash2/mount_slash/pgcache.h	2017-09-11 09:47:25.874127649 -0400
+@@ -84,16 +84,21 @@
+ /* bmpce_flags */
+ #define BMPCEF_DATARDY		(1 <<  0)	/* data loaded in memory */
+ #define BMPCEF_FAULTING		(1 <<  1)	/* loading via RPC */
+-#define BMPCEF_TOFREE		(1 <<  2)	/* set when ref count is zero */
+-#define BMPCEF_DISCARD		(1 <<  3)	/* set when ref count is non-zero */
+-#define BMPCEF_LRU		(1 <<  4)	/* on LRU list */
+-#define BMPCEF_EIO		(1 <<  5)	/* I/O error in bmpce_rc */
+-#define BMPCEF_AIOWAIT		(1 <<  6)	/* wait on async read */
+-#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
++#define BMPCEF_TOFREE		(1 <<  2)	/* eviction in progress */
++#define BMPCEF_EIO		(1 <<  3)	/* I/O error */
++#define BMPCEF_AIOWAIT		(1 <<  4)	/* wait on async read */
++#define BMPCEF_DISCARD		(1 <<  5)	/* don't cache after I/O is done */
++#define BMPCEF_READAHEAD	(1 <<  6)	/* populated from readahead */
++#define BMPCEF_ACCESSED		(1 <<  7)	/* bmpce was used before reap (readahead) */
++#define BMPCEF_IDLE		(1 <<  8)	/* on idle_pages listcache */
++#define BMPCEF_REAPED		(1 <<  9)	/* reaper has removed us from LRU listcache */
++#define BMPCEF_READALC		(1 << 10)	/* on readahead_pages listcache */
+ 
+ #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
+ #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
++#define BMPCE_RLOCK(e)		reqlock(&(e)->bmpce_lock)
+ #define BMPCE_TRYLOCK(e)	trylock(&(e)->bmpce_lock)
++#define BMPCE_URLOCK(e, lk)	ureqlock(&(e)->bmpce_lock, (lk))
+ #define BMPCE_LOCK_ENSURE(e)	LOCK_ENSURE(&(e)->bmpce_lock)
+ 
+ #define BMPCE_WAIT(e)		psc_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
+@@ -120,7 +125,7 @@
+ #define DEBUG_BMPCE(level, pg, fmt, ...)				\
+ 	psclogs((level), SLSS_BMAP,					\
+ 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
+-	    "fl=%#x:%s%s%s%s%s%s "					\
++	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
+ 	    "off=%#09x base=%p ref=%u : " fmt,				\
+ 	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
+ 	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
+@@ -129,7 +134,12 @@
+ 	    (pg)->bmpce_flags & BMPCEF_TOFREE		? "t" : "",	\
+ 	    (pg)->bmpce_flags & BMPCEF_EIO		? "e" : "",	\
+ 	    (pg)->bmpce_flags & BMPCEF_AIOWAIT		? "w" : "",	\
++	    (pg)->bmpce_flags & BMPCEF_DISCARD		? "D" : "",	\
+ 	    (pg)->bmpce_flags & BMPCEF_READAHEAD	? "r" : "",	\
++	    (pg)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
++	    (pg)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
++	    (pg)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
++	    (pg)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
+ 	    (pg)->bmpce_off, (pg)->bmpce_base,				\
+ 	    (pg)->bmpce_ref, ## __VA_ARGS__)
+ 
+@@ -182,6 +192,8 @@
+ 
+ #define BIORQ_LOCK(r)		spinlock(&(r)->biorq_lock)
+ #define BIORQ_ULOCK(r)		freelock(&(r)->biorq_lock)
++#define BIORQ_RLOCK(r)		reqlock(&(r)->biorq_lock)
++#define BIORQ_URLOCK(r, lk)	ureqlock(&(r)->biorq_lock, (lk))
+ #define BIORQ_LOCK_ENSURE(r)	LOCK_ENSURE(&(r)->biorq_lock)
+ 
+ #define BIORQ_SETATTR(r, fl)	SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
+@@ -238,8 +250,6 @@
+ 
+ struct bmap_pagecache {
+ 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
+-	struct psc_waitq		 bmpc_waitq;
+-
+ 
+ 	/*
+ 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
+@@ -252,7 +262,6 @@
+ 	struct bmpc_biorq_tree		 bmpc_biorqs;
+ 	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expire */
+ 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all requests */
+-	struct psc_listentry		 bmpc_lentry;
+ };
+ 
+ struct bmpc_write_coalescer {
+@@ -291,14 +300,14 @@
+ 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,
+ 	    char *, uint32_t, uint32_t, int);
+ 
+-void	 bmpce_init(struct bmap_pagecache_entry *);
+-int	 bmpce_lookup(struct bmpc_ioreq *,
+-	     struct bmap *, int, uint32_t, struct psc_waitq *);
+-
+-void	 bmpce_release_locked(struct bmap_pagecache_entry *, 
+-	    struct bmap_pagecache *);
++#define bmpce_lookup(r, b, fl, off, wq, ep)				\
++	_bmpce_lookup(PFL_CALLERINFO(), (r), (b), (fl), (off), (wq), (ep))
+ 
+-void	 bmpce_free(struct bmap_pagecache_entry *, struct bmap_pagecache *);
++void	 bmpce_init(struct bmap_pagecache_entry *);
++int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
++	     struct bmap *, int, uint32_t, struct psc_waitq *,
++	     struct bmap_pagecache_entry **);
++void	 bmpce_release(struct bmap_pagecache_entry *);
+ 
+ struct bmpc_write_coalescer *	 bwc_alloc(void);
+ void				 bwc_free(struct bmpc_write_coalescer *);
+@@ -307,8 +316,8 @@
+ extern struct psc_poolmgr	*bwc_pool;
+ 
+ extern struct timespec		 msl_bflush_maxage;
+-
+-extern struct psc_listcache	 msl_lru_pages;
++extern struct psc_listcache	 msl_idle_pages;
++extern struct psc_listcache	 msl_readahead_pages;
+ 
+ static __inline void
+ bmpc_init(struct bmap_pagecache *bmpc)
+@@ -322,9 +331,6 @@
+ 	    biorq_exp_lentry, NULL);
+ 
+ 	RB_INIT(&bmpc->bmpc_biorqs);
+-	
+-	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
+-	//lc_addtail(&bmpcLru, bmpc);
+ }
+ 
+ #endif /* _MSL_PGCACHE_H_ */
+diff -dru -x .git tree1/slash2/mount_slash/rcm.c tree2/slash2/mount_slash/rcm.c
+--- tree1/slash2/mount_slash/rcm.c	2017-09-11 10:12:35.168120827 -0400
++++ tree2/slash2/mount_slash/rcm.c	2017-09-11 09:47:25.876127551 -0400
+@@ -226,7 +226,6 @@
+  		 * long the flush will take.
+  		 */
+ 		b->bcm_flags |= BMAPF_TOFREE; 
+-		msl_bmap_cache_rls(b);
+ 		bmap_op_done(b);
+ 		fcmh_op_done(f);
+ 		OPSTAT_INCR("msl.bmap_reclaim");
+diff -dru -x .git tree1/slash2/mount_slash/rpc_cli.h tree2/slash2/mount_slash/rpc_cli.h
+--- tree1/slash2/mount_slash/rpc_cli.h	2017-09-11 10:12:35.170120729 -0400
++++ tree2/slash2/mount_slash/rpc_cli.h	2017-09-11 09:47:25.878127453 -0400
+@@ -138,10 +138,10 @@
+ 	switch (thr->pscthr_type) {
+ 	case MSTHRT_ATTR_FLUSH:
+ 		return (&msattrflushthr(thr)->maft_mw);
+-	case MSTHRT_BWATCH:
+-		return (&msbwatchthr(thr)->mbwt_mw);
+ 	case MSTHRT_BRELEASE:
+ 		return (&msbreleasethr(thr)->mbrt_mw);
++	case MSTHRT_BWATCH:
++		return (&msbwatchthr(thr)->mbwt_mw);
+ 	case MSTHRT_FLUSH:
+ 		return (&msflushthr(thr)->mflt_mw);
+ 	case PFL_THRT_FS:
+@@ -158,7 +158,7 @@
+ 	case PFL_THRT_CTL:
+ 		return (NULL);
+ 	}
+-	psc_fatalx("unknown thread type: %d", thr->pscthr_type);
++	psc_fatalx("unknown thread type");
+ }
+ 
+ #endif /* _RPC_CLI_H_ */
+diff -dru -x .git tree1/slash2/msctl/msctl.c tree2/slash2/msctl/msctl.c
+--- tree1/slash2/msctl/msctl.c	2017-09-11 10:12:35.178120337 -0400
++++ tree2/slash2/msctl/msctl.c	2017-09-11 09:47:25.886127061 -0400
+@@ -759,7 +759,6 @@
+ 		pfl_fmt_ratio(rbuf, bact, bact + both);
+ 		printf(" %6d %6d %6s", bact, bact + both, rbuf);
+ 
+-		/* By experiment, we print 129 bmap states per line */
+ 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
+ 			off = SL_BITS_PER_REPLICA * iosidx +
+ 			    SL_NBITS_REPLST_BHDR;
+@@ -871,7 +870,7 @@
+ 
+ 	printf("%016"SLPRIxFID" %6d %3d "
+ 	    "%4d %7x %7x "
+-	    "%c%c%c%c%c%c "
++	    "%c%c%c%c%c%c%c%c%c%c%c "
+ 	    "%3d %3d "
+ 	    "%8"PRIx64"\n",
+ 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
+@@ -881,7 +880,12 @@
+ 	    mpce->mpce_flags & BMPCEF_TOFREE	? 't' : '-',
+ 	    mpce->mpce_flags & BMPCEF_EIO	? 'e' : '-',
+ 	    mpce->mpce_flags & BMPCEF_AIOWAIT	? 'w' : '-',
++	    mpce->mpce_flags & BMPCEF_DISCARD	? 'D' : '-',
+ 	    mpce->mpce_flags & BMPCEF_READAHEAD	? 'r' : '-',
++	    mpce->mpce_flags & BMPCEF_ACCESSED	? 'a' : '-',
++	    mpce->mpce_flags & BMPCEF_IDLE	? 'i' : '-',
++	    mpce->mpce_flags & BMPCEF_REAPED	? 'X' : '-',
++	    mpce->mpce_flags & BMPCEF_READALC	? 'R' : '-',
+ 	    mpce->mpce_nwaiters, mpce->mpce_npndgaios,
+ 	    mpce->mpce_laccess.tv_sec);
+ }
+diff -dru -x .git tree1/slash2/share/bmap.c tree2/slash2/share/bmap.c
+--- tree1/slash2/share/bmap.c	2017-09-11 10:12:35.188119847 -0400
++++ tree2/slash2/share/bmap.c	2017-09-11 09:47:25.897126520 -0400
+@@ -35,7 +35,6 @@
+ #include "pfl/cdefs.h"
+ #include "pfl/lock.h"
+ #include "pfl/log.h"
+-#include "pfl/pool.h"
+ #include "pfl/thread.h"
+ #include "pfl/tree.h"
+ #include "pfl/treeutil.h"
+@@ -102,7 +101,8 @@
+ 		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and
+ 		 * msl_bmap_final_cleanup().
+ 		 */
+-		sl_bmap_ops.bmo_final_cleanupf(b);
++		if (sl_bmap_ops.bmo_final_cleanupf)
++			sl_bmap_ops.bmo_final_cleanupf(b);
+ 
+ 		bmap_remove(b);
+ 	} else {
+@@ -141,7 +141,6 @@
+ 			goto restart;
+ 		}
+ 
+-		/* (gdb) p ((struct bmap_cli_info *)(b+1))->bci_bmpc.bmpc_tree */
+ 		if (b->bcm_flags & BMAPF_TOFREE) {
+ 			/*
+ 			 * This bmap is going away; wait for it so we
+@@ -169,6 +168,10 @@
+ 	}
+ 	if (bnew == NULL) {
+ 		pfl_rwlock_unlock(&f->fcmh_rwlock);
++
++		if (sl_bmap_ops.bmo_reapf)
++			sl_bmap_ops.bmo_reapf();
++
+ 		bnew = psc_pool_get(bmap_pool);
+ 		goto restart;
+ 	}
+@@ -241,10 +244,6 @@
+ 		goto out;
+ 	}
+ 	if (flags & BMAPGETF_NONBLOCK) {
+-		/*
+- 		 * If want to change this to return EWOULDBLOCK, 
+- 		 * just be careful.
+- 		 */
+ 		if (b->bcm_flags & BMAPF_LOADING)
+ 			goto out;
+ 	} else
+@@ -338,13 +337,12 @@
+ }
+ 
+ void
+-bmap_cache_init(size_t priv_size, int count, 
+-    int (*reclaimcb)(struct psc_poolmgr *))
++bmap_cache_init(size_t priv_size, int count)
+ {
+ 	_psc_poolmaster_init(&bmap_poolmaster,
+ 	    sizeof(struct bmap) + priv_size,
+ 	    offsetof(struct bmap, bcm_lentry),
+-	    PPMF_AUTO, count, count, 0, NULL, reclaimcb, "bmap");
++	    PPMF_AUTO, count, count, 0, NULL, NULL, "bmap");
+ 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+ }
+ 
+diff -dru -x .git tree1/slash2/share/fidc_common.c tree2/slash2/share/fidc_common.c
+--- tree1/slash2/share/fidc_common.c	2017-09-11 10:12:35.192119651 -0400
++++ tree2/slash2/share/fidc_common.c	2017-09-11 09:47:25.901126324 -0400
+@@ -250,7 +250,8 @@
+ 			f->fcmh_flags |= FCMH_TOFREE;
+ 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+ 		} else {
+-			FCMH_ULOCK(f);
++			if ((flags & FIDC_LOOKUP_LOCK) == 0)
++				FCMH_ULOCK(f);
+ 			*fp = f;
+ 		}
+ 		OPSTAT_INCR("fidcache.hit");
+@@ -340,7 +341,8 @@
+ 		*fp = f;
+ 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+ 	}
+-	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
++	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), f,
++	    FCMH_OPCNT_NEW, flags & FIDC_LOOKUP_LOCK);
+ 	return (rc);
+ }
+ 
+@@ -394,7 +396,8 @@
+ }
+ 
+ void
+-fcmh_op_start_type(struct fidc_membh *f, int type)
++_fcmh_op_start_type(const struct pfl_callerinfo *pci,
++    struct fidc_membh *f, int type)
+ {
+ 	int locked;
+ 
+@@ -419,7 +422,8 @@
+ }
+ 
+ void
+-fcmh_op_done_type(struct fidc_membh *f, int type)
++_fcmh_op_done_type(const struct pfl_callerinfo *pci,
++    struct fidc_membh *f, int type, int keep_locked)
+ {
+ 	int rc;
+ 
+@@ -469,7 +473,8 @@
+ 		f->fcmh_etime.tv_sec += MAX_FCMH_LIFETIME;
+ 	}
+ 	fcmh_wake_locked(f);
+-	FCMH_ULOCK(f);
++	if (!keep_locked)
++		FCMH_ULOCK(f);
+ }
+ 
+ void
+@@ -491,6 +496,29 @@
+ }
+ 
+ #if PFL_DEBUG > 0
++void
++dump_fcmh(struct fidc_membh *f)
++{
++	int locked;
++
++	locked = FCMH_RLOCK(f);
++	DEBUG_FCMH(PLL_MAX, f, "");
++	FCMH_URLOCK(f, locked);
++}
++
++void
++dump_fidcache(void)
++{
++	struct psc_hashbkt *bkt;
++	struct fidc_membh *tmp;
++
++	PSC_HASHTBL_FOREACH_BUCKET(bkt, &sl_fcmh_hashtbl) {
++		psc_hashbkt_lock(bkt);
++		PSC_HASHBKT_FOREACH_ENTRY(&sl_fcmh_hashtbl, tmp, bkt)
++			dump_fcmh(tmp);
++		psc_hashbkt_unlock(bkt);
++	}
++}
+ 
+ void
+ _dump_fcmh_flags_common(int *flags, int *seq)
+diff -dru -x .git tree1/slash2/share/rpc_common.c tree2/slash2/share/rpc_common.c
+--- tree1/slash2/share/rpc_common.c	2017-09-11 10:12:35.196119455 -0400
++++ tree2/slash2/share/rpc_common.c	2017-09-11 09:47:25.905126128 -0400
+@@ -514,11 +514,6 @@
+  	 */
+ 	if (!locked)
+ 		CSVC_LOCK(csvc);
+-
+-	/*
+- 	 * 09/07/2017: pscrpc_drop_conns() --> pscrpc_fail_import()
+- 	 * sl_imp_hldrop_cli() makes rc = -1.
+- 	 */
+ 	rc = --csvc->csvc_refcnt;
+ 	psc_assert(rc >= 0);
+ 	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
+@@ -951,12 +946,6 @@
+  	 * 07/10/2017: Hit a crash with flag 11000010, this indicates that 
+  	 * there is a code path that can reach the csvc after its reference 
+  	 * count is zero and marked to free.
+- 	 *
+- 	 * Hit again, this comes from the mdscoh_req code path.  The problem
+- 	 * is that bml->bml_exp is not protected by a reference count, which
+- 	 * probably in turn can't ensure the csvc is still there.
+- 	 *
+- 	 * Hit again from slm_ptrunc_prepare().
+  	 */
+ 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
+ 		csvc->csvc_flags |= CSVCF_ONLIST;
+diff -dru -x .git tree1/slash2/slashd/bmap_mds.c tree2/slash2/slashd/bmap_mds.c
+--- tree1/slash2/slashd/bmap_mds.c	2017-09-11 10:12:35.203119110 -0400
++++ tree2/slash2/slashd/bmap_mds.c	2017-09-11 09:47:25.913125736 -0400
+@@ -635,6 +635,7 @@
+ #endif
+ 
+ struct bmap_ops sl_bmap_ops = {
++	NULL,				/* bmo_reapf() */
+ 	mds_bmap_init,			/* bmo_init_privatef() */
+ 	mds_bmap_read,			/* bmo_retrievef() */
+ 	NULL,				/* bmo_mode_chngf() */
+diff -dru -x .git tree1/slash2/slashd/bmap_mds.h tree2/slash2/slashd/bmap_mds.h
+--- tree1/slash2/slashd/bmap_mds.h	2017-09-11 10:12:35.204119061 -0400
++++ tree2/slash2/slashd/bmap_mds.h	2017-09-11 09:47:25.914125687 -0400
+@@ -143,6 +143,8 @@
+ #define BTE_DEL			(1 << 1)
+ #define BTE_REATTACH		(1 << 2)
+ 
++#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
++
+ struct bmap_mds_lease {
+ 	uint64_t		  bml_seq;
+ 	int32_t		  	  bml_refcnt;
+@@ -152,7 +154,7 @@
+ 	time_t			  bml_start;
+ 	time_t			  bml_expire;
+ 	struct bmap_mds_info	 *bml_bmi;
+-	struct pscrpc_export	 *bml_exp;		/* XXX should take a refcount */
++	struct pscrpc_export	 *bml_exp;
+ 	struct psc_listentry	  bml_bmi_lentry;
+ 	struct psc_listentry	  bml_timeo_lentry;
+ 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
+diff -dru -x .git tree1/slash2/slashd/ctl_mds.c tree2/slash2/slashd/ctl_mds.c
+--- tree1/slash2/slashd/ctl_mds.c	2017-09-11 10:12:35.207118914 -0400
++++ tree2/slash2/slashd/ctl_mds.c	2017-09-11 09:47:25.917125540 -0400
+@@ -528,32 +528,6 @@
+ }
+ 
+ void
+-slmctlparam_max_lease_get(char *val)
+-{
+-	snprintf(val, PCP_VALUE_MAX, "%d", slm_max_lease_timeout);
+-}
+-
+-int
+-slmctlparam_max_lease_set(const char *val)
+-{
+-	unsigned long l;
+-	char *endp;
+-	int rc = 0;
+-
+-	l = strtol(val, &endp, 0);
+-	if (endp == val || *endp)
+-		rc = -1;
+-	else {
+-		if (l >= BMAP_TIMEO_MIN && l <= BMAP_TIMEO_MAX)
+-			slm_max_lease_timeout = l;
+-		else
+-			rc = -1;
+-	}
+-
+-	return (rc);
+-}
+-
+-void
+ slmctlthr_spawn(const char *fn)
+ {
+ 	pfl_journal_register_ctlops(slmctlops);
+@@ -643,9 +617,6 @@
+ 	psc_ctlparam_register_var("sys.upsch_batch_size",
+ 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
+ 
+-	psc_ctlparam_register_simple("sys.max_lease_time",
+-	    slmctlparam_max_lease_get, slmctlparam_max_lease_set);
+-
+ 	psc_ctlparam_register_simple("sys.upsch_batch_inflight",
+ 	    slrcp_batch_get_max_inflight, slrcp_batch_set_max_inflight);
+ 
+diff -dru -x .git tree1/slash2/slashd/fidc_mds.c tree2/slash2/slashd/fidc_mds.c
+--- tree1/slash2/slashd/fidc_mds.c	2017-09-11 10:12:35.209118816 -0400
++++ tree2/slash2/slashd/fidc_mds.c	2017-09-11 09:47:25.918125491 -0400
+@@ -93,16 +93,9 @@
+ 		mds_unreserve_slot(1);
+ 
+ 	if (!rc) {
+-		FCMH_LOCK(f);
+-		/*
+- 		 * The following assert used to be outside of the fcmh lock.
+- 		 * I hit it and gdb shows the two values are identical. So
+- 		 * let us at least move it inside the lock.
+- 		 *
+- 		 * (gdb) p f->fcmh_sstb.sst_fg.fg_fid == sstb_out.sst_fg.fg_fid
+- 		 * 
+- 		 */
+ 		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
++
++		FCMH_LOCK(f);
+ 		f->fcmh_sstb = sstb_out;
+ 		FCMH_ULOCK(f);
+ 	}
+diff -dru -x .git tree1/slash2/slashd/main_mds.c tree2/slash2/slashd/main_mds.c
+--- tree1/slash2/slashd/main_mds.c	2017-09-11 10:12:35.216118473 -0400
++++ tree2/slash2/slashd/main_mds.c	2017-09-11 09:47:25.926125099 -0400
+@@ -490,7 +490,7 @@
+ 	}
+ 
+ 	fidc_init(sizeof(struct fcmh_mds_info));
+-	bmap_cache_init(sizeof(struct bmap_mds_info), MDS_BMAP_COUNT, NULL);
++	bmap_cache_init(sizeof(struct bmap_mds_info), MDS_BMAP_COUNT);
+ 
+ 	/*
+ 	 * Start up ZFS threads and import the MDS zpool.  Also, make
+@@ -581,8 +581,8 @@
+ 	slm_upsch_init();
+ 
+ 	psc_poolmaster_init(&slm_bml_poolmaster,
+-	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 
+-	    MDS_BMAP_COUNT, MDS_BMAP_COUNT, 0, NULL, "bmplease");
++	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
++	    2048, 0, NULL, "bmplease");
+ 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
+ 
+ 	sl_nbrqset = pscrpc_prep_set();
+diff -dru -x .git tree1/slash2/slashd/mds_bmap_timeo.c tree2/slash2/slashd/mds_bmap_timeo.c
+--- tree1/slash2/slashd/mds_bmap_timeo.c	2017-09-11 10:12:35.219118326 -0400
++++ tree2/slash2/slashd/mds_bmap_timeo.c	2017-09-11 09:47:25.929124952 -0400
+@@ -241,7 +241,7 @@
+ 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
+ 		if (!bml) {
+ 			freelock(&slm_bmap_leases.btt_lock);
+-			nsecs = slm_max_lease_timeout;
++			nsecs = BMAP_TIMEO_MAX;
+ 			goto out;
+ 		}
+ 		b = bml_2_bmap(bml);
+diff -dru -x .git tree1/slash2/slashd/mds.c tree2/slash2/slashd/mds.c
+--- tree1/slash2/slashd/mds.c	2017-09-11 10:12:35.218118375 -0400
++++ tree2/slash2/slashd/mds.c	2017-09-11 09:47:25.928125001 -0400
+@@ -66,7 +66,6 @@
+  */
+ int			slm_ptrunc_enabled = 1;
+ int			slm_preclaim_enabled = 1;
+-int			slm_max_lease_timeout = BMAP_TIMEO_MAX;
+ 
+ __static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
+ 
+@@ -240,7 +239,6 @@
+ 	struct sl_resm *resm = libsl_ios2resm(bml->bml_ios);
+ 	struct resm_mds_info *rmmi;
+ 
+-	OPSTAT_INCR("bmap-ios-restart");
+ 	rmmi = resm2rmmi(resm);
+ 
+ 	psc_assert(bml->bml_bmi->bmi_assign);
+@@ -250,10 +248,7 @@
+ 		 * Looks like we somehow end up with two write leases on
+ 		 * the same bmap, but likely with different IOSes, hence
+ 		 * the following assert triggers.  The bml_start value
+-		 * between the two leases exceeds 60000.
+-		 *
+-		 * Here we use the memory address to assert that different
+-		 * leases share the same IOS.
++		 * between the two lease exceeds 60000.
+ 		 */
+ 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+ 	} else {
+@@ -712,7 +707,7 @@
+ 	bia->bia_fid = fcmh_2_fid(b->bcm_fcmh);
+ 	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+ 	bia->bia_bmapno = b->bcm_bmapno;
+-	bia->bia_start = bml->bml_start;
++	bia->bia_start = time(NULL);
+ 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
+ 
+ 	bmi->bmi_assign = item;
+@@ -760,7 +755,7 @@
+ 		PSCFREE(bia);
+ 		return (-1); // errno
+ 	}
+-	bia->bia_start = bml->bml_start;
++	bia->bia_start = time(NULL);
+ 	/*
+  	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
+  	 */
+@@ -829,7 +824,6 @@
+ 		tmp = tmp->bml_chain;
+ 	} while (tmp != bml);
+ 
+-	/* Return the lease on the list if any. */
+ 	return (bml);
+ }
+ 
+@@ -977,10 +971,6 @@
+ 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
+ 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
+ 
+-	/*
+- 	 * We are adding a new lease. Let us check the lease status
+- 	 * of the bmap and see if we need to trigger DIO.
+- 	 */
+ 	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
+ 	    &bml->bml_cli_nidpid);
+ 	if (rc && (bml->bml_flags & BML_RECOVER))
+@@ -1028,9 +1018,6 @@
+ 		/*
+ 		 * Drop the lock prior to doing disk and possibly
+ 		 * network I/O.
+-		 *
+-		 * This flag allows us to drop bmap lock without
+-		 * any interfering from others.
+ 		 */
+ 		b->bcm_flags |= BMAPF_IOSASSIGNED;
+ 
+@@ -1260,10 +1247,6 @@
+ 			/*
+  			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
+  			 * bmi_seq = -1, and bml_flags = 101000010.
+- 			 *
+- 			 * Looks like this is because we assign BMAPSEQ_ANY at
+- 			 * reattach time.  The flags above shows this is during
+- 			 * recovery.
+  			 */
+ 			if (bia->bia_seq !=  bmi->bmi_seq) {
+ 				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
+@@ -1393,7 +1376,7 @@
+ 
+ 	bml->bml_flags = flags;
+ 	bml->bml_start = time(NULL);
+-	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
++	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+ 	bml->bml_bmi = bmap_2_bmi(b);
+ 
+ 	bml->bml_exp = e;
+@@ -1471,11 +1454,7 @@
+ 	 * susceptible to gross changes in the system time.
+ 	 */
+ 	bml->bml_start = bia->bia_start;
+-	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
+-
+-	/*
+- 	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
+- 	 */
++	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+ 	if (bml->bml_expire <= time(NULL))
+ 		OPSTAT_INCR("bmap-restart-expired");
+ 
+@@ -1665,22 +1644,21 @@
+ void
+ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
+ {
+-	int i;
+ 	struct bmap_mds_info *bmi;
+-
+-	BMAP_LOCK_ENSURE(b);
++	int i, locked;
+ 
+ 	bmi = bmap_2_bmi(b);
++	locked = BMAP_RLOCK(b);
+ 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
+ 	sbd->sbd_bmapno = b->bcm_bmapno;
+ 	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
+ 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
+-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
++	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+ 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
+ 			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
+ 			break;
+ 		}
+-	}
++	BMAP_URLOCK(b, locked);
+ }
+ 
+ /*
+@@ -1757,7 +1735,7 @@
+ 	 * lease.
+ 	 */
+ 	sbd->sbd_seq = bml->bml_seq;
+-	sbd->sbd_expire = slm_max_lease_timeout;
++	sbd->sbd_key = BMAPSEQ_ANY;
+ 
+ 	/*
+ 	 * Store the nid/pid of the client interface in the bmapdesc to
+@@ -1840,9 +1818,6 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out1, rc);
+ 
+-	obml->bml_start = time(NULL);
+-	obml->bml_expire = obml->bml_start + slm_max_lease_timeout;
+-
+ 	/*
+ 	 * Deal with the lease renewal and repl_add before modifying the
+ 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
+@@ -1851,7 +1826,7 @@
+ 	bia->bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
+ 	bia->bia_lastcli = obml->bml_cli_nidpid;
+ 	bia->bia_ios = resm->resm_res_id;
+-	bia->bia_start = obml->bml_start;
++	bia->bia_start = time(NULL);
+ 
+ 	rc = mds_bmap_add_repl(b, bia);
+ 	if (rc)
+@@ -1865,9 +1840,9 @@
+ 	/* Do some post setup on the modified lease. */
+ 	slm_fill_bmapdesc(sbd_out, b);
+ 	sbd_out->sbd_seq = obml->bml_seq;
+-	sbd_out->sbd_expire = slm_max_lease_timeout;
+ 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
+ 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
++	sbd_out->sbd_key = BMAPSEQ_ANY;
+ 	sbd_out->sbd_ios = obml->bml_ios;
+ 
+  out1:
+@@ -1912,12 +1887,6 @@
+ 		OPSTAT_INCR("lease-renew-enoent");
+ 
+ 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
+-
+-	if (rw == BML_READ)
+-		OPSTAT_INCR("lease-renew-read");
+-	else
+-		OPSTAT_INCR("lease-renew-write");
+-		
+ 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
+ 	rc = mds_bmap_bml_add(bml, rw == BML_READ ? SL_READ : SL_WRITE,
+ 	    sbd_in->sbd_ios);
+@@ -1933,7 +1902,6 @@
+ 	 */
+ 	slm_fill_bmapdesc(sbd_out, b);
+ 	sbd_out->sbd_seq = bml->bml_seq;
+-	sbd_out->sbd_expire = slm_max_lease_timeout;
+ 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
+ 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
+ 
+@@ -1942,8 +1910,10 @@
+ 
+ 		psc_assert(bmi->bmi_wr_ion);
+ 
++		sbd_out->sbd_key = BMAPSEQ_ANY;
+ 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+ 	} else {
++		sbd_out->sbd_key = BMAPSEQ_ANY;
+ 		sbd_out->sbd_ios = IOS_ID_ANY;
+ 	}
+ 
+diff -dru -x .git tree1/slash2/slashd/rmc.c tree2/slash2/slashd/rmc.c
+--- tree1/slash2/slashd/rmc.c	2017-09-11 10:12:35.231117738 -0400
++++ tree2/slash2/slashd/rmc.c	2017-09-11 09:47:25.941124364 -0400
+@@ -272,10 +272,6 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
+-	/*
+-	 * XXX if the above returns ENOENT, should we renew here?
+-	 */
+-
+ 	bmi = bmap_2_bmi(b);
+ 
+ 	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq,
+@@ -292,6 +288,7 @@
+ 
+ 	mp->sbd = mq->sbd;
+ 	mp->sbd.sbd_seq = bml->bml_seq;
++	mp->sbd.sbd_key = BMAPSEQ_ANY;
+ 
+ 	psc_assert(bmi->bmi_wr_ion);
+ 	mp->sbd.sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+diff -dru -x .git tree1/slash2/slashd/slashd.h tree2/slash2/slashd/slashd.h
+--- tree1/slash2/slashd/slashd.h	2017-09-11 10:12:35.237117444 -0400
++++ tree2/slash2/slashd/slashd.h	2017-09-11 09:47:25.947124070 -0400
+@@ -48,8 +48,6 @@
+ struct slm_sth;
+ struct bmap_mds_lease;
+ 
+-extern int slm_max_lease_timeout;
+-
+ extern sqlite3	*db_handle;
+ 
+ /* MDS thread types. */
+diff -dru -x .git tree1/slash2/sliod/bmap_iod.c tree2/slash2/sliod/bmap_iod.c
+--- tree1/slash2/sliod/bmap_iod.c	2017-09-11 10:12:35.250116807 -0400
++++ tree2/slash2/sliod/bmap_iod.c	2017-09-11 09:47:25.961123384 -0400
+@@ -309,8 +309,8 @@
+ 			goto out;
+ 		}
+ 	}
+-	DEBUG_BMAP(PLL_DIAG, b, "brls=%p seq=%"PRId64,
+-	    brls, sbd->sbd_seq);
++	DEBUG_BMAP(PLL_DIAG, b, "brls=%p seq=%"PRId64" key=%"PRId64,
++	    brls, sbd->sbd_seq, sbd->sbd_key);
+ 
+ 	if (pll_empty(&bii->bii_rls)) {
+ 		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
+@@ -567,6 +567,7 @@
+ #endif
+ 
+ struct bmap_ops sl_bmap_ops = {
++	NULL,				/* bmo_reapf() */
+ 	iod_bmap_init,			/* bmo_init_privatef() */
+ 	iod_bmap_retrieve,		/* bmo_retrievef() */
+ 	NULL,				/* bmo_mode_chngf() */
+diff -dru -x .git tree1/slash2/sliod/ctl_iod.c tree2/slash2/sliod/ctl_iod.c
+--- tree1/slash2/sliod/ctl_iod.c	2017-09-11 10:12:35.253116659 -0400
++++ tree2/slash2/sliod/ctl_iod.c	2017-09-11 09:47:25.964123237 -0400
+@@ -668,9 +668,5 @@
+ 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+ 	    &sli_sync_max_writes);
+ 
+-	psc_ctlparam_register_var("sys.max_readahead",
+-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
+-	    &sli_predio_max_slivers);
+-
+ 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), 0, SLITHRT_CTLAC);
+ }
+diff -dru -x .git tree1/slash2/sliod/fidc_iod.h tree2/slash2/sliod/fidc_iod.h
+--- tree1/slash2/sliod/fidc_iod.h	2017-09-11 10:12:35.255116560 -0400
++++ tree2/slash2/sliod/fidc_iod.h	2017-09-11 09:47:25.966123139 -0400
+@@ -32,13 +32,9 @@
+ struct fidc_membh;
+ 
+ struct fcmh_iod_info {
+-	int			fii_fd;			/* open file descriptor */
+-	int			fii_nwrite;		/* # of sliver writes */
+-	off_t			fii_predio_lastoff;	/* last I/O offset */
+-	off_t			fii_predio_lastsize;	/* last I/O size */
+-	off_t			fii_predio_off;		/* next predict I/O offset */
+-	int			fii_predio_nseq;	/* num sequential io's */
+-	struct psclist_head	fii_lentry;		/* all fcmhs with readahead */
++	int			fii_fd;		/* open file descriptor */
++	int			fii_nwrite;	/* # of sliver writes */
++	struct psclist_head	fii_lentry;	/* fcmh with dirty slivers */
+ };
+ 
+ /* sliod-specific fcmh_flags */
+diff -dru -x .git tree1/slash2/sliod/main_iod.c tree2/slash2/sliod/main_iod.c
+--- tree1/slash2/sliod/main_iod.c	2017-09-11 10:12:35.257116462 -0400
++++ tree2/slash2/sliod/main_iod.c	2017-09-11 09:47:25.968123041 -0400
+@@ -133,7 +133,8 @@
+ 	while (pscthr_run(thr)) {
+ 		rc = statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf);
+ 		if (rc == -1)
+-			psclog_error("statvfs %s", slcfg_local->cfg_fsroot);
++			psclog_error("statvfs %s",
++			    slcfg_local->cfg_fsroot);
+ 
+ 		if (rc == 0) {
+ 			spinlock(&sli_ssfb_lock);
+@@ -323,7 +324,7 @@
+ 	if (statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf) == -1)
+ 		psc_fatal("%s", slcfg_local->cfg_fsroot);
+ 
+-	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT, NULL);
++	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);
+ 	fidc_init(sizeof(struct fcmh_iod_info));
+ 	bim_init();
+ 	sl_nbrqset = pscrpc_prep_set();
+diff -dru -x .git tree1/slash2/sliod/ric.c tree2/slash2/sliod/ric.c
+--- tree1/slash2/sliod/ric.c	2017-09-11 10:12:35.260116315 -0400
++++ tree2/slash2/sliod/ric.c	2017-09-11 09:47:25.971122894 -0400
+@@ -62,9 +62,6 @@
+ int				 sli_min_space_reserve_gb = MIN_SPACE_RESERVE_GB;
+ int				 sli_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
+ 
+-int				 sli_predio_pipe_size = 16;
+-int				 sli_predio_max_slivers = 4;
+-
+ int
+ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
+     int nslvrs)
+@@ -154,29 +151,11 @@
+ 	return (1);
+ }
+ 
+-void
+-readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
+-{
+-	struct sli_readaheadrq *rarq;
+-
+-#ifdef MYDEBUG
+-	psclog_max("readahead: offset = %ld, size = %ld\n", off, size);
+-#endif
+-	rarq = psc_pool_get(sli_readaheadrq_pool);
+-	INIT_PSC_LISTENTRY(&rarq->rarq_lentry);
+-	rarq->rarq_fg = f->fcmh_fg;
+-	rarq->rarq_off = off;
+-	rarq->rarq_size = size;
+-
+-	/* feed work to slirathr_main() */
+-	lc_add(&sli_readaheadq, rarq);
+-}
+-
+ __static int
+ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
+ {
+ 	sl_bmapno_t bmapno, slvrno;
+-	int rc, nslvrs = 0, i, delta, needaio = 0;
++	int rc, nslvrs = 0, i, needaio = 0;
+ 	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
+ 	struct slvr *s, *slvr[RIC_MAX_SLVRS_PER_IO];
+ 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
+@@ -189,7 +168,6 @@
+ 	struct fidc_membh *f;
+ 	uint64_t seqno;
+ 	ssize_t rv;
+-	off_t off, raoff, rasize;
+ 
+ 	SL_RSX_ALLOCREP(rq, mq, mp);
+ 
+@@ -345,11 +323,6 @@
+ 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
+ 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
+ 
+-#ifdef MYDEBUG
+-	psclog_max("read/write: offset = %d, bmap = %d, size = %d\n", 
+-	    mq->offset, bmapno, mq->size);
+-#endif
+-
+ 	/*
+ 	 * This loop assumes that nslvrs is always no larger than
+ 	 * RIC_MAX_SLVRS_PER_IO.
+@@ -477,79 +450,6 @@
+ 		goto out1;
+ 	}
+ 
+-	if (!sli_predio_max_slivers)
+-		goto out1;
+-
+-	FCMH_LOCK(f);
+-
+-	fii = fcmh_2_fii(f);
+-#if 0
+-	delta = SLASH_SLVR_SIZE * 4;
+-	off = mq->offset + bmapno * SLASH_BMAP_SIZE;
+-	if (off == fii->fii_predio_lastoff + fii->fii_predio_lastsize) {
+-
+-		fii->fii_predio_nseq++;
+-		OPSTAT_INCR("readahead-increase");
+-
+-	} else if (off > fii->fii_predio_lastoff + fii->fii_predio_lastsize + delta ||
+-	      off < fii->fii_predio_lastoff + fii->fii_predio_lastsize - delta) {
+-
+-	    	fii->fii_predio_off = 0;
+-		fii->fii_predio_nseq = 0;
+-		OPSTAT_INCR("readahead-reset");
+-	} else {
+-		/* tolerate out-of-order arrivals */
+-	}
+-
+-	fii->fii_predio_lastoff = off;
+-	fii->fii_predio_lastsize = mq->size;
+-
+-	if (!fii->fii_predio_nseq) {
+-		FCMH_ULOCK(f);
+-		goto out1;
+-	}
+-		
+-	raoff = mq->offset + bmapno * SLASH_BMAP_SIZE + mq->size;
+-	if (raoff + sli_predio_pipe_size * SLASH_SLVR_SIZE < 
+-	    fii->fii_predio_off) {
+-		OPSTAT_INCR("readahead-pipe");
+-		FCMH_ULOCK(f);
+-		goto out1;
+-	}
+-	if (raoff >= (off_t)f->fcmh_sstb.sst_size) {
+-		FCMH_ULOCK(f);
+-		goto out1;
+-	}
+-	if (fii->fii_predio_off) {
+-		if (fii->fii_predio_off > raoff) {
+-			OPSTAT_INCR("readahead-skip");
+-			raoff = fii->fii_predio_off;
+-		}
+-	}
+-
+-	rasize = MAX(SLASH_SLVR_SIZE * fii->fii_predio_nseq * 2, mq->size);
+-	rasize = MIN(rasize, sli_predio_max_slivers * SLASH_SLVR_SIZE);
+-	rasize = MIN(rasize, f->fcmh_sstb.sst_size - raoff);
+-
+-	readahead_enqueue(f, raoff, rasize);
+-	fii->fii_predio_off = raoff;
+-#else
+-	delta = 0;	/* make gcc happy */
+-	off = mq->offset + bmapno * SLASH_BMAP_SIZE + delta;
+-	raoff = off + mq->size;
+-	if (raoff >= (off_t)f->fcmh_sstb.sst_size) {
+-		FCMH_ULOCK(f);
+-		goto out1;
+-	}
+-	rasize = sli_predio_max_slivers * SLASH_SLVR_SIZE;
+-	rasize = MIN(rasize, f->fcmh_sstb.sst_size - raoff);
+-
+-	readahead_enqueue(f, raoff, rasize);
+-
+-#endif
+-
+-	FCMH_ULOCK(f);
+-
+  out1:
+ 	for (i = 0; i < nslvrs && slvr[i]; i++) {
+ 		s = slvr[i];
+diff -dru -x .git tree1/slash2/sliod/rpc_iod.c tree2/slash2/sliod/rpc_iod.c
+--- tree1/slash2/sliod/rpc_iod.c	2017-09-11 10:12:35.263116168 -0400
++++ tree2/slash2/sliod/rpc_iod.c	2017-09-11 09:47:25.975122696 -0400
+@@ -257,16 +257,11 @@
+ 		PFL_GETTIMESPEC(&now);
+ 
+ 		if (timespeccmp(&now, &sli_ssfb_send, >)) {
+-			/*
+-			 * slistatfsthr_main() wake up every 60
+-			 * seconds, so 30 seconds should be more
+-			 * than enough.
+-			 */
+ 			qlens[nq++] = sizeof(struct srt_statfs) +
+ 			    sizeof(struct srt_bwqueued);
+ 			spinlock(&sli_ssfb_lock);
+ 			sli_ssfb_send = now;
+-			sli_ssfb_send.tv_sec += 30;
++			sli_ssfb_send.tv_sec += 1;
+ 			freelock(&sli_ssfb_lock);
+ 			flags |= SLRPC_MSGF_STATFS;
+ 		}
+diff -dru -x .git tree1/slash2/sliod/slab.c tree2/slash2/sliod/slab.c
+--- tree1/slash2/sliod/slab.c	2017-09-11 10:12:35.265116070 -0400
++++ tree2/slash2/sliod/slab.c	2017-09-11 09:47:25.976122647 -0400
+@@ -41,24 +41,17 @@
+ #include "sliod.h"
+ #include "slvr.h"
+ 
+-extern struct psc_poolmgr	*slvr_pool;
+-
+ struct psc_poolmaster	 slab_poolmaster;
+ struct psc_poolmgr	*slab_pool;
+ 
+-struct timespec		 sli_slvr_timeout = { 30, 0L };
+-struct psc_waitq	 sli_slvr_waitq = PSC_WAITQ_INIT("slvr");
+-psc_spinlock_t		 sli_slvr_lock = SPINLOCK_INIT;
+-
+ struct slab *
+ slab_alloc(void)
+ {
+ 	struct slab *slb;
+ 
+ 	slb = psc_pool_get(slab_pool);
+-	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
+-	/* XXX ENOMEM */
+ 	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
++	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
+ 
+ 	return (slb);
+ }
+@@ -74,24 +67,32 @@
+ slibreapthr_main(struct psc_thread *thr)
+ {
+ 	while (pscthr_run(thr)) {
+-		psc_pool_reap(slvr_pool, 0);
+-
+-		spinlock(&sli_slvr_lock);
+-		psc_waitq_waitrel_ts(&sli_slvr_waitq,
+-		    &sli_slvr_lock, &sli_slvr_timeout);
++		psc_pool_reap(slab_pool, 0);
++		thr->pscthr_waitq = "sleep 10";
++		sleep(10);
++		thr->pscthr_waitq = NULL;
+ 	}
+ }
+ 
+ void
+-slab_cache_init(int nbuf)
++slab_cache_init(void)
+ {
++	size_t nbuf;
++
++	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
++
++	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
++		psc_fatalx("invalid slab_cache_size setting; "
++		    "minimum allowed is %zu", SLAB_MIN_CACHE);
++
++	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
+ 	psc_poolmaster_init(&slab_poolmaster, struct slab,
+ 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
+-	    NULL, "slab", NULL);
++	    slab_cache_reap, "slab", NULL);
+ 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
+ 
+ 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
+ 
+-	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %d bufs", 
++	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %zd bufs", 
+ 	    slcfg_local->cfg_slab_cache_size, nbuf);
+ }
+diff -dru -x .git tree1/slash2/sliod/slab.h tree2/slash2/sliod/slab.h
+--- tree1/slash2/sliod/slab.h	2017-09-11 10:12:35.266116021 -0400
++++ tree2/slash2/sliod/slab.h	2017-09-11 09:47:25.978122549 -0400
+@@ -45,7 +45,7 @@
+ #define SLAB_DEF_CACHE		((size_t)SLAB_DEF_COUNT * SLASH_SLVR_SIZE)
+ #define SLAB_MIN_CACHE		((size_t)128 * SLASH_SLVR_SIZE)
+ 
+-void	slab_cache_init(int);
++void	slab_cache_init(void);
+ int	slab_cache_reap(struct psc_poolmgr *);
+ 
+ struct slab	*slab_alloc(void);
+diff -dru -x .git tree1/slash2/sliod/sliod.h tree2/slash2/sliod/sliod.h
+--- tree1/slash2/sliod/sliod.h	2017-09-11 10:12:35.268115923 -0400
++++ tree2/slash2/sliod/sliod.h	2017-09-11 09:47:25.979122500 -0400
+@@ -58,14 +58,11 @@
+ 	SLITHRT_RIM,			/* service RPC requests from MDS */
+ 	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
+ 	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
+-	SLITHRT_READAHEAD,		/* sliver read-ahead */
+ 	SLITHRT_STATFS,			/* statvfs(2) updater */
+ 	SLITHRT_USKLNDPL,		/* userland socket Lustre net dev poll thr */
+ 	SLITHRT_WORKER			/* generic worker thread */
+ };
+ 
+-#define NSLVR_READAHEAD_THRS	8
+-
+ #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
+ 
+ #define NSLVRSYNC_THRS		2	/* perhaps default to ncores + configurable? */
+@@ -122,7 +119,6 @@
+ extern int			 sli_sync_max_writes;
+ extern int			 sli_min_space_reserve_gb;
+ extern int			 sli_min_space_reserve_pct;
+-extern int			 sli_predio_max_slivers;
+ extern struct psc_thread	*sliconnthr;
+ 
+ extern uint64_t			 sli_current_reclaim_xid;
+diff -dru -x .git tree1/slash2/sliod/slvr.c tree2/slash2/sliod/slvr.c
+--- tree1/slash2/sliod/slvr.c	2017-09-11 10:12:35.271115776 -0400
++++ tree2/slash2/sliod/slvr.c	2017-09-11 09:47:25.983122304 -0400
+@@ -50,14 +50,11 @@
+ struct psc_poolmaster	 slvr_poolmaster;
+ struct psc_poolmaster	 sli_aiocbr_poolmaster;
+ struct psc_poolmaster	 sli_iocb_poolmaster;
+-struct psc_poolmaster	 sli_readaheadrq_poolmaster;
+ 
+ struct psc_poolmgr	*slvr_pool;
+ struct psc_poolmgr	*sli_aiocbr_pool;
+ struct psc_poolmgr	*sli_iocb_pool;
+-struct psc_poolmgr	*sli_readaheadrq_pool;
+ 
+-struct psc_listcache	 sli_readaheadq;
+ struct psc_listcache	 sli_iocb_pndg;
+ 
+ psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
+@@ -68,8 +65,6 @@
+ 
+ struct psc_listcache	 sli_fcmh_dirty;
+ 
+-extern struct psc_waitq	 sli_slvr_waitq;
+-
+ SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
+ 
+ /*
+@@ -658,8 +653,8 @@
+  * @flags: operational flags.
+  */
+ ssize_t
+-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw, 
+-    int readahead)
++slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
++    __unusedx int flags)
+ {
+ 	struct bmap *b = slvr_2_bmap(s);
+ 	ssize_t rc = 0;
+@@ -688,15 +683,8 @@
+ 	 */
+ 	s->slvr_flags |= SLVRF_FAULTING;
+ 
+-	if (s->slvr_flags & SLVRF_DATARDY) {
+-		if (!readahead && (s->slvr_flags & SLVRF_READAHEAD)) {
+-			s->slvr_flags &= ~SLVRF_READAHEAD;
+-			OPSTAT_INCR("readahead-hit");
+-		}
++	if (s->slvr_flags & SLVRF_DATARDY)
+ 		goto out1;
+-	}
+-	if (!readahead && rw == SL_READ)
+-		OPSTAT_INCR("readahead-miss");
+ 
+ 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
+ 		/*
+@@ -706,6 +694,7 @@
+ 		 */
+ 		goto out1;
+ 	}
++
+ 	SLVR_ULOCK(s);
+ 
+ 	/*
+@@ -713,8 +702,6 @@
+ 	 * lock.  All should be protected by the FAULTING bit.
+ 	 */
+ 	rc = slvr_fsbytes_rio(s, off, len);
+-	if (!rc && readahead)
+-		s->slvr_flags |= SLVRF_READAHEAD;
+ 	goto out2;
+ 
+  out1:
+@@ -777,8 +764,6 @@
+ 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
+ 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
+ 
+-	if (s->slvr_flags & SLVRF_READAHEAD)
+-		OPSTAT_INCR("readahead-waste");
+ 	slab_free(s->slvr_slab);
+ 	psc_pool_return(slvr_pool, s);
+ }
+@@ -912,18 +897,6 @@
+ 	 */
+ 	lc_move2tail(&sli_lruslvrs, s);
+ 	SLVR_ULOCK(s);
+-
+-	/*
+- 	 * I am holding the bmap lock here, do don't call reaper 
+- 	 * directly to avoid a potential deadlock.
+- 	 *
+- 	 * We reap proactively instead of on demand to avoid ENOMEM
+- 	 * situation, which we don't handle gracefully right now.
+- 	 */
+-	if (slvr_pool->ppm_nfree < 3) {
+-		OPSTAT_INCR("slvr-wakeone");
+-		psc_waitq_wakeone(&sli_slvr_waitq);
+-	}
+ }
+ 
+ void
+@@ -984,7 +957,8 @@
+  * freed.
+  */
+ struct slvr *
+-slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
++_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
++    struct bmap_iod_info *bii)
+ {
+ 	struct slvr *s, *tmp1 = NULL, ts;
+ 	struct slab *tmp2 = NULL;
+@@ -1063,22 +1037,17 @@
+ }
+ 
+ /*
+- * The reclaim function for slvr_pool.  Note that our caller
++ * The reclaim function for slab_pool.  Note that our caller
+  * psc_pool_get() ensures that we are called exclusively.
+  */
+ int
+ slab_cache_reap(struct psc_poolmgr *m)
+ {
+-	struct psc_dynarray a = DYNARRAY_INIT;
++	static struct psc_dynarray a = DYNARRAY_INIT;
+ 	struct slvr *s;
+-	int i, nitems;
+-
+-	psc_assert(m == slvr_pool);
++	int i;
+ 
+ 	LIST_CACHE_LOCK(&sli_lruslvrs);
+-	nitems = lc_nitems(&sli_lruslvrs) / 5;
+-	if (nitems < 5)
+-		nitems = 5;
+ 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
+ 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
+ 
+@@ -1101,11 +1070,12 @@
+ 			continue;
+ 		}
+ 
++		psc_dynarray_add(&a, s);
+ 		s->slvr_flags |= SLVRF_FREEING;
+ 		SLVR_ULOCK(s);
+ 
+-		psc_dynarray_add(&a, s);
+-		if (psc_dynarray_len(&a) >= nitems)
++		if (psc_dynarray_len(&a) >=
++		    psc_atomic32_read(&m->ppm_nwaiters))
+ 			break;
+ 	}
+ 	LIST_CACHE_ULOCK(&sli_lruslvrs);
+@@ -1114,8 +1084,7 @@
+ 		slvr_remove(s);
+ 	psc_dynarray_free(&a);
+ 
+-	OPSTAT_INCR("slab-lru-reap");
+-	return (nitems);
++	return (0);
+ }
+ 
+ void
+@@ -1155,93 +1124,13 @@
+ }
+ 
+ void
+-slirathr_main(struct psc_thread *thr)
+-{
+-	struct sli_readaheadrq *rarq;
+-	struct bmapc_memb *b;
+-	struct fidc_membh *f;
+-	struct slvr *s;
+-	int i, rc, slvrno, nslvr;
+-	sl_bmapno_t bno;
+-
+-	while (pscthr_run(thr)) {
+-		f = NULL;
+-		b = NULL;
+-
+-		if (slcfg_local->cfg_async_io)
+-			break;
+-
+-		rarq = lc_getwait(&sli_readaheadq);
+-		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
+-			goto next;
+-
+-		bno = rarq->rarq_off / SLASH_BMAP_SIZE;
+-		slvrno = (rarq->rarq_off % SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+-		nslvr = rarq->rarq_size / SLASH_SLVR_SIZE;
+-		if (rarq->rarq_size % SLASH_SLVR_SIZE)
+-			nslvr++;
+-
+-		for (i = 0; i < nslvr; i++) {
+-			if (i + slvrno >= SLASH_SLVRS_PER_BMAP) {
+-				bno++;
+-				slvrno = 0;
+-				if (b) {
+-					bmap_op_done(b);
+-					b = NULL;
+-				}
+-			}
+-			if (!b) {
+-				if (bmap_get(f, bno, SL_READ, &b))
+-					goto next;
+-			}
+-			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
+-			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 1);
+-			/*
+-			 * FixMe: This cause asserts on flags when we
+-			 * encounter AIOWAIT. We need a unified way to
+-			 * perform I/O done on each sliver instead of
+-			 * sprinkling them all over the place.
+-			 */
+-			slvr_io_done(s, rc);
+-			slvr_rio_done(s);
+-		}
+-
+- next:
+-		if (b)
+-			bmap_op_done(b);
+-		if (f)
+-			fcmh_op_done(f);
+-		psc_pool_return(sli_readaheadrq_pool, rarq);
+-	}
+-}
+-
+-void
+ slvr_cache_init(void)
+ {
+-	int i, nbuf;
+-
+-	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
+-
+-	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
+-		psc_fatalx("invalid slab_cache_size setting; "
+-		    "minimum allowed is %zu", SLAB_MIN_CACHE);
+-
+-	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
+-
+ 	psc_poolmaster_init(&slvr_poolmaster,
+-	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
+-	    nbuf, nbuf, slab_cache_reap, "slvr");
++	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
++	    SLAB_DEF_COUNT, 0, NULL, "slvr");
+ 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+ 
+-	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
+-	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
+-	    NULL, "readaheadrq");
+-	sli_readaheadrq_pool = psc_poolmaster_getmgr(
+-	    &sli_readaheadrq_poolmaster);
+-
+-	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
+-	    "readaheadq");
+-
+ 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
+ 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
+ 
+@@ -1265,11 +1154,7 @@
+ 		pscthr_init(SLITHRT_AIO, sliaiothr_main, 0, "sliaiothr");
+ 	}
+ 
+-	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
+-		pscthr_init(SLITHRT_READAHEAD, slirathr_main, 0,
+-		    "slirathr%d", i);
+-
+-	slab_cache_init(nbuf);
++	slab_cache_init();
+ 	slvr_worker_init();
+ }
+ 
+diff -dru -x .git tree1/slash2/sliod/slvr.h tree2/slash2/sliod/slvr.h
+--- tree1/slash2/sliod/slvr.h	2017-09-11 10:12:35.272115727 -0400
++++ tree2/slash2/sliod/slvr.h	2017-09-11 09:47:25.984122255 -0400
+@@ -78,13 +78,14 @@
+ #define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
+ #define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
+ #define SLVRF_ACCESSED		(1 <<  6)	/* actually used by a client */
+-#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead logic */
+ 
+ #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
+ #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
+ /*
+  * Think twice if you ever want to use recursive lock.
+  */
++#define SLVR_RLOCK(s)		reqlock(&(s)->slvr_lock)
++#define SLVR_URLOCK(s, lk)	ureqlock(&(s)->slvr_lock, (lk))
+ #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(&(s)->slvr_lock)
+ #define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
+ #define SLVR_TRYRLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
+@@ -177,8 +178,12 @@
+ 	int			  iocb_rc;
+ };
+ 
++#define slvr_lookup(n, bii)						\
++	_slvr_lookup(PFL_CALLERINFO(), (n), (bii))
++
+ struct slvr *
+-	slvr_lookup(uint32_t, struct bmap_iod_info *);
++	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
++	    struct bmap_iod_info *);
+ void	slvr_cache_init(void);
+ int	slvr_do_crc(struct slvr *, uint64_t *);
+ ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);
+@@ -206,11 +211,11 @@
+ 
+ void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
+ 
+-
+ struct sli_readaheadrq {
+ 	struct sl_fidgen	rarq_fg;
+-	off_t			rarq_off;
+-	off_t			rarq_size;
++	sl_bmapno_t		rarq_bno;
++	int32_t			rarq_off;
++	int32_t			rarq_size;
+ 	struct psc_listentry	rarq_lentry;
+ };
+ 
+@@ -219,7 +224,6 @@
+ extern struct psc_listcache	 sli_crcqslvrs;
+ extern struct psc_listcache	 sli_readaheadq;
+ 
+-
+ static __inline int
+ slvr_cmp(const void *x, const void *y)
+ {
+diff -dru -x .git tree1/slash2/tests/bigfile1.c tree2/slash2/tests/bigfile1.c
+--- tree1/slash2/tests/bigfile1.c	2017-09-11 10:12:35.294114649 -0400
++++ tree2/slash2/tests/bigfile1.c	2017-09-11 09:47:26.007121128 -0400
+@@ -35,11 +35,7 @@
+ #define	BASE_NAME_MAX		128
+ #define BASE_NAME_SUFFIX	10
+ 
+-int value;
+-int dryrun;
+ int verbose;
+-int setvalue;
+-
+ char scratch[MAX_BUF_LEN];
+ 
+ struct testfile {
+@@ -84,27 +80,20 @@
+ create_file(int i)
+ {
+ 	int j = 0;
+-	off_t offset = 0;
+ 	size_t tmp1, tmp2;
+ 
+ 	tmp1 = files[i].size;
+ 
+-	if (dryrun)
+-		return;
+-
+ 	while (j < 20) {
+-		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
++		tmp2 = write(files[i].fd, files[i].buf, tmp1);
+ 		if (tmp2 < 0) {
+ 			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
+ 			exit (1);
+ 		}
+-		j++;
+-		if (tmp1 == tmp2) {
+-			printf("File %s has been created with %d attempts\n", files[i].name, j);
++		if (tmp1 == tmp2)
+ 			return;
+-		}
+-		offset += tmp2;
+ 		tmp1 = tmp1 - tmp2;	
++		j++;
+ 	}
+ 	printf("Can't finish creating file %s within 20 attempts\n", files[i].name);
+ 	exit (1);
+@@ -120,12 +109,10 @@
+ 	if (offset == files[i].size)
+ 		offset--;
+ 	
+-	if (!dryrun) {
+-		tmp1 = lseek(files[i].fd, offset, SEEK_SET);
+-		if (tmp1 != offset) {
+-			printf("Seek fail: file = %d, offset = %d\n", i, j);
+-			exit (1);
+-		}
++	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
++	if (tmp1 != offset) {
++		printf("Seek fail: file = %d, offset = %d\n", i, j);
++		exit (1);
+ 	}
+ 
+ 	if (files[i].size - offset > MAX_BUF_LEN) {
+@@ -137,12 +124,8 @@
+ 	}
+ 
+ 	tmp1 = size;
+-	if (verbose || dryrun)
+-		printf("Read  %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
+-
+-	if (dryrun)
+-		return;
+-
++	if (verbose)
++		printf("Read %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
+ 	tmp2 = read(files[i].fd, scratch, tmp1);
+ 	if (tmp1 != tmp2) {
+ 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
+@@ -151,15 +134,12 @@
+ 
+ 	for (j = 0; j < size; j++) {
+ 		if (scratch[j] != files[i].buf[offset + j]) {
+-			printf("Data mismatch: file = %s, offset = %d, size = %d\n\n", 
+-				files[i].name, offset, size);
++			printf("Compare fail: file = %d, offset = %d, size = %d\n", i, j, size);
+ 			tmp1 = 0;
+ 			for (k = j; k < size; k++) {
+-				if (tmp1++ > 512)
++				if (tmp1++ > 100)
+ 					break;
+-				printf("%5d: %#02x - %#02x\n", offset + k, 
+-					(unsigned char)scratch[k], 
+-					(unsigned char)files[i].buf[offset + k]);
++				printf("%08x: %08x - %08x\n", k, scratch[k], files[i].buf[offset + k]);
+ 			}
+ 			exit (1);
+ 		}
+@@ -168,19 +148,17 @@
+ 
+ write_file(int i)
+ {
++	char *buf;
+ 	off_t offset;
+-	char *buf, ch;
+ 	size_t j, size, tmp1, tmp2;
+ 
+ 	offset = random();
+ 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
+ 	
+-	if (!dryrun) {
+-		tmp1 = lseek(files[i].fd, offset, SEEK_SET);
+-		if (tmp1 != offset) {
+-			printf("Seek fail: file = %d, offset = %d\n", i, offset);
+-			exit (1);
+-		}
++	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
++	if (tmp1 != offset) {
++		printf("Seek fail: file = %d, offset = %d\n", i, offset);
++		exit (1);
+ 	}
+ 
+ 	size = random();
+@@ -201,36 +179,20 @@
+ 		if (tmp1 == 0)
+ 			tmp1 = 1;
+ 
+-		if (verbose || dryrun)
+-			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
+-
+ 		/* always tweak some data on each write */
+ 		buf = files[i].buf + offset;
+ 		for (j = 0; j < tmp1; j++) {
+-			if (setvalue)
+-				ch = (char)value;
+-			else
+-				ch = (char)random();
+-
+-#ifdef NOZERO
+-			if (ch == 0)
+-				ch = 0x55;
+-#endif
+-
+-			if (!dryrun)
+-				buf[j] = ch;
++			buf[j] = (char)random();
+ 		}
+ 
+-		if (dryrun)
+-			goto skip;
+-
++		if (verbose)
++			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
+ 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
+ 		if (tmp1 != tmp2) {
+ 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
+ 			exit (1);
+ 		}
+ 			
+- skip:
+ 		offset += tmp1;
+ 		size -= tmp1;
+ 	}
+@@ -238,15 +200,15 @@
+ 
+ int main(int argc, char *argv[])
+ {
+-	char *name, ch;
++	char *name;
+ 	size_t tmp;
+-	int rc, times = 10;
++	int times = 10;
+ 	unsigned int seed = 1234;
+ 	size_t i, j, c, fd, nfile;
+ 	struct timeval t1, t2, t3;
+ 
+ 	gettimeofday(&t1, NULL);
+-	while ((c = getopt(argc, argv, "ds:n:vV:")) != -1) {
++	while ((c = getopt(argc, argv, "s:n:v")) != -1) {
+ 		switch (c) {
+ 			case 's':
+ 				seed = atoi(optarg);
+@@ -257,19 +219,11 @@
+                         case 'v':
+ 				verbose = 1;
+ 				break;
+-                        case 'V':
+-				setvalue = 1;
+-				value = atoi(optarg);
+-                        case 'd':
+-				dryrun = 1;
+-				break;
+ 		}   
+ 	}
+ 	if (optind > argc - 1) {
+-#if 0
+ 		printf("optind = %d, argc - 1 = %d\n", optind, argc - 1);
+-#endif
+-		printf("Usage: a.out [-v] [-s seed] [-V value ] [-n count] name\n");
++		printf("Usage: a.out [-v] [-s seed] [-n count] name\n");
+ 		exit (1);
+ 	}   
+ 
+@@ -281,12 +235,8 @@
+ 	srandom(seed);
+ 	nfile = sizeof(files)/sizeof(struct testfile);
+ 
+-	if (setvalue)
+-		printf("Base name = %s, file count = %d, seed = %u, value = %02x, loop = %d.\n\n", 
+-			argv[optind], nfile, seed, value, times);
+-	else
+-		printf("Base name = %s, file count = %d, seed = %u, loop = %d.\n\n", 
+-			argv[optind], nfile, seed, times);
++	printf("Base name = %s, file count = %d, seed = %u, loop = %d.\n\n", 
++		argv[optind], nfile, seed, times);
+ 
+ 	for (i = 0; i < nfile; i++) {
+ 
+@@ -294,39 +244,20 @@
+ 		printf("Try to allocate %12ld bytes of working memory for file %s\n", 
+ 			files[i].size, files[i].name); 
+ 
+-
+ 		fflush(stdout);
+-		if (!dryrun) {
+-			files[i].buf = malloc(files[i].size);
+-			if (!files[i].buf) {
+-				printf("Fail to allocate memory, errno = %d\n", errno);
+-				exit (1);
+-			}
++		files[i].buf = malloc(files[i].size);
++		if (!files[i].buf) {
++			printf("Fail to allocate memory, errno = %d\n", errno);
++			exit (1);
+ 		}
+ 
+-		for (j = 0; j < files[i].size; j++) {
+-			if (setvalue)
+-				ch = (char)value;
+-			else
+-				ch = (char)random();
+-
+-#ifdef NOZERO
+-			if (ch == 0)
+-				ch = 0x55;
+-#endif
+-
+-			if (!dryrun)
+-				files[i].buf[j] = ch;
+-		}
++		for (j = 0; j < files[i].size; j++)
++			files[i].buf[j] = (char)random();
+ 	}
+ 	printf("\nMemory for %d files have been allocated/initialized successfully.\n\n", nfile);
+ 	fflush(stdout);
+ 
+ 	for (i = 0; i < nfile; i++) {
+-
+-		if (dryrun)
+-			continue;
+-
+ 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
+ 		if (files[i].fd < 0) {
+ 			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
+@@ -336,14 +267,10 @@
+ 
+ 	        close(files[i].fd);
+ 	}
+-	printf("\nInitial %d files have been created successfully.\n\n", nfile);
++	printf("Initial %d files have been created successfully.\n\n", nfile);
+ 	fflush(stdout);
+ 
+ 	for (i = 0; i < nfile; i++) {
+-
+-		if (dryrun)
+-			continue;
+-
+         	files[i].fd = open(files[i].name, O_RDWR);
+ 		if (files[i].fd < 0) {
+ 			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
+@@ -362,15 +289,8 @@
+ 		fflush(stdout);
+ 	}
+ 
+-	printf("\n");
+ 	for (i = 0; i < nfile; i++) {
+ 	        close(files[i].fd);
+-        	rc = unlink(files[i].name);
+-		if (rc < 0) {
+-			printf("Fail to unlink file %s, errno = %d\n", files[i].name, errno);
+-			exit (1);
+-		}
+-		printf("Test file %s has been removed successfully...\n", files[i].name);
+ 	}
+ 	gettimeofday(&t2, NULL);
+ 
+diff -dru -x .git tree1/slash2/tests/bigfile2.c tree2/slash2/tests/bigfile2.c
+--- tree1/slash2/tests/bigfile2.c	2017-09-11 10:12:35.294114649 -0400
++++ tree2/slash2/tests/bigfile2.c	2017-09-11 09:47:26.008121079 -0400
+@@ -32,7 +32,7 @@
+ 	struct stat stbuf;
+ 	unsigned char *buf;
+ 	struct timeval t1, t2, t3;
+-	int fd, error = 0, readonly = 0, delete = 0;
++	int fd, error = 0, readonly = 0;
+ 	size_t i, j, c, seed, size, bsize, nblocks, remainder = 0;
+ 
+ 	bsize = 5678;
+@@ -40,7 +40,7 @@
+ 	seed = 4456;
+ 	gettimeofday(&t1, NULL);
+ 
+-	while ((c = getopt(argc, argv, "b:s:n:rd")) != -1) {
++	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
+ 		switch (c) {
+ 			case 'b':
+ 				bsize = atoi(optarg);
+@@ -54,9 +54,6 @@
+                         case 'r':
+ 				readonly = 1;
+ 				break;
+-                        case 'd':
+-				delete = 1;
+-				break;
+ 		}   
+ 	}
+ 	if (optind != argc - 1) {
+@@ -162,13 +159,6 @@
+ 			printf("Fail to fsync file, errno = %d.\007\n", errno);
+ 	}
+         close(fd);
+-	if (!error && delete) {
+-		error = unlink(filename);
+-		if (!error)
+-			printf("File has been deleted successfully.\007\n");
+-		else
+-			printf("Fail to delete file %s, errno = %d.\007\n", filename, errno);
+-	}
+ 
+ 	gettimeofday(&t2, NULL);
+ 
+diff -dru -x .git tree1/slash2/tests/bigfile3.c tree2/slash2/tests/bigfile3.c
+--- tree1/slash2/tests/bigfile3.c	2017-09-11 10:12:35.295114600 -0400
++++ tree2/slash2/tests/bigfile3.c	2017-09-11 09:47:26.009121030 -0400
+@@ -94,7 +94,7 @@
+ 	struct timeval t1, t2, t3;
+ 	int i, j, k, fd, ret, error, nthreads, readonly;
+ 	struct random_data rand_state;
+-	size_t c, off, seed, size, bsize, nblocks;
++	size_t c, seed, size, bsize, nblocks;
+ 
+ 	error = 0;
+ 	readonly = 0;
+@@ -194,7 +194,6 @@
+ 		exit(1);
+ 	}
+ 	
+-	off = 0;
+ 	for (i = 0; i < nthreads; i++) {
+ 		for (j = 0; j < nblocks; j++) {
+ 			ret = read(fd, buf, bsize);
+@@ -206,27 +205,15 @@
+ 				random_r(&rand_state, &result);
+ 				if (buf[k] != (unsigned char)result & 0xff) {
+ 					error++;
+-					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
+-						error, off+k, i, j, k, buf[k], result & 0xff);
++					printf("%4d: File corrupted (%d:%d): %2x vs %2x\n", 
++						error, i*j, k, buf[k], result & 0xff);
+ 					fflush(stdout);
+-					if (error > 2048)
+-						goto out;
+ 				}
+ 			}
+-			off += bsize;
+ 		}
+ 	}
+ 	close(fd);
+ 
+- out:
+-	if (!error) {
+-		error = unlink(filename);
+-		if (error)
+-			printf("Fail to delete file %s\n", filename);
+-		else
+-			printf("File %s has been deleted successfully\n", filename);
+-	}
+-
+ 	gettimeofday(&t2, NULL);
+ 
+ 	if (t2.tv_usec < t1.tv_usec) {
+@@ -237,13 +224,12 @@
+ 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+ 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+ 
+-	printf("\n\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
++	printf("\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
+ 		error ? "Test failed" : "Test succeeded", 
+ 		t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+ 
+-	if (error) {
+-		printf("Please check file %s.\n", filename);
++	if (error)
+ 		exit(1);
+-	}
+-	exit(0);
++	else
++		exit(0);
+ }
+diff -dru -x .git tree1/slash2/tests/bigfile.sh tree2/slash2/tests/bigfile.sh
+--- tree1/slash2/tests/bigfile.sh	2017-09-11 10:12:35.292114747 -0400
++++ tree2/slash2/tests/bigfile.sh	2017-09-11 09:47:26.006121177 -0400
+@@ -9,15 +9,6 @@
+ # All tests have passed successfully! Total time 83275.18377186 seconds
+ #
+ 
+-function bail {
+-    set +o pipefail
+-    END=`date +%s%N`
+-    ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
+-    echo
+-    echo "Some tests have failed. Total elapsed time: $ELAPSED seconds."
+-    exit 0
+-}
+-
+ if [ $# -eq 1 ]
+ then
+     mypath=$1
+@@ -30,7 +21,6 @@
+     exit 0
+ fi
+ 
+-pid=$$
+ START=`date +%s%N`
+ myhost=$(hostname -s)
+ 
+@@ -38,95 +28,92 @@
+ cc -o bigfile2 bigfile2.c
+ cc -o bigfile3 bigfile3.c -lpthread
+ 
+-set -o pipefail
+-
+-./bigfile1                                     $mypath/$myhost.bigfile1-1.$pid.dat | tee $myhost.bigfile1-1.$pid.log
++./bigfile1                                     $mypath/$myhost.bigfile1-1.dat | tee $myhost.bigfile1-1.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile2                                     $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
++./bigfile2                                     $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile2 -r                                  $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
++./bigfile2 -r                                  $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile2    -s 4499 -b 12348 -n 3993777      $mypath/$myhost.bigfile2-2.$pid.dat | tee $myhost.bigfile2-2.$pid.log
++./bigfile2    -s 4499 -b 12348 -n 3993777      $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile2 -r -d -s 4499 -b 7790               $mypath/$myhost.bigfile2-2.$pid.dat | tee $myhost.bigfile2-2.$pid.log
++./bigfile2 -r -s 4499 -b 7790                  $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3                                     $mypath/$myhost.bigfile3-1.$pid.dat | tee $myhost.bigfile3-1.$pid.log
++./bigfile3                                     $mypath/$myhost.bigfile3-1.dat | tee $myhost.bigfile3-1.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  7738 -t  6 -b  71785  -n 243656 $mypath/$myhost.bigfile3-2.$pid.dat | tee $myhost.bigfile3-2.$pid.log
++./bigfile3 -s  7738 -t  6 -b  71785  -n 243656 $mypath/$myhost.bigfile3-2.dat | tee $myhost.bigfile3-2.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  3873 -t  7 -b  91785  -n 143659 $mypath/$myhost.bigfile3-3.$pid.dat | tee $myhost.bigfile3-3.$pid.log
++./bigfile3 -s  3873 -t  7 -b  91785  -n 143659 $mypath/$myhost.bigfile3-3.dat | tee $myhost.bigfile3-3.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  3805 -t  9 -b   1785  -n 413957 $mypath/$myhost.bigfile3-4.$pid.dat | tee $myhost.bigfile3-4.$pid.log
++./bigfile3 -s  3805 -t  9 -b   1785  -n 443957 $mypath/$myhost.bigfile3-4.dat | tee $myhost.bigfile3-4.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+   
+-./bigfile3 -s  9805 -t  3 -b 111785  -n 133296 $mypath/$myhost.bigfile3-5.$pid.dat | tee $myhost.bigfile3-5.$pid.log
++./bigfile3 -s  9805 -t  3 -b 111785  -n 143206 $mypath/$myhost.bigfile3-5.dat | tee $myhost.bigfile3-5.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  1805 -t  5 -b  81025  -n 213258 $mypath/$myhost.bigfile3-6.$pid.dat | tee $myhost.bigfile3-6.$pid.log
++./bigfile3 -s  1805 -t  5 -b  81025  -n 213258 $mypath/$myhost.bigfile3-6.dat | tee $myhost.bigfile3-6.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  1234 -t 25 -b  21029  -n  10052 $mypath/$myhost.bigfile3-7.$pid.dat | tee $myhost.bigfile3-7.$pid.log
++./bigfile3 -s  1234 -t 11 -b  21029  -n 110052 $mypath/$myhost.bigfile3-7.dat | tee $myhost-bigfile3-7.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s 91234 -t 13 -b  51029  -n 207052 $mypath/$myhost.bigfile3-8.$pid.dat | tee $myhost.bigfile3-8.$pid.log
++./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.dat | tee $myhost-bigfile3-8.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-./bigfile3 -s  5555 -t 17 -b 114129  -n  77112 $mypath/$myhost.bigfile3-9.$pid.dat | tee $myhost.bigfile3-9.$pid.log
++./bigfile3 -s  5555 -t 17 -b 114129  -n 280112 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
+ if [ $? -eq 1 ]
+ then
+-    bail
++    exit 1
+ fi
+ 
+-set +o pipefail
+ 
+ END=`date +%s%N`
+ ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
+ echo
+-echo "All tests have passed successfully! Total elapsed time: $ELAPSED seconds."
++echo "All tests have passed successfully! Total time $ELAPSED seconds"
+diff -dru -x .git tree1/slash2/TODO tree2/slash2/TODO
+--- tree1/slash2/TODO	2017-09-11 10:12:35.092124553 -0400
++++ tree2/slash2/TODO	2017-09-11 09:47:25.796131473 -0400
+@@ -5962,36 +5962,3 @@
+ [1498719149.59035000 msnbrqthr8:7ffefc7f1700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe540bd2e0 x32406078/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+ [1498719149.59042200 msnbrqthr5:7ffefd3f4700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6c0bb980 x32406084/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
+ 
+-08/02/2017
+-----------
+-
+-* Investigate why read does not time out when an I/O server is down.
+-
+-* Explore options to turn off or optimize hash for each RPC.
+-
+-08/05/2017
+-----------
+-
+-Add an RPC from MDS to sliods so that you can sync up quickly (write-disable + min leases).
+-
+-08/08/2017
+-----------
+-
+-Explore race: replicate a large file and use repl-remove to remove some block maps immediately.
+-
+-
+-08/15/2017
+-----------
+-
+-rapier@client2 p]$ cp README.md /fstest/rapier/test/
+-cp: failed to close ‘/fstest/rapier/test/README.md’: Numerical result out of range
+-
+-09/02/2017
+-----------
+-
+-Don't shrink some pools - biorq, bmpce, slab etc.
+-
+-09/04/2017
+-----------
+-
+-bigfile.sh does not handle ENOSPC or slash2 lied?
+diff -dru -x .git tree1/zfs-fuse/src/lib/libzpool/dmu_tx.c tree2/zfs-fuse/src/lib/libzpool/dmu_tx.c
+--- tree1/zfs-fuse/src/lib/libzpool/dmu_tx.c	2017-09-11 10:12:39.641901439 -0400
++++ tree2/zfs-fuse/src/lib/libzpool/dmu_tx.c	2017-09-11 09:47:26.916076563 -0400
+@@ -1156,22 +1156,6 @@
+ 		return;
+ 
+ 	if (delta > 0) {
+-		/*
+-		 * 07/24/2017: Crash here delta = 393216. It is called from 
+-		 * fzap_add_cd() --> zap_expand_leaf() --> zap_grow_ptrtbl()
+-		 * --> zap_table_grow() --> dbuf_will_dirty() --> dbuf_dirty()
+-		 * --> dnode_willuse_space().
+-		 *
+-		 * 07/31/2017: More evidence: 
+-		 *
+-		 * (gdb) p delta
+-		 * $1 = 393216
+-		 * (gdb) p tx->tx_space_towrite
+-		 * $2 = 9830400
+-		 * (gdb) p tx->tx_space_written->rc_count
+-		 * $3 = 9830400
+-		 *
+-		 */
+ 		ASSERT3U(refcount_count(&tx->tx_space_written) + delta, <=,
+ 		    tx->tx_space_towrite);
+ 		(void) refcount_add_many(&tx->tx_space_written, delta, NULL);
