@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 	int i, j, k, fd, ret, error, nthreads, readonly;
 	struct random_data rand_state;
-	size_t c, seed, size, bsize, nblocks;
+	size_t c, off, seed, size, bsize, nblocks;
 
 	error = 0;
 	readonly = 0;
@@ -194,6 +194,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
+	off = 0;
 	for (i = 0; i < nthreads; i++) {
 		for (j = 0; j < nblocks; j++) {
 			ret = read(fd, buf, bsize);
@@ -205,14 +206,26 @@ int main(int argc, char *argv[])
 				random_r(&rand_state, &result);
 				if (buf[k] != (unsigned char)result & 0xff) {
 					error++;
-					printf("%4d: File corrupted (%d:%d): %2x vs %2x\n", 
-						error, i*j, k, buf[k], result & 0xff);
+					printf("%4d: File corrupted offset = %ld (%d:%d:%d): %02x vs %02x\n", 
+						error, off+k, i, j, k, buf[k], result & 0xff);
 					fflush(stdout);
+					if (error > 2048)
+						goto out;
 				}
 			}
+			off += bsize;
 		}
 	}
 	close(fd);
+
+ out:
+	if (!error) {
+		error = unlink(filename);
+		if (error)
+			printf("Fail to delete file %s\n", filename);
+		else
+			printf("File %s has been deleted successfully\n", filename);
+	}
 
 	gettimeofday(&t2, NULL);
 
@@ -224,12 +237,13 @@ int main(int argc, char *argv[])
 	t3.tv_sec = t2.tv_sec - t1.tv_sec;
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
-	printf("\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
+	printf("\n\n%s: Total elapsed time is %02d:%02d:%02d.\n", 
 		error ? "Test failed" : "Test succeeded", 
 		t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 
-	if (error)
+	if (error) {
+		printf("Please check file %s.\n", filename);
 		exit(1);
-	else
-		exit(0);
+	}
+	exit(0);
 }
