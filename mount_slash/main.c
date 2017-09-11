@@ -3422,7 +3422,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_bmapflushq);
 	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
 	pfl_listcache_destroy_registered(&msl_readaheadq);
-	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);

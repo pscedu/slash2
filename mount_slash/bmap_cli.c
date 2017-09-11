@@ -1200,22 +1200,31 @@ void
 msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+#if 0
+	struct bmpc_ioreq *r;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct bmap_pagecache_entry *e, *next;
+#endif
 
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 
 	/*
-	 * Assert that this bmap can no longer be scheduled by the write
-	 * back cache thread.
+	 * Assert that this bmap can no longer be scheduled by the 
+	 * write back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
 
-	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
-
-	bmpc_freeall(b);
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
+#if 0
+	/* DIO rq's are allowed since no cached pages are involved. */
+	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
+		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
+			psc_assert(r->biorq_flags & BIORQ_DIO);
+	}
+#endif
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }

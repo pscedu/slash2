@@ -179,7 +179,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 {
 	uint32_t aoff, alen, bmpce_off;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
-	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
 	int i, npages;
 
@@ -223,7 +222,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
 		bmpce_lookup(r, b, 0, bmpce_off,
-		    &b->bcm_fcmh->fcmh_waitq, &e);
+		    &b->bcm_fcmh->fcmh_waitq);
 	}
 	return (r);
 }
@@ -236,18 +235,19 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	int i;
 
-	BMAP_LOCK(b);
-
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		bmpce_release(e);
+		bmpce_release_locked(e, bmpc);
 	}
 	psc_dynarray_free(&r->biorq_pages);
 
+	BMAP_LOCK(b);
+
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE)
+	if (r->biorq_flags & BIORQ_ONTREE) {
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+	}
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		pll_remove(&bmpc->bmpc_biorqs_exp, r);
@@ -553,12 +553,6 @@ biorq_bmpces_setflag(struct bmpc_ioreq *r, int flag)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		newval = e->bmpce_flags | flag;
-		if (e->bmpce_flags & BMPCEF_READALC) {
-			lc_remove(&msl_readahead_pages, e);
-			lc_add(&msl_idle_pages, e);
-			newval = (newval & ~BMPCEF_READALC) |
-			    BMPCEF_IDLE;
-		}
 		e->bmpce_flags = newval;
 		BMPCE_ULOCK(e);
 	}
@@ -659,8 +653,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 					r = q->mfsrq_biorq[i];
 					if (!r)
 						break;
-					biorq_bmpces_setflag(r,
-					    BMPCEF_ACCESSED);
 				}
 
 				piov = q->mfsrq_iovs;
@@ -675,9 +667,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 						break;
 					iov[nio].iov_base = r->biorq_buf;
 					iov[nio].iov_len = r->biorq_len;
-
-					biorq_bmpces_setflag(r,
-					    BMPCEF_ACCESSED);
 				}
 				piov = iov;
 			}
@@ -692,8 +681,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, size_t len,
 				r = q->mfsrq_biorq[i];
 				if (!r)
 					break;
-				biorq_bmpces_setflag(r,
-				    BMPCEF_ACCESSED);
 			}
 		}
 		slc_fsreply_write(f, pfr, q->mfsrq_len,
@@ -2287,7 +2274,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 void
 msreadaheadthr_main(struct psc_thread *thr)
 {
-	struct bmap_pagecache_entry *pg;
 	struct readaheadrq *rarq;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
@@ -2345,9 +2331,7 @@ msreadaheadthr_main(struct psc_thread *thr)
 		for (i = 0; i < npages; i++) {
 			rc = bmpce_lookup(r, b, BMPCEF_READAHEAD,
 			    rarq->rarq_off + i * BMPC_BUFSZ,
-			    &f->fcmh_waitq, &pg);
-			if (rc == EALREADY)
-				continue;
+			    &f->fcmh_waitq);
 			if (rc)
 				break;
 		}

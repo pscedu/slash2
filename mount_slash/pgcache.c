@@ -51,7 +51,9 @@ struct psc_poolmgr	*bwc_pool;
 int			 msl_bmpces_min = 512;	 	/* 16MiB */
 int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
-struct psc_listcache	 msl_idle_pages;
+struct psc_listcache     msl_lru_pages;
+int                      msl_lru_pages_gen;
+
 struct psc_listcache	 msl_readahead_pages;
 
 RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
@@ -60,6 +62,8 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct psc_listcache	 page_buffers;
 int			 page_buffers_count;	/* total, including free */
+
+__static int bmpce_reaper(struct psc_poolmgr *);
 
 void
 msl_pgcache_init(void)
@@ -227,76 +231,51 @@ bmpce_init(struct bmap_pagecache_entry *e)
 }
 
 int
-_bmpce_lookup(const struct pfl_callerinfo *pci,
-    __unusedx struct bmpc_ioreq *r, struct bmap *b, int flags,
-    uint32_t off, struct psc_waitq *wq,
-    struct bmap_pagecache_entry **ep)
+bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+    uint32_t off, struct psc_waitq *wq)
 {
-	int remove_idle = 0, remove_readalc = 0, wrlock = 0;
-	struct bmap_pagecache_entry q, *e = NULL, *e2 = NULL;
+	int rc = 0, wrlock = 0;
+	struct bmap_pagecache_entry q, *e, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
-	void *page;
+	void *page = NULL;
+	struct timespec tm;
 
 	bmpc = bmap_2_bmpc(b);
 	q.bmpce_off = off;
 
-	pfl_rwlock_rdlock(&bci->bci_rwlock);
+ restart:
+
+	if (wrlock)
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
+	else
+		pfl_rwlock_rdlock(&bci->bci_rwlock);
 
 	for (;;) {
 		e = RB_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, &q);
 		if (e) {
+			if (flags & BMPCEF_READAHEAD) {
+				rc = EEXIST;
+				break;
+			}
 			BMPCE_LOCK(e);
 			/*
 			 * It is possible that the EIO flag can be cleared
 			 * and the page is re-used now.
 			 */
-			if (e->bmpce_flags & BMPCEF_EIO) {
-				if (e->bmpce_flags & BMPCEF_READAHEAD) {
-					e->bmpce_flags &= ~BMPCEF_EIO;
-				} else {
-					DEBUG_BMPCE(PLL_WARN, e,
-					    "skipping an EIO page");
-					OPSTAT_INCR("msl.bmpce-eio");
-					BMPCE_ULOCK(e);
-
- retry:
-					psc_waitq_waitrelf_us(
-					    &b->bcm_fcmh->fcmh_waitq,
-					    PFL_LOCKPRIMT_RWLOCK,
-					    &bci->bci_rwlock, 100);
-					if (wrlock)
-						pfl_rwlock_wrlock(
-						    &bci->bci_rwlock);
-					else
-						pfl_rwlock_rdlock(
-						    &bci->bci_rwlock);
-					continue;
-				}
-			}
-			if (e->bmpce_flags & BMPCEF_TOFREE) {
+			if ((e->bmpce_flags & BMPCEF_EIO) ||
+			    (e->bmpce_flags & BMPCEF_TOFREE) ||
+			    (e->bmpce_flags & BMPCEF_DISCARD)) {
 				BMPCE_ULOCK(e);
-				goto retry;
+				pfl_rwlock_unlock(&bci->bci_rwlock);
+				tm.tv_sec = 0;
+				tm.tv_nsec = 100000;
+				nanosleep(&tm, NULL);
+				goto restart;
 			}
 
-			if (e->bmpce_ref == 1 &&
-			    !(e->bmpce_flags & BMPCEF_REAPED)) {
-				if (e->bmpce_flags &
-				    BMPCEF_IDLE) {
-					e->bmpce_flags &=
-					    ~BMPCEF_IDLE;
-					remove_idle = 1;
-				} else if (e->bmpce_flags &
-				    BMPCEF_READALC) {
-					e->bmpce_flags &=
-					    ~BMPCEF_READALC;
-					remove_readalc = 1;
-				} else
-					e->bmpce_ref++;
-			} else
-				e->bmpce_ref++;
-			DEBUG_BMPCE(PLL_DIAG, e,
-			    "add reference");
+			e->bmpce_ref++;
+			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
 			BMPCE_ULOCK(e);
 
 			OPSTAT_INCR("msl.bmpce-cache-hit");
@@ -305,15 +284,16 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 
 		if (e2 == NULL) {
 			pfl_rwlock_unlock(&bci->bci_rwlock);
-
 			if (flags & BMPCEF_READAHEAD) {
 				e2 = psc_pool_shallowget(bmpce_pool);
-				if (e2 == NULL)
-					return (EAGAIN);
+				if (e2 == NULL) {
+					rc = EAGAIN;
+					goto out;
+				}
 				page = msl_pgcache_get(0);
 				if (page == NULL) {
-					psc_pool_return(bmpce_pool, e2);
-					return (EAGAIN);
+					rc = EAGAIN;
+					goto out;
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
@@ -326,7 +306,6 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			OPSTAT_INCR("msl.bmpce-cache-miss");
 
 			e = e2;
-			e2 = NULL;
 			bmpce_init(e);
 			e->bmpce_off = off;
 			e->bmpce_ref = 1;
@@ -337,8 +316,13 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 			e->bmpce_bmap = b;
 			e->bmpce_base = page;
 
+			e2 = NULL;
+			page = NULL;
+
 			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
+
+			bmap_op_start_type(b, BMAP_OPCNT_BMPCE);
 
 			DEBUG_BMPCE(PLL_DIAG, e, "creating");
 			break;
@@ -346,102 +330,61 @@ _bmpce_lookup(const struct pfl_callerinfo *pci,
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 
+ out:
+
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		msl_pgcache_put(page);
+		if (page)
+			msl_pgcache_put(page);
 		psc_pool_return(bmpce_pool, e2);
 	}
 
-	if (remove_idle) {
-		DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
-		lc_remove(&msl_idle_pages, e);
-	} else if (remove_readalc) {
-		DEBUG_BMPCE(PLL_DIAG, e, "removing from readalc");
-		lc_remove(&msl_readahead_pages, e);
-	}
-
-	psc_dynarray_add(&r->biorq_pages, e);
+	if (!rc)
+		psc_dynarray_add(&r->biorq_pages, e);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "registering bmpce@%p "
-	    "n=%d foff=%"PRIx64, e, psc_dynarray_len(&r->biorq_pages),
-	    off + bmap_foff(b));
+	    "n=%d foff=%"PRIx64" rc = %d", 
+	    e, psc_dynarray_len(&r->biorq_pages), off + bmap_foff(b), rc);
 
-	*ep = e;
-	return (0);
+	return (rc);
 }
 
 void
-bmpce_free(struct bmap_pagecache_entry *e)
+bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(e->bmpce_bmap);
-	struct bmap_cli_info *bci = bmap_2_bci(e->bmpce_bmap);
-	int locked;
+	struct bmap *b = bmpc_2_bmap(bmpc);
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+
+	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
+
+	BMPCE_LOCK_ENSURE(e);
 
 	psc_assert(e->bmpce_ref == 0);
-	e->bmpce_flags |= BMPCEF_TOFREE;
+	psc_assert(e->bmpce_flags & BMPCEF_TOFREE);
+
+	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
+
+	if (e->bmpce_flags & BMPCEF_READAHEAD)
+		OPSTAT_INCR("msl.readahead-waste");
 
 	BMPCE_ULOCK(e);
 
-	locked = pfl_rwlock_haswrlock(&bci->bci_rwlock);
-	if (!locked)
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
-	if (!locked)
-		pfl_rwlock_unlock(&bci->bci_rwlock);
-
-	if ((e->bmpce_flags & (BMPCEF_READAHEAD | BMPCEF_ACCESSED)) ==
-	    BMPCEF_READAHEAD)
-		OPSTAT2_ADD("msl.readahead-waste", BMPC_BUFSZ);
-
-	DEBUG_BMPCE(PLL_DIAG, e, "destroying, locked = %d", locked);
 
 	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
 }
 
 void
-bmpce_release(struct bmap_pagecache_entry *e)
+bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
+	struct bmap *b = e->bmpce_bmap;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+
 	LOCK_ENSURE(&e->bmpce_lock);
 
+	psc_assert(bmpc == bmap_2_bmpc(b));
 	psc_assert(e->bmpce_ref > 0);
-
-	if (e->bmpce_ref == 1 && (e->bmpce_flags & (BMPCEF_DATARDY |
-	    BMPCEF_EIO | BMPCEF_DISCARD)) == BMPCEF_DATARDY) {
-		BMPCE_ULOCK(e);
-
-		/*
-		 * XXX Need to recheck flags after grabbing the lock.
-		 */
-		if ((e->bmpce_flags & (BMPCEF_READAHEAD |
-		    BMPCEF_ACCESSED)) == BMPCEF_READAHEAD) {
-			LIST_CACHE_LOCK(&msl_readahead_pages);
-			BMPCE_LOCK(e);
-			if (e->bmpce_ref == 1) {
-				DEBUG_BMPCE(PLL_DIAG, e,
-				    "add to readahead");
-				lc_add(&msl_readahead_pages, e);
-				e->bmpce_flags |= BMPCEF_READALC;
-				BMPCE_ULOCK(e);
-				LIST_CACHE_ULOCK(&msl_readahead_pages);
-				return;
-			}
-			LIST_CACHE_ULOCK(&msl_readahead_pages);
-		} else {
-			LIST_CACHE_LOCK(&msl_idle_pages);
-			BMPCE_LOCK(e);
-			if (e->bmpce_ref == 1) {
-				DEBUG_BMPCE(PLL_DIAG, e, "add to idle");
-				lc_add(&msl_idle_pages, e);
-				e->bmpce_flags |= BMPCEF_IDLE;
-				BMPCE_ULOCK(e);
-				LIST_CACHE_ULOCK(&msl_idle_pages);
-				return;
-			}
-			LIST_CACHE_ULOCK(&msl_idle_pages);
-		}
-	}
-
 	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
 	if (e->bmpce_ref > 0) {
@@ -452,7 +395,46 @@ bmpce_release(struct bmap_pagecache_entry *e)
 	/* sanity checks */
 	psc_assert(pll_empty(&e->bmpce_pndgaios));
 
-	bmpce_free(e);
+	/*
+ 	 * This has the side effect of putting the page
+ 	 * to the end of the list.
+ 	 */
+	if (e->bmpce_flags & BMPCEF_LRU) {
+		e->bmpce_flags &= ~BMPCEF_LRU;
+		lc_remove(&msl_lru_pages, e);
+		msl_lru_pages_gen++;
+	}
+
+	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
+	   !(e->bmpce_flags & BMPCEF_EIO) &&
+	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
+	   !(e->bmpce_flags & BMPCEF_DISCARD)) { 
+		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
+		e->bmpce_flags |= BMPCEF_LRU;
+
+		/*
+ 		 * The other side must use trylock to
+ 		 * avoid a deadlock.
+ 		 */
+		lc_add(&msl_lru_pages, e);
+		msl_lru_pages_gen++;
+
+		BMPCE_ULOCK(e);
+		if (bmpce_pool->ppm_nfree < 3) {
+			OPSTAT_INCR("msl.bmpce-nfree-reap");
+			bmpce_reaper(bmpce_pool);
+		}
+		return;
+	}
+
+	e->bmpce_flags |= BMPCEF_TOFREE;
+	BMPCE_ULOCK(e);
+
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
+	BMPCE_LOCK(e);
+	bmpce_free(e, bmpc);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
+	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 }
 
 struct bmpc_ioreq *
@@ -494,63 +476,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 	return (r);
 }
-
-/*
- * Called when a bmap is being released.  Iterate across the tree
- * freeing each bmpce.  Prior to being invoked, all bmpce's must be idle
- * (i.e. have zero refcnts).
- */
-void
-bmpc_freeall(struct bmap *b)
-{
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct bmap_pagecache_entry *e, *next;
-
-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
-
-	/* DIO rq's are allowed since no cached pages are involved. */
-	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
-		struct bmpc_ioreq *r;
-
-		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-			psc_assert(r->biorq_flags & BIORQ_DIO);
-	}
-
- restart:
-	/*
-	 * Remove any LRU pages still associated with the bmap.
-	 * Only readahead pages can be encountered here. If we
-	 * don't treat readahead pages specially, this code can
-	 * go away some day.
-	 */
-	pfl_rwlock_wrlock(&bci->bci_rwlock);
-	for (e = RB_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;
-	    e = next) {
-		next = RB_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
-
-		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCEF_DISCARD;
-		if (e->bmpce_flags & BMPCEF_REAPED) {
-			BMPCE_ULOCK(e);
-			pfl_rwlock_unlock(&bci->bci_rwlock);
-			goto restart;
-		}
-		if (e->bmpce_flags & BMPCEF_IDLE) {
-			DEBUG_BMPCE(PLL_DIAG, e, "removing from idle");
-			lc_remove(&msl_idle_pages, e);
-			bmpce_release(e);
-		} else if (e->bmpce_flags & BMPCEF_READALC) {
-			DEBUG_BMPCE(PLL_DIAG, e,
-			    "removing from readalc");
-			lc_remove(&msl_readahead_pages, e);
-			bmpce_release(e);
-		} else
-			psc_fatalx("impossible");
-	}
-	pfl_rwlock_unlock(&bci->bci_rwlock);
-}
-
 
 void
 bmpc_expire_biorqs(struct bmap_pagecache *bmpc)
@@ -603,8 +528,7 @@ bmpc_biorqs_flush(struct bmap *b)
 		BMAP_ULOCK(b);
 		f = b->bcm_fcmh;
 		FCMH_LOCK(f);
-		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock,
-		    100);
+		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
 		BMAP_LOCK(b);
 	}
 }
@@ -648,40 +572,75 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		OPSTAT_INCR("msl.bmpce-reap-spin");
 	LIST_CACHE_ULOCK(lc);
 }
-/*
- * Reap pages from the idle and/or readahead lists.  The readahead list
- * is only considered if we are desperate and unable to reap anything
- * else.  In such situations (i.e. when no pages are readily available),
- * no more readahead should be issued.
- */
+
+/* Called from psc_pool_reap() */
 __static int
-bmpce_reap(struct psc_poolmgr *m)
+bmpce_reaper(struct psc_poolmgr *m)
 {
+	int i, idle, nitems, nfreed;
 	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_pagecache_entry *e;
-	int nfreed, i;
+	struct bmap_pagecache_entry *e, *t;
+	struct bmap_pagecache *bmpc;
+	struct bmap *b;
+	struct bmap_cli_info *bci;
 
-	/* 
-	 * XXX A readahead page is not necessarily more valuable
-	 * until it is proven so.
-	 */
-	if (m->ppm_flags & PPMF_DESPERATE)
-		bmpce_reap_list(&a, &msl_readahead_pages,
-		    BMPCEF_READALC, m);
+	psc_assert(m == bmpce_pool);
 
-	if (psc_dynarray_len(&a) < psc_atomic32_read(&m->ppm_nwaiters))
-		bmpce_reap_list(&a, &msl_idle_pages, BMPCEF_IDLE, m);
+	POOL_LOCK(bmpce_pool);
+	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
+	bmpce_pool->ppm_flags &= ~PPMF_IDLEREAP;
+	POOL_ULOCK(bmpce_pool);
 
-	nfreed = psc_dynarray_len(&a);
+	/* Use two loops to reduce lock contention */
+	LIST_CACHE_LOCK(&msl_lru_pages);
+	if (idle)
+		nitems = lc_nitems(&msl_lru_pages) / 20;
+	else
+		nitems = lc_nitems(&msl_lru_pages) / 5;
+	if (nitems < 5)
+		nitems = 5;
+	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
+		if (!BMPCE_TRYLOCK(e))
+			continue;
+		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
+
+		e->bmpce_flags |= BMPCEF_TOFREE;
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+
+		if (!idle)
+			msl_lru_pages_gen++;
+
+		lc_remove(&msl_lru_pages, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
+
+		psc_dynarray_add(&a, e);
+		BMPCE_ULOCK(e);
+
+		if (psc_dynarray_len(&a) >= nitems)
+			break;
+	}
+	LIST_CACHE_ULOCK(&msl_lru_pages);
 
 	DYNARRAY_FOREACH(e, i, &a) {
+ 		b = e->bmpce_bmap;
+		bci = bmap_2_bci(b);
+ 		bmpc = bmap_2_bmpc(b);
+
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
 		BMPCE_LOCK(e);
-		bmpce_release(e);
+		bmpce_free(e, bmpc);
+		pfl_rwlock_unlock(&bci->bci_rwlock);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 
+	nfreed = psc_dynarray_len(&a);
 	psc_dynarray_free(&a);
 
-	OPSTAT_ADD("msl.bmpce-reap", nfreed);
+	psclog_diag("nfreed=%d, waiters=%d", nfreed,
+	    psc_atomic32_read(&m->ppm_nwaiters));
 
 	return (nfreed);
 }
@@ -700,7 +659,7 @@ bmpc_global_init(void)
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
-	    bmpce_reap, "bmpce");
+	    bmpce_reaper, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
 	msl_pgcache_init();
@@ -710,10 +669,8 @@ bmpc_global_init(void)
 	    64, 0, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
-	lc_reginit(&msl_idle_pages, struct bmap_pagecache_entry,
-	    bmpce_lentry, "idlepages");
-	lc_reginit(&msl_readahead_pages, struct bmap_pagecache_entry,
-	    bmpce_lentry, "readapages");
+	lc_reginit(&msl_lru_pages, struct bmap_pagecache_entry,
+		bmpce_lentry, "lru-pages");
 }
 
 void

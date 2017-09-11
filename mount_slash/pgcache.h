@@ -86,13 +86,14 @@ struct bmap_page_entry {
 #define BMPCEF_FAULTING		(1 <<  1)	/* loading via RPC */
 #define BMPCEF_TOFREE		(1 <<  2)	/* eviction in progress */
 #define BMPCEF_EIO		(1 <<  3)	/* I/O error */
-#define BMPCEF_AIOWAIT		(1 <<  4)	/* wait on async read */
-#define BMPCEF_DISCARD		(1 <<  5)	/* don't cache after I/O is done */
-#define BMPCEF_READAHEAD	(1 <<  6)	/* populated from readahead */
-#define BMPCEF_ACCESSED		(1 <<  7)	/* bmpce was used before reap (readahead) */
-#define BMPCEF_IDLE		(1 <<  8)	/* on idle_pages listcache */
-#define BMPCEF_REAPED		(1 <<  9)	/* reaper has removed us from LRU listcache */
-#define BMPCEF_READALC		(1 << 10)	/* on readahead_pages listcache */
+#define BMPCEF_LRU              (1 <<  4)       /* on LRU list */
+#define BMPCEF_AIOWAIT		(1 <<  5)	/* wait on async read */
+#define BMPCEF_DISCARD		(1 <<  6)	/* don't cache after I/O is done */
+#define BMPCEF_READAHEAD	(1 <<  7)	/* populated from readahead */
+#define BMPCEF_ACCESSED		(1 <<  8)	/* bmpce was used before reap (readahead) */
+#define BMPCEF_IDLE		(1 <<  9)	/* on idle_pages listcache */
+#define BMPCEF_REAPED		(1 << 10)	/* reaper has removed us from LRU listcache */
+#define BMPCEF_READALC		(1 << 11)	/* on readahead_pages listcache */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -300,14 +301,12 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmap *,
 	    char *, uint32_t, uint32_t, int);
 
-#define bmpce_lookup(r, b, fl, off, wq, ep)				\
-	_bmpce_lookup(PFL_CALLERINFO(), (r), (b), (fl), (off), (wq), (ep))
+int      bmpce_lookup(struct bmpc_ioreq *,
+             struct bmap *, int, uint32_t, struct psc_waitq *);
 
 void	 bmpce_init(struct bmap_pagecache_entry *);
-int	_bmpce_lookup(const struct pfl_callerinfo *, struct bmpc_ioreq *,
-	     struct bmap *, int, uint32_t, struct psc_waitq *,
-	     struct bmap_pagecache_entry **);
-void	 bmpce_release(struct bmap_pagecache_entry *);
+void     bmpce_release_locked(struct bmap_pagecache_entry *,
+            struct bmap_pagecache *);
 
 struct bmpc_write_coalescer *	 bwc_alloc(void);
 void				 bwc_free(struct bmpc_write_coalescer *);

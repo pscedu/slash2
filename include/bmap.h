@@ -376,6 +376,7 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
 	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
 	BMAP_OPCNT_BIORQ,		/* all: IO request */
+	BMAP_OPCNT_BMPCE,		/* CLI: page */
 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
 	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
