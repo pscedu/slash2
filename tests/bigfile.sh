@@ -46,6 +46,12 @@ then
     bail
 fi
 
+./bigfile1 -n 20 -s 9901                       $mypath/$myhost.bigfile1-2.$pid.dat | tee $myhost.bigfile1-2.$pid.log
+if [ $? -eq 1 ]
+then
+    bail
+fi
+
 ./bigfile2                                     $mypath/$myhost.bigfile2-1.$pid.dat | tee $myhost.bigfile2-1.$pid.log
 if [ $? -eq 1 ]
 then
