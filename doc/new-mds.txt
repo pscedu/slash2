@@ -5,6 +5,9 @@ Motivation:
 
 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
 
+		<-- might take advantage of the new features of kernel resident file system
+		    such as quota.
+
 	* All metadata are user visible files.
 
 	* Help MDS run as non-root.
@@ -23,6 +26,8 @@ Motivation:
 
 	* After removing a huge number of files in a directory, the ls performance of
 	  that directory never recovers (after reboot, etc).  Sounds like a performance bug.
+
+	* No more ZFS-fuse crashes and ZFS arc_evict issues.
 
 Feasibility:
 
@@ -79,8 +84,15 @@ Obstacle:
 		- since we have on-disk format change, we might as well do the following:
 
 			- combine ino and inox, add a version to inode
-			- increase number of IOS per inode from 64 to 128
+			- increase number of IOS per inode from 64 to 1024
 			- get rid of CRC stuff.
+			- use extended attributes to specify the target IO servers
+			  for each file.
+
+		- Add generation number to each data structure that can be updated atomically
+		  for log replay.  Also protect each data structure with CRC checksum.
+
+		- Add version number to each data structures to allow piece meal upgrade.
 
 	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
 	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
