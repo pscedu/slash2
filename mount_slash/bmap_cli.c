@@ -584,6 +584,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -683,7 +684,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			BMAP_LOCK(b);
 		}
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
+			   "expire = %ld, rc=%d", 
+			    bci->bci_etime.tv_sec, rc);
 		BMAP_LOCK(b);
 	}
 
