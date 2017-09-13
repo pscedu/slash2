@@ -160,8 +160,9 @@ struct msl_fhent {
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
-	off_t				 mfh_predio_lastoff;	/* last offset */
-	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
+	off_t				 mfh_predio_lastoff;	/* last I/O offset */
+	off_t				 mfh_predio_lastsize;	/* last I/O size */
+	off_t				 mfh_predio_off;	/* next predio I/O offset */
 	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */
@@ -392,9 +393,10 @@ extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
-extern int			 msl_predio_issue_maxpages;
-extern int			 msl_predio_issue_minpages;
-extern int			 msl_predio_window_size;
+
+extern int			 msl_predio_max_pages;
+extern int			 msl_predio_pipe_size;
+
 extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_repl_enable;

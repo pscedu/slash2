@@ -79,9 +79,8 @@ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-int			 msl_predio_window_size = 4 * 1024 * 1024;
-int			 msl_predio_issue_minpages = LNET_MTU / BMPC_BUFSZ;
-int			 msl_predio_issue_maxpages = SLASH_BMAP_SIZE / BMPC_BUFSZ * 8;
+int                      msl_predio_pipe_size = 256;
+int                      msl_predio_max_pages = 64;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -1823,6 +1822,59 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 	return (tbytes);
 }
 
+void
+mfh_track_predictive_io(struct msl_fhent *mfh, size_t size, off_t off,
+    enum rw rw)
+{
+	int delta = BMPC_BUFSZ;
+
+	MFH_LOCK(mfh);
+
+	if (rw == SL_WRITE) {
+		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
+			mfh->mfh_flags |= MFHF_TRACKING_WA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_lastsize = 0;
+		}
+	} else {
+		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
+			mfh->mfh_flags |= MFHF_TRACKING_RA;
+			mfh->mfh_predio_off = 0;
+			mfh->mfh_predio_nseq = 0;
+			mfh->mfh_predio_lastoff = 0;
+			mfh->mfh_predio_lastsize = 0;
+		}
+	}
+
+	/*
+	 * If the first read starts from offset 0, the following will
+	 * automatically trigger a read-ahead because as part of the
+	 * msl_fhent structure, the fields are zeroed during allocation.
+	 */
+	if (off == mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize) {
+		OPSTAT_INCR("msl.predio-sequential");
+		mfh->mfh_predio_nseq++;
+		goto out;
+	}
+	if (off > mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize + delta ||
+	    off < mfh->mfh_predio_lastoff + mfh->mfh_predio_lastsize - delta) {
+		OPSTAT_INCR("msl.predio-reset");
+		mfh->mfh_predio_off = 0;
+		mfh->mfh_predio_nseq = 0;
+		goto out;
+	}
+	OPSTAT_INCR("msl.predio-semi-sequential");
+
+ out:
+	mfh->mfh_predio_lastoff = off;
+	mfh->mfh_predio_lastsize = size;
+
+	MFH_ULOCK(mfh);
+}
 /*
  * Calculate the next predictive I/O for an actual I/O request.
  *
@@ -1845,120 +1897,84 @@ __static void
 msl_issue_predio(struct msl_fhent *mfh, sl_bmapno_t bno, enum rw rw,
     uint32_t off, int npages)
 {
-	sl_bmapno_t orig_bno = bno;
 	int bsize, tpages, rapages;
-	off_t absoff, newissued;
 	struct fidc_membh *f;
+	off_t raoff;
 
+	f = mfh->mfh_fcmh;
 	MFH_LOCK(mfh);
 
-	/*
-	 * Allow either write I/O tracking or read I/O tracking but not
-	 * both.
-	 */
-	if (rw == SL_WRITE) {
-		if (mfh->mfh_flags & MFHF_TRACKING_RA) {
-			mfh->mfh_flags &= ~MFHF_TRACKING_RA;
-			mfh->mfh_flags |= MFHF_TRACKING_WA;
-			mfh->mfh_predio_lastoff = 0;
-			mfh->mfh_predio_nseq = 0;
-		} else if ((mfh->mfh_flags & MFHF_TRACKING_WA) == 0) {
-			mfh->mfh_flags |= MFHF_TRACKING_WA;
+	if (!mfh->mfh_predio_nseq)
+		PFL_GOTOERR(out, 0);
+
+	if (mfh->mfh_flags & MFHF_TRACKING_WA) {
+		if (BMPC_BUFSZ * msl_predio_pipe_size >= SLASH_BMAP_SIZE ||
+		    off + npages * BMPC_BUFSZ >= 
+		    SLASH_BMAP_SIZE - BMPC_BUFSZ * msl_predio_pipe_size) {
+			OPSTAT_INCR("msl.predio-write-enqueue");
+			predio_enqueue(&f->fcmh_fg, bno+1, rw, 0, 0);
 		}
-	} else {
-		if (mfh->mfh_flags & MFHF_TRACKING_WA) {
-			mfh->mfh_flags &= ~MFHF_TRACKING_WA;
-			mfh->mfh_flags |= MFHF_TRACKING_RA;
-			mfh->mfh_predio_lastoff = 0;
-			mfh->mfh_predio_nseq = 0;
-		} else if ((mfh->mfh_flags & MFHF_TRACKING_RA) == 0) {
-			mfh->mfh_flags |= MFHF_TRACKING_RA;
-		}
-	}
-
-	absoff = bno * SLASH_BMAP_SIZE + off;
-
-	/*
-	 * If the first read starts from offset 0, the following will
-	 * trigger a read-ahead.  This is because as part of the
-	 * msl_fhent structure, the fields are zeroed during allocation.
-	 *
-	 * Ensure this I/O is within a window from our expectation.
-	 * This allows predictive I/O amidst slightly out of order
-	 * (typically because of application threading) or skipped I/Os.
-	 */
-	if (labs(absoff - mfh->mfh_predio_lastoff) <
-	    msl_predio_window_size) {
-		if (mfh->mfh_predio_nseq) {
-			mfh->mfh_predio_nseq = MIN(
-			    mfh->mfh_predio_nseq * 2,
-			    msl_predio_issue_maxpages);
-		} else
-			mfh->mfh_predio_nseq = npages;
-	} else
-		mfh->mfh_predio_nseq = 0;
-
-	mfh->mfh_predio_lastoff = absoff;
-
-	if (mfh->mfh_predio_nseq)
-		OPSTAT_INCR("msl.predio-window-hit");
-	else {
-		OPSTAT_INCR("msl.predio-window-miss");
 		PFL_GOTOERR(out, 0);
 	}
 
-	rapages = mfh->mfh_predio_nseq;
+	raoff = bno * SLASH_BMAP_SIZE + off + npages * BMPC_BUFSZ;
+	if (raoff + msl_predio_pipe_size * BMPC_BUFSZ < mfh->mfh_predio_off) {
+		OPSTAT_INCR("msl.predio-pipe-hit");
+		PFL_GOTOERR(out, 0);
+	}
+	OPSTAT_INCR("msl.predio-pipe-miss");
 
-	/* Note: this can extend past current EOF. */
-	newissued = absoff + rapages * BMPC_BUFSZ;
-	if (newissued < mfh->mfh_predio_issued) {
-		/*
-		 * Our tracking is incoherent; we'll sync up with the
-		 * application now.
-		 */
-	} else {
-		/* Don't issue too soon after a previous issue. */
-		rapages = (newissued - mfh->mfh_predio_issued) /
-		    BMPC_BUFSZ;
-		if (rapages < msl_predio_issue_minpages)
-			PFL_GOTOERR(out, 0);
-		bno = mfh->mfh_predio_issued / SLASH_BMAP_SIZE;
-		off = mfh->mfh_predio_issued % SLASH_BMAP_SIZE;
+	/* Adjust raoff based on our position in the pipe */
+	if (mfh->mfh_predio_off) {
+		if (mfh->mfh_predio_off > raoff) {
+			OPSTAT_INCR("msl.predio-pipe-enlarge");
+			raoff = mfh->mfh_predio_off;
+		} else
+			OPSTAT_INCR("msl.predio-pipe-overrun");
 	}
 
-	f = mfh->mfh_fcmh;
-	/* Now issue an I/O for each bmap in the prediction. */
-	for (; rapages && bno < fcmh_2_nbmaps(f);
-	    rapages -= tpages, off += tpages * BMPC_BUFSZ) {
-		if (off >= SLASH_BMAP_SIZE) {
-			off = 0;
-			bno++;
-		}
+	/* convert to bmap relative */
+	bno = raoff / SLASH_BMAP_SIZE;
+	raoff = raoff - bno * SLASH_BMAP_SIZE;
+	rapages = MIN(MAX(mfh->mfh_predio_nseq*2, npages), msl_predio_max_pages);
+
+#ifdef MYDEBUG
+	psclog_max("readahead: FID = "SLPRI_FID", bno = %d, offset = %ld, size = %d", 
+	    fcmh_2_fid(f), bno, raoff, rapages);
+#endif
+
+	/* 
+	 * Now issue an I/O for each bmap in the prediction. This loop
+	 * can handle read-ahead into multiple bmaps.
+	 */
+	for (; rapages && bno < fcmh_2_nbmaps(f); rapages -= tpages) {
+
 		bsize = SLASH_BMAP_SIZE;
-		/* Trim a readahead that extends past EOF. */
-		if (rw == SL_READ && bno == fcmh_2_nbmaps(f) - 1) {
+		if (bno == fcmh_2_nbmaps(f) - 1) {
 			bsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 			if (bsize == 0 && fcmh_2_fsz(f))
 				bsize = SLASH_BMAP_SIZE;
 		}
-		tpages = howmany(bsize - off, BMPC_BUFSZ);
+		tpages = howmany(bsize - raoff, BMPC_BUFSZ);
 		if (!tpages)
 			break;
+#if 0
+		if (tpages > BMPC_MAXBUFSRPC)
+			tpages = BMPC_MAXBUFSRPC;
+#endif
 		if (tpages > rapages)
 			tpages = rapages;
 
-		/*
-		 * Write-ahead is only used for acquiring bmap leases
-		 * predictively, not for preparing pages, so skip
-		 * unnecessary work.
-		 */
-		if (rw == SL_WRITE && bno == orig_bno)
-			continue;
+		predio_enqueue(&f->fcmh_fg, bno, rw, raoff, tpages);
 
-		predio_enqueue(&f->fcmh_fg, bno, rw, off, tpages);
+		raoff += tpages * BMPC_BUFSZ;
+		if (raoff >= SLASH_BMAP_SIZE) {
+			raoff = 0;
+			bno++;
+		}
 	}
 
-	mfh->mfh_predio_issued = bno * SLASH_BMAP_SIZE + off;
+	mfh->mfh_predio_off = bno * SLASH_BMAP_SIZE + raoff;
 
  out:
 	MFH_ULOCK(mfh);
@@ -2092,6 +2108,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (size + (uint64_t)off > fsz)
 			size = fsz - off;
 	}
+	mfh_track_predictive_io(mfh, size, off, rw);
 
 	FCMH_ULOCK(f);
 
@@ -2207,7 +2224,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Step 2: trigger read-ahead or write-ahead if necessary. */
-	if (!msl_predio_issue_maxpages || b->bcm_flags & BMAPF_DIO)
+	if (!msl_predio_max_pages || b->bcm_flags & BMAPF_DIO)
 		goto out1;
 
 	/* Note that i can only be 0 or 1 after the above loop. */
