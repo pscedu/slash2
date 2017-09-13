@@ -835,7 +835,6 @@ msl_bmap_reap_init(struct bmap *b)
 	 * Take the reaper ref cnt early and place the bmap onto the
 	 * reap list.
 	 */
-	b->bcm_flags |= BMAPF_TIMEOQ;
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -853,6 +852,12 @@ msl_bmap_reap_init(struct bmap *b)
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAPF_DIO;
 	}
+	if (b->bcm_flags & BMAPF_TIMEOQ) {
+		lc_move2tail(&msl_bmaptimeoutq, bci);
+		return;
+	}
+
+	b->bcm_flags |= BMAPF_TIMEOQ;
 
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
