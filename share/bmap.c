@@ -260,6 +260,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 
+ retrieve:
+
 	b->bcm_flags |= BMAPF_LOADING;
 	DEBUG_BMAP(PLL_DIAG, b, "loading bmap; flags=%d", flags);
 	BMAP_ULOCK(b);
@@ -321,6 +323,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
+		if (rc == -ENOENT) {
+			b->bcm_flags &= ~BMAPF_LOADED;
+			goto retrieve;
+		}
 	}
 
  out:
