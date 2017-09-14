@@ -852,6 +852,10 @@ msl_bmap_reap_init(struct bmap *b)
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAPF_DIO;
 	}
+	/*
+ 	 * This is needed because we retrieve the bmap after we
+ 	 * fail to change the bmap mode.
+ 	 */
 	if (b->bcm_flags & BMAPF_TIMEOQ) {
 		lc_move2tail(&msl_bmaptimeoutq, bci);
 		return;
