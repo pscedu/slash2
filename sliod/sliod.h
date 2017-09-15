@@ -58,10 +58,13 @@ enum {
 	SLITHRT_RIM,			/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
 	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
+	SLITHRT_READAHEAD,		/* sliver read-ahead */
 	SLITHRT_STATFS,			/* statvfs(2) updater */
 	SLITHRT_USKLNDPL,		/* userland socket Lustre net dev poll thr */
 	SLITHRT_WORKER			/* generic worker thread */
 };
+
+#define NSLVR_READAHEAD_THRS	8
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
@@ -119,6 +122,7 @@ extern struct psc_listcache	 sli_fcmh_dirty;
 extern int			 sli_sync_max_writes;
 extern int			 sli_min_space_reserve_gb;
 extern int			 sli_min_space_reserve_pct;
+extern int			 sli_predio_max_slivers;
 extern struct psc_thread	*sliconnthr;
 
 extern uint64_t			 sli_current_reclaim_xid;

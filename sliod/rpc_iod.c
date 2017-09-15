@@ -257,11 +257,16 @@ sli_rpc_newreq(struct slrpc_cservice *csvc, int op,
 		PFL_GETTIMESPEC(&now);
 
 		if (timespeccmp(&now, &sli_ssfb_send, >)) {
+			/*
+			 * slistatfsthr_main() wake up every 60
+			 * seconds, so 30 seconds should be more
+			 * than enough.
+			 */
 			qlens[nq++] = sizeof(struct srt_statfs) +
 			    sizeof(struct srt_bwqueued);
 			spinlock(&sli_ssfb_lock);
 			sli_ssfb_send = now;
-			sli_ssfb_send.tv_sec += 1;
+			sli_ssfb_send.tv_sec += 30;
 			freelock(&sli_ssfb_lock);
 			flags |= SLRPC_MSGF_STATFS;
 		}

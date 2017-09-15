@@ -309,8 +309,8 @@ sli_bml_process_release(struct bmap_iod_rls *brls)
 			goto out;
 		}
 	}
-	DEBUG_BMAP(PLL_DIAG, b, "brls=%p seq=%"PRId64" key=%"PRId64,
-	    brls, sbd->sbd_seq, sbd->sbd_key);
+	DEBUG_BMAP(PLL_DIAG, b, "brls=%p seq=%"PRId64,
+	    brls, sbd->sbd_seq);
 
 	if (pll_empty(&bii->bii_rls)) {
 		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
@@ -567,7 +567,7 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	NULL,				/* bmo_reapf() */
+	NULL,
 	iod_bmap_init,			/* bmo_init_privatef() */
 	iod_bmap_retrieve,		/* bmo_retrievef() */
 	NULL,				/* bmo_mode_chngf() */

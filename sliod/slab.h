@@ -45,7 +45,7 @@ struct slab {
 #define SLAB_DEF_CACHE		((size_t)SLAB_DEF_COUNT * SLASH_SLVR_SIZE)
 #define SLAB_MIN_CACHE		((size_t)128 * SLASH_SLVR_SIZE)
 
-void	slab_cache_init(void);
+void	slab_cache_init(int);
 int	slab_cache_reap(struct psc_poolmgr *);
 
 struct slab	*slab_alloc(void);

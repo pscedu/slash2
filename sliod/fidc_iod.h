@@ -32,9 +32,13 @@
 struct fidc_membh;
 
 struct fcmh_iod_info {
-	int			fii_fd;		/* open file descriptor */
-	int			fii_nwrite;	/* # of sliver writes */
-	struct psclist_head	fii_lentry;	/* fcmh with dirty slivers */
+	int			fii_fd;			/* open file descriptor */
+	int			fii_nwrite;		/* # of sliver writes */
+	off_t			fii_predio_lastoff;	/* last I/O offset */
+	off_t			fii_predio_lastsize;	/* last I/O size */
+	off_t			fii_predio_off;		/* next predict I/O offset */
+	int			fii_predio_nseq;	/* num sequential io's */
+	struct psclist_head	fii_lentry;		/* all fcmhs with readahead */
 };
 
 /* sliod-specific fcmh_flags */

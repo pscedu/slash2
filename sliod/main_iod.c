@@ -133,8 +133,7 @@ slistatfsthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		rc = statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf);
 		if (rc == -1)
-			psclog_error("statvfs %s",
-			    slcfg_local->cfg_fsroot);
+			psclog_error("statvfs %s", slcfg_local->cfg_fsroot);
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);

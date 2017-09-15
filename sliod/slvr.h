@@ -78,14 +78,13 @@ struct slvr {
 #define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
 #define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
 #define SLVRF_ACCESSED		(1 <<  6)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead logic */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
 /*
  * Think twice if you ever want to use recursive lock.
  */
-#define SLVR_RLOCK(s)		reqlock(&(s)->slvr_lock)
-#define SLVR_URLOCK(s, lk)	ureqlock(&(s)->slvr_lock, (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(&(s)->slvr_lock)
 #define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
 #define SLVR_TRYRLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
@@ -178,12 +177,8 @@ struct sli_iocb {
 	int			  iocb_rc;
 };
 
-#define slvr_lookup(n, bii)						\
-	_slvr_lookup(PFL_CALLERINFO(), (n), (bii))
-
 struct slvr *
-	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
-	    struct bmap_iod_info *);
+	slvr_lookup(uint32_t, struct bmap_iod_info *);
 void	slvr_cache_init(void);
 int	slvr_do_crc(struct slvr *, uint64_t *);
 ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);
@@ -211,11 +206,11 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
+
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;
-	sl_bmapno_t		rarq_bno;
-	int32_t			rarq_off;
-	int32_t			rarq_size;
+	off_t			rarq_off;
+	off_t			rarq_size;
 	struct psc_listentry	rarq_lentry;
 };
 
@@ -223,6 +218,7 @@ extern struct psc_poolmgr	*sli_readaheadrq_pool;
 extern struct psc_listcache	 sli_lruslvrs;
 extern struct psc_listcache	 sli_crcqslvrs;
 extern struct psc_listcache	 sli_readaheadq;
+
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

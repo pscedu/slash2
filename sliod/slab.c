@@ -41,8 +41,14 @@
 #include "sliod.h"
 #include "slvr.h"
 
+extern struct psc_poolmgr	*slvr_pool;
+
 struct psc_poolmaster	 slab_poolmaster;
 struct psc_poolmgr	*slab_pool;
+
+struct timespec		 sli_slvr_timeout = { 30, 0L };
+struct psc_waitq	 sli_slvr_waitq = PSC_WAITQ_INIT("slvr");
+psc_spinlock_t		 sli_slvr_lock = SPINLOCK_INIT;
 
 struct slab *
 slab_alloc(void)
@@ -50,8 +56,9 @@ slab_alloc(void)
 	struct slab *slb;
 
 	slb = psc_pool_get(slab_pool);
-	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
+	/* XXX ENOMEM */
+	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
 
 	return (slb);
 }
@@ -67,32 +74,24 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_pool_reap(slab_pool, 0);
-		thr->pscthr_waitq = "sleep 10";
-		sleep(10);
-		thr->pscthr_waitq = NULL;
+		psc_pool_reap(slvr_pool, 0);
+
+		spinlock(&sli_slvr_lock);
+		psc_waitq_waitrel_ts(&sli_slvr_waitq,
+		    &sli_slvr_lock, &sli_slvr_timeout);
 	}
 }
 
 void
-slab_cache_init(void)
+slab_cache_init(int nbuf)
 {
-	size_t nbuf;
-
-	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
-
-	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
-		psc_fatalx("invalid slab_cache_size setting; "
-		    "minimum allowed is %zu", SLAB_MIN_CACHE);
-
-	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 	psc_poolmaster_init(&slab_poolmaster, struct slab,
 	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    slab_cache_reap, "slab", NULL);
+	    NULL, "slab", NULL);
 	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
 
 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
 
-	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %zd bufs", 
+	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %d bufs", 
 	    slcfg_local->cfg_slab_cache_size, nbuf);
 }

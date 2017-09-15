@@ -50,11 +50,14 @@
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
+struct psc_poolmaster	 sli_readaheadrq_poolmaster;
 
 struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
+struct psc_poolmgr	*sli_readaheadrq_pool;
 
+struct psc_listcache	 sli_readaheadq;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
@@ -64,6 +67,8 @@ struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have thei
 						 * CRCs shipped to the MDS. */
 
 struct psc_listcache	 sli_fcmh_dirty;
+
+extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
@@ -653,8 +658,8 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
  * @flags: operational flags.
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
-    __unusedx int flags)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw, 
+    int readahead)
 {
 	struct bmap *b = slvr_2_bmap(s);
 	ssize_t rc = 0;
@@ -683,8 +688,15 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 */
 	s->slvr_flags |= SLVRF_FAULTING;
 
-	if (s->slvr_flags & SLVRF_DATARDY)
+	if (s->slvr_flags & SLVRF_DATARDY) {
+		if (!readahead && (s->slvr_flags & SLVRF_READAHEAD)) {
+			s->slvr_flags &= ~SLVRF_READAHEAD;
+			OPSTAT_INCR("readahead-hit");
+		}
 		goto out1;
+	}
+	if (!readahead && rw == SL_READ)
+		OPSTAT_INCR("readahead-miss");
 
 	if (rw == SL_WRITE && !off && len == SLASH_SLVR_SIZE) {
 		/*
@@ -694,7 +706,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		goto out1;
 	}
-
 	SLVR_ULOCK(s);
 
 	/*
@@ -702,6 +713,8 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * lock.  All should be protected by the FAULTING bit.
 	 */
 	rc = slvr_fsbytes_rio(s, off, len);
+	if (!rc && readahead)
+		s->slvr_flags |= SLVRF_READAHEAD;
 	goto out2;
 
  out1:
@@ -764,6 +777,8 @@ slvr_remove(struct slvr *s)
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
+	if (s->slvr_flags & SLVRF_READAHEAD)
+		OPSTAT_INCR("readahead-waste");
 	slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
@@ -897,6 +912,18 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 */
 	lc_move2tail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
+
+	/*
+ 	 * I am holding the bmap lock here, do don't call reaper 
+ 	 * directly to avoid a potential deadlock.
+ 	 *
+ 	 * We reap proactively instead of on demand to avoid ENOMEM
+ 	 * situation, which we don't handle gracefully right now.
+ 	 */
+	if (slvr_pool->ppm_nfree < 3) {
+		OPSTAT_INCR("slvr-wakeone");
+		psc_waitq_wakeone(&sli_slvr_waitq);
+	}
 }
 
 void
@@ -957,8 +984,7 @@ slvr_wio_done(struct slvr *s, int repl)
  * freed.
  */
 struct slvr *
-_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
-    struct bmap_iod_info *bii)
+slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
 	struct slab *tmp2 = NULL;
@@ -1037,17 +1063,22 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 }
 
 /*
- * The reclaim function for slab_pool.  Note that our caller
+ * The reclaim function for slvr_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
 int
 slab_cache_reap(struct psc_poolmgr *m)
 {
-	static struct psc_dynarray a = DYNARRAY_INIT;
+	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
-	int i;
+	int i, nitems;
+
+	psc_assert(m == slvr_pool);
 
 	LIST_CACHE_LOCK(&sli_lruslvrs);
+	nitems = lc_nitems(&sli_lruslvrs) / 5;
+	if (nitems < 5)
+		nitems = 5;
 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
@@ -1070,12 +1101,11 @@ slab_cache_reap(struct psc_poolmgr *m)
 			continue;
 		}
 
-		psc_dynarray_add(&a, s);
 		s->slvr_flags |= SLVRF_FREEING;
 		SLVR_ULOCK(s);
 
-		if (psc_dynarray_len(&a) >=
-		    psc_atomic32_read(&m->ppm_nwaiters))
+		psc_dynarray_add(&a, s);
+		if (psc_dynarray_len(&a) >= nitems)
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
@@ -1084,7 +1114,8 @@ slab_cache_reap(struct psc_poolmgr *m)
 		slvr_remove(s);
 	psc_dynarray_free(&a);
 
-	return (0);
+	OPSTAT_INCR("slab-lru-reap");
+	return (nitems);
 }
 
 void
@@ -1124,12 +1155,92 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
+slirathr_main(struct psc_thread *thr)
+{
+	struct sli_readaheadrq *rarq;
+	struct bmapc_memb *b;
+	struct fidc_membh *f;
+	struct slvr *s;
+	int i, rc, slvrno, nslvr;
+	sl_bmapno_t bno;
+
+	while (pscthr_run(thr)) {
+		f = NULL;
+		b = NULL;
+
+		if (slcfg_local->cfg_async_io)
+			break;
+
+		rarq = lc_getwait(&sli_readaheadq);
+		if (sli_fcmh_peek(&rarq->rarq_fg, &f))
+			goto next;
+
+		bno = rarq->rarq_off / SLASH_BMAP_SIZE;
+		slvrno = (rarq->rarq_off % SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+		nslvr = rarq->rarq_size / SLASH_SLVR_SIZE;
+		if (rarq->rarq_size % SLASH_SLVR_SIZE)
+			nslvr++;
+
+		for (i = 0; i < nslvr; i++) {
+			if (i + slvrno >= SLASH_SLVRS_PER_BMAP) {
+				bno++;
+				slvrno = 0;
+				if (b) {
+					bmap_op_done(b);
+					b = NULL;
+				}
+			}
+			if (!b) {
+				if (bmap_get(f, bno, SL_READ, &b))
+					goto next;
+			}
+			s = slvr_lookup(slvrno + i, bmap_2_bii(b));
+			rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 1);
+			/*
+			 * FixMe: This cause asserts on flags when we
+			 * encounter AIOWAIT. We need a unified way to
+			 * perform I/O done on each sliver instead of
+			 * sprinkling them all over the place.
+			 */
+			slvr_io_done(s, rc);
+			slvr_rio_done(s);
+		}
+
+ next:
+		if (b)
+			bmap_op_done(b);
+		if (f)
+			fcmh_op_done(f);
+		psc_pool_return(sli_readaheadrq_pool, rarq);
+	}
+}
+
+void
 slvr_cache_init(void)
 {
+	int i, nbuf;
+
+	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
+
+	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
+		psc_fatalx("invalid slab_cache_size setting; "
+		    "minimum allowed is %zu", SLAB_MIN_CACHE);
+
+	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
+
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr, slvr_lentry, PPMF_AUTO, SLAB_DEF_COUNT, 
-	    SLAB_DEF_COUNT, 0, NULL, "slvr");
+	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
+	    nbuf, nbuf, slab_cache_reap, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+
+	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
+	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, "readaheadrq");
+	sli_readaheadrq_pool = psc_poolmaster_getmgr(
+	    &sli_readaheadrq_poolmaster);
+
+	lc_reginit(&sli_readaheadq, struct sli_readaheadrq, rarq_lentry,
+	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
@@ -1154,7 +1265,11 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_AIO, sliaiothr_main, 0, "sliaiothr");
 	}
 
-	slab_cache_init();
+	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
+		pscthr_init(SLITHRT_READAHEAD, slirathr_main, 0,
+		    "slirathr%d", i);
+
+	slab_cache_init(nbuf);
 	slvr_worker_init();
 }
 
