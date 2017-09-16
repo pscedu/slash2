@@ -24,6 +24,9 @@
  * pgcache - Client user data page cache routines.  read(2) and write(2)
  * data is held in these buffers when the client is not in direct I/O
  * (DIO) mode.
+ *
+ *
+ * XXX used bmpce stuck hours after test in my last bigfile test.
  */
 
 #define PSC_SUBSYS SLSS_BMAP
