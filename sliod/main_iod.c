@@ -323,7 +323,7 @@ main(int argc, char *argv[])
 	if (statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf) == -1)
 		psc_fatal("%s", slcfg_local->cfg_fsroot);
 
-	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT);
+	bmap_cache_init(sizeof(struct bmap_iod_info), SLI_BMAP_COUNT, NULL);
 	fidc_init(sizeof(struct fcmh_iod_info));
 	bim_init();
 	sl_nbrqset = pscrpc_prep_set();

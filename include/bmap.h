@@ -41,6 +41,7 @@
 #include "pfl/crc.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/pool.h"
 #include "pfl/tree.h"
 
 #include "cache_params.h"
@@ -341,7 +342,7 @@ struct bmap {
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
 
 int	 bmap_cmp(const void *, const void *);
-void	 bmap_cache_init(size_t, int);
+void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
 void	 bmap_cache_destroy(void);
 void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmap *);

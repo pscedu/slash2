@@ -959,7 +959,7 @@ if (!pfl_rpc_max_retry) {
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
 			BMAP_LOCK(b);
-			b->bcm_flags |= BMAPF_LEASEEXPIRED;
+			b->bcm_flags |= BMAPF_LEASEEXPIRE;
 			BMAP_ULOCK(b);
 			OPSTAT_INCR("msl.bmap-read-expired");
 		}

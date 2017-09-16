@@ -533,46 +533,6 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
-void
-bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
-    int flag, struct psc_poolmgr *m)
-{
-	struct bmap_pagecache_entry *e, *t;
-
-	LIST_CACHE_LOCK(lc);
-	LIST_CACHE_FOREACH_SAFE(e, t, lc) {
-		/*
-		 * This avoids a deadlock with bmpc_freeall().  In
-		 * general, a background reaper should be nice to other
-		 * uses.
-		 */
-		if (!BMPCE_TRYLOCK(e))
-			continue;
-		/*
- 		 * XXX Checking flags here is bogus, we should assert that
- 		 * the flag is set because it is on the list.  In addition,
- 		 * we should check reference count here.
- 		 */ 
-		if ((e->bmpce_flags & (flag |
-		    BMPCEF_REAPED)) == flag) {
-			e->bmpce_flags &= ~flag;
-			e->bmpce_flags |= BMPCEF_DISCARD | BMPCEF_REAPED;
-			lc_remove(lc, e);
-			psc_dynarray_add(a, e);
-			DEBUG_BMPCE(PLL_DIAG, e, "reaping from %s",
-			    lc->plc_name);
-		}
-		BMPCE_ULOCK(e);
-
-		if (psc_dynarray_len(a) >=
-		    psc_atomic32_read(&m->ppm_nwaiters))
-			break;
-	}
-	if (!psc_dynarray_len(a) && lc_nitems(lc))
-		OPSTAT_INCR("msl.bmpce-reap-spin");
-	LIST_CACHE_ULOCK(lc);
-}
-
 /* Called from psc_pool_reap() */
 __static int
 bmpce_reaper(struct psc_poolmgr *m)
