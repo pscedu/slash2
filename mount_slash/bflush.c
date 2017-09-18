@@ -335,6 +335,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 			bci->bci_flush_rc = rc;
 		BMAP_ULOCK(r->biorq_bmap);
 
+		OPSTAT_INCR("msl.bmap-flush-maxretry");
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 		return;
