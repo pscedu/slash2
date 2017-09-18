@@ -166,24 +166,29 @@ void
 msl_pgcache_reap(void)
 {
 	void *p;
+	static int last = 0;
 	int i, rc, curr, nfree;
-	static int count = 0;		/* this assume one reaper */
 
-	/* 
-	 * We don't reap if the number of free buffers keeps growing. 
-	 * This greatly cuts down the number of mmap() calls.
-	 */
-	curr = lc_nitems(&page_buffers);
-	if (!count || count != curr) {
-		count = curr;
+	curr = msl_lru_pages_gen;
+	if (!last || last != curr) {
+		last = curr;
 		return;
 	}
-	if (curr <= bmpce_pool->ppm_min)
+
+	POOL_LOCK(bmpce_pool);
+	bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
+	POOL_ULOCK(bmpce_pool);
+
+	if (!bmpce_reaper(bmpce_pool))
 		return;
 
-	nfree = (curr - bmpce_pool->ppm_min) / 2;
-	if (!nfree)
-		nfree = 1;
+	nfree = bmpce_pool->ppm_nfree; 
+	psc_pool_try_shrink(bmpce_pool, nfree);
+
+	if (lc_nitems(&page_buffers) <= bmpce_pool->ppm_total)
+		return;
+
+	nfree = lc_nitems(&page_buffers) - bmpce_pool->ppm_total;
 	for (i = 0; i < nfree; i++) {
 		p = lc_getnb(&page_buffers);
 		if (!p)

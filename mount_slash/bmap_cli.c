@@ -987,6 +987,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&curtime);
+		curtime.tv_sec += BMAP_CLI_EXTREQSECS;
 
 		/*
 		 * We always check for lease before accessing cached pages.
@@ -1379,7 +1380,6 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	msl_bmap_reap,			/* bmo_reapf() */
 	msl_bmap_init,			/* bmo_init_privatef() */
 	msl_bmap_retrieve,		/* bmo_retrievef() */
 	msl_bmap_modeset,		/* bmo_mode_chngf() */

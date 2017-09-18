@@ -168,10 +168,6 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	}
 	if (bnew == NULL) {
 		pfl_rwlock_unlock(&f->fcmh_rwlock);
-
-		if (sl_bmap_ops.bmo_reapf)
-			sl_bmap_ops.bmo_reapf();
-
 		bnew = psc_pool_get(bmap_pool);
 		goto restart;
 	}
