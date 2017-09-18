@@ -5962,3 +5962,48 @@ pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
 [1498719149.59035000 msnbrqthr8:7ffefc7f1700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe540bd2e0 x32406078/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
 [1498719149.59042200 msnbrqthr5:7ffefd3f4700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6c0bb980 x32406084/t0 cb=0x7fffd7afb56d c0 o42->@54321-128.182.99.208@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1498719139 :: type == PSCRPC_MSG_ERR, rc == -501
 
+07/18/2017
+----------
+
+Potential ACL issue:
+
+getfacl appears to be inaccurately reporting ACLs on /pghbio, although it
+seems the correct rules (i.e., the ones we put in place to govern access to
+tcga) are being enforced.
+
+/pghbio/data/tcga is owned by me and belongs to the tcgadmin unix group,
+under regular unix permissions:
+
+[bradsol1@br005 data]$ ls -l
+total 75
+drwxrwx--- 36 blood tcgadmin 36 Feb 24  2017 tcga
+
+Read access *should* be granted to all members of the 'tcga' group through
+ACLs. If you look at the directory with getfacl, it appears that access is
+NOT being granted to anyone beyond the regular unix permissions:
+
+[bradsol1@br005 data]$ getfacl tcga
+# file: tcga
+# owner: blood
+# group: tcgadmin
+user::rwx
+group::rwx
+other::---
+
+However, I *can* still enter this directory as user bradsol1, who is a
+member of the 'tcga' group, but not 'tcgadmin'. If I try to enter the tcga
+directory as a regular user (not in tcgadmin or tcga groups) I get
+permission denied.
+
+So, it seems that the original ACLs that we applied to this directory are
+still protecting it (which is a relief), but the state of permissions is
+*not* accurately reflected by the getfacl command, which makes it difficult
+to track what is actually protected and what is not!
+
+Phil
+
+It was created a long time ago, but I think it would have been:
+
+setfacl -m g:tcga:r-x /pghbio/data/tcga
+
+
