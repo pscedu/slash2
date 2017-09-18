@@ -316,11 +316,11 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BMAP_LOCK(b);
 
-	if (rc == -PFLERR_KEYEXPIRED) {
+	if (rc == -PFLERR_KEYEXPIRED) {				/* -501 */
 		OPSTAT_INCR("msl.bmap-flush-expired");
 		b->bcm_flags |= BMAPF_LEASEEXPIRE;
 	}
-	if (rc == -PFLERR_TIMEDOUT)				/* 511 */
+	if (rc == -PFLERR_TIMEDOUT)				/* -511 */
 		OPSTAT_INCR("msl.bmap-flush-timedout");
 
 	BIORQ_LOCK(r);
