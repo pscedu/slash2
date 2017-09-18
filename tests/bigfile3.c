@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 	}
 	for (i = 0; i < nthreads; i++) {
 		pthread_join(threads[i], NULL);
-		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
+		printf("Thread %3d is done with errno = %3d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
 		error += args[i].ret;
 		close(args[i].fd);
