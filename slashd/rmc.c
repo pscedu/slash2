@@ -269,22 +269,28 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	/* XXX Busy fcmh if we ever want to read the bmap */
 	mp->rc = -bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
-	if (mp->rc)
+	if (mp->rc) {
+		psclog_diag("bno = %d, rc = %d", mq->sbd.sbd_bmapno, mp->rc);
 		PFL_GOTOERR(out, mp->rc);
+	}
 
 	bmi = bmap_2_bmi(b);
 
 	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq,
 	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
-	if (bml == NULL)
+	if (bml == NULL) {
+		psclog_diag("bno = %d, rc = %d", mq->sbd.sbd_bmapno, -EINVAL);
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	}
 
 	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios[0]);
 	if (mp->rc == -PFLERR_ALREADY)
 		mp->rc = 0;
-	else if (mp->rc)
+	else if (mp->rc) {
+		psclog_diag("bno = %d, rc = %d", mq->sbd.sbd_bmapno, mp->rc);
 		PFL_GOTOERR(out, mp->rc);
+	}
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
@@ -725,7 +731,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 #ifdef OLD_DEBUG_BITS
 	if (strcmp(mq->name, ".sconsign.dblite") == 0)
-		psclog_max("creating file .sconsign.dblite");
+		psclog_diag("creating file .sconsign.dblite");
 #endif
 
 	cr.scr_uid = mq->owner.scr_uid;
