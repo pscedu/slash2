@@ -1105,7 +1105,9 @@ slab_cache_reap(struct psc_poolmgr *m)
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
-		if (psc_dynarray_len(&a) >= nitems)
+		if (psc_dynarray_len(&a) >= nitems && 
+		    psc_dynarray_len(&a) >= 
+		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
