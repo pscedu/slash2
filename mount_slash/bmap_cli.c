@@ -446,7 +446,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct timespec ts;
-	int secs, rc;
+	long secs;
+	int rc;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -468,7 +469,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 
 	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
-	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
 	if (secs >= BMAP_CLI_EXTREQSECS &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 		if (blocking)
@@ -526,7 +527,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 
