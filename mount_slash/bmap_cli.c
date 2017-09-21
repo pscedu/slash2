@@ -966,7 +966,7 @@ void
 msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
-	struct timespec nto, curtime;
+	struct timespec nto, ts;
 	struct bmap_cli_info *bci, *tmp;
 	struct bmapc_memb *b;
 	int exiting, i;
@@ -986,8 +986,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			break;
 		}
 		OPSTAT_INCR("msl.release-wakeup");
-		PFL_GETTIMESPEC(&curtime);
-		curtime.tv_sec += BMAP_CLI_EXTREQSECS;
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
 
 		/*
 		 * We always check for lease before accessing cached pages.
@@ -1008,7 +1008,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+			if (timespeccmp(&ts, &bci->bci_etime, <) &&
 			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1047,8 +1047,8 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&bmaps);
 
-		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+		PFL_GETTIMESPEC(&ts);
+		timespecadd(&ts, &msl_bmap_timeo_inc, &nto);
 		if (!exiting) {
 			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
