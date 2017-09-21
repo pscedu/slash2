@@ -745,6 +745,10 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
+		if (!bmap_flushable(b)) {
+			OPSTAT_INCR("msl.bmap-flush-bail");
+			goto next;
+		}
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
@@ -763,6 +767,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		psc_dynarray_reset(reqs);
 
 		BMAP_LOCK(b);
+ next:
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
