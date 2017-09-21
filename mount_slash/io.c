@@ -1049,7 +1049,9 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup");
 
-	//msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
+#if 0
+	msl_update_iocounters(slc_iorpc_iostats, rw, bwc->bwc_size);
+#endif
 
 	return (rc);
 }
