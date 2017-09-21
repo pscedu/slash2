@@ -394,6 +394,12 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	/*
+ 	 * XXX RPC throttle here. Otherwise, our RPC will be
+ 	 * stalled and when it eventually sent out, got
+ 	 * rejected by expired keys.  Need experiment to
+ 	 * confirm.
+ 	 */
 	b = r->biorq_bmap;
 	BMAP_LOCK(b);
 	rc = msl_bmap_lease_extend(b, 1);
