@@ -1054,6 +1054,10 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			/*
 			 * No duplicate lease detected and this client
 			 * is the first writer.
+			 *
+			 * Need to confirm that we can reach here in 
+			 * the case of extending a bmap lease. If so,
+			 * we can probably get rid of reassign RPC.
 			 */
 			psc_assert(!bmi->bmi_wr_ion);
 			BMAP_ULOCK(b);

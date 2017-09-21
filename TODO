@@ -6007,3 +6007,29 @@ It was created a long time ago, but I think it would have been:
 setfacl -m g:tcga:r-x /pghbio/data/tcga
 
 
+09/20/2017
+-----------
+
+reclaim slowness:
+
+[1505900984.07982000 slirimthr06:7ffee2bea700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+176.662 second(s)
+[1505901097.15276600 slirimthr04:7ffee33ec700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+110.22 second(s)
+[1505901198.94141300 slirimthr02:7ffee3bee700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+1.769 second(s)
+[1505901653.17010600 slirimthr02:7ffee3bee700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+3.534 second(s)
+[1505901955.01583300 slirimthr02:7ffee3bee700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+1.405 second(s)
+[1505920391.34256100 slirimthr02:7ffee3bee700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+73.16 second(s)
+[1505920619.34654800 slirimthr00:7ffee43f0700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+1.202 second(s)
+[1505932985.05906100 slirimthr03:7ffee37ed700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+1019.127 second(s)
+[1505933292.61071900 slirimthr07:7ffee27e9700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+1087.373 second(s)
+[1505939690.53942800 slirimthr07:7ffee27e9700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
+460.719 second(s)
+
