@@ -766,6 +766,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
+	psc_dynarray_reset(bmaps);
 
 	return (didwork);
 }
