@@ -364,8 +364,11 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	 * re-established with that sliod.  But that logic is too
 	 * complicated to get right.
 	 */
-	PFL_GETTIMESPEC(&r->biorq_expire);
-	r->biorq_expire.tv_sec += SL_MAX_BMAPFLSH_DELAY;
+	if (rc != -PFLERR_KEYEXPIRED) {
+		OPSTAT_INCR("msl.bmap-flush-backoff");
+		PFL_GETTIMESPEC(&r->biorq_expire);
+		r->biorq_expire.tv_sec += SL_MAX_BMAPFLSH_DELAY;
+	}
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);
