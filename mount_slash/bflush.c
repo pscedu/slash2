@@ -704,10 +704,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
  * Send out SRMT_WRITE RPCs to the I/O server.
  */
 __static int
-bmap_flush(void)
+bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 {
-	struct psc_dynarray reqs = DYNARRAY_INIT,
-	    bmaps = DYNARRAY_INIT;
 	struct bmpc_write_coalescer *bwc;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
@@ -732,45 +730,42 @@ bmap_flush(void)
 
 		if (bmap_flushable(b)) {
 			b->bcm_flags |= BMAPF_SCHED;
-			psc_dynarray_add(&bmaps, b);
+			psc_dynarray_add(bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 		}
 		BMAP_ULOCK(b);
 
-		if (psc_dynarray_len(&bmaps) >= msl_ios_max_inflight_rpcs)
+		if (psc_dynarray_len(bmaps) >= msl_ios_max_inflight_rpcs)
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_bmapflushq);
 
-	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
-		b = psc_dynarray_getpos(&bmaps, i);
+	for (i = 0; i < psc_dynarray_len(bmaps); i++) {
+		b = psc_dynarray_getpos(bmaps, i);
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 		RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs) {
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
-			psc_dynarray_add(&reqs, r);
+			psc_dynarray_add(reqs, r);
 		}
 		BMAP_ULOCK(b);
 
 		j = 0;
 		rc = 0;
-		while (!rc && j < psc_dynarray_len(&reqs) &&
-		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
+		while (!rc && j < psc_dynarray_len(reqs) &&
+		    (bwc = bmap_flush_trycoalesce(reqs, &j))) {
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
 			rc = bmap_flush_send_rpcs(bwc);
 		}
-		psc_dynarray_reset(&reqs);
+		psc_dynarray_reset(reqs);
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
-
-	psc_dynarray_free(&reqs);
-	psc_dynarray_free(&bmaps);
 
 	return (didwork);
 }
@@ -780,6 +775,8 @@ msflushthr_main(struct psc_thread *thr)
 {
 	struct timespec work, delta, tmp1, tmp2;
 	struct msflush_thread *mflt;
+	struct psc_dynarray reqs = DYNARRAY_INIT;
+	struct psc_dynarray bmaps = DYNARRAY_INIT;
 
 	mflt = msflushthr(thr);
 	while (pscthr_run(thr)) {
@@ -797,7 +794,7 @@ msflushthr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.bmap-flush");
 
 		PFL_GETTIMESPEC(&tmp1);
-		while (bmap_flush())
+		while (bmap_flush(&reqs, &bmaps))
 			;
 		PFL_GETTIMESPEC(&tmp2);
 
@@ -819,6 +816,9 @@ msflushthr_main(struct psc_thread *thr)
 		    PSCPRI_TIMESPEC_ARGS(&work),
 		    PSCPRI_TIMESPEC_ARGS(&delta));
 	}
+
+	psc_dynarray_free(&reqs);
+	psc_dynarray_free(&bmaps);
 }
 
 void
