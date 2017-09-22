@@ -717,6 +717,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 	struct bmpc_ioreq *r;
 	struct bmap *b, *tmpb;
 	int i, j, rc, didwork = 0;
+	struct sl_resm *m;
 
 	LIST_CACHE_LOCK(&msl_bmapflushq);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &msl_bmapflushq) {
@@ -733,8 +734,9 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 			BMAP_ULOCK(b);
 			continue;
 		}
-
-		if (bmap_flushable(b)) {
+		m = libsl_ios2resm(bmap_2_ios(b));
+		rc = msl_resm_throttle_yield(m);
+		if (!rc && bmap_flushable(b)) {
 			b->bcm_flags |= BMAPF_SCHED;
 			psc_dynarray_add(bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
