@@ -446,7 +446,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct timespec ts;
-	int secs, rc;
+	long secs;
+	int rc;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -468,7 +469,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 
 	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
-	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
 	if (secs >= BMAP_CLI_EXTREQSECS &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 		if (blocking)
@@ -526,7 +527,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 
@@ -966,7 +967,7 @@ void
 msbwatchthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
-	struct timespec nto, curtime;
+	struct timespec nto, ts;
 	struct bmap_cli_info *bci, *tmp;
 	struct bmapc_memb *b;
 	int exiting, i;
@@ -986,8 +987,8 @@ msbwatchthr_main(struct psc_thread *thr)
 			break;
 		}
 		OPSTAT_INCR("msl.release-wakeup");
-		PFL_GETTIMESPEC(&curtime);
-		curtime.tv_sec += BMAP_CLI_EXTREQSECS;
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
 
 		/*
 		 * We always check for lease before accessing cached pages.
@@ -1008,7 +1009,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			if (timespeccmp(&curtime, &bci->bci_etime, <) &&
+			if (timespeccmp(&ts, &bci->bci_etime, <) &&
 			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1047,8 +1048,8 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&bmaps);
 
-		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+		PFL_GETTIMESPEC(&ts);
+		timespecadd(&ts, &msl_bmap_timeo_inc, &nto);
 		if (!exiting) {
 			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
