@@ -587,7 +587,9 @@ bmpce_reaper(struct psc_poolmgr *m)
 		psc_dynarray_add(&a, e);
 		BMPCE_ULOCK(e);
 
-		if (psc_dynarray_len(&a) >= nitems)
+		if (psc_dynarray_len(&a) >= nitems &&
+		    psc_dynarray_len(&a) >= 
+		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_lru_pages);
