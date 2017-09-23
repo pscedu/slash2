@@ -161,4 +161,7 @@ msl_getmw(void)
 	psc_fatalx("unknown thread type");
 }
 
+int	msl_resm_get_credit(struct sl_resm *, int);
+void	msl_resm_put_credit(struct sl_resm *);
+
 #endif /* _RPC_CLI_H_ */
