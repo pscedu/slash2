@@ -91,8 +91,7 @@ msl_resm_throttle_yield(struct sl_resm *m)
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
-	RPCI_ULOCK(rpci);
-	if (rpci->rpci_infl_rpcs >= max)
+	if (rpci->rpci_infl_rpcs + rpci->rpci_infl_credits >= max)
 		rc = -EAGAIN;
 	RPCI_ULOCK(rpci);
 	return rc;
