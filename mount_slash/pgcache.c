@@ -163,7 +163,7 @@ msl_pgcache_put(void *p)
 }
 
 void
-msl_pgcache_reap(void)
+msl_pgcache_reap(int idle)
 {
 	void *p;
 	static int last = 0;
@@ -175,9 +175,11 @@ msl_pgcache_reap(void)
 		return;
 	}
 
-	POOL_LOCK(bmpce_pool);
-	bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
-	POOL_ULOCK(bmpce_pool);
+	if (idle) {
+		POOL_LOCK(bmpce_pool);
+		bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
+		POOL_ULOCK(bmpce_pool);
+	}
 
 	if (!bmpce_reaper(bmpce_pool))
 		return;
