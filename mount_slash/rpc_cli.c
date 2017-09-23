@@ -170,7 +170,7 @@ msl_resm_throttle_wait(struct sl_resm *m)
 	 * XXX use resm multiwait?
 	 */
 	RPCI_LOCK(rpci);
-	while (rpci->rpci_infl_rpcs >= max) {
+	while (rpci->rpci_infl_rpcs + rpci->rpci_infl_credits >= max) {
 		if (!account) {
 			PFL_GETTIMESPEC(&ts0);
 			account = 1;
