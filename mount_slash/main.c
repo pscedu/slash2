@@ -3951,12 +3951,15 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
+	int rc = 0;
+
 	while (pscthr_run(thr)) {
 
-		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+		if (rc)
+			while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
 		msl_pgcache_reap();
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+		rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
 	}
 }
 

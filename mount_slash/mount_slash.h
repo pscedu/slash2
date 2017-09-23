@@ -411,4 +411,6 @@ extern int			 msl_max_namecache_per_directory;
 void				 msl_pgcache_init(void);
 void				 msl_pgcache_reap(void);
 
+extern struct psc_waitq		 sl_freap_waitq;
+
 #endif /* _MOUNT_SLASH_H_ */
