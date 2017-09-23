@@ -161,6 +161,7 @@ msl_resm_put_credit(struct sl_resm *m)
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
+	psc_assert(rpci->rpci_infl_credits >= mflt->mflt_credits);
 	rpci->rpci_infl_credits =- mflt->mflt_credits;
 	mflt->mflt_credits = 0;
 	RPCI_WAKE(rpci);
@@ -196,6 +197,7 @@ msl_resm_throttle_wait(struct sl_resm *m)
 		psc_assert(rpci->rpci_infl_credits > 0);
 		mflt->mflt_credits--;
 		rpci->rpci_infl_credits--;
+		OPSTAT_INCR("msl.throttle-credit");
 		goto out;
 	}
 	while (rpci->rpci_infl_rpcs + rpci->rpci_infl_credits >= max) {
