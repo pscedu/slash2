@@ -3951,7 +3951,6 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
-	int curr, last = 0;
 	while (pscthr_run(thr)) {
 
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
