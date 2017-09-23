@@ -409,7 +409,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
  	 */
 	b = r->biorq_bmap;
 	m = libsl_ios2resm(bmap_2_ios(b));
-	rc = msl_resem_get_credit(m);
+	rc = msl_resm_get_credit(m, BMAP_CLI_EXTREQSECS - 5);
 	if (rc) {
 		rc = -EAGAIN;
 		OPSTAT_INCR("msl.bmap-flush-throttled");

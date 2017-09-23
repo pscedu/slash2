@@ -243,6 +243,8 @@ struct resprof_cli_info {
 #define RPCI_ULOCK(rpci)		freelock(&(rpci)->rpci_lock)
 #define RPCI_WAIT(rpci)			psc_waitq_wait(&(rpci)->rpci_waitq, \
 					    &(rpci)->rpci_lock)
+#define RPCI_WAITABS(rpci, ts)		psc_waitq_waitabs(&(rpci)->rpci_waitq, \
+					    &(rpci)->rpci_lock, &(ts))
 #define RPCI_WAKE(rpci)			psc_waitq_wakeall(&(rpci)->rpci_waitq)
 
 static __inline struct resprof_cli_info *

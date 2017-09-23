@@ -99,12 +99,13 @@ msl_resm_throttle_yield(struct sl_resm *m)
 }
 
 int
-msl_resm_get_credit(struct sl_resm *m)
+msl_resm_get_credit(struct sl_resm *m, int secs)
 {
-	struct timespec ts0, ts1, tsd;
+	int timeout = 0;
+	struct timespec ts0, ts1;
 	struct resprof_cli_info *rpci;
-	int account = 0, max;
 
+	psc_assert(secs > 0);
 	if (m->resm_type == SLREST_MDS) {
 		max = msl_mds_max_inflight_rpcs;
 	} else {
@@ -115,17 +116,22 @@ msl_resm_get_credit(struct sl_resm *m)
 	/*
 	 * XXX use resm multiwait?
 	 */
+	PFL_GETTIMESPEC(&ts0);
 	RPCI_LOCK(rpci);
-	while (rpci->rpci_infl_rpcs >= max) {
-		if (!account) {
-			PFL_GETTIMESPEC(&ts0);
-			account = 1;
+	while (rpci->rpci_infl_rpcs + rpci->rpci_infl_credits >= max) {
+		PFL_GETTIMESPEC(&ts1);
+		if (ts1.tv_sec - ts0.tv_sec > secs) {
+			timeout = 1;
+			break;
 		}
 		RPCI_WAIT(rpci);
-		OPSTAT_INCR("msl.throttle-wait");
+		OPSTAT_INCR("msl.throttle-credit-wait");
 		RPCI_LOCK(rpci);
 	}
-	rpci->rpci_infl_credits++;
+	if (!timeout)
+		rpci->rpci_infl_credits++;
+	RPCI_ULOCK(rpci);
+	return (timeout);
 }
 
 void
