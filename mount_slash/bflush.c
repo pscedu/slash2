@@ -387,6 +387,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct bmpc_ioreq *r;
 	struct bmap *b;
 	int i, rc;
+	struct sl_resm m;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
@@ -401,6 +402,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
  	 * confirm.
  	 */
 	b = r->biorq_bmap;
+	m = libsl_ios2resm(bmap_2_ios(b));
 	BMAP_LOCK(b);
 	rc = msl_bmap_lease_extend(b, 1);
 	if (rc)
@@ -793,6 +795,7 @@ msflushthr_main(struct psc_thread *thr)
 	struct psc_dynarray bmaps = DYNARRAY_INIT;
 
 	mflt = msflushthr(thr);
+	mflt->mflt_credits = 0;
 	while (pscthr_run(thr)) {
 		/*
 		 * Reset deep counter incremented during successive RPC

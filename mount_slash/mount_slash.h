@@ -89,6 +89,7 @@ struct msbwatch_thread {
 
 struct msflush_thread {
 	int				 mflt_failcnt;
+	int				 mflt_credits;
 	struct pfl_multiwait		 mflt_mw;
 };
 
