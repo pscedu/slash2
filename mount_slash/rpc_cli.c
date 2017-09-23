@@ -110,6 +110,7 @@ msl_resm_get_credit(struct sl_resm *m, int secs)
 	thr = pscthr_get();
 	psc_assert(secs > 0);
 
+	psc_assert(thr->pscthr_type == MSTHRT_FLUSH);
 	mflt = msflushthr(thr);
 
 	if (m->resm_type == SLREST_MDS) {
@@ -150,6 +151,7 @@ msl_resm_put_credit(struct sl_resm *m)
 	struct resprof_cli_info *rpci;
 
 	thr = pscthr_get();
+	psc_assert(thr->pscthr_type == MSTHRT_FLUSH);
 	mflt = msflushthr(thr);
 	/*
 	 * XXX use resm multiwait?

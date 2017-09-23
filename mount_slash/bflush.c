@@ -443,6 +443,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (!rc)
 		return (0);
+	msl_resm_put_credit(m);
 
  out:
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs)
