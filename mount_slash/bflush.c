@@ -391,9 +391,11 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct slrpc_cservice *csvc;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
+	struct bmap_cli_info *bci;
 	struct bmap *b;
 	int i, rc;
 	struct sl_resm *m;
+	struct timespec ts;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
@@ -408,9 +410,21 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
  	 * confirm.
  	 */
 	b = r->biorq_bmap;
+	bci = bmap_2_bci(b);
+
+	BMAP_LOCK(b);
+	PFL_GETTIMESPEC(&ts);
+	ts.tv_sec += 1;
+	if (timespeccmp(&bci->bci_etime, &ts, <=)) {
+		BMAP_ULOCK(b);
+		rc = -EAGAIN;
+		OPSTAT_INCR("msl.bmap-lease-expired");
+		PFL_GOTOERR(out, rc);
+	}
 	m = libsl_ios2resm(bmap_2_ios(b));
-	rc = msl_resm_get_credit(m, BMAP_CLI_EXTREQSECS - 5);
+	rc = msl_resm_get_credit(m, bci->bci_etime.tv_sec - ts.tv_sec);
 	if (rc) {
+		BMAP_ULOCK(b);
 		rc = -EAGAIN;
 		OPSTAT_INCR("msl.bmap-flush-throttled");
 		PFL_GOTOERR(out, rc);
@@ -418,7 +432,6 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
-	BMAP_LOCK(b);
 	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		/*
