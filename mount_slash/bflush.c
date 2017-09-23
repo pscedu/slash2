@@ -325,6 +325,9 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
+	if (rc == -EAGAIN)
+		goto requeue;
+
 	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
 	    ((r->biorq_flags & BIORQ_EXPIRE) && 
 	     (r->biorq_retries >= msl_max_retries * 32))) {
@@ -341,12 +344,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		return;
 	}
 
-	if (!(r->biorq_flags & BIORQ_ONTREE)) {
-		bmpc = bmap_2_bmpc(b);
-		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
-		r->biorq_flags |= BIORQ_ONTREE;
-	}
-	OPSTAT_INCR("msl.bmap-flush-resched");
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
@@ -369,6 +366,15 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		PFL_GETTIMESPEC(&r->biorq_expire);
 		r->biorq_expire.tv_sec += SL_MAX_BMAPFLSH_DELAY;
 	}
+
+ requeue:
+
+	if (!(r->biorq_flags & BIORQ_ONTREE)) {
+		bmpc = bmap_2_bmpc(b);
+		PSC_RB_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+		r->biorq_flags |= BIORQ_ONTREE;
+	}
+	OPSTAT_INCR("msl.bmap-flush-resched");
 
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(b);
@@ -403,10 +409,12 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
  	 */
 	b = r->biorq_bmap;
 	m = libsl_ios2resm(bmap_2_ios(b));
-	BMAP_LOCK(b);
-	rc = msl_bmap_lease_extend(b, 1);
-	if (rc)
+	rc = msl_resem_get_credit(m);
+	if (rc) {
+		rc = -EAGAIN;
+		OPSTAT_INCR("msl.bmap-flush-throttled");
 		PFL_GOTOERR(out, rc);
+	}
 
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
