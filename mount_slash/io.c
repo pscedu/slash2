@@ -436,7 +436,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
-		biorq_incref(r);
+		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
 		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p", e);
 		pll_add(&e->bmpce_pndgaios, r);
