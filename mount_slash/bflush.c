@@ -393,7 +393,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct bmpc_ioreq *r;
 	struct bmap *b;
 	int i, rc;
-	struct sl_resm m;
+	struct sl_resm *m;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
