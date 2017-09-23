@@ -412,5 +412,6 @@ void				 msl_pgcache_init(void);
 void				 msl_pgcache_reap(int);
 
 extern struct psc_waitq		 sl_freap_waitq;
+int				 bmpce_reaper(struct psc_poolmgr *);
 
 #endif /* _MOUNT_SLASH_H_ */

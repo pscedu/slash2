@@ -3959,7 +3959,12 @@ msreapthr_main(struct psc_thread *thr)
 			while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
 		msl_pgcache_reap(rc);
-		rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+		while (1) {
+			rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+			if (rc)
+				break;
+			bmpce_reaper(bmpce_pool);
+		}
 	}
 }
 

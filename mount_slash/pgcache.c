@@ -66,8 +66,6 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 struct psc_listcache	 page_buffers;
 int			 page_buffers_count;	/* total, including free */
 
-__static int bmpce_reaper(struct psc_poolmgr *);
-
 void
 msl_pgcache_init(void)
 {
@@ -432,8 +430,9 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		BMPCE_ULOCK(e);
 		if (bmpce_pool->ppm_nfree < 5) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
-			bmpce_reaper(bmpce_pool);
 #if 0
+			bmpce_reaper(bmpce_pool);
+#else
 			psc_waitq_wakeone(&sl_freap_waitq);
 #endif
 		}
@@ -547,7 +546,7 @@ bmpc_biorqs_flush(struct bmap *b)
 }
 
 /* Called from psc_pool_reap() */
-__static int
+int
 bmpce_reaper(struct psc_poolmgr *m)
 {
 	int i, idle, nitems, nfreed;
