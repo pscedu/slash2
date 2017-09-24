@@ -173,14 +173,10 @@ msl_pgcache_reap(int idle)
 		return;
 	}
 
-	if (idle) {
-		POOL_LOCK(bmpce_pool);
-		bmpce_pool->ppm_flags |= PPMF_IDLEREAP;
-		POOL_ULOCK(bmpce_pool);
-	}
-
 	if (!bmpce_reaper(bmpce_pool))
 		return;
+
+	last = msl_lru_pages_gen;
 
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
@@ -545,34 +541,36 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
+#define	PAGE_RECLAIM_BATCH	5
+
 /* Called from psc_pool_reap() */
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, idle, nitems, nfreed;
+	int i, nitems, nfreed;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache_entry *e, *t;
 	struct bmap_pagecache *bmpc;
 	struct bmap *b;
 	struct bmap_cli_info *bci;
+	struct psc_thread *thr;
+
+	nfreed = 0;
+	thr = pscthr_get();
+	if (thr->pscthr_type == MSTHRT_REAP) {
+		nitems = lc_nitems(&msl_lru_pages) / 10;
+	} else {
+		nitems = 1;
+	}
 
 	psc_assert(m == bmpce_pool);
+	psc_dynarray_ensurelen(&a, PAGE_RECLAIM_BATCH);
 
-	POOL_LOCK(bmpce_pool);
-	idle = bmpce_pool->ppm_flags & PPMF_IDLEREAP;
-	bmpce_pool->ppm_flags &= ~PPMF_IDLEREAP;
-	POOL_ULOCK(bmpce_pool);
+again:
 
 	/* Use two loops to reduce lock contention */
 	LIST_CACHE_LOCK(&msl_lru_pages);
-	if (idle)
-		nitems = lc_nitems(&msl_lru_pages) / 20;
-	else
-		/*
- 		 * We don't want to keep the lock for too long.
- 		 */
-		nitems = 3;
-	psc_dynarray_ensurelen(&a, nitems);
+
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
 		if (!BMPCE_TRYLOCK(e))
 			continue;
@@ -584,8 +582,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		e->bmpce_flags |= BMPCEF_TOFREE;
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 
-		if (!idle)
-			msl_lru_pages_gen++;
+		msl_lru_pages_gen++;
 
 		lc_remove(&msl_lru_pages, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
@@ -593,9 +590,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 		psc_dynarray_add(&a, e);
 		BMPCE_ULOCK(e);
 
-		if (psc_dynarray_len(&a) >= nitems &&
-		    psc_dynarray_len(&a) >= 
-		    psc_atomic32_read(&m->ppm_nwaiters))
+		nfreed++;
+		if (psc_dynarray_len(&a) >= PAGE_RECLAIM_BATCH)
 			break;
 	}
 	LIST_CACHE_ULOCK(&msl_lru_pages);
@@ -611,8 +607,12 @@ bmpce_reaper(struct psc_poolmgr *m)
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
+	if (nfreed < nitems && 
+	    psc_dynarray_len(&a) >= PAGE_RECLAIM_BATCH) { 
+		psc_dynarray_reset(&a);
+		goto again;
+	}
 
-	nfreed = psc_dynarray_len(&a);
 	psc_dynarray_free(&a);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
