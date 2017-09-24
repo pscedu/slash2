@@ -1203,6 +1203,9 @@ slirathr_main(struct psc_thread *thr)
 			 * encounter AIOWAIT. We need a unified way to
 			 * perform I/O done on each sliver instead of
 			 * sprinkling them all over the place.
+			 *
+			 * 09/24/2017, rc = -511, we have't release bmap
+			 * lock, so we deadlock.
 			 */
 			slvr_io_done(s, rc);
 			slvr_rio_done(s);
