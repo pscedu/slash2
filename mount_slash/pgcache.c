@@ -572,6 +572,7 @@ bmpce_reaper(struct psc_poolmgr *m)
  		 * We don't want to keep the lock for too long.
  		 */
 		nitems = 3;
+	psc_dynarray_ensurelen(&a, nitems);
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
 		if (!BMPCE_TRYLOCK(e))
 			continue;
