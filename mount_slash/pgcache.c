@@ -428,7 +428,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree < 5) {
+		if (bmpce_pool->ppm_nfree < 3) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -568,7 +568,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (idle)
 		nitems = lc_nitems(&msl_lru_pages) / 20;
 	else
-		nitems = 5;
+		/*
+ 		 * We don't want to keep the lock for too long.
+ 		 */
+		nitems = 3;
 	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
 		if (!BMPCE_TRYLOCK(e))
 			continue;
