@@ -1075,8 +1075,10 @@ slab_cache_reap(struct psc_poolmgr *m)
 
 	psc_assert(m == slvr_pool);
 
-	nitems = 3;
 	LIST_CACHE_LOCK(&sli_lruslvrs);
+	nitems = lc_nitems(&sli_lruslvrs) / 5;
+	if (nitems < 5)
+		nitems = 5;
 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
