@@ -66,6 +66,8 @@ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 struct psc_listcache	 page_buffers;
 int			 page_buffers_count;	/* total, including free */
 
+struct psc_listcache	 bmpcLru;
+
 void
 msl_pgcache_init(void)
 {
@@ -405,8 +407,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
  	 */
 	if (e->bmpce_flags & BMPCEF_LRU) {
 		e->bmpce_flags &= ~BMPCEF_LRU;
-		lc_remove(&msl_lru_pages, e);
-		msl_lru_pages_gen++;
+		pll_remove(&bmpc->bmpc_lru, e);
 	}
 
 	if ((e->bmpce_flags & BMPCEF_DATARDY) &&
@@ -420,11 +421,11 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
  		 * The other side must use trylock to
  		 * avoid a deadlock.
  		 */
-		lc_add(&msl_lru_pages, e);
+		pll_add(&bmpc->bmpc_lru, e);
 		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree < 3) {
+		if (bmpce_pool->ppm_nfree < 16) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -543,6 +544,32 @@ bmpc_biorqs_flush(struct bmap *b)
 
 #define	PAGE_RECLAIM_BATCH	5
 
+__static int
+bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
+{
+	struct bmap_pagecache_entry *e, *tmp;
+	int freed = 0;
+
+	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
+		if (!BMPCE_TRYLOCK(e))
+			continue;
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		if (psc_atomic32_read(&e->bmpce_ref)) {
+			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
+			BMPCE_ULOCK(e);
+			continue;
+		}
+		OPSTAT_INCR("bmpce_reap");
+		pll_remove(&bmpc->bmpc_lru, e);
+		bmpce_free(e, bmpc);
+		if (++freed >= nfree)
+			break;
+	}
+
+	return (freed);
+}
+
 /* Called from psc_pool_reap() */
 int
 bmpce_reaper(struct psc_poolmgr *m)
@@ -556,64 +583,31 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct psc_thread *thr;
 
 	nfreed = 0;
-	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_REAP) {
-		nitems = lc_nitems(&msl_lru_pages) / 10;
-	} else {
-		nitems = 1;
-	}
+	LIST_CACHE_LOCK(&bmpcLru);
+	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 
-	psc_assert(m == bmpce_pool);
-	psc_dynarray_ensurelen(&a, PAGE_RECLAIM_BATCH);
-
-again:
-
-	/* Use two loops to reduce lock contention */
-	LIST_CACHE_LOCK(&msl_lru_pages);
-
-	LIST_CACHE_FOREACH_SAFE(e, t, &msl_lru_pages) {
-		if (!BMPCE_TRYLOCK(e))
+		b = bmpc_2_bmap(bmpc);
+		if (!BMAP_TRYLOCK(b))
 			continue;
-		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
-			BMPCE_ULOCK(e);
-			continue;
+
+		/* First check for LRU items. */
+		if (pll_nitems(&bmpc->bmpc_lru)) {
+			DEBUG_BMAP(PLL_DIAG, b, "try free");
+			nfreed += bmpc_lru_tryfree(bmpc,
+			    psc_atomic32_read(&m->ppm_nwaiters));
+			DEBUG_BMAP(PLL_DIAG, b, "try free done");
+		} else {
+			OPSTAT_INCR("bmpce_reap_spin");
+			psclog_debug("skip bmpc=%p, nothing on lru",
+			    bmpc);
 		}
+		BMAP_ULOCK(b);
 
-		e->bmpce_flags |= BMPCEF_TOFREE;
-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-
-		msl_lru_pages_gen++;
-
-		lc_remove(&msl_lru_pages, e);
-		e->bmpce_flags &= ~BMPCEF_LRU;
-
-		psc_dynarray_add(&a, e);
-		BMPCE_ULOCK(e);
-
-		nfreed++;
-		if (psc_dynarray_len(&a) >= PAGE_RECLAIM_BATCH)
+		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 			break;
+	
 	}
-	LIST_CACHE_ULOCK(&msl_lru_pages);
-
-	DYNARRAY_FOREACH(e, i, &a) {
- 		b = e->bmpce_bmap;
-		bci = bmap_2_bci(b);
- 		bmpc = bmap_2_bmpc(b);
-
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
-		BMPCE_LOCK(e);
-		bmpce_free(e, bmpc);
-		pfl_rwlock_unlock(&bci->bci_rwlock);
-		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
-	}
-	if (nfreed < nitems && 
-	    psc_dynarray_len(&a) >= PAGE_RECLAIM_BATCH) { 
-		psc_dynarray_reset(&a);
-		goto again;
-	}
-
-	psc_dynarray_free(&a);
+	LIST_CACHE_ULOCK(&bmpcLru);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
 	    psc_atomic32_read(&m->ppm_nwaiters));
