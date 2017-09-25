@@ -163,7 +163,7 @@ void
 msl_pgcache_reap(int idle)
 {
 	void *p;
-	int i, rc, curr, nfree;
+	int i, rc, nfree;
 
 	if (!bmpce_reaper(bmpce_pool))
 		return;
@@ -543,7 +543,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			continue;
 
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-		if (psc_atomic32_read(&e->bmpce_ref)) {
+		if (e->bmpce_ref) {
 			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
 			BMPCE_ULOCK(e);
 			continue;
@@ -562,13 +562,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, nitems, nfreed;
-	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_pagecache_entry *e, *t;
-	struct bmap_pagecache *bmpc;
+	int nfreed;
 	struct bmap *b;
-	struct bmap_cli_info *bci;
-	struct psc_thread *thr;
+	struct bmap_pagecache *bmpc;
 
 	nfreed = 0;
 	LIST_CACHE_LOCK(&bmpcLru);
