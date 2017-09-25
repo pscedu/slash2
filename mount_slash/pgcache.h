@@ -327,6 +327,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
 
+	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
+
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
 	    bmpce_lentry, NULL);
 
