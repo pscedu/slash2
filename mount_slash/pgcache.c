@@ -423,7 +423,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		pll_add(&bmpc->bmpc_lru, e);
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree < 3) {
+		if (bmpce_pool->ppm_nfree < 16) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -553,7 +553,7 @@ bmpc_lru_cmp(const void *x, const void *y)
 	return (0);
 }
 
-#define	PAGE_RECLAIM_BATCH	3
+#define	PAGE_RECLAIM_BATCH	2
 
 /* Called from psc_pool_reap() */
 int
@@ -603,7 +603,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt));
 
 			nfreed++;
-			if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+			if (nfreed >= PAGE_RECLAIM_BATCH &&
+			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
 		}
 		pfl_rwlock_unlock(&bci->bci_rwlock);
@@ -618,13 +619,14 @@ bmpce_reaper(struct psc_poolmgr *m)
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
-		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+		if (nfreed >= PAGE_RECLAIM_BATCH &&
+		    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 3) {
+	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 16) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
 		goto again;
