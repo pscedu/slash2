@@ -421,8 +421,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		pll_add(&bmpc->bmpc_lru, e);
 
 		BMPCE_ULOCK(e);
-#if 0
-		if (bmpce_pool->ppm_nfree < 16) {
+		if (bmpce_pool->ppm_nfree < 3) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -431,7 +430,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 			psc_waitq_wakeone(&sl_freap_waitq);
 #endif
 		}
-#endif
 		return;
 	}
 
