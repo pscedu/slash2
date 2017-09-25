@@ -559,12 +559,11 @@ bmpc_lru_cmp(const void *x, const void *y)
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, nfreed;
+	int nfreed;
 	struct bmap *b;
 	struct bmap_cli_info *bci;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e, *tmp;
-	struct psc_dynarray a = DYNARRAY_INIT;
 	struct psc_thread *thr;
 
 	thr = pscthr_get();
@@ -572,7 +571,6 @@ bmpce_reaper(struct psc_poolmgr *m)
  again:
 
 	nfreed = 0;
-	psc_dynarray_ensurelen(&a, psc_atomic32_read(&m->ppm_nwaiters));
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 
@@ -582,6 +580,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 
 		if (!BMAP_TRYLOCK(b))
 			continue;
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+
+		bci = bmap_2_bci(b);
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
 
 		PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
 			if (!BMPCE_TRYLOCK(e))
@@ -596,14 +598,15 @@ bmpce_reaper(struct psc_poolmgr *m)
 			e->bmpce_flags |= BMPCEF_TOFREE;
 			e->bmpce_flags &= ~BMPCEF_LRU;
 			pll_remove(&bmpc->bmpc_lru, e);
-			psc_dynarray_add(&a, e);
-			BMPCE_ULOCK(e);
+			bmpce_free(e, bmpc);
+			psc_atomic32_dec(&b->bcm_opcnt);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt));
 
 			nfreed++;
-			if (nfreed >= PAGE_RECLAIM_BATCH &&
-			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+			if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
 		}
+		pfl_rwlock_unlock(&bci->bci_rwlock);
 
 		if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 			e = pll_peekhead(&bmpc->bmpc_lru);
@@ -613,35 +616,19 @@ bmpce_reaper(struct psc_poolmgr *m)
 			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
 		}
 
-		BMAP_ULOCK(b);
+		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
-		if (nfreed >= PAGE_RECLAIM_BATCH &&
-		    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	DYNARRAY_FOREACH(e, i, &a) {
- 		b = e->bmpce_bmap;
-		bci = bmap_2_bci(b);
- 		bmpc = bmap_2_bmpc(b);
-
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
-		BMPCE_LOCK(e);
-		bmpce_free(e, bmpc);
-		pfl_rwlock_unlock(&bci->bci_rwlock);
-		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
-	}
-
-	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
+	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 3) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
-		psc_dynarray_reset(&a);
 		goto again;
 	}
-
-	psc_dynarray_free(&a);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
 	    psc_atomic32_read(&m->ppm_nwaiters));
