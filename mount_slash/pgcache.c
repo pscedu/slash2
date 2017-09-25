@@ -65,6 +65,8 @@ int			 page_buffers_count;	/* total, including free */
 
 struct psc_listcache	 bmpcLru;
 
+int			 msl_bmpce_gen;
+
 void
 msl_pgcache_init(void)
 {
@@ -163,7 +165,13 @@ void
 msl_pgcache_reap(int idle)
 {
 	void *p;
+	static int last;
 	int i, rc, nfree;
+
+	if (msl_bmpce_gen != last) {
+		last = msl_bmpce_gen;
+		return;
+	}
 
 	if (!bmpce_reaper(bmpce_pool))
 		return;
@@ -375,6 +383,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	struct bmap *b = e->bmpce_bmap;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
+	msl_bmpce_gen++;
 	LOCK_ENSURE(&e->bmpce_lock);
 
 	psc_assert(bmpc == bmap_2_bmpc(b));
