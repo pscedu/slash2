@@ -264,6 +264,7 @@ struct bmap_pagecache {
 	struct bmpc_biorq_tree		 bmpc_biorqs;
 	struct psc_lockedlist		 bmpc_biorqs_exp;	/* flush/expire */
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* all requests */
+	struct psc_listentry		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
 struct bmpc_write_coalescer {

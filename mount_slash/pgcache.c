@@ -54,9 +54,6 @@ struct psc_poolmgr	*bwc_pool;
 int			 msl_bmpces_min = 512;	 	/* 16MiB */
 int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
-struct psc_listcache     msl_lru_pages;
-int                      msl_lru_pages_gen;
-
 struct psc_listcache	 msl_readahead_pages;
 
 RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
@@ -166,19 +163,10 @@ void
 msl_pgcache_reap(int idle)
 {
 	void *p;
-	static int last = 0;
 	int i, rc, curr, nfree;
-
-	curr = msl_lru_pages_gen;
-	if (!last || last != curr) {
-		last = curr;
-		return;
-	}
 
 	if (!bmpce_reaper(bmpce_pool))
 		return;
-
-	last = msl_lru_pages_gen;
 
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
@@ -422,7 +410,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
  		 * avoid a deadlock.
  		 */
 		pll_add(&bmpc->bmpc_lru, e);
-		msl_lru_pages_gen++;
 
 		BMPCE_ULOCK(e);
 		if (bmpce_pool->ppm_nfree < 16) {
@@ -640,8 +627,8 @@ bmpc_global_init(void)
 	    64, 0, NULL, "bwc");
 	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
-	lc_reginit(&msl_lru_pages, struct bmap_pagecache_entry,
-		bmpce_lentry, "lru-pages");
+	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
+	    "bmpclru");
 }
 
 void
