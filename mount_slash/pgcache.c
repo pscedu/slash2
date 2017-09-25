@@ -551,6 +551,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e, *tmp;
 	struct psc_dynarray a = DYNARRAY_INIT;
+	struct psc_thread *thr;
+
+	thr = pscthr_get();
+
+ again:
 
 	nfreed = 0;
 	psc_dynarray_ensurelen(&a, psc_atomic32_read(&m->ppm_nwaiters));
@@ -605,6 +610,13 @@ bmpce_reaper(struct psc_poolmgr *m)
 		bmpce_free(e, bmpc);
 		pfl_rwlock_unlock(&bci->bci_rwlock);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
+	}
+
+	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
+		pscthr_yield();
+		OPSTAT_INCR("msl.reap-loop");
+		psc_dynarray_reset(&a);
+		goto again;
 	}
 
 	psc_dynarray_free(&a);
