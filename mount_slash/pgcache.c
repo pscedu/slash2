@@ -417,6 +417,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 #if 0
 			bmpce_reaper(bmpce_pool);
 #else
+			/* call msreapthr_main() */
 			psc_waitq_wakeone(&sl_freap_waitq);
 #endif
 		}

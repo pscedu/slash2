@@ -1357,6 +1357,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	}
 #endif
 
+	lc_remove(&bmpcLru, bmpc);
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
 

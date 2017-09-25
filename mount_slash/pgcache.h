@@ -320,6 +320,8 @@ extern struct timespec		 msl_bflush_maxage;
 extern struct psc_listcache	 msl_idle_pages;
 extern struct psc_listcache	 msl_readahead_pages;
 
+extern struct psc_listcache	 bmpcLru;
+
 static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
 {
@@ -335,6 +337,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    biorq_exp_lentry, NULL);
 
 	RB_INIT(&bmpc->bmpc_biorqs);
+	lc_addtail(&bmpcLru, bmpc);
 }
 
 #endif /* _MSL_PGCACHE_H_ */
