@@ -553,7 +553,7 @@ bmpc_lru_cmp(const void *x, const void *y)
 	return (0);
 }
 
-#define	PAGE_RECLAIM_BATCH	2
+#define	PAGE_RECLAIM_BATCH	1
 
 /* Called from psc_pool_reap() */
 int
