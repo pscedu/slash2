@@ -567,6 +567,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 			e->bmpce_flags &= ~BMPCEF_LRU;
 			pll_remove(&bmpc->bmpc_lru, e);
 			psc_dynarray_add(&a, e);
+			BMPCE_ULOCK(e);
+
 			if (++nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
 		}
