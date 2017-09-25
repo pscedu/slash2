@@ -530,61 +530,47 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
-#define	PAGE_RECLAIM_BATCH	5
-
-__static int
-bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
-{
-	struct bmap_pagecache_entry *e, *tmp;
-	int freed = 0;
-
-	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
-		if (!BMPCE_TRYLOCK(e))
-			continue;
-
-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
-		if (e->bmpce_ref) {
-			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
-			BMPCE_ULOCK(e);
-			continue;
-		}
-		OPSTAT_INCR("bmpce_reap");
-		pll_remove(&bmpc->bmpc_lru, e);
-		bmpce_free(e, bmpc);
-		if (++freed >= nfree)
-			break;
-	}
-
-	return (freed);
-}
-
 /* Called from psc_pool_reap() */
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int nfreed;
+	int i, nfreed;
 	struct bmap *b;
+	struct bmap_cli_info *bci;
 	struct bmap_pagecache *bmpc;
+	struct bmap_pagecache_entry *e, *tmp;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
 	nfreed = 0;
+	psc_dynarray_ensurelen(&a, psc_atomic32_read(&m->ppm_nwaiters));
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 
 		b = bmpc_2_bmap(bmpc);
+		if (!pll_nitems(&bmpc->bmpc_lru))
+			continue;
+
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		/* First check for LRU items. */
-		if (pll_nitems(&bmpc->bmpc_lru)) {
-			DEBUG_BMAP(PLL_DIAG, b, "try free");
-			nfreed += bmpc_lru_tryfree(bmpc,
-			    psc_atomic32_read(&m->ppm_nwaiters));
-			DEBUG_BMAP(PLL_DIAG, b, "try free done");
-		} else {
-			OPSTAT_INCR("bmpce_reap_spin");
-			psclog_debug("skip bmpc=%p, nothing on lru",
-			    bmpc);
+		PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
+			if (!BMPCE_TRYLOCK(e))
+				continue;
+
+			if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+				DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
+				BMPCE_ULOCK(e);
+				continue;
+			}
+			psc_assert(e->bmpce_flags & BMPCEF_LRU);
+			e->bmpce_flags |= BMPCEF_TOFREE;
+			e->bmpce_flags &= ~BMPCEF_LRU;
+			pll_remove(&bmpc->bmpc_lru, e);
+			psc_dynarray_add(&a, e);
+			if (++nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
+				break;
 		}
+
 		BMAP_ULOCK(b);
 
 		if (nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
@@ -592,6 +578,20 @@ bmpce_reaper(struct psc_poolmgr *m)
 	
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
+
+	DYNARRAY_FOREACH(e, i, &a) {
+ 		b = e->bmpce_bmap;
+		bci = bmap_2_bci(b);
+ 		bmpc = bmap_2_bmpc(b);
+
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
+		BMPCE_LOCK(e);
+		bmpce_free(e, bmpc);
+		pfl_rwlock_unlock(&bci->bci_rwlock);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
+	}
+
+	psc_dynarray_free(&a);
 
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
 	    psc_atomic32_read(&m->ppm_nwaiters));
