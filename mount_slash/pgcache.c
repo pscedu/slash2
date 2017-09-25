@@ -412,6 +412,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	   !(e->bmpce_flags & BMPCEF_TOFREE) &&
 	   !(e->bmpce_flags & BMPCEF_DISCARD)) { 
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
+
+		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCEF_LRU;
 
 		/*
@@ -539,6 +541,18 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
+int
+bmpc_lru_cmp(const void *x, const void *y)
+{
+	const struct bmap_pagecache *a = x, *b = y;
+
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
+		return (-1);
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
+		return (1);
+	return (0);
+}
+
 #define	PAGE_RECLAIM_BATCH	3
 
 /* Called from psc_pool_reap() */
@@ -589,6 +603,14 @@ bmpce_reaper(struct psc_poolmgr *m)
 			if (nfreed >= PAGE_RECLAIM_BATCH &&
 			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
+		}
+
+		if (pll_nitems(&bmpc->bmpc_lru) > 0) {
+			e = pll_peekhead(&bmpc->bmpc_lru);
+			memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
+			    sizeof(struct timespec));
+			lc_remove(&bmpcLru, bmpc);
+			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
 		}
 
 		BMAP_ULOCK(b);

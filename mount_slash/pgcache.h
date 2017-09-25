@@ -70,6 +70,7 @@ struct bmap_pagecache_entry {
 	psc_spinlock_t		 bmpce_lock;
 	void			*bmpce_base;	/* statically allocated pg contents */
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
+	struct pfl_timespec      bmpce_laccess; /* last page access             */
 	struct psc_lockedlist	 bmpce_pndgaios;
 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
@@ -251,6 +252,7 @@ RB_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
+	struct timespec                  bmpc_oldest;           /* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;
 
 	/*
@@ -341,6 +343,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    biorq_exp_lentry, NULL);
 
 	RB_INIT(&bmpc->bmpc_biorqs);
+
+	PFL_GETTIMESPEC(&bmpc->bmpc_oldest);
 	lc_addtail(&bmpcLru, bmpc);
 }
 
