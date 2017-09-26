@@ -822,11 +822,17 @@ msl_bmap_lease_reassign(struct bmap *b)
 void
 msl_bmap_cache_rls(struct bmap *b)
 {
+	int i;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
-	pfl_rwlock_wrlock(&bci->bci_rwlock);
+	/*
+ 	 * We need two loops because we don't have a safe version
+ 	 * of RB_FOREACH().
+ 	 */
+	pfl_rwlock_rdlock(&bci->bci_rwlock);
 	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
@@ -837,18 +843,26 @@ msl_bmap_cache_rls(struct bmap *b)
 		psclog_diag("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
-		if (e->bmpce_flags & BMPCEF_LRU) {
-			pll_remove(&bmpc->bmpc_lru, e);
-			e->bmpce_flags &= ~BMPCEF_LRU;
-		}
-		bmpce_free(e, bmpc);
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		pll_remove(&bmpc->bmpc_lru, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
 
-		psc_atomic32_dec(&b->bcm_opcnt);
-		psc_assert(psc_atomic32_read(&b->bcm_opcnt));
-
+		psc_dynarray_add(&a, e);
 		OPSTAT_INCR("msl.bmap-release-page");
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
+
+	DYNARRAY_FOREACH(e, i, &a) {
+ 		b = e->bmpce_bmap;
+		bci = bmap_2_bci(b);
+ 		bmpc = bmap_2_bmpc(b);
+
+		pfl_rwlock_wrlock(&bci->bci_rwlock);
+		BMPCE_LOCK(e);
+		bmpce_free(e, bmpc);
+		pfl_rwlock_unlock(&bci->bci_rwlock);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
+	}
 }
 
 void
