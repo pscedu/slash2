@@ -588,6 +588,10 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 			msl_bmap_cache_rls(b);
 			BMAP_LOCK(b);
 		}
+		OPSTAT_INCR("bmap-modeset-ok");
+	} else {
+		OPSTAT_INCR("bmap-modeset-err");
+		msl_bmap_cache_rls(b);
 	}
 
 	b->bcm_flags &= ~BMAPF_MODECHNG;
