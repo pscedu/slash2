@@ -853,10 +853,6 @@ msl_bmap_cache_rls(struct bmap *b)
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 
 	DYNARRAY_FOREACH(e, i, &a) {
- 		b = e->bmpce_bmap;
-		bci = bmap_2_bci(b);
- 		bmpc = bmap_2_bmpc(b);
-
 		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
