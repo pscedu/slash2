@@ -607,6 +607,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 			bmpce_free(e, bmpc);
 			bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 		}
+		psc_dynarray_reset(&a);
 
 		/*
  		 * Hold a list lock can cause deadlock and slow things down.
@@ -633,7 +634,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
-		psc_dynarray_reset(&a);
 		goto again;
 	}
 
