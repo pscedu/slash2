@@ -435,9 +435,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	}
 
 	e->bmpce_flags |= BMPCEF_TOFREE;
-	BMPCE_ULOCK(e);
 
-	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
 	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 }
