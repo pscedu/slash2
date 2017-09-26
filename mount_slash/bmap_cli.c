@@ -857,6 +857,7 @@ msl_bmap_cache_rls(struct bmap *b)
 		bmpce_free(e, bmpc);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
+	psc_dynarray_free(&a);
 }
 
 void
