@@ -54,6 +54,8 @@ struct psc_poolmgr	*bwc_pool;
 int			 msl_bmpces_min = 512;	 	/* 16MiB */
 int			 msl_bmpces_max = 16384; 	/* 512MiB */
 
+#define			 MIN_FREE_PAGES		16	
+
 struct psc_listcache	 msl_readahead_pages;
 
 RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
@@ -422,7 +424,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		pll_add(&bmpc->bmpc_lru, e);
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree < 32) {
+		if (bmpce_pool->ppm_nfree < MIN_FREE_PAGES) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -634,7 +636,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (thr->pscthr_type != PFL_THRT_FS && 
 	    thr->pscthr_type != MSTHRT_READAHEAD && m->ppm_nfree < 32) {
 #endif
-	if (thr->pscthr_type == MSTHRT_READAHEAD && m->ppm_nfree < 32) {
+	if (thr->pscthr_type == MSTHRT_REAP && 
+	    m->ppm_nfree < MIN_FREE_PAGES) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
 		goto again;
