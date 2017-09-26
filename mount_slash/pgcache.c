@@ -557,7 +557,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	int i, nfreed;
 	struct bmap *b;
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *e, *tmp;
+	struct bmap_pagecache_entry *e;
 	struct psc_thread *thr;
 	struct psc_dynarray a = DYNARRAY_INIT;
 
@@ -579,7 +579,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
 		PLL_LOCK(&bmpc->bmpc_lru);
-		PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
+		PLL_FOREACH(e, &bmpc->bmpc_lru) {
 			if (!BMPCE_TRYLOCK(e))
 				continue;
 
@@ -588,10 +588,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 				BMPCE_ULOCK(e);
 				continue;
 			}
-			psc_assert(e->bmpce_flags & BMPCEF_LRU);
 			e->bmpce_flags |= BMPCEF_TOFREE;
-			pll_remove(&bmpc->bmpc_lru, e);
-			e->bmpce_flags &= ~BMPCEF_LRU;
 			BMPCE_ULOCK(e);
 
 			psc_dynarray_add(&a, e);
@@ -603,6 +600,9 @@ bmpce_reaper(struct psc_poolmgr *m)
 		PLL_ULOCK(&bmpc->bmpc_lru);
 		DYNARRAY_FOREACH(e, i, &a) {
 			BMPCE_LOCK(e);
+			psc_assert(e->bmpce_flags & BMPCEF_LRU);
+			pll_remove(&bmpc->bmpc_lru, e);
+			e->bmpce_flags &= ~BMPCEF_LRU;
 			bmpce_free(e, bmpc);
 			bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 		}
@@ -630,7 +630,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
+#if 0
+	if (thr->pscthr_type != PFL_THRT_FS && 
+	    thr->pscthr_type != MSTHRT_READAHEAD && m->ppm_nfree < 32) {
+#endif
+	if (thr->pscthr_type == MSTHRT_READAHEAD && m->ppm_nfree < 32) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
 		goto again;
