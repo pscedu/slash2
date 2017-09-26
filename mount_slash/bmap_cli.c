@@ -238,6 +238,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
 		/* ignore all errors for this background operation */
+		msl_bmap_cache_rls(b);
 		BMAP_LOCK(b);
 	}
 
@@ -374,6 +375,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	} else {
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
+		msl_bmap_cache_rls(b);
 		BMAP_LOCK(b);
 	}
 
@@ -392,6 +394,8 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+
 	int rc;
 
 	BMAP_LOCK(b);
@@ -403,6 +407,11 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	if (!rc) {
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+		lc_move2tail(&msl_bmaptimeoutq, bci);
+		OPSTAT_INCR("msl.bmap-extend-cb-ok");
+	} else {
+		msl_bmap_cache_rls(b);
+		OPSTAT_INCR("msl.bmap-extend-cb-err");
 	}
 
 	/*
