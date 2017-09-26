@@ -423,7 +423,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 		pll_add(&bmpc->bmpc_lru, e);
 
 		BMPCE_ULOCK(e);
-		if (bmpce_pool->ppm_nfree < 16) {
+		if (bmpce_pool->ppm_nfree < 32) {
 			OPSTAT_INCR("msl.bmpce-nfree-reap");
 #if 0
 			bmpce_reaper(bmpce_pool);
@@ -626,7 +626,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 16) {
+	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
 		goto again;

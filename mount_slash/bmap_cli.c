@@ -826,7 +826,7 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e;
 
-	pfl_rwlock_rdlock(&bci->bci_rwlock);
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
