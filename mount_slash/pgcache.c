@@ -592,10 +592,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 			}
 			psc_assert(e->bmpce_flags & BMPCEF_LRU);
 			e->bmpce_flags |= BMPCEF_TOFREE;
-			e->bmpce_flags &= ~BMPCEF_LRU;
 			pll_remove(&bmpc->bmpc_lru, e);
-			psc_dynarray_add(&a, e);
+			e->bmpce_flags &= ~BMPCEF_LRU;
+			BMPCE_ULOCK(e);
 
+			psc_dynarray_add(&a, e);
 			nfreed++;
 			if (nfreed >= PAGE_RECLAIM_BATCH &&
 			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))

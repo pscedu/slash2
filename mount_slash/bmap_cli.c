@@ -846,6 +846,7 @@ msl_bmap_cache_rls(struct bmap *b)
 		psc_assert(e->bmpce_flags & BMPCEF_LRU);
 		pll_remove(&bmpc->bmpc_lru, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
+		BMPCE_ULOCK(e);
 
 		psc_dynarray_add(&a, e);
 		OPSTAT_INCR("msl.bmap-release-page");
