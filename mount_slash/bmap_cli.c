@@ -857,10 +857,8 @@ msl_bmap_cache_rls(struct bmap *b)
 		bci = bmap_2_bci(b);
  		bmpc = bmap_2_bmpc(b);
 
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
 		BMPCE_LOCK(e);
 		bmpce_free(e, bmpc);
-		pfl_rwlock_unlock(&bci->bci_rwlock);
 		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 	}
 }

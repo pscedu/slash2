@@ -162,7 +162,7 @@ msl_pgcache_put(void *p)
 }
 
 void
-msl_pgcache_reap(int idle)
+msl_pgcache_reap(__unusedx int idle)
 {
 	void *p;
 	static int last;
@@ -357,8 +357,6 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	struct bmap *b = bmpc_2_bmap(bmpc);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
-	psc_assert(pfl_rwlock_haswrlock(&bci->bci_rwlock));
-
 	BMPCE_LOCK_ENSURE(e);
 
 	psc_assert(e->bmpce_ref == 0);
@@ -371,7 +369,9 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 
 	BMPCE_ULOCK(e);
 
+	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+	pfl_rwlock_unlock(&bci->bci_rwlock);
 
 	msl_pgcache_put(e->bmpce_base);
 	psc_pool_return(bmpce_pool, e);
@@ -381,7 +381,6 @@ void
 bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 {
 	struct bmap *b = e->bmpce_bmap;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	msl_bmpce_gen++;
 	LOCK_ENSURE(&e->bmpce_lock);
@@ -438,10 +437,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	e->bmpce_flags |= BMPCEF_TOFREE;
 	BMPCE_ULOCK(e);
 
-	pfl_rwlock_wrlock(&bci->bci_rwlock);
 	BMPCE_LOCK(e);
 	bmpce_free(e, bmpc);
-	pfl_rwlock_unlock(&bci->bci_rwlock);
 	bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 }
 
@@ -561,7 +558,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 {
 	int nfreed;
 	struct bmap *b;
-	struct bmap_cli_info *bci;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e, *tmp;
 	struct psc_thread *thr;
@@ -582,9 +578,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 			continue;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
-		bci = bmap_2_bci(b);
-		pfl_rwlock_wrlock(&bci->bci_rwlock);
-
+		PLL_LOCK(&bmpc->bmpc_lru);
 		PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
 			if (!BMPCE_TRYLOCK(e))
 				continue;
@@ -607,7 +601,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
 		}
-		pfl_rwlock_unlock(&bci->bci_rwlock);
 
 		if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 			e = pll_peekhead(&bmpc->bmpc_lru);
@@ -616,6 +609,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 			lc_remove(&bmpcLru, bmpc);
 			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
 		}
+		PLL_ULOCK(&bmpc->bmpc_lru);
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
