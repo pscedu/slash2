@@ -401,6 +401,18 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 
+	/*
+ 	 * To get the original request:
+ 	 *
+ 	 * (gdb) p &((struct pscrpc_msg *)0)->buflens[2]
+ 	 * $23 = (uint32_t *) 0x48
+ 	 * (gdb) p *(struct srm_leasebmapext_req *)((char *)rq->rq_reqmsg + 0x48)
+ 	 * $24 = {sbd = {sbd_fg = {fg_fid = 327636872892953958, fg_gen = 0}, \
+ 	 * sbd_bmapno = 0, sbd_seq = 10681986, sbd_nid = 562995062530997, \
+ 	 * sbd_pid = 2147503903, sbd_expire = 600, sbd_ios = 4294967295, \
+ 	 * sbd_flags = 4}}
+ 	 *
+ 	 */
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	/* ignore all errors for this background operation */
