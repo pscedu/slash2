@@ -556,13 +556,15 @@ bmpc_lru_cmp(const void *x, const void *y)
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int nfreed;
+	int i, nfreed;
 	struct bmap *b;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e, *tmp;
 	struct psc_thread *thr;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
 	thr = pscthr_get();
+	psc_dynarray_ensurelen(&a, PAGE_RECLAIM_BATCH);
 
  again:
 
@@ -592,15 +594,24 @@ bmpce_reaper(struct psc_poolmgr *m)
 			e->bmpce_flags |= BMPCEF_TOFREE;
 			e->bmpce_flags &= ~BMPCEF_LRU;
 			pll_remove(&bmpc->bmpc_lru, e);
-			bmpce_free(e, bmpc);
-			psc_atomic32_dec(&b->bcm_opcnt);
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt));
+			psc_dynarray_add(&a, e);
 
 			nfreed++;
 			if (nfreed >= PAGE_RECLAIM_BATCH &&
 			    nfreed >= psc_atomic32_read(&m->ppm_nwaiters))
 				break;
 		}
+		PLL_ULOCK(&bmpc->bmpc_lru);
+		DYNARRAY_FOREACH(e, i, &a) {
+			BMPCE_LOCK(e);
+			bmpce_free(e, bmpc);
+			bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
+		}
+
+		/*
+ 		 * Hold a list lock can cause deadlock and slow things down.
+ 		 * So do it in two loops.
+ 		 */
 
 		if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 			e = pll_peekhead(&bmpc->bmpc_lru);
@@ -609,7 +620,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 			lc_remove(&bmpcLru, bmpc);
 			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
 		}
-		PLL_ULOCK(&bmpc->bmpc_lru);
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
@@ -623,9 +633,11 @@ bmpce_reaper(struct psc_poolmgr *m)
 	if (thr->pscthr_type == MSTHRT_REAP && m->ppm_nfree < 32) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
+		psc_dynarray_reset(&a);
 		goto again;
 	}
 
+	psc_dynarray_free(&a);
 	psclog_diag("nfreed=%d, waiters=%d", nfreed,
 	    psc_atomic32_read(&m->ppm_nwaiters));
 
