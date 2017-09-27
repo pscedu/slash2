@@ -614,6 +614,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 		}
 		psc_dynarray_reset(&a);
 
+		/*
+ 		 * Resort LRU based on the next page to be reclaimed.
+ 		 */
+		PLL_LOCK(&bmpc->bmpc_lru);
 		e = pll_peekhead(&bmpc->bmpc_lru);
 		if (e) {
 			memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
@@ -621,6 +625,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 			lc_remove(&bmpcLru, bmpc);
 			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
 		}
+		PLL_ULOCK(&bmpc->bmpc_lru);
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
