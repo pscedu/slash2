@@ -415,7 +415,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	BMAP_LOCK(b);
 	PFL_GETTIMESPEC(&ts);
 	ts.tv_sec += 1;
-	if (timespeccmp(&bci->bci_etime, &ts, <=)) {
+	if (bci->bci_etime.tv_sec <= ts.tv_sec) {
 		BMAP_ULOCK(b);
 		rc = -EAGAIN;
 		OPSTAT_INCR("msl.bmap-lease-expired");
