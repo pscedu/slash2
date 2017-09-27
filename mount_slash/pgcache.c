@@ -580,6 +580,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 			continue;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
+		/*
+ 		 * Hold a list lock can cause deadlock and slow things down.
+ 		 * So do it in two loops.
+ 		 */
 		PLL_LOCK(&bmpc->bmpc_lru);
 		PLL_FOREACH(e, &bmpc->bmpc_lru) {
 			if (!BMPCE_TRYLOCK(e))
@@ -610,13 +614,8 @@ bmpce_reaper(struct psc_poolmgr *m)
 		}
 		psc_dynarray_reset(&a);
 
-		/*
- 		 * Hold a list lock can cause deadlock and slow things down.
- 		 * So do it in two loops.
- 		 */
-
-		if (pll_nitems(&bmpc->bmpc_lru) > 0) {
-			e = pll_peekhead(&bmpc->bmpc_lru);
+		e = pll_peekhead(&bmpc->bmpc_lru);
+		if (e) {
 			memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
 			    sizeof(struct timespec));
 			lc_remove(&bmpcLru, bmpc);
