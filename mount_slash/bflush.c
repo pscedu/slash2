@@ -395,7 +395,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct bmap *b;
 	int i, rc;
 	struct sl_resm *m;
-	struct timespec ts;
+	struct timespec ts0, ts1;
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
@@ -403,28 +403,28 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	/*
- 	 * XXX RPC throttle here. Otherwise, our RPC will be
- 	 * stalled and when it eventually sent out, got
- 	 * rejected by expired keys.  Need experiment to
- 	 * confirm.
- 	 */
 	b = r->biorq_bmap;
 	bci = bmap_2_bci(b);
 
 	BMAP_LOCK(b);
-	PFL_GETTIMESPEC(&ts);
-	ts.tv_sec += 1;
-	if (bci->bci_etime.tv_sec <= ts.tv_sec) {
-		BMAP_ULOCK(b);
+	PFL_GETTIMESPEC(&ts0);
+	ts0.tv_sec += 1;
+	ts1.tv_sec = bci->bci_etime.tv_sec;
+	BMAP_ULOCK(b);
+
+	if (ts1.tv_sec <= ts0.tv_sec) {
 		rc = -EAGAIN;
 		OPSTAT_INCR("msl.bmap-lease-expired");
 		PFL_GOTOERR(out, rc);
 	}
+	/*
+ 	 * Throttle RPC here. Otherwise, our RPC will be
+ 	 * stalled and when it eventually sent out, got
+ 	 * rejected by expired keys.
+ 	 */
 	m = libsl_ios2resm(bmap_2_ios(b));
-	rc = msl_resm_get_credit(m, bci->bci_etime.tv_sec - ts.tv_sec);
+	rc = msl_resm_get_credit(m, ts1.tv_sec - ts0.tv_sec);
 	if (rc) {
-		BMAP_ULOCK(b);
 		rc = -EAGAIN;
 		OPSTAT_INCR("msl.bmap-flush-throttled");
 		PFL_GOTOERR(out, rc);
@@ -432,6 +432,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	psc_assert(bwc->bwc_soff == r->biorq_off);
 
+	BMAP_LOCK(b);
 	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		/*
