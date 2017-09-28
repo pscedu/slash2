@@ -414,7 +414,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	   !(e->bmpce_flags & BMPCEF_DISCARD)) { 
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 
-		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCEF_LRU;
 
 		/*
@@ -538,18 +537,6 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
-int
-bmpc_lru_cmp(const void *x, const void *y)
-{
-	const struct bmap_pagecache *a = x, *b = y;
-
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
-		return (-1);
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
-		return (1);
-	return (0);
-}
-
 #define	PAGE_RECLAIM_BATCH	1
 
 /* Called from psc_pool_reap() */
@@ -613,19 +600,6 @@ bmpce_reaper(struct psc_poolmgr *m)
 			bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
 		}
 		psc_dynarray_reset(&a);
-
-		/*
- 		 * Resort LRU based on the next page to be reclaimed.
- 		 */
-		PLL_LOCK(&bmpc->bmpc_lru);
-		e = pll_peekhead(&bmpc->bmpc_lru);
-		if (e) {
-			memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
-			    sizeof(struct timespec));
-			lc_remove(&bmpcLru, bmpc);
-			lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
-		}
-		PLL_ULOCK(&bmpc->bmpc_lru);
 
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 
