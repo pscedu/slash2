@@ -610,10 +610,10 @@ bmpce_reaper(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-#if 0
-	if (thr->pscthr_type != PFL_THRT_FS && 
-	    thr->pscthr_type != MSTHRT_READAHEAD && m->ppm_nfree < 32) {
-#endif
+	/*
+	 * I have also tried to let all non PFL_THRT_FS and non
+	 * MSTHRT_READAHEAD to work harder, to no avail.
+	 *
 	if (thr->pscthr_type == MSTHRT_REAP && 
 	    m->ppm_nfree < MIN_FREE_PAGES) {
 		pscthr_yield();
