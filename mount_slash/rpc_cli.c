@@ -125,6 +125,10 @@ msl_resm_get_credit(struct sl_resm *m, int secs)
 	PFL_GETTIMESPEC(&ts0);
 	RPCI_LOCK(rpci);
 	while (rpci->rpci_infl_rpcs + rpci->rpci_infl_credits >= max) {
+		/*
+		 * XXX We should check time _after_ we wake up and
+		 * we should use timed wait as well.
+		 */
 		PFL_GETTIMESPEC(&ts1);
 		if (ts1.tv_sec - ts0.tv_sec > secs) {
 			timeout = 1;
