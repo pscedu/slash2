@@ -793,6 +793,10 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		rc = 0;
 		while (!rc && j < psc_dynarray_len(reqs) &&
 		    (bwc = bmap_flush_trycoalesce(reqs, &j))) {
+			/*
+ 			 * XXXX We should only set didwork after sending
+ 			 * out an RPC.
+ 			 */
 			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
 			rc = bmap_flush_send_rpcs(bwc);
