@@ -335,6 +335,7 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
 	    NULL);
 	if (!csvc) {
+		OPSTAT_INCR("sliod-offline");
 		/* This sliod hasn't established a connection to us. */
 		psclog_diag("res=%s skipped due to NULL csvc",
 		    resm->resm_name);
