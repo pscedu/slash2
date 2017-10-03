@@ -174,6 +174,9 @@ int main(int argc, char *argv[])
 		fflush(stdout);
 	}
 
+	if (error)
+		goto out;
+
  verify:
 
 	printf("\nAll threads have exited. Now verifying file contents ... \n\n");

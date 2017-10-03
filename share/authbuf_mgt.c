@@ -141,9 +141,14 @@ authbuf_checkkey(const char *fn, struct stat *stb)
 	if ((stb->st_mode & (ALLPERMS & ~S_IWUSR)) != S_IRUSR)
 		psc_fatalx("key file %s has wrong permissions (0%o), "
 		    "should be 0400", fn, stb->st_mode & ALLPERMS);
+#if 0
+	/*
+ 	 * All a regular user to start mount slash2 using setuid trick.
+ 	 */
 	if (stb->st_uid != 0)
 		psc_fatalx("key file %s has wrong owner, should be "
 		    "root", fn);
+#endif
 }
 
 /*
