@@ -3147,6 +3147,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
+				msl_bmap_cache_rls(b);
 				bmap_biorq_waitempty(b);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
