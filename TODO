@@ -6033,3 +6033,7 @@ reclaim slowness:
 [1505939690.53942800 slirimthr07:7ffee27e9700:def rim.c sli_rim_handle_reclaim 272]reclaim processing for batchno 972 (1 files) took 
 460.719 second(s)
 
+10/03/2017
+----------
+
+MDS: add per-client DIO setting and RPC counters.
