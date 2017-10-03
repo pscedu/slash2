@@ -281,7 +281,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	if (bml == NULL) {
 		psclog_diag("bno = %d, rc = %d", mq->sbd.sbd_bmapno, -EINVAL);
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
 	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios[0]);
