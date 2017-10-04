@@ -116,6 +116,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	uint32_t n, nrepls = 0;
 	char *res_name;
 	int rc;
+	sl_bmapno_t bno;
+	struct bmap *b;
 
 	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
@@ -158,6 +160,22 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	} else
 		rc = ENOTSUP;
 	fg = f->fcmh_fg;
+
+	/*
+	 * Give up write lease ASAP to allow replication to proceed.
+	 */
+	for (bno = 0; bno < fcmh_2_nbmaps(f); bno++) {
+		rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_NORETRIEVE, &b);
+		if (rc == ENOENT)
+			continue;
+		if (!(b->bcm_flags & BMAPF_WR)) {
+			BMAP_ULOCK(b);
+			continue;
+		}
+		b->bcm_flags |= BMAPF_LEASEEXPIRE;
+		msl_bmap_cache_rls(b);
+		bmap_op_done(b);
+	}
 	fcmh_op_done(f);
 
 	if (rc)
