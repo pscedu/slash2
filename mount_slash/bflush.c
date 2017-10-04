@@ -310,7 +310,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc;
-	struct bmap_cli_info *bci;
+	struct bmap_cli_info *bci = bmap_2_bci(r->biorq_bmap);
 
 	DEBUG_BIORQ(PLL_DIAG, r, "resched rc=%d", rc);
 
@@ -333,7 +333,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	     (r->biorq_retries >= msl_max_retries * 32))) {
 
 		BIORQ_ULOCK(r);
-		bci = bmap_2_bci(r->biorq_bmap);
 		if (rc && !bci->bci_flush_rc)
 			bci->bci_flush_rc = rc;
 		BMAP_ULOCK(r->biorq_bmap);
