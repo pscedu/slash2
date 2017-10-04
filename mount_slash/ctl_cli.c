@@ -166,8 +166,10 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 */
 	for (bno = 0; bno < fcmh_2_nbmaps(f); bno++) {
 		rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_NORETRIEVE, &b);
-		if (rc == ENOENT)
+		if (rc == ENOENT) {
+			rc = 0;
 			continue;
+		}
 		if (!(b->bcm_flags & BMAPF_WR)) {
 			BMAP_ULOCK(b);
 			continue;
