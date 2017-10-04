@@ -779,6 +779,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 * to be relinquished.
 			 */
 			if (bmap_2_bmi(b)->bmi_wr_ion) {
+				OPSTAT_INCR("upsch-skip-write");
 				psclog_debug("skipping because write "
 				    "lease still active");
 				break;
