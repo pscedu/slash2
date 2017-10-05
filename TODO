@@ -6037,3 +6037,8 @@ reclaim slowness:
 ----------
 
 MDS: add per-client DIO setting and RPC counters.
+
+10/05/2017
+----------
+
+Look into FUSE max readahead setting.
