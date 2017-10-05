@@ -1382,11 +1382,6 @@ void
 msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-#if 0
-	struct bmpc_ioreq *r;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
-	struct bmap_pagecache_entry *e, *next;
-#endif
 
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
@@ -1399,14 +1394,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 	 * write back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
-
-#if 0
-	/* DIO rq's are allowed since no cached pages are involved. */
-	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
-		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-			psc_assert(r->biorq_flags & BIORQ_DIO);
-	}
-#endif
 
 	lc_remove(&bmpcLru, bmpc);
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
