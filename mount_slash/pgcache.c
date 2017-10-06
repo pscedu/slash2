@@ -543,8 +543,8 @@ bmpc_biorqs_flush(struct bmap *b)
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
-	int i, nfreed;
 	struct bmap *b;
+	int i, nfreed, haswork;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e;
 	struct psc_thread *thr;
@@ -556,6 +556,7 @@ bmpce_reaper(struct psc_poolmgr *m)
  again:
 
 	nfreed = 0;
+	haswork = 0;
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 
@@ -563,6 +564,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		if (!pll_nitems(&bmpc->bmpc_lru))
 			continue;
 
+		haswork = 1;
 		if (!BMAP_TRYLOCK(b))
 			continue;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
@@ -615,7 +617,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 	 * MSTHRT_READAHEAD to work harder, to no avail.
 	 */
 	if (thr->pscthr_type == MSTHRT_REAP && 
-	    m->ppm_nfree < MIN_FREE_PAGES) {
+	    m->ppm_nfree < MIN_FREE_PAGES && haswork) {
 		pscthr_yield();
 		OPSTAT_INCR("msl.reap-loop");
 		goto again;
