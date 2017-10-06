@@ -40,7 +40,6 @@
 #define NOTIFY_FSYNC_TIMEOUT	10
 
 struct bmap_iod_minseq	 sli_bminseq;
-static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 const struct timespec	 sli_bmap_release_idle = { 0, 1000 * 1000L};
 
 struct psc_listcache	 sli_bmap_releaseq;		/* bmaps to release */
@@ -122,33 +121,44 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	struct slrpc_cservice *csvc = NULL;
-	struct pscrpc_request *rq = NULL;
-	struct srm_getbmapminseq_req *mq;
-	struct srm_getbmapminseq_rep *mp;
-	struct timespec crtime;
 	uint64_t seqno;
-	int rc;
 
-	OPSTAT_INCR("bim-getcurseq");
-
- retry:
 	spinlock(&sli_bminseq.bim_lock);
 	while (sli_bminseq.bim_flags & BIM_RETRIEVE_SEQ) {
+		OPSTAT_INCR("bmapseqno-wait");
 		psc_waitq_wait(&sli_bminseq.bim_waitq,
 		    &sli_bminseq.bim_lock);
 		spinlock(&sli_bminseq.bim_lock);
 	}
 
-	PFL_GETTIMESPEC(&crtime);
-	timespecsub(&crtime, &bim_timeo, &crtime);
+	seqno = sli_bminseq.bim_minseq;
+	freelock(&sli_bminseq.bim_lock);
+	return (seqno);
+}
 
-	if (timespeccmp(&crtime, &sli_bminseq.bim_age, >) ||
-	    sli_bminseq.bim_minseq == BMAPSEQ_ANY) {
+void
+sliseqnothr_main(struct psc_thread *thr)
+{
+	int rc;
+	struct slrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_getbmapminseq_req *mq;
+	struct srm_getbmapminseq_rep *mp;
+        struct psc_waitq dummy = PSC_WAITQ_INIT("seqno");
+        struct timespec ts; 
 
+	while (pscthr_run(thr)) {
+
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BIM_MINAGE;
+		psc_waitq_waitabs(&dummy, NULL, &ts);
+
+		spinlock(&sli_bminseq.bim_lock);
 		sli_bminseq.bim_flags |= BIM_RETRIEVE_SEQ;
 		freelock(&sli_bminseq.bim_lock);
+		OPSTAT_INCR("bmapseqno-req");
 
+ retry:
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
@@ -171,21 +181,16 @@ bim_getcurseq(void)
 			csvc = NULL;
 		}
 
-		spinlock(&sli_bminseq.bim_lock);
-		sli_bminseq.bim_flags &= ~BIM_RETRIEVE_SEQ;
-		psc_waitq_wakeall(&sli_bminseq.bim_waitq);
 		if (rc) {
-			freelock(&sli_bminseq.bim_lock);
 			psclog_warnx("failed to get bmap seqno rc=%d", rc);
 			sleep(1);
 			goto retry;
 		}
+		spinlock(&sli_bminseq.bim_lock);
+		sli_bminseq.bim_flags &= ~BIM_RETRIEVE_SEQ;
+		psc_waitq_wakeall(&sli_bminseq.bim_waitq);
+		freelock(&sli_bminseq.bim_lock);
 	}
-
-	seqno = sli_bminseq.bim_minseq;
-	freelock(&sli_bminseq.bim_lock);
-
-	return (seqno);
 }
 
 void

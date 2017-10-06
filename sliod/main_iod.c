@@ -350,6 +350,9 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_HEALTH, slihealththr_main, 0,
 	    "slihealththr");
 
+	pscthr_init(SLITHRT_SEQNO, sliseqnothr_main, 0,
+	    "sliseqnothr");
+
 	pfl_workq_init(128, 1024, 1024);
 	pfl_wkthr_spawn(SLITHRT_WORKER, SLI_NWORKER_THREADS, 0, "sliwkthr%d");
 

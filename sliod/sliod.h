@@ -56,6 +56,7 @@ enum {
 	SLITHRT_RIC,			/* service RPC requests from CLI */
 	SLITHRT_RII,			/* service RPC requests from ION */
 	SLITHRT_RIM,			/* service RPC requests from MDS */
+	SLITHRT_SEQNO,			/* update min seqno */
 	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
 	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
 	SLITHRT_READAHEAD,		/* sliver read-ahead */
@@ -137,5 +138,8 @@ extern struct statvfs		 sli_statvfs_buf;
 #define RIC_HANDLE_FAULT        "sliod/ric_handle"
 
 void	slictlthr_spawn(const char *);
+
+void	sliseqnothr_main(struct psc_thread *);
+
 
 #endif /* _SLIOD_H_ */
