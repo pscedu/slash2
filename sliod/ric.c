@@ -275,7 +275,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_warnx("%s: seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw == SL_WRITE ? "write" : "read", 
 		    mq->sbd.sbd_seq, seqno);
-#if 0
+#if 1
 		psc_fatalx("key expired, mq = %p", mp);
 #endif
 		mp->rc = -PFLERR_KEYEXPIRED;

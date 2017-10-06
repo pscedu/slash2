@@ -66,6 +66,7 @@ bim_updateseq(uint64_t seq)
 
 	if (seq == BMAPSEQ_ANY) {
 		invalid = 1;
+		OPSTAT_INCR("seqno-invalid");
 		goto out;
 	}
 
@@ -158,11 +159,8 @@ bim_getcurseq(void)
 			goto out;
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc)
-			goto out;
-
-		rc = bim_updateseq(mp->seqno);
-
+		if (!rc)
+			rc = bim_updateseq(mp->seqno);
  out:
 		if (rq) {
 			pscrpc_req_finished(rq);
@@ -178,8 +176,7 @@ bim_getcurseq(void)
 		psc_waitq_wakeall(&sli_bminseq.bim_waitq);
 		if (rc) {
 			freelock(&sli_bminseq.bim_lock);
-			psclog_warnx("failed to get bmap seqno rc=%d",
-			    rc);
+			psclog_warnx("failed to get bmap seqno rc=%d", rc);
 			sleep(1);
 			goto retry;
 		}
