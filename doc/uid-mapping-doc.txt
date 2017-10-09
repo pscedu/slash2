@@ -26,3 +26,9 @@ group on the other side.
 
 If a user does not have explicit mapping, he or she will be treated as nobody and 
 nogroup.  This makes sure that a user does not gain more privileges accidentally.
+
+10/09/2017
+----------
+
+UID/GID mapping allows a user or a group of users to gain access to files without
+actually changing the onwership of these files.
