@@ -294,7 +294,7 @@ mapfile_parse_group(char *start)
 		psc_hashtbl_add_item(&msl_gidmap_ext, gm);
 	} else {
 		q.gm_key = remote;
-		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
+		gm = psc_hashtbl_search(&msl_gidmap_int, &q.gm_key);
 		if (gm != NULL)
 			goto malformed;
 
