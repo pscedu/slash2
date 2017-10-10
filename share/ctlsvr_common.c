@@ -379,7 +379,10 @@ slctlparam_logrotate_set(const char *val)
 	newval = strtol(val, NULL, 0);
 	if (newval < 0)
 		return (1);
-	pfl_log_rotate = newval;
+	if (newval)
+		pfl_log_rotate = newval;
+	else
+		pfl_log_rotate = PSC_MAX_LOG_PER_FILE;
 	return (0);
 }
 
