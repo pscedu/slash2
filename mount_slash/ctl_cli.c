@@ -1007,7 +1007,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
 	psc_ctlparam_register_simple("sys.logrotate",
-	    slctlparam_logrotate_get, slctlparam_logrotate_set, NULL);
+	    slctlparam_logrotate_get, slctlparam_logrotate_set);
 
 	psc_ctlparam_register_var("sys.nbrq_outstanding",
 	    PFLCTL_PARAMT_INT, 0, &sl_nbrqset->set_remaining);

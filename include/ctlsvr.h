@@ -46,7 +46,7 @@ int slctlparam_resources(int, struct psc_ctlmsghdr *,
 void slctlparam_uptime_get(char *);
 void slctlparam_version_get(char *);
 void slctlparam_logrotate_get(char *);
-void slctlparam_logrotate_get(char *);
+int  slctlparam_logrotate_set(const char *);
 
 extern const struct slctl_res_field slctl_resmds_fields[];
 extern const struct slctl_res_field slctl_resios_fields[];
