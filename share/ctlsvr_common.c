@@ -364,3 +364,22 @@ slctlparam_uptime_get(char *val)
 	    (delta.tv_sec % (60 * 60 * 24)) / (60 * 60),
 	    (delta.tv_sec % (60 * 60)) / 60);
 }
+
+void
+slctlparam_logrotate_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", pfl_log_rotate);
+}
+
+int
+slctlparam_logrotate_set(const char *val)
+{
+	int newval;
+
+	newval = strtol(val, NULL, 0);
+	if (newval < 0)
+		return (1);
+	pfl_log_rotate = newval;
+	return (0);
+}
+

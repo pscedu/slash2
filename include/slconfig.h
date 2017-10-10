@@ -329,6 +329,7 @@ extern struct psclist_head cfg_lnetif_pairs;
 extern uint32_t		 sl_sys_upnonce;
 extern int		 sl_stk_version;
 extern struct timespec	 pfl_uptime;
+extern int		 pfl_log_rotate;
 
 /*
  * Produce a global, unique identifier for a resource from its internal
