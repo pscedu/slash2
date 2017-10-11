@@ -270,11 +270,13 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 }
 
 struct pscfs_creds *
-slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
+slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr, int map)
 {
 	pscfs_getcreds(pfr, pcr);
-	uidmap_ext_cred(pcr);
-	gidmap_ext_cred(pcr);
+	if (map) {
+		uidmap_ext_cred(pcr);
+		gidmap_ext_cred(pcr);
+	}
 	return (pcr);
 }
 
@@ -308,7 +310,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	FCMH_LOCK(c);
 	if (pcr.pcr_uid == 0) {
@@ -442,7 +444,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK | X_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -615,7 +617,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
@@ -802,7 +804,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -855,7 +857,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -955,7 +957,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1401,7 +1403,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0)
 		PFL_GOTOERR(out, rc = EPERM);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	FCMH_LOCK(p);
 	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && pcr.pcr_uid) {
@@ -1574,7 +1576,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
@@ -1899,7 +1901,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	rc = fcmh_checkcreds(d, pfr, &pcr, R_OK);
 	if (rc)
@@ -2054,7 +2056,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &c);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
@@ -2088,7 +2090,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2428,7 +2430,7 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 
 	pft = thr->pscthr_private;
 	if (pft->pft_pfr) {
-		slc_getfscreds(pft->pft_pfr, &pcr);
+		slc_getfscreds(pft->pft_pfr, &pcr, 1);
 		return (pcr.pcr_uid);
 	}
 	return (-1);
@@ -2534,7 +2536,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -2825,7 +2827,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2979,7 +2981,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 	}
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if (msl_root_squash && pcr.pcr_uid == 0 && 
 	    fcmh_2_fid(c) != SLFID_ROOT) {
 		rc = EACCES;
@@ -3533,7 +3535,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3701,7 +3703,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3814,7 +3816,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	if (size)
 		buf = PSCALLOC(size);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3879,7 +3881,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);

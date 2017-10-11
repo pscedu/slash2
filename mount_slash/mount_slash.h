@@ -339,7 +339,7 @@ void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
 struct pscfs_creds *
-	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *, int);
 
 void	 uidmap_ext_cred(struct pscfs_creds *);
 void	 gidmap_ext_cred(struct pscfs_creds *);
