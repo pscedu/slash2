@@ -72,82 +72,6 @@ extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
-/*
- * Take the CRC of the data contained within a sliver and add the update
- * to a bcr.
- * @s: the sliver reference.
- * Notes:  Don't hold the lock while taking the CRC.
- * Returns: errno on failure, 0 on success, -1 on not applicable.
- */
-int
-slvr_do_crc(struct slvr *s, uint64_t *crcp)
-{
-	uint64_t crc;
-
-	SLVR_LOCK_ENSURE(s);
-	psc_assert((s->slvr_flags & SLVRF_FAULTING ||
-		    s->slvr_flags & SLVRF_CRCDIRTY));
-
-	if (s->slvr_flags & SLVRF_CRCDIRTY) {
-		/*
-		 * SLVRF_CRCDIRTY means that DATARDY has been set and
-		 * that a write dirtied the buffer and invalidated the
-		 * CRC.
-		 */
-		DEBUG_SLVR(PLL_DIAG, s, "crc");
-
-#ifdef ADLERCRC32
-		// XXX not a running CRC?  double check for correctness
-		crc = adler32(crc, slvr_2_buf(s, 0) + soff,
-		    (int)(eoff - soff));
-#else
-		psc_crc64_calc(&crc, slvr_2_buf(s, 0), SLASH_SLVR_SIZE);
-#endif
-
-		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
-
-		*crcp = crc;
-		slvr_2_crc(s) = crc;
-		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-
-		DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-		    "CRC update: slvr=%hu, crc=%"PSCPRIxCRC64,
-		    s->slvr_num, slvr_2_crc(s));
-	} else if (s->slvr_flags & SLVRF_FAULTING) {
-		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
-			return (SLERR_CRCABSENT);
-
-		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
-		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-
-			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			    SLASH_SLVR_SIZE);
-
-			if (crc != slvr_2_crc(s)) {
-				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-				    "CRC failure: slvr=%hu, crc="
-				    "%"PSCPRIxCRC64,
-				    s->slvr_num, slvr_2_crc(s));
-				return (PFLERR_BADCRC);
-			}
-		} else {
-			return (0);
-		}
-	}
-
-	return (-1);
-}
-
-void
-sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
-{
-	psc_assert(psclist_disjoint(&a->aiocbr_lentry));
-
-	if (a->aiocbr_csvc)
-		sl_csvc_decref(a->aiocbr_csvc);
-	psc_pool_return(sli_aiocbr_pool, a);
-}
-
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 {
@@ -1255,7 +1179,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVRF_DATARDY, &fl, &seq);
 	PFL_PRFLAG(SLVRF_DATAERR, &fl, &seq);
 	PFL_PRFLAG(SLVRF_LRU, &fl, &seq);
-	PFL_PRFLAG(SLVRF_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVRF_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVRF_ACCESSED, &fl, &seq);
 	if (fl)

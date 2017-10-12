@@ -75,10 +75,9 @@ struct slvr {
  * like to get rid of this special case.  However, maybe someday, we
  * will remove the CRC logic entirely.
  */
-#define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
-#define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
-#define SLVRF_ACCESSED		(1 <<  6)	/* actually used by a client */
-#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead logic */
+#define SLVRF_FREEING		(1 <<  4)	/* sliver is being reaped */
+#define SLVRF_ACCESSED		(1 <<  5)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  6)	/* loaded via readahead logic */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
