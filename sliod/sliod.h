@@ -102,8 +102,6 @@ void	slictlthr_main(const char *);
 int	sli_has_enough_space(struct fidc_membh *, uint32_t, uint32_t,
 	    uint32_t);
 
-int	bcr_update_inodeinfo(struct bcrcupd *);
-
 #define SLI_NWORKER_THREADS	4
 
 extern struct pfl_opstats_grad	 sli_iorpc_iostats_rd;

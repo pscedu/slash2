@@ -38,40 +38,6 @@
 #include "slutil.h"
 #include "slvr.h"
 
-int
-bcr_update_inodeinfo(struct bcrcupd *bcr)
-{
-	struct fidc_membh *f;
-	struct stat stb;
-	struct bmap *b;
-
-	b = bcr_2_bmap(bcr);
-	f = b->bcm_fcmh;
-
-	if (bcr->bcr_crcup.fg.fg_fid == FID_ANY)
-		return (EINVAL);
-
-	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
-
-	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen) {
-		OPSTAT_INCR("brcupdate-stale");
-		return (ESTALE);
-	}
-
-	if ((f->fcmh_flags & FCMH_IOD_BACKFILE) == 0)
-		return (EBADF);
-
-	if (fstat(fcmh_2_fd(f), &stb) == -1)
-		return (errno);
-
-	/* Used by mds_bmap_crc_update() */
-	bcr->bcr_crcup.fsize = stb.st_size;
-	bcr->bcr_crcup.nblks = stb.st_blocks;
-	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;
-
-	return (0);
-}
-
 /*
  * Build the pathname in the FID object root that corresponds to a FID,
  * allowing easily lookup of file metadata via FIDs.
