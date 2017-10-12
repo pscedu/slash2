@@ -766,8 +766,6 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		s->slvr_flags &= ~SLVRF_LRU;
 		lc_remove(&sli_lruslvrs, s);
 	}
-	psc_assert(s->slvr_flags & SLVRF_LRU);
-
 	if (s->slvr_flags & SLVRF_DATAERR) {
 		/*
 		 * This is safe because we hold the sliver lock
