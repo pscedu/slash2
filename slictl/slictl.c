@@ -115,14 +115,13 @@ slvr_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slictlmsg_slvr *ss = m;
 
-	printf("%016"SLPRIxFID" %6d %3d %4d %c%c%c%c%c%c%c "
+	printf("%016"SLPRIxFID" %6d %3d %4d %c%c%c%c%c%c "
 	    "%5d %9"PRId64" \n",
 	    ss->ss_fid, ss->ss_bno, ss->ss_slvrno, ss->ss_refcnt,
 	    ss->ss_flags & SLVRF_FAULTING	? 'f' : '-',
 	    ss->ss_flags & SLVRF_DATARDY	? 'd' : '-',
 	    ss->ss_flags & SLVRF_DATAERR	? 'E' : '-',
 	    ss->ss_flags & SLVRF_LRU		? 'l' : '-',
-	    ss->ss_flags & SLVRF_CRCDIRTY	? 'D' : '-',
 	    ss->ss_flags & SLVRF_FREEING	? 'F' : '-',
 	    ss->ss_flags & SLVRF_ACCESSED	? 'a' : '-',
 	    ss->ss_err, ss->ss_ts.tv_sec);
