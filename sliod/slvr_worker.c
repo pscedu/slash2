@@ -48,14 +48,11 @@
 #define	SLI_SYNC_AHEAD_BATCH	10
 
 void
-sli_sync_ahead(void)
+sli_sync_ahead(struct psc_dynarray *a)
 {
 	int i, skip;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii;
-	struct psc_dynarray a = DYNARRAY_INIT;
-
-	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
 
  restart:
 
@@ -76,11 +73,11 @@ sli_sync_ahead(void)
 		f->fcmh_flags |= FCMH_IOD_SYNCFILE;
 		fcmh_op_start_type(f, FCMH_OPCNT_SYNC_AHEAD);
 		FCMH_ULOCK(f);
-		psc_dynarray_add(&a, f);
+		psc_dynarray_add(a, f);
 	}
 	LIST_CACHE_ULOCK(&sli_fcmh_dirty);
 
-	DYNARRAY_FOREACH(f, i, &a) {
+	DYNARRAY_FOREACH(f, i, a) {
 
 		fsync(fcmh_2_fd(f));
 		OPSTAT_INCR("sync-ahead");
@@ -97,21 +94,24 @@ sli_sync_ahead(void)
 		f->fcmh_flags &= ~FCMH_IOD_SYNCFILE;
 		fcmh_op_done_type(f, FCMH_OPCNT_SYNC_AHEAD);
 	}
+	psc_dynarray_reset(a);
 	if (skip) {
 		sleep(5);
-		psc_dynarray_reset(&a);
 		goto restart;
 	}
-	psc_dynarray_free(&a);
 }
 
 void
 slisyncthr_main(struct psc_thread *thr)
 {
+	struct psc_dynarray a = DYNARRAY_INIT;
+
+	psc_dynarray_ensurelen(&a, SLI_SYNC_AHEAD_BATCH);
 	while (pscthr_run(thr)) {
 		lc_peekheadwait(&sli_fcmh_dirty);
-		sli_sync_ahead();
+		sli_sync_ahead(&a);
 	}
+	psc_dynarray_free(&a);
 }
 
 void
