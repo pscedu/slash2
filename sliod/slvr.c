@@ -751,7 +751,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_refcnt || (s->slvr_flags & SLVRF_CRCDIRTY)) {
+	if (s->slvr_refcnt) {
 		SLVR_ULOCK(s);
 		return;
 	}
