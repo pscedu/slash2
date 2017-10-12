@@ -457,31 +457,8 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR("fsio-read-fail");
-		} else if (rc) {
-			int crc_rc;
-
+		} else
 			pfl_opstat_add(sli_backingstore_iostats.rd, rc);
-
-			/*
-			 * When a file is truncated, the generation
-			 * number increments and all CRCs should be
-			 * invalid.  Luckily we can use a simple check
-			 * here without resorting to a complicated
-			 * protocol.
-			 */
-			SLVR_LOCK(s);
-			crc_rc = slvr_do_crc(s, NULL);
-			SLVR_ULOCK(s);
-
-			if (crc_rc == PFLERR_BADCRC) {
-				OPSTAT_INCR("fsio-read-crc-bad");
-				DEBUG_SLVR(PLL_ERROR, s,
-				    "bad crc blks=%d off=%zu",
-				    nblks, foff);
-			} else {
-				OPSTAT_INCR("fsio-read-crc-good");
-			}
-		}
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
