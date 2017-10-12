@@ -44,7 +44,6 @@ enum {
 	SLITHRT_BREAP,			/* bmap reaper */
 	SLITHRT_BATCHRPC,		/* batch RPC sender */
 	SLITHRT_CONN,			/* connection monitor */
-	SLITHRT_CRUD,			/* CRC update sender */
 	SLITHRT_CTL,			/* control processor */
 	SLITHRT_CTLAC,			/* control acceptor */
 	SLITHRT_FREAP,			/* file reaper */
