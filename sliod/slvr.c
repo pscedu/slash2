@@ -265,7 +265,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		if (a->aiocbr_rw == SL_READ)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
 		else
-			slvr_wio_done(a->aiocbr_slvrs[i], 0);
+			slvr_wio_done(a->aiocbr_slvrs[i]);
 	}
 
 	sli_aio_aiocbr_release(a);
@@ -929,7 +929,7 @@ slvr_rio_done(struct slvr *s)
  * Called after a write on the given sliver has completed.
  */
 void
-slvr_wio_done(struct slvr *s, int repl)
+slvr_wio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_refcnt > 0);

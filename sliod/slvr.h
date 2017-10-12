@@ -186,7 +186,7 @@ ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw, int);
 
 void	slvr_io_done(struct slvr *, int);
 void	slvr_rio_done(struct slvr *);
-void	slvr_wio_done(struct slvr *, int);
+void	slvr_wio_done(struct slvr *);
 
 void	slvr_remove(struct slvr *);
 void	slvr_remove_all(struct fidc_membh *);
