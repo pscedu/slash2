@@ -193,104 +193,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	return (rc);
 }
 
-void
-slicrudthr_main(struct psc_thread *thr)
-{
-	struct psc_dynarray *bcrs;
-	struct timespec now, diff;
-	struct bcrcupd *bcr;
-	int i, rc;
-
-	bcrs = PSCALLOC(sizeof(*bcrs));
-
-	while (pscthr_run(thr)) {
-#define MAX_INFL_BCRCUPD 128
-		/* XXX per-MDS */
-		while (psc_atomic32_read(&sli_ninfl_bcrcupd) >
-		    MAX_INFL_BCRCUPD)
-			usleep(3000);
-
-		LIST_CACHE_LOCK(&bcr_ready);
-		PFL_GETTIMESPEC(&now);
-		LIST_CACHE_FOREACH(bcr, &bcr_ready) {
-			psc_assert(bcr->bcr_crcup.nups > 0);
-
-			if (!BII_TRYLOCK(bcr->bcr_bii))
-				continue;
-
-			/*
-			 * Leave scheduled bcr's on the list so that in
-			 * case of a failure, ordering will be
-			 * maintained.
-			 */
-			if (bcr_2_bmap(bcr)->bcm_flags &
-			    BMAPF_CRUD_INFLIGHT) {
-				BII_ULOCK(bcr->bcr_bii);
-				continue;
-			}
-
-			timespecsub(&now, &bcr->bcr_age, &diff);
-			if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS ||
-			    diff.tv_sec >= BCR_BATCH_AGE) {
-				psc_dynarray_add(bcrs, bcr);
-				bcr->bcr_bii->bii_bcr = NULL;
-				bcr_2_bmap(bcr)->bcm_flags |=
-				    BMAPF_CRUD_INFLIGHT;
-			}
-
-			BII_ULOCK(bcr->bcr_bii);
-
-			DEBUG_BCR(PLL_DIAG, bcr,
-			    "scheduled nbcrs=%d total_bcrs=%d",
-			    psc_dynarray_len(bcrs),
-			    lc_nitems(&bcr_ready));
-
-			if (psc_dynarray_len(bcrs) ==
-			    MAX_BMAP_NCRC_UPDATES)
-				break;
-		}
-		LIST_CACHE_ULOCK(&bcr_ready);
-
-		if (!psc_dynarray_len(bcrs)) {
-			thr->pscthr_waitq = "usleep 100";
-			usleep(100);
-			thr->pscthr_waitq = NULL;
-			continue;
-		}
-
-		OPSTAT_INCR("crc-update-push");
-
-		/*
-		 * If we fail to send an RPC, we must leave the
-		 * reference in the tree for future attempt(s).
-		 * Otherwise, the callback function (i.e.
-		 * sli_rmi_bcrcupd_cb) should remove them from the tree.
-		 */
-		rc = slvr_worker_crcup_genrq(bcrs);
-		if (rc) {
-			DYNARRAY_FOREACH(bcr, i, bcrs) {
-				BII_LOCK(bcr->bcr_bii);
-				bcr_2_bmap(bcr)->bcm_flags &=
-				    ~BMAPF_CRUD_INFLIGHT;
-				//bcr->bcr_bii->bii_bcr = NULL;
-				BII_ULOCK(bcr->bcr_bii);
-
-				/*
-				 * There is a newer FID generation in
-				 * existence than our packaged update is
-				 * for, so this can be safely discarded.
-				 */
-				if (rc == ESTALE || rc == EBADF) {
-					bcr_ready_remove(bcr);
-				}
-			}
-			psc_dynarray_reset(bcrs);
-		} else {
-			bcrs = PSCALLOC(sizeof(*bcrs));
-		}
-	}
-}
-
 /*
  * Attempt to setup a bmap CRC update RPC for dirty part(s) of a sliver.
  */
@@ -571,6 +473,4 @@ slvr_worker_init(void)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
 
-	pscthr_init(SLITHRT_CRUD, slicrudthr_main, 0,
-	    "slicrudthr");
 }
