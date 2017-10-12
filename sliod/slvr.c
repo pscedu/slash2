@@ -728,6 +728,10 @@ slvr_remove_all(struct fidc_membh *f)
 				goto restart;
 			}
 			s->slvr_flags |= SLVRF_FREEING;
+			if (s->slvr_flags & SLVRF_LRU) {
+				s->slvr_flags &= ~SLVRF_LRU;
+				lc_remove(&sli_lruslvrs, s);
+			}
 
 			SLVR_ULOCK(s);
 			BII_ULOCK(bii);
