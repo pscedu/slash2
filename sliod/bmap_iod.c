@@ -193,30 +193,6 @@ sliseqnothr_main(struct psc_thread *thr)
 	}
 }
 
-void
-bcr_ready_add(struct bcrcupd *bcr)
-{
-	DEBUG_BCR(PLL_DIAG, bcr, "bcr add");
-
-	BII_LOCK_ENSURE(bcr->bcr_bii);
-	lc_addtail(&bcr_ready, bcr);
-	bmap_op_start_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
-}
-
-void
-bcr_ready_remove(struct bcrcupd *bcr)
-{
-	DEBUG_BCR(PLL_DIAG, bcr, "bcr remove");
-
-	/*
-	 * When bcr is sent out, the pointer to it from bii (bii_bcr) 
-	 * has been nullified.
-	 */
-	lc_remove(&bcr_ready, bcr);
-	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
-	psc_pool_return(bmap_crcupd_pool, bcr);
-}
-
 /*
  * XXX  We probably need a way to make sure that all data have been
  * actually written from cache to persistent storage before
