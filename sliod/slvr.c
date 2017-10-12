@@ -966,10 +966,6 @@ slab_cache_reap(struct psc_poolmgr *m)
 			continue;
 		}
 		s->slvr_flags |= SLVRF_FREEING;
-		if (s->slvr_flags & SLVRF_LRU) {
-			s->slvr_flags &= ~SLVRF_LRU;
-			lc_remove(&sli_lruslvrs, s);
-		}
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
@@ -980,8 +976,12 @@ slab_cache_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
 
-	DYNARRAY_FOREACH(s, i, &a)
+	DYNARRAY_FOREACH(s, i, &a) {
+		psc_assert(s->slvr_flags & SLVRF_LRU);
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
 		slvr_remove(s);
+	}
 	psc_dynarray_free(&a);
 
 	OPSTAT_INCR("slab-lru-reap");
