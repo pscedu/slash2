@@ -382,75 +382,6 @@ slisyncthr_main(struct psc_thread *thr)
 	}
 }
 
-/*
- * Guts of the sliver bmap CRC update RPC generator thread.  RPCs are
- * constructed from slivers on the queue after the minimal expiration is
- * reached and shipped off to the MDS.
- */
-void
-slislvrthr_main(struct psc_thread *thr)
-{
-	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
-	struct timespec expire;
-	struct slvr *s, *dummy;
-	int i;
-
-	while (pscthr_run(thr)) {
-
-		LIST_CACHE_LOCK(&sli_crcqslvrs);
-		lc_peekheadwait(&sli_crcqslvrs);
-
-		PFL_GETTIMESPEC(&expire);
-		expire.tv_sec -= CRC_QUEUE_AGE;
-
-		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
-			if (!SLVR_TRYLOCK(s))
-				continue;
-			/*
-			 * A sliver can be referenced while being
-			 * CRC'ed.  However, we want to wait for all
-			 * references to go away before doing CRC on it.
-			 */
-			if (s->slvr_refcnt ||
-			    s->slvr_flags & SLVRF_FREEING) {
-				SLVR_ULOCK(s);
-				continue;
-			}
-			if (s->slvr_flags & SLVRF_DATAERR) {
-				s->slvr_flags |= SLVRF_FREEING;
-				OPSTAT_INCR("slvr-crc-remove1");
-				SLVR_ULOCK(s);
-				slvr_remove(s);
-				continue;
-			}
-			if (timespeccmp(&expire, &s->slvr_ts, >)) {
-				s->slvr_flags |= SLVRF_FAULTING;
-				lc_remove(&sli_crcqslvrs, s);
-				psc_dynarray_add(&ss, s);
-			}
-			SLVR_ULOCK(s);
-			if (psc_dynarray_len(&ss) >= MAX_BMAP_NCRC_UPDATES)
-				break;
-		}
-		LIST_CACHE_ULOCK(&sli_crcqslvrs);
-
-		/*
-		 * If we didn't do any work, induce sleep to avoid
-		 * spinning.
-		 */
-		if (!psc_dynarray_len(&ss)) {
-			usleep(1000);
-			continue;
-		}
-
-		DYNARRAY_FOREACH(s, i, &ss)
-			slislvrthr_proc(s);
-
-		psc_dynarray_reset(&ss);
-	}
-	psc_dynarray_free(&ss);
-}
-
 void
 slvr_worker_init(void)
 {
@@ -464,10 +395,6 @@ slvr_worker_init(void)
 	    offsetof(struct bcrcupd, bcr_lentry), PPMF_AUTO, 64,
 	    64, 0, NULL, NULL, "bcrcupd");
 	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
-
-	for (i = 0; i < NSLVRCRC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_CRC, slislvrthr_main, 0,
-		    "slislvrthr%d", i);
 
 	for (i = 0; i < NSLVRSYNC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
