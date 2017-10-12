@@ -88,7 +88,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	}
 
 	slvr_io_done(s, rc);
-	slvr_wio_done(s, 1);
+	slvr_wio_done(s);
 
 	spinlock(&w->srw_lock);
 	if (!rc)
@@ -403,7 +403,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
  out:
 	if (rc) {
 		slvr_io_done(s, rc);
-		slvr_wio_done(s, 1);
+		slvr_wio_done(s);
 
 		spinlock(&w->srw_lock);
 		w->srw_slvr[slvridx] = NULL;
