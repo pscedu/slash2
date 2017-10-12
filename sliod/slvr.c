@@ -63,8 +63,6 @@ struct psc_listcache	 sli_iocb_pndg;
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 
 struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be reaped */
-struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have their
-						 * CRCs shipped to the MDS. */
 
 struct psc_listcache	 sli_fcmh_dirty;
 
@@ -646,10 +644,7 @@ slvr_remove(struct slvr *s)
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
 	psc_assert(s->slvr_refcnt == 0);
-	if (s->slvr_flags & SLVRF_LRU)
-		lc_remove(&sli_lruslvrs, s);
-	else
-		lc_remove(&sli_crcqslvrs, s);
+	psc_assert(s->slvr_flags & SLVRF_LRU);
 
 	bii = slvr_2_bii(s);
 
@@ -966,10 +961,6 @@ slab_cache_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		/*
-		 * We do not check SLVRF_FAULTING here because we
-		 * are not looking at the CRC list (sli_crcqslvrs).
-		 */
 		if (s->slvr_refcnt || (s->slvr_flags & SLVRF_FREEING)) {
 			SLVR_ULOCK(s);
 			continue;
@@ -1122,7 +1113,6 @@ slvr_cache_init(void)
 	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
-	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
 	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry,
 	    "fcmhdirty");
