@@ -52,63 +52,6 @@ psc_atomic32_t			 sli_ninfl_bcrcupd;
 struct psc_listcache		 bcr_ready;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
 
-int
-sli_rmi_bcrcupd_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slrpc_cservice *csvc = args->pointer_arg[1];
-	struct psc_dynarray *a = args->pointer_arg[0];
-	struct srm_bmap_crcwrt_rep *mp;
-	struct srm_bmap_crcwrt_req *mq;
-	struct bmap_iod_info *bii;
-	struct bcrcupd *bcr;
-	int rc, i;
-
-	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-
-	for (i = 0; i < psc_dynarray_len(a); i++) {
-		bcr = psc_dynarray_getpos(a, i);
-		bii = bcr->bcr_bii;
-
-		/* 05/03/2017: Saw unknown, no buf */
-		DEBUG_BCR(rc || !mp || mp->rc ?
-		    PLL_ERROR : PLL_DIAG, bcr, "rq_status=%d rc=%d%s",
-		    rq->rq_status, rc, mp ? "" : " (unknown, no buf)");
-
-		BII_LOCK(bii);
-		psc_assert(bii_2_bmap(bii)->bcm_flags &
-		    BMAPF_CRUD_INFLIGHT);
-		bii_2_bmap(bii)->bcm_flags &= ~BMAPF_CRUD_INFLIGHT;
-
-		if (rc) {
-			BII_ULOCK(bii);
-			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
-			OPSTAT_INCR("crc-update-cb-failure");
-			continue;
-		}
-		bcr_ready_remove(bcr);
-	}
-
-	/*
-	 * If there were errors, log them but obviously the MDS will
-	 * make the master choice about what our residency validity is.
-	 */
-	for (i = 0; i < (int)mq->ncrc_updates; i++)
-		if (mp && mp->crcup_rc[i])
-			psclog_errorx("MDS rejected our CRC update; "
-			    "rc=%d", mp->crcup_rc[i]);
-
-	psc_dynarray_free(a);
-	PSCFREE(a);
-
-	sl_csvc_decref(csvc);
-
-	psc_atomic32_dec(&sli_ninfl_bcrcupd);
-
-	return (1);
-}
 
 /*
  * Send an RPC containing CRC updates for slivers to the MDS.  To avoid
