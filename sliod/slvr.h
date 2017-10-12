@@ -204,8 +204,6 @@ struct sli_aiocb_reply *
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
-void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
-
 
 struct sli_readaheadrq {
 	struct sl_fidgen	rarq_fg;

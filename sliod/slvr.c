@@ -726,28 +726,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 
 
 void
-slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
-{
-	int i, rc;
-	int32_t slvrno;
-	struct slvr *s;
-	struct bmap *bmap;
-
-	rc = bmap_get(f, bmapno, SL_READ, &bmap);
-	if (rc)
-		return;
-
-	slvrno = (offset - 1) / SLASH_SLVR_SIZE;
-	for (i = 0; i <= slvrno; i++) {
-		s = slvr_lookup(i, bmap_2_bii(bmap));
-		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
-		slvr_io_done(s, rc);
-		slvr_wio_done(s, 0);
-	}
-	bmap_op_done(bmap);
-}
-
-void
 slvr_remove(struct slvr *s)
 {
 	struct bmap_iod_info *bii;
