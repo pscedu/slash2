@@ -56,7 +56,6 @@ enum {
 	SLITHRT_RII,			/* service RPC requests from ION */
 	SLITHRT_RIM,			/* service RPC requests from MDS */
 	SLITHRT_SEQNO,			/* update min seqno */
-	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
 	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
 	SLITHRT_READAHEAD,		/* sliver read-ahead */
 	SLITHRT_STATFS,			/* statvfs(2) updater */
@@ -139,6 +138,5 @@ extern struct statvfs		 sli_statvfs_buf;
 void	slictlthr_spawn(const char *);
 
 void	sliseqnothr_main(struct psc_thread *);
-
 
 #endif /* _SLIOD_H_ */
