@@ -129,7 +129,7 @@ struct slvr {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu ref=%u "		\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "bii=%p slab=%p bmap=%p fid="SLPRI_FID" iocb=%p flgs="	\
-	    "%s%s%s%s%s%s%s :: " fmt,					\
+	    "%s%s%s%s%s%s :: " fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_refcnt,			\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
 	    (s)->slvr_bii, (s)->slvr_slab,				\
@@ -141,7 +141,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVRF_DATARDY	? "d" : "-",		\
 	    (s)->slvr_flags & SLVRF_DATAERR	? "E" : "-",		\
 	    (s)->slvr_flags & SLVRF_LRU		? "l" : "-",		\
-	    (s)->slvr_flags & SLVRF_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVRF_FREEING	? "F" : "-",		\
 	    (s)->slvr_flags & SLVRF_ACCESSED	? "a" : "-",		\
 	    ##__VA_ARGS__)
