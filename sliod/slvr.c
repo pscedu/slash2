@@ -644,7 +644,7 @@ slvr_remove(struct slvr *s)
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
 	psc_assert(s->slvr_refcnt == 0);
-	psc_assert(s->slvr_flags & SLVRF_LRU);
+	psc_assert(!(s->slvr_flags & SLVRF_LRU));
 
 	bii = slvr_2_bii(s);
 
@@ -762,6 +762,11 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		SLVR_ULOCK(s);
 		return;
 	}
+	if (s->slvr_flags & SLVRF_LRU) {
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
+	}
+	psc_assert(s->slvr_flags & SLVRF_LRU);
 
 	if (s->slvr_flags & SLVRF_DATAERR) {
 		/*
@@ -775,7 +780,6 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		return;
 	}
 
-	psc_assert(s->slvr_flags & SLVRF_LRU);
 	psc_assert(s->slvr_flags & SLVRF_DATARDY);
 
 	/*
@@ -785,7 +789,8 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	lc_move2tail(&sli_lruslvrs, s);
+	s->slvr_flags |= SLVRF_LRU;
+	lc_add(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
 	/*
@@ -916,13 +921,6 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
-		/*
-		 * Until the slab is added to the sliver, the sliver is
-		 * private to the bmap's biod_slvrtree.
-		 */
-		s->slvr_flags |= SLVRF_LRU;
-		lc_addtail(&sli_lruslvrs, s);
-
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
@@ -965,8 +963,11 @@ slab_cache_reap(struct psc_poolmgr *m)
 			SLVR_ULOCK(s);
 			continue;
 		}
-
 		s->slvr_flags |= SLVRF_FREEING;
+		if (s->slvr_flags & SLVRF_LRU) {
+			s->slvr_flags &= ~SLVRF_LRU;
+			lc_remove(&sli_lruslvrs, s);
+		}
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
