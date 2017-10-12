@@ -724,17 +724,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	return (rc);
 }
 
-__static void
-slvr_schedule_crc_locked(struct slvr *s)
-{
-	s->slvr_flags &= ~SLVRF_LRU;
-	s->slvr_flags |= SLVRF_CRCDIRTY;
-	PFL_GETTIMESPEC(&s->slvr_ts);
-	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
-
-	lc_remove(&sli_lruslvrs, s);
-	lc_addqueue(&sli_crcqslvrs, s);
-}
 
 void
 slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
@@ -970,13 +959,7 @@ slvr_wio_done(struct slvr *s, int repl)
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
 
-	if (s->slvr_flags & SLVRF_DATAERR || repl) {
-		slvr_lru_tryunpin_locked(s);
-	} else {
-		if (s->slvr_flags & SLVRF_LRU)
-			slvr_schedule_crc_locked(s);
-		SLVR_ULOCK(s);
-	}
+	slvr_lru_tryunpin_locked(s);
 }
 
 /*
