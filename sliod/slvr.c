@@ -72,6 +72,18 @@ extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
+
+void
+sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
+{
+	psc_assert(psclist_disjoint(&a->aiocbr_lentry));
+
+	if (a->aiocbr_csvc)
+		sl_csvc_decref(a->aiocbr_csvc);
+	psc_pool_return(sli_aiocbr_pool, a);
+}
+
+
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 {
