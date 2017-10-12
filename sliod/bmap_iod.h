@@ -142,11 +142,6 @@ extern struct bmap_iod_minseq	 sli_bminseq;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
 extern struct psc_poolmgr	*bmap_rls_pool;
 
-extern struct psc_poolmaster	 bmap_crcupd_poolmaster;
-extern struct psc_poolmgr	*bmap_crcupd_pool;
-
-extern struct psc_listcache	 bcr_ready;
-
 static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)
 {
