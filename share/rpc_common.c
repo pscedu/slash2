@@ -518,6 +518,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	/*
  	 * 09/07/2017: pscrpc_drop_conns() --> pscrpc_fail_import()
  	 * sl_imp_hldrop_cli() makes rc = -1.
+ 	 *
+ 	 * 10/12/1027: Similar crash coming from usocklnd_tear_peer_conn().
  	 */
 	rc = --csvc->csvc_refcnt;
 	psc_assert(rc >= 0);
