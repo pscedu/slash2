@@ -975,6 +975,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
 	struct bmap *b;
+	sl_bmapno_t nvalidbmaps;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS || *nbmaps == 0)
 		return (-EINVAL);
@@ -1016,12 +1017,15 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
 
+	nvalidbmaps = fcmh_nvalidbmaps(f);
+	FCMH_ULOCK(f);
+
 	/*
  	 * The following loop will bail out on the very first error. 
  	 * However,  its previous action, if any, has already taken
  	 * effect.
  	 */
-	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
+	for (; *nbmaps && bmapno < nvalidbmaps;
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 		if (nbmaps_processed >= SLM_REPLRQ_NBMAPS_MAX)
 			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
