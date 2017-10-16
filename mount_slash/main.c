@@ -1497,10 +1497,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 	slc_fcmh_setattr(p, &mp->pattr);
 
-	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &c, pfr))
+	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");
 	else {
+		FCMH_LOCK(c);
 		if (mp->valid) {
 			slc_fcmh_setattr_locked(c, &mp->cattr);
 		} else {
@@ -2667,7 +2667,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * Author: Jared Yanovich <yanovich@psc.edu>
 	 * Date:   Wed Jan 8 23:26:58 2014 +0000
 	 *
-	 * fix an fcmh leak of child and refresh RENAME clobbered file stat(2) attributes
+	 * fix an fcmh leak of child and refresh RENAME clobbered file 
+	 * stat(2) attributes
 	 *         
 	 */
 	/*
@@ -2677,7 +2678,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+	    0, &ch, pfr) == 0) {
+		FCMH_LOCK(ch);
 		if (!mp->srr_clattr.sst_nlink) {
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");

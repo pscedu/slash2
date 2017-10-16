@@ -382,13 +382,13 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		 * and we have fcmh update in bewteen?
 		 */
 		rc = sl_fcmh_lookup(fgp->fg_fid, fgp->fg_gen,
-		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOCK | FIDC_LOOKUP_EXCL, 
-		    &f, NULL); 
+		    FIDC_LOOKUP_CREATE|FIDC_LOOKUP_EXCL, &f, NULL); 
 
 		if (rc) {
 			OPSTAT_INCR("msl.readdir-fcmh-exist");
 			continue;
 		}
+		FCMH_LOCK(f);
 		OPSTAT_INCR("msl.readdir-fcmh");
 		slc_fcmh_setattr_locked(f, &e->sstb);
 
