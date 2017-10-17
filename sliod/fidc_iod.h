@@ -39,8 +39,9 @@ struct fcmh_iod_info {
 	off_t			fii_predio_off;		/* next predict I/O offset */
 	int			fii_predio_nseq;	/* num sequential io's */
 
-	uint64_t		fii_nblks;		/* cache fstat() results */ 
+	int64_t			fii_nblks;		/* cache fstat() results */ 
 	long			fii_lastwrite;		/* when last write/punch happens */
+	long			fii_lastupdate;		/* when last write/punch updates */
 
 	struct psclist_head	fii_lentry;		/* all fcmhs with dirty contents */
 	struct psclist_head	fii_lentry2;		/* all fcmhs with storage update */

@@ -127,7 +127,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
 	if (rc) {
-		DYNARRAY_FOREACH(fii, i, &a) {
+		DYNARRAY_FOREACH(fii, i, a) {
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
 			if (f->fcmh_flags & FCMH_IOD_UPDATEFILE) {
@@ -159,10 +159,13 @@ sliupdthr_main(struct psc_thread *thr)
 	struct psc_dynarray *a;
 	struct srm_updatefile_req *mq;
 	struct srm_updatefile_rep *mp;
+	struct timeval now;
+	struct pscrpc_request *rq;
 
 	while (pscthr_run(thr)) {
 
 		i = 0;
+		rq = NULL;
 		csvc = NULL;
 
 		a = PSCALLOC(sizeof(*a));
@@ -182,6 +185,7 @@ sliupdthr_main(struct psc_thread *thr)
 
  again:
 
+		PFL_GETTIMEVAL(&now);
 		LIST_CACHE_LOCK(&sli_fcmh_update);
 		LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_update) {
 			f = fii_2_fcmh(fii);
@@ -198,8 +202,8 @@ sliupdthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);	
 				continue;
 			}
-			fii->fii_nblks = stb.st_blocks;
-			psc_dynarray_add(&a, f);
+			fii->fii_lastupdate = now.tv_sec;
+			psc_dynarray_add(a, fii);
 			mq->updates[i].fg = f->fcmh_sstb.sst_fg;
 			mq->updates[i].nblks = stb.st_blocks;
 
@@ -216,18 +220,8 @@ sliupdthr_main(struct psc_thread *thr)
 		}
 
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc)
-			goto out;
-
-		/*
-		 * Remove from the update list.
-		 */
-		DYNARRAY_FOREACH(f, i, &a) {
-			f = fii_2_fcmh(fii);
-			lc_remove(&sli_fcmh_update, fii);
-			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
-		}
-
+		if (!rc)
+			continue;
   out:
 
 		psc_dynarray_free(a);
@@ -237,6 +231,5 @@ sliupdthr_main(struct psc_thread *thr)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
-		}
 	}
 }
