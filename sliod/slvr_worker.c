@@ -113,3 +113,17 @@ slisyncthr_main(struct psc_thread *thr)
 	}
 	psc_dynarray_free(&a);
 }
+
+void
+sliupdthr_main(struct psc_thread *thr)
+{
+	struct fidc_membh *f;
+	struct fcmh_iod_info *fii;
+
+	while (pscthr_run(thr)) {
+		LIST_CACHE_LOCK(&sli_fcmh_update);
+		LIST_CACHE_FOREACH(fii, &sli_fcmh_update) {
+			f = fii_2_fcmh(fii);
+		}
+	}
+}

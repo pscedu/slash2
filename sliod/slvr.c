@@ -1150,6 +1150,9 @@ slvr_cache_init(void)
 	for (i = 0; i < NSLVRSYNC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
+
+	pscthr_init(SLITHRT_UPDATE, sliupdthr_main, 0, "sliupdthr");
+
 }
 
 #if PFL_DEBUG > 0
