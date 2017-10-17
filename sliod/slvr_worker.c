@@ -119,7 +119,7 @@ int
 sli_rmi_update_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	int rc;
+	int i, rc;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii;
 	struct psc_dynarray *a = args->pointer_arg[0];
@@ -127,7 +127,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
 	if (rc) {
-		DYNARRAY_FOREACH(f, i, &a) {
+		DYNARRAY_FOREACH(fii, i, &a) {
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
 			if (f->fcmh_flags & FCMH_IOD_UPDATEFILE) {
@@ -154,9 +154,9 @@ sliupdthr_main(struct psc_thread *thr)
 	int i, rc;
 	struct stat stb;
 	struct fidc_membh *f;
-	struct fcmh_iod_info *fii;
+	struct fcmh_iod_info *fii, *tmp;
 	struct slrpc_cservice *csvc;
-	struct psc_dynarray a = DYNARRAY_INIT;
+	struct psc_dynarray *a;
 	struct srm_updatefile_req *mq;
 	struct srm_updatefile_rep *mp;
 
@@ -164,14 +164,26 @@ sliupdthr_main(struct psc_thread *thr)
 
 		i = 0;
 		csvc = NULL;
-		psc_dynarray_reset(&a);
+
+		a = PSCALLOC(sizeof(*a));
+		psc_dynarray_init(a);
 
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
 
+		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
+		if (rc)
+			goto out;
+
+		rq->rq_interpret_reply = sli_rmi_update_cb;
+		rq->rq_async_args.pointer_arg[0] = a;
+		rq->rq_async_args.pointer_arg[1] = csvc;
+
+ again:
+
 		LIST_CACHE_LOCK(&sli_fcmh_update);
-		LIST_CACHE_FOREACH_SAFE(fii, &sli_fcmh_update) {
+		LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_update) {
 			f = fii_2_fcmh(fii);
 			if (!FCMH_TRYLOCK(f))
 				continue;
@@ -187,30 +199,22 @@ sliupdthr_main(struct psc_thread *thr)
 				continue;
 			}
 			fii->fii_nblks = stb.st_blocks;
-			FCMH_ULOCK(f);	
 			psc_dynarray_add(&a, f);
+			mq->updates[i].fg = f->fcmh_sstb.sst_fg;
+			mq->updates[i].nblks = stb.st_blocks;
+
+			FCMH_ULOCK(f);	
+
+			i++;
 			if (i >= MAX_FILE_UPDATES);
 				break;
-			i++;
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
 		if (!i) {
 			pscthr_yield();
-			continue;
+			goto again; 
 		}
-		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
-		if (rc)
-			goto out;
 
-		rq->rq_interpret_reply = sli_rmi_update_cb;
-		rq->rq_async_args.pointer_arg[0] = a;
-		rq->rq_async_args.pointer_arg[1] = csvc;
-
-		DYNARRAY_FOREACH(f, i, &a) {
-			f = fii_2_fcmh(fii);
-			mp->updates[i].fg = f->fcmh_sstb.sst_fg;
-			mp->updates[i].nblks = fii->fii_nblks;
-		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc)
 			goto out;
@@ -225,9 +229,14 @@ sliupdthr_main(struct psc_thread *thr)
 		}
 
   out:
+
+		psc_dynarray_free(a);
+		PSCFREE(a);
+
 		if (rq)
 			pscrpc_req_finished(rq);
 		if (csvc)
-			 sl_csvc_decref(csvc);
+			sl_csvc_decref(csvc);
+		}
 	}
 }
