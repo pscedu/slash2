@@ -138,5 +138,5 @@ echo
 HOURS=$((ELAPSED/60/60))
 MINS=$(((ELAPSED%3600)/60))
 SECS=$((ELAPSED%60))
-echo "All tests have passed successfully! Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
+echo "All tests have passed successfully on $myhost! Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
 
