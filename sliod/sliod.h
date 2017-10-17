@@ -116,6 +116,7 @@ extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct timespec		 sli_ssfb_send;
 extern struct psc_listcache	 sli_fcmh_dirty;
+extern struct psc_listcache	 sli_fcmh_update;
 extern int			 sli_sync_max_writes;
 extern int			 sli_min_space_reserve_gb;
 extern int			 sli_min_space_reserve_pct;

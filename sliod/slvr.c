@@ -65,6 +65,7 @@ psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be reaped */
 
 struct psc_listcache	 sli_fcmh_dirty;
+struct psc_listcache	 sli_fcmh_update;
 
 extern struct psc_waitq	 sli_slvr_waitq;
 
@@ -1119,6 +1120,9 @@ slvr_cache_init(void)
 
 	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry,
 	    "fcmhdirty");
+
+	lc_reginit(&sli_fcmh_update, struct fcmh_iod_info, fii_lentry2,
+	    "fcmhupdate");
 
 	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
