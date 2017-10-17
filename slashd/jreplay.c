@@ -499,9 +499,6 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    case MDS_LOG_UPDATE:
 		rc = mds_replay_update(pje);
 		break;
-	    case MDS_LOG_BMAP_CRC:
-		rc = mds_replay_bmap_crc(pje);
-		break;
 	    case MDS_LOG_BMAP_SEQ:
 		rc = mds_replay_bmap_seq(pje);
 		break;

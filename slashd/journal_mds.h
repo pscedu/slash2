@@ -179,7 +179,7 @@ struct sl_mds_crc_log {
 };
 
 #define MDS_LOG_BMAP_REPLS		(_PJE_FLSHFT << 0)
-#define MDS_LOG_BMAP_CRC		(_PJE_FLSHFT << 1)
+#define MDS_LOG_UPDATE			(_PJE_FLSHFT << 1)
 #define MDS_LOG_BMAP_SEQ		(_PJE_FLSHFT << 2)
 #define MDS_LOG_BMAP_ASSIGN		(_PJE_FLSHFT << 3)
 #define MDS_LOG_INO_REPLS		(_PJE_FLSHFT << 4)

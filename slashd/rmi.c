@@ -116,9 +116,9 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 	void *buf;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->ncrc_updates > MAX_BMAP_NCRC_UPDATES) {
+	if (mq->count > MAX_FILE_UPDATES) {
 		psclog_errorx("ncrc_updates=%u is > %d",
-		    mq->ncrc_updates, MAX_BMAP_NCRC_UPDATES);
+		    mq->count, MAX_FILE_UPDATES);
 		mp->rc = -EINVAL;
 		return (mp->rc);
 	}

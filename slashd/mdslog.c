@@ -488,7 +488,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
     __unusedx uint64_t xid, int npeers, int action)
 {
 	struct slmds_jent_namespace *sjnm = NULL;
-	struct slmds_jent_bmap_crc *sjbc = NULL;
 	struct srt_update_entry ue, *u;
 	int rc, count, total;
 	uint16_t type;
@@ -558,6 +557,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	memset(&ue, 0, U_ENTSZ);
 	ue.xid = pje->pje_xid;
 
+#if 0
 	/*
 	 * Fabricate a setattr update entry to change the size.
 	 */
@@ -569,6 +569,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		ue.target_fid = sjbc->sjbc_fid;
 		goto write_update;
 	}
+#endif
 
 	ue.op = sjnm->sjnm_op;
 	ue.target_gen = sjnm->sjnm_target_gen;
