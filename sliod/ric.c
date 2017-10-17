@@ -190,6 +190,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint64_t seqno;
 	ssize_t rv;
 	off_t off, raoff, rasize;
+	struct timeval now;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -335,7 +336,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
+			PFL_GETTIMEVAL(&now);
 			OPSTAT_INCR("fcmh-dirty-update");
+			fii->fii_lastwrite = now.tv_sec;
 			lc_add(&sli_fcmh_update, fii);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}
