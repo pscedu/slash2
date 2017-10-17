@@ -136,6 +136,7 @@ extern struct statvfs		 sli_statvfs_buf;
 
 void	slictlthr_spawn(const char *);
 
+void	slisyncthr_main(struct psc_thread *);
 void	sliseqnothr_main(struct psc_thread *);
 
 #endif /* _SLIOD_H_ */

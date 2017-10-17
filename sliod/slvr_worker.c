@@ -113,14 +113,3 @@ slisyncthr_main(struct psc_thread *thr)
 	}
 	psc_dynarray_free(&a);
 }
-
-void
-slvr_worker_init(void)
-{
-	int i;
-
-	for (i = 0; i < NSLVRSYNC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
-		    "slisyncthr%d", i);
-
-}

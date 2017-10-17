@@ -190,7 +190,6 @@ void	slvr_remove(struct slvr *);
 void	slvr_remove_all(struct fidc_membh *);
 
 void	slvr_schedule_crc(struct slvr *);
-void	slvr_worker_init(void);
 
 struct sli_aiocb_reply *
 	sli_aio_reply_setup(struct pscrpc_request *, uint32_t, uint32_t,
