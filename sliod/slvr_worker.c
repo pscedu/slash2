@@ -114,16 +114,120 @@ slisyncthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&a);
 }
 
+
+int
+sli_rmi_update_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	int rc;
+	struct fidc_membh *f;
+	struct fcmh_iod_info *fii;
+	struct psc_dynarray *a = args->pointer_arg[0];
+	struct slrpc_cservice *csvc = args->pointer_arg[1];
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
+	if (rc) {
+		DYNARRAY_FOREACH(f, i, &a) {
+			f = fii_2_fcmh(fii);
+			FCMH_LOCK(f);
+			if (f->fcmh_flags & FCMH_IOD_UPDATEFILE) {
+				lc_addhead(&sli_fcmh_update, fii);
+				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
+			}
+			FCMH_ULOCK(f);
+		}
+	}
+	sl_csvc_decref(csvc);
+	psc_dynarray_free(a);
+	PSCFREE(a);
+}
+
+
+/*
+ * We used to do bulk RPC in non-blocking mode.  See how SRMT_BMAPCRCWRT
+ * was implemented in the git history.
+ */
+
 void
 sliupdthr_main(struct psc_thread *thr)
 {
+	int i, rc;
+	struct stat stb;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii;
+	struct slrpc_cservice *csvc;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct srm_updatefile_req *mq;
+	struct srm_updatefile_rep *mp;
 
 	while (pscthr_run(thr)) {
+
+		i = 0;
+		csvc = NULL;
+		psc_dynarray_reset(&a);
+
+		rc = sli_rmi_getcsvc(&csvc);
+		if (rc)
+			goto out;
+
 		LIST_CACHE_LOCK(&sli_fcmh_update);
-		LIST_CACHE_FOREACH(fii, &sli_fcmh_update) {
+		LIST_CACHE_FOREACH_SAFE(fii, &sli_fcmh_update) {
 			f = fii_2_fcmh(fii);
+			if (!FCMH_TRYLOCK(f))
+				continue;
+
+			if (fstat(fcmh_2_fd(f), &stb) == -1) {
+				FCMH_ULOCK(f);	
+				continue;
+			}
+			if (fii->fii_nblks == stb.st_blocks) {
+				lc_remove(&sli_fcmh_update, fii);
+				f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
+				FCMH_ULOCK(f);	
+				continue;
+			}
+			fii->fii_nblks = stb.st_blocks;
+			FCMH_ULOCK(f);	
+			psc_dynarray_add(&a, f);
+			if (i >= MAX_FILE_UPDATES);
+				break;
+			i++;
 		}
+		LIST_CACHE_ULOCK(&sli_fcmh_update);
+		if (!i) {
+			pscthr_yield();
+			continue;
+		}
+		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
+		if (rc)
+			goto out;
+
+		rq->rq_interpret_reply = sli_rmi_update_cb;
+		rq->rq_async_args.pointer_arg[0] = a;
+		rq->rq_async_args.pointer_arg[1] = csvc;
+
+		DYNARRAY_FOREACH(f, i, &a) {
+			f = fii_2_fcmh(fii);
+			mp->updates[i].fg = f->fcmh_sstb.sst_fg;
+			mp->updates[i].nblks = fii->fii_nblks;
+		}
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc)
+			goto out;
+
+		/*
+		 * Remove from the update list.
+		 */
+		DYNARRAY_FOREACH(f, i, &a) {
+			f = fii_2_fcmh(fii);
+			lc_remove(&sli_fcmh_update, fii);
+			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
+		}
+
+  out:
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			 sl_csvc_decref(csvc);
 	}
 }

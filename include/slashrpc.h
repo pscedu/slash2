@@ -545,7 +545,7 @@ struct srm_delete_req {
 
 struct srt_update_rec {
 	struct sl_fidgen	fg;
-	uint64_t		nblock;
+	uint64_t		nblks;
 } __packed;
 
 #define	MAX_FILE_UPDATES	32

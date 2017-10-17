@@ -41,13 +41,6 @@ struct slvr;
 extern psc_spinlock_t            sli_release_bmap_lock;
 extern struct psc_waitq          sli_release_bmap_waitq;
 
-struct bcrcupd {
-	struct timespec		 bcr_age;
-	struct bmap_iod_info	*bcr_bii;
-	struct psc_listentry	 bcr_lentry;
-	struct srt_bmap_crcup	 bcr_crcup;
-};
-
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)
 
 struct bmap_iod_minseq {
