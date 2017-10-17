@@ -501,11 +501,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	 * thread.
 	 */
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	if (type == MDS_LOG_BMAP_CRC) {
-		sjbc = PJE_DATA(pje);
-		goto check_update;
-	}
-
 	if (type != MDS_LOG_NAMESPACE)
 		return (0);
 

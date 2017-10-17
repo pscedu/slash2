@@ -131,7 +131,7 @@ enum {
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,			/*  5: change read/write access mode */
-	SRMT_FILEUPDATE,			/*  6: update file status */
+	SRMT_UPDATEFILE,			/*  6: update file status */
 	SRMT_BMAPDIO,				/*  7: request client direct I/O on a bmap */
 	SRMT_BMAP_PTRUNC,			/*  8: partial truncate and redo CRC for bmap */
 	SRMT_BMAP_WAKE,				/*  9: client work may now progress after EAGAIN */

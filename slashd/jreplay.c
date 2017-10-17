@@ -60,8 +60,6 @@ mds_replay_bmap(void *jent, int op)
 {
 	int resid, off, i, rc, tract[NBREPLST];
 	struct slmds_jent_bmap_repls *sjbr = jent;
-	struct slmds_jent_bmap_crc *sjbc = jent;
-	struct srt_bmap_crcwire *bmap_wire;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
