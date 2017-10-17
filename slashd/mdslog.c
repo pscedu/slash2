@@ -1800,60 +1800,6 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pjournal_put_buf(slm_journal, sjbr);
 }
 
-/*
- * Commit bmap CRC changes to the journal.
- * @datap: CRC log structure.
- * @txg: transaction group ID.
- * Notes: bmap_crc_writes from the ION are sent here directly because
- *	this function is responsible for updating the cached bmap after
- *	the CRC has been committed to the journal.  This allows us to
- *	not have to hold the lock while doing journal I/O with the
- *	caveat that we trust the ION to not send multiple CRC updates
- *	for the same region which we may then process out of order.
- */
-void
-mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
-{
-	struct sl_mds_crc_log *crclog = datap;
-	struct bmapc_memb *bmap = crclog->scl_bmap;
-	struct srt_bmap_crcup *crcup = crclog->scl_crcup;
-	struct slmds_jent_bmap_crc *sjbc;
-	uint32_t n, t, distill;
-
-	/*
-	 * See if we need to distill the file enlargement information.
-	 */
-	distill = crcup->extend;
-	for (t = 0, n = 0; t < crcup->nups; t += n) {
-
-		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
-
-		sjbc = pjournal_get_buf(slm_journal, sizeof(*sjbc));
-		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid = crclog->scl_iosid;
-		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
-		sjbc->sjbc_ncrcs = n;
-		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */
-		sjbc->sjbc_repl_nblks = crcup->nblks;
-		sjbc->sjbc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
-		sjbc->sjbc_extend = distill;
-		sjbc->sjbc_utimgen = crcup->utimgen;		/* utime generation number */
-
-		memcpy(sjbc->sjbc_crc, &crcup->crcs[t],
-		    n * sizeof(struct srt_bmap_crcwire));
-
-		pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_CRC,
-		    distill, sjbc, sizeof(*sjbc));
-
-		if (!distill)
-			pjournal_put_buf(slm_journal, sjbc);
-		else
-			distill = 0;
-	}
-
-	psc_assert(t == crcup->nups);
-}
-
 void
 mds_journal_init(uint64_t fsuuid)
 {

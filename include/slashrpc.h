@@ -131,7 +131,7 @@ enum {
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,			/*  5: change read/write access mode */
-	SRMT_BMAPCRCWRT,			/*  6: update bmap data checksums */
+	SRMT_FILEUPDATE,			/*  6: update file status */
 	SRMT_BMAPDIO,				/*  7: request client direct I/O on a bmap */
 	SRMT_BMAP_PTRUNC,			/*  8: partial truncate and redo CRC for bmap */
 	SRMT_BMAP_WAKE,				/*  9: client work may now progress after EAGAIN */
@@ -543,38 +543,20 @@ struct srm_delete_req {
 
 #define srm_delete_rep		srm_generic_rep
 
-struct srt_bmap_crcwire {
-	uint64_t		crc;		/* CRC of the corresponding sliver */
-	uint32_t		slot;		/* sliver number in the owning bmap */
-	 int32_t		_pad;
-} __packed;
-
-#define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srt_bmap_crcup */
-
-struct srt_bmap_crcup {				/* a batch of CRC updates for the same file */
+struct srt_update_rec {
 	struct sl_fidgen	fg;
-	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
-	uint64_t		nblks;		/* st_blocks for us */
-	uint32_t		bno;		/* bmap number */
-	uint32_t		nups;		/* number of CRC updates */
-	uint32_t		utimgen;
-	 int32_t		extend;
-	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
+	uint64_t		nblock;
 } __packed;
 
-#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in an RPC */
+#define	MAX_FILE_UPDATES	32
 
-struct srm_bmap_crcwrt_req {
-	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
-	uint32_t		ncrc_updates;
-	uint32_t		flags;
+struct srm_updatefile_req {
+	uint16_t		count;
+	uint16_t		flags;
+	struct srt_update_rec	updates[MAX_FILE_UPDATES];
 } __packed;
 
-struct srm_bmap_crcwrt_rep {
-	 int32_t		crcup_rc[MAX_BMAP_NCRC_UPDATES];
-	 int32_t		rc;
-	 int32_t		_pad;
-} __packed;
+#define srm_updatefile_rep	srm_generic_rep
 
 struct srm_bmap_iod_get {
 	uint64_t		fid;

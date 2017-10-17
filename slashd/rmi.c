@@ -105,10 +105,10 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
  * XXX should we check if an actual lease is out??
  */
 int
-slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
+slm_rmi_handle_update(struct pscrpc_request *rq)
 {
-	struct srm_bmap_crcwrt_req *mq;
-	struct srm_bmap_crcwrt_rep *mp;
+	struct srm_updatefile_req *mq;
+	struct srm_updatefile_rep *mp;
 	struct iovec *iovs;
 	size_t len = 0;
 	uint32_t i;
@@ -369,8 +369,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 
 	/* bmap messages */
-	case SRMT_BMAPCRCWRT:
-		rc = slm_rmi_handle_bmap_crcwrt(rq);
+	case SRMT_UPDATEFILE:
+		rc = slm_rmi_handle_update(rq);
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = slm_rmi_handle_rls_bmap(rq);

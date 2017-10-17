@@ -44,32 +44,6 @@ struct srt_stat;
 #define SLJ_MDS_MAX_JNENTS		(1024 * 1024 * UINT64_C(1024) / SLJ_MDS_ENTSIZE)
 
 /**
- * slmds_jent_bmap_crc - Log for bmap CRC updates from IONs.
- * @sjbc_fid: file ID.
- * @sjbc_bmapno: which bmap region.
- * @sjbc_ion: the ion who sent the request.
- * @sjbc_crc: array of slots and crcs.
- * Notes: this is presumed to be the most common entry in the journal.
- */
-struct slmds_jent_bmap_crc {
-	/*
-	 * We can't use ZFS ID here because the create operation may not
-	 * make it to the disk.  When we redo the creation, we will get
-	 * a different ZFS ID.
-	 */
-	slfid_t				sjbc_fid;
-	sl_bmapno_t			sjbc_bmapno;
-	sl_ios_id_t			sjbc_iosid;		/* which IOS got the I/O */
-	 int32_t			sjbc_ncrcs;
-	uint32_t			sjbc_utimgen;
-	uint64_t			sjbc_fsize;		/* new st_size */
-	uint64_t			sjbc_aggr_nblks;	/* total st_blocks */
-	uint64_t			sjbc_repl_nblks;	/* IOS' st_blocks */
-	 int32_t			sjbc_extend;		/* XXX flags */
-	struct srt_bmap_crcwire		sjbc_crc[SLJ_MDS_NCRCS];
-} __packed;
-
-/**
  * slmds_jent_bmap_repls - Log for updated replication state of a bmap,
  *	from replication activity, write I/O which invalidates valid
  *	replicas, etc.

@@ -89,51 +89,6 @@ mds_replay_bmap(void *jent, int op)
 	DEBUG_BMAPOD(PLL_DIAG, b, "before bmap replay op=%d", op);
 
 	switch (op) {
-	case B_REPLAY_OP_CRC: {
-		struct slash_inode_handle *ih;
-		struct srt_stat sstb;
-		int fl, idx;
-
-		FCMH_LOCK(f);
-		ih = fcmh_2_inoh(f);
-		idx = mds_repl_ios_lookup(current_vfsid, ih,
-		    sjbc->sjbc_iosid);
-		if (idx < 0) {
-			psclog_errorx("iosid %d not found in repl "
-			    "table", sjbc->sjbc_iosid);
-			goto out;
-		}
-		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
-		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
-		if (idx >= SL_DEF_REPLICAS)
-			rc = mds_inox_write(current_vfsid, ih, NULL,
-			    NULL);
-		else
-			rc = mds_inode_write(current_vfsid, ih, NULL,
-			    NULL);
-		if (rc)
-			goto out;
-
-		fl = SL_SETATTRF_NBLKS;
-
-		/* Apply the filesize from the journal entry. */
-		if (sjbc->sjbc_extend) {
-			sstb.sst_size = sjbc->sjbc_fsize;
-			fl |= PSCFS_SETATTRF_DATASIZE;
-		}
-		rc = mds_fcmh_setattr_nolog(current_vfsid, f, fl,
-		    &sstb);
-		if (rc)
-			goto out;
-
-		for (i = 0; i < sjbc->sjbc_ncrcs; i++) {
-			bmap_wire = &sjbc->sjbc_crc[i];
-			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
-			bmi->bmi_crcstates[bmap_wire->slot] |=
-			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-		}
-		break;
-	    }
 	case B_REPLAY_OP_REPLS:
 
 		OPSTAT_INCR("replay-repls");
@@ -226,7 +181,7 @@ mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
  * in the bmap, this has to be a read-modify-write process.
  */
 static int
-mds_replay_bmap_crc(struct psc_journal_enthdr *pje)
+mds_replay_update(struct psc_journal_enthdr *pje)
 {
 	return (mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_CRC));
 }
@@ -543,8 +498,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	switch (type) {
-	    case MDS_LOG_BMAP_REPLS:
-		rc = mds_replay_bmap_repls(pje);
+	    case MDS_LOG_UPDATE:
+		rc = mds_replay_update(pje);
 		break;
 	    case MDS_LOG_BMAP_CRC:
 		rc = mds_replay_bmap_crc(pje);
