@@ -1981,6 +1981,12 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 				BMAP_LOCK(b);
 				continue;
 			}
+			/*
+			 * 10/18/2017:
+			 *
+			 * This leads to psclist_add() crash, we should 
+			 * probably have a reference to protect bml_exp.
+			 */
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL) {
 				psclog_warnx("Unable to get csvc: %p",
