@@ -130,7 +130,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 		DYNARRAY_FOREACH(fii, i, a) {
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
-			if (f->fcmh_flags & FCMH_IOD_UPDATEFILE) {
+			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
 				lc_addhead(&sli_fcmh_update, fii);
 				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 			}
@@ -191,18 +191,32 @@ sliupdthr_main(struct psc_thread *thr)
 			f = fii_2_fcmh(fii);
 			if (!FCMH_TRYLOCK(f))
 				continue;
+	
+			/*
+ 			 * Wait for more writes to come in.  Also some
+ 			 * file systems might do not update st_nblocks
+ 			 * right away.
+ 			 */
+			if (fii->fii_firstwrite + 5 < now.tv_sec) {
+				FCMH_ULOCK(f);
+				LIST_CACHE_ULOCK(&sli_fcmh_update);
+				sleep(5);
+				goto again;
+			}
 
 			if (fstat(fcmh_2_fd(f), &stb) == -1) {
 				FCMH_ULOCK(f);	
 				continue;
 			}
+			lc_remove(&sli_fcmh_update, fii);
+			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
+			/*
+ 			 * No change in storage usage.
+ 			 */
 			if (fii->fii_nblks == stb.st_blocks) {
-				lc_remove(&sli_fcmh_update, fii);
-				f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
 				FCMH_ULOCK(f);	
 				continue;
 			}
-			fii->fii_lastupdate = now.tv_sec;
 			psc_dynarray_add(a, fii);
 			mq->updates[i].fg = f->fcmh_sstb.sst_fg;
 			mq->updates[i].nblks = stb.st_blocks;
@@ -223,6 +237,16 @@ sliupdthr_main(struct psc_thread *thr)
 		if (!rc)
 			continue;
   out:
+
+		DYNARRAY_FOREACH(fii, i, a) {
+			f = fii_2_fcmh(fii);
+			FCMH_LOCK(f);
+			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
+				lc_addhead(&sli_fcmh_update, fii);
+				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
+			}
+			FCMH_ULOCK(f);
+		}
 
 		psc_dynarray_free(a);
 		PSCFREE(a);

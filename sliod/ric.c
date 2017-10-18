@@ -335,13 +335,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
+		FL_GETTIMEVAL(&now);
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
-			PFL_GETTIMEVAL(&now);
 			OPSTAT_INCR("fcmh-dirty-update");
-			fii->fii_lastwrite = now.tv_sec;
+			fii->fii_firstwrite = now.tv_sec;
 			lc_add(&sli_fcmh_update, fii);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}
+		fii->fii_lastwrite = now.tv_sec;
 	}
 	FCMH_ULOCK(f);
 
