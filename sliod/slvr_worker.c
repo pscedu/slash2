@@ -143,6 +143,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 	sl_csvc_decref(csvc);
 	psc_dynarray_free(a);
 	PSCFREE(a);
+	return (0);
 }
 
 
