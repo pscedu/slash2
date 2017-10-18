@@ -548,7 +548,10 @@ struct srt_update_rec {
 	uint64_t		nblks;
 } __packed;
 
-#define	MAX_FILE_UPDATES	32
+/*
+ * I tried 32 and the RPC does not go through.  See SLM_RMI_BUFSZ.
+ */
+#define	MAX_FILE_UPDATES	16
 
 struct srm_updatefile_req {
 	uint16_t		count;

@@ -241,7 +241,7 @@ sliupdthr_main(struct psc_thread *thr)
 		rq->rq_async_args.pointer_arg[1] = csvc;
 
 		mq->count = i;
-		for (i = 0; i <  mq->count; i++) {
+		for (i = 0; i < mq->count; i++) {
 			mq->updates[i].fg = recs[i].fg;
 			mq->updates[i].nblks = recs[i].nblks;
 
