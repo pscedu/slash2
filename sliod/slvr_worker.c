@@ -188,6 +188,7 @@ sliupdthr_main(struct psc_thread *thr)
 
  again:
 
+		lc_peekheadwait(&sli_fcmh_update);
 		PFL_GETTIMEVAL(&now);
 		LIST_CACHE_LOCK(&sli_fcmh_update);
 		LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_update) {
