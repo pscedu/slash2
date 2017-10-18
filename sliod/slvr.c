@@ -1149,8 +1149,6 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
 
-	pscthr_init(SLITHRT_UPDATE, sliupdthr_main, 0, "sliupdthr");
-
 	slab_cache_init(nbuf);
 }
 
