@@ -209,7 +209,9 @@ sliupdthr_main(struct psc_thread *thr)
 				goto again;
 			}
 
-			if (fstat(fcmh_2_fd(f), &stb) == -1) {
+			rc = fstat(fcmh_2_fd(f), &stb);
+			if (rc < 0) {
+				psclog_errorx("fstat");
 				FCMH_ULOCK(f);	
 				continue;
 			}
@@ -229,7 +231,7 @@ sliupdthr_main(struct psc_thread *thr)
 			FCMH_ULOCK(f);	
 
 			i++;
-			if (i >= MAX_FILE_UPDATES);
+			if (i >= MAX_FILE_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
