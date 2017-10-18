@@ -1102,8 +1102,6 @@ slvr_cache_init(void)
 
 	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 
-	slab_cache_init(nbuf);
-
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
 	    nbuf, nbuf, slab_cache_reap, "slvr");
@@ -1151,8 +1149,7 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
 		    "slisyncthr%d", i);
 
-	pscthr_init(SLITHRT_UPDATE, sliupdthr_main, 0, "sliupdthr");
-
+	slab_cache_init(nbuf);
 }
 
 #if PFL_DEBUG > 0

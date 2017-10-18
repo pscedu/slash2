@@ -369,6 +369,8 @@ main(int argc, char *argv[])
 
 	sli_rmi_setmds(prefmds);
 
+	pscthr_init(SLITHRT_UPDATE, sliupdthr_main, 0, "sliupdthr");
+
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
 

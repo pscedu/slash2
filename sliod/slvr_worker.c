@@ -143,6 +143,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 	sl_csvc_decref(csvc);
 	psc_dynarray_free(a);
 	PSCFREE(a);
+	return (0);
 }
 
 
@@ -188,6 +189,7 @@ sliupdthr_main(struct psc_thread *thr)
 
  again:
 
+		lc_peekheadwait(&sli_fcmh_update);
 		PFL_GETTIMEVAL(&now);
 		LIST_CACHE_LOCK(&sli_fcmh_update);
 		LIST_CACHE_FOREACH_SAFE(fii, tmp, &sli_fcmh_update) {
@@ -200,7 +202,7 @@ sliupdthr_main(struct psc_thread *thr)
  			 * file systems might do not update st_nblocks
  			 * right away.
  			 */
-			if (fii->fii_lastwrite + 5 < now.tv_sec) {
+			if (fii->fii_lastwrite + 5 > now.tv_sec) {
 				FCMH_ULOCK(f);
 				LIST_CACHE_ULOCK(&sli_fcmh_update);
 				sleep(5);
