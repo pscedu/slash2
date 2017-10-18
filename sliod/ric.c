@@ -335,7 +335,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
-		FL_GETTIMEVAL(&now);
+		PFL_GETTIMEVAL(&now);
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
 			OPSTAT_INCR("fcmh-dirty-update");
 			lc_add(&sli_fcmh_update, fii);
