@@ -165,6 +165,7 @@ sliupdthr_main(struct psc_thread *thr)
 	struct srm_updatefile_rep *mp;
 	struct timeval now;
 	struct pscrpc_request *rq;
+	struct srt_update_rec recs[MAX_FILE_UPDATES];
 
 	while (pscthr_run(thr)) {
 
@@ -178,15 +179,6 @@ sliupdthr_main(struct psc_thread *thr)
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
-		if (rc)
-			goto out;
-
-		rq->rq_interpret_reply = sli_rmi_update_cb;
-		rq->rq_async_args.pointer_arg[0] = a;
-		rq->rq_async_args.pointer_arg[1] = csvc;
-
  again:
 
 		lc_peekheadwait(&sli_fcmh_update);
@@ -225,8 +217,8 @@ sliupdthr_main(struct psc_thread *thr)
 				continue;
 			}
 			psc_dynarray_add(a, fii);
-			mq->updates[i].fg = f->fcmh_sstb.sst_fg;
-			mq->updates[i].nblks = stb.st_blocks;
+			recs[i].fg = f->fcmh_sstb.sst_fg;
+			recs[i].nblks = stb.st_blocks;
 
 			FCMH_ULOCK(f);	
 
@@ -240,6 +232,20 @@ sliupdthr_main(struct psc_thread *thr)
 			goto again; 
 		}
 
+		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
+		if (rc)
+			goto out;
+
+		rq->rq_interpret_reply = sli_rmi_update_cb;
+		rq->rq_async_args.pointer_arg[0] = a;
+		rq->rq_async_args.pointer_arg[1] = csvc;
+
+		mq->count = i;
+		for (i = 0; i <  mq->count; i++) {
+			mq->updates[i].fg = recs[i].fg;
+			mq->updates[i].nblks = recs[i].nblks;
+
+		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (!rc)
 			continue;
