@@ -202,7 +202,7 @@ sliupdthr_main(struct psc_thread *thr)
  			 * file systems might do not update st_nblocks
  			 * right away.
  			 */
-			if (fii->fii_lastwrite + 5 < now.tv_sec) {
+			if (fii->fii_lastwrite + 5 > now.tv_sec) {
 				FCMH_ULOCK(f);
 				LIST_CACHE_ULOCK(&sli_fcmh_update);
 				sleep(5);
