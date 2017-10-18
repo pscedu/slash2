@@ -852,6 +852,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		if (flags & CSVCF_NONBLOCK) {
 			success = 0;	
+			OPSTAT_INCR("csvc-nowait");
 			goto out2;
 		}
 
