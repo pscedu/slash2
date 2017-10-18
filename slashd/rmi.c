@@ -96,6 +96,59 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	return (0);
 }
 
+
+int
+mds_file_update(sl_ios_id_t iosid, struct srt_update_rec *recp)
+{
+	struct fidc_membh *f;
+	struct srt_stat sstb;
+	int rc, fl, idx, vfsid;
+	uint32_t i;
+	uint64_t nblks;
+	struct slash_inode_handle *ih;
+
+        rc = slm_fcmh_get(&recp->fg, &f); 
+        if (rc) 
+		return (rc);
+
+	ih = fcmh_2_inoh(f);
+	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
+	if (idx < 0) {
+		psclog_warnx("CRC update: invalid IOS %x", iosid);
+		return (idx);
+	}
+
+	if (idx < SL_DEF_REPLICAS)
+		nblks = fcmh_2_ino(f)->ino_repl_nblks[idx];
+	else
+		nblks = fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS];
+
+	/*
+	 * Only update the block usage when there is a real change.
+	 */
+	if (recp->nblks != nblks) {
+		sstb.sst_blocks = fcmh_2_nblks(f) + recp->nblks - nblks;
+		fl = SL_SETATTRF_NBLKS;
+
+		fcmh_set_repl_nblks(f, idx, recp->nblks);
+
+		/* use nolog because mdslog_bmap_crc() will cover this */
+		FCMH_LOCK(f);
+		rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
+		if (rc)
+			psclog_error("unable to setattr: rc=%d", rc);
+
+		FCMH_LOCK(f);
+		if (idx < SL_DEF_REPLICAS)
+			mds_inode_write(vfsid, ih, NULL, NULL);
+		else
+			mds_inox_write(vfsid, ih, NULL, NULL);
+		FCMH_ULOCK(f);
+	}
+	fcmh_op_done(f);
+	return (rc);
+}
+
 /*
  * Handle a BMAPCRCWRT request from ION, which receives the CRCs for the
  * data contained in a bmap, checks their integrity during transmission,
@@ -114,6 +167,7 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 	uint32_t i;
 	off_t off;
 	void *buf;
+	sl_ios_id_t iosid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->count > MAX_FILE_UPDATES) {
@@ -122,8 +176,14 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
+	iosid = libsl_nid2iosid(rq->rq_conn->c_peer.nid);
 
-	return (mp->rc);
+	for (i = 0; i < mq->count; i++) {
+		mp->rc = mds_file_update(iosid, mq->updates[i]);
+		if (mp->rc)
+			break;
+	}
+	return (0);
 }
 
 int
