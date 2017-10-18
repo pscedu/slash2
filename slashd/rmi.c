@@ -103,7 +103,6 @@ mds_file_update(sl_ios_id_t iosid, struct srt_update_rec *recp)
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	int rc, fl, idx, vfsid;
-	uint32_t i;
 	uint64_t nblks;
 	struct slash_inode_handle *ih;
 
@@ -111,11 +110,18 @@ mds_file_update(sl_ios_id_t iosid, struct srt_update_rec *recp)
         if (rc) 
 		return (rc);
 
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	if (rc) {
+		rc = -rc;
+		goto out;
+	}
+
 	ih = fcmh_2_inoh(f);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0) {
 		psclog_warnx("CRC update: invalid IOS %x", iosid);
-		return (idx);
+		rc = idx;
+		goto out;
 	}
 
 	if (idx < SL_DEF_REPLICAS)
@@ -145,7 +151,10 @@ mds_file_update(sl_ios_id_t iosid, struct srt_update_rec *recp)
 			mds_inox_write(vfsid, ih, NULL, NULL);
 		FCMH_ULOCK(f);
 	}
-	fcmh_op_done(f);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
 	return (rc);
 }
 
@@ -164,6 +173,7 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 	struct srm_updatefile_rep *mp;
 	struct iovec *iovs;
 	size_t len = 0;
+	int rc;
 	uint32_t i;
 	off_t off;
 	void *buf;
@@ -171,7 +181,7 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->count > MAX_FILE_UPDATES) {
-		psclog_errorx("ncrc_updates=%u is > %d",
+		psclog_errorx("updates=%u is > %d",
 		    mq->count, MAX_FILE_UPDATES);
 		mp->rc = -EINVAL;
 		return (mp->rc);
@@ -179,9 +189,12 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 	iosid = libsl_nid2iosid(rq->rq_conn->c_peer.nid);
 
 	for (i = 0; i < mq->count; i++) {
-		mp->rc = mds_file_update(iosid, mq->updates[i]);
-		if (mp->rc)
-			break;
+		rc = mds_file_update(iosid, &mq->updates[i]);
+		if (rc) {
+			psclog_errorx("Fail to update storage for file");
+			if (!mp->rc);
+				mp->rc = rc;
+		}
 	}
 	return (0);
 }
