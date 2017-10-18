@@ -192,7 +192,7 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 		rc = mds_file_update(iosid, &mq->updates[i]);
 		if (rc) {
 			psclog_errorx("Fail to update storage for file");
-			if (!mp->rc);
+			if (!mp->rc)
 				mp->rc = rc;
 		}
 	}
