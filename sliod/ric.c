@@ -338,7 +338,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		FL_GETTIMEVAL(&now);
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
 			OPSTAT_INCR("fcmh-dirty-update");
-			fii->fii_firstwrite = now.tv_sec;
 			lc_add(&sli_fcmh_update, fii);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}

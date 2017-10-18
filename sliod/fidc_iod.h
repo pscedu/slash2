@@ -40,9 +40,7 @@ struct fcmh_iod_info {
 	int			fii_predio_nseq;	/* num sequential io's */
 
 	int64_t			fii_nblks;		/* cache fstat() results */ 
-	long			fii_firstwrite;		/* when first write/punch happens */
 	long			fii_lastwrite;		/* when last write/punch happens */
-	long			fii_lastupdate;		/* when last write/punch updates */
 
 	struct psclist_head	fii_lentry;		/* all fcmhs with dirty contents */
 	struct psclist_head	fii_lentry2;		/* all fcmhs with storage update */

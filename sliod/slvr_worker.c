@@ -131,12 +131,15 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
 			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
+				OPSTAT_INCR("requeue-update");
 				lc_addhead(&sli_fcmh_update, fii);
 				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 			}
 			FCMH_ULOCK(f);
 		}
-	}
+		OPSTAT_INCR("update-failure");
+	} else
+		OPSTAT_INCR("update-success");
 	sl_csvc_decref(csvc);
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -197,7 +200,7 @@ sliupdthr_main(struct psc_thread *thr)
  			 * file systems might do not update st_nblocks
  			 * right away.
  			 */
-			if (fii->fii_firstwrite + 5 < now.tv_sec) {
+			if (fii->fii_lastwrite + 5 < now.tv_sec) {
 				FCMH_ULOCK(f);
 				LIST_CACHE_ULOCK(&sli_fcmh_update);
 				sleep(5);
