@@ -121,28 +121,38 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 {
 	int i, rc;
 	struct fidc_membh *f;
+	struct sl_fidgen *fgp;
 	struct fcmh_iod_info *fii;
-	struct psc_dynarray *a = args->pointer_arg[0];
+	struct srt_update_rec *recp = args->pointer_arg[0];
 	struct slrpc_cservice *csvc = args->pointer_arg[1];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
-	if (rc) {
-		DYNARRAY_FOREACH(fii, i, a) {
-			f = fii_2_fcmh(fii);
-			FCMH_LOCK(f);
-			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
-				OPSTAT_INCR("requeue-update");
-				lc_addhead(&sli_fcmh_update, fii);
-				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
-			}
-			FCMH_ULOCK(f);
-		}
-		OPSTAT_INCR("update-failure");
-	} else
+	if (!rc) {
 		OPSTAT_INCR("update-success");
+		goto out;
+	}
+	for (i = 0; i < MAX_FILE_UPDATES; i++) {
+		fgp = &recp[i].fg;
+		if (fgp->fg_fid == 0 && fgp->fg_gen == 0)
+			break;
+		rc = sli_fcmh_get(fgp, &f);
+		if (rc)
+			continue;
+		
+		FCMH_LOCK(f);
+		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
+			OPSTAT_INCR("requeue-update");
+			fii = fcmh_2_fii(f);
+			lc_addhead(&sli_fcmh_update, fii);
+			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
+		}
+		fcmh_op_done(f);
+	}
+
+ out:
+
 	sl_csvc_decref(csvc);
-	psc_dynarray_free(a);
-	PSCFREE(a);
+	PSCFREE(recp);
 	return (0);
 }
 
@@ -155,17 +165,20 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 void
 sliupdthr_main(struct psc_thread *thr)
 {
-	int i, rc;
+	int i, rc, size;
 	struct stat stb;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
 	struct slrpc_cservice *csvc;
-	struct psc_dynarray *a;
+	struct psc_dynarray a = DYNARRAY_INIT;
 	struct srm_updatefile_req *mq;
 	struct srm_updatefile_rep *mp;
 	struct timeval now;
 	struct pscrpc_request *rq;
-	struct srt_update_rec recs[MAX_FILE_UPDATES];
+	struct srt_update_rec *recp;
+
+	psc_dynarray_ensurelen(&a, MAX_FILE_UPDATES);
+	size = sizeof(struct srt_update_rec) * MAX_FILE_UPDATES;
 
 	while (pscthr_run(thr)) {
 
@@ -173,8 +186,8 @@ sliupdthr_main(struct psc_thread *thr)
 		rq = NULL;
 		csvc = NULL;
 
-		a = PSCALLOC(sizeof(*a));
-		psc_dynarray_init(a);
+		recp = PSCALLOC(size);
+		memset(recp, 0, size);
 
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
@@ -220,9 +233,9 @@ sliupdthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);	
 				continue;
 			}
-			psc_dynarray_add(a, fii);
-			recs[i].fg = f->fcmh_sstb.sst_fg;
-			recs[i].nblks = stb.st_blocks;
+			psc_dynarray_add(&a, fii);
+			recp[i].fg = f->fcmh_sstb.sst_fg;
+			recp[i].nblks = stb.st_blocks;
 
 			FCMH_ULOCK(f);	
 
@@ -241,13 +254,13 @@ sliupdthr_main(struct psc_thread *thr)
 			goto out;
 
 		rq->rq_interpret_reply = sli_rmi_update_cb;
-		rq->rq_async_args.pointer_arg[0] = a;
+		rq->rq_async_args.pointer_arg[0] = recp;
 		rq->rq_async_args.pointer_arg[1] = csvc;
 
 		mq->count = i;
 		for (i = 0; i < mq->count; i++) {
-			mq->updates[i].fg = recs[i].fg;
-			mq->updates[i].nblks = recs[i].nblks;
+			mq->updates[i].fg = recp[i].fg;
+			mq->updates[i].nblks = recp[i].nblks;
 
 		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
@@ -255,7 +268,7 @@ sliupdthr_main(struct psc_thread *thr)
 			continue;
   out:
 
-		DYNARRAY_FOREACH(fii, i, a) {
+		DYNARRAY_FOREACH(fii, i, &a) {
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
 			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
@@ -265,12 +278,10 @@ sliupdthr_main(struct psc_thread *thr)
 			FCMH_ULOCK(f);
 		}
 
-		psc_dynarray_free(a);
-		PSCFREE(a);
-
 		if (rq)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
+	psc_dynarray_free(&a);
 }
