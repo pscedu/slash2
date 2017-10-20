@@ -179,6 +179,7 @@ sliupdthr_main(struct psc_thread *thr)
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
+
  again:
 
 		lc_peekheadwait(&sli_fcmh_update);
@@ -193,12 +194,15 @@ sliupdthr_main(struct psc_thread *thr)
  			 * Wait for more writes to come in.  Also some
  			 * file systems might do not update st_nblocks
  			 * right away.
+ 			 *
+ 			 * A file could be written repeatedly, so its
+ 			 * order in the list does not necessarily 
+ 			 * reflect when it is last written.
  			 */
 			if (fii->fii_lastwrite + 5 > now.tv_sec) {
 				FCMH_ULOCK(f);
 				LIST_CACHE_ULOCK(&sli_fcmh_update);
-				sleep(5);
-				goto again;
+				continue;
 			}
 
 			rc = fstat(fcmh_2_fd(f), &stb);
@@ -228,7 +232,7 @@ sliupdthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
 		if (!i) {
-			pscthr_yield();
+			sleep(5);
 			goto again; 
 		}
 
