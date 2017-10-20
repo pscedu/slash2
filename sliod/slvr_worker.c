@@ -118,6 +118,7 @@ int
 sli_rmi_update_queue(struct srt_update_rec *recp)
 {
 	int i, rc;
+	struct timeval now;
 	struct fidc_membh *f;
 	struct sl_fidgen *fgp;
 	struct fcmh_iod_info *fii;
@@ -134,7 +135,9 @@ sli_rmi_update_queue(struct srt_update_rec *recp)
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
 			OPSTAT_INCR("requeue-update");
 			fii = fcmh_2_fii(f);
-			lc_addhead(&sli_fcmh_update, fii);
+			PFL_GETTIMEVAL(&now);
+			fii->fii_lastwrite = now.tv_sec - 5;
+			lc_add(&sli_fcmh_update, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}
@@ -154,11 +157,11 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
 	if (!rc) {
 		OPSTAT_INCR("update-success");
-		goto out;
+	} else {
+		OPSTAT_INCR("update-failure");
+		sli_rmi_update_queue(recp);
 	}
-	sli_rmi_update_queue(recp);
 
- out:
 
 	sl_csvc_decref(csvc);
 	PSCFREE(recp);
