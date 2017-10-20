@@ -252,7 +252,7 @@ sliupdthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
 		if (!i) {
-			sleep(5);
+			pscthr_yield();
 			goto again; 
 		}
 
@@ -281,5 +281,7 @@ sliupdthr_main(struct psc_thread *thr)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
+
+		sleep(SLI_UPDATE_FILE_WAIT);
 	}
 }
