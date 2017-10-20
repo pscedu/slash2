@@ -83,7 +83,7 @@ gidmap_ext_cred(struct pscfs_creds *cr)
 		gm = psc_hashtbl_search(&msl_gidmap_ext, &q.gm_key);
 		if (!gm)
 			continue;
-		/* overwrite is fine */
+		/* overwrite is fine because i >= j */
 		cr->pcr_gidv[j] = gm->gm_val;
 		j++;
 	}

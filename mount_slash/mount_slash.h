@@ -157,6 +157,8 @@ struct msl_fhent {
 	pid_t				 mfh_pid;
 	pid_t				 mfh_sid;
 	uid_t				 mfh_accessing_euid;
+	uid_t				 mfh_accessing_uid;
+	gid_t				 mfh_accessing_gid;
 
 	int				 mfh_oflags;	/* open(2) flags */
 

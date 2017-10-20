@@ -2469,6 +2469,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		if (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)
 			psclogs_info(SLCSS_INFO,
 			    "file closed fid="SLPRI_FID" "
+			    "uid=%u gid=%u "
 			    "euid=%u owner=%u fgrp=%u "
 			    "fsize=%"PRId64" "
 			    "oatime="PFLPRI_PTIMESPEC" "
@@ -2476,6 +2477,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    "otime="PSCPRI_TIMESPEC" "
 			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 			    fcmh_2_fid(f),
+			    mfh->mfh_accessing_uid,
+			    mfh->mfh_accessing_gid,
 			    mfh->mfh_accessing_euid,
 			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 			    f->fcmh_sstb.sst_size,
