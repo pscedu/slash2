@@ -171,16 +171,12 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 {
 	struct srm_updatefile_req *mq;
 	struct srm_updatefile_rep *mp;
-	struct iovec *iovs;
-	size_t len = 0;
 	int rc;
 	uint32_t i;
-	off_t off;
-	void *buf;
 	sl_ios_id_t iosid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->count > MAX_FILE_UPDATES) {
+	if (mq->count > MAX_FILE_UPDATES || mq->count <= 0) {
 		psclog_errorx("updates=%u is > %d",
 		    mq->count, MAX_FILE_UPDATES);
 		mp->rc = -EINVAL;
@@ -190,11 +186,10 @@ slm_rmi_handle_update(struct pscrpc_request *rq)
 
 	for (i = 0; i < mq->count; i++) {
 		rc = mds_file_update(iosid, &mq->updates[i]);
-		if (rc) {
-			psclog_errorx("Fail to update storage for file");
-			if (!mp->rc)
-				mp->rc = rc;
-		}
+		if (!rc) 
+			continue;
+		psclog_errorx("Update failed: "SLPRI_FG,
+			SLPRI_FG_ARGS(&mq->updates[i].fg));
 	}
 	return (0);
 }
