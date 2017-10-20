@@ -144,6 +144,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 			OPSTAT_INCR("requeue-update");
 			fii = fcmh_2_fii(f);
 			lc_addhead(&sli_fcmh_update, fii);
+			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}
 		fcmh_op_done(f);
@@ -264,11 +265,17 @@ sliupdthr_main(struct psc_thread *thr)
 
 		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (!rc)
-			continue;
+		if (!rc) {
+			rq = NULL;
+			csvc = NULL;
+		}
   out:
 
 		DYNARRAY_FOREACH(fii, i, &a) {
+			if (!rc) {
+				fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
+				continue;
+			}
 			f = fii_2_fcmh(fii);
 			FCMH_LOCK(f);
 			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
