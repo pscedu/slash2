@@ -345,6 +345,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			OPSTAT_INCR("fcmh-dirty-update");
 			lc_add(&sli_fcmh_update, fii);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
+			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 		}
 		fii->fii_lastwrite = now.tv_sec;
 	}

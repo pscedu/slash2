@@ -231,16 +231,16 @@ sliupdthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);	
 				continue;
 			}
-			lc_remove(&sli_fcmh_update, fii);
-			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
 			/*
- 			 * No change in storage usage.
+ 			 * Check if we need to send a RPC.
  			 */
 			if (fii->fii_nblks != stb.st_blocks) {
 				recp[i].fg = f->fcmh_sstb.sst_fg;
 				recp[i].nblks = stb.st_blocks;
 				i++;
 			}
+			lc_remove(&sli_fcmh_update, fii);
+			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
 			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
 
 			if (i >= MAX_FILE_UPDATES)
