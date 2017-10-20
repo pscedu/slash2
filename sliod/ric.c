@@ -335,7 +335,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
-		/*  XXX do this after write is done successfully */
+		/*
+		 * We should do this after write is done successfully.
+		 * However, it is tricky to handle the AIO case. So
+		 * be careful.
+		 */ 
 		PFL_GETTIMEVAL(&now);
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
 			OPSTAT_INCR("fcmh-dirty-update");
