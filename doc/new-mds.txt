@@ -94,6 +94,9 @@ Obstacle:
 
 		- Add version number to each data structures to allow piece meal upgrade.
 
+		- Currently, we use some ZFS fields to store slash2 attributes, we won't be able
+		  to touch file system inode at all.
+
 	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
 	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
 	  ask Ed.
