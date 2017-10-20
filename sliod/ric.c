@@ -342,10 +342,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */ 
 		PFL_GETTIMEVAL(&now);
 		if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
-			OPSTAT_INCR("fcmh-dirty-update");
+			OPSTAT_INCR("fcmh-update-enqueue");
 			lc_add(&sli_fcmh_update, fii);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
+		} else {
+			OPSTAT_INCR("fcmh-update-requeue");
+			lc_move2tail(&sli_fcmh_update, fii);
 		}
 		fii->fii_lastwrite = now.tv_sec;
 	}
