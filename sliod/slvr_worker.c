@@ -114,23 +114,14 @@ slisyncthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&a);
 }
 
-
 int
-sli_rmi_update_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
+sli_rmi_update_queue(struct srt_update_rec *recp)
 {
 	int i, rc;
 	struct fidc_membh *f;
 	struct sl_fidgen *fgp;
 	struct fcmh_iod_info *fii;
-	struct srt_update_rec *recp = args->pointer_arg[0];
-	struct slrpc_cservice *csvc = args->pointer_arg[1];
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
-	if (!rc) {
-		OPSTAT_INCR("update-success");
-		goto out;
-	}
 	for (i = 0; i < MAX_FILE_UPDATES; i++) {
 		fgp = &recp[i].fg;
 		if (fgp->fg_fid == 0 && fgp->fg_gen == 0)
@@ -149,6 +140,23 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 		}
 		fcmh_op_done(f);
 	}
+
+
+}
+int
+sli_rmi_update_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	int i, rc;
+	struct srt_update_rec *recp = args->pointer_arg[0];
+	struct slrpc_cservice *csvc = args->pointer_arg[1];
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
+	if (!rc) {
+		OPSTAT_INCR("update-success");
+		goto out;
+	}
+	sli_rmi_update_queue(recp);
 
  out:
 
@@ -171,14 +179,12 @@ sliupdthr_main(struct psc_thread *thr)
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
 	struct slrpc_cservice *csvc;
-	struct psc_dynarray a = DYNARRAY_INIT;
 	struct srm_updatefile_req *mq;
 	struct srm_updatefile_rep *mp;
 	struct timeval now;
 	struct pscrpc_request *rq;
 	struct srt_update_rec *recp;
 
-	psc_dynarray_ensurelen(&a, MAX_FILE_UPDATES);
 	size = sizeof(struct srt_update_rec) * MAX_FILE_UPDATES;
 
 	while (pscthr_run(thr)) {
@@ -230,17 +236,13 @@ sliupdthr_main(struct psc_thread *thr)
 			/*
  			 * No change in storage usage.
  			 */
-			if (fii->fii_nblks == stb.st_blocks) {
-				FCMH_ULOCK(f);	
-				continue;
+			if (fii->fii_nblks != stb.st_blocks) {
+				recp[i].fg = f->fcmh_sstb.sst_fg;
+				recp[i].nblks = stb.st_blocks;
+				i++;
 			}
-			psc_dynarray_add(&a, fii);
-			recp[i].fg = f->fcmh_sstb.sst_fg;
-			recp[i].nblks = stb.st_blocks;
+			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
 
-			FCMH_ULOCK(f);	
-
-			i++;
 			if (i >= MAX_FILE_UPDATES)
 				break;
 		}
@@ -265,30 +267,15 @@ sliupdthr_main(struct psc_thread *thr)
 
 		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (!rc) {
-			rq = NULL;
-			csvc = NULL;
-		}
+		if (!rc)
+			continue;
   out:
-
-		DYNARRAY_FOREACH(fii, i, &a) {
-			if (!rc) {
-				fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
-				continue;
-			}
-			f = fii_2_fcmh(fii);
-			FCMH_LOCK(f);
-			if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
-				lc_addhead(&sli_fcmh_update, fii);
-				f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
-			}
-			FCMH_ULOCK(f);
-		}
+		
+		sli_rmi_update_queue(recp);
 
 		if (rq)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
-	psc_dynarray_free(&a);
 }
