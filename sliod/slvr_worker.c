@@ -114,7 +114,9 @@ slisyncthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&a);
 }
 
-int
+#define	SLI_UPDATE_FILE_WAIT	5
+
+void
 sli_rmi_update_queue(struct srt_update_rec *recp)
 {
 	int i, rc;
@@ -136,21 +138,20 @@ sli_rmi_update_queue(struct srt_update_rec *recp)
 			OPSTAT_INCR("requeue-update");
 			fii = fcmh_2_fii(f);
 			PFL_GETTIMEVAL(&now);
-			fii->fii_lastwrite = now.tv_sec - 5;
+			fii->fii_lastwrite = now.tv_sec - SLI_UPDATE_FILE_WAIT;
 			lc_add(&sli_fcmh_update, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		}
 		fcmh_op_done(f);
 	}
-
-
 }
+
 int
 sli_rmi_update_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	int i, rc;
+	int rc;
 	struct srt_update_rec *recp = args->pointer_arg[0];
 	struct slrpc_cservice *csvc = args->pointer_arg[1];
 
@@ -161,7 +162,6 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 		OPSTAT_INCR("update-failure");
 		sli_rmi_update_queue(recp);
 	}
-
 
 	sl_csvc_decref(csvc);
 	PSCFREE(recp);
@@ -222,7 +222,8 @@ sliupdthr_main(struct psc_thread *thr)
  			 * order in the list does not necessarily 
  			 * reflect when it is last written.
  			 */
-			if (fii->fii_lastwrite + 5 > now.tv_sec) {
+			if (fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT > 
+			    now.tv_sec) {
 				FCMH_ULOCK(f);
 				LIST_CACHE_ULOCK(&sli_fcmh_update);
 				continue;
