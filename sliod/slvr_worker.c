@@ -217,10 +217,6 @@ sliupdthr_main(struct psc_thread *thr)
  			 * Wait for more writes to come in.  Also some
  			 * file systems might do not update st_nblocks
  			 * right away.
- 			 *
- 			 * A file could be written repeatedly, so its
- 			 * order in the list does not necessarily 
- 			 * reflect when it is last written.
  			 */
 			if (fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT > 
 			    now.tv_sec) {
@@ -281,6 +277,8 @@ sliupdthr_main(struct psc_thread *thr)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
+
+		PSCFREE(recp);
 
 		sleep(SLI_UPDATE_FILE_WAIT);
 	}
