@@ -177,7 +177,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 void
 sliupdthr_main(struct psc_thread *thr)
 {
-	int i, rc, size;
+	int i, rc, size, delta;
 	struct stat stb;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
@@ -205,6 +205,7 @@ sliupdthr_main(struct psc_thread *thr)
 
  again:
 
+		delta = 0;
 		lc_peekheadwait(&sli_fcmh_update);
 		PFL_GETTIMEVAL(&now);
 		LIST_CACHE_LOCK(&sli_fcmh_update);
@@ -220,9 +221,10 @@ sliupdthr_main(struct psc_thread *thr)
  			 */
 			if (fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT > 
 			    now.tv_sec) {
+				delta = fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT 
+					- now.tv_sec;
 				FCMH_ULOCK(f);
-				LIST_CACHE_ULOCK(&sli_fcmh_update);
-				continue;
+				break;
 			}
 
 			rc = fstat(fcmh_2_fd(f), &stb);
@@ -248,7 +250,10 @@ sliupdthr_main(struct psc_thread *thr)
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
 		if (!i) {
-			pscthr_yield();
+			if (delta)
+				sleep(delta);
+			else
+				pscthr_yield();
 			goto again; 
 		}
 
