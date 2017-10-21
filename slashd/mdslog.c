@@ -710,6 +710,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		 *
 		 * Add 1000 to differentiate the reason for distilling
 		 * in the log messages.
+		 *
+		 * 10/20/2017: It is not likely we have 1000 peers.
 		 */
 		distill += 1000;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
