@@ -189,7 +189,7 @@ sliupdthr_main(struct psc_thread *thr)
 	struct srm_updatefile_rep *mp;
 	struct timeval now;
 	struct pscrpc_request *rq;
-	struct sli_update *recp;
+	struct sli_update *recp = NULL;
 
 	while (pscthr_run(thr)) {
 
@@ -277,14 +277,14 @@ sliupdthr_main(struct psc_thread *thr)
   out:
 		
 		sli_rmi_update_queue(recp);
+
 		psc_pool_return(sli_upd_pool, recp);
+		recp = NULL;
 
 		if (rq)
 			pscrpc_req_finished(rq);
 		if (csvc)
 			sl_csvc_decref(csvc);
-
-		PSCFREE(recp);
 
 		sleep(SLI_UPDATE_FILE_WAIT);
 	}
