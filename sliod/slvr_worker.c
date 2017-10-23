@@ -197,6 +197,7 @@ sliupdthr_main(struct psc_thread *thr)
 
 		recp = psc_pool_get(sli_upd_pool);
 		memset(recp, 0, sizeof(*recp));
+		INIT_PSC_LISTENTRY(&recp->sli_lentry);
 
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
