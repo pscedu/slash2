@@ -147,7 +147,6 @@ sli_rmi_update_queue(struct sli_update *recp)
 		}
 		fcmh_op_done(f);
 	}
-	psc_pool_return(sli_upd_pool, recp);
 }
 
 int
@@ -155,7 +154,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	int rc;
-	struct srt_update_rec *recp = args->pointer_arg[0];
+	struct sli_update *recp = args->pointer_arg[0];
 	struct slrpc_cservice *csvc = args->pointer_arg[1];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_updatefile_rep, rc);
@@ -166,6 +165,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 		sli_rmi_update_queue(recp);
 	}
 
+	psc_pool_return(sli_upd_pool, recp);
 	sl_csvc_decref(csvc);
 	PSCFREE(recp);
 	return (0);
@@ -249,7 +249,7 @@ sliupdthr_main(struct psc_thread *thr)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
-		if (!i) {
+		if (!recp->sli_count) {
 			if (delta)
 				sleep(delta);
 			else
@@ -277,6 +277,7 @@ sliupdthr_main(struct psc_thread *thr)
   out:
 		
 		sli_rmi_update_queue(recp);
+		psc_pool_return(sli_upd_pool, recp);
 
 		if (rq)
 			pscrpc_req_finished(rq);
