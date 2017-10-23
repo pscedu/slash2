@@ -45,7 +45,11 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define	SLI_SYNC_AHEAD_BATCH	10
+#define	SLI_SYNC_AHEAD_BATCH	 10
+
+struct psc_poolmaster		 sli_upd_poolmaster;
+struct psc_poolmgr		*sli_upd_pool;
+
 
 void
 sli_sync_ahead(struct psc_dynarray *a)

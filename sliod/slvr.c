@@ -1150,6 +1150,12 @@ slvr_cache_init(void)
 		    "slisyncthr%d", i);
 
 	slab_cache_init(nbuf);
+
+	_psc_poolmaster_init(&sli_upd_poolmaster,
+	    sizeof(struct sli_update),
+	    offsetof(struct sli_update, sli_lentry), PPMF_AUTO, 64,
+	    64, 0, NULL, NULL, "sliupd");
+	sli_upd_pool = psc_poolmaster_getmgr(&sli_upd_poolmaster);
 }
 
 #if PFL_DEBUG > 0

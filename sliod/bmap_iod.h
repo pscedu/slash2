@@ -56,6 +56,11 @@ struct bmap_iod_rls {
 	struct psc_listentry	 bir_lentry;
 };
 
+struct sli_update {
+	struct srt_update_rec	 sli_recs[MAX_FILE_UPDATES];
+	struct psc_listentry     sli_lentry;
+};
+
 #define BIM_RETRIEVE_SEQ	1
 
 #define BIM_MINAGE		5	/* seconds */
@@ -122,6 +127,9 @@ extern struct bmap_iod_minseq	 sli_bminseq;
 
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
 extern struct psc_poolmgr	*bmap_rls_pool;
+
+extern struct psc_poolmaster     sli_upd_poolmaster;
+extern struct psc_poolmgr       *sli_upd_pool;
 
 static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)
