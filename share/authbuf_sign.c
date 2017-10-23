@@ -91,6 +91,13 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_dst_nid = peer_prid.nid;
 	saf->saf_secret.sas_dst_pid = peer_prid.pid;
 
+	/*
+ 	 * 07/23/2017: Called from msl_read_rpc_launch() and segfault
+ 	 * inside_int_malloc().
+ 	 *
+ 	 * mount_wokfs[9727]: segfault at 100000008 ip 00007fabe7d7e7fa
+ 	 * sp 00007faa197f1b80 error 4 in libc-2.17.so[7fabe7d03000+1b7000]
+ 	 */
 	gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 	if (gerr) {
 		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
