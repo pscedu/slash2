@@ -57,8 +57,9 @@ struct bmap_iod_rls {
 };
 
 struct sli_update {
-	struct srt_update_rec	 sli_recs[MAX_FILE_UPDATES];
+	int			 sli_count;
 	struct psc_listentry     sli_lentry;
+	struct srt_update_rec	 sli_recs[MAX_FILE_UPDATES];
 };
 
 #define BIM_RETRIEVE_SEQ	1

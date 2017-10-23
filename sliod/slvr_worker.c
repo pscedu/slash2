@@ -121,7 +121,7 @@ slisyncthr_main(struct psc_thread *thr)
 #define	SLI_UPDATE_FILE_WAIT	5
 
 void
-sli_rmi_update_queue(struct srt_update_rec *recp)
+sli_rmi_update_queue(struct sli_update *recp)
 {
 	int i, rc;
 	struct timeval now;
@@ -129,10 +129,8 @@ sli_rmi_update_queue(struct srt_update_rec *recp)
 	struct sl_fidgen *fgp;
 	struct fcmh_iod_info *fii;
 
-	for (i = 0; i < MAX_FILE_UPDATES; i++) {
-		fgp = &recp[i].fg;
-		if (fgp->fg_fid == 0 && fgp->fg_gen == 0)
-			break;
+	for (i = 0; i < recp->sli_count; i++) {
+		fgp = &recp->sli_recs[i].fg;
 		rc = sli_fcmh_get(fgp, &f);
 		if (rc)
 			continue;
@@ -149,6 +147,7 @@ sli_rmi_update_queue(struct srt_update_rec *recp)
 		}
 		fcmh_op_done(f);
 	}
+	psc_pool_return(sli_upd_pool, recp);
 }
 
 int
@@ -181,7 +180,7 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 void
 sliupdthr_main(struct psc_thread *thr)
 {
-	int i, rc, size, delta;
+	int i, rc, delta;
 	struct stat stb;
 	struct fidc_membh *f;
 	struct fcmh_iod_info *fii, *tmp;
@@ -190,18 +189,15 @@ sliupdthr_main(struct psc_thread *thr)
 	struct srm_updatefile_rep *mp;
 	struct timeval now;
 	struct pscrpc_request *rq;
-	struct srt_update_rec *recp;
-
-	size = sizeof(struct srt_update_rec) * MAX_FILE_UPDATES;
+	struct sli_update *recp;
 
 	while (pscthr_run(thr)) {
 
-		i = 0;
 		rq = NULL;
 		csvc = NULL;
 
-		recp = PSCALLOC(size);
-		memset(recp, 0, size);
+		recp = psc_pool_get(sli_upd_pool);
+		memset(recp, 0, sizeof(*recp));
 
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
@@ -241,15 +237,15 @@ sliupdthr_main(struct psc_thread *thr)
  			 * Check if we need to send a RPC.
  			 */
 			if (fii->fii_nblks != stb.st_blocks) {
-				recp[i].fg = f->fcmh_sstb.sst_fg;
-				recp[i].nblks = stb.st_blocks;
-				i++;
+				recp->sli_recs[i].fg = f->fcmh_sstb.sst_fg;
+				recp->sli_recs[i].nblks = stb.st_blocks;
+				recp->sli_count++;
 			}
 			lc_remove(&sli_fcmh_update, fii);
 			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
 			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
 
-			if (i >= MAX_FILE_UPDATES)
+			if (recp->sli_count >= MAX_FILE_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
@@ -269,10 +265,10 @@ sliupdthr_main(struct psc_thread *thr)
 		rq->rq_async_args.pointer_arg[0] = recp;
 		rq->rq_async_args.pointer_arg[1] = csvc;
 
-		mq->count = i;
+		mq->count = recp->sli_count;
 		for (i = 0; i < mq->count; i++) {
-			mq->updates[i].fg = recp[i].fg;
-			mq->updates[i].nblks = recp[i].nblks;
+			mq->updates[i].fg = recp->sli_recs[i].fg;
+			mq->updates[i].nblks = recp->sli_recs[i].nblks;
 
 		}
 		rc = SL_NBRQSET_ADD(csvc, rq);
