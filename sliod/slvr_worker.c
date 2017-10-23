@@ -167,7 +167,6 @@ sli_rmi_update_cb(struct pscrpc_request *rq,
 
 	psc_pool_return(sli_upd_pool, recp);
 	sl_csvc_decref(csvc);
-	PSCFREE(recp);
 	return (0);
 }
 
