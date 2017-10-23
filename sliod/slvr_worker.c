@@ -237,6 +237,7 @@ sliupdthr_main(struct psc_thread *thr)
  			 * Check if we need to send a RPC.
  			 */
 			if (fii->fii_nblks != stb.st_blocks) {
+				fii->fii_nblks = stb.st_blocks;
 				recp->sli_recs[recp->sli_count].fg = f->fcmh_sstb.sst_fg;
 				recp->sli_recs[recp->sli_count].nblks = stb.st_blocks;
 				recp->sli_count++;
@@ -267,6 +268,7 @@ sliupdthr_main(struct psc_thread *thr)
 
 		mq->count = recp->sli_count;
 		for (i = 0; i < mq->count; i++) {
+			OPSTAT_INCR("update-file");
 			mq->updates[i].fg = recp->sli_recs[i].fg;
 			mq->updates[i].nblks = recp->sli_recs[i].nblks;
 
