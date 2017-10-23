@@ -239,6 +239,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		} else {
 			sl_externalize_stat(&stb, &f->fcmh_sstb);
 			// XXX get ptruncgen and gen
+			fii->fii_nblks = stb.st_blocks;
 			f->fcmh_flags |= FCMH_HAVE_ATTRS;
 		}
 	}
