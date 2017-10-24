@@ -141,4 +141,6 @@ void	sliupdthr_main(struct psc_thread *);
 void	slisyncthr_main(struct psc_thread *);
 void	sliseqnothr_main(struct psc_thread *);
 
+void	sli_enqueue_update(struct fidc_membh *);
+
 #endif /* _SLIOD_H_ */
