@@ -61,6 +61,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 {
 	struct slvr *s;
 	int slvrsiz;
+	struct fidc_membh *f;
 
 	s = w->srw_slvr[slvridx];
 
@@ -80,11 +81,18 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		return (rc);
 	}
 
-	if (rc == 0) {
+	if (!rc) {
 		slvrsiz = SLASH_SLVR_SIZE;
 		if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
 			slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 		rc = slvr_fsbytes_wio(s, 0, slvrsiz);
+	}
+
+	if (!rc) {
+		f = slvr_2_fcmh(s);
+		FCMH_LOCK(f);
+		sli_enqueue_update(f);
+		FCMH_ULOCK(f);
 	}
 
 	slvr_io_done(s, rc);
