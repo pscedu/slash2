@@ -118,7 +118,8 @@ slisyncthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&a);
 }
 
-#define	SLI_UPDATE_FILE_WAIT	5
+#define	SLI_UPDATE_FILE_DELAY	5
+#define	SLI_UPDATE_FILE_WRITE	64
 
 void
 sli_rmi_update_queue(struct sli_update *recp)
@@ -140,7 +141,7 @@ sli_rmi_update_queue(struct sli_update *recp)
 			OPSTAT_INCR("requeue-update");
 			fii = fcmh_2_fii(f);
 			PFL_GETTIMEVAL(&now);
-			fii->fii_lastwrite = now.tv_sec - SLI_UPDATE_FILE_WAIT;
+			fii->fii_lastwrite = now.tv_sec - SLI_UPDATE_FILE_DELAY;
 			lc_add(&sli_fcmh_update, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 			f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
@@ -219,20 +220,21 @@ sliupdthr_main(struct psc_thread *thr)
  			 * file systems might do not update st_nblocks
  			 * right away.
  			 */
-			if (fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT > 
-			    now.tv_sec) {
-				delta = fii->fii_lastwrite + SLI_UPDATE_FILE_WAIT 
+			if (fii->fii_lastwrite + SLI_UPDATE_FILE_DELAY > 
+			    now.tv_sec && fii->fii_nwrites < 
+			    SLI_UPDATE_FILE_WRITE)  {
+				delta = fii->fii_lastwrite + SLI_UPDATE_FILE_DELAY 
 					- now.tv_sec;
 				FCMH_ULOCK(f);
 				break;
 			}
-
 			rc = fstat(fcmh_2_fd(f), &stb);
 			if (rc < 0) {
 				psclog_errorx("fstat");
 				FCMH_ULOCK(f);	
 				continue;
 			}
+			fii->fii_nwrites  = 0;
 			/*
  			 * Check if we need to send a RPC.
  			 */
@@ -288,6 +290,6 @@ sliupdthr_main(struct psc_thread *thr)
 		if (csvc)
 			sl_csvc_decref(csvc);
 
-		sleep(SLI_UPDATE_FILE_WAIT);
+		sleep(SLI_UPDATE_FILE_DELAY);
 	}
 }

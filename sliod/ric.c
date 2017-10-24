@@ -350,6 +350,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			OPSTAT_INCR("fcmh-update-requeue");
 			lc_move2tail(&sli_fcmh_update, fii);
 		}
+		fii->fii_nwrites++;
 		fii->fii_lastwrite = now.tv_sec;
 	}
 	FCMH_ULOCK(f);
