@@ -496,6 +496,12 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	switch (type) {
+	    case MDS_LOG_BMAP_REPLS:
+		rc = mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_REPLS);
+		break;
+	    case MDS_LOG_BMAP_CRC:
+		psc_warnx("unexpected log entry type %d", pje->pje_type);
+		break;
 	    case MDS_LOG_UPDATE:
 		rc = mds_replay_update(pje);
 		break;
