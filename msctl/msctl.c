@@ -1063,6 +1063,7 @@ main(int argc, char *argv[])
 {
 	pfl_init();
 	sl_errno_init();
+	pscthr_init(0, NULL, 0, "msctl");
 
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 97, NULL, "fnfidpairs");
