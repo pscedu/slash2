@@ -58,7 +58,7 @@
 static int
 mds_replay_bmap(void *jent, int op)
 {
-	int resid, off, i, rc, tract[NBREPLST];
+	int resid, off, rc, tract[NBREPLST];
 	struct slmds_jent_bmap_repls *sjbr = jent;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
