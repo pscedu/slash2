@@ -102,58 +102,20 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
 {
-	int i, locked[2], lastslvr, lastsize;
-	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
-	int64_t amt = 0;
+	int64_t amt;
 
 	f = b->bcm_fcmh;
-	locked[0] = FCMH_RLOCK(f);
-	locked[1] = BMAP_RLOCK(b);
-
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno)
 		lastbno--;
 
-	if (fcmh_2_fsz(f)) {
-		off_t bmapsize;
+	if (b->bcm_bmapno == lastbno)
+		amt = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+	else
+		amt = SLASH_BMAP_SIZE;
 
-		bmapsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
-		if (bmapsize == 0)
-			bmapsize = SLASH_BMAP_SIZE;
-
-		/* last slvr number within the bmap */
-		lastslvr = (bmapsize - 1) / SLASH_SLVR_SIZE;
-		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
-		if (lastsize == 0)
-			lastsize = SLASH_SLVR_SIZE;
-	} else {
-		/*
-		 * XXX can we unlock and return here
-		 * without going through the next loop?
-		 */ 
-		lastslvr = 0;
-		lastsize = 0;
-	}
-
-	bmi = bmap_2_bmi(b);
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
-		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
-			/*
-			 * If this is the last sliver of the last bmap,
-			 * tally only the portion of data that exists.
-			 */
-			if (b->bcm_bmapno == lastbno &&
-			    i == lastslvr) {
-				amt += lastsize;
-				break;
-			}
-			amt += SLASH_SLVR_SIZE;
-		}
-	}
-	BMAP_URLOCK(b, locked[1]);
-	FCMH_URLOCK(f, locked[0]);
 	return (amt);
 }
 
