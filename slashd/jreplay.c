@@ -175,7 +175,7 @@ mds_replay_bmap(void *jent, int op)
 static int
 mds_replay_update(struct psc_journal_enthdr *pje)
 {
-	return (mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_CRC));
+	return (0);
 }
 
 static int
