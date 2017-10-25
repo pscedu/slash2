@@ -40,34 +40,8 @@ struct srt_stat;
 /* SLJ_MDS_JNENTS % SLJ_MDS_READSZ == 0 */
 #define SLJ_MDS_JNENTS			(128 * 1024)
 #define SLJ_MDS_READSZ			1024
-#define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 #define SLJ_MDS_MAX_JNENTS		(1024 * 1024 * UINT64_C(1024) / SLJ_MDS_ENTSIZE)
 
-/**
- * slmds_jent_bmap_crc - Log for bmap CRC updates from IONs.
- * @sjbc_fid: file ID.
- * @sjbc_bmapno: which bmap region.
- * @sjbc_ion: the ion who sent the request.
- * @sjbc_crc: array of slots and crcs.
- * Notes: this is presumed to be the most common entry in the journal.
- */
-struct slmds_jent_bmap_crc {
-	/*
-	 * We can't use ZFS ID here because the create operation may not
-	 * make it to the disk.  When we redo the creation, we will get
-	 * a different ZFS ID.
-	 */
-	slfid_t				sjbc_fid;
-	sl_bmapno_t			sjbc_bmapno;
-	sl_ios_id_t			sjbc_iosid;		/* which IOS got the I/O */
-	 int32_t			sjbc_ncrcs;
-	uint32_t			sjbc_utimgen;
-	uint64_t			sjbc_fsize;		/* new st_size */
-	uint64_t			sjbc_aggr_nblks;	/* total st_blocks */
-	uint64_t			sjbc_repl_nblks;	/* IOS' st_blocks */
-	 int32_t			sjbc_extend;		/* XXX flags */
-	struct srt_bmap_crcwire		sjbc_crc[SLJ_MDS_NCRCS];
-} __packed;
 
 /**
  * slmds_jent_bmap_repls - Log for updated replication state of a bmap,
@@ -205,12 +179,13 @@ struct sl_mds_crc_log {
 };
 
 #define MDS_LOG_BMAP_REPLS		(_PJE_FLSHFT << 0)
-#define MDS_LOG_BMAP_CRC		(_PJE_FLSHFT << 1)
+#define MDS_LOG_BMAP_CRC		(_PJE_FLSHFT << 1)	/* keep for compatibility for now */
 #define MDS_LOG_BMAP_SEQ		(_PJE_FLSHFT << 2)
 #define MDS_LOG_BMAP_ASSIGN		(_PJE_FLSHFT << 3)
 #define MDS_LOG_INO_REPLS		(_PJE_FLSHFT << 4)
 #define MDS_LOG_NAMESPACE		(_PJE_FLSHFT << 5)
-#define _MDS_LOG_LAST_TYPE		(_PJE_FLSHFT << 5)
+#define MDS_LOG_UPDATE                  (_PJE_FLSHFT << 6)
+#define _MDS_LOG_LAST_TYPE		(_PJE_FLSHFT << 7)
 
 void	mdslog_bmap_crc(void *, uint64_t, int);
 void	mdslog_bmap_repls(void *, uint64_t, int);
