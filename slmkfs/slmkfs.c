@@ -227,6 +227,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_errno_init();
+	pscthr_init(0, NULL, 0, "slmkfs");
 	while ((c = getopt(argc, argv, "iI:R:u:W")) != -1)
 		switch (c) {
 		case 'I':

@@ -27,6 +27,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/log.h"
+#include "pfl/thread.h"
 
 #include "authbuf.h"
 #include "pathnames.h"
@@ -50,6 +51,7 @@ main(int argc, char *argv[])
 	int c;
 
 	pfl_init();
+	pscthr_init(0, NULL, 0, "slkeymgt");
 	sl_errno_init();
 	while ((c = getopt(argc, argv, "cD:")) != -1)
 		switch (c) {
