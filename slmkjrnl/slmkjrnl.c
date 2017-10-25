@@ -475,6 +475,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_errno_init();
+	pscthr_init(0, NULL, 0, "slmkjrnl");
 	sl_subsys_register();
 
 	fn[0] = '\0';
