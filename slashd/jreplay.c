@@ -168,12 +168,6 @@ mds_replay_bmap(void *jent, int op)
 	return (rc);
 }
 
-static int
-mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
-{
-	return (mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_REPLS));
-}
-
 /*
  * Replay a CRC update.  Because we only log CRCs that have been changed
  * in the bmap, this has to be a read-modify-write process.
