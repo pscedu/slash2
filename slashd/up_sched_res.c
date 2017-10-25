@@ -263,7 +263,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	q.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &q.bgen);
 	q.src_resid = src_resm->resm_res_id;
-	q.len = SLASH_BMAP_SIZE;
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno > 0)
 		lastbno--;
@@ -277,7 +276,8 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 			PFL_GOTOERR(out, rc = -ENODATA);
 
 		q.len = MIN(sz, SLASH_BMAP_SIZE);
-	}
+	} else
+		q.len = SLASH_BMAP_SIZE;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
