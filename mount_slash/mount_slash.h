@@ -409,6 +409,7 @@ extern int			 msl_repl_enable;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
 extern int			 msl_max_namecache_per_directory; 
+extern int			 msl_attributes_timeout;
 
 void				 msl_pgcache_init(void);
 void				 msl_pgcache_reap(int);
