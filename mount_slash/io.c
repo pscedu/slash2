@@ -2039,7 +2039,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec + FCMH_ATTR_TIMEO;
+		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 		lc_addtail(&msl_attrtimeoutq, fci);
