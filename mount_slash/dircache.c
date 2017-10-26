@@ -71,7 +71,9 @@ dircache_init(struct fidc_membh *d)
 {
 	struct fcmh_cli_info *fci = fcmh_2_fci(d);
 
-	psc_assert(!(d->fcmh_flags & FCMHF_INIT_DIRCACHE));
+	if (d->fcmh_flags & FCMHF_INIT_DIRCACHE)
+		return;
+
 	d->fcmh_flags |= FCMHF_INIT_DIRCACHE;
 
 	pll_init(&fci->fci_dc_pages, struct dircache_page, dcp_lentry,
@@ -162,6 +164,8 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 	struct dircache_page *p, *np;
 	struct dircache_ent *dce;
 	int n;
+
+	dircache_init(d);
 
 	fci = fcmh_2_fci(d);
 	DIRCACHE_RDLOCK(d);

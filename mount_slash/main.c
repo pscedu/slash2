@@ -1900,6 +1900,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		DEBUG_FCMH(PLL_ERROR, d, "readdir on a non-dir");
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	}
+
+	dircache_init(d);
 	rc = fcmh_reserved(d);
 	if (rc)
 		PFL_GOTOERR(out, rc);

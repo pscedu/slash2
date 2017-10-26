@@ -155,9 +155,6 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	fci = fcmh_2_fci(f);
 	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 	PFL_GETTIMEVAL(&fci->fci_age);
-
-	if (fcmh_isdir(f) && !(f->fcmh_flags & FCMHF_INIT_DIRCACHE))
-		dircache_init(f);
 }
 
 void
