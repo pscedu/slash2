@@ -47,6 +47,8 @@ struct sl_fcmh_ops {
 	int	(*sfop_ctor)(struct fidc_membh *, int);
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
+
+	/* XXX client only, consider removing it someday */
 	void	(*sfop_postsetattr)(struct fidc_membh *);
 	int	(*sfop_reopen)(struct fidc_membh *, slfgen_t);
 };

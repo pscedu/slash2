@@ -133,6 +133,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	f->fcmh_flags |= FCMH_HAVE_ATTRS;
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
+	/* call slc_fcmh_refresh_age() to update age */
 	if (sl_fcmh_ops.sfop_postsetattr)
 		sl_fcmh_ops.sfop_postsetattr(f);
 
