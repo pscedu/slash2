@@ -150,13 +150,11 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 void
 slc_fcmh_refresh_age(struct fidc_membh *f)
 {
-	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(f);
 	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 	PFL_GETTIMEVAL(&fci->fci_age);
-	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 
 	if (fcmh_isdir(f) && !(f->fcmh_flags & FCMHF_INIT_DIRCACHE))
 		dircache_init(f);

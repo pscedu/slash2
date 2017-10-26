@@ -740,7 +740,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &fci->fci_age, <)) {
+		now.tv_sec -= FCMH_ATTR_TIMEO;
+		if (now.tv_sec < fci->fci_age.tv_sec) {
 			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
@@ -3552,8 +3553,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
+		now.tv_sec -= FCMH_ATTR_TIMEO;
 		fci = fcmh_2_fci(f);
-		if (timercmp(&now, &fci->fci_age, >=)) {
+		if (now.tv_sec >= fci->fci_age.tv_sec) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		/* 05/08/2017: suspect crash site */
 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
@@ -3743,9 +3745,10 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
+		now.tv_sec -= FCMH_ATTR_TIMEO;
 		fci = fcmh_2_fci(f);
 		locked = FCMH_RLOCK(f);
-		if (timercmp(&now, &fci->fci_age, <) &&
+		if (now.tv_sec < fci->fci_age.tv_sec &&
 		    fci->fci_xattrsize == 0)
 			rc = ENODATA; // ENOATTR
 		FCMH_URLOCK(f, locked);
