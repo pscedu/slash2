@@ -138,27 +138,11 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&fci->fci_age);
 
-	/* call slc_fcmh_refresh_age() to update age */
-	if (sl_fcmh_ops.sfop_postsetattr)
-		sl_fcmh_ops.sfop_postsetattr(f);
-
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
  out:
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_ULOCK(f);
-}
-
-/*
- * XXX check client attributes when generation number changes
- */
-void
-slc_fcmh_refresh_age(struct fidc_membh *f)
-{
-	struct fcmh_cli_info *fci;
-
-	fci = fcmh_2_fci(f);
-	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 }
 
 void
@@ -309,6 +293,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 	slc_fcmh_ctor,		/* sfop_ctor */
 	slc_fcmh_dtor,		/* sfop_dtor */
 	msl_stat,		/* sfop_getattr */
-	slc_fcmh_refresh_age,	/* sfop_postsetattr */
 	NULL			/* sfop_modify */
 };
