@@ -66,6 +66,8 @@ void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
     int flags)
 {
+	struct fcmh_cli_info *fci;
+
 	if (flags & FCMH_SETATTRF_HAVELOCK)
 		FCMH_LOCK_ENSURE(f);
 	else
@@ -133,6 +135,9 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	f->fcmh_flags |= FCMH_HAVE_ATTRS;
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
+	fci = fcmh_2_fci(f);
+	PFL_GETTIMEVAL(&fci->fci_age);
+
 	/* call slc_fcmh_refresh_age() to update age */
 	if (sl_fcmh_ops.sfop_postsetattr)
 		sl_fcmh_ops.sfop_postsetattr(f);
@@ -154,7 +159,6 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 
 	fci = fcmh_2_fci(f);
 	f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
-	PFL_GETTIMEVAL(&fci->fci_age);
 }
 
 void
@@ -220,7 +224,6 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	int i;
 
 	fci = fcmh_get_pri(f);
-	slc_fcmh_refresh_age(f);
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
