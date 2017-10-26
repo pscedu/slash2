@@ -185,7 +185,7 @@ struct sl_mds_crc_log {
 #define MDS_LOG_INO_REPLS		(_PJE_FLSHFT << 4)
 #define MDS_LOG_NAMESPACE		(_PJE_FLSHFT << 5)
 #define MDS_LOG_UPDATE                  (_PJE_FLSHFT << 6)
-#define _MDS_LOG_LAST_TYPE		(_PJE_FLSHFT << 7)
+#define _MDS_LOG_LAST_TYPE		(_PJE_FLSHFT << 6)
 
 void	mdslog_bmap_crc(void *, uint64_t, int);
 void	mdslog_bmap_repls(void *, uint64_t, int);
