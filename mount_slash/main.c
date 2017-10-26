@@ -747,8 +747,10 @@ msl_stat(struct fidc_membh *f, void *arg)
 			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
+			OPSTAT_INCR("attr-cached");
 			return (0);
 		}
+		OPSTAT_INCR("attr-timeout");
 	}
 
 	/* Attrs have expired or do not exist. */
