@@ -109,8 +109,6 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
-#define MSL_FLUSH_ATTR_TIMEOUT	8
-
 #define fcmh_super_root(f)	(fcmh_2_fid(f) == SLFID_ROOT && \
 				fcmh_2_gen(f) == FGEN_ANY - 1  ? EPERM : 0)
 
