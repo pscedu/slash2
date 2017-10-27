@@ -91,7 +91,7 @@ struct fidc_membh {
 #define _FCMH_FLGSHFT		(1 <<  9)
 
 /* number of seconds in which attribute times out */
-#define FCMH_ATTR_TIMEO		8
+#define FCMH_ATTR_TIMEO		30
 
 #define FCMH_PCI		PFL_CALLERINFOSS(SLSS_FCMH)
 
