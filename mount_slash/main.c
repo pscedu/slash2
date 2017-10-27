@@ -4238,8 +4238,8 @@ msl_init(void)
 			sl_csvc_decref(csvc);
 	}
 
-	pscfs_entry_timeout = 8.;
-	pscfs_attr_timeout = 8.;
+	pscfs_attr_timeout = (double)PSCFS_ATTR_TIMEOUT; 
+	pscfs_entry_timeout = (double)PSCFS_ENTRY_TIMEOUT;
 
 	/* Catch future breakage after two-day's debugging */
 	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
