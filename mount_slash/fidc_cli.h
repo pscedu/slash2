@@ -73,7 +73,7 @@ struct fcmh_cli_info_dir {
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
-	struct timeval			 fci_age;
+	struct timeval			 fci_age;	/* attr update time */
 
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
