@@ -157,7 +157,9 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		OPSTAT_INCR("ptrunc-success");
 	}
 
+	sli_enqueue_update(f);
 	fcmh_op_done(f);
+
 	return (0);
 }
 
