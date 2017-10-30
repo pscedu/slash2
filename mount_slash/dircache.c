@@ -105,6 +105,9 @@ dircache_mgr_init(void)
 	dircache_page_pool = psc_poolmaster_getmgr(
 	    &dircache_page_poolmaster);
 
+	/*
+ 	 * XXX Put a max here that can be adjusted on the fly.
+ 	 */
 	psc_poolmaster_init(&dircache_ent_poolmaster,
 	    struct dircache_ent, dce_lentry, PPMF_AUTO, 
 	    DIRCACHE_NAMECACHE, DIRCACHE_NAMECACHE, 0, NULL, 
