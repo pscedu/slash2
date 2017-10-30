@@ -97,6 +97,8 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 		OPSTAT_INCR("preclaim-err");
 	} else {
 		p->rc = 0;
+		FCMH_LOCK(f);
+		sli_enqueue_update(f);
 		OPSTAT_INCR("preclaim-ok");
 	}
 
