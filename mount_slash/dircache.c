@@ -202,6 +202,8 @@ dircache_purge(struct fidc_membh *d)
 
 	/* (gdb) p fci.u.d.ents */
 	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
+		if (!dce)
+			continue;
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
@@ -459,15 +461,53 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 			dce = NULL;
 		} else
 			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
-		}
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (dce) {
+		fci->fcid_count--;
 		psc_dynarray_setpos(&fci->fcid_ents, dce->dce_index, NULL);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	DIRCACHE_ULOCK(d);
+}
+
+int
+dircache_insert_dce(struct fidc_membh *d, struct dircache_ent *dce)
+{
+	int i;
+	struct timeval now;
+	struct psc_hashbkt *b;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent  *tmp;
+
+	fci = fcmh_get_pri(d);
+	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory) {
+		dce->dce_index = psc_dynarray_pos(&fci->fcid_ents);
+		psc_dynarray_add(&fci->fcid_ents, dce);
+		return (0);
+	}
+	PFL_GETTIMEVAL(&now);
+	DYNARRAY_FOREACH(tmp, i, &fci->fcid_ents) {
+		if (!tmp) {
+			dce->dce_index = i;
+			psc_dynarray_setpos(&fci->fcid_ents, i, dce);
+			return (0);
+		}
+		if (tmp->dce_age - 30 > now.tv_sec)
+			continue;
+		b = psc_hashent_getbucket(&msl_namecache_hashtbl, tmp);
+		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmp);
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		if (!(tmp->dce_flag & DIRCACHE_F_SHORT))
+			PSCFREE(dce->dce_name);
+		psc_pool_return(dircache_ent_pool, tmp);
+
+		dce->dce_index = i;
+		psc_dynarray_setpos(&fci->fcid_ents, i, dce);
+		return (0);
+	}
+	return (1);
 }
 
 /*
@@ -520,7 +560,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	if (tmpdce) {
 		OPSTAT_INCR("msl.dircache-update");
-		psc_dynarray_removeitem(&fci->fcid_ents, tmpdce);
+		psc_dynarray_setpos(&fci->fcid_ents, tmpdce->dce_index, NULL);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(tmpdce->dce_name);
@@ -530,30 +570,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory) {
-		dce->dce_index = fci->fci_pos;
-		psc_dynarray_add(&fci->fcid_ents, dce);
-		DIRCACHE_ULOCK(d);
-		return;
-	}
-	OPSTAT_INCR("msl.dircache-evict");
-	/*
- 	 * Note that the array can shrink due to deletion of files and
- 	 * msl_max_namecache_per_directory is set to a lower value at 
- 	 * the same time.
- 	 */
-	if (fci->fci_pos >= psc_dynarray_len(&fci->fcid_ents))
-		fci->fci_pos = 0;
+	psc_assert(!dircache_insert_dce(d, dce));
 
-	/* (gdb) p fci->u.d.ents */
-	tmpdce = psc_dynarray_getpos(&fci->fcid_ents, fci->fci_pos);
-	dce->dce_index = fci->fci_pos;
-	psc_dynarray_setpos(&fci->fcid_ents, fci->fci_pos, dce);
-	fci->fci_pos++;
-
-	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce->dce_key);
-	psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
-	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	DIRCACHE_ULOCK(d);
 }
