@@ -293,6 +293,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	int i, rc;
 	off_t adj;
 	void *ebase;
+	struct timeval now;
 	struct fidc_membh *f;
 	struct psc_hashbkt *b;
 	struct sl_fidgen *fgp;
@@ -309,6 +310,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
  	 * we can't let the entry to last longer than its associated
  	 * page.  So let us keep it as simple as possible.
  	 */
+	PFL_GETTIMEVAL(&now);
 	ebase = PSC_AGP(base, size);
 	for (i = 0, adj = 0, e = ebase; i < nents; i++, e++) {
 		dirent = PSC_AGP(base, adj);
@@ -347,6 +349,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
+		dce->dce_age = now.tv_sec;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
@@ -457,6 +460,7 @@ void
 dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
 	int len;
+	struct timeval now;
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
@@ -469,6 +473,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	dce = psc_pool_get(dircache_ent_pool);
 
+	PFL_GETTIMEVAL(&now);
 	len = strlen(name);
 	dce->dce_flag = DIRCACHE_F_NONE;
 	dce->dce_namelen = len;
@@ -486,6 +491,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	/* fuse treats zero node ID as ENOENT */
 	psc_assert(ino);
 	dce->dce_ino = ino;
+	dce->dce_age = now.tv_sec;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 	    dce->dce_namelen);
