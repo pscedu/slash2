@@ -3975,6 +3975,10 @@ msreapthr_main(struct psc_thread *thr)
 
 		msl_pgcache_reap(rc);
 		while (1) {
+			/* 
+ 			 * XXX continue to reap as long as there is 
+ 			 * no activities.
+ 			 */
 			rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
 			if (rc)
 				break;
