@@ -295,7 +295,7 @@ void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int nents, void *base, size_t size, int eof)
 {
-	int i, rc;
+	int i, rc, index;
 	off_t adj;
 	void *ebase;
 	struct timeval now;
@@ -328,8 +328,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
  		 * Allow cache attributes in fcmh might help getattrs
  		 * after a readdir.
  		 */
-		if (psc_dynarray_len(&fci->fcid_ents) >= 
-		    msl_max_namecache_per_directory) {
+		index = dircache_insert_index(d);
+		if (index == -1) {
 			OPSTAT_INCR("msl.dircache-cache-fcmh");
 			goto cache_fcmh;
 		}
@@ -369,7 +369,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 	
 		if (!tmpdce) {
-			psc_dynarray_add(&fci->fcid_ents, dce);
 			OPSTAT_INCR("msl.dircache-insert-readdir");
 		} else {
 			OPSTAT_INCR("msl.dircache-discard-readdir");
@@ -466,14 +465,13 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 
 	if (dce) {
 		fci->fcid_count--;
-		psc_dynarray_setpos(&fci->fcid_ents, dce->dce_index, NULL);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	DIRCACHE_ULOCK(d);
 }
 
 int
-dircache_insert_dce(struct fidc_membh *d, struct dircache_ent *dce)
+dircache_insert_index(struct fidc_membh *d)
 {
 	int i;
 	struct timeval now;
@@ -482,32 +480,26 @@ dircache_insert_dce(struct fidc_membh *d, struct dircache_ent *dce)
 	struct dircache_ent  *tmp;
 
 	fci = fcmh_get_pri(d);
-	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory) {
-		dce->dce_index = psc_dynarray_pos(&fci->fcid_ents);
-		psc_dynarray_add(&fci->fcid_ents, dce);
-		return (0);
-	}
+	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory)
+		return (psc_dynarray_pos(&fci->fcid_ents));
+
 	PFL_GETTIMEVAL(&now);
 	DYNARRAY_FOREACH(tmp, i, &fci->fcid_ents) {
-		if (!tmp) {
-			dce->dce_index = i;
-			psc_dynarray_setpos(&fci->fcid_ents, i, dce);
-			return (0);
-		}
+		if (!tmp)
+			return (i);
+
 		if (tmp->dce_age - 30 > now.tv_sec)
 			continue;
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, tmp);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmp);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		if (!(tmp->dce_flag & DIRCACHE_F_SHORT))
-			PSCFREE(dce->dce_name);
+			PSCFREE(tmp->dce_name);
 		psc_pool_return(dircache_ent_pool, tmp);
 
-		dce->dce_index = i;
-		psc_dynarray_setpos(&fci->fcid_ents, i, dce);
-		return (0);
+		return (i);
 	}
-	return (1);
+	return (-1);
 }
 
 /*
@@ -516,7 +508,7 @@ dircache_insert_dce(struct fidc_membh *d, struct dircache_ent *dce)
 void
 dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
-	int len;
+	int len, index;
 	struct timeval now;
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
@@ -527,6 +519,12 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
+
+	index = dircache_insert_index(d);
+	if (index == -1) {
+		DIRCACHE_ULOCK(d);
+		return;
+	}
 
 	dce = psc_pool_get(dircache_ent_pool);
 
@@ -560,7 +558,6 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	if (tmpdce) {
 		OPSTAT_INCR("msl.dircache-update");
-		psc_dynarray_setpos(&fci->fcid_ents, tmpdce->dce_index, NULL);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(tmpdce->dce_name);
@@ -569,8 +566,6 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
-
-	psc_assert(!dircache_insert_dce(d, dce));
 
 
 	DIRCACHE_ULOCK(d);

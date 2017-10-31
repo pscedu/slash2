@@ -173,10 +173,10 @@ struct dircache_ent {
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 
+	struct psc_hashentry     dce_dentry;    /* per directory linkage */
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;
-	int			 dce_index;
 	long			 dce_age;
 	int			 dce_flag;
 	char			 dce_short[SL_SHORT_NAME];

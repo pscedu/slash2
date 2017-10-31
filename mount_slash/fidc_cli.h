@@ -44,6 +44,12 @@ struct fcmh_cli_info_file {
 struct fcmh_cli_info_dir {
 	struct psc_lockedlist	 pages;
 	struct psc_dynarray	 ents;		/* dircache ents not in a page */
+
+	/*
+	 * Compared to a dynarray, a linked list allows us to use as much memory
+	 * as needed.  It is also easier to remove an item from the list. 	
+	 */
+	struct psclist_head	 entlist;
 	struct pfl_rwlock	 dircache_rwlock;
 	int			 count;
 
