@@ -71,7 +71,7 @@ struct fidc_membh {
 	const char		*fcmh_fn;
 	int			 fcmh_lineno;
 	struct pfl_hashentry	 fcmh_hentry;	/* hash table membership for lookups */
-	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
+	struct psclist_head	 fcmh_lentry;	/* idle or free list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
 	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
