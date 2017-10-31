@@ -431,13 +431,16 @@ void
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 {
 	int len;
+	struct timeval now;
 	struct psc_hashbkt *b;
+	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, tmpdce;
 
 	*ino = 0;
 	if (!msl_enable_namecache)
 		return;
 
+	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
@@ -449,10 +452,21 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
-	if (dce)
-		*ino = dce->dce_ino;
+	if (dce) {
+		PFL_GETTIMEVAL(&now);
+		if (dce->dce_age + 30 > now.tv_sec) {
+			*ino = dce->dce_ino;
+			dce = NULL;
+		} else
+			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+		}
+	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
+	if (dce) {
+		psc_dynarray_setpos(&fci->fcid_ents, dce->dce_index, NULL);
+		psc_pool_return(dircache_ent_pool, dce);
+	}
 	DIRCACHE_ULOCK(d);
 }
 
@@ -517,6 +531,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory) {
+		dce->dce_index = fci->fci_pos;
 		psc_dynarray_add(&fci->fcid_ents, dce);
 		DIRCACHE_ULOCK(d);
 		return;
@@ -532,6 +547,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	/* (gdb) p fci->u.d.ents */
 	tmpdce = psc_dynarray_getpos(&fci->fcid_ents, fci->fci_pos);
+	dce->dce_index = fci->fci_pos;
 	psc_dynarray_setpos(&fci->fcid_ents, fci->fci_pos, dce);
 	fci->fci_pos++;
 
