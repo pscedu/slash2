@@ -168,7 +168,6 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 	struct fcmh_cli_info *fci;
 	struct dircache_page *p, *np;
 	struct dircache_ent *dce;
-	int n;
 
 	dircache_init(d);
 
@@ -293,7 +292,7 @@ void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int nents, void *base, size_t size, int eof)
 {
-	int i, rc, index;
+	int i, rc;
 	off_t adj;
 	void *ebase;
 	struct timeval now;
@@ -470,7 +469,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 void
 dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
-	int len, index;
+	int len;
 	struct timeval now;
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
@@ -538,7 +537,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 void
 dircache_delete(struct fidc_membh *d, const char *name)
 {
-	int i, len;
+	int len;
 	struct psc_hashbkt *b;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, tmpdce;
