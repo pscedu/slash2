@@ -373,6 +373,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 		}
 
+		INIT_PSC_LISTENTRY(&dce->dce_entry);
+		psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
 
 		fgp = &e->sstb.sst_fg;
 		psc_assert(fgp->fg_fid == dirent->pfd_ino);
@@ -454,47 +456,14 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		if (dce->dce_age + 30 > now.tv_sec) {
 			*ino = dce->dce_ino;
 			dce = NULL;
-		} else
+		} else {
 			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+			psc_pool_return(dircache_ent_pool, dce);
+		}
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	if (dce) {
-		psc_pool_return(dircache_ent_pool, dce);
-	}
 	DIRCACHE_ULOCK(d);
-}
-
-int
-dircache_insert_index(struct fidc_membh *d)
-{
-	int i;
-	struct timeval now;
-	struct psc_hashbkt *b;
-	struct fcmh_cli_info *fci;
-	struct dircache_ent  *tmp;
-
-	fci = fcmh_get_pri(d);
-	if (psc_dynarray_len(&fci->fcid_ents) < msl_max_namecache_per_directory)
-		return (psc_dynarray_pos(&fci->fcid_ents));
-
-	PFL_GETTIMEVAL(&now);
-	DYNARRAY_FOREACH(tmp, i, &fci->fcid_ents) {
-		if (!tmp)
-			return (i);
-
-		if (tmp->dce_age - 30 > now.tv_sec)
-			continue;
-		b = psc_hashent_getbucket(&msl_namecache_hashtbl, tmp);
-		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmp);
-		psc_hashbkt_put(&msl_namecache_hashtbl, b);
-		if (!(tmp->dce_flag & DIRCACHE_F_SHORT))
-			PSCFREE(tmp->dce_name);
-		psc_pool_return(dircache_ent_pool, tmp);
-
-		return (i);
-	}
-	return (-1);
 }
 
 /*
@@ -514,12 +483,6 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
-
-	index = dircache_insert_index(d);
-	if (index == -1) {
-		DIRCACHE_ULOCK(d);
-		return;
-	}
 
 	dce = psc_pool_get(dircache_ent_pool);
 
@@ -559,6 +522,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 		psc_pool_return(dircache_ent_pool, tmpdce);
 	}
 
+	INIT_PSC_LISTENTRY(&dce->dce_entry);
+	psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
