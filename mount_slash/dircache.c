@@ -190,9 +190,8 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 void
 dircache_purge(struct fidc_membh *d)
 {
-	int i;
 	struct psc_hashbkt *b;
-	struct dircache_ent *dce;
+	struct dircache_ent *dce, *tmp;
 	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
 
@@ -202,7 +201,8 @@ dircache_purge(struct fidc_membh *d)
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		dircache_free_page(d, p);
 
-	psclist_for_each_entry(dce, &fci->fcid_entlist, dce_entry) {
+	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
+		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
