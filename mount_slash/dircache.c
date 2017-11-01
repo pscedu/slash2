@@ -471,10 +471,10 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
 		PFL_GETTIMEVAL(&now);
-		if (dce->dce_age + 30 > now.tv_sec) {
+		if (dce->dce_age + 30 > now.tv_sec)
 			*ino = dce->dce_ino;
-			dce = NULL;
-		} else {
+		else {
+			fci->fcid_count--;
 			psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 			psc_pool_return(dircache_ent_pool, dce);
@@ -483,7 +483,6 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	dircache_trim(d);
-
 	DIRCACHE_ULOCK(d);
 }
 
@@ -589,15 +588,12 @@ dircache_delete(struct fidc_membh *d, const char *name)
 		OPSTAT_INCR("msl.dircache-delete-hash");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+		psc_pool_return(dircache_ent_pool, dce);
 	} else
 		OPSTAT_INCR("msl.dircache-delete-noop");
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	if (dce)
-		psc_pool_return(dircache_ent_pool, dce);
-
 	dircache_trim(d);
-
 	DIRCACHE_ULOCK(d);
 }
