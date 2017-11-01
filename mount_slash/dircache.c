@@ -63,6 +63,8 @@ struct psc_lockedlist	 msl_dircache_pages_lru;
 int	msl_enable_namecache = 1;
 int	msl_enable_sillyrename = 1;
 
+#define	DCACHE_ENTRY_LIFETIME		30
+
 /*
  * Initialize per-fcmh dircache structures.
  */
@@ -325,6 +327,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
  		 * after a readdir.
  		 */
 
+		if (fci->fcid_count >= msl_max_namecache_per_directory) {
+			OPSTAT_INCR("msl.dircache-cache-fcmh");
+			goto cache_fcmh;
+		}
+
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
 			continue;
@@ -370,6 +377,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		fci->fcid_count++;
 		INIT_PSC_LISTENTRY(&dce->dce_entry);
 		psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
+
+ cache_fcmh:
 
 		fgp = &e->sstb.sst_fg;
 		psc_assert(fgp->fg_fid == dirent->pfd_ino);
@@ -432,7 +441,7 @@ dircache_trim(struct fidc_membh *d)
 	PFL_GETTIMEVAL(&now);
 	fci = fcmh_get_pri(d);
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
-		if (dce->dce_age + 30 > now.tv_sec)
+		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
 			break;
 		OPSTAT_INCR("dircache-trim");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
@@ -471,7 +480,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
 		PFL_GETTIMEVAL(&now);
-		if (dce->dce_age + 30 > now.tv_sec)
+		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
 			*ino = dce->dce_ino;
 		else {
 			fci->fcid_count--;
@@ -556,7 +565,6 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	dircache_trim(d);
-
 	DIRCACHE_ULOCK(d);
 }
 
