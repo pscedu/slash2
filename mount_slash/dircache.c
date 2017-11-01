@@ -423,6 +423,29 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 }
 
 void
+dircache_trim(struct fidc_membh *d)
+{
+	struct psc_hashbkt *b;
+	struct timeval now;
+	struct dircache_ent *dce, *tmp;
+	struct fcmh_cli_info *fci;
+
+	PFL_GETTIMEVAL(&now);
+	fci = fcmh_get_pri(d);
+	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
+		if (dce->dce_age + 30 > now.tv_sec)
+			break;
+		OPSTAT_INCR("dircache-trim");
+		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
+		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
+		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
+			PSCFREE(dce->dce_name);
+	}
+}
+
+void
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 {
 	int len;
@@ -459,6 +482,8 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		}
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+	dircache_trim(d);
 
 	DIRCACHE_ULOCK(d);
 }
@@ -518,6 +543,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	    dircache_ent_cmp, dce, NULL, NULL, &dce->dce_key);
 
 	if (tmpdce) {
+		fci->fcid_count--;
 		OPSTAT_INCR("msl.dircache-update");
 		psclist_del(&tmpdce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
@@ -530,6 +556,8 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
+
+	dircache_trim(d);
 
 	DIRCACHE_ULOCK(d);
 }
@@ -569,6 +597,8 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	if (dce)
 		psc_pool_return(dircache_ent_pool, dce);
+
+	dircache_trim(d);
 
 	DIRCACHE_ULOCK(d);
 }
