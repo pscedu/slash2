@@ -52,12 +52,6 @@ struct fcmh_cli_info_dir {
 	struct psclist_head	 entlist;
 	struct pfl_rwlock	 dircache_rwlock;
 	int			 count;
-
-	/*
-	 * Predictive readdir when LOOKUPs aren't hitting dircache.
-	 */
-	struct timeval		 lookup_age;	/* async readdir  */
-	uint64_t		 lookup_misses;
 };
 
 /*
@@ -99,8 +93,6 @@ struct fcmh_cli_info {
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 #define fcid_ents		u.d.ents
 #define fcid_entlist		u.d.entlist
-#define fcid_lookup_age		u.d.lookup_age
-#define fcid_lookup_misses	u.d.lookup_misses
 	} u;
 	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec			 fci_etime;	/* attr expire time */
