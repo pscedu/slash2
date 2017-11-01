@@ -43,15 +43,12 @@ struct fcmh_cli_info_file {
 
 struct fcmh_cli_info_dir {
 	struct psc_lockedlist	 pages;
-	struct psc_dynarray	 ents;		/* dircache ents not in a page */
-
 	/*
 	 * Compared to a dynarray, a linked list allows us to use as much memory
 	 * as needed.  It is also easier to remove an item from the list. 	
 	 */
 	struct psclist_head	 entlist;
 	struct pfl_rwlock	 dircache_rwlock;
-	int			 count;
 };
 
 /*
@@ -79,7 +76,6 @@ struct fcmh_cli_info {
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
-	int				 fci_pos;	/* next to displace */
 
 	union {
 		struct fcmh_cli_info_file f;
@@ -90,9 +86,8 @@ struct fcmh_cli_info {
 
 		struct fcmh_cli_info_dir d;
 #define fci_dc_pages		u.d.pages
-#define fcid_dircache_rwlock	u.d.dircache_rwlock
-#define fcid_ents		u.d.ents
 #define fcid_entlist		u.d.entlist
+#define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec			 fci_etime;	/* attr expire time */

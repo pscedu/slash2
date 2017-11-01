@@ -178,7 +178,7 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
 			continue;
 	}
-	DYNARRAY_FOREACH(dce, n, &fci->fcid_ents)
+	psclist_for_each_entry(dce, &fci->fcid_entlist, dce_entry)
 		cbf(NULL, dce, cbarg);
 	DIRCACHE_ULOCK(d);
 }
@@ -547,14 +547,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	tmpdce.dce_pino = fcmh_2_fid(d);
 	tmpdce.dce_key = dircache_hash(tmpdce.dce_pino, name, len);
 
-	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
-		if (!dircache_ent_cmp((const void *)&tmpdce, 
-		                      (const void *)dce))
-			continue;
-		OPSTAT_INCR("msl.dircache-delete-list");
-		psc_dynarray_removeitem(&fci->fcid_ents, dce);
-		break;
-	}
+	psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce.dce_key);
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
