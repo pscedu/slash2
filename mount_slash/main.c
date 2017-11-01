@@ -1901,7 +1901,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	}
 
-	dircache_init(d);
 	rc = fcmh_reserved(d);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1913,6 +1912,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		PFL_GOTOERR(out, rc);
 
 	DIRCACHE_WRLOCK(d);
+	dircache_init(d);
 	fci = fcmh_2_fci(d);
 
  restart:
