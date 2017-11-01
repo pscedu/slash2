@@ -76,6 +76,8 @@ dircache_init(struct fidc_membh *d)
 
 	d->fcmh_flags |= FCMHF_INIT_DIRCACHE;
 
+	INIT_LISTHEAD(&fci->fcid_entlist);
+	
 	pll_init(&fci->fci_dc_pages, struct dircache_page, dcp_lentry,
 	    &d->fcmh_lock);
 	pfl_rwlock_init(&fci->fcid_dircache_rwlock);
@@ -328,11 +330,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
  		 * Allow cache attributes in fcmh might help getattrs
  		 * after a readdir.
  		 */
-		index = dircache_insert_index(d);
-		if (index == -1) {
-			OPSTAT_INCR("msl.dircache-cache-fcmh");
-			goto cache_fcmh;
-		}
 
 		if (dirent->pfd_namelen >= SL_SHORT_NAME) {
 			OPSTAT_INCR("msl.dircache-skip-long");
@@ -376,7 +373,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 		}
 
- cache_fcmh:
 
 		fgp = &e->sstb.sst_fg;
 		psc_assert(fgp->fg_fid == dirent->pfd_ino);
@@ -464,7 +460,6 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	if (dce) {
-		fci->fcid_count--;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
 	DIRCACHE_ULOCK(d);

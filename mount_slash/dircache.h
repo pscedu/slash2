@@ -173,7 +173,7 @@ struct dircache_ent {
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 
-	struct psc_hashentry     dce_dentry;    /* per directory linkage */
+	struct psc_listentry	 dce_entry;     /* per directory linkage */
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;

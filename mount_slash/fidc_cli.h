@@ -98,7 +98,7 @@ struct fcmh_cli_info {
 #define fci_dc_pages		u.d.pages
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 #define fcid_ents		u.d.ents
-#define fcid_count		u.d.count
+#define fcid_entlist		u.d.entlist
 #define fcid_lookup_age		u.d.lookup_age
 #define fcid_lookup_misses	u.d.lookup_misses
 	} u;
