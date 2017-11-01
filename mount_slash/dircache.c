@@ -202,10 +202,7 @@ dircache_purge(struct fidc_membh *d)
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		dircache_free_page(d, p);
 
-	/* (gdb) p fci.u.d.ents */
-	DYNARRAY_FOREACH(dce, i, &fci->fcid_ents) {
-		if (!dce)
-			continue;
+	psclist_for_each_entry(dce, &fci->fcid_entlist, dce_entry) {
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
@@ -213,7 +210,6 @@ dircache_purge(struct fidc_membh *d)
 			PSCFREE(dce->dce_name);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
-	psc_dynarray_free(&fci->fcid_ents);
 }
 
 /*
