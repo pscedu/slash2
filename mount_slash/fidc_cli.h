@@ -65,8 +65,6 @@ struct fcmh_cli_info_dir {
  * @fcif_mapstircnt: how many times @idxmap has been used since last
  *	stir.
  * @fci_dc_pages: dircache pages.
- * @fcid_lookup_age: second-resolution of last dircache LOOKUP miss.
- * @fcid_lookup_misses: how many LOOKUPs did not hit dircache since @age.
  * @fci_lentry: cache membership.
  * @fci_etime: attribute expiration time.
  */
