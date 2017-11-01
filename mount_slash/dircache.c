@@ -369,6 +369,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 		}
 
+		fci->fcid_count++;
 		INIT_PSC_LISTENTRY(&dce->dce_entry);
 		psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
 
@@ -481,7 +482,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
 	if (fci->fcid_count > msl_max_namecache_per_directory) {
-		OPSTAT("dircache-limit");
+		OPSTAT_INCR("dircache-limit");
 		DIRCACHE_ULOCK(d);
 		return;
 	}
@@ -554,13 +555,13 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	tmpdce.dce_pino = fcmh_2_fid(d);
 	tmpdce.dce_key = dircache_hash(tmpdce.dce_pino, name, len);
 
-	psclist_del(&dce->dce_entry, &fci->fcid_entlist);
-
 	b = psc_hashbkt_get(&msl_namecache_hashtbl, &tmpdce.dce_key);
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
+		fci->fcid_count--;
 		OPSTAT_INCR("msl.dircache-delete-hash");
+		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 	} else
 		OPSTAT_INCR("msl.dircache-delete-noop");
