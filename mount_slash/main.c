@@ -1926,7 +1926,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	 * code should really be changed to create a stub and wait for
 	 * it to be filled in instead of rescanning the entire list.
 	 */
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry) {
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			OPSTAT_INCR("msl.dircache-wait");
 			p->dcp_flags |= DIRCACHEPGF_WAIT;

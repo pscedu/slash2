@@ -77,9 +77,8 @@ dircache_init(struct fidc_membh *d)
 	d->fcmh_flags |= FCMHF_INIT_DIRCACHE;
 
 	INIT_LISTHEAD(&fci->fcid_entlist);
+	INIT_LISTHEAD(&fci->fci_dc_pages);
 	
-	pll_init(&fci->fci_dc_pages, struct dircache_page, dcp_lentry,
-	    &d->fcmh_lock);
 	pfl_rwlock_init(&fci->fcid_dircache_rwlock);
 }
 
@@ -147,7 +146,7 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
 		OPSTAT_INCR("msl.dircache-unused-page");
 
-	pll_remove(&fci->fci_dc_pages, p);
+	psclist_del(&p->dcp_lentry, &fci->fci_dc_pages);
 
 	PSCFREE(p->dcp_base);
 	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
@@ -173,7 +172,7 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 
 	fci = fcmh_2_fci(d);
 	DIRCACHE_RDLOCK(d);
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry) {
 		if (p->dcp_rc || p->dcp_flags & DIRCACHEPGF_LOADING)
 			continue;
 	}
@@ -197,7 +196,7 @@ dircache_purge(struct fidc_membh *d)
 	DIRCACHE_WR_ENSURE(d);
 
 	fci = fcmh_2_fci(d);
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
+	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry)
 		dircache_free_page(d, p);
 
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
@@ -260,9 +259,9 @@ dircache_new_page(struct fidc_membh *d, off_t off, int block)
 
 	fci = fcmh_2_fci(d);
 	memset(p, 0, sizeof(*p));
-	INIT_PSC_LISTENTRY(&p->dcp_lentry);
 	p->dcp_off = off;
-	pll_addtail(&fci->fci_dc_pages, p);
+	INIT_PSC_LISTENTRY(&p->dcp_lentry);
+	psclist_add_tail(&p->dcp_lentry, &fci->fci_dc_pages);
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
 	if (!block)
 		p->dcp_flags |= DIRCACHEPGF_ASYNC;
