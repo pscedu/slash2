@@ -43,6 +43,7 @@ struct fcmh_cli_info_file {
 
 struct fcmh_cli_info_dir {
 	struct psc_lockedlist	 pages;
+	int			 count;
 	/*
 	 * Compared to a dynarray, a linked list allows us to use as much memory
 	 * as needed.  It is also easier to remove an item from the list. 	
@@ -87,6 +88,7 @@ struct fcmh_cli_info {
 		struct fcmh_cli_info_dir d;
 #define fci_dc_pages		u.d.pages
 #define fcid_entlist		u.d.entlist
+#define fcid_count		u.d.count
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
