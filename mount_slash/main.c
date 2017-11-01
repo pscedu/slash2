@@ -170,7 +170,7 @@ int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
-int				 msl_max_namecache_per_directory = 16384; 
+int				 msl_max_namecache_per_directory = 65536; 
 
 int				 msl_attributes_timeout = FCMH_ATTR_TIMEO;
 
