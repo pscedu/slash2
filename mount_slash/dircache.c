@@ -73,8 +73,11 @@ dircache_init(struct fidc_membh *d)
 {
 	struct fcmh_cli_info *fci = fcmh_2_fci(d);
 
-	if (d->fcmh_flags & FCMHF_INIT_DIRCACHE)
+	FCMH_LOCK(d);
+	if (d->fcmh_flags & FCMHF_INIT_DIRCACHE) {
+		FCMH_ULOCK(d);
 		return;
+	}
 
 	d->fcmh_flags |= FCMHF_INIT_DIRCACHE;
 
@@ -82,6 +85,7 @@ dircache_init(struct fidc_membh *d)
 	INIT_LISTHEAD(&fci->fci_dc_pages);
 	
 	pfl_rwlock_init(&fci->fcid_dircache_rwlock);
+	FCMH_ULOCK(d);
 }
 
 /*
