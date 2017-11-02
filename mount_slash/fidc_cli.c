@@ -135,6 +135,9 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	f->fcmh_flags |= FCMH_HAVE_ATTRS;
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
+	if (fcmh_isdir(f))
+		dircache_init(f);
+
 	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&fci->fci_age);
 

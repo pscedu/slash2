@@ -1911,7 +1911,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	dircache_init(d);
 	DIRCACHE_WRLOCK(d);
 
 	fci = fcmh_2_fci(d);
