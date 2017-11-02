@@ -285,6 +285,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	chg = 1;
 
+	/*
+ 	 * 11/02/2017: Hit this during replication stress test (rc = 1
+ 	 * and off = 27).  However, we hold the bmap lock all the way.
+ 	 */
 	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
 		DEBUG_BMAP(PLL_FATAL, b,
 		    "invalid bmap replica state [off %d]: %d", off, rc);
