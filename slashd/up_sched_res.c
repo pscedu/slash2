@@ -288,6 +288,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	/*
  	 * 11/02/2017: Hit this during replication stress test (rc = 1
  	 * and off = 27).  However, we hold the bmap lock all the way.
+ 	 *
+ 	 * Hmm, bmap_wait_locked() might drop lock temporarily.
+ 	 *
+ 	 * This issue should be fixed once I get rid of SQLite.
  	 */
 	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
 		DEBUG_BMAP(PLL_FATAL, b,
@@ -338,9 +342,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
-		BMAP_LOCK(b);
 		mds_repl_bmap_apply(b, tract, NULL, off);
-		BMAP_ULOCK(b);
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
