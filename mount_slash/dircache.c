@@ -300,6 +300,7 @@ dircache_trim(struct fidc_membh *d)
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
 		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
 			break;
+		fci->fcid_count--;
 		OPSTAT_INCR("dircache-trim");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
@@ -502,7 +503,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
 
-	if (!msl_enable_namecache || !msl_max_namecache_per_directory)
+	if (!msl_enable_namecache)
 		return;
 
 	fci = fcmh_get_pri(d);
@@ -510,7 +511,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	DIRCACHE_WRLOCK(d);
 	dircache_trim(d);
 
-	if (fci->fcid_count > msl_max_namecache_per_directory) {
+	if (fci->fcid_count >= msl_max_namecache_per_directory) {
 		OPSTAT_INCR("dircache-limit");
 		DIRCACHE_ULOCK(d);
 		return;
@@ -562,7 +563,6 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	dircache_trim(d);
 	DIRCACHE_ULOCK(d);
 }
 
