@@ -1130,6 +1130,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 {
 	pscfs_inum_t inum;
 	struct fidc_membh *p = NULL, *c = NULL;
+	struct timeval now;
+	struct fcmh_cli_info *fci;
 	int rc;
 
 	if (fp)
@@ -1196,18 +1198,30 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		OPSTAT_INCR("msl.dircache-lookup-hit");
 		/* will call msl_stat() if necessary */
 		rc = msl_load_fcmh(pfr, inum, &c);
-		if (!rc) {
-			OPSTAT_INCR("msl.dircache-lookup-hit-ok");
-			if (sstb)
-				*sstb = c->fcmh_sstb;
-			goto out;
+		if (rc) {
+			/*
+ 			 * Retry LOOK RPC below in case the name 
+ 			 * cache has wrong information.
+ 			 */
+			OPSTAT_INCR("msl.dircache-lookup-err");
+			goto rpc;
 		}
-		/*
- 		 * Retry LOOK RPC below in case the name 
- 		 * cache has wrong information.
- 		 */
-		OPSTAT_INCR("msl.dircache-lookup-err");
+		OPSTAT_INCR("msl.dircache-lookup-hit-ok");
+		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
+			PFL_GETTIMEVAL(&now);
+			fci = fcmh_2_fci(c);
+			now.tv_sec -= msl_attributes_timeout;
+			if (now.tv_sec < fci->fci_age.tv_sec) {
+				if (sstb)
+					*sstb = c->fcmh_sstb;
+				goto out;
+			}
+		}
+		fcmh_op_done(c);
+		c = NULL;
 	}
+
+ rpc:
 
 	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
  out:
@@ -3966,24 +3980,10 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
-	int rc = 0;
-
 	while (pscthr_run(thr)) {
-
-		if (rc)
-			while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
-
-		msl_pgcache_reap(rc);
-		while (1) {
-			/* 
- 			 * XXX continue to reap as long as there is 
- 			 * no activities.
- 			 */
-			rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
-			if (rc)
-				break;
-			bmpce_reaper(bmpce_pool);
-		}
+		msl_pgcache_reap();
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
 	}
 }
 
