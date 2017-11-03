@@ -657,6 +657,10 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 		if (src_res_i.ri_rnd_idx == dst_idx)
 			continue;
 
+		/* 
+		 * (gdb) p ((struct fcmh_mds_info *)(f+1)) \
+		 * 	->fmi_inodeh->inoh_extras.inox_repls
+		 */ 
 		src_res = libsl_id2res(
 		    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
 
@@ -742,10 +746,25 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_ios_id_t iosid;
+	struct slash_inode_handle *ih;
 
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
+
+	/*
+ 	 * We use FOREACH_RND() below, so make sure we load everything to
+ 	 * avoid a segment fault, which appears with heavy replication 
+ 	 * tests.
+ 	 */
+	ih = fcmh_2_inoh(f);
+	rc = mds_inox_ensure_loaded(ih);
+	if (rc) {
+		OPSTAT_INCR("repl-load-err");
+		psclog_warnx("proc bmap: fid="SLPRI_FID", bno = %d, rc = %d", 
+		    fcmh_2_fid(f), b->bcm_bmapno, rc);
+		return;
+	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
