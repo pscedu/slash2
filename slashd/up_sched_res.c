@@ -752,6 +752,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 
+	/*
+ 	 * We use FOREACH_RND() below, so make sure we load everything to
+ 	 * avoid a segment fault, which appears with heavy replication 
+ 	 * tests.
+ 	 */
 	ih = fcmh_2_inoh(f);
 	rc = mds_inox_ensure_loaded(ih);
 	if (rc) {
