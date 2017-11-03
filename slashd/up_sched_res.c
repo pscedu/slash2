@@ -657,6 +657,10 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 		if (src_res_i.ri_rnd_idx == dst_idx)
 			continue;
 
+		/* 
+		 * (gdb) p ((struct fcmh_mds_info *)(f+1)) \
+		 * 	->fmi_inodeh->inoh_extras.inox_repls
+		 */ 
 		src_res = libsl_id2res(
 		    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
 
