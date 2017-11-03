@@ -1130,6 +1130,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 {
 	pscfs_inum_t inum;
 	struct fidc_membh *p = NULL, *c = NULL;
+	struct timeval now;
+	struct fcmh_cli_info *fci;
 	int rc;
 
 	if (fp)
@@ -1196,18 +1198,30 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		OPSTAT_INCR("msl.dircache-lookup-hit");
 		/* will call msl_stat() if necessary */
 		rc = msl_load_fcmh(pfr, inum, &c);
-		if (!rc) {
-			OPSTAT_INCR("msl.dircache-lookup-hit-ok");
-			if (sstb)
-				*sstb = c->fcmh_sstb;
-			goto out;
+		if (rc) {
+			/*
+ 			 * Retry LOOK RPC below in case the name 
+ 			 * cache has wrong information.
+ 			 */
+			OPSTAT_INCR("msl.dircache-lookup-err");
+			goto rpc;
 		}
-		/*
- 		 * Retry LOOK RPC below in case the name 
- 		 * cache has wrong information.
- 		 */
-		OPSTAT_INCR("msl.dircache-lookup-err");
+		OPSTAT_INCR("msl.dircache-lookup-hit-ok");
+		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
+			PFL_GETTIMEVAL(&now);
+			fci = fcmh_2_fci(c);
+			now.tv_sec -= msl_attributes_timeout;
+			if (now.tv_sec < fci->fci_age.tv_sec) {
+				if (sstb)
+					*sstb = c->fcmh_sstb;
+				goto out;
+			}
+		}
+		fcmh_op_done(c);
+		c = NULL;
 	}
+
+ rpc:
 
 	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
  out:
