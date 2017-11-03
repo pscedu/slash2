@@ -746,10 +746,19 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct fidc_membh *f;
 	struct bmap *b;
 	sl_ios_id_t iosid;
+	struct slash_inode_handle *ih;
 
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
+
+	ih = fcmh_2_inoh(f);
+	rc = mds_inox_ensure_loaded(ih);
+	if (rc) {
+		psclog_warnx("proc bmap: fid="SLPRI_FID", bno = %d, rc = %d", 
+		    fcmh_2_fid(f), b->bcm_bmapno, rc);
+		return;
+	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
