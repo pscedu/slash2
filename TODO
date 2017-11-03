@@ -6042,3 +6042,10 @@ MDS: add per-client DIO setting and RPC counters.
 ----------
 
 Look into FUSE max readahead setting.
+
+11/03/2017
+----------
+
+* FUSE punch a hole
+
+* FUSE readdirplus
