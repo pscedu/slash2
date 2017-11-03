@@ -303,11 +303,13 @@ dircache_trim(struct fidc_membh *d)
 		fci->fcid_count--;
 		OPSTAT_INCR("dircache-trim");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
+
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
 		psc_hashbkt_put(&msl_namecache_hashtbl, b);
 		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
 			PSCFREE(dce->dce_name);
+		psc_pool_return(dircache_ent_pool, dce);
 	}
 }
 
@@ -460,16 +462,12 @@ void
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 {
 	int len;
-	struct timeval now;
 	struct psc_hashbkt *b;
-	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, tmpdce;
 
 	*ino = 0;
 	if (!msl_enable_namecache)
 		return;
-
-	fci = fcmh_get_pri(d);
 
 	DIRCACHE_WRLOCK(d);
 	dircache_trim(d);
