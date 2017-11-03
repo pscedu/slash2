@@ -760,6 +760,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	ih = fcmh_2_inoh(f);
 	rc = mds_inox_ensure_loaded(ih);
 	if (rc) {
+		OPSTAT_INCR("repl-load-err");
 		psclog_warnx("proc bmap: fid="SLPRI_FID", bno = %d, rc = %d", 
 		    fcmh_2_fid(f), b->bcm_bmapno, rc);
 		return;
