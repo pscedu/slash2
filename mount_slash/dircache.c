@@ -288,6 +288,29 @@ dircache_ent_cmp(const void *a, const void *b)
 }
 
 void
+dircache_trim(struct fidc_membh *d)
+{
+	struct psc_hashbkt *b;
+	struct timeval now;
+	struct dircache_ent *dce, *tmp;
+	struct fcmh_cli_info *fci;
+
+	PFL_GETTIMEVAL(&now);
+	fci = fcmh_get_pri(d);
+	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
+		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
+			break;
+		OPSTAT_INCR("dircache-trim");
+		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
+		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
+		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+		psc_hashbkt_put(&msl_namecache_hashtbl, b);
+		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
+			PSCFREE(dce->dce_name);
+	}
+}
+
+void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     int nents, void *base, size_t size, int eof)
 {
@@ -304,6 +327,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	struct pscfs_dirent *dirent = NULL;
 
 	DIRCACHE_WRLOCK(d);
+
+	dircache_trim(d);
+
 	fci = fcmh_get_pri(d);
 	/*
  	 * We used to allow an entry to point to a dirent inside the
@@ -428,28 +454,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	DIRCACHE_ULOCK(d);
 }
 
-void
-dircache_trim(struct fidc_membh *d)
-{
-	struct psc_hashbkt *b;
-	struct timeval now;
-	struct dircache_ent *dce, *tmp;
-	struct fcmh_cli_info *fci;
-
-	PFL_GETTIMEVAL(&now);
-	fci = fcmh_get_pri(d);
-	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
-		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
-			break;
-		OPSTAT_INCR("dircache-trim");
-		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
-		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
-		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
-		psc_hashbkt_put(&msl_namecache_hashtbl, b);
-		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
-			PSCFREE(dce->dce_name);
-	}
-}
 
 void
 dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
@@ -465,7 +469,10 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		return;
 
 	fci = fcmh_get_pri(d);
+
 	DIRCACHE_WRLOCK(d);
+	dircache_trim(d);
+
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
 	tmpdce.dce_namelen = len;
@@ -476,20 +483,10 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
-	if (dce) {
-		PFL_GETTIMEVAL(&now);
-		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
-			*ino = dce->dce_ino;
-		else {
-			fci->fcid_count--;
-			psclist_del(&dce->dce_entry, &fci->fcid_entlist);
-			psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
-			psc_pool_return(dircache_ent_pool, dce);
-		}
-	}
+	if (dce)
+		*ino = dce->dce_ino;
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	dircache_trim(d);
 	DIRCACHE_ULOCK(d);
 }
 
@@ -509,7 +506,10 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 		return;
 
 	fci = fcmh_get_pri(d);
+
 	DIRCACHE_WRLOCK(d);
+	dircache_trim(d);
+
 	if (fci->fcid_count > msl_max_namecache_per_directory) {
 		OPSTAT_INCR("dircache-limit");
 		DIRCACHE_ULOCK(d);
@@ -579,6 +579,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
+	dircache_trim(d);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
@@ -600,6 +601,5 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
-	dircache_trim(d);
 	DIRCACHE_ULOCK(d);
 }
