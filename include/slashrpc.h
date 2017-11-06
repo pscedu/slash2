@@ -42,13 +42,20 @@
 struct stat;
 struct statvfs;
 
+/*
+ * Technically, RPCs between different kinds of pairs of peers 
+ * can have different versions. However, to avoid hassle in terms 
+ * of maintainence and administration. Let us use one version.
+ */
+#define	SL_RPC_VERSION		2
+
 /* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
 #define SRMC_CTL_PORTAL		13
 
-#define SRMC_VERSION		1
+#define SRMC_VERSION		SL_RPC_VERSION
 #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
 
 /* RPC channel to MDS from MDS. */
@@ -57,7 +64,7 @@ struct statvfs;
 #define SRMM_BULK_PORTAL	17
 #define SRMM_CTL_PORTAL		18
 
-#define SRMM_VERSION		1
+#define SRMM_VERSION		SL_RPC_VERSION
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
 
 /* RPC channel to MDS from ION. */
@@ -66,7 +73,7 @@ struct statvfs;
 #define SRMI_BULK_PORTAL	22
 #define SRMI_CTL_PORTAL		23
 
-#define SRMI_VERSION		1
+#define SRMI_VERSION		SL_RPC_VERSION
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
 
 /* RPC channel to CLI from MDS. */
@@ -75,7 +82,7 @@ struct statvfs;
 #define SRCM_BULK_PORTAL	27
 #define SRCM_CTL_PORTAL		28
 
-#define SRCM_VERSION		1
+#define SRCM_VERSION		SL_RPC_VERSION
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
 
 /* RPC channel to ION from CLI. */
@@ -84,7 +91,7 @@ struct statvfs;
 #define SRIC_BULK_PORTAL	32
 #define SRIC_CTL_PORTAL		33
 
-#define SRIC_VERSION		1
+#define SRIC_VERSION		SL_RPC_VERSION
 #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
 
 /* RPC channel to ION from ION. */
@@ -93,7 +100,7 @@ struct statvfs;
 #define SRII_BULK_PORTAL	37
 #define SRII_CTL_PORTAL		38
 
-#define SRII_VERSION		1
+#define SRII_VERSION		SL_RPC_VERSION
 #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
 
 /* RPC channel to ION from MDS. */
@@ -102,7 +109,7 @@ struct statvfs;
 #define SRIM_BULK_PORTAL	42
 #define SRIM_CTL_PORTAL		43
 
-#define SRIM_VERSION		1
+#define SRIM_VERSION		SL_RPC_VERSION
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
 /* RPC channel to CLI from ION. */
@@ -111,7 +118,7 @@ struct statvfs;
 #define SRCI_BULK_PORTAL	47
 #define SRCI_CTL_PORTAL		48
 
-#define SRCI_VERSION		1
+#define SRCI_VERSION		SL_RPC_VERSION
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
 /* sizeof(pscrpc_msg) + hdr + sizeof(authbuf_footer) */
