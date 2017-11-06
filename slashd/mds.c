@@ -111,6 +111,10 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	if (lastbno)
 		lastbno--;
 
+	/*
+ 	 * Relying on file size could be a problem if the file size
+ 	 * has not been updated yet.
+ 	 */
 	if (b->bcm_bmapno == lastbno) {
 		amt = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 		if (amt == 0)
