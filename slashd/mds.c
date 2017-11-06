@@ -1948,6 +1948,11 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 			 *
 			 * This leads to psclist_add() crash, we should 
 			 * probably have a reference to protect bml_exp.
+			 *
+			 * 11/05/2017:
+			 *
+			 * Segment fault (11) from here.  We just can't
+			 * trust bml_exp.
 			 */
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL) {
