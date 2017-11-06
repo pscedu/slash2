@@ -595,8 +595,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	ue.namelen2 = sjnm->sjnm_namelen2;
 	memcpy(ue.name, sjnm->sjnm_name,
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
+#if 0
 
  write_update:
+
+#endif
 	rc = mds_write_file(nsupd_prg.log_handle, &ue, U_ENTSZ, &size,
 	    nsupd_prg.log_offset);
 	if (size != U_ENTSZ)
