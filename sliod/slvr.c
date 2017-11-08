@@ -655,7 +655,7 @@ slvr_remove(struct slvr *s)
 
 	if (s->slvr_flags & SLVRF_READAHEAD)
 		OPSTAT_INCR("readahead-waste");
-	slab_free(s->slvr_slab);
+	PSCFREE(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -901,7 +901,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = slab_alloc();
+			tmp2 = PSCALLOC(SLASH_SLVR_SIZE);
 			BII_LOCK(bii);
 			goto retry;
 		}
@@ -927,7 +927,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 	}
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
-		slab_free(tmp2);
+		PSCFREE(tmp2);
 	}
 	return (s);
 }

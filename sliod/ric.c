@@ -420,7 +420,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * here because reading beyond EOF should return 0
 		 * bytes.
 		 */
-		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
+		iovs[i].iov_base = slvr[i]->slvr_slab + roff;
 		tsize -= iovs[i].iov_len = len[i];
 
 		/*

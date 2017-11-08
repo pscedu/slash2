@@ -43,32 +43,9 @@
 
 extern struct psc_poolmgr	*slvr_pool;
 
-struct psc_poolmaster	 slab_poolmaster;
-struct psc_poolmgr	*slab_pool;
-
 struct timespec		 sli_slvr_timeout = { 30, 0L };
 struct psc_waitq	 sli_slvr_waitq = PSC_WAITQ_INIT("slvr");
 psc_spinlock_t		 sli_slvr_lock = SPINLOCK_INIT;
-
-struct slab *
-slab_alloc(void)
-{
-	struct slab *slb;
-
-	slb = psc_pool_get(slab_pool);
-	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
-	/* XXX ENOMEM */
-	slb->slb_base = PSCALLOC(SLASH_SLVR_SIZE);
-
-	return (slb);
-}
-
-void
-slab_free(struct slab *slb)
-{
-	PSCFREE(slb->slb_base);
-	psc_pool_return(slab_pool, slb);
-}
 
 void
 slibreapthr_main(struct psc_thread *thr)
@@ -85,11 +62,6 @@ slibreapthr_main(struct psc_thread *thr)
 void
 slab_cache_init(int nbuf)
 {
-	psc_poolmaster_init(&slab_poolmaster, struct slab,
-	    slb_mgmt_lentry, PPMF_AUTO, nbuf, nbuf, nbuf,
-	    NULL, "slab", NULL);
-	slab_pool = psc_poolmaster_getmgr(&slab_poolmaster);
-
 	pscthr_init(SLITHRT_BREAP, slibreapthr_main, 0, "slibreapthr");
 
 	psclogs_info(SLISS_INFO, "Slab cache size is %zd bytes or %d bufs", 

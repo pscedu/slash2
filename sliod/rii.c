@@ -156,7 +156,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	BMAP_ULOCK(b);
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	if (rv == -SLERR_AIOWAIT) {
@@ -292,7 +292,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	psc_assert(!rc);
 	BMAP_ULOCK(b);
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
@@ -391,7 +391,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
 	if (rc)
 		goto out;
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,

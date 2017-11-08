@@ -59,7 +59,7 @@ struct slvr {
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
-	struct slab		*slvr_slab;
+	void			*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
@@ -112,7 +112,7 @@ struct slvr {
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
 
 #define slvr_2_buf(s, blk)						\
-	((void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ)))
+	((void *)((s)->slvr_slab + ((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_fileoff(s, blk)						\
 	((off_t)((slvr_2_bmap(s)->bcm_bmapno * SLASH_BMAP_SIZE) +	\

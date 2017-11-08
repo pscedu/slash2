@@ -48,9 +48,4 @@ struct slab {
 void	slab_cache_init(int);
 int	slab_cache_reap(struct psc_poolmgr *);
 
-struct slab	*slab_alloc(void);
-void		 slab_free(struct slab *);
-
-extern struct psc_poolmgr	*slab_pool;
-
 #endif /* _SLI_SLAB_H_ */
