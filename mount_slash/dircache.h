@@ -139,13 +139,8 @@ struct dircache_expire {
  *   (5) page references an older directory generation: evict.
  */
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\
-	((p)->dcp_refcnt == 0 &&					\
-	 (((p)->dcp_flags & DIRCACHEPGF_READ &&				\
-	  timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >)) ||	\
-	  timespeccmp(&(dexp)->dexp_hard, &(p)->dcp_local_tm, >) ||	\
-	  memcmp(&(d)->fcmh_sstb.sst_mtim, &(p)->dcp_remote_tm,		\
-	    sizeof((p)->dcp_remote_tm)) ||				\
-	  (p)->dcp_dirgen != fcmh_2_gen(d)))
+	(timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >) ||	\
+	  (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define DIRCACHEPG_INITEXP(dexp)					\
 	do {								\
