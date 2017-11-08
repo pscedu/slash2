@@ -864,7 +864,7 @@ struct slvr *
 slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
-	struct slab *tmp2 = NULL;
+	void *tmp2 = NULL;
 	int alloc = 0;
 
 	ts.slvr_num = num;
@@ -917,7 +917,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
 
-		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
+		memset(tmp2, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;
 		s->slvr_refcnt = 1;
 

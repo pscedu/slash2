@@ -36,10 +36,6 @@
 /*
  * Used for both read caching and write aggregation.
  */
-struct slab {
-	void			*slb_base;		/* pointer to the data buffer */
-	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
-};
 
 #define SLAB_DEF_COUNT		512
 #define SLAB_DEF_CACHE		((size_t)SLAB_DEF_COUNT * SLASH_SLVR_SIZE)
