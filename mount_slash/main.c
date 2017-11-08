@@ -1766,7 +1766,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
-	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;

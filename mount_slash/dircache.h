@@ -81,7 +81,6 @@ struct dircache_page {
 	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
 	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
 	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
-	struct pfl_timespec	 dcp_remote_tm;	/* remote clock when populated */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	void			*dcp_base;	/* pscfs_dirents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
