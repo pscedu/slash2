@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < nfile; i++) {
 			write_file(i);
 		}
-		printf("Loop %d on %d files is done successfully.\n", j, nfile);
+		printf("Loop %2d on %d files is done successfully.\n", j, nfile);
 		fflush(stdout);
 	}
 
