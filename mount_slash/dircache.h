@@ -67,8 +67,7 @@ struct fidc_membh;
 #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
 #define DIRCACHE_NAMECACHE	2048		/* initial number of name cache enties in pool */
 
-#define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
-#define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
+#define DIRCACHEPG_SOFT_TIMEO	30		/* expiration regardless if read */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)
@@ -126,7 +125,6 @@ struct dircache_page {
  */
 struct dircache_expire {
 	struct pfl_timespec	 dexp_soft;	/* used if page was read */
-	struct pfl_timespec	 dexp_hard;	/* max */
 };
 
 /*
@@ -145,9 +143,7 @@ struct dircache_expire {
 #define DIRCACHEPG_INITEXP(dexp)					\
 	do {								\
 		PFL_GETPTIMESPEC(&(dexp)->dexp_soft);			\
-		(dexp)->dexp_hard = (dexp)->dexp_soft;			\
 		(dexp)->dexp_soft.tv_sec -= DIRCACHEPG_SOFT_TIMEO;	\
-		(dexp)->dexp_hard.tv_sec -= DIRCACHEPG_HARD_TIMEO;	\
 	} while (0)
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
