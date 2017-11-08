@@ -59,6 +59,9 @@ struct slvr {
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
+	/*
+	 * Used for both read caching and write aggregation.
+	 */
 	void			*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */

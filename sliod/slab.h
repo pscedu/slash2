@@ -33,10 +33,6 @@
 #include "pfl/list.h"
 #include "pfl/pool.h"
 
-/*
- * Used for both read caching and write aggregation.
- */
-
 #define SLAB_DEF_COUNT		512
 #define SLAB_DEF_CACHE		((size_t)SLAB_DEF_COUNT * SLASH_SLVR_SIZE)
 #define SLAB_MIN_CACHE		((size_t)128 * SLASH_SLVR_SIZE)
