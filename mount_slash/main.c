@@ -1896,7 +1896,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
-	struct dircache_expire dexp;
+	struct pfl_timespec now;
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
@@ -1932,7 +1932,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	raoff = 0;
 	issue = 1;
-	DIRCACHEPG_INITEXP(&dexp);
+	PFL_GETPTIMESPEC(&now);
+	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
 
 	/*
 	 * XXX Large directories will page in lots of buffers so this
@@ -1956,7 +1957,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 			break;
 		}
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+		if (DIRCACHEPG_EXPIRED(d, p, &now)) {
 			dircache_free_page(d, p);
 			continue;
 		}

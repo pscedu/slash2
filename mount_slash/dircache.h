@@ -117,33 +117,11 @@ struct dircache_page {
 	} while (0)
 
 /*
- * This structure is used to decide when to evict a page.  It is
- * assigned the 'now' timestamp minus the page timeout intervals then
- * these values are checked against the time stored when the page was
- * populated.
- */
-struct dircache_expire {
-	struct pfl_timespec	 dexp_soft;	/* used if page was read */
-};
-
-/*
  * Determine if a page of dirents should be evicted.
- * Conditions:
- *   (1) no current references to this page
- *   (2) page was READ and is older than soft timeout: evict.
- *   (3) page is older than hard timeout: evict.
- *   (4) XXX page is older than directory's mtime: evict.
- *   (5) page references an older directory generation: evict.
  */
-#define DIRCACHEPG_EXPIRED(d, p, dexp)					\
-	(timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >) ||	\
+#define DIRCACHEPG_EXPIRED(d, p, expire)				\
+	(timespeccmp((expire), &(p)->dcp_local_tm, >) ||		\
 	  (p)->dcp_dirgen != fcmh_2_gen(d))
-
-#define DIRCACHEPG_INITEXP(dexp)					\
-	do {								\
-		PFL_GETPTIMESPEC(&(dexp)->dexp_soft);			\
-		(dexp)->dexp_soft.tv_sec -= DIRCACHEPG_SOFT_TIMEO;	\
-	} while (0)
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d gen %"PRId64" "	\
