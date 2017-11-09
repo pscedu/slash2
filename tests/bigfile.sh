@@ -14,7 +14,10 @@ function bail {
     END=`date +%s%N`
     ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
     echo
-    echo "Some tests have failed. Total elapsed time: $ELAPSED seconds."
+    HOURS=$((ELAPSED/60/60))
+    MINS=$(((ELAPSED%3600)/60))
+    SECS=$((ELAPSED%60))
+    echo "Some tests have failed on $myhost. Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
     exit 0
 }
 
