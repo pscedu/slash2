@@ -645,7 +645,6 @@ bmpc_global_init(void)
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
 	    bmpce_reaper, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
-	bmpce_pool->ppm_thres = 100;
 
 	msl_pgcache_init();
 
