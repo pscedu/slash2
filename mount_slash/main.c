@@ -1759,6 +1759,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
  out:
 	DIRCACHE_WRLOCK(d);
 
+	/*
+ 	 * XXX Looks like we never free a page inside a callback. If we
+ 	 * use reference count properly, we should be able to do so.
+ 	 */
 	p->dcp_rc = rc;
 	p->dcp_refcnt--;
 	async = p->dcp_flags & DIRCACHEPGF_ASYNC;
