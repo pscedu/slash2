@@ -71,6 +71,16 @@ extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
+struct psc_listcache     slab_buffers;
+int                      slab_buffers_count;    /* total, including free */
+
+struct slab_buffer_entry {
+	union {
+		struct psc_listentry     slab_lentry;
+		char                     slab_buf[SLASH_SLVR_SIZE];
+	};
+};
+
 
 void *
 sli_slab_alloc(void)
@@ -1105,9 +1115,12 @@ slirathr_main(struct psc_thread *thr)
 void
 slvr_cache_init(void)
 {
+	void *p;
 	int i, nbuf;
 
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
+
+
 
 	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
 		psc_fatalx("invalid slab_cache_size setting; "
@@ -1119,6 +1132,22 @@ slvr_cache_init(void)
 	    struct slvr, slvr_lentry, PPMF_AUTO, nbuf,
 	    nbuf, nbuf, slab_cache_reap, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+
+	lc_reginit(&slab_buffers, struct slab_buffer_entry,
+		slab_lentry, "slabbuffers"); 
+
+	for (i = 0; i < nbuf; i++) {
+		p = mmap(NULL, SLASH_SLVR_SIZE, PROT_READ|PROT_WRITE,
+			MAP_ANONYMOUS|MAP_SHARED, -1, 0); 
+
+		if (p == MAP_FAILED)
+			psc_fatalx("Please raise vm.max_map_count limit");
+
+		OPSTAT_INCR("mmap-success");
+		slab_buffers_count++;
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&slab_buffers, p);
+	}   
 
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
 	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
