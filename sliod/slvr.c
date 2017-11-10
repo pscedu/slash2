@@ -1144,6 +1144,9 @@ slvr_cache_init(void)
 	    nbuf, nbuf, slab_cache_reap, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
+	if (!use_slab_buffers)
+		goto next;
+
 	lc_reginit(&slab_buffers, struct slab_buffer_entry,
 		slab_lentry, "slabbuffers"); 
 
@@ -1160,6 +1163,7 @@ slvr_cache_init(void)
 		lc_add(&slab_buffers, p);
 	}   
 
+ next:
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
 	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "readaheadrq");
