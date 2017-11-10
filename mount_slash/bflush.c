@@ -601,6 +601,12 @@ bmap_flushable(struct bmap *b)
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
 		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		/*
+		 * XXX: If the IOS is done, we will try to get a lease.
+		 * However, MDS will reject us with -1010. So we can't
+		 * flush the bmap. We should bail after some number of
+		 * retries.
+		 */
 		if (timespeccmp(&bmap_2_bci(b)->bci_etime, &ts, <) ||
 		    (b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 			OPSTAT_INCR("msl.flush-skip-expire");
