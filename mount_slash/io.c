@@ -244,9 +244,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE) {
+	if (r->biorq_flags & BIORQ_ONTREE)
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
-	}
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		pll_remove(&bmpc->bmpc_biorqs_exp, r);
