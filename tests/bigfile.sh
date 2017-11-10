@@ -12,7 +12,7 @@
 function bail {
     set +o pipefail
     END=`date +%s%N`
-    ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
+    ELAPSED=`echo "scale=0; ($END - $START) / 1000000000" | bc`
     echo
     HOURS=$((ELAPSED/60/60))
     MINS=$(((ELAPSED%3600)/60))
@@ -27,6 +27,7 @@ then
 else
     mypath=/zzh-slash2/zhihui
 fi
+
 
 if [ ! -d "$mypath" ]; then
     echo "Working directory $mypath does not exist, bailing.."
