@@ -1068,6 +1068,9 @@ msbwatchthr_main(struct psc_thread *thr)
 
 			/*
 			 * Do not extend if we don't have any data.
+			 *
+			 * if bmpc->bmpc_pndg_writes, then bmpc_tree
+			 * must not be empty.
 			 */
 			bmpc = bmap_2_bmpc(b);
 			if (RB_EMPTY(&bmpc->bmpc_tree)) {
