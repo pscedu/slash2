@@ -81,17 +81,30 @@ struct slab_buffer_entry {
 	};
 };
 
+int			 use_slab_buffers = 1;
 
 void *
 sli_slab_alloc(void)
 {
-	return(PSCALLOC(SLASH_SLVR_SIZE));
+	void *p;
+
+	if (use_slab_buffers) {
+		p = lc_getnb(&slab_buffers);
+		psc_assert(p);
+	} else
+		p = PSCALLOC(SLASH_SLVR_SIZE);
+
+	return (p);
 }
 
 void
 sli_slab_free(void *p)
 {
-	PSCFREE(p);
+	if (use_slab_buffers) {
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&slab_buffers, p);
+	} else
+		PSCFREE(p);
 }
 
 
@@ -1119,8 +1132,6 @@ slvr_cache_init(void)
 	int i, nbuf;
 
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
-
-
 
 	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
 		psc_fatalx("invalid slab_cache_size setting; "
