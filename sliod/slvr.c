@@ -72,6 +72,19 @@ extern struct psc_waitq	 sli_slvr_waitq;
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 
+void *
+sli_slab_alloc(void)
+{
+	return(PSCALLOC(SLASH_SLVR_SIZE));
+}
+
+void
+sli_slab_free(void *p)
+{
+	PSCFREE(p);
+}
+
+
 void
 sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 {
@@ -655,7 +668,7 @@ slvr_remove(struct slvr *s)
 
 	if (s->slvr_flags & SLVRF_READAHEAD)
 		OPSTAT_INCR("readahead-waste");
-	PSCFREE(s->slvr_slab);
+	sli_slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -901,7 +914,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = PSCALLOC(SLASH_SLVR_SIZE);
+			tmp2 = sli_slab_alloc();
 			BII_LOCK(bii);
 			goto retry;
 		}
