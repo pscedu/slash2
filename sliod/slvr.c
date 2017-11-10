@@ -962,8 +962,8 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 
 	}
 	if (alloc) {
+		sli_slab_free(tmp2);
 		psc_pool_return(slvr_pool, tmp1);
-		PSCFREE(tmp2);
 	}
 	return (s);
 }
