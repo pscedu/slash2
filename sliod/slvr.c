@@ -71,6 +71,9 @@ extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
+#define                  MIN_FREE_SLABS		 16
+#define			 SLAB_RECLAIM_BATCH      1
+
 struct psc_listcache     slab_buffers;
 int                      slab_buffers_count;    /* total, including free */
 
@@ -972,20 +975,28 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
  * The reclaim function for slvr_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
+
+
+
 int
 slab_cache_reap(struct psc_poolmgr *m)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
-	int i, nitems;
+	struct psc_thread *thr;
+	int i, haswork, nitems;
 
+	thr = pscthr_get();
 	psc_assert(m == slvr_pool);
 
+	psc_dynarray_ensurelen(&a, SLAB_RECLAIM_BATCH);
+
+again:
+	haswork = 0;
 	LIST_CACHE_LOCK(&sli_lruslvrs);
-	nitems = lc_nitems(&sli_lruslvrs) / 5;
-	if (nitems < 5)
-		nitems = 5;
 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
+
+		haswork = 1;
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
 		/*
@@ -1006,12 +1017,19 @@ slab_cache_reap(struct psc_poolmgr *m)
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
-		if (psc_dynarray_len(&a) >= nitems && 
+		if (psc_dynarray_len(&a) >= SLAB_RECLAIM_BATCH &&
 		    psc_dynarray_len(&a) >= 
 		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
+
+	if (thr->pscthr_type == SLITHRT_BREAP &&
+	     m->ppm_nfree < MIN_FREE_SLABS && haswork) {
+		pscthr_yield();
+		OPSTAT_INCR("sli.reap-loop");
+		goto again;
+	}
 
 	DYNARRAY_FOREACH(s, i, &a) {
 		psc_assert(s->slvr_flags & SLVRF_LRU);
