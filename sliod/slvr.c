@@ -982,7 +982,7 @@ slab_cache_reap(struct psc_poolmgr *m)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
 	struct psc_thread *thr;
-	int i, haswork, nitems;
+	int i, haswork, nitems = 0;
 
 	thr = pscthr_get();
 	psc_assert(m == slvr_pool);
@@ -1021,6 +1021,14 @@ again:
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
+	DYNARRAY_FOREACH(s, i, &a) {
+		psc_assert(s->slvr_flags & SLVRF_LRU);
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
+		slvr_remove(s);
+	}
+	nitems += psc_dynarray_len(&a);
+	psc_dynarray_reset(&a);
 
 	if (thr->pscthr_type == SLITHRT_BREAP &&
 	     m->ppm_nfree < MIN_FREE_SLABS && haswork) {
@@ -1029,12 +1037,6 @@ again:
 		goto again;
 	}
 
-	DYNARRAY_FOREACH(s, i, &a) {
-		psc_assert(s->slvr_flags & SLVRF_LRU);
-		s->slvr_flags &= ~SLVRF_LRU;
-		lc_remove(&sli_lruslvrs, s);
-		slvr_remove(s);
-	}
 	psc_dynarray_free(&a);
 
 	OPSTAT_INCR("slab-lru-reap");
