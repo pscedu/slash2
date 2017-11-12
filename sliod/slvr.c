@@ -1011,8 +1011,8 @@ again:
 			SLVR_ULOCK(s);
 			continue;
 		}
-		s->slvr_flags |= SLVRF_FREEING;
 		psc_assert(s->slvr_flags & SLVRF_LRU);
+		s->slvr_flags |= SLVRF_FREEING;
 		s->slvr_flags &= ~SLVRF_LRU;
 		lc_remove(&sli_lruslvrs, s);
 		SLVR_ULOCK(s);
