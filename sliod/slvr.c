@@ -1012,6 +1012,9 @@ again:
 			continue;
 		}
 		s->slvr_flags |= SLVRF_FREEING;
+		psc_assert(s->slvr_flags & SLVRF_LRU);
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
@@ -1021,12 +1024,9 @@ again:
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
-	DYNARRAY_FOREACH(s, i, &a) {
-		psc_assert(s->slvr_flags & SLVRF_LRU);
-		s->slvr_flags &= ~SLVRF_LRU;
-		lc_remove(&sli_lruslvrs, s);
+	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
-	}
+
 	nitems += psc_dynarray_len(&a);
 	psc_dynarray_reset(&a);
 
