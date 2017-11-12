@@ -842,7 +842,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 * We reap proactively instead of on demand to avoid ENOMEM
  	 * situation, which we don't handle gracefully right now.
  	 */
-	if (slvr_pool->ppm_nfree < 3) {
+	if (slvr_pool->ppm_nfree < MIN_FREE_SLABS) {
 		OPSTAT_INCR("slvr-wakeone");
 		psc_waitq_wakeone(&sli_slvr_waitq);
 	}
@@ -975,8 +975,6 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
  * The reclaim function for slvr_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
-
-
 
 int
 slab_cache_reap(struct psc_poolmgr *m)
