@@ -51,8 +51,8 @@ void
 slibreapthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_pool_reap(slvr_pool, 0);
 
+		slab_cache_reap(slvr_pool);
 		spinlock(&sli_slvr_lock);
 		psc_waitq_waitrel_ts(&sli_slvr_waitq,
 		    &sli_slvr_lock, &sli_slvr_timeout);
