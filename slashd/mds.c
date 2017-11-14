@@ -1044,11 +1044,13 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	}
 
  out:
-	DEBUG_BMAP(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_DIAG,
-	    b, "bml_add (mion=%p) bml=%p (seq=%"PRId64") (rw=%d) "
-	    "(nwtrs=%d nrdrs=%d) (rc=%d)",
-	    bmi->bmi_wr_ion, bml, bml->bml_seq, rw,
-	    bmi->bmi_writers, bmi->bmi_readers, rc);
+	/*
+	 * This used to print 8192 bytes of message and cause fprintf()
+	 * to return -1 and we abort. So it was simplified.
+	 */
+	psclogs(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_DIAG,
+	     SLSS_BMAP, "bno = %d, fid = "SLPRI_FID,
+     	     b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
 	/*
 	 * On error, the caller will issue mds_bmap_bml_release() which
