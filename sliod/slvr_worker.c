@@ -230,7 +230,8 @@ sliupdthr_main(struct psc_thread *thr)
 			}
 			rc = fstat(fcmh_2_fd(f), &stb);
 			if (rc < 0) {
-				psclog_errorx("fstat");
+				psclog_error("fstat failed, fid="SLPRI_FID, 
+				    fcmh_2_fid(f));
 				FCMH_ULOCK(f);	
 				continue;
 			}
