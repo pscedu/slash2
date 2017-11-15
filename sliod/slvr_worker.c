@@ -119,7 +119,7 @@ slisyncthr_main(struct psc_thread *thr)
 }
 
 #define	SLI_UPDATE_FILE_DELAY	5
-#define	SLI_UPDATE_FILE_WRITE	64
+#define	SLI_UPDATE_FILE_WRITE	32
 
 void
 sli_rmi_update_queue(struct sli_update *recp)
