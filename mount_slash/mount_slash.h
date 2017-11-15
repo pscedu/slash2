@@ -234,6 +234,7 @@ struct resprof_cli_info {
 	int				 rpci_timeouts;
 	int				 rpci_saw_error;
 	int				 rpci_infl_rpcs;
+	int				 rpci_total_rpcs;
 	int				 rpci_infl_credits;
 	int				 rpci_max_infl_rpcs;
 };
