@@ -212,6 +212,7 @@ msl_resm_throttle_wait(struct sl_resm *m)
  out:
 
 	rpci->rpci_infl_rpcs++;
+	rpci->rpci_total_rpcs++;
 	if (rpci->rpci_infl_rpcs > rpci->rpci_max_infl_rpcs)
 		rpci->rpci_max_infl_rpcs = rpci->rpci_infl_rpcs;
 	RPCI_ULOCK(rpci);
