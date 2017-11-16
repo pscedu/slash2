@@ -225,9 +225,9 @@ int main(int argc, char *argv[])
 	if (!error) {
 		error = unlink(filename);
 		if (error)
-			printf("Fail to delete file %s\n", filename);
+			printf("Fail to delete file %s, errno = %d.\n", filename, errno);
 		else
-			printf("File %s has been deleted successfully\n", filename);
+			printf("File %s has been deleted successfully!\n", filename);
 	}
 
 	gettimeofday(&t2, NULL);
