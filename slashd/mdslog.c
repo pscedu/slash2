@@ -1359,6 +1359,19 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 		freelock(&ra->lock);
 	}
 
+	/*
+ 	 * Saw rc = -110 below during bigfile.sh test.  The problem
+ 	 * is lime is every slow with only two disks. It can't keep
+ 	 * up.  So we timed out here.  However, we should not drop
+ 	 * the connection with pscrpc_fail_import() just because a
+ 	 * single RPC fails. As a result, the MDS will tell the client
+ 	 * to write elsewhere even if lime is its preferred IOS.
+ 	 * The good news is that lime pings MDS and come back online
+ 	 * shortly.  Also, the bigfile.sh test passes as well.
+ 	 *
+ 	 * We need to make this scenario more robust.
+ 	 */
+
 	psclog(rc ? PLL_ERROR : PLL_DIAG,
 	    "reclaim batchno=%"PRId64" res=%s rc=%d",
 	    si->si_batchno, res->res_name, rc);

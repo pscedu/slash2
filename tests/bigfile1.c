@@ -367,10 +367,10 @@ int main(int argc, char *argv[])
 	        close(files[i].fd);
         	rc = unlink(files[i].name);
 		if (rc < 0) {
-			printf("Fail to unlink file %s, errno = %d\n", files[i].name, errno);
+			printf("Fail to unlink file %s, errno = %d.\n", files[i].name, errno);
 			exit (1);
 		}
-		printf("Test file %s has been removed successfully...\n", files[i].name);
+		printf("Test file %s has been removed successfully!\n", files[i].name);
 	}
 	gettimeofday(&t2, NULL);
 
