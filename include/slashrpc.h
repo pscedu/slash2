@@ -47,7 +47,7 @@ struct statvfs;
  * can have different versions. However, to avoid hassle in terms 
  * of maintainence and administration. Let us use one version.
  */
-#define	SL_RPC_VERSION		2
+#define	SL_RPC_VERSION		3
 
 /* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
