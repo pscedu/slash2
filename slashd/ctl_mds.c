@@ -528,6 +528,32 @@ slmctlparam_commit_get(char *val)
 }
 
 void
+slmctlparam_max_lease_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", slm_max_lease_timeout);
+}
+
+int
+slmctlparam_max_lease_set(const char *val)
+{
+	unsigned long l;
+	char *endp;
+	int rc = 0;
+
+	l = strtol(val, &endp, 0);
+	if (endp == val || *endp)
+		rc = -1;
+	else {
+		if (l >= BMAP_TIMEO_MIN && l <= BMAP_TIMEO_MAX)
+			slm_max_lease_timeout = l;
+		else
+			rc = -1;
+	}
+
+	return (rc);
+}
+
+void
 slmctlthr_spawn(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
@@ -616,6 +642,9 @@ slmctlthr_spawn(const char *fn)
 
 	psc_ctlparam_register_var("sys.upsch_batch_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
+
+	psc_ctlparam_register_simple("sys.max_lease_time",
+	    slmctlparam_max_lease_get, slmctlparam_max_lease_set);
 
 	psc_ctlparam_register_simple("sys.upsch_batch_inflight",
 	    slrcp_batch_get_max_inflight, slrcp_batch_set_max_inflight);
