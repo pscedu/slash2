@@ -164,6 +164,12 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	if (!sbd->sbd_seq)
 		psc_fatalx("Zero bmap lease number (%s)", action);
+
+	if (sbd->sbd_expire < BMAP_TIMEO_MIN ||
+	    sbd->sbd_expire > BMAP_TIMEO_MAX)
+		psc_fatalx("Invalid bmap expire time %d (%s)",
+		    sbd->sbd_expire, action);
+
 	psc_assert(sbd->sbd_fg.fg_fid);
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
@@ -181,8 +187,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	 * expiration time.
 	 */
 	PFL_GETTIMESPEC(&bci->bci_etime);
-	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
-	    &bci->bci_etime);
+	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_INC);
 	b->bcm_flags &= ~BMAPF_LEASEEXPIRE;
 
 	*bmap_2_sbd(b) = *sbd;
@@ -954,10 +959,9 @@ msl_rmc_bmaprelease_cb(struct pscrpc_request *rq,
 
 	for (i = 0; i < mq->nbmaps; i++)
 		psclog(rc ? PLL_ERROR : PLL_DIAG,
-		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
+		    "fid="SLPRI_FID" bmap=%u"
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
-		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
-		    mq->sbd[i].sbd_seq, rc);
+		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_seq, rc);
 
 	sl_csvc_decref(csvc);
 	return (rc);
