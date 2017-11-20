@@ -496,7 +496,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
 	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
-	if (secs >= BMAP_CLI_EXTREQSECS &&
+	if (secs >= BMAP_TIMEO_INC &&
 	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 		if (blocking)
 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
@@ -1043,7 +1043,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 		PFL_GETTIMESPEC(&ts);
-		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+		ts.tv_sec += BMAP_TIMEO_INC;
 
 		/*
 		 * We always check for lease before accessing cached pages.
