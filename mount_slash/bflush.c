@@ -408,7 +408,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	BMAP_LOCK(b);
 	PFL_GETTIMESPEC(&ts0);
 	ts0.tv_sec += 1;
-	ts1.tv_sec = bci->bci_etime.tv_sec;
+	ts1.tv_sec = bci->bci_etime.tv_sec - BMAP_TIMEO_INC;
 	BMAP_ULOCK(b);
 
 	if (ts1.tv_sec <= ts0.tv_sec) {
