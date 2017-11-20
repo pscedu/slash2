@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2006-2017, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
-#define BMAP_TIMEO_INC            5             /* RPC delay, etc */
+#define BMAP_TIMEO_INC		 5			/* RPC delay, etc */
 
 /*
  * Private data associated with a bmap used by a SLASH2 client.
