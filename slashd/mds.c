@@ -1486,20 +1486,20 @@ void
 slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 {
 	struct bmap_mds_info *bmi;
-	int i, locked;
+	int i;
 
+	BMAP_LOCK_ENSURE(b);
 	bmi = bmap_2_bmi(b);
-	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
 	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
 			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
 			break;
 		}
-	BMAP_URLOCK(b, locked);
+	}
 }
 
 /*
