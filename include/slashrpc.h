@@ -275,11 +275,12 @@ struct srt_bmapdesc {
 
 	uint64_t		sbd_nid;	/* XXX go away */
 	uint32_t		sbd_pid;	/* XXX go away */
-	int32_t			sbd_expire;
+
+	uint16_t		sbd_expire;
+	uint16_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
 
 	sl_ios_id_t		sbd_ios;
 	sl_bmapno_t		sbd_bmapno;
-	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
 } __packed;
 
 /* RPC transportably safe structures. */
