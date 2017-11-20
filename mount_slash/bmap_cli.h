@@ -64,7 +64,6 @@ struct bmap_cli_info {
 
 /* XXX change horribly named flags */
 #define BMAP_CLI_EXTREQSECS	20
-#define BMAP_CLI_TIMEO_INC	1
 
 static __inline struct bmap_cli_info *
 bmap_2_bci(struct bmap *b)
