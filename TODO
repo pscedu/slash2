@@ -6050,22 +6050,3 @@ Look into FUSE max readahead setting.
 
 * FUSE readdirplus
 
-
-11/14/2017
-----------
-
-Looks like I have a regression since Oct 9 (hit OOM):
-
-commit efd5c863f8777251c1678db082a8ccca490978d0
-Author: zhihui-slash2 <zhihui@psc.edu>
-Date:   Mon Oct 9 10:19:16 2017 -0400
-
-    Mostly update test results:
-    
-    slower: 167m build 4.13.4 on zebes, untar takes 6m35, similar result on a second run.
-    
-    faster:
-    
-    on zebes: big file test takes: 13:14, 14:20, 15:53.
-    on yuze: big file test takes: 31 : 48 : 39, 31 : 47 : 41, 31 : 45 : 4, still a lot of key expires.
-

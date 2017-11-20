@@ -228,10 +228,14 @@ sliupdthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				break;
 			}
+			/*
+			 * XXX
+			 * Check FCMH_IOD_BACKFILE to avoid a race with unlink.
+			 */
 			rc = fstat(fcmh_2_fd(f), &stb);
 			if (rc < 0) {
 				if (errno != ENOENT)
-				    OPSTAT_INCR("fstat-file-err");
+					OPSTAT_INCR("fstat-file-err");
 				psclog_error("fstat failed, fid="SLPRI_FID, 
 				    fcmh_2_fid(f));
 				FCMH_ULOCK(f);	
