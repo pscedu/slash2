@@ -143,8 +143,6 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
-#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
-
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
 	int32_t		  	  bml_refcnt;

@@ -217,7 +217,11 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 		 * Looks like we somehow end up with two write leases on
 		 * the same bmap, but likely with different IOSes, hence
 		 * the following assert triggers.  The bml_start value
-		 * between the two lease exceeds 60000.
+		 * between the two leases exceeds 60000.
+		 *
+		 * Here we use the memory address to assert that different
+		 * leases share the same IOS.
+		 *
 		 */
 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
 	} else {
