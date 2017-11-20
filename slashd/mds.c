@@ -1571,12 +1571,13 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 
 	slm_fill_bmapdesc(sbd, b);
 
+
 	/*
 	 * SLASH2 monotonic coherency sequence number assigned to this
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
-	sbd->sbd_key = BMAPSEQ_ANY;
+	sbd->sbd_expire = slm_max_lease_timeout;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1686,7 +1687,6 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_seq = obml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
-	sbd_out->sbd_key = BMAPSEQ_ANY;
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
@@ -1755,10 +1755,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		psc_assert(bmi->bmi_wr_ion);
 
-		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
-		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
 	}
 

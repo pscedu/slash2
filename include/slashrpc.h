@@ -272,7 +272,6 @@ struct srt_authbuf_footer {
 struct srt_bmapdesc {
 	struct sl_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
-	uint64_t		sbd_key;
 
 	uint64_t		sbd_nid;	/* XXX go away */
 	uint32_t		sbd_pid;	/* XXX go away */
