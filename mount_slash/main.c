@@ -183,10 +183,6 @@ int				 msl_newent_inherit_groups = 1;	/* default to BSD behavior */
 struct psc_thread		*slcconnthr;
 
 
-#ifdef DO_DEBUG
-struct sl_fidgen		 debug_fg;	
-#endif
-
 /*
  * I/O requests that have failed due to timeouts are placed here for
  * retry.
@@ -569,14 +565,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	SL_REPL_SET_BMAP_IOS_STAT(bci->bci_repls, 0, BREPLST_VALID);
 
 	bmap_op_done(b);
-
-#ifdef DO_DEBUG
-	if (strcmp(name, "prslerr.c") == 0) {
-		debug_fg = c->fcmh_fg;
-		psclog_max("CREATE: fid="SLPRI_FID", name = %s", 
-		    debug_fg.fg_fid, name);
-	}
-#endif
 
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
@@ -2179,11 +2167,6 @@ msl_flush(struct msl_fhent *mfh)
 
 	f = mfh->mfh_fcmh;
 
-#ifdef DO_DEBUG
-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
-		DEBUG_FCMH(PLL_MAX, f, "flush");
-#endif
-
   restart:
 	DYNARRAY_FOREACH(b, i, &a)
 		/*
@@ -2241,12 +2224,6 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	int rc, retries = 0;
 
 	FCMH_BUSY_ENSURE(f);
-
-#ifdef DO_DEBUG
-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
-		DEBUG_FCMH(PLL_MAX, f, "setattr, size = %lu, set_size = %d", 
-			sstb->sst_size, to_set & PSCFS_SETATTRF_DATASIZE);
-#endif
 
 again:
 
@@ -3511,12 +3488,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
 	f = mfh->mfh_fcmh;
 
-#ifdef DO_DEBUG
-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
-		DEBUG_FCMH(PLL_MAX, f, "write start: pfr=%p sz=%zu "
-		    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
-#endif
-
 	DEBUG_FCMH(PLL_DIAG, f, "write start: pfr=%p sz=%zu "
 	    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
 
@@ -3530,12 +3501,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	struct fidc_membh *f;
 
 	f = mfh->mfh_fcmh;
-
-#ifdef DO_DEBUG
-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
-		DEBUG_FCMH(PLL_MAX, f, "read start: pfr=%p sz=%zu "
-		    "off=%"PSCPRIdOFFT, pfr, size, off);
-#endif
 
 	DEBUG_FCMH(PLL_DIAG, f, "read start: pfr=%p sz=%zu "
 	    "off=%"PSCPRIdOFFT, pfr, size, off);
