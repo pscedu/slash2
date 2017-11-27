@@ -234,6 +234,7 @@ fcmh_checkcreds(struct fidc_membh *f,
 		return (0);
 
 #ifdef SLOPT_POSIX_ACLS
+	/* checkout ../mk/pre.mk on how to enable this */
 	if (msl_acl)
 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
 	else
