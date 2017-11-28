@@ -6144,3 +6144,17 @@ Missing separate debuginfos, use: debuginfo-install glibc-2.17-157.el7_3.5.x86_6
 #15 0x00007f006bf4e76d in clone () from /lib64/libc.so.6
 (gdb) 
 
+
+11/28/2017
+----------
+
+Complaints about data consistency across nodes:
+
+In my reproduction attempt, reads FAILED for 25 second and then the new data was available.  
+I'm not entirely surprised about a propagation delay, but I would have expected to be able 
+to read old data or block (due to lock taken by writing client) in the interim and for the 
+delay to be far shorter.
+
+Please do investigate as a bug and advise as to the outcome.  If we don't expect data written 
+from one client to be promptly available from another, that could contraindicate Slash2 for 
+use in jobs that spans nodes and rely on consistency with the shared filesystem.
