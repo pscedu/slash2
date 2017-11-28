@@ -1570,8 +1570,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	}
 
 	slm_fill_bmapdesc(sbd, b);
-
-
 	/*
 	 * SLASH2 monotonic coherency sequence number assigned to this
 	 * lease.
@@ -1685,6 +1683,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Do some post setup on the modified lease. */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
+	sbd_out->sbd_expire = slm_max_lease_timeout;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 	sbd_out->sbd_ios = obml->bml_ios;
