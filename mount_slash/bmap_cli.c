@@ -396,15 +396,13 @@ __static int
 msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
+	int rc;
 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 
-	int rc;
-
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 
 	/*
  	 * To get the original request:
@@ -439,6 +437,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	 * failed.
 	 */
 
+	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
@@ -539,8 +538,10 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		rc = mp->rc;
  out:
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
-		pscrpc_req_finished(rq);
-		rq = NULL;
+		if (rq) {
+			pscrpc_req_finished(rq);
+			rq = NULL;
+		}
 		if (csvc) {
 			sl_csvc_decref(csvc);
 			csvc = NULL;
