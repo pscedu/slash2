@@ -777,11 +777,12 @@ msl_stat(struct fidc_membh *f, void *arg)
 	return (rc);
 }
 
+
 void
 mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct pscfs_creds pcr;
-	struct fidc_membh *f;
+	struct fidc_membh *f = NULL;
 	struct stat stb;
 	int rc;
 
@@ -3714,6 +3715,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	    "name='%s' rc=%d", inum, name, rc);
 }
 
+static	int fail_getxattr = 0;
+
 int
 slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
@@ -3725,6 +3728,9 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
+
+	if (fail_getxattr)
+		PFL_GOTOERR(out, rc = ENOSYS);
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3825,6 +3831,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
  out:
 	if (f)
 		fcmh_op_done(f);
+	psc_assert(rc != ENOSYS);
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	PSCFREE(buf);
 	psclogs_diag(SLCSS_FSOP, "GETXATTR: fid="SLPRI_FID" "
