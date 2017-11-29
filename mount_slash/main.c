@@ -3521,7 +3521,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
-	int rc;
+	int rc, level = PLL_DIAG;
 
 	if (size > LNET_MTU)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3612,11 +3612,19 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (f)
 		fcmh_op_done(f);
 
-	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
-
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+	if (rc == ENOSYS) {
+		rc = ENODATA;
+		level = PLL_ERROR;
+		OPSTAT_INCR("msl.listxattr-enosys");
+	}
+	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
+	psclogs(SLCSS_FSOP, level, "LISTXATTR: fid="SLPRI_FID" "
+	    "rc=%d", inum, rc);
+
 	PSCFREE(buf);
 }
 
