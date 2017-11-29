@@ -3683,7 +3683,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 {
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
-	int rc;
+	int rc, level = PLL_DIAG;
 
 	if (strlen(name) >= SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -3710,8 +3710,13 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (f)
 		fcmh_op_done(f);
 
+	if (rc == ENOSYS) {
+		rc = ENODATA;
+		level = PLL_ERROR;
+		OPSTAT_INCR("msl.setxattr-enosys");
+	}
 	pscfs_reply_setxattr(pfr, rc);
-	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
+	psclogs(SLCSS_FSOP, level, "SETXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
 }
 
