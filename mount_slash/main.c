@@ -3840,7 +3840,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
  out:
 	if (f)
 		fcmh_op_done(f);
-	PSCFREE(buf);
 
 	if (rc == ENOSYS) {
 		rc = ENODATA;
@@ -3850,6 +3849,8 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	psclogs(SLCSS_FSOP, level, "GETXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
+
+	PSCFREE(buf);
 }
 
 int
