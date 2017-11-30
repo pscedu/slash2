@@ -592,6 +592,25 @@ msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 }
 
 void
+msctlparam_acl_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", msl_acl_enabled);
+}
+
+int
+msctlparam_acl_set(const char *val)
+{
+	int newval;
+
+	newval = strtol(val, NULL, 0);
+	if (newval != 0 && newval != 1)
+		return (1);
+
+	msl_acl_enabled = newval;
+	return (0);
+}
+
+void
 msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
 {
 	struct sl_resource *r;
@@ -1037,6 +1056,9 @@ msctlthr_spawn(void)
 	    slctlparam_uptime_get, NULL);
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+
+	psc_ctlparam_register_simple("sys.acl_enabled",
+	    msctlparam_acl_get, msctlparam_acl_set);
 
 	psc_ctlparam_register_var("sys.attr_timeout", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_attributes_timeout);
