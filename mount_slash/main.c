@@ -235,7 +235,7 @@ fcmh_checkcreds(struct fidc_membh *f,
 
 #ifdef SLOPT_POSIX_ACLS
 	/* checkout ../mk/pre.mk on how to enable this */
-	if (msl_acl)
+	if (msl_acl_enabled)
 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
 	else
 #endif
@@ -4284,7 +4284,7 @@ msl_opt_lookup(const char *opt)
 		int		 type;
 		void		*ptr;
 	} *io, opts[] = {
-		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
+		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl_enabled },
 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
