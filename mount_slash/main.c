@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2007-2016, Pittsburgh Supercomputing Center
+ * Copyright 2007-2017, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -234,7 +234,7 @@ fcmh_checkcreds(struct fidc_membh *f,
 		return (0);
 
 #ifdef SLOPT_POSIX_ACLS
-	/* checkout ../mk/pre.mk on how to enable this */
+	/* checkout file ../mk/pre.mk on how to enable this */
 	if (msl_acl_enabled)
 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
 	else
