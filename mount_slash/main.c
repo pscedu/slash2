@@ -4335,16 +4335,18 @@ msl_opt_lookup(const char *opt)
 			default:
 				psc_fatalx("invalid type");
 			}
+
+#ifndef SLOPT_POSIX_ACLS
+			/*
+			 * Ignore acl option if the code is not even 
+			 * compiled in.
+			 */
+			msl_acl_enabled = 0;
+#endif
 			return (1);
 		}
 	}
 
-#ifndef SLOPT_POSIX_ACLS
-	/*
-	 * Ignore acl option if the code is not compiled in.
-	 */
-	msl_acl_enabled = 0;
-#endif
 
 	return (0);
 }
