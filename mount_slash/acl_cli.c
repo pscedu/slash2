@@ -32,8 +32,6 @@
 #define ACL_DEF_SIZE	128
 #define ACL_EA_ACCESS	"system.posix_acl_access"
 
-int msl_acl_enabled;
-
 /*
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
  */

@@ -160,9 +160,9 @@ struct psc_hashtbl		 msl_gidmap_int;
  * Before that, O_DIRECT and the FUSE direct_io path were not fully
  * integrated.
  */
-int				 msl_acl;
 int				 msl_force_dio;
 int				 msl_map_enable;
+int				 msl_acl_enabled;
 int				 msl_root_squash;
 int				 msl_bmap_reassign;
 int				 msl_repl_enable = 1;
