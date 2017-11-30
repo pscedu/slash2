@@ -606,7 +606,7 @@ msctlparam_acl_set(const char *val)
 	if (newval != 0 && newval != 1)
 		return (1);
 
-#ifdef SLOPT_POSIX_ACLS
+#ifndef SLOPT_POSIX_ACLS
 	msl_acl_enabled = 0;
 #else
 	msl_acl_enabled = newval;
