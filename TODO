@@ -6158,3 +6158,54 @@ delay to be far shorter.
 Please do investigate as a bug and advise as to the outcome.  If we don't expect data written 
 from one client to be promptly available from another, that could contraindicate Slash2 for 
 use in jobs that spans nodes and rely on consistency with the shared filesystem.
+
+11/30/2017
+----------
+
+I think a key issue is that permissions changed with 'chmod' do not get reflected in the ACL 
+settings on pghbio. For example:
+
+[milnes@br006 cure]$ getfacl congma
+# file: congma
+# owner: milnes
+# group: ms4s84p
+user::rwx
+user:congma:rwx
+group::---
+mask::rwx
+other::---
+
+[milnes@br006 cure]$ ls -ld congma/
+drwx------+ 7 milnes ms4s84p 7 May 10Â!   2017 congma/
+
+[milnes@br006 cure]$ chmod g+rx congma/
+
+[milnes@br006 cure]$ ls -ld congma
+drwxr-x---+ 7 milnes ms4s84p 7 May 10  2017 congma
+
+[milnes@br006 cure]$ getfacl congma
+# file: congma
+# owner: milnes
+# group: ms4s84p
+user::rwx
+user:congma:rwx
+group::---
+mask::rwx
+other::---
+
+So, I have to do an extra step and explicitly set group permissions via setfacl:
+
+[milnes@br006 cure]$ setfacl -m g::rx congma
+[milnes@br006 cure]$ getfacl congma
+# file: congma
+# owner: milnes
+# group: ms4s84p
+user::rwx
+user:congma:rwx
+group::r-x
+mask::rwx
+other::---
+
+Likewise, if I remove permissions with chmod, it does not get updated in the ACLs.
+
+Phil
