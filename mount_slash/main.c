@@ -4308,7 +4308,7 @@ msl_opt_lookup(const char *opt)
 	} else
 		optlen = strlen(opt);
 
-	for (io = opts; io->name; io++)
+	for (io = opts; io->name; io++) {
 		if (strncmp(opt, io->name, optlen) == 0) {
 			switch (io->type) {
 			case LOOKUP_TYPE_BOOL:
@@ -4337,6 +4337,15 @@ msl_opt_lookup(const char *opt)
 			}
 			return (1);
 		}
+	}
+
+#ifndef SLOPT_POSIX_ACLS
+	/*
+	 * Ignore acl option if the code is not compiled in.
+	 */
+	msl_acl_enabled = 0;
+#endif
+
 	return (0);
 }
 
