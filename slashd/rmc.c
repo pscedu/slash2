@@ -209,6 +209,38 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 	return (0);
 }
 
+/*
+ * Register the intention of the client to access the directory
+ * and let other clients know this if necessary.
+ */
+int
+slm_rmc_namespace_callback(struct fidc_membh *f)
+{
+	int rc;
+	struct bmapc_memb *b = NULL;
+
+	rc = -bmap_getf(f, 0, SL_WRITE, 
+	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
+#if 0
+	/* Lookup the original lease to ensure it actually exists. */
+	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
+	    sbd_in->sbd_nid, sbd_in->sbd_pid);
+	if (!obml)
+		OPSTAT_INCR("lease-renew-enoent");
+
+	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
+	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
+	rc = mds_bmap_bml_add(bml, rw == BML_READ ? SL_READ : SL_WRITE,
+	    sbd_in->sbd_ios);
+	if (rc) {
+		bml->bml_flags |= BML_FREEING;
+		goto out;
+#endif
+
+	if (b)
+		bmap_op_done(b);
+	return (rc);
+}
 int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
@@ -934,7 +966,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
-	struct bmapc_memb *b = NULL;
 	off_t dummy;
 	int vfsid;
 
@@ -961,8 +992,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = -bmap_getf(f, 0, SL_WRITE, 
-	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
+	mp->rc = slm_rmc_namespace_callback(f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1015,8 +1045,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
  out:
-	if (b)
-		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
 	PSCFREE(iov[0].iov_base);
