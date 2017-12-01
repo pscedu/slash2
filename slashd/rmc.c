@@ -214,7 +214,8 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  * and let other clients know this if necessary.
  */
 int
-slm_rmc_namespace_callback(struct fidc_membh *f)
+slm_rmc_namespace_callback(struct fidc_membh *f, 
+    struct pscrpc_export *exp)
 {
 	int rc;
 	struct bmapc_memb *b = NULL;
@@ -992,7 +993,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_rmc_namespace_callback(f);
+	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
