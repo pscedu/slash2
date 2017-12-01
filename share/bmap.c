@@ -239,6 +239,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = ENOENT;
 		goto out;
 	}
+	if (flags & BMAPGETF_DIRECTORY)
+		goto out;
+
 	if (flags & BMAPGETF_NONBLOCK) {
 		if (b->bcm_flags & BMAPF_LOADING)
 			goto out;

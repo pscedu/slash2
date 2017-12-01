@@ -348,6 +348,7 @@ struct bmap {
 #define BMAPGETF_NOAUTOINST	(1 << 3)	/* do not autoinstantiate */
 #define BMAPGETF_NODISKREAD	(1 << 4)	/* do not read from disk - nothing there */
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
+#define BMAPGETF_DIRECTORY	(1 << 6)	/* create a bmap lease for directory */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));

@@ -934,6 +934,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
+	struct bmapc_memb *b = NULL;
 	off_t dummy;
 	int vfsid;
 
@@ -957,6 +958,11 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = -bmap_getf(f, 0, SL_WRITE, 
+	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1009,6 +1015,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
  out:
+	if (b)
+		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
 	PSCFREE(iov[0].iov_base);
