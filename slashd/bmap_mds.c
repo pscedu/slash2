@@ -514,7 +514,6 @@ dump_bmap_flags(uint32_t flags)
 	int seq = 0;
 
 	_dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAPF_CRC_UP, &flags, &seq);
 	PFL_PRFLAG(BMAPF_REPLMODWR, &flags, &seq);
 	PFL_PRFLAG(BMAPF_IOSASSIGNED, &flags, &seq);
 	if (flags)
