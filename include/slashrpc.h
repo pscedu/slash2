@@ -799,7 +799,7 @@ struct srm_create_rep {
 	struct srt_stat		cattr;		/* attrs of new file */
 	struct srt_stat		pattr;		/* parent dir attributes */
 	 int32_t		rc;		/* 0 for success or slerrno */
-	 int32_t		_pad;
+	 int32_t		lease;	
 
 	/* parameters for fetching first bmap */
 	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
@@ -816,14 +816,15 @@ struct srm_getattr_req {
 struct srm_getattr_rep {
 	struct srt_stat		attr;
 	 uint32_t		xattrsize;
+	 int32_t		lease;
 	 int32_t		rc;
 } __packed;
 
 struct srm_getattr2_rep {
 	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
+	 int32_t		lease;
 	 int32_t		rc;
-	 int32_t		_pad;
 } __packed;
 
 struct srm_io_req {
@@ -911,7 +912,8 @@ struct srm_readdir_rep {
 	uint32_t		eof:1;		/* flag: directory read EOF */
 	uint32_t		nents:31;	/* #dirents returned */
 	 int32_t		rc;
-	unsigned char		ents[824];
+	 int32_t		lease;
+	unsigned char		ents[820];
 /* XXX ents should be in a portable format, not fuse_dirent */
 /* XXX ents is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
 } __packed;
@@ -946,8 +948,8 @@ struct srm_rename_rep {
 	struct srt_stat		srr_opattr;	/* old parent */
 	struct srt_stat		srr_cattr;	/* child node */
 	struct srt_stat		srr_clattr;	/* clobbered node */
+	 int32_t		lease;
 	 int32_t		rc;
-	 int32_t		_pad;
 } __packed;
 
 struct srm_replrq_req {
@@ -1006,6 +1008,7 @@ struct srm_unlink_rep {
 	struct srt_stat		cattr;		/* child node - FID always valid */
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		valid;		/* child attr valid */
+	 int32_t		lease;
 	 int32_t		rc;
 } __packed;
 
