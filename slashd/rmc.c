@@ -218,26 +218,34 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
     struct pscrpc_export *exp)
 {
 	int rc;
+	uint32_t pid;
+	uint64_t nid;
 	struct bmapc_memb *b = NULL;
+	struct bmap_mds_lease *bml = NULL;
+
+	pid = exp->exp_connection->c_peer.pid;
+	nid = exp->exp_connection->c_peer.nid;
 
 	rc = -bmap_getf(f, 0, SL_WRITE, 
 	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
+
 #if 0
 	/* Lookup the original lease to ensure it actually exists. */
-	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
-	    sbd_in->sbd_nid, sbd_in->sbd_pid);
-	if (!obml)
+	bml = mds_bmap_getbml(b, sbd_in->sbd_seq, nid, pid);
+	if (!bml)
 		OPSTAT_INCR("lease-renew-enoent");
 
-	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
 	rc = mds_bmap_bml_add(bml, rw == BML_READ ? SL_READ : SL_WRITE,
 	    sbd_in->sbd_ios);
 	if (rc) {
 		bml->bml_flags |= BML_FREEING;
 		goto out;
+	}
+
 #endif
 
+ out:
 	if (b)
 		bmap_op_done(b);
 	return (rc);
