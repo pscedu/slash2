@@ -213,6 +213,11 @@ void	 mds_bmap_ensure_valid(struct bmap *);
 struct bmap_mds_lease *
 	 mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
 
+struct bmap_mds_lease *
+	 mds_bml_new(struct bmap *, struct pscrpc_export *, int, 
+	     lnet_process_id_t *);
+int mds_bmap_bml_add(struct bmap_mds_lease *, enum rw, sl_ios_id_t);
+
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 

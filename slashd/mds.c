@@ -928,7 +928,7 @@ mds_bmap_getbml(struct bmap *b, uint64_t seq, uint64_t nid, uint32_t pid)
  * @rw: read/write access for bmap.
  * @prefios: client preferred I/O system.
  */
-__static int
+int
 mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
     sl_ios_id_t prefios)
 {
@@ -1342,7 +1342,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 	return (0);
 }
 
-static struct bmap_mds_lease *
+struct bmap_mds_lease *
 mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
     lnet_process_id_t *cnp)
 {
