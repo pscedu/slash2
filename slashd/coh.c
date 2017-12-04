@@ -56,22 +56,6 @@ slm_coh_delete_file(__unusedx struct fidc_membh *c)
 {
 }
 
-void
-slm_coh_bml_release(struct bmap_mds_lease *bml)
-{
-	struct bmap_mds_info *bmi;
-	struct bmap *b;
-
-	bmi = bml->bml_bmi;
-	b = bmi_2_bmap(bmi);
-
-	BMAP_LOCK(b);
-	bmi->bmi_diocb--;
-	bml->bml_flags &= ~BML_DIOCB;
-
-	mds_bmap_bml_release(bml);
-}
-
 int
 slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
