@@ -756,10 +756,13 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 /*
  * Find the first lease of a given client based on its {nid, pid} pair.
+ * 
  * Also walk the chain of duplicate leases to count the number of read
  * and write leases.  Note that only the first lease of a client is
  * linked on the bmi->bmi_leases list, the rest is linked on a private
  * chain and tagged with BML_CHAIN flag.
+ *
+ * Return the first lease of a client on the bmap lease list.
  */
 static __inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
