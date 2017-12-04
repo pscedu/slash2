@@ -145,8 +145,9 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	mq->dio = 1;
 
 	/* Take a reference for the asynchronous RPC. */
-	bmi->bmi_diocb++;
 	bml->bml_refcnt++;
+
+	bmi->bmi_diocb++;
 	bml->bml_flags |= BML_DIOCB;
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
@@ -156,9 +157,8 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	if (rc == 0)
 		return (0);
 
-	bml->bml_flags &= ~BML_DIOCB;
-
 	bmi->bmi_diocb--;
+	bml->bml_flags &= ~BML_DIOCB;
 
  out:
 	pscrpc_req_finished(rq);
