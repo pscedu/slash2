@@ -188,7 +188,7 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 				if (bml->bml_flags & BML_DIOCB)
 					goto next;
 
-				mdscoh_req(bml);
+				slm_coherent_callback(bml);
 
  next:
 				bml = bml->bml_chain;
