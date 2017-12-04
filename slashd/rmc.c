@@ -240,9 +240,13 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
 			bml->bml_flags |= BML_FREEING;
 			goto out;
 		}
-	} else
+	} else {
 		OPSTAT_INCR("directory-lease-ext");
-
+		bml->bml_start = time(NULL);
+		bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
+		pll_remove(&slm_bmap_leases.btt_leases, bml);
+		pll_addtail(&slm_bmap_leases.btt_leases, bml);
+	}
  out:
 	if (bml)
 		mds_bmap_bml_release(bml);
