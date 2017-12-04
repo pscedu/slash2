@@ -168,7 +168,8 @@ struct bmap_mds_lease {
 #define BML_RECOVER		(1 <<  6)
 #define BML_CHAIN		(1 <<  7)
 #define BML_FREEING		(1 <<  8)		/* being freed, don't reuse */
-#define BML_RECOVERFAIL		(1 <<  9)
+#define BML_DIRECTORY		(1 <<  9)
+#define BML_RECOVERFAIL		(1 <<  10)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmi)
 

@@ -233,7 +233,8 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
 	bml = mds_bmap_getbml(b, 0, nid, pid);
 	if (!bml) {
 		OPSTAT_INCR("directory-lease-new");
-		bml = mds_bml_new(b, exp, SL_READ, &exp->exp_connection->c_peer);
+		bml = mds_bml_new(b, exp, BML_READ | BML_DIRECTORY, 
+		    &exp->exp_connection->c_peer);
 		rc = mds_bmap_bml_add(bml, SL_READ, IOS_ID_ANY);
 		if (rc) {
 			bml->bml_flags |= BML_FREEING;
