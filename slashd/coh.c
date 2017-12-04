@@ -101,15 +101,16 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 
 	BMAP_LOCK(b);
 	bml->bml_flags |= BML_DIO;
-	BMAP_ULOCK(b);
+	bmi->bmi_diocb--;
+	bml->bml_flags &= ~BML_DIOCB;
+
+	mds_bmap_bml_release(bml);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
 	    "cli=%s seq=%"PRId64" rc=%d",
 	    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
 	    buf), mq->seq, rc);
-
-	slm_coh_bml_release(bml);
 
 	sl_csvc_decref(csvc);
 
