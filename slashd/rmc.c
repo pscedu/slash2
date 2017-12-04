@@ -215,19 +215,27 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  */
 int
 slm_rmc_namespace_callback(struct fidc_membh *f, 
-    struct pscrpc_export *exp)
+    struct pscrpc_export *exp, int *expire)
 {
 	int rc;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
+	struct bmap_mds_info *bmi;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml = NULL;
 
+	*expire = 0;
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
 
+	/*
+	 * Create an in-memory only bmap to track clients that are
+	 * interested in the directory.
+	 */
 	rc = -bmap_getf(f, 0, SL_READ, 
 	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
+	if (rc)
+		goto out;
 
 	/* Lookup the original lease to ensure it actually exists. */
 	bml = mds_bmap_getbml(b, 0, nid, pid);
@@ -248,6 +256,10 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
 		pll_addtail(&slm_bmap_leases.btt_leases, bml);
 	}
  out:
+	if (!rc) {	
+		bmi = bmap_2_bmi(b);
+		expire = bmi->bmi_readers > 1 ? 0 : slm_max_lease_timeout;
+	}
 	if (bml)
 		mds_bmap_bml_release(bml);
 	if (b)
@@ -980,7 +992,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
 	off_t dummy;
-	int vfsid;
+	int vfsid, expire;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -1005,7 +1017,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export);
+	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export, &expire);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
