@@ -215,7 +215,7 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  */
 int
 slm_rmc_namespace_callback(struct fidc_membh *f, 
-    struct pscrpc_export *exp, int *expire)
+    struct pscrpc_export *exp, int *lease)
 {
 	int rc;
 	lnet_nid_t nid;
@@ -224,7 +224,7 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml = NULL;
 
-	*expire = 0;
+	*lease = 0;
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
 
@@ -258,7 +258,7 @@ slm_rmc_namespace_callback(struct fidc_membh *f,
  out:
 	if (!rc) {	
 		bmi = bmap_2_bmi(b);
-		expire = bmi->bmi_readers > 1 ? 0 : slm_max_lease_timeout;
+		lease = bmi->bmi_readers > 1 ? 0 : slm_max_lease_timeout;
 	}
 	if (bml)
 		mds_bmap_bml_release(bml);
@@ -1017,7 +1017,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export, &expire);
+	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
