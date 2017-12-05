@@ -500,7 +500,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
 
-	if (!msl_enable_namecache || !lease)
+	if (!msl_enable_namecache)
 		return;
 
 	fci = fcmh_get_pri(d);
@@ -508,7 +508,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	DIRCACHE_WRLOCK(d);
 	dircache_trim(d);
 
-	if (fci->fcid_count >= msl_max_namecache_per_directory) {
+	if (!lease || fci->fcid_count >= msl_max_namecache_per_directory) {
 		OPSTAT_INCR("dircache-limit");
 		DIRCACHE_ULOCK(d);
 		return;
