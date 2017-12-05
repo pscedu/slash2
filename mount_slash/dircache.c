@@ -315,7 +315,7 @@ dircache_trim(struct fidc_membh *d)
 
 void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int nents, void *base, size_t size, int eof)
+    int nents, void *base, size_t size, int eof, int32_t lease)
 {
 	int i, rc;
 	off_t adj;
