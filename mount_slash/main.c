@@ -1773,7 +1773,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	PFL_GETPTIMESPEC(&p->dcp_expire);
-	p->dcp_expire.tv_sec += DIRCACHEPG_SOFT_TIMEO;
+	p->dcp_expire.tv_sec += DIRCACHEPG_TIMEOUT;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
