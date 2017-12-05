@@ -1870,7 +1870,7 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
  out2:
 	DIRCACHE_WRLOCK(d);
 	p->dcp_refcnt--;
-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 	wake = p->dcp_flags & DIRCACHEPGF_WAIT;
 	dircache_free_page(d, p);
 	if (wake) {
