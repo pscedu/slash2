@@ -51,6 +51,7 @@
 #include "mount_slash.h"
 #include "sltypes.h"
 #include "slutil.h"
+#include "bmap_cli.h"
 
 struct psc_poolmaster	 dircache_page_poolmaster;
 struct psc_poolmgr	*dircache_page_pool;
@@ -379,7 +380,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
-		dce->dce_expire = now.tv_sec;
+		dce->dce_expire = now.tv_sec + lease - BMAP_TIMEO_INC;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
