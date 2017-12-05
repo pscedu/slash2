@@ -67,7 +67,8 @@ struct fidc_membh;
 #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
 #define DIRCACHE_NAMECACHE	2048		/* initial number of name cache enties in pool */
 
-#define DIRCACHEPG_TIMEOUT	30		/* expiration regardless if read or not */
+#define DIRCACHEPG_DEF_TIMEOUT	30		/* default expiration regardless if read or not */
+#define DIRCACHEPG_MIN_TIMEOUT	5		/* minimum expiration regardless if read or not */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)

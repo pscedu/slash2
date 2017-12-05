@@ -1743,7 +1743,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
-	if (mp->lease) {
+	if (!mp->lease) {
 		OPSTAT_INCR("msl.readdir-lease-skip");
 		goto out;
 	}
@@ -1773,8 +1773,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	PFL_GETPTIMESPEC(&p->dcp_expire);
-	p->dcp_expire.tv_sec += DIRCACHEPG_TIMEOUT;
-
+	if (mp->lease)
+		p->dcp_expire.tv_sec += DIRCACHEPG_DEF_TIMEOUT;
+	else
+		p->dcp_expire.tv_sec += DIRCACHEPG_MIN_TIMEOUT;
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
 		OPSTAT_INCR("msl.dircache-wakeup");
