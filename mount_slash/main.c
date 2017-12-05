@@ -1772,7 +1772,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	PFL_GETPTIMESPEC(&p->dcp_expire);
+	p->dcp_expire.tv_sec += DIRCACHEPG_SOFT_TIMEO;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
@@ -1940,7 +1941,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	raoff = 0;
 	issue = 1;
 	PFL_GETPTIMESPEC(&now);
-	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
 
 	/*
 	 * XXX Large directories will page in lots of buffers so this
