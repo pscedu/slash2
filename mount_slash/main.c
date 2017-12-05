@@ -1743,8 +1743,17 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
-	/* XXX: crash if I comment out the following line */
+	/*
+	 * XXX: crash if I comment out the following line, need closer look.
+	 *
+	 * Anyway, if we fail to register individual entries, the readdir
+	 * operation itself is still a success.
+	 */
 	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size, dentbuf);
+	if (rc) {
+		rc = 0;
+		OPSTAT_INCR("msl.readdir-register-err");
+	}
 
  out:
 	DIRCACHE_WRLOCK(d);
