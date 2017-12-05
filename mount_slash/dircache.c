@@ -298,7 +298,7 @@ dircache_trim(struct fidc_membh *d)
 	PFL_GETTIMEVAL(&now);
 	fci = fcmh_get_pri(d);
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
-		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
+		if (dce->dce_expire > now.tv_sec)
 			break;
 		fci->fcid_count--;
 		OPSTAT_INCR("dircache-trim");
@@ -379,7 +379,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
-		dce->dce_age = now.tv_sec;
+		dce->dce_expire = now.tv_sec;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
@@ -534,7 +534,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	/* fuse treats zero node ID as ENOENT */
 	psc_assert(ino);
 	dce->dce_ino = ino;
-	dce->dce_age = now.tv_sec;
+	dce->dce_expire = now.tv_sec + DCACHE_ENTRY_LIFETIME;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 	    dce->dce_namelen);

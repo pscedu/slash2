@@ -144,7 +144,7 @@ struct dircache_ent {
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;
-	long			 dce_age;
+	long			 dce_expire;
 	int			 dce_flag;
 	char			 dce_short[SL_SHORT_NAME];
 	char			*dce_name;	/* NOT null-terminated */
