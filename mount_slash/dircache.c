@@ -492,7 +492,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
  * Add a name after a successful lookup.
  */
 void
-dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
+dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t lease)
 {
 	int len;
 	struct timeval now;
@@ -500,7 +500,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce, *tmpdce;
 
-	if (!msl_enable_namecache)
+	if (!msl_enable_namecache || !lease)
 		return;
 
 	fci = fcmh_get_pri(d);
@@ -535,7 +535,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	/* fuse treats zero node ID as ENOENT */
 	psc_assert(ino);
 	dce->dce_ino = ino;
-	dce->dce_expire = now.tv_sec + DCACHE_ENTRY_LIFETIME;
+	dce->dce_expire = now.tv_sec + lease - BMAP_TIMEO_INC;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 	    dce->dce_namelen);

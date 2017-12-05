@@ -482,8 +482,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	if (mp->lease)
-		dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
 #if 0
 	if (oflags & O_APPEND) {
@@ -900,7 +899,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	FCMH_ULOCK(c);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, newname, fcmh_2_fid(c));
+	dircache_insert(p, newname, fcmh_2_fid(c), mp->lease);
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
@@ -993,7 +992,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
@@ -1049,7 +1048,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
+	dircache_insert(p, name, mp->attr.sst_fg.fg_fid, mp->lease);
 
 	/*
 	 * Add the inode to the cache first, otherwise pscfs may come to
@@ -1366,7 +1365,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 
 	msl_invalidate_readdir(f);
 	dircache_delete(f, name);
-	dircache_insert(f, newname, fcmh_2_fid(c));
+	dircache_insert(f, newname, fcmh_2_fid(c), mp->lease);
 	newname = NULL;
 
  out:
@@ -1624,7 +1623,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
@@ -2720,7 +2719,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	dircache_delete(op, oldname); 
 	if (child) {
 		msl_invalidate_readdir(np);
-		dircache_insert(np, newname, fcmh_2_fid(child)); 
+		dircache_insert(np, newname, fcmh_2_fid(child), mp->lease); 
 	}
 
  out:
@@ -2899,7 +2898,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	FCMH_ULOCK(c);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
