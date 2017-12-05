@@ -1743,6 +1743,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+	if (mp->lease) {
+		OPSTAT_INCR("msl.readdir-lease-skip");
+		goto out;
+	}
 	/*
 	 * XXX: crash if I comment out the following line, need closer look.
 	 *
