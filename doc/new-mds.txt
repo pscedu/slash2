@@ -97,7 +97,7 @@ Obstacle:
 			- we might have to support multiple formats of the same data structure in the
 			  future.
 
-			- add generation number and CRC checksum to make sure data structures are
+			- add generation number and 64-bit CRC checksum to make sure data structures are
 			  updated atomically on the disk.
 
 		- Currently, we use some ZFS fields to store slash2 attributes, we won't be able
