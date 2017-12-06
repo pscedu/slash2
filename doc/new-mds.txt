@@ -92,6 +92,10 @@ Obstacle:
 		- Add generation number to each data structure that can be updated atomically
 		  for log replay.  Also protect each data structure with CRC checksum.
 
+			- if we don't have file system wide sync, then each log entry should have
+			  a callback to sync corresponding file system data before it can be
+			  reclaimed.
+
 		- Add version number to different types of data structures to allow piece meal upgrade.
 
 			- we might have to support multiple formats of the same data structure in the
