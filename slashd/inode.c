@@ -113,6 +113,13 @@ mds_inode_read(struct slash_inode_handle *ih)
 		if (mds_inode_update_interrupted(vfsid, ih, &rc))
 			;
 		else if (vers && vers < INO_VERSION)
+			/*
+			 * Instead of updating different versions of 
+			 * inode format, it is probably safer to 
+			 * support multiple formats at the same 
+			 * time unless you want to drop old format
+			 * completely.
+			 */
 			rc = mds_inode_update(vfsid, ih, vers);
 		else {
 			DEBUG_INOH(PLL_WARN, ih, buf, 
