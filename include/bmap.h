@@ -74,6 +74,11 @@ struct srt_bmapdesc;
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_core_state {
+	/*
+ 	 * The field appears to be a misnomer because we no longer
+ 	 * support per sliver CRC state. However, there might be
+ 	 * value in keeping track of whether a sliver has data.
+ 	 */
 	uint8_t			bcs_crcstates[SLASH_SLVRS_PER_BMAP];
 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
 };
