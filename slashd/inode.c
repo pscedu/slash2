@@ -236,7 +236,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	uint64_t crc, od_crc;
+	uint64_t crc, od_crc = 0;
 	int rc, vfsid;
 	size_t nb;
 	char buf[LINE_MAX];
@@ -252,6 +252,11 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mfh(ih));
+
+	/*
+	 * No need to check od_crc if rc == 0. In fact, this will cause 
+	 * problem if od_crc is not initialized.
+	 */
 	if (rc == 0 && od_crc == 0 &&
 	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
 		rc = 0;
