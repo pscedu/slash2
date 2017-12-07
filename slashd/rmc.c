@@ -252,6 +252,14 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
 	}
+	/*
+ 	 * If the number of users goes from 1 to 2, send callbacks.
+ 	 */
+	if (count == 1 && !found) {
+
+
+
+	}
 
 	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
 	psclist_add(cb, &fmi->fmi_callback);
