@@ -1959,6 +1959,10 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 
 	FCMH_ULOCK(f);
 
+	/*
+ 	 * Disable it for now until I have a proper fix for the
+ 	 * crash in the following loop.
+ 	 */
 	if (slm_lease_skip)
 		goto skip;
 
