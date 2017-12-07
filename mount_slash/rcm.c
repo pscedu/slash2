@@ -291,9 +291,12 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (fcmh_isdir(f)) {
+		dircache_trim(f, 1);
+		OPSTAT_INCR("msl.bmapdio-dir");
 		PFL_GOTOERR(out, mp->rc = 0);
 	}
 
+	OPSTAT_INCR("msl.bmapdio-reg");
 	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
 	    mq->bno, mq->seq);
 
