@@ -1925,6 +1925,8 @@ slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
 	return (0);
 }
 
+int	slm_lease_skip = 1;
+
 int
 slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 {
@@ -1956,6 +1958,10 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 
 	FCMH_ULOCK(f);
+
+	if (slm_lease_skip)
+		goto skip;
+
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
 		    BMAPGETF_NOAUTOINST, &b))
@@ -2011,6 +2017,8 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 		}
 		bmap_op_done(b);
 	}
+
+ skip:
 
 	FCMH_LOCK(f);
 	to_set |= SL_SETATTRF_PTRUNCGEN;
