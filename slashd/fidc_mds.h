@@ -33,6 +33,13 @@
 #include "slashd.h"
 #include "up_sched_res.h"
 
+
+struct fcmh_mds_callback {
+	int32_t			  fmc_expire;
+	lnet_process_id_t	  fmc_cli_nidpid;
+	struct psc_listentry      fmc_lentry;
+};
+
 /**
  * fcmh_mds_info - MDS-specific fcmh data.
  * @fmi_mfid - backing object MIO FID.  This is used to access the
@@ -45,6 +52,7 @@ struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
 	mio_fid_t		  fmi_mfid;		/* backing object inum */
 	struct mio_fh		  fmi_mfh;		/* file handle */
+	struct fcmh_mds_callback *fmi_callback;
 	union {
 		struct {
 			/*

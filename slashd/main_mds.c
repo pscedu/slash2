@@ -88,6 +88,9 @@ int			 slm_opstate;
 struct psc_poolmaster	 slm_bml_poolmaster;
 struct psc_poolmgr	*slm_bml_pool;
 
+struct psc_poolmaster	 slm_callback_poolmaster;
+struct psc_poolmgr	*slm_callback_pool;
+
 struct psc_poolmaster	 slm_repl_status_poolmaster;
 
 int
@@ -489,12 +492,6 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	_psc_poolmaster_init(&callback_poolmaster,
-	    sizeof(struct bmap) + priv_size,
-	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, 4096, 4096, 0, NULL, NULL, "callback");
-	callback_pool = psc_poolmaster_getmgr(&callback_poolmaster);
-
 	fidc_init(sizeof(struct fcmh_mds_info));
 	bmap_cache_init(sizeof(struct bmap_mds_info), MDS_BMAP_COUNT, NULL);
 
@@ -590,6 +587,11 @@ main(int argc, char *argv[])
 	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
 	    2048, 0, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
+
+	psc_poolmaster_init(&slm_callback_poolmaster,
+	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, 2048,
+	    2048, 0, NULL, "callback");
+	slm_callback_pool = psc_poolmaster_getmgr(&slm_callback_poolmaster);
 
 	sl_nbrqset = pscrpc_prep_set();
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,
