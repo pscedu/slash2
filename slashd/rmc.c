@@ -210,7 +210,7 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 }
 
 /*
- * Register out intention to access the file. If there are other clients 
+ * Register our intention to access the file. If there are other clients 
  * interested in the same file, let them know.
  *
  * Note that we don't ask a callback explicitly. This way, we only incur
@@ -248,6 +248,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		}
 	}
 	if (!found) {
+		OPSTAT_INCR("fcmh-lease");
 		cb = psc_pool_get(slm_callback_pool);
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
@@ -257,6 +258,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 * If the number of users goes from 1 to 2, send callbacks.
  	 */
 	if (count == 1 && !found) {
+		OPSTAT_INCR("fcmh-send-callback");
 
 
 
