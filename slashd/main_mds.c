@@ -489,6 +489,12 @@ main(int argc, char *argv[])
 		usage();
 	}
 
+	_psc_poolmaster_init(&callback_poolmaster,
+	    sizeof(struct bmap) + priv_size,
+	    offsetof(struct bmap, bcm_lentry),
+	    PPMF_AUTO, 4096, 4096, 0, NULL, NULL, "callback");
+	callback_pool = psc_poolmaster_getmgr(&callback_poolmaster);
+
 	fidc_init(sizeof(struct fcmh_mds_info));
 	bmap_cache_init(sizeof(struct bmap_mds_info), MDS_BMAP_COUNT, NULL);
 
