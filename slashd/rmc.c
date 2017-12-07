@@ -210,60 +210,21 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 }
 
 /*
- * Register the intention of the client to access the directory
- * and let other clients know this if necessary.
+ * Register out intention to access the file. If there are other clients 
+ * interested in the same file, let them know.
  */
 int
-slm_rmc_namespace_callback(struct fidc_membh *f, 
+slm_rmc_coherent_callback(struct fidc_membh *f, 
     struct pscrpc_export *exp, int *lease)
 {
 	int rc;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
-	struct bmap_mds_info *bmi;
-	struct bmapc_memb *b = NULL;
-	struct bmap_mds_lease *bml = NULL;
 
 	*lease = 0;
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
 
-	/*
-	 * Create an in-memory only bmap to track clients that are
-	 * interested in the directory.
-	 */
-	rc = -bmap_getf(f, 0, SL_READ, 
-	    BMAPGETF_CREATE|BMAPGETF_DIRECTORY, &b);
-	if (rc)
-		goto out;
-
-	/* Lookup the original lease to ensure it actually exists. */
-	bml = mds_bmap_getbml(b, 0, nid, pid);
-	if (!bml) {
-		OPSTAT_INCR("directory-lease-new");
-		bml = mds_bml_new(b, exp, BML_READ | BML_DIRECTORY, 
-		    &exp->exp_connection->c_peer);
-		rc = mds_bmap_bml_add(bml, SL_READ, IOS_ID_ANY);
-		if (rc) {
-			bml->bml_flags |= BML_FREEING;
-			goto out;
-		}
-	} else {
-		OPSTAT_INCR("directory-lease-ext");
-		bml->bml_start = time(NULL);
-		bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
-		pll_remove(&slm_bmap_leases.btt_leases, bml);
-		pll_addtail(&slm_bmap_leases.btt_leases, bml);
-	}
- out:
-	if (!rc) {	
-		bmi = bmap_2_bmi(b);
-		lease = bmi->bmi_readers > 1 ? 0 : slm_max_lease_timeout;
-	}
-	if (bml)
-		mds_bmap_bml_release(bml);
-	if (b)
-		bmap_op_done(b);
 	return (rc);
 }
 int
@@ -1017,7 +978,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_rmc_namespace_callback(f, rq->rq_export, &mp->lease);
+	mp->rc = slm_rmc_coherent_callback(f, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
