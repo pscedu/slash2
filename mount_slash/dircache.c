@@ -289,7 +289,7 @@ dircache_ent_cmp(const void *a, const void *b)
 }
 
 void
-dircache_trim(struct fidc_membh *d)
+dircache_trim(struct fidc_membh *d, int force)
 {
 	struct psc_hashbkt *b;
 	struct timeval now;
@@ -299,7 +299,7 @@ dircache_trim(struct fidc_membh *d)
 	PFL_GETTIMEVAL(&now);
 	fci = fcmh_get_pri(d);
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
-		if (dce->dce_expire > now.tv_sec)
+		if (dce->dce_expire > now.tv_sec || force)
 			break;
 		fci->fcid_count--;
 		OPSTAT_INCR("dircache-trim");
@@ -332,7 +332,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	DIRCACHE_WRLOCK(d);
 
-	dircache_trim(d);
+	dircache_trim(d, 0);
 
 	fci = fcmh_get_pri(d);
 	/*
@@ -469,7 +469,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		return;
 
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d);
+	dircache_trim(d, 0);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
@@ -506,7 +506,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	fci = fcmh_get_pri(d);
 
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d);
+	dircache_trim(d, 0);
 
 	if (!lease || fci->fcid_count >= msl_max_namecache_per_directory) {
 		OPSTAT_INCR("dircache-limit");
@@ -576,7 +576,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d);
+	dircache_trim(d, 0);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;

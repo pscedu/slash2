@@ -290,6 +290,10 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	if (fcmh_isdir(f)) {
+		PFL_GOTOERR(out, mp->rc = 0);
+	}
+
 	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
 	    mq->bno, mq->seq);
 
