@@ -212,6 +212,10 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 /*
  * Register out intention to access the file. If there are other clients 
  * interested in the same file, let them know.
+ *
+ * Note that we don't ask a callback explicitly. This way, we only incur
+ * overhead when more than one client is access the same file around the
+ * same time window.
  */
 int
 slm_rmc_coherent_callback(struct fidc_membh *f, 
