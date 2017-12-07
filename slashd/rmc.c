@@ -231,11 +231,12 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
 
-	FCMH_LOCK(f);
-
+	rc = 0;
 	count = 0;
 	*lease = 0;
+
 	fmi = fcmh_2_fmi(f);
+	FCMH_LOCK(f);
 	psclist_for_each(tmp, &fmi->fmi_callback) {
 		count++;
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
@@ -245,6 +246,11 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 			break;
 		}
 	}
+	if (!found) {
+		cb = psc_pool_get(slm_callback_pool);
+	}
+
+	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
 	FCMH_ULOCK(f);
 
 	return (rc);
@@ -975,7 +981,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
 	off_t dummy;
-	int vfsid, expire;
+	int vfsid;
 
 	memset(iov, 0, sizeof(iov));
 

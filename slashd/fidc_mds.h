@@ -33,6 +33,8 @@
 #include "slashd.h"
 #include "up_sched_res.h"
 
+extern struct psc_poolmaster	 slm_callback_poolmaster;
+extern struct psc_poolmgr	*slm_callback_pool;
 
 struct fcmh_mds_callback {
 	int32_t			  fmc_expire;
