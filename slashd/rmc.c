@@ -221,13 +221,31 @@ int
 slm_fcmh_coherent_callback(struct fidc_membh *f, 
     struct pscrpc_export *exp, int *lease)
 {
-	int rc;
+	int rc, count, found;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
+	struct psclist_head *tmp;
+	struct fcmh_mds_info *fmi;
+	struct fcmh_mds_callback *cb;
 
-	*lease = 0;
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
+
+	FCMH_LOCK(f);
+
+	count = 0;
+	*lease = 0;
+	fmi = fcmh_2_fmi(f);
+	psclist_for_each(tmp, &fmi->fmi_callback) {
+		count++;
+		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
+		if (cb->fmc_nidpid.nid == nid &&
+		    cb->fmc_nidpid.pid == pid) {
+			found = 1;
+			break;
+		}
+	}
+	FCMH_ULOCK(f);
 
 	return (rc);
 }
