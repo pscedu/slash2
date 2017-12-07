@@ -242,7 +242,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
 		if (cb->fmc_nidpid.nid == nid &&
 		    cb->fmc_nidpid.pid == pid) {
-			psclist_del(cb, &fmi->fmi_callback);
+			psclist_del(tmp, &fmi->fmi_callback);
 			found = 1;
 			break;
 		}
@@ -265,7 +265,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	}
 
 	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
-	psclist_add(cb, &fmi->fmi_callback);
+	psclist_add(&cb->fmc_lentry, &fmi->fmi_callback);
 	FCMH_ULOCK(f);
 
 	return (rc);
