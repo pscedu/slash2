@@ -251,6 +251,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb = psc_pool_get(slm_callback_pool);
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
+		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 	}
 	/*
  	 * If the number of users goes from 1 to 2, send callbacks.
