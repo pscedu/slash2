@@ -218,7 +218,7 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  * same time window.
  */
 int
-slm_rmc_coherent_callback(struct fidc_membh *f, 
+slm_fcmh_coherent_callback(struct fidc_membh *f, 
     struct pscrpc_export *exp, int *lease)
 {
 	int rc;
@@ -982,7 +982,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_rmc_coherent_callback(f, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

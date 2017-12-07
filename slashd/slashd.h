@@ -317,7 +317,7 @@ int	slm_get_next_slashfid(slfid_t *);
 int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
 void	slm_coh_delete_file(struct fidc_membh *);
-int	slm_coherent_callback(struct bmap_mds_lease *);
+int	slm_bmap_coherent_callback(struct bmap_mds_lease *);
 
 void	slm_mdfs_scan(void);
 int	slm_wkcb_wr_brepl(void *);

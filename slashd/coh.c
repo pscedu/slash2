@@ -108,7 +108,7 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
  * Note: @bml is unlocked upon return.
  */
 int
-slm_coherent_callback(struct bmap_mds_lease *bml)
+slm_bmap_coherent_callback(struct bmap_mds_lease *bml)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
