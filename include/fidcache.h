@@ -98,7 +98,6 @@ struct fidc_membh {
 #define FCMH_LOCK(f)		spinlock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_TRYLOCK(f)		trylock_pci(FCMH_PCI, &(f)->fcmh_lock)
-#define FCMH_TRYRLOCK(f, lk)	tryreqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
 #define FCMH_RLOCK(f)		reqlock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_URLOCK(f, lk)	ureqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
