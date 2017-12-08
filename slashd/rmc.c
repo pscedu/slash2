@@ -260,10 +260,12 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
 		if (rc)
 			goto next;
+		mq->fg = f->fcmh_fg;
 		rq->rq_async_args.pointer_arg[0] = csvc;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc)
 			goto next;
+		rq = NULL;
 	}
 
  next:
@@ -276,10 +278,17 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_exp = exp;
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 	}
-
+	/*
+ 	 * At this point, cb can be the new callback or the one
+ 	 * found on the list.  In either case, we update its
+ 	 * expiration time, and add it to the end of the list.
+ 	 */
 	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
 	psclist_add(&cb->fmc_lentry, &fmi->fmi_callback);
 	FCMH_ULOCK(f);
+
+	if (rq)
+		pscrpc_req_finished(rq);
 
 	return (rc);
 }
