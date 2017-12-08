@@ -83,6 +83,7 @@ int			slm_min_space_lastcode;
 struct timespec		slm_min_space_lastcheck;
 int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 	
+struct fcmh_timeo_table slm_fcmh_callbacks;
 
 static void
 slm_root_attributes(struct srt_stat *attr)
@@ -246,7 +247,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
 		if (cb->fmc_nidpid.nid == nid &&
 		    cb->fmc_nidpid.pid == pid) {
-			psclist_del(tmp, &fmi->fmi_callback);
+			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			found = 1;
 			break;
 		}
@@ -277,6 +278,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_nidpid.pid = pid;
 		cb->fmc_exp = exp;
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
+		psclist_add(tmp, &fmi->fmi_callback);
+		pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	}
 	/*
  	 * At this point, cb can be the new callback or the one
