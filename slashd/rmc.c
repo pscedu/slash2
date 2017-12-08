@@ -227,6 +227,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	struct psclist_head *tmp;
 	struct fcmh_mds_info *fmi;
 	struct fcmh_mds_callback *cb;
+	struct pscrpc_request *rq = NULL;
+	struct slrpc_cservice *csvc = NULL;
 
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
@@ -247,6 +249,23 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 			break;
 		}
 	}
+	/*
+ 	 * If the number of users goes from 1 to 2, send callbacks.
+ 	 */
+	if (count == 1 && !found) {
+		OPSTAT_INCR("fcmh-send-callback");
+		csvc = slm_getclcsvc(cb->fmc_exp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
+		if (rc)
+			goto next;
+		rq->rq_async_args.pointer_arg[0] = csvc;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc)
+			goto next;
+	}
+
+ next:
+
 	if (!found) {
 		OPSTAT_INCR("fcmh-lease");
 		cb = psc_pool_get(slm_callback_pool);
@@ -254,15 +273,6 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_nidpid.pid = pid;
 		cb->fmc_exp = exp;
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
-	}
-	/*
- 	 * If the number of users goes from 1 to 2, send callbacks.
- 	 */
-	if (count == 1 && !found) {
-		OPSTAT_INCR("fcmh-send-callback");
-
-
-
 	}
 
 	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
