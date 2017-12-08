@@ -588,10 +588,18 @@ main(int argc, char *argv[])
 	    2048, 0, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
+
+	/*
+ 	 * Initialize file callback data structures.
+ 	 */
 	psc_poolmaster_init(&slm_callback_poolmaster,
 	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, 2048,
 	    2048, 0, NULL, "callback");
 	slm_callback_pool = psc_poolmaster_getmgr(&slm_callback_poolmaster);
+
+	INIT_SPINLOCK(&slm_fcmh_callbacks.ftt_lock);
+	pll_init(&slm_fcmh_callbacks.ftt_callbacks, struct fcmh_mds_callback,
+	    fmc_timeo_lentry, &slm_fcmh_callbacks.ftt_lock);
 
 	sl_nbrqset = pscrpc_prep_set();
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,

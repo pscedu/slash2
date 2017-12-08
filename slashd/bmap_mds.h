@@ -152,6 +152,10 @@ struct bmap_mds_lease {
 	time_t			  bml_start;
 	time_t			  bml_expire;
 	struct bmap_mds_info	 *bml_bmi;
+	/*
+	 * Either add a reference count or use pscrpc_get_connection()
+	 * or pscrpc_getpridforpeer() to find out export on the fly.
+	 */
 	struct pscrpc_export	 *bml_exp;
 	struct psc_listentry	  bml_bmi_lentry;
 	struct psc_listentry	  bml_timeo_lentry;
