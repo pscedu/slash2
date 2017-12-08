@@ -247,10 +247,14 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
 		if (cb->fmc_nidpid.nid == nid &&
 		    cb->fmc_nidpid.pid == pid) {
+			psc_assert(!found);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			found = 1;
-			break;
 		}
+	}
+	if (!count || (count == 1 && found)) {
+		*lease = slm_max_lease_timeout;
+		OPSTAT_INCR("fcmh-sole-callback");
 	}
 	/*
  	 * If the number of users goes from 1 to 2, send callbacks.
@@ -272,7 +276,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  next:
 
 	if (!found) {
-		OPSTAT_INCR("fcmh-lease");
+		OPSTAT_INCR("fcmh-new-callback");
 		cb = psc_pool_get(slm_callback_pool);
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
