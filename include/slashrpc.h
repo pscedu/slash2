@@ -196,6 +196,8 @@ enum {
 	SRMT_BATCH_RP,				/* 50: async batch reply */
 	SRMT_CTL,				/* 51: generic control */
 
+	SRMT_FILECB,				/* 52: file callback */
+
 	SRMT_TOTAL
 };
 
@@ -241,6 +243,12 @@ struct srt_ctlsetopt {
 	 int32_t		_pad;
 	uint64_t		opv;		/* value */
 };
+
+struct srm_filecb_req {
+	struct sl_fidgen	fg;		/* file */
+} __packed;
+
+#define srm_filecb_rep		srm_generic_rep
 
 #define SRMCTL_OPT_HEALTH	0
 

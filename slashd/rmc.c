@@ -226,6 +226,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	lnet_pid_t pid;
 	struct psclist_head *tmp;
 	struct fcmh_mds_info *fmi;
+	struct srm_filecb_req *mq;
+	struct srm_filecb_rep *mp;
 	struct fcmh_mds_callback *cb;
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc = NULL;
@@ -255,7 +257,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	if (count == 1 && !found) {
 		OPSTAT_INCR("fcmh-send-callback");
 		csvc = slm_getclcsvc(cb->fmc_exp);
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
 		if (rc)
 			goto next;
 		rq->rq_async_args.pointer_arg[0] = csvc;
