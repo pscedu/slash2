@@ -33,6 +33,7 @@
 
 #include "bmap.h"
 #include "bmap_mds.h"
+#include "fidc_mds.h"
 #include "journal_mds.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
@@ -300,9 +301,33 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 void
 slmcbtimeothr_begin(struct psc_thread *thr)
 {
+	int nsecs;
+	char wait[16];
+	struct fcmh_mds_callback *cb;
+
 	while (pscthr_run(thr)) {
 
+		nsecs = 0;
+		spinlock(&slm_fcmh_callbacks.ftt_lock);
+		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
+		if (!cb)
+			goto out;
+		nsecs = cb->fmc_expire - time(NULL);
+		if (nsecs > 0) {
+			goto out;
+		}
 
+		freelock(&slm_fcmh_callbacks.ftt_lock);
+
+ out:
+		psclog_debug("nsecs=%d", nsecs);
+
+		if (nsecs > 0) {
+			snprintf(wait, 16, "sleep %d", nsecs);
+			thr->pscthr_waitq = wait;
+			sleep((uint32_t)nsecs);
+			thr->pscthr_waitq = NULL;
+		}
 	}
 }
 
