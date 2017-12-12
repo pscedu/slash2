@@ -78,6 +78,7 @@ enum {
 	SLMTHRT_PAGER,			/* read SQL table */
 	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	SLMTHRT_WORKER,			/* miscellaneous work */
+	SLMTHRT_CALLBACK,		/* coherent callback */
 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
 };
 

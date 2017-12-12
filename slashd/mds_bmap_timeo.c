@@ -298,8 +298,20 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 }
 
 void
+slmcbtimeothr_begin(struct psc_thread *thr)
+{
+	while (pscthr_run(thr)) {
+
+
+	}
+}
+
+
+void
 slmbmaptimeothr_spawn(void)
 {
 	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, 0,
 	    "slmbmaptimeothr");
+	pscthr_init(SLMTHRT_CALLBACK, slmcbtimeothr_begin, 0,
+	    "slmcbtimeothr");
 }
