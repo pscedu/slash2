@@ -229,7 +229,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	struct fcmh_mds_info *fmi;
 	struct srm_filecb_req *mq;
 	struct srm_filecb_rep *mp;
-	struct fcmh_mds_callback *cb;
+	struct fcmh_mds_callback *cb, *found_cb;
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc = NULL;
 
@@ -237,6 +237,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	nid = exp->exp_connection->c_peer.nid;
 
 	rc = 0;
+	found = 0;
 	count = 0;
 	*lease = 0;
 
@@ -250,6 +251,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 			psc_assert(!found);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			found = 1;
+			found_cb = cb;
 		}
 	}
 	if (!count) {
@@ -287,7 +289,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_fmi = fcmh_2_fmi(f);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 		psclist_add(tmp, &fmi->fmi_callbacks);
-	}
+	} else
+		cb = found_cb;
 	/*
  	 * At this point, cb can be either a new callback or the one
  	 * found on the list.  In either case, we update its
