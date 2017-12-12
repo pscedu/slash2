@@ -334,7 +334,8 @@ slmcbtimeothr_begin(struct psc_thread *thr)
 		pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 		psc_pool_return(slm_callback_pool, cb);
 
-		FCMH_ULOCK(f);
+		fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
+
 		freelock(&slm_fcmh_callbacks.ftt_lock);
 
  out:
