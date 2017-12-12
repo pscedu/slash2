@@ -225,7 +225,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	int rc, count, found;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
-	struct psclist_head *tmp;
+	struct psc_listentry *tmp;
 	struct fcmh_mds_info *fmi;
 	struct srm_filecb_req *mq;
 	struct srm_filecb_rep *mp;
@@ -252,15 +252,19 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 			found = 1;
 		}
 	}
-	if (!count || (count == 1 && found)) {
+	if (!count) {
 		*lease = slm_max_lease_timeout;
-		OPSTAT_INCR("fcmh-sole-callback");
+		OPSTAT_INCR("slm-new-callback");
+	}
+	if (count == 1 && found) {
+		*lease = slm_max_lease_timeout;
+		OPSTAT_INCR("slm-renew-callback");
 	}
 	/*
  	 * If the number of users goes from 1 to 2, send callbacks.
  	 */
 	if (count == 1 && !found) {
-		OPSTAT_INCR("fcmh-send-callback");
+		OPSTAT_INCR("slm-invoke-callback");
 		csvc = slm_getclcsvc(cb->fmc_exp);
 		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
 		if (rc)
@@ -276,22 +280,20 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  next:
 
 	if (!found) {
-		OPSTAT_INCR("fcmh-new-callback");
 		cb = psc_pool_get(slm_callback_pool);
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
 		cb->fmc_exp = exp;
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 		psclist_add(tmp, &fmi->fmi_callback);
-		pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	}
 	/*
- 	 * At this point, cb can be the new callback or the one
+ 	 * At this point, cb can be either a new callback or the one
  	 * found on the list.  In either case, we update its
  	 * expiration time, and add it to the end of the list.
  	 */
 	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
-	psclist_add(&cb->fmc_lentry, &fmi->fmi_callback);
+	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
 
 	if (rq)

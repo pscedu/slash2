@@ -38,6 +38,10 @@ extern struct psc_poolmgr	*slm_callback_pool;
 
 struct fcmh_mds_callback {
 	int32_t			  fmc_flags;
+	/*
+ 	 * The time period during which the MDS assumes that
+ 	 * the client is still accessing the file.
+ 	 */
 	int32_t			  fmc_expire;
 	lnet_process_id_t	  fmc_nidpid;
 	struct pscrpc_export	 *fmc_exp;
