@@ -242,7 +242,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
-	psclist_for_each(tmp, &fmi->fmi_callback) {
+	psclist_for_each(tmp, &fmi->fmi_callbacks) {
 		count++;
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
 		if (cb->fmc_nidpid.nid == nid &&
@@ -286,7 +286,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_exp = exp;
 		cb->fmc_fmi = fcmh_2_fmi(f);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
-		psclist_add(tmp, &fmi->fmi_callback);
+		psclist_add(tmp, &fmi->fmi_callbacks);
 	}
 	/*
  	 * At this point, cb can be either a new callback or the one

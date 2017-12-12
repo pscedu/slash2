@@ -330,7 +330,7 @@ slmcbtimeothr_begin(struct psc_thread *thr)
 			freelock(&slm_fcmh_callbacks.ftt_lock);
 			goto out;
 		}
-		psclist_del(&cb->fmc_lentry, &fmi->fmi_callback);
+		psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
 		pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 		psc_pool_return(slm_callback_pool, cb);
 
