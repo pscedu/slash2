@@ -303,6 +303,7 @@ slmcbtimeothr_begin(struct psc_thread *thr)
 {
 	int nsecs;
 	char wait[16];
+	struct fidc_membh *f;
 	struct fcmh_mds_callback *cb;
 
 	while (pscthr_run(thr)) {
@@ -310,13 +311,17 @@ slmcbtimeothr_begin(struct psc_thread *thr)
 		nsecs = 0;
 		spinlock(&slm_fcmh_callbacks.ftt_lock);
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
-		if (!cb)
-			goto out;
-		nsecs = cb->fmc_expire - time(NULL);
-		if (nsecs > 0) {
+		if (!cb) {
+			freelock(&slm_fcmh_callbacks.ftt_lock);
+			nsecs = slm_max_lease_timeout;
 			goto out;
 		}
-
+		f = fmi_2_fcmh(cb->fmc_fmi);
+		nsecs = cb->fmc_expire - time(NULL);
+		if (nsecs > 0) {
+			freelock(&slm_fcmh_callbacks.ftt_lock);
+			goto out;
+		}
 		freelock(&slm_fcmh_callbacks.ftt_lock);
 
  out:
