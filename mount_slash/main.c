@@ -1832,7 +1832,7 @@ msl_readdir_issue(struct fidc_membh *d, off_t off, size_t size,
 	p = dircache_new_page(d, off, block);
 	if (p == NULL) {
 		DIRCACHE_ULOCK(d);
-		return (-ESRCH);
+		return (-ENOMEM);
 	}
 
 	DIRCACHE_ULOCK(d);
