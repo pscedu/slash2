@@ -287,8 +287,10 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_nidpid.pid = pid;
 		cb->fmc_exp = exp;
 		cb->fmc_fmi = fcmh_2_fmi(f);
+		INIT_PSC_LISTENTRY(&cb->fmc_lentry);
+		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
-		psclist_add(tmp, &fmi->fmi_callbacks);
+		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
 	} else
 		cb = found_cb;
 	/*
