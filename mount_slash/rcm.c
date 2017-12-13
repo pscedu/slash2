@@ -329,6 +329,21 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 }
 
 /*
+ * Handle a BMAPDIO request for CLI from MDS.
+ * @rq: request.
+ */
+int
+msrcm_handle_file_cb(struct pscrpc_request *rq)
+{
+
+
+
+
+
+}
+
+
+/*
  * Handle a request for CLI from MDS.
  * @rq: request.
  */
@@ -361,6 +376,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_BMAPDIO:
 		rc = msrcm_handle_bmapdio(rq);
+		break;
+	case SRMT_FILECB:
+		rc = msrcm_handle_file_cb(rq);
 		break;
 
 	default:
