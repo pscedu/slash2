@@ -914,6 +914,10 @@ msl_bmap_reap_init(struct bmap *b)
 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAPF_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
+		/*
+		 * If the MDS knows some IOS that the client does not
+		 * know due to mismatch config files, this can happen.
+		 */
 		if (!r)
 			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
 		psc_assert(b->bcm_flags & BMAPF_WR);
