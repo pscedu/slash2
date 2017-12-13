@@ -335,11 +335,21 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 int
 msrcm_handle_file_cb(struct pscrpc_request *rq)
 {
+	struct srm_filecb_req *mq; 
+	struct srm_filecb_rep *mp; 
+	struct fidc_membh *f = NULL;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	mp->rc = sl_fcmh_peek_fg(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 
-
-
-
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (0);
 }
 
 
