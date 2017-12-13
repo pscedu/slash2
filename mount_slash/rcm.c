@@ -337,6 +337,8 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 {
 	struct srm_filecb_req *mq; 
 	struct srm_filecb_rep *mp; 
+
+	struct fcmh_cli_info *fci;
 	struct fidc_membh *f = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -345,6 +347,21 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	FCMH_LOCK(f);
+	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
+		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
+		OPSTAT_INCR("msl.callback-invalidate-attrs");
+	}
+	if (fcmh_isdir(f)) {
+		fci = fcmh_get_pri(f);
+		if (psc_listhd_empty(&fci->fcid_entlist))
+			OPSTAT_INCR("msl.callback-invalidate-empty");
+		else {
+			OPSTAT_INCR("msl.callback-invalidte-dentry");
+			dircache_trim(f, 1);
+		}
+	}
+	FCMH_ULOCK(f);
 
  out:
 	if (f)
