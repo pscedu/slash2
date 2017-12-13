@@ -121,7 +121,7 @@ struct dircache_page {
  * Determine if a page of dirents should be evicted.
  */
 #define DIRCACHEPG_EXPIRED(d, p, expire)				\
-	(timespeccmp(&(p)->dcp_expire, (expire), >) ||			\
+	(timespeccmp(&(p)->dcp_expire, (expire), <) ||			\
 	  (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\

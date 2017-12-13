@@ -1777,7 +1777,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	if (!rc) {
 		if (mp->lease)
-			p->dcp_expire.tv_sec += DIRCACHEPG_DEF_TIMEOUT;
+			p->dcp_expire.tv_sec += mp->lease;
 		else
 			p->dcp_expire.tv_sec += DIRCACHEPG_MIN_TIMEOUT;
 	}
