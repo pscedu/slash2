@@ -3956,6 +3956,10 @@ msattrflushthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			break;
 		}
+		/*
+		 * XXX walk the entire list to find out how long we 
+		 * should wait.
+		 */
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
