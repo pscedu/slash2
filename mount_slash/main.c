@@ -731,8 +731,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
-		now.tv_sec -= msl_attributes_timeout;
-		if (now.tv_sec < fci->fci_age.tv_sec) {
+		if (now.tv_sec <= fci->fci_age.tv_sec) {
 			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
@@ -1202,8 +1201,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
 			PFL_GETTIMEVAL(&now);
 			fci = fcmh_2_fci(c);
-			now.tv_sec -= msl_attributes_timeout;
-			if (now.tv_sec < fci->fci_age.tv_sec) {
+			if (now.tv_sec <= fci->fci_age.tv_sec) {
 				if (sstb)
 					*sstb = c->fcmh_sstb;
 				goto out;
@@ -3562,7 +3560,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
-		now.tv_sec -= msl_attributes_timeout;
 		fci = fcmh_2_fci(f);
 		if (now.tv_sec >= fci->fci_age.tv_sec) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
@@ -3768,10 +3765,9 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
-		now.tv_sec -= msl_attributes_timeout;
 		fci = fcmh_2_fci(f);
 		locked = FCMH_RLOCK(f);
-		if (now.tv_sec < fci->fci_age.tv_sec &&
+		if (now.tv_sec <= fci->fci_age.tv_sec &&
 		    fci->fci_xattrsize == 0)
 			rc = ENODATA; // ENOATTR
 		FCMH_URLOCK(f, locked);

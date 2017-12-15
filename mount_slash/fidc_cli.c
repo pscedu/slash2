@@ -64,7 +64,7 @@
  */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
-    int flags, int32_t expire)
+    int flags, int32_t lease)
 {
 	struct fcmh_cli_info *fci;
 
@@ -140,6 +140,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 
 	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&fci->fci_age);
+	fci->fci_age.tv_sec += lease;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
