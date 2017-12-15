@@ -677,8 +677,8 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 }
 
 int
-slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
-    int opflags, struct fidc_membh **dp)
+slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq, 
+    struct srm_mkdir_rep *mp, int opflags, struct fidc_membh **dp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	slfid_t fid = 0;
@@ -699,6 +699,10 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 	}
 
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -754,7 +758,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
+	return (slm_mkdir(vfsid, rq, mq, mp, 0, NULL));
 }
 
 int
