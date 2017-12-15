@@ -3756,14 +3756,12 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 	struct srm_getxattr_req *mq;
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
-
+	struct timeval now;
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
-		struct timeval now;
-
 		PFL_GETTIMEVAL(&now);
 		fci = fcmh_2_fci(f);
 		locked = FCMH_RLOCK(f);
