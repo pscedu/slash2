@@ -597,6 +597,10 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	psclog_diag("lookup: pfid="SLPRI_FID" name=%s", fcmh_2_mfid(p),
 	    mq->name);
