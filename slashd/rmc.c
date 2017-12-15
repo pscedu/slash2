@@ -255,11 +255,11 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		}
 	}
 	if (!count) {
-		*lease = slm_max_lease_timeout;
+		*lease = slm_callback_timeout;
 		OPSTAT_INCR("slm-new-callback");
 	}
 	if (count == 1 && found) {
-		*lease = slm_max_lease_timeout;
+		*lease = slm_callback_timeout;
 		OPSTAT_INCR("slm-renew-callback");
 	}
 	/*
