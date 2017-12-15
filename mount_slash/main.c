@@ -172,8 +172,6 @@ uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
 int				 msl_max_namecache_per_directory = 65536; 
 
-int				 msl_attributes_timeout = FCMH_ATTR_TIMEO;
-
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
 int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
 int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
@@ -3948,8 +3946,6 @@ msattrflushthr_main(struct psc_thread *thr)
 	struct fidc_membh *f;
 
 	while (pscthr_run(thr)) {
-		nexttimeo.tv_sec = msl_attributes_timeout;
-		nexttimeo.tv_nsec = 0;
 
 		LIST_CACHE_LOCK(&msl_attrtimeoutq);
 		if (lc_peekheadwait(&msl_attrtimeoutq) == NULL) {

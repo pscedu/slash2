@@ -1065,9 +1065,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("sys.acl_enabled",
 	    msctlparam_acl_get, msctlparam_acl_set);
 
-	psc_ctlparam_register_var("sys.attr_timeout", PFLCTL_PARAMT_INT,
-	    PFLCTL_PARAMF_RDWR, &msl_attributes_timeout);
-
 	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
 
