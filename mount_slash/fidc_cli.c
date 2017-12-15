@@ -64,7 +64,7 @@
  */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
-    int flags)
+    int flags, int32_t expire)
 {
 	struct fcmh_cli_info *fci;
 

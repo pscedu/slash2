@@ -431,7 +431,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		}
 		FCMH_LOCK(f);
 		OPSTAT_INCR("msl.readdir-fcmh");
-		slc_fcmh_setattr_locked(f, &e->sstb);
+		slc_fcmh_setattr_locked(f, &e->sstb, lease);
 
 #if 0
 		/*

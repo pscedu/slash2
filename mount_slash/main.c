@@ -410,9 +410,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_create_rep *mp = NULL;
 	struct msl_fhent *mfh = NULL;
+
 	struct srm_create_req *mq;
+	struct srm_create_rep *mp = NULL;
+
 	struct fcmh_cli_info *fci = NULL;
 	struct bmap_cli_info *bci;
 	struct pscfs_creds pcr;
@@ -475,7 +477,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -507,7 +509,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
-	    FCMH_SETATTRF_CLOBBER);
+	    FCMH_SETATTRF_CLOBBER, mp->lease);
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	fci = fcmh_2_fci(c);
@@ -762,7 +764,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
 		rc = EBADF;
 	if (!rc) {
-		slc_fcmh_setattr_locked(f, &mp->attr);
+		slc_fcmh_setattr_locked(f, &mp->attr, mp->lease);
 		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 	}
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
@@ -891,10 +893,10 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr);
+	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
@@ -985,7 +987,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -995,7 +997,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr);
+	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
@@ -1063,7 +1065,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*fgp = mp->attr.sst_fg;
 
 	FCMH_LOCK(f);
-	slc_fcmh_setattr_locked(f, &mp->attr);
+	slc_fcmh_setattr_locked(f, &mp->attr, mp->lease);
 	msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 
 	if (sstb)
@@ -1502,14 +1504,14 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");
 	else {
 		FCMH_LOCK(c);
 		if (mp->valid) {
-			slc_fcmh_setattr_locked(c, &mp->cattr);
+			slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 		} else {
 			c->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.delete-marked");
@@ -1616,7 +1618,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -1626,7 +1628,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr);
+	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
@@ -2294,7 +2296,7 @@ again:
 	}
 
 	if (!rc)
-		slc_fcmh_setattrf(f, &mp->attr, setattrflags);
+		slc_fcmh_setattrf(f, &mp->attr, setattrflags, mp->lease);
  out:
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
@@ -2670,16 +2672,16 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		PFL_GOTOERR(out, rc);
 
 	/* refresh old parent attributes */
-	slc_fcmh_setattr(op, &mp->srr_opattr);
+	slc_fcmh_setattr(op, &mp->srr_opattr, mp->lease);
 
 	if (np != op)
 		/* refresh new parent attributes */
-		slc_fcmh_setattr(np, &mp->srr_npattr);
+		slc_fcmh_setattr(np, &mp->srr_npattr, mp->lease);
 
 	/* refresh moved file's attributes */
 	if (mp->srr_cattr.sst_fid != FID_ANY &&
 	    msl_fcmh_load_fg(&mp->srr_cattr.sst_fg, &ch, pfr) == 0) {
-		slc_fcmh_setattr(ch, &mp->srr_cattr);
+		slc_fcmh_setattr(ch, &mp->srr_cattr, mp->lease);
 		fcmh_op_done(ch);
 	}
 
@@ -2707,7 +2709,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
 		}
-		slc_fcmh_setattr_locked(ch, &mp->srr_clattr);
+		slc_fcmh_setattr_locked(ch, &mp->srr_clattr, mp->lease);
 		fcmh_op_done(ch);
 	}
 
@@ -2888,14 +2890,14 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr);
+	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 

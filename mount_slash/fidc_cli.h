@@ -128,10 +128,10 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
 
-#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
-#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
+#define slc_fcmh_setattr(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), 0, lease)
+#define slc_fcmh_setattr_locked(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, lease)
 
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);
