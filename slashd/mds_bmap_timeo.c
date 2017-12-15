@@ -242,7 +242,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {
 			freelock(&slm_bmap_leases.btt_lock);
-			nsecs = slm_max_lease_timeout;
+			nsecs = slm_lease_timeout;
 			goto out;
 		}
 		b = bml_2_bmap(bml);
@@ -314,7 +314,7 @@ slmcbtimeothr_begin(struct psc_thread *thr)
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
 		if (!cb) {
 			freelock(&slm_fcmh_callbacks.ftt_lock);
-			nsecs = slm_max_lease_timeout;
+			nsecs = slm_lease_timeout;
 			goto out;
 		}
 		fmi = cb->fmc_fmi;

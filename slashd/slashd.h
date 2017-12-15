@@ -47,7 +47,7 @@ struct srt_stat;
 
 struct slm_sth;
 struct bmap_mds_lease;
-extern int slm_max_lease_timeout;
+extern int slm_lease_timeout;
 extern int slm_callback_timeout;
 
 #define CALLBACK_TIMEO_MAX             240     /* default callback timeout */

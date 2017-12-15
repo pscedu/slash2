@@ -530,7 +530,7 @@ slmctlparam_commit_get(char *val)
 void
 slmctlparam_max_lease_get(char *val)
 {
-	snprintf(val, PCP_VALUE_MAX, "%d", slm_max_lease_timeout);
+	snprintf(val, PCP_VALUE_MAX, "%d", slm_lease_timeout);
 }
 
 int
@@ -545,7 +545,7 @@ slmctlparam_max_lease_set(const char *val)
 		rc = -1;
 	else {
 		if (l >= BMAP_TIMEO_MIN && l <= BMAP_TIMEO_MAX)
-			slm_max_lease_timeout = l;
+			slm_lease_timeout = l;
 		else
 			rc = -1;
 	}

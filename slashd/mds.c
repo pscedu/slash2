@@ -59,7 +59,7 @@
 struct pfl_odt		*slm_bia_odt;
 
 int			slm_max_ios = SL_MAX_REPLICAS;
-int			slm_max_lease_timeout = BMAP_TIMEO_MAX;
+int			slm_lease_timeout = BMAP_TIMEO_MAX;
 int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
 
 /*
@@ -1365,7 +1365,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1443,7 +1443,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + slm_max_lease_timeout;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 
 	/*
 	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
@@ -1579,7 +1579,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
-	sbd->sbd_expire = slm_max_lease_timeout;
+	sbd->sbd_expire = slm_lease_timeout;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1663,7 +1663,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		PFL_GOTOERR(out1, rc);
 
 	obml->bml_start = time(NULL);
-	obml->bml_expire = obml->bml_start + slm_max_lease_timeout;
+	obml->bml_expire = obml->bml_start + slm_lease_timeout;
 
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
@@ -1687,7 +1687,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Do some post setup on the modified lease. */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
-	sbd_out->sbd_expire = slm_max_lease_timeout;
+	sbd_out->sbd_expire = slm_lease_timeout;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 	sbd_out->sbd_ios = obml->bml_ios;
@@ -1749,7 +1749,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
-	sbd_out->sbd_expire = slm_max_lease_timeout;
+	sbd_out->sbd_expire = slm_lease_timeout;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 

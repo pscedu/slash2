@@ -298,7 +298,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 * found on the list.  In either case, we update its
  	 * expiration time, and add it to the end of the list.
  	 */
-	cb->fmc_expire = time(NULL) + slm_max_lease_timeout;
+	cb->fmc_expire = time(NULL) + slm_lease_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
 
