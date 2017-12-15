@@ -60,6 +60,7 @@ struct pfl_odt		*slm_bia_odt;
 
 int			slm_max_ios = SL_MAX_REPLICAS;
 int			slm_max_lease_timeout = BMAP_TIMEO_MAX;
+int			slm_max_callback_timeout = CALLBACK_TIMEO_MAX;
 
 /*
  * Knobs that allow us to turn off some features easily if
