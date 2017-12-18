@@ -1001,8 +1001,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, mp->lease, &stb,
+	    mp->lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
@@ -2614,7 +2614,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				/* XXX race */
 				rc = msl_lookup_fidcache(pfr, &pcr,
 				    npinum, newname, &dstfg, &dstsstb,
-				    NULL);
+				    NULL, NULL);
 				if (rc == 0 && dstsstb.sst_uid != pcr.pcr_uid)
 					rc = EACCES;
 				else
