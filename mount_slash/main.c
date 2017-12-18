@@ -1008,8 +1008,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, mp->lease, &stb,
-	    mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
+	    (double)mp->lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
@@ -1642,8 +1642,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, mp->lease, &stb,
-	    mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
+	    (double)mp->lease, rc);
 
 	psclogs_diag(SLCSS_FSOP, "MKNOD: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
@@ -2918,8 +2918,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, mp->lease, &stb,
-	    mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
+	    (double)mp->lease, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
