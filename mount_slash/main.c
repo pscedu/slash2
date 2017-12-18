@@ -1070,6 +1070,10 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 		*sstb = f->fcmh_sstb;
 
  out:
+	/* Even a negative lookup have a lease */
+	if (lease && mp)
+		*lease = mp->lease;
+
 	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
 	    "cfid="SLPRI_FID" rc=%d",
 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
@@ -2575,7 +2579,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 		if (sticky) {
 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
-			    oldname, &srcfg, &srcsstb, &child);
+			    oldname, &srcfg, &srcsstb, &child, NULL);
 			if (rc)
 				PFL_GOTOERR(out, rc);
 			if (srcsstb.sst_uid != pcr.pcr_uid)
