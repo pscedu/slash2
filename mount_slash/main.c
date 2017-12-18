@@ -1020,7 +1020,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 __static int
 msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp)
+    struct fidc_membh **fp, int32_t *lease)
 {
 	slfid_t pfid = fcmh_2_fid(p);
 	struct slrpc_cservice *csvc = NULL;
@@ -1116,7 +1116,7 @@ __static int
 msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
-    struct fidc_membh **fp)
+    struct fidc_membh **fp, int32_t *lease)
 {
 	pscfs_inum_t inum;
 	struct fidc_membh *p = NULL, *c = NULL;
@@ -1212,7 +1212,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
  rpc:
 
-	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
+	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c, lease);
  out:
 
 	if (rc == 0 && fp) {
@@ -2077,6 +2077,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
 	struct stat stb;
+	int32_t lease;
 	int rc;
 
 	memset(&sstb, 0, sizeof(sstb));
@@ -2087,7 +2088,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	slc_getfscreds(pfr, &pcr, 1);
-	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &c);
+	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, 
+	    &sstb, &c, &lease);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	msl_internalize_stat(&sstb, &stb);
@@ -2096,7 +2098,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
-	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
+	    lease, &stb, lease, rc);
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -2622,7 +2624,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (pcr.pcr_uid) {
 		if (srcfg.fg_fid == FID_ANY) {
 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
-			    oldname, &srcfg, &srcsstb, &child);
+			    oldname, &srcfg, &srcsstb, &child, NULL);
 			if (rc)
 				PFL_GOTOERR(out, rc);
 		}
