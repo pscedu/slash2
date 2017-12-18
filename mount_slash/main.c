@@ -569,7 +569,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
 	    pscfs_attr_timeout, mfh, rflags, rc);
 
 	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
@@ -783,6 +783,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct fidc_membh *f = NULL;
 	struct stat stb;
+	struct fcmh_cli_info *fci;
 	int rc;
 
 
@@ -812,11 +813,11 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
  out:
+	fci = fcmh_2_fci(c);
+	pscfs_reply_getattr(pfr, &stb, (double)fci->fci_timeout, rc);
 	if (f)
 		fcmh_op_done(f);
-	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
-	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d",
-	    rc);
+	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d", rc);
 }
 
 void
@@ -4250,9 +4251,6 @@ msl_init(void)
 		if (csvc)
 			sl_csvc_decref(csvc);
 	}
-
-	pscfs_attr_timeout = (double)PSCFS_ATTR_TIMEOUT; 
-	pscfs_entry_timeout = (double)PSCFS_ENTRY_TIMEOUT;
 
 	/* Catch future breakage after two-day's debugging */
 	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
