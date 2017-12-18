@@ -3958,10 +3958,12 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
+	int skip;
 	struct timespec ts, nexttimeo;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 
+	nexttimeo.tv_nsec = 0;
 	while (pscthr_run(thr)) {
 
 		LIST_CACHE_LOCK(&msl_attrtimeoutq);
@@ -3973,11 +3975,15 @@ msattrflushthr_main(struct psc_thread *thr)
 		 * XXX walk the entire list to find out how long we 
 		 * should wait.
 		 */
+		skip = 1;
+		nexttimeo.tv_sec = 300;
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
-			if (!FCMH_TRYLOCK(f))
+			if (!FCMH_TRYLOCK(f)) {
+				skip = 1;
 				continue;
+			}
 
 			if (f->fcmh_flags & FCMH_BUSY) {
 				FCMH_ULOCK(f);
@@ -3985,8 +3991,11 @@ msattrflushthr_main(struct psc_thread *thr)
 			}
 
 			if (timespeccmp(&fci->fci_etime, &ts, >)) {
-				timespecsub(&fci->fci_etime, &ts,
-				    &nexttimeo);
+				if (fci->fci_etime.tv_sec - ts.tv_sec < 
+				    nexttimeo.tv_sec) {
+				    nexttimeo.tv_sec = fci->fci_etime.tv_sec - 
+						ts.tv_sec;
+				}
 				FCMH_ULOCK(f);
 				continue;
 			}
@@ -3997,11 +4006,12 @@ msattrflushthr_main(struct psc_thread *thr)
 			msl_flush_ioattrs(NULL, f);
 			break;
 		}
-		if (fci == NULL) {
-			OPSTAT_INCR("msl.flush-attr-wait");
-			psc_waitq_waitrel_ts(&msl_flush_attrq,
-			    &msl_attrtimeoutq.plc_lock, &nexttimeo);
-		}
+		if (skip)
+			nexttimeo.tv_sec = 1;
+		
+		OPSTAT_INCR("msl.flush-attr-wait");
+		psc_waitq_waitrel_ts(&msl_flush_attrq,
+		    &msl_attrtimeoutq.plc_lock, &nexttimeo);
 	}
 }
 
