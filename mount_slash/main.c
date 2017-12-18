@@ -570,7 +570,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
-	    pscfs_attr_timeout, mfh, rflags, rc);
+	    (double)mp->lease, mfh, rflags, rc);
 
 	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	//psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
@@ -698,7 +698,7 @@ mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 }
 
 int
-msl_stat(struct fidc_membh *f, void *arg)
+msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -785,6 +785,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	struct fcmh_cli_info *fci;
 	int rc;
+	int32_t lease;
 
 
 	/*
@@ -802,7 +803,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	rc = msl_stat(f, pfr);
+	rc = msl_stat(f, pfr, &lease);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -813,8 +814,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
  out:
-	fci = fcmh_2_fci(c);
-	pscfs_reply_getattr(pfr, &stb, (double)fci->fci_timeout, rc);
+	pscfs_reply_getattr(pfr, &stb, (double)lease, rc);
 	if (f)
 		fcmh_op_done(f);
 	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d", rc);
@@ -903,8 +903,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
+	    (double)mp->lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
@@ -2240,7 +2240,7 @@ msl_flush(struct msl_fhent *mfh)
  */
 int
 msl_setattr(struct fidc_membh *f, int32_t to_set,
-    const struct srt_stat *sstb, int setattrflags)
+    const struct srt_stat *sstb, int setattrflags, int32_t *lease)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -2301,6 +2301,8 @@ again:
 	if (!rc)
 		slc_fcmh_setattrf(f, &mp->attr, setattrflags, mp->lease);
  out:
+	if (lease & mp)
+		lease = mp->lease;
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
 	pscrpc_req_finished(rq);
@@ -2350,7 +2352,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 	}
 
 	FCMH_ULOCK(f);
-	rc = msl_setattr(f, to_set, &attr, 0);
+	rc = msl_setattr(f, to_set, &attr, 0, NULL);
 	FCMH_LOCK(f);
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -2909,8 +2911,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, mp->lease, &stb,
+	    mp->lease, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
@@ -2974,6 +2976,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct timespec ts;
+	int32_t lease;
 
 	memset(&mdie, 0, sizeof(mdie));
 
@@ -3229,7 +3232,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		setattrflags |= FCMH_SETATTRF_CLOBBER;
 
  retry:
-	rc = msl_setattr(c, to_set, &sstb, setattrflags);
+	rc = msl_setattr(c, to_set, &sstb, setattrflags, &lease);
 	if (rc && slc_rpc_should_retry(pfr, &rc))
 		goto retry;
 
