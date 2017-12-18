@@ -698,6 +698,14 @@ mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 }
 
 int
+slc_fcmh_getattr(struct fidc_membh *f, void *arg)
+{
+	int rc;
+	rc = msl_stat(f, arg, NULL);
+	return (rc);
+}
+
+int
 msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
 {
 	struct slrpc_cservice *csvc = NULL;
@@ -783,7 +791,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct fidc_membh *f = NULL;
 	struct stat stb;
-	struct fcmh_cli_info *fci;
 	int rc;
 	int32_t lease;
 
@@ -2301,8 +2308,8 @@ again:
 	if (!rc)
 		slc_fcmh_setattrf(f, &mp->attr, setattrflags, mp->lease);
  out:
-	if (lease & mp)
-		lease = mp->lease;
+	if (lease && mp)
+		*lease = mp->lease;
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
 	pscrpc_req_finished(rq);
@@ -3277,7 +3284,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	}
 
-	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
+	pscfs_reply_setattr(pfr, stb, (double)lease, rc);
 
 	if (c) {
 

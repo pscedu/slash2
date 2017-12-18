@@ -298,6 +298,6 @@ dump_fcmh_flags(int flags)
 struct sl_fcmh_ops sl_fcmh_ops = {
 	slc_fcmh_ctor,		/* sfop_ctor */
 	slc_fcmh_dtor,		/* sfop_dtor */
-	msl_stat,		/* sfop_getattr */
+	slc_fcmh_getattr,	/* sfop_getattr */
 	NULL			/* sfop_modify */
 };
