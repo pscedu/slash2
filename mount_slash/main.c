@@ -2109,7 +2109,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
-	    lease, &stb, lease, rc);
+	    (double)lease, &stb, (double)lease, rc);
 	if (c)
 		fcmh_op_done(c);
 	if (p)

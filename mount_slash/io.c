@@ -2040,6 +2040,8 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fci->fci_etime.tv_sec = ts.tv_sec + fci->fci_timeout;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
+
+		/* feed work for msattrflushthr_main() */
 		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	}
