@@ -2850,6 +2850,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct iovec iov;
 	struct stat stb;
 	int rc;
+	int32_t lease = 0;
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2916,11 +2917,12 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msl_invalidate_readdir(p);
 	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
+	lease = mp->lease;
 
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
-	    (double)mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, rc);
 
 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" name='%s' rc=%d",
