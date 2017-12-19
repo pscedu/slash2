@@ -597,8 +597,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	int rc = 0;
 
 	*mfhp = NULL;
-
-
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
@@ -769,6 +767,8 @@ msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
 		rc = EBADF;
 	if (!rc) {
+		if (lease)
+			*lease = mp->lease;
 		slc_fcmh_setattr_locked(f, &mp->attr, mp->lease);
 		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 	}
@@ -792,8 +792,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct fidc_membh *f = NULL;
 	struct stat stb;
 	int rc;
-	int32_t lease;
-
+	int32_t lease = 0;
 
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
