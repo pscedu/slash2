@@ -838,7 +838,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc = 0;
-	int32_t lease;
+	int32_t lease = 0;
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2089,7 +2089,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
 	struct stat stb;
-	int32_t lease;
+	int32_t lease = 0;
 	int rc;
 
 	memset(&sstb, 0, sizeof(sstb));
