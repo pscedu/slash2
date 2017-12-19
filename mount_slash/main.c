@@ -2984,7 +2984,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct srt_stat sstb;
 	struct timespec ts;
-	int32_t lease;
+	int32_t lease = 0;
 
 	memset(&mdie, 0, sizeof(mdie));
 
@@ -3972,11 +3972,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			break;
 		}
-		/*
-		 * XXX walk the entire list to find out how long we 
-		 * should wait.
-		 */
-		skip = 1;
+		skip = 0;
 		nexttimeo.tv_sec = 300;
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
