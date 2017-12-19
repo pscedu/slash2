@@ -838,6 +838,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc = 0;
+	int32_t lease;
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -899,6 +900,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
+	lease = mp->lease;
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
@@ -909,8 +911,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
-	    (double)mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
