@@ -3998,13 +3998,15 @@ msattrflushthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				continue;
 			}
+			FCMH_ULOCK(f);
 
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
-
-			FCMH_ULOCK(f);
 			msl_flush_ioattrs(NULL, f);
 			break;
 		}
+		if (fci)
+			continue;
+
 		if (skip)
 			nexttimeo.tv_sec = 1;
 		
