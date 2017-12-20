@@ -939,6 +939,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
+	int32_t lease = 0;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -965,6 +966,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		mode |= S_ISGID;
+
 
  retry1:
 
@@ -1006,11 +1008,12 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
+	lease = mp->lease;
 
  out:
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
-	    (double)mp->lease, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
