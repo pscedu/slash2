@@ -323,7 +323,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
-		rc = sl_fcmh_ops.sfop_getattr(f, arg);	/* msl_stat() */
+		/* call slc_fcmh_getattr() */
+		rc = sl_fcmh_ops.sfop_getattr(f, arg);
 	}
 
  finish:
