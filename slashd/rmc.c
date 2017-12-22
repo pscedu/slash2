@@ -1767,7 +1767,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, mq->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

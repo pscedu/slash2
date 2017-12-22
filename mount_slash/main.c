@@ -1516,7 +1516,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, NULL);
+	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
 
 	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");

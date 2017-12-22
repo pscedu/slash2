@@ -1018,7 +1018,8 @@ struct srm_unlink_rep {
 	struct srt_stat		cattr;		/* child node - FID always valid */
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		valid;		/* child attr valid */
-	 int32_t		rc;		/* no lease required */
+	 int32_t		lease;		/* lease for parent attributes */
+	 int32_t		rc;
 } __packed;
 
 struct srm_listxattr_req {
