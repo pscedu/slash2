@@ -214,9 +214,9 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  * Register our intention to access the file. If there are other clients 
  * interested in the same file, let them know.
  *
- * Note that we don't ask a callback explicitly. This way, we only incur
- * overhead when more than one client is access the same file around the
- * same time window.
+ * Note that a client doesn't ask for a callback explicitly. This way, we 
+ * only incur overhead when more than one client is access the same file 
+ * around the same time window.
  */
 int
 slm_fcmh_coherent_callback(struct fidc_membh *f, 
@@ -1755,6 +1755,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	chfg = attr.sst_fg;
 	mp->rc = -slm_fcmh_get(&chfg, &c);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
