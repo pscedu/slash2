@@ -194,8 +194,10 @@ dircache_purge(struct fidc_membh *d)
 	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
 
-	DIRCACHE_WR_ENSURE(d);
+	if (!(d->fcmh_flags & FCMHF_INIT_DIRCACHE))
+		return;
 
+	DIRCACHE_WRLOCK(d);
 	fci = fcmh_2_fci(d);
 	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry)
 		dircache_free_page(d, p);
@@ -209,6 +211,7 @@ dircache_purge(struct fidc_membh *d)
 			PSCFREE(dce->dce_name);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
+	DIRCACHE_ULOCK(d);
 }
 
 /*

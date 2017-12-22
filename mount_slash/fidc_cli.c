@@ -255,16 +255,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 slc_fcmh_dtor(struct fidc_membh *f)
 {
-	if (f->fcmh_flags & FCMHF_INIT_DIRCACHE) {
-		/*
-		 * We must lock here or other threads with HOLDs on ents
-		 * can race with us.
-		 */
-		DIRCACHE_WRLOCK(f);
-		dircache_purge(f);
-		DIRCACHE_ULOCK(f);
-	}
-
+	dircache_purge(f);
 	DEBUG_FCMH(PLL_DEBUG, f, "dtor");
 }
 
