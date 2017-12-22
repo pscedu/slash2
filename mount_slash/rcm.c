@@ -360,6 +360,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 			OPSTAT_INCR("msl.callback-invalidte-dentry");
 			dircache_trim(f, 1);
 		}
+		dircache_purge(f);
 	}
 	FCMH_ULOCK(f);
 
