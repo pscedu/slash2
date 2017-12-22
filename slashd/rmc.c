@@ -868,9 +868,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
 
 	DEBUG_FCMH(level, p, "create op start for %s", mq->name);
 
@@ -913,6 +910,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
+
+	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 #if 0
 	mp->rc2 = ENOENT;
