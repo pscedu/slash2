@@ -91,7 +91,7 @@ struct fcmh_cli_info {
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
-	struct timespec			 fci_etime;	/* attr expire time */
+	struct timespec			 fci_ftime;	/* attr flush time */
 };
 
 #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)

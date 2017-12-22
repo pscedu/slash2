@@ -2493,8 +2493,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.release_dirty_attrs");
-		PFL_GETTIMESPEC(&fci->fci_etime);
-		fci->fci_etime.tv_sec--;
+		PFL_GETTIMESPEC(&fci->fci_ftime);
+		fci->fci_ftime.tv_sec--;
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 
@@ -3992,10 +3992,10 @@ msattrflushthr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			if (timespeccmp(&fci->fci_etime, &ts, >)) {
-				if (fci->fci_etime.tv_sec - ts.tv_sec < 
+			if (timespeccmp(&fci->fci_ftime, &ts, >)) {
+				if (fci->fci_ftime.tv_sec - ts.tv_sec < 
 				    nexttimeo.tv_sec) {
-				    nexttimeo.tv_sec = fci->fci_etime.tv_sec - 
+				    nexttimeo.tv_sec = fci->fci_ftime.tv_sec - 
 						ts.tv_sec;
 				}
 				FCMH_ULOCK(f);

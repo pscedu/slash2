@@ -81,6 +81,8 @@ struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_INC, 0 };
 int                      msl_predio_pipe_size = 256;
 int                      msl_predio_max_pages = 64;
 
+int			 msl_attributes_flush_timeout = 30;
+
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
 struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
@@ -2037,8 +2039,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec + fci->fci_timeout;
-		fci->fci_etime.tv_nsec = ts.tv_nsec;
+		fci->fci_ftime.tv_sec = ts.tv_sec + msl_attributes_flush_timeout;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 
 		/* feed work for msattrflushthr_main() */
