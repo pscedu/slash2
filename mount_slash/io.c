@@ -2095,6 +2095,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			OPSTAT_INCR("msl.fsrq-write-isdir");
 		PFL_GOTOERR(out3, rc = EISDIR);
 	}
+	/*
+ 	 * Update attributes first before I/O.
+ 	 */
+	rc = msl_stat(f, pfr, NULL);
+	if (rc)
+		PFL_GOTOERR(out3, rc);
 
 	FCMH_LOCK(f);
 	/*
