@@ -220,8 +220,9 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
  */
 int
 slm_fcmh_coherent_callback(struct fidc_membh *f, 
-    struct pscrpc_export *exp, int *lease)
+    struct pscrpc_export *exp, int32_t *leasep)
 {
+	int32_t lease;
 	int rc, count, found;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
@@ -239,7 +240,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	rc = 0;
 	found = 0;
 	count = 0;
-	*lease = 0;
+	lease = 0;
 
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
@@ -255,11 +256,11 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		}
 	}
 	if (!count) {
-		*lease = slm_callback_timeout;
+		lease = slm_callback_timeout;
 		OPSTAT_INCR("slm-new-callback");
 	}
 	if (count == 1 && found) {
-		*lease = slm_callback_timeout;
+		lease = slm_callback_timeout;
 		OPSTAT_INCR("slm-renew-callback");
 	}
 	/*
@@ -302,6 +303,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
 
+	if (leasep)
+		*leasep = lease;
 	if (rq)
 		pscrpc_req_finished(rq);
 
