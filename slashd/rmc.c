@@ -517,6 +517,12 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		goto out;
 	}
 
+#if 0
+	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+#endif
+
 	/*
  	 * If we don't wait for a truncation to complete on an IOS, a
  	 * later write beyond the truncation point could race with it 

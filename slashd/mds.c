@@ -59,6 +59,11 @@
 struct pfl_odt		*slm_bia_odt;
 
 int			slm_max_ios = SL_MAX_REPLICAS;
+
+/*
+ * Longer timeout values reduce RPC cost, but need more memory to
+ * keep track of them.
+ */
 int			slm_lease_timeout = BMAP_TIMEO_MAX;
 int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
 
