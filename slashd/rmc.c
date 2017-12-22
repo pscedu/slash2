@@ -584,7 +584,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 int
 slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p = NULL;
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int vfsid;
@@ -597,9 +597,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	psclog_diag("lookup: pfid="SLPRI_FID" name=%s", fcmh_2_mfid(p),
@@ -669,8 +666,20 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 				mp->attr.sst_fg.fg_fid = fid;
 		}
 	}
+	/*
+ 	 * We don't have an OPEN RPC, so we give a callback implicitly.
+ 	 */
+	mp->rc = -slm_fcmh_get(&mp->attr.sst_fg, &c);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
  out:
+	if (c)
+		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
 	return (0);
