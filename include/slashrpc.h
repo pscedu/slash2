@@ -246,6 +246,8 @@ struct srt_ctlsetopt {
 
 struct srm_filecb_req {
 	struct sl_fidgen	fg;		/* file */
+	uint32_t		flags;		/* semantics */
+	 int32_t		_pad;
 } __packed;
 
 #define srm_filecb_rep		srm_generic_rep
