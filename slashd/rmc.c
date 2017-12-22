@@ -714,7 +714,7 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -723,6 +723,12 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
+
+	/*
+ 	 * XXX Register a callback with the new directory, so that I
+ 	 * can send a delete callback to the client if need be.
+ 	 */
+	mp->lease = slm_callback_timeout;
 
  out:
 	if (p)
