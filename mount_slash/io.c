@@ -2037,6 +2037,9 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 	}
+	/*
+ 	 * XXX maintain order of timeout queue.
+ 	 */
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
 		fci->fci_ftime.tv_sec = ts.tv_sec + msl_attributes_flush_timeout;
