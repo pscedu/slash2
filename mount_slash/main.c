@@ -3991,15 +3991,11 @@ msattrflushthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				continue;
 			}
-
 			if (timespeccmp(&fci->fci_ftime, &ts, >)) {
-				if (fci->fci_ftime.tv_sec - ts.tv_sec < 
-				    nexttimeo.tv_sec) {
-				    nexttimeo.tv_sec = fci->fci_ftime.tv_sec - 
-						ts.tv_sec;
-				}
+				nexttimeo.tv_sec = 
+				    fci->fci_ftime.tv_sec - ts.tv_sec;
 				FCMH_ULOCK(f);
-				continue;
+				break;
 			}
 			FCMH_ULOCK(f);
 
@@ -4007,9 +4003,6 @@ msattrflushthr_main(struct psc_thread *thr)
 			msl_flush_ioattrs(NULL, f);
 			break;
 		}
-		if (fci)
-			continue;
-
 		if (skip)
 			nexttimeo.tv_sec = 1;
 		

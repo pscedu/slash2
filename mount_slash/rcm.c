@@ -347,6 +347,9 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	/*
+ 	 * XXX: Flush dirty attributes and THEN invalidate them.
+ 	 */
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
