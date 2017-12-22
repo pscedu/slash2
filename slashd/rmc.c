@@ -240,7 +240,11 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	rc = 0;
 	found = 0;
 	count = 0;
-	lease = 0;
+
+	/*
+ 	 * This could help finish the on-going operation without a RPC again.
+ 	 */
+	lease = 1;
 
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
