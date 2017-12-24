@@ -6209,3 +6209,10 @@ other::---
 Likewise, if I remove permissions with chmod, it does not get updated in the ACLs.
 
 Phil
+
+12/24/2017
+----------
+
+Potential signal 7 issues:
+
+	- double check all new RPC added to pghbio
