@@ -3965,13 +3965,12 @@ void
 msattrflushthr_main(struct psc_thread *thr)
 {
 	int skip;
-	struct timespec ts, nexttimeo;
-	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
+	struct fcmh_cli_info *fci;
+	struct timespec ts, nexttimeo;
 
 	nexttimeo.tv_nsec = 0;
 	while (pscthr_run(thr)) {
-
 		LIST_CACHE_LOCK(&msl_attrtimeoutq);
 		if (lc_peekheadwait(&msl_attrtimeoutq) == NULL) {
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
@@ -3988,11 +3987,11 @@ msattrflushthr_main(struct psc_thread *thr)
 			}
 
 			if (f->fcmh_flags & FCMH_BUSY) {
+				skip = 1;
 				FCMH_ULOCK(f);
 				continue;
 			}
 			if (timespeccmp(&fci->fci_ftime, &ts, >)) {
-				FCMH_ULOCK(f);
 				nexttimeo.tv_sec = 
 				    fci->fci_ftime.tv_sec - ts.tv_sec;
 				FCMH_ULOCK(f);
@@ -4002,7 +4001,7 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			msl_flush_ioattrs(NULL, f);
-			break;
+			continue;
 		}
 		if (skip)
 			nexttimeo.tv_sec = 1;
