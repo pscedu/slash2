@@ -2087,6 +2087,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	uint32_t aoff;
 	uint64_t fsz;
 	off_t roff;
+	slfgen_t gen;
 
 	f = mfh->mfh_fcmh;
 
@@ -2102,9 +2103,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/*
  	 * Update attributes first before I/O.
  	 */
+	gen = fcmh_2_gen(f);
 	rc = msl_stat(f, pfr, NULL);
 	if (rc)
 		PFL_GOTOERR(out3, rc);
+
+	if (gen != fcmh_2_gen(f)) {
+		OPSTAT_INCR("msl.invalid-bmap-gen");
+	}
+
 
 	FCMH_LOCK(f);
 	/*
