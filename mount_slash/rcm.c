@@ -339,6 +339,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 {
 	struct srm_filecb_req *mq; 
 	struct srm_filecb_rep *mp; 
+	struct timeval now;
 
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f = NULL;
@@ -353,9 +354,10 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	fci = fcmh_get_pri(f);
 	FCMH_LOCK(f);
 	/*
- 	 * Flush the file attributes whenever it is dirty.
+ 	 * Expire attribues now and flush dirty attributes.
  	 */
-	PFL_GETTIMEVAL(&fci->fci_expire);
+	PFL_GETTIMEVAL(&now);
+	fci->fci_expire = now.tv_sec;
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.callback-flush-attrs");
 		lc_move2head(&msl_attrtimeoutq, f);
