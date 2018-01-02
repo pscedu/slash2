@@ -350,6 +350,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	/*
  	 * XXX: Flush dirty attributes and THEN invalidate them.
  	 */
+	OPSTAT_INCR("msl.file-callback");
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
