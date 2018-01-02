@@ -350,18 +350,18 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	OPSTAT_INCR("msl.file-callback");
+	fci = fcmh_get_pri(f);
 	FCMH_LOCK(f);
 	/*
  	 * Flush the file attributes whenever it is dirty.
  	 */
-	f->fcmh_flags |= FCMH_CLI_DIRTY_FLUSH;
+	PFL_GETTIMEVAL(&fci->fci_expire);
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.callback-flush-attrs");
 		lc_move2head(&msl_attrtimeoutq, f);
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 	if (fcmh_isdir(f)) {
-		fci = fcmh_get_pri(f);
 		if (psc_listhd_empty(&fci->fcid_entlist))
 			OPSTAT_INCR("msl.callback-invalidate-empty");
 		else {
