@@ -43,6 +43,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
+extern struct psc_waitq		 msl_flush_attrq;
+
 struct msctl_replstq *
 mrsq_lookup(int id)
 {
@@ -353,9 +355,10 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
  	 * Flush the file attributes whenever it is dirty.
  	 */
 	f->fcmh_flags |= FCMH_CLI_DIRTY_FLUSH;
-	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE){
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.callback-flush-attrs");
 		lc_move2head(&msl_attrtimeoutq, f);
+		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 	if (fcmh_isdir(f)) {
 		fci = fcmh_get_pri(f);
