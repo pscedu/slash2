@@ -347,14 +347,15 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	/*
- 	 * XXX: Flush dirty attributes and THEN invalidate them.
- 	 */
 	OPSTAT_INCR("msl.file-callback");
 	FCMH_LOCK(f);
-	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
-		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
-		OPSTAT_INCR("msl.callback-invalidate-attrs");
+	/*
+ 	 * Flush the file attributes whenever it is dirty.
+ 	 */
+	f->fcmh_flags |= FCMH_CLI_DIRTY_FLUSH;
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE){
+		OPSTAT_INCR("msl.callback-flush-attrs");
+		lc_move2head(&msl_attrtimeoutq, f);
 	}
 	if (fcmh_isdir(f)) {
 		fci = fcmh_get_pri(f);

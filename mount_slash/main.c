@@ -3991,7 +3991,9 @@ msattrflushthr_main(struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				continue;
 			}
-			if (timespeccmp(&fci->fci_ftime, &ts, >)) {
+			if (timespeccmp(&fci->fci_ftime, &ts, >) &&
+			    !(f->fcmh_flags & FCMH_CLI_DIRTY_FLUSH)) {
+				FCMH_ULOCK(f);
 				nexttimeo.tv_sec = 
 				    fci->fci_ftime.tv_sec - ts.tv_sec;
 				FCMH_ULOCK(f);
