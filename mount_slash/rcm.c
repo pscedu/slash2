@@ -381,12 +381,13 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	 */
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		b->bcm_flags |= BMAPF_TOFREE;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 		psc_dynarray_add(&a, b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 	DYNARRAY_FOREACH(b, i, &a) {
+		BMAP_LOCK(b);
+		b->bcm_flags |= BMAPF_TOFREE;
 		msl_bmap_cache_rls(b);
 		bmap_op_done_type(b, BMAP_OPCNT_WORK);
 	}
