@@ -6216,3 +6216,8 @@ Phil
 Potential signal 7 issues:
 
 	- double check all new RPC added to pghbio
+
+01/02/2017
+----------
+
+Don't cache DIO bmap - the file generation in it might be stable!
