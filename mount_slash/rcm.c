@@ -376,6 +376,9 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 		dircache_purge(f);
 		goto out;
 	}
+	/*
+	 * Use two loops to avoid a potential deadlock.
+	 */
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
