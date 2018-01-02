@@ -282,6 +282,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap_cli_info *bci;
+	struct bmap_pagecache *bmpc;
+
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -318,6 +320,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	/* All new read and write I/O's will get BIORQ_DIO. */
 	b->bcm_flags |= BMAPF_DIO;
+	bmpc = bmap_2_bmpc(b);
+	bmpc_expire_biorqs(bmpc);
 	BMAP_ULOCK(b);
 
 	msl_bmap_cache_rls(b);
