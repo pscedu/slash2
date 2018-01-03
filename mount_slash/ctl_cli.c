@@ -175,6 +175,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			continue;
 		}
 		b->bcm_flags |= BMAPF_LEASEEXPIRE;
+		/* XXX drop bmap lock here? */
 		msl_bmap_cache_rls(b);
 		bmap_op_done(b);
 	}
