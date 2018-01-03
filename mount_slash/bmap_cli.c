@@ -695,6 +695,12 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		nretries++;
 		if (msl_bmap_diowait(&diowait_duration, nretries))
 			goto retry;
+		
+		/*
+ 		 * Don't fall through to retry logic again.
+ 		 */
+		rc = ETIMEDOUT;
+		goto out2;
 	}
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -728,6 +734,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		}
 		goto out3;
 	}
+ out2:
 
 	DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
 		   "expire = %ld, rc=%d", 
