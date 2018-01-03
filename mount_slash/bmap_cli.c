@@ -657,11 +657,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
  retry:
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
@@ -684,7 +684,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
 		rc = mp->rc;
- out:
+ out1:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
