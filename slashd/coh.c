@@ -77,8 +77,10 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	 * timeout, which ever comes first.
 	 */ 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
-	if (rc && rc != -ENOENT)
+	if (rc && rc != -ENOENT) {
+		OPSTAT_INCR("bmap-dio-cb-err");
 		goto out;
+	}
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
@@ -88,6 +90,7 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	bmi->bmi_diocb--;
 	bml->bml_flags &= ~BML_DIOCB;
 
+	OPSTAT_INCR("bmap-dio-cb-ok");
 	mds_bmap_bml_release(bml);
 
  out:
