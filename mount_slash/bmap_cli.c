@@ -323,9 +323,9 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
  out:
-	if (rc == -SLERR_BMAP_DIOWAIT) {
+	if (rc == SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-retrieve-diowait");
 
 		/* Retry for bmap to be DIO ready. */
@@ -341,18 +341,18 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
-	if (rc == -SLERR_BMAP_IN_PTRUNC)
+	if (rc == SLERR_BMAP_IN_PTRUNC)
 		rc = EAGAIN;
 
 	bci = bmap_2_bci(b);
-	if (rc == -SLERR_ION_OFFLINE) {
+	if (rc == SLERR_ION_OFFLINE) {
 		rc = EHOSTDOWN;
 		BMAP_LOCK(b);
 		bci->bci_nreassigns = 0;
 		BMAP_ULOCK(b);
 		OPSTAT_INCR("msl.bmap-lease-ehostdown");
 	}
-	if (rc == -SLERR_ION_READONLY) {
+	if (rc == SLERR_ION_READONLY) {
 		rc = EAGAIN;
 		BMAP_LOCK(b);
 		bci->bci_nreassigns = 0;
@@ -390,7 +390,6 @@ out3:
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 	pscrpc_req_finished(rq);
-	rc = abs(rc);
 	return (rc);
 }
 
