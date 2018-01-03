@@ -322,7 +322,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
-		if (rc == -ENOENT) {
+		if (rc == ENOENT) {
 			b->bcm_flags &= ~BMAPF_LOADED;
 			OPSTAT_INCR("bmap-reload");
 			goto retrieve;

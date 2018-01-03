@@ -683,9 +683,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
-		rc = mp->rc;
+		rc = -mp->rc;
  out1:
-	if (rc == -SLERR_BMAP_DIOWAIT) {
+	if (rc == SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
 		/* Retry for bmap to be DIO ready. */
