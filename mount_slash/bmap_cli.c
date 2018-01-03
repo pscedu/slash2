@@ -726,7 +726,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			msl_bmap_cache_rls(b);
 			BMAP_LOCK(b);
 		}
-		goto out2;
+		goto out3;
 	}
 
 	DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
@@ -734,7 +734,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		    bci->bci_etime.tv_sec, rc);
 	BMAP_LOCK(b);
 
- out2:
+ out3:
 
 	/* We can get here for !blocking case */
 	b->bcm_flags &= ~BMAPF_MODECHNG;
