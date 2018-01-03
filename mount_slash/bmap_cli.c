@@ -377,12 +377,14 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		msl_bmap_reap_init(b);
 
 		b->bcm_flags |= BMAPF_LOADED;
-	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
-		    rc);
-		msl_bmap_cache_rls(b);
-		BMAP_LOCK(b);
+		goto out3;
+
 	}
+	DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
+	msl_bmap_cache_rls(b);
+	BMAP_LOCK(b);
+
+out3:
 
 	b->bcm_flags &= ~BMAPF_LOADING;
 	bmap_wake_locked(b);
