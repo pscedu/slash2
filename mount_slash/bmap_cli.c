@@ -335,6 +335,11 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		nretries++;
 		if (msl_bmap_diowait(&diowait_duration, nretries))
 			goto retry;
+		/*
+ 		 * Don't fall through to retry logic again.
+ 		 */
+		rc = ETIMEDOUT;
+		goto out2;
 	}
 
 	if (csvc) {
@@ -380,11 +385,14 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		goto out3;
 
 	}
+
+ out2:
+
 	DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
 	msl_bmap_cache_rls(b);
 	BMAP_LOCK(b);
 
-out3:
+ out3:
 
 	b->bcm_flags &= ~BMAPF_LOADING;
 	bmap_wake_locked(b);
