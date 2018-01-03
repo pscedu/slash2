@@ -271,8 +271,14 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 * If the number of users goes from 1 to 2, send callbacks.
  	 */
 	if (count == 1 && !found) {
-		OPSTAT_INCR("slm-invoke-callback");
 		csvc = slm_getclcsvc(cb->fmc_exp);
+		/*
+ 		 * Hit this when a client dies. Need more investigation.
+ 		 */
+		if (!csvc) {
+			OPSTAT_INCR("slm-callback-skip");
+			goto next;
+		}
 		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
 		if (rc)
 			goto next;
@@ -282,6 +288,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		if (rc)
 			goto next;
 		rq = NULL;
+		OPSTAT_INCR("slm-invoke-callback");
 	}
 
  next:
