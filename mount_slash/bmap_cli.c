@@ -44,10 +44,10 @@
 #define BMAP_CACHE_MAX		1024
 
 /*
- * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
+ * Total wait time is .5+1+2+4+8+16+32+60*(16-7) = 603.5 seconds.
  */
 #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
-#define BMAP_DIOWAIT_MAX_TRIES	32
+#define BMAP_DIOWAIT_MAX_TRIES	16
 
 const struct timespec slc_bmap_diowait_max = { 60, 0 };
 
@@ -657,11 +657,11 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
  retry:
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios[0] = msl_pref_ios;
@@ -683,9 +683,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
-		rc = mp->rc;
- out:
-	if (rc == -SLERR_BMAP_DIOWAIT) {
+		rc = -mp->rc;
+ out1:
+	if (rc == SLERR_BMAP_DIOWAIT) {
 		OPSTAT_INCR("bmap-modeset-diowait");
 
 		/* Retry for bmap to be DIO ready. */
@@ -695,6 +695,12 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		nretries++;
 		if (msl_bmap_diowait(&diowait_duration, nretries))
 			goto retry;
+		
+		/*
+ 		 * Don't fall through to retry logic again.
+ 		 */
+		rc = ETIMEDOUT;
+		goto out2;
 	}
 
 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
@@ -726,12 +732,16 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			msl_bmap_cache_rls(b);
 			BMAP_LOCK(b);
 		}
-	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
-			   "expire = %ld, rc=%d", 
-			    bci->bci_etime.tv_sec, rc);
-		BMAP_LOCK(b);
+		goto out3;
 	}
+ out2:
+
+	DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
+		   "expire = %ld, rc=%d", 
+		    bci->bci_etime.tv_sec, rc);
+	BMAP_LOCK(b);
+
+ out3:
 
 	/* We can get here for !blocking case */
 	b->bcm_flags &= ~BMAPF_MODECHNG;
