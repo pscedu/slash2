@@ -44,10 +44,10 @@
 #define BMAP_CACHE_MAX		1024
 
 /*
- * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
+ * Total wait time is .5+1+2+4+8+16+32+60*(16-7) = 603.5 seconds.
  */
 #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
-#define BMAP_DIOWAIT_MAX_TRIES	32
+#define BMAP_DIOWAIT_MAX_TRIES	16
 
 const struct timespec slc_bmap_diowait_max = { 60, 0 };
 
