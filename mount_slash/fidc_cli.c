@@ -40,6 +40,7 @@
 #include "pfl/str.h"
 #include "pfl/time.h"
 
+#include "bmap_cli.h"
 #include "cache_params.h"
 #include "dircache.h"
 #include "fid.h"
@@ -62,6 +63,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 		}    
 		b->bcm_flags |= BMAPF_TOFREE;
 		BMAP_ULOCK(b);
+		msl_bmap_cache_rls(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 }
