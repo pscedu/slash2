@@ -65,17 +65,15 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}    
-		staled = 1;
-		BMAP_ULOCK(b);
-		msl_bmap_cache_rls(b);
-
-		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAPF_TIMEOQ) {
 			bci = bmap_2_bci(b);
 			lc_move2head(&msl_bmaptimeoutq, bci);
 		}
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
+
+		staled = 1;
+		msl_bmap_cache_rls(b);
 		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);

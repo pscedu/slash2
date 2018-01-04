@@ -1156,7 +1156,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, expire, nevict;
+	int exiting, i, expire, nevict, skip;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -1195,6 +1195,7 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		OPSTAT_INCR("msl.release-wakeup");
 
+		skip = 0;
 		expire = 0;
 		PFL_GETTIMESPEC(&curtime);
 
@@ -1212,6 +1213,8 @@ msbreleasethr_main(struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+				if (b->bcm_flags & BMAPF_STALE)
+					skip = 1;
 				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
@@ -1291,6 +1294,11 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		if (expire && nevict == expire)
 			goto again;
+
+		if (skip) {
+			pscthr_yield();
+			goto again;
+		}
 
 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
 		if (!exiting) {
