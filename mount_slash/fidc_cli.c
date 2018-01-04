@@ -110,6 +110,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 			goto out;
 		}
 		if (fcmh_2_gen(f) < sstb->sst_gen) {
+			f->fcmh_flags |= FCMH_CLI_NEW_GENERATION;
 			OPSTAT_INCR("msl.generation-forwards");
 			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 			    "gen %"PRIu64" from old gen %"PRIu64,

@@ -2108,13 +2108,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (rc)
 		PFL_GOTOERR(out3, rc);
 
-	if (gen != fcmh_2_gen(f)) {
+	FCMH_LOCK(f);
+	if (f->fcmh_flags & FCMH_CLI_NEW_GENERATION) {
+		f->fcmh_flags &= ~FCMH_CLI_NEW_GENERATION;
+		FCMH_ULOCK(f);
 		slc_fcmh_invalidate_bmap(f);
+		FCMH_LOCK(f);
 		OPSTAT_INCR("msl.invalid-bmap-io");
 	}
 
-
-	FCMH_LOCK(f);
 	/*
 	 * All I/O's block here for pending truncate requests.
 	 *
