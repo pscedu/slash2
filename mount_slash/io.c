@@ -2109,7 +2109,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		PFL_GOTOERR(out3, rc);
 
 	if (gen != fcmh_2_gen(f)) {
-		OPSTAT_INCR("msl.invalid-bmap-gen");
+		slc_fcmh_invalidate_bmap(f);
+		OPSTAT_INCR("msl.invalid-bmap-io");
 	}
 
 

@@ -156,4 +156,6 @@ int	msl_fcmh_fetch_inode(struct fidc_membh *);
 void	msl_fcmh_stash_inode(struct fidc_membh *, struct srt_inode *);
 void	msl_fcmh_stash_xattrsize(struct fidc_membh *, uint32_t);
 
+void	slc_fcmh_invalidate_bmap(struct fidc_membh *);
+
 #endif /* _FIDC_CLI_H_ */

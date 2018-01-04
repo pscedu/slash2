@@ -817,8 +817,10 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	if (!fcmh_isdir(f))
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
-	if (gen != fcmh_2_gen(f))
-		;
+	if (gen != fcmh_2_gen(f)) {
+		slc_fcmh_invalidate_bmap(f);
+		OPSTAT_INCR("msl.invalid-bmap-attr");
+	}
 
 	FCMH_LOCK(f);
 	msl_internalize_stat(&f->fcmh_sstb, &stb);
