@@ -71,8 +71,6 @@ struct fcmh_cli_info_dir {
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	long			 	 fci_expire;	/* attr expire time */
-	long			 	 fci_timeout;	/* FUSE attr timeout value */
-
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;

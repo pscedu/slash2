@@ -175,7 +175,6 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 
 	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&now);
-	fci->fci_timeout = lease;
 	fci->fci_expire = now.tv_sec + lease;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
