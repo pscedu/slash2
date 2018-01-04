@@ -1149,7 +1149,7 @@ msbreleasethr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
-	struct timespec ts, nto, curtime;
+	struct timespec nto, curtime;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
@@ -1168,12 +1168,26 @@ msbreleasethr_main(struct psc_thread *thr)
 
  again:
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-		PFL_GETTIMESPEC(&ts);
-		ts.tv_sec += 1;
-		if (lc_peekheadtimed(&msl_bmaptimeoutq, &ts) == NULL) {
-			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
-			continue;
+
+#if 0
+		{
+			struct timespec ts;
+			PFL_GETTIMESPEC(&ts);
+			ts.tv_sec += 1;
+			if (lc_peekheadtimed(&msl_bmaptimeoutq, &ts) == NULL) {
+				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+				continue;
+			}
 		}
+#else
+		{
+			if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+				continue;
+			}
+		}
+#endif
+
 		OPSTAT_INCR("msl.release-wakeup");
 
 		expire = 0;
