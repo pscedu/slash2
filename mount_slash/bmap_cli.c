@@ -44,12 +44,12 @@
 #define BMAP_CACHE_MAX		1024
 
 /*
- * Total wait time is .5+1+2+4+8+16+32+60*(16-7) = 603.5 seconds.
+ * Total wait time is .5+1+2+4+5*(64-4) = 307.5 seconds.
  */
 #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
-#define BMAP_DIOWAIT_MAX_TRIES	16
+#define BMAP_DIOWAIT_MAX_TRIES	64
 
-const struct timespec slc_bmap_diowait_max = { 60, 0 };
+const struct timespec slc_bmap_diowait_max = { 5, 0 };
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
@@ -1149,7 +1149,7 @@ msbreleasethr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_dynarray bcis = DYNARRAY_INIT;
-	struct timespec nto, curtime;
+	struct timespec ts, nto, curtime;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
@@ -1168,9 +1168,11 @@ msbreleasethr_main(struct psc_thread *thr)
 
  again:
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += 1;
+		if (lc_peekheadtimed(&msl_bmaptimeoutq, &ts) == NULL) {
 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
-			break;
+			continue;
 		}
 		OPSTAT_INCR("msl.release-wakeup");
 
