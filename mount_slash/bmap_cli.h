@@ -49,7 +49,7 @@ struct bmap_cli_info {
 
 
 
-/* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  9) */
+/* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  10) */
 
 #define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* lease request RPC in prog */
 #define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)	/* lease re-assign */

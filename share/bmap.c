@@ -141,7 +141,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
-		if (b->bcm_flags & BMAPF_TOFREE) {
+		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.

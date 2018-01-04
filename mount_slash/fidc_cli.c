@@ -49,9 +49,12 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
+extern struct psc_waitq		 msl_bmap_waitq;
+
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 {
+	int staled = 0;
 	struct bmap *b;
 
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
@@ -61,11 +64,14 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}    
-		b->bcm_flags |= BMAPF_TOFREE;
+		staled = 1;
+		b->bcm_flags |= BMAPF_STALE;
 		BMAP_ULOCK(b);
 		msl_bmap_cache_rls(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
+	if (staled)
+		psc_waitq_wakeall(&msl_bmap_waitq);
 }
 
 /*
