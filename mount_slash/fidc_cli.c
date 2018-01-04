@@ -48,6 +48,24 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
+void
+slc_fcmh_invalidate_bmap(struct fidc_membh *f)
+{
+	struct bmap *b;
+
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		BMAP_LOCK(b);
+		if (b->bcm_flags & BMAPF_TOFREE) {
+			BMAP_ULOCK(b);
+			continue;
+		}    
+		b->bcm_flags |= BMAPF_TOFREE;
+		BMAP_ULOCK(b);
+	}
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
+}
+
 /*
  * Update the high-level app stat(2)-like attribute buffer for a FID
  * cache member.
