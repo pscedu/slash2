@@ -1169,11 +1169,11 @@ msbreleasethr_main(struct psc_thread *thr)
  again:
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 
-#if 0
+#if 1
 		{
 			struct timespec ts;
 			PFL_GETTIMESPEC(&ts);
-			ts.tv_sec += 1;
+			ts.tv_sec += BMAP_TIMEO_INC;
 			if (lc_peekheadtimed(&msl_bmaptimeoutq, &ts) == NULL) {
 				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 				continue;
@@ -1181,6 +1181,10 @@ msbreleasethr_main(struct psc_thread *thr)
 		}
 #else
 		{
+			/*
+ 			 * This somehow misses a wakeup - it stuck there when
+ 			 * there is one item on the list.
+ 			 */
 			if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
 				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 				continue;
