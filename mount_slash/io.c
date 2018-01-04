@@ -2087,7 +2087,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	uint32_t aoff;
 	uint64_t fsz;
 	off_t roff;
-	slfgen_t gen;
 
 	f = mfh->mfh_fcmh;
 
@@ -2103,11 +2102,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/*
  	 * Update attributes first before I/O.
  	 */
-	gen = fcmh_2_gen(f);
 	rc = msl_stat(f, pfr, NULL);
 	if (rc)
 		PFL_GOTOERR(out3, rc);
 
+	/*
+	 * The flag can be set at various paths (lookup, getattr, and
+	 * the above), as long as we invalidate bmaps before I/O, we
+	 * are fine.
+	 */
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_CLI_NEW_GENERATION) {
 		f->fcmh_flags &= ~FCMH_CLI_NEW_GENERATION;
