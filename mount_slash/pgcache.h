@@ -340,6 +340,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_biorqs_exp, struct bmpc_ioreq,
 	    biorq_exp_lentry, NULL);
 
+	RB_INIT(&bmpc->bmpc_tree);
 	RB_INIT(&bmpc->bmpc_biorqs);
 
 	lc_addtail(&bmpcLru, bmpc);
