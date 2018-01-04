@@ -1079,6 +1079,7 @@ msbwatchthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			if (b->bcm_flags & BMAPF_TOFREE ||
+			    b->bcm_flags & BMAPF_STALE ||
 			    b->bcm_flags & BMAPF_REASSIGNREQ ||
 			    b->bcm_flags & BMAPF_LEASEEXTEND) {
 				BMAP_ULOCK(b);

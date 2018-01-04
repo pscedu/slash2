@@ -58,7 +58,6 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 	struct bmap *b;
 	struct bmap_cli_info *bci;
 
-
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
@@ -77,6 +76,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 		}
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
+		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 	if (staled)

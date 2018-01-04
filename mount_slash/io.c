@@ -2117,7 +2117,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		FCMH_ULOCK(f);
 		slc_fcmh_invalidate_bmap(f);
 		FCMH_LOCK(f);
-		OPSTAT_INCR("msl.invalid-bmap-io");
 	}
 
 	/*
