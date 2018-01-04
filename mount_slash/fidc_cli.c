@@ -56,6 +56,8 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 {
 	int staled = 0;
 	struct bmap *b;
+	struct bmap_cli_info *bci;
+
 
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
@@ -65,9 +67,16 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			continue;
 		}    
 		staled = 1;
-		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
 		msl_bmap_cache_rls(b);
+
+		BMAP_LOCK(b);
+		if (b->bcm_flags & BMAPF_TIMEOQ) {
+			bci = bmap_2_bci(b);
+			lc_move2head(&msl_bmaptimeoutq, bci);
+		}
+		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
+		BMAP_ULOCK(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 	if (staled)
