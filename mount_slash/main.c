@@ -792,7 +792,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct fidc_membh *f = NULL;
 	struct stat stb;
 	int rc;
-	slfgen_t gen;
 	int32_t lease = 0;
 
 	/*
@@ -810,17 +809,12 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	gen = fcmh_2_gen(f);
 	rc = msl_stat(f, pfr, &lease);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	if (!fcmh_isdir(f))
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
-	if (gen != fcmh_2_gen(f)) {
-		slc_fcmh_invalidate_bmap(f);
-		OPSTAT_INCR("msl.invalid-bmap-attr");
-	}
 
 	FCMH_LOCK(f);
 	msl_internalize_stat(&f->fcmh_sstb, &stb);
