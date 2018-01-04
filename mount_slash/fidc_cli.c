@@ -65,7 +65,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			continue;
 		}    
 		staled = 1;
-		b->bcm_flags |= BMAPF_STALE;
+		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
 		msl_bmap_cache_rls(b);
 	}
