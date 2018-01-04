@@ -3964,7 +3964,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
-	int skip;
+	int skip, didwork;
 	struct fidc_membh *f;
 	struct fcmh_cli_info *fci;
 	struct timespec ts, nexttimeo;
@@ -3977,6 +3977,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			break;
 		}
 		skip = 0;
+		didwork = 0;
 		nexttimeo.tv_sec = 300;
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
@@ -4001,8 +4002,12 @@ msattrflushthr_main(struct psc_thread *thr)
 
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			msl_flush_ioattrs(NULL, f);
-			continue;
+			didwork = 1;
+			break;
 		}
+		if (didwork)
+			continue;
+
 		if (skip)
 			nexttimeo.tv_sec = 1;
 		
