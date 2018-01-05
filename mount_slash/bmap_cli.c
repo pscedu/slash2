@@ -1156,7 +1156,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, skip;
+	int exiting, i, skip, didwork;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -1196,6 +1196,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		OPSTAT_INCR("msl.release-wakeup");
 
 		skip = 0;
+		didwork = 0;
 		PFL_GETTIMESPEC(&curtime);
 
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
@@ -1291,7 +1292,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 
-		if (skip) {
+		if (skip || didwork) {
 			pscthr_yield();
 			goto again;
 		}
