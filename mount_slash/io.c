@@ -2099,6 +2099,16 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			OPSTAT_INCR("msl.fsrq-write-isdir");
 		PFL_GOTOERR(out3, rc = EISDIR);
 	}
+
+	/*
+	 * All I/O's block here for pending truncate requests.
+	 *
+	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
+	 * until we are done setting up the I/O to block intervening
+	 * truncates.
+	 */
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+
 	/*
  	 * Update attributes first before I/O.
  	 */
@@ -2119,16 +2129,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		FCMH_LOCK(f);
 	}
 
-	/*
-	 * All I/O's block here for pending truncate requests.
-	 *
-	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
-	 * until we are done setting up the I/O to block intervening
-	 * truncates.
-	 */
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
 	fsz = fcmh_2_fsz(f);
-
 	if (rw == SL_READ) {
 		/* Catch read ops which extend beyond EOF. */
 		if (size + (uint64_t)off > fsz)
