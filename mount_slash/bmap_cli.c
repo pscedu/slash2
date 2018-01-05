@@ -1441,6 +1441,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
 	OPSTAT_INCR("msl.bmap-wait-empty");
+	/* XXX use 32-bit atomic read ?? */
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 	OPSTAT_INCR("msl.bmap-wait-empty-done");
 
