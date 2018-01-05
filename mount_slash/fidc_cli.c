@@ -63,7 +63,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		didwork = 1;
 		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAPF_TOFREE) {
+		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
 			BMAP_ULOCK(b);
 			continue;
 		}    
