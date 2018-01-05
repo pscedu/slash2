@@ -593,8 +593,8 @@ main(int argc, char *argv[])
  	 * Initialize file callback data structures.
  	 */
 	psc_poolmaster_init(&slm_callback_poolmaster,
-	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, 2048,
-	    2048, 0, NULL, "callback");
+	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, MDS_FIDCACHE_SIZE,
+	    MDS_FIDCACHE_SIZE, 0, NULL, "callback");
 	slm_callback_pool = psc_poolmaster_getmgr(&slm_callback_poolmaster);
 
 	INIT_SPINLOCK(&slm_fcmh_callbacks.ftt_lock);
