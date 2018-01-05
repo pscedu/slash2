@@ -54,12 +54,14 @@ extern struct psc_waitq		 msl_bmap_waitq;
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 {
-	int staled = 0;
+	int didwork = 0;
 	struct bmap *b;
 	struct bmap_cli_info *bci;
 
+ again:
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		didwork = 1;
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
@@ -72,13 +74,17 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
 
-		staled = 1;
 		msl_bmap_cache_rls(b);
 		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
-	if (staled)
+	if (didwork) {
 		psc_waitq_wakeall(&msl_bmap_waitq);
+		pscthr_yield();
+		didwork = 0;
+		OPSTAT_INCR("msl.invalidate-bmap-loop");
+		goto again; 
+	}
 }
 
 /*
