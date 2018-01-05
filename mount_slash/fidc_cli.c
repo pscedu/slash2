@@ -60,6 +60,11 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_cli_info *bci;
 
+	/*
+ 	 * I should be able to throw away stale bmap right away and
+ 	 * directly without waiting for the bmap release thread.
+ 	 * The MDS and IOS should have already moved on.
+ 	 */
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
