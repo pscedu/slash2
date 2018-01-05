@@ -1247,6 +1247,7 @@ msbreleasethr_main(struct psc_thread *thr)
  			 * into the array. If multiple bmaps belong to the
  			 * same file, we could end up deadlock against setattr.
  			 */
+			didwork = 1;
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
