@@ -50,6 +50,7 @@
 #include "rpc_cli.h"
 
 extern struct psc_waitq		 msl_bmap_waitq;
+extern psc_atomic32_t		 msl_bmap_stale;
 
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f)
@@ -70,6 +71,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			bci = bmap_2_bci(b);
 			lc_move2head(&msl_bmaptimeoutq, bci);
 		}
+		psc_atomic32_inc(&msl_bmap_stale);
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
 

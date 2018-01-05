@@ -65,6 +65,8 @@ void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
+psc_atomic32_t		 msl_bmap_stale = PSC_ATOMIC32_INIT(0);
+
 /*
  * Easy debugging with separate lock/wait combo.
  */
@@ -1259,6 +1261,10 @@ msbreleasethr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
 			BMAP_LOCK(b);
+
+			if (b->bcm_flags & BMAPF_STALE)
+				psc_atomic32_dec(&msl_bmap_stale);
+
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&msl_bmaptimeoutq, bci);
 
@@ -1296,6 +1302,10 @@ msbreleasethr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 
 		if (skip || didwork) {
+			pscthr_yield();
+			goto again;
+		}
+		if (psc_atomic32_read(&msl_bmap_stale)) {
 			pscthr_yield();
 			goto again;
 		}
