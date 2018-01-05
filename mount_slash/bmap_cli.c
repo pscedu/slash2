@@ -1215,8 +1215,10 @@ msbreleasethr_main(struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				if (b->bcm_flags & BMAPF_STALE)
+				if (b->bcm_flags & BMAPF_STALE) {
+					OPSTAT_INCR("msl.stale-skip");
 					skip++;
+				}
 				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
