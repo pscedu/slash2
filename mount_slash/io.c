@@ -2107,7 +2107,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * until we are done setting up the I/O to block intervening
 	 * truncates.
 	 */
+	FCMH_LOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+	FCMH_ULOCK(f);
 
 	/*
  	 * Update attributes first before I/O.
