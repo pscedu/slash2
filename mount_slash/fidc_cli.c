@@ -93,6 +93,11 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}
+		/* avaoid race with the release thread */
+		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
+			BMAP_ULOCK(b);
+			continue;
+		}    
 
 		b->bcm_flags &= ~BMAPF_TIMEOQ;
 		lc_remove(&msl_bmaptimeoutq, bci);
