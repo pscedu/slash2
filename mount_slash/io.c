@@ -2126,7 +2126,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_CLI_NEW_GENERATION) {
 		f->fcmh_flags &= ~FCMH_CLI_NEW_GENERATION;
-		slc_fcmh_invalidate_bmap(f);
+		slc_fcmh_invalidate_bmap(f, 1);
 		OPSTAT_INCR("msl.invalidate-fcmh-bmap");
 	}
 

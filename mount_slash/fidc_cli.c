@@ -53,7 +53,7 @@ extern struct psc_waitq		 msl_bmap_waitq;
 extern psc_atomic32_t		 msl_bmap_stale;
 
 void
-slc_fcmh_invalidate_bmap(struct fidc_membh *f)
+slc_fcmh_invalidate_bmap(struct fidc_membh *f, int wait)
 {
 	int i, didwork;
 	struct bmap *b;
@@ -65,28 +65,32 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
  	 * and directly without waiting for the bmap release 
  	 * thread. The MDS and IOS should have already moved on.
  	 */
-	didwork = 0;
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
-		psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
 			continue;
 		}    
-		b->bcm_flags |= BMAPF_TOFREE;
+		if (!wait) {
+			b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
+		} else {
+			b->bcm_flags |= BMAPF_TOFREE;
+			psc_dynarray_add(&a, b);
+		}
 		BMAP_ULOCK(b);
-
-		msl_bmap_cache_rls(b);
-
-		psc_dynarray_add(&a, b);
 		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
+	if (!wait)
+		return;
+
+	didwork = 0;
 	DYNARRAY_FOREACH(b, i, &a) {
 
 		didwork = 1;
+		msl_bmap_cache_rls(b);
 
 		BMAP_LOCK(b);
 		while (psc_atomic32_read(&b->bcm_opcnt) > 1) {
@@ -154,10 +158,8 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 			goto out;
 		}
 		if (fcmh_2_gen(f) < sstb->sst_gen) {
-#if 0
 			f->fcmh_flags |= FCMH_CLI_NEW_GENERATION;
-#endif
-			slc_fcmh_invalidate_bmap(f);
+			slc_fcmh_invalidate_bmap(f, 0);
 			OPSTAT_INCR("msl.generation-forwards");
 			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 			    "gen %"PRIu64" from old gen %"PRIu64,
