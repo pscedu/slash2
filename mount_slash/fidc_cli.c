@@ -53,10 +53,14 @@ extern struct psc_waitq		 msl_bmap_waitq;
 extern psc_atomic32_t		 msl_bmap_stale;
 
 void
-slc_fcmh_invalidate_bmap(struct fidc_membh *f, int wait)
+slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
 	struct bmap *b;
 
+	/*
+	 * Invalidate bmap lease so that we can renew it with
+	 * the correct lease.
+	 */
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
@@ -64,7 +68,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, int wait)
 			BMAP_ULOCK(b);
 			continue;
 		}    
-		b->bcm_flags |= BMAPF_STALE;
+		b->bcm_flags |= BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
