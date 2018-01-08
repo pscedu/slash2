@@ -75,6 +75,10 @@ bmap_remove(struct bmap *b)
 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
+	/*
+	 * XXX, we are dealing with bmap, and yet we
+	 * drop fcmh lock here.  Not good.
+	 */
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_pool_return(bmap_pool, b);
 }

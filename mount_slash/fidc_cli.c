@@ -55,16 +55,17 @@ extern psc_atomic32_t		 msl_bmap_stale;
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 {
-	int i;
+	int i, didwork;
 	struct bmap *b;
 	struct bmap_cli_info *bci;
 	struct psc_dynarray a = DYNARRAY_INIT;
 
 	/*
- 	 * I should be able to throw away stale bmap right away and
- 	 * directly without waiting for the bmap release thread.
- 	 * The MDS and IOS should have already moved on.
+ 	 * I should be able to throw away stale bmap right away 
+ 	 * and directly without waiting for the bmap release 
+ 	 * thread. The MDS and IOS should have already moved on.
  	 */
+	didwork = 0;
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
@@ -73,10 +74,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}    
-
-		psc_atomic32_inc(&msl_bmap_stale);
-		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
-		psc_atomic32_inc(&(b)->bcm_opcnt);
+		b->bcm_flags |= BMAPF_TOFREE;
 		BMAP_ULOCK(b);
 
 		msl_bmap_cache_rls(b);
@@ -86,27 +84,31 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
- again:
-
 	DYNARRAY_FOREACH(b, i, &a) {
+
+		didwork = 1;
+
 		BMAP_LOCK(b);
-		if (psc_atomic32_read(&b->bcm_opcnt) > 2) {
+		while (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 			BMAP_ULOCK(b);
 			OPSTAT_INCR("msl.invalidate-bmap-loop");
 			pscthr_yield();
-			goto again;
+			BMAP_LOCK(b);
 		}
 		BMAP_ULOCK(b);
-	}
 
-	DYNARRAY_FOREACH(b, i, &a) {
-		psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 2);
+		psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
 		bci = bmap_2_bci(b);
 		b->bcm_flags &= ~BMAPF_TIMEOQ;
 		lc_remove(&msl_bmaptimeoutq, bci);
-		psc_atomic32_dec(&(b)->bcm_opcnt);
 		bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 	}
+	/*
+ 	 * XXX, I don't like this, but ...
+ 	 */
+	if (didwork)
+		FCMH_LOCK(f);
+
 	psc_dynarray_free(&a);
 }
 
