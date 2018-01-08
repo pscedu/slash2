@@ -99,6 +99,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			continue;
 		}    
 
+		/* don't wait for the release thread to clean up */
 		b->bcm_flags &= ~BMAPF_TIMEOQ;
 		lc_remove(&msl_bmaptimeoutq, bci);
 		bmap_op_done_type(b, BMAP_OPCNT_REAPER);
