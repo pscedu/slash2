@@ -56,7 +56,7 @@ void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 {
 	struct bmap *b;
-	int i, didwork = 0;
+	int i, skip;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_cli_info *bci;
 
@@ -68,47 +68,52 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
+		psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
 			continue;
 		}    
 
-		psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
-		bci = bmap_2_bci(b);
-		lc_move2head(&msl_bmaptimeoutq, bci);
-
 		psc_atomic32_inc(&msl_bmap_stale);
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
+		psc_atomic32_inc(&(b)->bcm_opcnt);
 		BMAP_ULOCK(b);
 
-		didwork = 1;
+		msl_bmap_cache_rls(b);
+
 		psc_dynarray_add(&a, b);
 		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
+
+ again:
+	skip = 0;
 	DYNARRAY_FOREACH(b, i, &a) {
-		msl_bmap_cache_rls(b);
 		BMAP_LOCK(b);
-		if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+		if (psc_atomic32_read(&b->bcm_opcnt) > 2) {
 			BMAP_ULOCK(b);
+			skip = 1;
 			continue;
 		}
-		/* avaoid race with the release thread */
-		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
-			BMAP_ULOCK(b);
-			continue;
-		}    
+		psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 2);
 
 		/* don't wait for the release thread to clean up */
+		bci = bmap_2_bci(b);
 		b->bcm_flags &= ~BMAPF_TIMEOQ;
 		lc_remove(&msl_bmaptimeoutq, bci);
-		bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 	}
 
-	if (didwork) {
-		psc_dynarray_free(&a);
-		psc_waitq_wakeall(&msl_bmap_waitq);
+	if (skip) {
+		OPSTAT_INCR("msl.invalidate-bmap-loop");
+		pscthr_yield();
+		goto again;
 	}
+	DYNARRAY_FOREACH(b, i, &a) {
+		psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 2);
+		psc_atomic32_dec(&(b)->bcm_opcnt);
+		bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+	}
+	psc_dynarray_free(&a);
 }
 
 /*
