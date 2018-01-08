@@ -2049,6 +2049,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			 */
 			fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
 			raoff = p->dcp_nextoff;
+			/*
+ 			 * 01/07/2018: Hit this a couple of times when
+ 			 * debugging an issue by removing and deleting
+ 			 * the same directory. Restart MDS fixes it.
+ 			 * So there must be an issue on MDS side in
+ 			 * terms of cleaning up old files/directories.
+ 			 */
 			psc_assert(raoff);
 
 			issue = 0;
