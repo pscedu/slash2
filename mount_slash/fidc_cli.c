@@ -72,10 +72,11 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 			BMAP_ULOCK(b);
 			continue;
 		}    
-		if (b->bcm_flags & BMAPF_TIMEOQ) {
-			bci = bmap_2_bci(b);
-			lc_move2head(&msl_bmaptimeoutq, bci);
-		}
+
+		psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+		bci = bmap_2_bci(b);
+		lc_move2head(&msl_bmaptimeoutq, bci);
+
 		psc_atomic32_inc(&msl_bmap_stale);
 		b->bcm_flags |= BMAPF_STALE | BMAPF_LEASEEXPIRE;
 		BMAP_ULOCK(b);
@@ -85,8 +86,18 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f)
 		OPSTAT_INCR("msl.invalidate-bmap");
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
-	DYNARRAY_FOREACH(b, i, &a)
+	DYNARRAY_FOREACH(b, i, &a) {
 		msl_bmap_cache_rls(b);
+		BMAP_LOCK(b);
+		if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+			BMAP_ULOCK(b);
+			continue;
+		}
+
+		b->bcm_flags &= ~BMAPF_TIMEOQ;
+		lc_remove(&msl_bmaptimeoutq, bci);
+		bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+	}
 
 	if (didwork) {
 		psc_dynarray_free(&a);
