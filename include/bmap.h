@@ -153,7 +153,8 @@ struct bmap {
 #define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
 #define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
-#define _BMAPF_SHIFT		(1 <<  10)
+#define BMAPF_ONTREE		(1 <<  10)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 <<  11)
 
 #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
 

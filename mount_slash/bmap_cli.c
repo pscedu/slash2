@@ -1474,6 +1474,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
 
+
 #if PFL_DEBUG > 0
 void
 dump_bmap_flags(uint32_t flags)
