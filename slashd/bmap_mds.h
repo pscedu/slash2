@@ -90,7 +90,7 @@ struct bmap_mds_info {
 
 /* MDS-specific bcm_flags, _BMAPF_SHIFT	 = (1 <<  9) */
 
-#define BMAPF_DIRECTORY		(_BMAPF_SHIFT << 0)	/* create a bmap for directory */
+#define BMAPF_CRC_UP		(_BMAPF_SHIFT << 0)	/* CRC update in progress */
 #define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 1)	/* res state changes have been written */
 #define BMAPF_IOSASSIGNED	(_BMAPF_SHIFT << 2)	/* write request bound an IOS to this bmap */
 
@@ -143,6 +143,8 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
+#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
+
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
 	int32_t		  	  bml_refcnt;
@@ -152,10 +154,6 @@ struct bmap_mds_lease {
 	time_t			  bml_start;
 	time_t			  bml_expire;
 	struct bmap_mds_info	 *bml_bmi;
-	/*
-	 * Either add a reference count or use pscrpc_get_connection()
-	 * or pscrpc_getpridforpeer() to find out export on the fly.
-	 */
 	struct pscrpc_export	 *bml_exp;
 	struct psc_listentry	  bml_bmi_lentry;
 	struct psc_listentry	  bml_timeo_lentry;
@@ -166,14 +164,13 @@ struct bmap_mds_lease {
 #define BML_READ		(1 <<  0)		/* lease is for read activity */
 #define BML_WRITE		(1 <<  1)		/* lease is for write activity */
 #define BML_DIO			(1 <<  2)
-#define BML_DIOCB		(1 <<  3)		/* DIO callback in progress */
+#define BML_DIOCB		(1 <<  3)
 #define BML_TIMEOQ		(1 <<  4)
 #define BML_BMI			(1 <<  5)		/* linked in bmap_mds_info */
 #define BML_RECOVER		(1 <<  6)
 #define BML_CHAIN		(1 <<  7)
 #define BML_FREEING		(1 <<  8)		/* being freed, don't reuse */
-#define BML_DIRECTORY		(1 <<  9)
-#define BML_RECOVERFAIL		(1 <<  10)
+#define BML_RECOVERFAIL		(1 <<  9)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmi)
 
@@ -217,11 +214,6 @@ void	 mds_bmap_ensure_valid(struct bmap *);
 
 struct bmap_mds_lease *
 	 mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
-
-struct bmap_mds_lease *
-	 mds_bml_new(struct bmap *, struct pscrpc_export *, int, 
-	     lnet_process_id_t *);
-int mds_bmap_bml_add(struct bmap_mds_lease *, enum rw, sl_ios_id_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);

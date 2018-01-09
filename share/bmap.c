@@ -75,10 +75,6 @@ bmap_remove(struct bmap *b)
 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
-	/*
-	 * XXX, we are dealing with bmap, and yet we
-	 * drop fcmh lock here.  Not good.
-	 */
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_pool_return(bmap_pool, b);
 }
@@ -145,7 +141,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
-		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
+		if (b->bcm_flags & BMAPF_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
@@ -243,9 +239,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = ENOENT;
 		goto out;
 	}
-	if (flags & BMAPGETF_DIRECTORY)
-		goto out;
-
 	if (flags & BMAPGETF_NONBLOCK) {
 		if (b->bcm_flags & BMAPF_LOADING)
 			goto out;
@@ -326,7 +319,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
-		if (rc == ENOENT) {
+		if (rc == -ENOENT) {
 			b->bcm_flags &= ~BMAPF_LOADED;
 			OPSTAT_INCR("bmap-reload");
 			goto retrieve;

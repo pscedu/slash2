@@ -181,12 +181,6 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		DEBUG_INOH(PLL_DEBUG, ih, buf, "is rep[%u](=%u) == %u ?",
 		    j, repl[j].bs_id, ios);
 
-		/*
- 		 * XXX: If the ID is zero here and we are adding, we should be able
- 		 * to add the slot right there. Otherwise, we can run out of slots
- 		 * if constantly add and remove an IOS.  Thankfully, no one tries
- 		 * this as of today.
- 		 */
 		if (repl[j].bs_id == ios) {
 			/*
  			 * Luckily, this code is only called by mds_repl_delrq() 

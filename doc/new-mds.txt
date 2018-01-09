@@ -92,17 +92,7 @@ Obstacle:
 		- Add generation number to each data structure that can be updated atomically
 		  for log replay.  Also protect each data structure with CRC checksum.
 
-			- if we don't have file system wide sync, then each log entry should have
-			  a callback to sync corresponding file system data before it can be
-			  reclaimed.
-
-		- Add version number to different types of data structures to allow piece meal upgrade.
-
-			- we might have to support multiple formats of the same data structure in the
-			  future.
-
-			- add generation number and 64-bit CRC checksum to make sure data structures are
-			  updated atomically on the disk.
+		- Add version number to each data structures to allow piece meal upgrade.
 
 		- Currently, we use some ZFS fields to store slash2 attributes, we won't be able
 		  to touch file system inode at all.

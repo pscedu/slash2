@@ -408,7 +408,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	BMAP_LOCK(b);
 	PFL_GETTIMESPEC(&ts0);
 	ts0.tv_sec += 1;
-	ts1.tv_sec = bci->bci_etime.tv_sec - BMAP_TIMEO_INC;
+	ts1.tv_sec = bci->bci_etime.tv_sec;
 	BMAP_ULOCK(b);
 
 	if (ts1.tv_sec <= ts0.tv_sec) {
@@ -600,6 +600,7 @@ bmap_flushable(struct bmap *b)
 
 	if (flush) {
 		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
 		/*
 		 * XXX: If the IOS is done, we will try to get a lease.
 		 * However, MDS will reject us with -1010. So we can't

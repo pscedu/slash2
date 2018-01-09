@@ -56,6 +56,22 @@ slm_coh_delete_file(__unusedx struct fidc_membh *c)
 {
 }
 
+void
+slm_coh_bml_release(struct bmap_mds_lease *bml)
+{
+	struct bmap_mds_info *bmi;
+	struct bmap *b;
+
+	bmi = bml->bml_bmi;
+	b = bmi_2_bmap(bmi);
+
+	BMAP_LOCK(b);
+	bmi->bmi_diocb--;
+	bml->bml_flags &= ~BML_DIOCB;
+
+	mds_bmap_bml_release(bml);
+}
+
 int
 slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
@@ -77,27 +93,23 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
 	 * timeout, which ever comes first.
 	 */ 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
-	if (rc && rc != -ENOENT) {
-		OPSTAT_INCR("bmap-dio-cb-err");
+	if (rc && rc != -ENOENT)
 		goto out;
-	}
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
 
 	BMAP_LOCK(b);
 	bml->bml_flags |= BML_DIO;
-	bmi->bmi_diocb--;
-	bml->bml_flags &= ~BML_DIOCB;
-
-	OPSTAT_INCR("bmap-dio-cb-ok");
-	mds_bmap_bml_release(bml);
+	BMAP_ULOCK(b);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
 	    "cli=%s seq=%"PRId64" rc=%d",
 	    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
 	    buf), mq->seq, rc);
+
+	slm_coh_bml_release(bml);
 
 	sl_csvc_decref(csvc);
 
@@ -111,7 +123,7 @@ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
  * Note: @bml is unlocked upon return.
  */
 int
-slm_bmap_coherent_callback(struct bmap_mds_lease *bml)
+mdscoh_req(struct bmap_mds_lease *bml)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -148,9 +160,8 @@ slm_bmap_coherent_callback(struct bmap_mds_lease *bml)
 	mq->dio = 1;
 
 	/* Take a reference for the asynchronous RPC. */
-	bml->bml_refcnt++;
-
 	bmi->bmi_diocb++;
+	bml->bml_refcnt++;
 	bml->bml_flags |= BML_DIOCB;
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
@@ -160,8 +171,9 @@ slm_bmap_coherent_callback(struct bmap_mds_lease *bml)
 	if (rc == 0)
 		return (0);
 
-	bmi->bmi_diocb--;
 	bml->bml_flags &= ~BML_DIOCB;
+
+	bmi->bmi_diocb--;
 
  out:
 	pscrpc_req_finished(rq);

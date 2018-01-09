@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2018, Pittsburgh Supercomputing Center
+ * Copyright 2008-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,12 +76,11 @@ __static void	msl_update_attributes(struct msl_fsrqinfo *);
 /* Flushing fs threads wait here for I/O completion. */
 struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
 
-struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_INC, 0 };
+struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
+struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 int                      msl_predio_pipe_size = 256;
 int                      msl_predio_max_pages = 64;
-
-int			 msl_attributes_flush_timeout = 30;
 
 struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
 struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
@@ -2037,15 +2036,11 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 	}
-	/*
- 	 * XXX maintain order of timeout queue.
- 	 */
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
-		fci->fci_ftime.tv_sec = ts.tv_sec + msl_attributes_flush_timeout;
+		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
+		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-
-		/* feed work for msattrflushthr_main() */
 		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 	}
@@ -2100,6 +2095,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		PFL_GOTOERR(out3, rc = EISDIR);
 	}
 
+	FCMH_LOCK(f);
 	/*
 	 * All I/O's block here for pending truncate requests.
 	 *
@@ -2107,30 +2103,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * until we are done setting up the I/O to block intervening
 	 * truncates.
 	 */
-	FCMH_LOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
-	FCMH_ULOCK(f);
-
-	/*
- 	 * Update attributes first before I/O.
- 	 */
-	rc = msl_stat(f, pfr, NULL);
-	if (rc)
-		PFL_GOTOERR(out3, rc);
-
-	/*
-	 * The flag can be set at various paths (lookup, getattr, and
-	 * the above), as long as we invalidate bmaps before I/O, we
-	 * are fine.
-	 */
-	FCMH_LOCK(f);
-	if (f->fcmh_flags & FCMH_CLI_NEW_GENERATION) {
-		f->fcmh_flags &= ~FCMH_CLI_NEW_GENERATION;
-		slc_fcmh_invalidate_bmap(f, 1);
-		OPSTAT_INCR("msl.invalidate-fcmh-bmap");
-	}
-
 	fsz = fcmh_2_fsz(f);
+
 	if (rw == SL_READ) {
 		/* Catch read ops which extend beyond EOF. */
 		if (size + (uint64_t)off > fsz)

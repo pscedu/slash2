@@ -40,7 +40,6 @@
 #include "pfl/str.h"
 #include "pfl/time.h"
 
-#include "bmap_cli.h"
 #include "cache_params.h"
 #include "dircache.h"
 #include "fid.h"
@@ -48,33 +47,6 @@
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
-
-extern struct psc_waitq		 msl_bmap_waitq;
-extern psc_atomic32_t		 msl_bmap_stale;
-
-void
-slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
-{
-	struct bmap *b;
-
-	return;
-
-	/*
-	 * Invalidate bmap lease so that we can renew it with
-	 * the correct lease.
-	 */
-	pfl_rwlock_rdlock(&f->fcmh_rwlock);
-	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAPF_TOFREE) {
-			BMAP_ULOCK(b);
-			continue;
-		}    
-		b->bcm_flags |= BMAPF_LEASEEXPIRE;
-		BMAP_ULOCK(b);
-	}
-	pfl_rwlock_unlock(&f->fcmh_rwlock);
-}
 
 /*
  * Update the high-level app stat(2)-like attribute buffer for a FID
@@ -92,9 +64,8 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
  */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
-    int flags, int32_t lease)
+    int flags)
 {
-	struct timeval now;
 	struct fcmh_cli_info *fci;
 
 	if (flags & FCMH_SETATTRF_HAVELOCK)
@@ -105,28 +76,17 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	if (fcmh_2_gen(f) == FGEN_ANY)
 		fcmh_2_gen(f) = sstb->sst_gen;
 
-	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f)) {
-		if (fcmh_2_gen(f) > sstb->sst_gen) {
-			/*
- 			 * We bump it locally for a directory to avoid
- 			 * race with readdir operations.
- 			 */
-			OPSTAT_INCR("msl.generation-backwards");
-			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
-			    "gen %"PRIu64" from old gen %"PRIu64,
-			    fcmh_2_gen(f), sstb->sst_gen);
-			goto out;
-		}
-		if (fcmh_2_gen(f) < sstb->sst_gen) {
-#if 0
-			f->fcmh_flags |= FCMH_CLI_NEW_GENERATION;
-#endif
-			slc_fcmh_invalidate_bmap(f, 0);
-			OPSTAT_INCR("msl.generation-forwards");
-			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
-			    "gen %"PRIu64" from old gen %"PRIu64,
-			    fcmh_2_gen(f), sstb->sst_gen);
-		}
+	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f) &&
+	    fcmh_2_gen(f) > sstb->sst_gen) {
+		/*
+ 		 * We bump it locally for a directory to avoid
+ 		 * race with readdir operations.
+ 		 */
+		OPSTAT_INCR("msl.generation-backwards");
+		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
+		    "gen %"PRIu64" from old gen %"PRIu64,
+		    fcmh_2_gen(f), sstb->sst_gen);
+		goto out;
 	}
 	/*
  	 * Make sure that our generation number always goes up.
@@ -179,8 +139,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 		dircache_init(f);
 
 	fci = fcmh_2_fci(f);
-	PFL_GETTIMEVAL(&now);
-	fci->fci_expire = now.tv_sec + lease;
+	PFL_GETTIMEVAL(&fci->fci_age);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
@@ -293,7 +252,16 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 slc_fcmh_dtor(struct fidc_membh *f)
 {
-	dircache_purge(f);
+	if (f->fcmh_flags & FCMHF_INIT_DIRCACHE) {
+		/*
+		 * We must lock here or other threads with HOLDs on ents
+		 * can race with us.
+		 */
+		DIRCACHE_WRLOCK(f);
+		dircache_purge(f);
+		DIRCACHE_ULOCK(f);
+	}
+
 	DEBUG_FCMH(PLL_DEBUG, f, "dtor");
 }
 
@@ -327,6 +295,6 @@ dump_fcmh_flags(int flags)
 struct sl_fcmh_ops sl_fcmh_ops = {
 	slc_fcmh_ctor,		/* sfop_ctor */
 	slc_fcmh_dtor,		/* sfop_dtor */
-	slc_fcmh_getattr,	/* sfop_getattr */
+	msl_stat,		/* sfop_getattr */
 	NULL			/* sfop_modify */
 };

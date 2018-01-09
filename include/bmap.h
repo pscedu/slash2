@@ -56,14 +56,6 @@ struct srt_bmapdesc;
 #define	SLI_BMAP_COUNT		1024
 #define	MDS_BMAP_COUNT		4096
 
-
-/*
- * Longer time allows a client to cache pages longer and reduces RPC traffic
- * needed for lease extension.
- */
-#define BMAP_TIMEO_MAX		240	/* default bmap lease timeout */
-#define BMAP_TIMEO_MIN		40	/* minimum bmap lease timeout */
-
 /*
  * Basic information about bmaps shared by all MDS, IOS, and CLI.
  * @bcs_crcstates: bits describing the state of each sliver
@@ -74,11 +66,6 @@ struct srt_bmapdesc;
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_core_state {
-	/*
- 	 * The field appears to be a misnomer because we no longer
- 	 * support per sliver CRC state. However, there might be
- 	 * value in keeping track of whether a sliver has data.
- 	 */
 	uint8_t			bcs_crcstates[SLASH_SLVRS_PER_BMAP];
 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
 };
@@ -148,13 +135,11 @@ struct bmap {
 #define BMAPF_LOADED		(1 <<  2)	/* contents are loaded */
 #define BMAPF_LOADING		(1 <<  3)	/* retrieval RPC is inflight */
 #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
-#define BMAPF_STALE		(1 <<  5)	/* bmap is stale (gen changed) */
-#define BMAPF_TOFREE		(1 <<  6)	/* refcnt dropped to zero, removing */
-#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
-#define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
-#define BMAPF_ONTREE		(1 <<  10)	/* temporary processing lock */
-#define _BMAPF_SHIFT		(1 <<  11)
+#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+#define _BMAPF_SHIFT		(1 <<  9)
 
 #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
 
@@ -355,7 +340,6 @@ struct bmap {
 #define BMAPGETF_NOAUTOINST	(1 << 3)	/* do not autoinstantiate */
 #define BMAPGETF_NODISKREAD	(1 << 4)	/* do not read from disk - nothing there */
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
-#define BMAPGETF_DIRECTORY	(1 << 6)	/* create a bmap lease for directory */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
@@ -391,6 +375,7 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
+	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
 	BMAP_OPCNT_BIORQ,		/* all: IO request */
 	BMAP_OPCNT_BMPCE,		/* CLI: page */
 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */

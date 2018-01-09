@@ -70,7 +70,8 @@ struct fcmh_cli_info_dir {
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
-	long			 	 fci_expire;	/* attr expire time */
+	struct timeval			 fci_age;	/* attr update time */
+
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
@@ -89,7 +90,7 @@ struct fcmh_cli_info {
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
-	struct timespec			 fci_ftime;	/* attr flush time */
+	struct timespec			 fci_etime;	/* attr expire time */
 };
 
 #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)
@@ -120,7 +121,6 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_QUEUE		(_FCMH_FLGSHFT << 4)	/* on dirty queue */
 #define FCMH_CLI_XATTR_INFO		(_FCMH_FLGSHFT << 5)
 #define FCMH_CLI_SILLY_RENAME		(_FCMH_FLGSHFT << 6)
-#define FCMH_CLI_NEW_GENERATION		(_FCMH_FLGSHFT << 7)
 
 #define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 
@@ -128,10 +128,10 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 
-#define slc_fcmh_setattr(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), 0, lease)
-#define slc_fcmh_setattr_locked(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, lease)
+#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
+#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
 
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);
@@ -154,7 +154,5 @@ int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 int	msl_fcmh_fetch_inode(struct fidc_membh *);
 void	msl_fcmh_stash_inode(struct fidc_membh *, struct srt_inode *);
 void	msl_fcmh_stash_xattrsize(struct fidc_membh *, uint32_t);
-
-void	slc_fcmh_invalidate_bmap(struct fidc_membh *, int);
 
 #endif /* _FIDC_CLI_H_ */

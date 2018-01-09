@@ -59,10 +59,7 @@ ifneq ($(filter mds,${SLASH_MODULES}),)
 endif
 
 # To support ACL, add the following line in file local.mk
-# under the same directory:
-#
 # SLASH_OPTIONS+=acl
-#
 
 ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
  ifneq ($(filter acl,${SLASH_OPTIONS}),)

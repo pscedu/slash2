@@ -113,13 +113,6 @@ mds_inode_read(struct slash_inode_handle *ih)
 		if (mds_inode_update_interrupted(vfsid, ih, &rc))
 			;
 		else if (vers && vers < INO_VERSION)
-			/*
-			 * Instead of updating different versions of 
-			 * inode format, it is probably safer to 
-			 * support multiple formats at the same 
-			 * time unless you want to drop old format
-			 * completely.
-			 */
 			rc = mds_inode_update(vfsid, ih, vers);
 		else {
 			DEBUG_INOH(PLL_WARN, ih, buf, 
@@ -252,11 +245,6 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mfh(ih));
-
-	/*
-	 * No need to check od_crc if rc == 0. In fact, this will cause 
-	 * problem if od_crc is not initialized.
-	 */
 	if (rc == 0 && od_crc == 0 &&
 	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
 		rc = 0;

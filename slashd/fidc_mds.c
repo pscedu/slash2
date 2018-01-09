@@ -93,13 +93,9 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 		mds_unreserve_slot(1);
 
 	if (!rc) {
-		/*
- 		 * 01/04/2018: Hit this assert again, but gdb
- 		 * show they are identical.  So let us move
- 		 * into lock.
- 		 */
-		FCMH_LOCK(f);
 		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
+
+		FCMH_LOCK(f);
 		f->fcmh_sstb = sstb_out;
 		FCMH_ULOCK(f);
 	}
@@ -126,7 +122,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	}
 	fmi = fcmh_2_fmi(f);
 	memset(fmi, 0, sizeof(*fmi));
-	INIT_PSCLIST_HEAD(&fmi->fmi_callbacks);
 
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));

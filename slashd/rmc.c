@@ -83,7 +83,6 @@ int			slm_min_space_lastcode;
 struct timespec		slm_min_space_lastcheck;
 int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 	
-struct fcmh_timeo_table slm_fcmh_callbacks;
 
 static void
 slm_root_attributes(struct srt_stat *attr)
@@ -210,123 +209,6 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
- * Register our intention to access the file. If there are other clients 
- * interested in the same file, let them know.
- *
- * Note that a client doesn't ask for a callback explicitly. This way, we 
- * only incur overhead when more than one client is access the same file 
- * around the same time window.
- */
-int
-slm_fcmh_coherent_callback(struct fidc_membh *f, 
-    struct pscrpc_export *exp, int32_t *leasep)
-{
-	int32_t lease;
-	int rc, count, found;
-	lnet_nid_t nid;
-	lnet_pid_t pid;
-	struct psc_listentry *tmp;
-	struct fcmh_mds_info *fmi;
-	struct srm_filecb_req *mq;
-	struct srm_filecb_rep *mp;
-	struct fcmh_mds_callback *cb, *found_cb;
-	struct pscrpc_request *rq = NULL;
-	struct slrpc_cservice *csvc = NULL;
-
-	pid = exp->exp_connection->c_peer.pid;
-	nid = exp->exp_connection->c_peer.nid;
-
-	rc = 0;
-	found = 0;
-	count = 0;
-
-#if 0
-	/*
- 	 * This could help finish the on-going operation without a RPC again.
- 	 */
-	lease = 1;
-#else
-	lease = 0;
-#endif
-
-	fmi = fcmh_2_fmi(f);
-	FCMH_LOCK(f);
-	psclist_for_each(tmp, &fmi->fmi_callbacks) {
-		count++;
-		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
-		if (cb->fmc_nidpid.nid == nid &&
-		    cb->fmc_nidpid.pid == pid) {
-			psc_assert(!found);
-			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
-			found = 1;
-			found_cb = cb;
-		}
-	}
-	if (!count) {
-		lease = slm_callback_timeout;
-		OPSTAT_INCR("slm-new-callback");
-	}
-	if (count == 1 && found) {
-		lease = slm_callback_timeout;
-		OPSTAT_INCR("slm-renew-callback");
-	}
-	/*
- 	 * If the number of users goes from 1 to 2, send callbacks.
- 	 */
-	if (count == 1 && !found) {
-		csvc = slm_getclcsvc(cb->fmc_exp);
-		/*
- 		 * Hit this when a client dies. Need more investigation.
- 		 */
-		if (!csvc) {
-			OPSTAT_INCR("slm-callback-skip");
-			goto next;
-		}
-		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
-		if (rc)
-			goto next;
-		mq->fg = f->fcmh_fg;
-		rq->rq_async_args.pointer_arg[0] = csvc;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc)
-			goto next;
-		rq = NULL;
-		OPSTAT_INCR("slm-invoke-callback");
-	}
-
- next:
-
-	if (!found) {
-		cb = psc_pool_get(slm_callback_pool);
-		cb->fmc_nidpid.nid = nid;
-		cb->fmc_nidpid.pid = pid;
-		cb->fmc_exp = exp;
-		cb->fmc_fmi = fcmh_2_fmi(f);
-		INIT_PSC_LISTENTRY(&cb->fmc_lentry);
-		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
-		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
-		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
-	} else
-		cb = found_cb;
-	/*
- 	 * At this point, cb can be either a new callback or the one
- 	 * found on the list.  In either case, we update its
- 	 * expiration time, and add it to the end of the list.
- 	 *
- 	 * XXX we do this even if the lease time is zero.
- 	 */
-	cb->fmc_expire = time(NULL) + slm_lease_timeout;
-	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
-	FCMH_ULOCK(f);
-
-	if (leasep)
-		*leasep = lease;
-	if (rq)
-		pscrpc_req_finished(rq);
-
-	return (rc);
-}
 int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
@@ -356,10 +238,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	mp->xattrsize = mdsio_hasxattrs(vfsid, &rootcreds,
 	    fcmh_2_mfid(f));
 
-	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
+	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
 
  out:
@@ -415,6 +294,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
+	mp->sbd.sbd_key = BMAPSEQ_ANY;
 
 	psc_assert(bmi->bmi_wr_ion);
 	mp->sbd.sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
@@ -534,12 +414,6 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		goto out;
 	}
 
-#if 0
-	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-#endif
-
 	/*
  	 * If we don't wait for a truncation to complete on an IOS, a
  	 * later write beyond the truncation point could race with it 
@@ -613,7 +487,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 int
 slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p = NULL, *c = NULL;
+	struct fidc_membh *p = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int vfsid;
@@ -625,7 +499,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	psclog_diag("lookup: pfid="SLPRI_FID" name=%s", fcmh_2_mfid(p),
@@ -695,28 +568,16 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 				mp->attr.sst_fg.fg_fid = fid;
 		}
 	}
-	/*
- 	 * We don't have an OPEN RPC, so we give a callback implicitly.
- 	 */
-	mp->rc = -slm_fcmh_get(&mp->attr.sst_fg, &c);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
 
  out:
-	if (c)
-		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
 	return (0);
 }
 
 int
-slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq, 
-    struct srm_mkdir_rep *mp, int opflags, struct fidc_membh **dp)
+slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
+    int opflags, struct fidc_membh **dp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	slfid_t fid = 0;
@@ -740,21 +601,11 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
 	mds_reserve_slot(1);
 	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mfid(p), mq->name,
 	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
-
-	/*
- 	 * XXX Register a callback with the new directory, so that I
- 	 * can send a delete callback to the client if need be.
- 	 */
-	mp->lease = slm_callback_timeout;
 
  out:
 	if (p)
@@ -802,7 +653,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	return (slm_mkdir(vfsid, rq, mq, mp, 0, NULL));
+	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
 }
 
 int
@@ -903,7 +754,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-
 	DEBUG_FCMH(level, p, "create op start for %s", mq->name);
 
 	mp->cattr.sst_ctim = mq->time;
@@ -945,10 +795,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
-
-	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
 
 #if 0
 	mp->rc2 = ENOENT;
@@ -1112,10 +958,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1781,10 +1623,6 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	chfg = attr.sst_fg;
 	mp->rc = -slm_fcmh_get(&chfg, &c);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

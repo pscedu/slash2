@@ -308,8 +308,7 @@ void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
 
 void	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_stat(struct fidc_membh *, void *, int32_t *);
-int	 slc_fcmh_getattr(struct fidc_membh *, void *);
+int	 msl_stat(struct fidc_membh *, void *);
 
 int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -391,7 +390,7 @@ extern struct psc_poolmgr	*msl_retry_req_pool;
 extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
-extern int			 msl_acl_enabled;
+extern int			 msl_acl;
 extern int			 msl_enable_namecache;
 extern int			 msl_enable_sillyrename;
 extern int			 msl_force_dio;

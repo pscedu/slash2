@@ -98,6 +98,7 @@ struct fidc_membh {
 #define FCMH_LOCK(f)		spinlock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_TRYLOCK(f)		trylock_pci(FCMH_PCI, &(f)->fcmh_lock)
+#define FCMH_TRYRLOCK(f, lk)	tryreqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
 #define FCMH_RLOCK(f)		reqlock_pci(FCMH_PCI, &(f)->fcmh_lock)
 #define FCMH_URLOCK(f, lk)	ureqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
@@ -209,7 +210,7 @@ struct fidc_membh {
 #define FCMH_OPCNT_NEW			 2	/* all: early initialization */
 #define FCMH_OPCNT_OPEN			 3	/* CLI: pscfs file info */
 #define FCMH_OPCNT_WAIT			 4	/* all: dup ref during initialization */
-#define FCMH_OPCNT_WORKER		 5	/* CLI: generic worker */
+#define FCMH_OPCNT_WORKER		 5	/* MDS: generic worker */
 #define FCMH_OPCNT_DIRTY_QUEUE		 6	/* CLI: attribute flushing */
 #define FCMH_OPCNT_UPSCH		 7	/* MDS: temporarily held by upsch engine */
 #define FCMH_OPCNT_READDIR		 8	/* CLI: readahead readdir RPC */
@@ -217,8 +218,7 @@ struct fidc_membh {
 #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
 #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
 #define FCMH_OPCNT_UPDATE		12	/* IOD: update file */
-#define FCMH_OPCNT_CALLBACK		13	/* MDS: coherence callback */
-#define FCMH_OPCNT_MAXTYPE		14
+#define FCMH_OPCNT_MAXTYPE		13
 
 void	fidc_init(int);
 void	fidc_destroy(void);

@@ -61,13 +61,6 @@ struct pfl_odt		*slm_bia_odt;
 int			slm_max_ios = SL_MAX_REPLICAS;
 
 /*
- * Longer timeout values reduce RPC cost, but need more memory to
- * keep track of them.
- */
-int			slm_lease_timeout = BMAP_TIMEO_MAX;
-int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
-
-/*
  * Knobs that allow us to turn off some features easily if
  * they turn out to be unstable.
  */
@@ -194,7 +187,7 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 				if (bml->bml_flags & BML_DIOCB)
 					goto next;
 
-				slm_bmap_coherent_callback(bml);
+				mdscoh_req(bml);
 
  next:
 				bml = bml->bml_chain;
@@ -223,11 +216,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 		 * Looks like we somehow end up with two write leases on
 		 * the same bmap, but likely with different IOSes, hence
 		 * the following assert triggers.  The bml_start value
-		 * between the two leases exceeds 60000.
-		 *
-		 * Here we use the memory address to assert that different
-		 * leases share the same IOS.
-		 *
+		 * between the two lease exceeds 60000.
 		 */
 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
 	} else {
@@ -762,13 +751,10 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 /*
  * Find the first lease of a given client based on its {nid, pid} pair.
- * 
  * Also walk the chain of duplicate leases to count the number of read
  * and write leases.  Note that only the first lease of a client is
  * linked on the bmi->bmi_leases list, the rest is linked on a private
  * chain and tagged with BML_CHAIN flag.
- *
- * Return the first lease of a client on the bmap lease list.
  */
 static __inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
@@ -937,7 +923,7 @@ mds_bmap_getbml(struct bmap *b, uint64_t seq, uint64_t nid, uint32_t pid)
  * @rw: read/write access for bmap.
  * @prefios: client preferred I/O system.
  */
-int
+__static int
 mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
     sl_ios_id_t prefios)
 {
@@ -954,7 +940,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
-	rc = mds_bmap_directio(b, rw, bml->bml_flags & (BML_DIO|BML_DIRECTORY),
+	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
 	    &bml->bml_cli_nidpid);
 	if (rc && (bml->bml_flags & BML_RECOVER))
 		rc = 0;
@@ -1236,11 +1222,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			/*
  			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
  			 * bmi_seq = -1, and bml_flags = 101000010.
- 			 *
- 			 * Looks like this is because we assign BMAPSEQ_ANY at
- 			 * reattach time.  The flags above shows this is during
- 			 * recovery.
- 			 *
  			 */
 			if (bia->bia_seq !=  bmi->bmi_seq) {
 				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
@@ -1351,7 +1332,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 	return (0);
 }
 
-struct bmap_mds_lease *
+static struct bmap_mds_lease *
 mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
     lnet_process_id_t *cnp)
 {
@@ -1370,7 +1351,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + slm_lease_timeout;
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1448,11 +1429,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + slm_lease_timeout;
-
-	/*
-	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
-	 */
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
 	if (bml->bml_expire <= time(NULL))
 		OPSTAT_INCR("bmap-restart-expired");
 
@@ -1495,20 +1472,20 @@ void
 slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 {
 	struct bmap_mds_info *bmi;
-	int i;
+	int i, locked;
 
-	BMAP_LOCK_ENSURE(b);
 	bmi = bmap_2_bmi(b);
+	locked = BMAP_RLOCK(b);
 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = b->bcm_bmapno;
 	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
 			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
 			break;
 		}
-	}
+	BMAP_URLOCK(b, locked);
 }
 
 /*
@@ -1579,12 +1556,13 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	}
 
 	slm_fill_bmapdesc(sbd, b);
+
 	/*
 	 * SLASH2 monotonic coherency sequence number assigned to this
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
-	sbd->sbd_expire = slm_lease_timeout;
+	sbd->sbd_key = BMAPSEQ_ANY;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1667,9 +1645,6 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc)
 		PFL_GOTOERR(out1, rc);
 
-	obml->bml_start = time(NULL);
-	obml->bml_expire = obml->bml_start + slm_lease_timeout;
-
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
@@ -1692,9 +1667,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Do some post setup on the modified lease. */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
-	sbd_out->sbd_expire = slm_lease_timeout;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
+	sbd_out->sbd_key = BMAPSEQ_ANY;
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
@@ -1754,7 +1729,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
-	sbd_out->sbd_expire = slm_lease_timeout;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 
@@ -1763,8 +1737,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		psc_assert(bmi->bmi_wr_ion);
 
+		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
+		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
 	}
 
@@ -1965,10 +1941,6 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 
 	FCMH_ULOCK(f);
 
-	/*
- 	 * Disable it for now until I have a proper fix for the
- 	 * crash in the following loop.
- 	 */
 	if (slm_lease_skip)
 		goto skip;
 

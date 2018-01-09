@@ -33,7 +33,6 @@
 
 #include "bmap.h"
 #include "bmap_mds.h"
-#include "fidc_mds.h"
 #include "journal_mds.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
@@ -242,7 +241,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {
 			freelock(&slm_bmap_leases.btt_lock);
-			nsecs = slm_lease_timeout;
+			nsecs = BMAP_TIMEO_MAX;
 			goto out;
 		}
 		b = bml_2_bmap(bml);
@@ -299,63 +298,8 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 }
 
 void
-slmcbtimeothr_begin(struct psc_thread *thr)
-{
-	int nsecs;
-	char wait[16];
-	struct fidc_membh *f;
-	struct fcmh_mds_info *fmi;
-	struct fcmh_mds_callback *cb;
-
-	while (pscthr_run(thr)) {
-
-		nsecs = 0;
-		spinlock(&slm_fcmh_callbacks.ftt_lock);
-		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
-		if (!cb) {
-			freelock(&slm_fcmh_callbacks.ftt_lock);
-			nsecs = slm_lease_timeout;
-			goto out;
-		}
-		fmi = cb->fmc_fmi;
-		f = fmi_2_fcmh(fmi);
-		if (!FCMH_TRYLOCK(f)) {
-			freelock(&slm_fcmh_callbacks.ftt_lock);
-			nsecs = 1;
-			goto out;
-		}
-		nsecs = cb->fmc_expire - time(NULL);
-		if (nsecs > 0) {
-			FCMH_ULOCK(f);
-			freelock(&slm_fcmh_callbacks.ftt_lock);
-			goto out;
-		}
-		psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
-		pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
-		psc_pool_return(slm_callback_pool, cb);
-
-		fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
-
-		freelock(&slm_fcmh_callbacks.ftt_lock);
-
- out:
-		psclog_debug("nsecs=%d", nsecs);
-
-		if (nsecs > 0) {
-			snprintf(wait, 16, "sleep %d", nsecs);
-			thr->pscthr_waitq = wait;
-			sleep((uint32_t)nsecs);
-			thr->pscthr_waitq = NULL;
-		}
-	}
-}
-
-
-void
 slmbmaptimeothr_spawn(void)
 {
 	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, 0,
 	    "slmbmaptimeothr");
-	pscthr_init(SLMTHRT_CALLBACK, slmcbtimeothr_begin, 0,
-	    "slmcbtimeothr");
 }

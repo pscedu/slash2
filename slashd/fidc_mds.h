@@ -33,30 +33,6 @@
 #include "slashd.h"
 #include "up_sched_res.h"
 
-extern struct psc_poolmaster	 slm_callback_poolmaster;
-extern struct psc_poolmgr	*slm_callback_pool;
-
-struct fcmh_mds_callback {
-	/*
- 	 * The time period during which the MDS assumes that
- 	 * the client is still accessing the file.
- 	 */
-	int32_t			  fmc_expire;
-	lnet_process_id_t	  fmc_nidpid;
-	struct pscrpc_export	 *fmc_exp;
-	struct fcmh_mds_info	 *fmc_fmi;
-	struct psc_listentry	  fmc_lentry;
-	struct psc_listentry      fmc_timeo_lentry;
-};
-
-/*
- * List of fcmh callbacks.
- */
-struct fcmh_timeo_table {
-	psc_spinlock_t		 ftt_lock;
-	struct psc_lockedlist	 ftt_callbacks;
-};
-
 /**
  * fcmh_mds_info - MDS-specific fcmh data.
  * @fmi_mfid - backing object MIO FID.  This is used to access the
@@ -69,7 +45,6 @@ struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
 	mio_fid_t		  fmi_mfid;		/* backing object inum */
 	struct mio_fh		  fmi_mfh;		/* file handle */
-	struct psclist_head	  fmi_callbacks;
 	union {
 		struct {
 			/*

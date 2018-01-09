@@ -47,13 +47,6 @@ struct srt_stat;
 
 struct slm_sth;
 struct bmap_mds_lease;
-extern int slm_lease_timeout;
-extern int slm_callback_timeout;
-
-#define CALLBACK_TIMEO_MAX             240     /* default callback timeout */
-#define CALLBACK_TIMEO_MIN             40      /* minimum callback timeout */
-
-extern struct fcmh_timeo_table slm_fcmh_callbacks;
 
 extern sqlite3	*db_handle;
 
@@ -82,7 +75,6 @@ enum {
 	SLMTHRT_PAGER,			/* read SQL table */
 	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
 	SLMTHRT_WORKER,			/* miscellaneous work */
-	SLMTHRT_CALLBACK,		/* coherent callback */
 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
 };
 
@@ -323,8 +315,8 @@ int	slm_get_next_slashfid(slfid_t *);
 
 int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
+int	mdscoh_req(struct bmap_mds_lease *);
 void	slm_coh_delete_file(struct fidc_membh *);
-int	slm_bmap_coherent_callback(struct bmap_mds_lease *);
 
 void	slm_mdfs_scan(void);
 int	slm_wkcb_wr_brepl(void *);

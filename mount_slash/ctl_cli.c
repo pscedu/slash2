@@ -175,7 +175,6 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			continue;
 		}
 		b->bcm_flags |= BMAPF_LEASEEXPIRE;
-		/* XXX drop bmap lock here? */
 		msl_bmap_cache_rls(b);
 		bmap_op_done(b);
 	}
@@ -590,30 +589,6 @@ void
 msctlparam_mds_get(char buf[PCP_VALUE_MAX])
 {
 	strlcpy(buf, msl_rmc_resm->resm_name, PCP_VALUE_MAX);
-}
-
-void
-msctlparam_acl_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d", msl_acl_enabled);
-}
-
-int
-msctlparam_acl_set(const char *val)
-{
-	int newval;
-
-	newval = strtol(val, NULL, 0);
-	if (newval != 0 && newval != 1)
-		return (1);
-
-#ifndef SLOPT_POSIX_ACLS
-	msl_acl_enabled = 0;
-#else
-	msl_acl_enabled = newval;
-#endif
-
-	return (0);
 }
 
 void
@@ -1063,8 +1038,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
 
-	psc_ctlparam_register_simple("sys.acl_enabled",
-	    msctlparam_acl_get, msctlparam_acl_set);
+	psc_ctlparam_register_var("sys.attr_timeout", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_attributes_timeout);
 
 	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
