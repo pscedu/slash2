@@ -173,7 +173,7 @@ mds_replay_bmap(void *jent, int op)
  * in the bmap, this has to be a read-modify-write process.
  */
 static int
-mds_replay_update(struct psc_journal_enthdr *pje)
+mds_replay_update(__unusedx struct psc_journal_enthdr *pje)
 {
 	return (0);
 }

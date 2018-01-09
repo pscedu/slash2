@@ -54,6 +54,14 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+
+/*
+ * Longer timeout values reduce RPC cost, but need more memory to
+ * keep track of them.
+ */
+int			slm_lease_timeout = 240;
+int			slm_callback_timeout = 240;
+
 #define	SLM_CBARG_SLOT_CSVC	0
 
 struct pfl_odt		*slm_bia_odt;
