@@ -725,6 +725,8 @@ msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
 		f->fcmh_sstb.sst_size = 2;
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 		f->fcmh_sstb.sst_blocks = 4;
+		if (lease)
+			*lease = 60;
 		return (0);
 	}
 
@@ -735,10 +737,12 @@ msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
-		if (now.tv_sec <= fci->fci_expire) {
+		if (now.tv_sec < fci->fci_expire) {
 			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
+			if (lease)
+				*lease = fci->fci_expire - now.tv_sec;
 			OPSTAT_INCR("attr-cached");
 			return (0);
 		}

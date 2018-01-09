@@ -57,6 +57,8 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
 	struct bmap *b;
 
+	return;
+
 	/*
 	 * Invalidate bmap lease so that we can renew it with
 	 * the correct lease.

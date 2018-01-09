@@ -71,16 +71,15 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
-	if (b->bcm_flags & BMAPF_ONTREE) {
-		pfl_rwlock_wrlock(&f->fcmh_rwlock);
-		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-		pfl_rwlock_unlock(&f->fcmh_rwlock);
-		/*
-		 * XXX, we are dealing with bmap, and yet we
-		 * drop fcmh lock here.  Not good.
-		 */
-		fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
-	}
+	pfl_rwlock_wrlock(&f->fcmh_rwlock);
+	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
+
+	/*
+	 * XXX, we are dealing with bmap, and yet we
+	 * drop fcmh lock here.  Not good.
+	 */
+	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_pool_return(bmap_pool, b);
 }
 
@@ -134,7 +133,10 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	lb.bcm_bmapno = n;
 
  restart:
-	pfl_rwlock_wrlock(&f->fcmh_rwlock);
+	if (bnew)
+		pfl_rwlock_wrlock(&f->fcmh_rwlock);
+	else
+		pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	b = RB_FIND(bmaptree, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		if (!BMAP_TRYLOCK(b)) {
@@ -144,9 +146,18 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 		}
 
 		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
-			b->bcm_flags &= ~BMAPF_ONTREE;
-			PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-			pfl_rwlock_unlock(&f->fcmh_rwlock);
+			/*
+			 * This bmap is going away; wait for it so we
+			 * can reload it back.
+			 */
+			DEBUG_BMAP(PLL_DIAG, b, "wait on to-free bmap");
+			BMAP_ULOCK(b);
+			/*
+			 * We don't want to spin if we are waiting for a
+			 * flush to clear.
+			 */
+			psc_waitq_waitrelf_us(&f->fcmh_waitq,
+			    PFL_LOCKPRIMT_RWLOCK, &f->fcmh_rwlock, 100);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
@@ -193,7 +204,6 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	sl_bmap_ops.bmo_init_privatef(b);
 
 	/* Add to the fcmh's bmap cache */
-	b->bcm_flags |= BMAPF_ONTREE; 
 	PSC_RB_XINSERT(bmaptree, &f->fcmh_bmaptree, b);
 
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
