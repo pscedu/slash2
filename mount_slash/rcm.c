@@ -357,6 +357,9 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	/*
+	 * XXX Need to notify FUSE with invalidate_entry call.
+	 */ 	
 	OPSTAT_INCR("msl.file-callback");
 	fci = fcmh_get_pri(f);
 	FCMH_LOCK(f);
