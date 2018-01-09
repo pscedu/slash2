@@ -1,0 +1,3927 @@
+Only in stable: git-find.sh
+Only in stable: KNOWN-ISSUES.txt
+diff -dru -x .git stable/pfl/connection.c today/pfl/connection.c
+--- stable/pfl/connection.c	2018-01-09 12:17:22.428194202 -0500
++++ today/pfl/connection.c	2018-01-09 12:19:28.048073152 -0500
+@@ -78,6 +78,14 @@
+ 
+ //	psc_assert(uuid);
+ 
++	/*
++	 * (gdb) p $11.c_peer
++	 * $36 = {nid = 562995062530988, pid = 2147496892}
++	 * (gdb)  call libcfs_nid2str($11.c_peer)
++	 * $37 = 0xb38a40 <libcfs_nidstrings+1184> "128.182.99.172@tcp10"
++	 *
++	 * The pid is probably LNET_PID_USERFLAG | getpid().
++	 */
+ 	psclog_debug("self %s peer %s",
+ 	    libcfs_nid2str(self), libcfs_id2str(peer));
+ 
+@@ -156,9 +164,20 @@
+  		 * usocklnd_check_peer_stale() --> usocklnd_destroy_peer() -->
+  		 * lnet_enq_event_locked() --> pscrpc_master_callback() -->
+  		 * pscrpc_drop_callback().
++ 		 *
++ 		 * 12/07/2017: We should take one extra reference count
++ 		 * to the connection itself so that we can drop the
++ 		 * connection normally. Also, we should take reference
++ 		 * count on export as well, but don't use it if its
++ 		 * underlying connection is gone.
+  		 */
+ 		psc_hashbkt_lock(b);
+ 		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
++			/*
++ 			 * XXX, mark export and import as failed. Let
++ 			 * them go away when the reference count drops
++ 			 * to zero.
++ 			 */
+ 			if ((c->c_peer.nid == peer->nid &&
+ 			     c->c_peer.pid == peer->pid) ||
+ 			    peer->nid == LNET_NID_ANY) {
+diff -dru -x .git stable/pfl/export.c today/pfl/export.c
+--- stable/pfl/export.c	2018-01-09 12:17:22.456192838 -0500
++++ today/pfl/export.c	2018-01-09 12:19:28.076071789 -0500
+@@ -32,6 +32,10 @@
+ void
+ _pscrpc_export_put(struct pscrpc_export *exp)
+ {
++	/*
++ 	 * 12/07/2017: There should be a way to make the export as
++ 	 * failed before it is freed.
++ 	 */
+ 	if (atomic_dec_and_test(&exp->exp_refcount)) {
+ 		psclog_debug("destroying export %p/%s",
+ 		    exp, exp->exp_connection ?
+diff -dru -x .git stable/pfl/fs.h today/pfl/fs.h
+--- stable/pfl/fs.h	2018-01-09 12:17:22.464192449 -0500
++++ today/pfl/fs.h	2018-01-09 12:19:28.085071350 -0500
+@@ -277,7 +277,4 @@
+ extern struct psc_lockedlist		pflfs_filehandles;
+ extern struct psc_lockedlist		pflfs_requests;
+ 
+-extern double				pscfs_entry_timeout;
+-extern double				pscfs_attr_timeout;
+-
+ #endif /* _PFL_FS_H_ */
+diff -dru -x .git stable/pfl/fuse.c today/pfl/fuse.c
+--- stable/pfl/fuse.c	2018-01-09 12:17:22.470192155 -0500
++++ today/pfl/fuse.c	2018-01-09 12:19:28.090071106 -0500
+@@ -112,8 +112,6 @@
+ 	int			 mntlen;
+ } fuse_fs_info_t;
+ 
+-double				 pscfs_entry_timeout;
+-double				 pscfs_attr_timeout;
+ struct psc_poolmaster		 pflfs_req_poolmaster;
+ struct psc_poolmgr		*pflfs_req_pool;
+ struct psc_dynarray		 pscfs_modules;
+@@ -433,6 +431,7 @@
+ }
+ 
+ #ifdef PFL_CTL
++
+ #ifdef HAVE_FUSE_DEBUGLEVEL
+ void
+ pscfs_ctlparam_fuse_debug_get(char buf[PCP_VALUE_MAX])
+@@ -464,48 +463,7 @@
+ 	    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
+ }
+ 
+-void
+-pscfs_ctlparam_entry_timeout_get(char buf[PCP_VALUE_MAX])
+-{
+-	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_entry_timeout);
+-}
+-
+-int
+-pscfs_ctlparam_entry_timeout_set(const char *s)
+-{
+-	double val;
+-	char *endp;
+-
+-	endp = NULL;
+-	val = strtod(s, &endp);
+-	if (val < 0. || val > 60. ||
+-	    endp == s || *endp != '\0')
+-		return (-1);
+-	pscfs_entry_timeout = val;
+-	return (0);
+-}
+-
+-void
+-pscfs_ctlparam_attr_timeout_get(char buf[PCP_VALUE_MAX])
+-{
+-	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_attr_timeout);
+-}
+-
+-int
+-pscfs_ctlparam_attr_timeout_set(const char *s)
+-{
+-	char *endp;
+-	long val;
+-
+-	endp = NULL;
+-	val = strtod(s, &endp);
+-	if (val < 0. || val > 60. ||
+-	    endp == s || *endp != '\0')
+-		return (-1);
+-	pscfs_attr_timeout = val;
+-	return (0);
+-}
+-#endif
++#endif	/* PFL_CTL */
+ 
+ void
+ pfl_fuse_atexit(void)
+@@ -576,12 +534,6 @@
+ #endif
+ 	psc_ctlparam_register_simple("fuse.version",
+ 	    pscfs_ctlparam_fuse_version_get, NULL);
+-	psc_ctlparam_register_simple("pscfs.entry_timeout",
+-	    pscfs_ctlparam_entry_timeout_get,
+-	    pscfs_ctlparam_entry_timeout_set);
+-	psc_ctlparam_register_simple("pscfs.attr_timeout",
+-	    pscfs_ctlparam_attr_timeout_get,
+-	    pscfs_ctlparam_attr_timeout_set);
+ #endif
+ 
+ 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
+diff -dru -x .git stable/pfl/listcache.c today/pfl/listcache.c
+--- stable/pfl/listcache.c	2018-01-09 12:17:22.483191523 -0500
++++ today/pfl/listcache.c	2018-01-09 12:19:28.103070474 -0500
+@@ -82,6 +82,8 @@
+ 			if (rc) {
+ 				psc_assert(rc == ETIMEDOUT);
+ 				errno = rc;
++				LIST_CACHE_LOCK(plc);
++				LIST_CACHE_URLOCK(plc, locked);
+ 				return (NULL);
+ 			}
+ 		} else
+diff -dru -x .git stable/pfl/pthrutil.c today/pfl/pthrutil.c
+--- stable/pfl/pthrutil.c	2018-01-09 12:17:22.523189574 -0500
++++ today/pfl/pthrutil.c	2018-01-09 12:19:28.144068475 -0500
+@@ -249,6 +249,12 @@
+ 	p = pthread_self();
+ 	psc_assert(rw->pr_writer != p);
+ 
++	/*
++	 * If a thread already has a read lock and request for a write
++	 * lock, we will deadlock.
++	 *
++	 * (gdb) p/x *(pthread_t *)rw->pr_readers.pda_items[0]
++	 */
+ 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
+ 	if (rc)
+ 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));
+diff -dru -x .git stable/pfl/service.c today/pfl/service.c
+--- stable/pfl/service.c	2018-01-09 12:17:22.540188746 -0500
++++ today/pfl/service.c	2018-01-09 12:19:28.161067646 -0500
+@@ -367,6 +367,11 @@
+ 		atomic_set(&exp->exp_refcount, 1);
+ 		atomic_set(&exp->exp_rpc_count, 0);
+ 		exp->exp_connection = request->rq_conn;
++
++		/*
++ 		 * 12/07/2017: we also have exp->exp_connection. So export
++ 		 * and connection each take other's reference count!
++ 		 */
+ 		request->rq_conn->c_exp = exp;
+ 	}
+ 	freelock(&request->rq_conn->c_lock);
+diff -dru -x .git stable/pfl/stat.h today/pfl/stat.h
+--- stable/pfl/stat.h	2018-01-09 12:17:22.543188599 -0500
++++ today/pfl/stat.h	2018-01-09 12:19:28.165067452 -0500
+@@ -100,7 +100,13 @@
+ #define ALLPERMS	(S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)
+ #endif
+ 
+-/* XXX we should be careful here */
++/*
++ * XXX we should be careful here.
++ *
++ * If there is a definition conflict, please remove pickle files
++ * under the mk directory and retry.
++ */
++
+ #ifndef HAVE_BLKSIZE_T
+ typedef uint64_t blksize_t;
+ typedef uint64_t blkcnt_t;
+diff -dru -x .git stable/pfl/utils/daemon/pfl_daemon.sh today/pfl/utils/daemon/pfl_daemon.sh
+--- stable/pfl/utils/daemon/pfl_daemon.sh	2018-01-09 12:17:22.655183141 -0500
++++ today/pfl/utils/daemon/pfl_daemon.sh	2018-01-09 12:19:28.275062092 -0500
+@@ -308,6 +308,9 @@
+ 
+ 	mv -f *core* c/ 2>/dev/null
+ 	cp `which $prog` c/$prog.$id
++
++        # XXX Not sure how this timestap is attached to the log file.
++
+ 	tm=$(date +%s)
+ 	trap cleanup EXIT
+ }
+diff -dru -x .git stable/slash2/doc/new-mds.txt today/slash2/doc/new-mds.txt
+--- stable/slash2/doc/new-mds.txt	2018-01-09 12:17:22.730179488 -0500
++++ today/slash2/doc/new-mds.txt	2018-01-09 12:19:42.019392390 -0500
+@@ -92,7 +92,17 @@
+ 		- Add generation number to each data structure that can be updated atomically
+ 		  for log replay.  Also protect each data structure with CRC checksum.
+ 
+-		- Add version number to each data structures to allow piece meal upgrade.
++			- if we don't have file system wide sync, then each log entry should have
++			  a callback to sync corresponding file system data before it can be
++			  reclaimed.
++
++		- Add version number to different types of data structures to allow piece meal upgrade.
++
++			- we might have to support multiple formats of the same data structure in the
++			  future.
++
++			- add generation number and 64-bit CRC checksum to make sure data structures are
++			  updated atomically on the disk.
+ 
+ 		- Currently, we use some ZFS fields to store slash2 attributes, we won't be able
+ 		  to touch file system inode at all.
+diff -dru -x .git stable/slash2/include/bmap.h today/slash2/include/bmap.h
+--- stable/slash2/include/bmap.h	2018-01-09 12:17:22.760178026 -0500
++++ today/slash2/include/bmap.h	2018-01-09 12:19:42.048390978 -0500
+@@ -56,6 +56,14 @@
+ #define	SLI_BMAP_COUNT		1024
+ #define	MDS_BMAP_COUNT		4096
+ 
++
++/*
++ * Longer time allows a client to cache pages longer and reduces RPC traffic
++ * needed for lease extension.
++ */
++#define BMAP_TIMEO_MAX		240	/* default bmap lease timeout */
++#define BMAP_TIMEO_MIN		40	/* minimum bmap lease timeout */
++
+ /*
+  * Basic information about bmaps shared by all MDS, IOS, and CLI.
+  * @bcs_crcstates: bits describing the state of each sliver
+@@ -66,6 +74,11 @@
+  * This structure must be 64-bit aligned and padded.
+  */
+ struct bmap_core_state {
++	/*
++ 	 * The field appears to be a misnomer because we no longer
++ 	 * support per sliver CRC state. However, there might be
++ 	 * value in keeping track of whether a sliver has data.
++ 	 */
+ 	uint8_t			bcs_crcstates[SLASH_SLVRS_PER_BMAP];
+ 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
+ };
+@@ -135,11 +148,13 @@
+ #define BMAPF_LOADED		(1 <<  2)	/* contents are loaded */
+ #define BMAPF_LOADING		(1 <<  3)	/* retrieval RPC is inflight */
+ #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
+-#define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+-#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+-#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+-#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+-#define _BMAPF_SHIFT		(1 <<  9)
++#define BMAPF_STALE		(1 <<  5)	/* bmap is stale (gen changed) */
++#define BMAPF_TOFREE		(1 <<  6)	/* refcnt dropped to zero, removing */
++#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
++#define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
++#define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
++#define BMAPF_ONTREE		(1 <<  10)	/* temporary processing lock */
++#define _BMAPF_SHIFT		(1 <<  11)
+ 
+ #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
+ 
+@@ -340,6 +355,7 @@
+ #define BMAPGETF_NOAUTOINST	(1 << 3)	/* do not autoinstantiate */
+ #define BMAPGETF_NODISKREAD	(1 << 4)	/* do not read from disk - nothing there */
+ #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
++#define BMAPGETF_DIRECTORY	(1 << 6)	/* create a bmap lease for directory */
+ 
+ int	 bmap_cmp(const void *, const void *);
+ void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
+@@ -375,7 +391,6 @@
+ 
+ enum bmap_opcnt_types {
+ 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
+-	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
+ 	BMAP_OPCNT_BIORQ,		/* all: IO request */
+ 	BMAP_OPCNT_BMPCE,		/* CLI: page */
+ 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
+diff -dru -x .git stable/slash2/include/fidcache.h today/slash2/include/fidcache.h
+--- stable/slash2/include/fidcache.h	2018-01-09 12:17:22.766177734 -0500
++++ today/slash2/include/fidcache.h	2018-01-09 12:19:42.054390684 -0500
+@@ -98,7 +98,6 @@
+ #define FCMH_LOCK(f)		spinlock_pci(FCMH_PCI, &(f)->fcmh_lock)
+ #define FCMH_ULOCK(f)		freelock_pci(FCMH_PCI, &(f)->fcmh_lock)
+ #define FCMH_TRYLOCK(f)		trylock_pci(FCMH_PCI, &(f)->fcmh_lock)
+-#define FCMH_TRYRLOCK(f, lk)	tryreqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
+ #define FCMH_RLOCK(f)		reqlock_pci(FCMH_PCI, &(f)->fcmh_lock)
+ #define FCMH_URLOCK(f, lk)	ureqlock_pci(FCMH_PCI, &(f)->fcmh_lock, (lk))
+ #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
+@@ -210,7 +209,7 @@
+ #define FCMH_OPCNT_NEW			 2	/* all: early initialization */
+ #define FCMH_OPCNT_OPEN			 3	/* CLI: pscfs file info */
+ #define FCMH_OPCNT_WAIT			 4	/* all: dup ref during initialization */
+-#define FCMH_OPCNT_WORKER		 5	/* MDS: generic worker */
++#define FCMH_OPCNT_WORKER		 5	/* CLI: generic worker */
+ #define FCMH_OPCNT_DIRTY_QUEUE		 6	/* CLI: attribute flushing */
+ #define FCMH_OPCNT_UPSCH		 7	/* MDS: temporarily held by upsch engine */
+ #define FCMH_OPCNT_READDIR		 8	/* CLI: readahead readdir RPC */
+@@ -218,7 +217,8 @@
+ #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
+ #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
+ #define FCMH_OPCNT_UPDATE		12	/* IOD: update file */
+-#define FCMH_OPCNT_MAXTYPE		13
++#define FCMH_OPCNT_CALLBACK		13	/* MDS: coherence callback */
++#define FCMH_OPCNT_MAXTYPE		14
+ 
+ void	fidc_init(int);
+ void	fidc_destroy(void);
+diff -dru -x .git stable/slash2/include/slashrpc.h today/slash2/include/slashrpc.h
+--- stable/slash2/include/slashrpc.h	2018-01-09 12:17:22.770177538 -0500
++++ today/slash2/include/slashrpc.h	2018-01-09 12:19:42.057390538 -0500
+@@ -47,7 +47,7 @@
+  * can have different versions. However, to avoid hassle in terms 
+  * of maintainence and administration. Let us use one version.
+  */
+-#define	SL_RPC_VERSION		2
++#define	SL_RPC_VERSION		4
+ 
+ /* RPC channel to MDS from CLI. */
+ #define SRMC_REQ_PORTAL		10
+@@ -196,6 +196,8 @@
+ 	SRMT_BATCH_RP,				/* 50: async batch reply */
+ 	SRMT_CTL,				/* 51: generic control */
+ 
++	SRMT_FILECB,				/* 52: file callback */
++
+ 	SRMT_TOTAL
+ };
+ 
+@@ -242,6 +244,14 @@
+ 	uint64_t		opv;		/* value */
+ };
+ 
++struct srm_filecb_req {
++	struct sl_fidgen	fg;		/* file */
++	uint32_t		flags;		/* semantics */
++	 int32_t		_pad;
++} __packed;
++
++#define srm_filecb_rep		srm_generic_rep
++
+ #define SRMCTL_OPT_HEALTH	0
+ 
+ /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
+@@ -272,14 +282,15 @@
+ struct srt_bmapdesc {
+ 	struct sl_fidgen	sbd_fg;
+ 	uint64_t		sbd_seq;
+-	uint64_t		sbd_key;
+ 
+ 	uint64_t		sbd_nid;	/* XXX go away */
+ 	uint32_t		sbd_pid;	/* XXX go away */
+ 
++	uint16_t		sbd_expire;
++	uint16_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
++
+ 	sl_ios_id_t		sbd_ios;
+ 	sl_bmapno_t		sbd_bmapno;
+-	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_DIO, etc. */
+ } __packed;
+ 
+ /* RPC transportably safe structures. */
+@@ -798,7 +809,7 @@
+ 	struct srt_stat		cattr;		/* attrs of new file */
+ 	struct srt_stat		pattr;		/* parent dir attributes */
+ 	 int32_t		rc;		/* 0 for success or slerrno */
+-	 int32_t		_pad;
++	 int32_t		lease;	
+ 
+ 	/* parameters for fetching first bmap */
+ 	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
+@@ -815,14 +826,15 @@
+ struct srm_getattr_rep {
+ 	struct srt_stat		attr;
+ 	 uint32_t		xattrsize;
++	 int32_t		lease;
+ 	 int32_t		rc;
+ } __packed;
+ 
+ struct srm_getattr2_rep {
+ 	struct srt_stat		cattr;		/* child node */
+ 	struct srt_stat		pattr;		/* parent dir */
++	 int32_t		lease;
+ 	 int32_t		rc;
+-	 int32_t		_pad;
+ } __packed;
+ 
+ struct srm_io_req {
+@@ -910,7 +922,8 @@
+ 	uint32_t		eof:1;		/* flag: directory read EOF */
+ 	uint32_t		nents:31;	/* #dirents returned */
+ 	 int32_t		rc;
+-	unsigned char		ents[824];
++	 int32_t		lease;
++	unsigned char		ents[820];
+ /* XXX ents should be in a portable format, not fuse_dirent */
+ /* XXX ents is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
+ } __packed;
+@@ -945,8 +958,8 @@
+ 	struct srt_stat		srr_opattr;	/* old parent */
+ 	struct srt_stat		srr_cattr;	/* child node */
+ 	struct srt_stat		srr_clattr;	/* clobbered node */
++	 int32_t		lease;
+ 	 int32_t		rc;
+-	 int32_t		_pad;
+ } __packed;
+ 
+ struct srm_replrq_req {
+@@ -1005,6 +1018,7 @@
+ 	struct srt_stat		cattr;		/* child node - FID always valid */
+ 	struct srt_stat		pattr;		/* parent dir */
+ 	 int32_t		valid;		/* child attr valid */
++	 int32_t		lease;		/* lease for parent attributes */
+ 	 int32_t		rc;
+ } __packed;
+ 
+diff -dru -x .git stable/slash2/mk/pre.mk today/slash2/mk/pre.mk
+--- stable/slash2/mk/pre.mk	2018-01-09 12:17:22.780177050 -0500
++++ today/slash2/mk/pre.mk	2018-01-09 12:19:42.067390050 -0500
+@@ -59,7 +59,10 @@
+ endif
+ 
+ # To support ACL, add the following line in file local.mk
++# under the same directory:
++#
+ # SLASH_OPTIONS+=acl
++#
+ 
+ ifeq (${CURDIR},$(realpath ${SLASH_BASE}/mount_slash))
+  ifneq ($(filter acl,${SLASH_OPTIONS}),)
+diff -dru -x .git stable/slash2/mount_slash/bflush.c today/slash2/mount_slash/bflush.c
+--- stable/slash2/mount_slash/bflush.c	2018-01-09 12:17:22.785176807 -0500
++++ today/slash2/mount_slash/bflush.c	2018-01-09 12:19:42.071389856 -0500
+@@ -408,7 +408,7 @@
+ 	BMAP_LOCK(b);
+ 	PFL_GETTIMESPEC(&ts0);
+ 	ts0.tv_sec += 1;
+-	ts1.tv_sec = bci->bci_etime.tv_sec;
++	ts1.tv_sec = bci->bci_etime.tv_sec - BMAP_TIMEO_INC;
+ 	BMAP_ULOCK(b);
+ 
+ 	if (ts1.tv_sec <= ts0.tv_sec) {
+@@ -600,7 +600,6 @@
+ 
+ 	if (flush) {
+ 		PFL_GETTIMESPEC(&ts);
+-		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+ 		/*
+ 		 * XXX: If the IOS is done, we will try to get a lease.
+ 		 * However, MDS will reject us with -1010. So we can't
+diff -dru -x .git stable/slash2/mount_slash/bmap_cli.c today/slash2/mount_slash/bmap_cli.c
+--- stable/slash2/mount_slash/bmap_cli.c	2018-01-09 12:17:22.785176808 -0500
++++ today/slash2/mount_slash/bmap_cli.c	2018-01-09 12:19:42.072389808 -0500
+@@ -44,12 +44,12 @@
+ #define BMAP_CACHE_MAX		1024
+ 
+ /*
+- * Total wait time is .5+1+2+4+8+16+32+60*(32-7) = 1563.5 seconds.
++ * Total wait time is .5+1+2+4+5*(64-4) = 307.5 seconds.
+  */
+ #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
+-#define BMAP_DIOWAIT_MAX_TRIES	32
++#define BMAP_DIOWAIT_MAX_TRIES	64
+ 
+-const struct timespec slc_bmap_diowait_max = { 60, 0 };
++const struct timespec slc_bmap_diowait_max = { 5, 0 };
+ 
+ enum {
+ 	MSL_BMODECHG_CBARG_BMAP,
+@@ -65,6 +65,8 @@
+ 
+ int slc_bmap_max_cache = BMAP_CACHE_MAX;
+ 
++psc_atomic32_t		 msl_bmap_stale = PSC_ATOMIC32_INIT(0);
++
+ /*
+  * Easy debugging with separate lock/wait combo.
+  */
+@@ -164,6 +166,12 @@
+ 
+ 	if (!sbd->sbd_seq)
+ 		psc_fatalx("Zero bmap lease number (%s)", action);
++
++	if (sbd->sbd_expire < BMAP_TIMEO_MIN ||
++	    sbd->sbd_expire > BMAP_TIMEO_MAX)
++		psc_fatalx("Invalid bmap expire time %d (%s)",
++		    sbd->sbd_expire, action);
++
+ 	psc_assert(sbd->sbd_fg.fg_fid);
+ 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+ 
+@@ -181,8 +189,7 @@
+ 	 * expiration time.
+ 	 */
+ 	PFL_GETTIMESPEC(&bci->bci_etime);
+-	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
+-	    &bci->bci_etime);
++	bci->bci_etime.tv_sec += (sbd->sbd_expire - BMAP_TIMEO_INC);
+ 	b->bcm_flags &= ~BMAPF_LEASEEXPIRE;
+ 
+ 	*bmap_2_sbd(b) = *sbd;
+@@ -284,10 +291,10 @@
+  retry:
+ 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
+ 	if (rc)
+-		PFL_GOTOERR(out, rc);
++		PFL_GOTOERR(out1, rc);
+ 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
+ 	if (rc)
+-		PFL_GOTOERR(out, rc);
++		PFL_GOTOERR(out1, rc);
+ 
+ 	mq->fg = f->fcmh_fg;
+ 	mq->prefios[0] = msl_pref_ios;
+@@ -318,9 +325,9 @@
+ 	}
+ 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ 	if (!rc)
+-		rc = mp->rc;
+- out:
+-	if (rc == -SLERR_BMAP_DIOWAIT) {
++		rc = -mp->rc;
++ out1:
++	if (rc == SLERR_BMAP_DIOWAIT) {
+ 		OPSTAT_INCR("bmap-retrieve-diowait");
+ 
+ 		/* Retry for bmap to be DIO ready. */
+@@ -330,24 +337,29 @@
+ 		nretries++;
+ 		if (msl_bmap_diowait(&diowait_duration, nretries))
+ 			goto retry;
++		/*
++ 		 * Don't fall through to retry logic again.
++ 		 */
++		rc = ETIMEDOUT;
++		goto out2;
+ 	}
+ 
+ 	if (csvc) {
+ 		sl_csvc_decref(csvc);
+ 		csvc = NULL;
+ 	}
+-	if (rc == -SLERR_BMAP_IN_PTRUNC)
++	if (rc == SLERR_BMAP_IN_PTRUNC)
+ 		rc = EAGAIN;
+ 
+ 	bci = bmap_2_bci(b);
+-	if (rc == -SLERR_ION_OFFLINE) {
++	if (rc == SLERR_ION_OFFLINE) {
+ 		rc = EHOSTDOWN;
+ 		BMAP_LOCK(b);
+ 		bci->bci_nreassigns = 0;
+ 		BMAP_ULOCK(b);
+ 		OPSTAT_INCR("msl.bmap-lease-ehostdown");
+ 	}
+-	if (rc == -SLERR_ION_READONLY) {
++	if (rc == SLERR_ION_READONLY) {
+ 		rc = EAGAIN;
+ 		BMAP_LOCK(b);
+ 		bci->bci_nreassigns = 0;
+@@ -372,18 +384,22 @@
+ 		msl_bmap_reap_init(b);
+ 
+ 		b->bcm_flags |= BMAPF_LOADED;
+-	} else {
+-		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
+-		    rc);
+-		msl_bmap_cache_rls(b);
+-		BMAP_LOCK(b);
++		goto out3;
++
+ 	}
+ 
++ out2:
++
++	DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d", rc);
++	msl_bmap_cache_rls(b);
++	BMAP_LOCK(b);
++
++ out3:
++
+ 	b->bcm_flags &= ~BMAPF_LOADING;
+ 	bmap_wake_locked(b);
+ 	BMAP_ULOCK(b);
+ 	pscrpc_req_finished(rq);
+-	rc = abs(rc);
+ 	return (rc);
+ }
+ 
+@@ -391,15 +407,13 @@
+ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
+     struct pscrpc_async_args *args)
+ {
++	int rc;
+ 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+ 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+ 	struct srm_leasebmapext_rep *mp;
+ 	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 
+-	int rc;
+-
+ 	BMAP_LOCK(b);
+-	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
+ 
+ 	/*
+  	 * To get the original request:
+@@ -434,6 +448,7 @@
+ 	 * failed.
+ 	 */
+ 
++	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
+ 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+ 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+ 	sl_csvc_decref(csvc);
+@@ -491,7 +506,7 @@
+ 	/* if we aren't in the expiry window, bail */
+ 	PFL_GETTIMESPEC(&ts);
+ 	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
+-	if (secs >= BMAP_CLI_EXTREQSECS &&
++	if (secs >= BMAP_TIMEO_INC &&
+ 	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
+ 		if (blocking)
+ 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
+@@ -534,8 +549,10 @@
+ 		rc = mp->rc;
+  out:
+ 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
+-		pscrpc_req_finished(rq);
+-		rq = NULL;
++		if (rq) {
++			pscrpc_req_finished(rq);
++			rq = NULL;
++		}
+ 		if (csvc) {
+ 			sl_csvc_decref(csvc);
+ 			csvc = NULL;
+@@ -651,11 +668,11 @@
+  retry:
+ 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
+ 	if (rc)
+-		PFL_GOTOERR(out, rc);
++		PFL_GOTOERR(out1, rc);
+ 
+ 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCHWRMODE, rq, mq, mp);
+ 	if (rc)
+-		PFL_GOTOERR(out, rc);
++		PFL_GOTOERR(out1, rc);
+ 
+ 	mq->sbd = *bmap_2_sbd(b);
+ 	mq->prefios[0] = msl_pref_ios;
+@@ -677,9 +694,9 @@
+ 	}
+ 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+ 	if (!rc)
+-		rc = mp->rc;
+- out:
+-	if (rc == -SLERR_BMAP_DIOWAIT) {
++		rc = -mp->rc;
++ out1:
++	if (rc == SLERR_BMAP_DIOWAIT) {
+ 		OPSTAT_INCR("bmap-modeset-diowait");
+ 
+ 		/* Retry for bmap to be DIO ready. */
+@@ -689,6 +706,12 @@
+ 		nretries++;
+ 		if (msl_bmap_diowait(&diowait_duration, nretries))
+ 			goto retry;
++		
++		/*
++ 		 * Don't fall through to retry logic again.
++ 		 */
++		rc = ETIMEDOUT;
++		goto out2;
+ 	}
+ 
+ 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
+@@ -720,12 +743,16 @@
+ 			msl_bmap_cache_rls(b);
+ 			BMAP_LOCK(b);
+ 		}
+-	} else {
+-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
+-			   "expire = %ld, rc=%d", 
+-			    bci->bci_etime.tv_sec, rc);
+-		BMAP_LOCK(b);
++		goto out3;
+ 	}
++ out2:
++
++	DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
++		   "expire = %ld, rc=%d", 
++		    bci->bci_etime.tv_sec, rc);
++	BMAP_LOCK(b);
++
++ out3:
+ 
+ 	/* We can get here for !blocking case */
+ 	b->bcm_flags &= ~BMAPF_MODECHNG;
+@@ -908,6 +935,10 @@
+ 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAPF_DIO)) {
+ 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
+ 
++		/*
++		 * If the MDS knows some IOS that the client does not
++		 * know due to mismatch config files, this can happen.
++		 */
+ 		if (!r)
+ 			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
+ 		psc_assert(b->bcm_flags & BMAPF_WR);
+@@ -954,10 +985,9 @@
+ 
+ 	for (i = 0; i < mq->nbmaps; i++)
+ 		psclog(rc ? PLL_ERROR : PLL_DIAG,
+-		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
++		    "fid="SLPRI_FID" bmap=%u"
+ 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
+-		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
+-		    mq->sbd[i].sbd_seq, rc);
++		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_seq, rc);
+ 
+ 	sl_csvc_decref(csvc);
+ 	return (rc);
+@@ -1039,7 +1069,7 @@
+ 		}
+ 		OPSTAT_INCR("msl.release-wakeup");
+ 		PFL_GETTIMESPEC(&ts);
+-		ts.tv_sec += BMAP_CLI_EXTREQSECS;
++		ts.tv_sec += BMAP_TIMEO_INC;
+ 
+ 		/*
+ 		 * We always check for lease before accessing cached pages.
+@@ -1051,6 +1081,7 @@
+ 			if (!BMAP_TRYLOCK(b))
+ 				continue;
+ 			if (b->bcm_flags & BMAPF_TOFREE ||
++			    b->bcm_flags & BMAPF_STALE ||
+ 			    b->bcm_flags & BMAPF_REASSIGNREQ ||
+ 			    b->bcm_flags & BMAPF_LEASEEXTEND) {
+ 				BMAP_ULOCK(b);
+@@ -1127,7 +1158,7 @@
+ 	struct fcmh_cli_info *fci;
+ 	struct bmapc_memb *b;
+ 	struct sl_resm *resm;
+-	int exiting, i, expire, nevict;
++	int exiting, i, skip, didwork;
+ 
+ 	/*
+ 	 * XXX: just put the resm's in the dynarray.  When pushing out
+@@ -1140,20 +1171,43 @@
+ 
+  again:
+ 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+-		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+-			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+-			break;
++
++#if 1
++		{
++			struct timespec ts;
++			PFL_GETTIMESPEC(&ts);
++			ts.tv_sec += BMAP_TIMEO_INC;
++			if (lc_peekheadtimed(&msl_bmaptimeoutq, &ts) == NULL) {
++				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
++				continue;
++			}
+ 		}
++#else
++		{
++			/*
++ 			 * This somehow misses a wakeup - it stuck there when
++ 			 * there is one item on the list.
++ 			 */
++			if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
++				LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
++				continue;
++			}
++		}
++#endif
++
+ 		OPSTAT_INCR("msl.release-wakeup");
+ 
+-		expire = 0;
++		skip = 0;
++		didwork = 0;
+ 		PFL_GETTIMESPEC(&curtime);
+ 
+ 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+ 		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
+ 			b = bci_2_bmap(bci);
+-			if (!BMAP_TRYLOCK(b))
++			if (!BMAP_TRYLOCK(b)) {
++				skip++;
+ 				continue;
++			}
+ 			if (b->bcm_flags & BMAPF_TOFREE) {
+ 				BMAP_ULOCK(b);
+ 				continue;
+@@ -1163,6 +1217,10 @@
+ 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+ 
+ 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
++				if (b->bcm_flags & BMAPF_STALE) {
++					OPSTAT_INCR("msl.stale-skip");
++					skip++;
++				}
+ 				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
+ 				BMAP_ULOCK(b);
+ 				continue;
+@@ -1176,7 +1234,6 @@
+ 
+ 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
+ 			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
+-				expire++;
+ 				b->bcm_flags |= BMAPF_TOFREE;
+ 				BMAP_ULOCK(b);
+ 				goto evict;
+@@ -1189,7 +1246,12 @@
+ 			BMAP_ULOCK(b);
+ 			continue;
+  evict:
+-
++			/*
++ 			 * Historically, we held bmap locks when adding them
++ 			 * into the array. If multiple bmaps belong to the
++ 			 * same file, we could end up deadlock against setattr.
++ 			 */
++			didwork = 1;
+ 			psc_dynarray_add(&bcis, bci);
+ 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
+ 				break;
+@@ -1199,6 +1261,10 @@
+ 		DYNARRAY_FOREACH(bci, i, &bcis) {
+ 			b = bci_2_bmap(bci);
+ 			BMAP_LOCK(b);
++
++			if (b->bcm_flags & BMAPF_STALE)
++				psc_atomic32_dec(&msl_bmap_stale);
++
+ 			b->bcm_flags &= ~BMAPF_TIMEOQ;
+ 			lc_remove(&msl_bmaptimeoutq, bci);
+ 
+@@ -1232,12 +1298,17 @@
+ 		DYNARRAY_FOREACH(resm, i, &rels)
+ 			msl_bmap_release(resm);
+ 
+-		nevict = psc_dynarray_len(&bcis);
+ 		psc_dynarray_reset(&rels);
+ 		psc_dynarray_reset(&bcis);
+ 
+-		if (expire && nevict == expire)
++		if (skip || didwork) {
++			pscthr_yield();
++			goto again;
++		}
++		if (psc_atomic32_read(&msl_bmap_stale)) {
++			pscthr_yield();
+ 			goto again;
++		}
+ 
+ 		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+ 		if (!exiting) {
+@@ -1370,6 +1441,7 @@
+ 	bmpc = bmap_2_bmpc(b);
+ 	BMAP_LOCK(b);
+ 	OPSTAT_INCR("msl.bmap-wait-empty");
++	/* XXX use 32-bit atomic read ?? */
+ 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
+ 	OPSTAT_INCR("msl.bmap-wait-empty-done");
+ 
+@@ -1402,6 +1474,7 @@
+ 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
+ }
+ 
++
+ #if PFL_DEBUG > 0
+ void
+ dump_bmap_flags(uint32_t flags)
+diff -dru -x .git stable/slash2/mount_slash/bmap_cli.h today/slash2/mount_slash/bmap_cli.h
+--- stable/slash2/mount_slash/bmap_cli.h	2018-01-09 12:17:22.786176759 -0500
++++ today/slash2/mount_slash/bmap_cli.h	2018-01-09 12:19:42.073389760 -0500
+@@ -3,7 +3,7 @@
+  * %GPL_START_LICENSE%
+  * ---------------------------------------------------------------------
+  * Copyright 2015-2016, Google, Inc.
+- * Copyright (c) 2006-2015, Pittsburgh Supercomputing Center (PSC).
++ * Copyright (c) 2006-2017, Pittsburgh Supercomputing Center (PSC).
+  * All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+@@ -30,6 +30,8 @@
+ #include "pgcache.h"
+ #include "slashrpc.h"
+ 
++#define BMAP_TIMEO_INC		 5			/* RPC delay, etc */
++
+ /*
+  * Private data associated with a bmap used by a SLASH2 client.
+  */
+@@ -47,7 +49,7 @@
+ 
+ 
+ 
+-/* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  9) */
++/* mount_slash specific bcm_flags: _BMAPF_SHIFT	= (1 <<  10) */
+ 
+ #define BMAPF_LEASEEXTREQ	(_BMAPF_SHIFT << 0)	/* lease request RPC in prog */
+ #define BMAPF_REASSIGNREQ	(_BMAPF_SHIFT << 1)	/* lease re-assign */
+@@ -59,12 +61,6 @@
+ #define BMAPF_FLUSHQ		(_BMAPF_SHIFT << 6)	/* bmap is on writer flushq */
+ #define BMAPF_TIMEOQ		(_BMAPF_SHIFT << 7)	/* on timeout queue */
+ 
+-
+-/* XXX change horribly named flags */
+-#define BMAP_CLI_MAX_LEASE	60			/* seconds */
+-#define BMAP_CLI_EXTREQSECS	20
+-#define BMAP_CLI_TIMEO_INC	1
+-
+ static __inline struct bmap_cli_info *
+ bmap_2_bci(struct bmap *b)
+ {
+diff -dru -x .git stable/slash2/mount_slash/ctl_cli.c today/slash2/mount_slash/ctl_cli.c
+--- stable/slash2/mount_slash/ctl_cli.c	2018-01-09 12:17:22.789176612 -0500
++++ today/slash2/mount_slash/ctl_cli.c	2018-01-09 12:19:42.076389613 -0500
+@@ -175,6 +175,7 @@
+ 			continue;
+ 		}
+ 		b->bcm_flags |= BMAPF_LEASEEXPIRE;
++		/* XXX drop bmap lock here? */
+ 		msl_bmap_cache_rls(b);
+ 		bmap_op_done(b);
+ 	}
+@@ -592,6 +593,30 @@
+ }
+ 
+ void
++msctlparam_acl_get(char *val)
++{
++	snprintf(val, PCP_VALUE_MAX, "%d", msl_acl_enabled);
++}
++
++int
++msctlparam_acl_set(const char *val)
++{
++	int newval;
++
++	newval = strtol(val, NULL, 0);
++	if (newval != 0 && newval != 1)
++		return (1);
++
++#ifndef SLOPT_POSIX_ACLS
++	msl_acl_enabled = 0;
++#else
++	msl_acl_enabled = newval;
++#endif
++
++	return (0);
++}
++
++void
+ msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
+ {
+ 	struct sl_resource *r;
+@@ -1038,8 +1063,8 @@
+ 	psc_ctlparam_register_simple("sys.version",
+ 	    slctlparam_version_get, NULL);
+ 
+-	psc_ctlparam_register_var("sys.attr_timeout", PFLCTL_PARAMT_INT,
+-	    PFLCTL_PARAMF_RDWR, &msl_attributes_timeout);
++	psc_ctlparam_register_simple("sys.acl_enabled",
++	    msctlparam_acl_get, msctlparam_acl_set);
+ 
+ 	psc_ctlparam_register_var("sys.bmap_max_cache",
+ 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
+diff -dru -x .git stable/slash2/mount_slash/dircache.c today/slash2/mount_slash/dircache.c
+--- stable/slash2/mount_slash/dircache.c	2018-01-09 12:17:22.792176465 -0500
++++ today/slash2/mount_slash/dircache.c	2018-01-09 12:19:42.078389515 -0500
+@@ -51,6 +51,7 @@
+ #include "mount_slash.h"
+ #include "sltypes.h"
+ #include "slutil.h"
++#include "bmap_cli.h"
+ 
+ struct psc_poolmaster	 dircache_page_poolmaster;
+ struct psc_poolmgr	*dircache_page_pool;
+@@ -193,8 +194,10 @@
+ 	struct dircache_page *p, *np;
+ 	struct fcmh_cli_info *fci;
+ 
+-	DIRCACHE_WR_ENSURE(d);
++	if (!(d->fcmh_flags & FCMHF_INIT_DIRCACHE))
++		return;
+ 
++	DIRCACHE_WRLOCK(d);
+ 	fci = fcmh_2_fci(d);
+ 	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry)
+ 		dircache_free_page(d, p);
+@@ -208,6 +211,7 @@
+ 			PSCFREE(dce->dce_name);
+ 		psc_pool_return(dircache_ent_pool, dce);
+ 	}
++	DIRCACHE_ULOCK(d);
+ }
+ 
+ /*
+@@ -288,7 +292,7 @@
+ }
+ 
+ void
+-dircache_trim(struct fidc_membh *d)
++dircache_trim(struct fidc_membh *d, int force)
+ {
+ 	struct psc_hashbkt *b;
+ 	struct timeval now;
+@@ -298,7 +302,7 @@
+ 	PFL_GETTIMEVAL(&now);
+ 	fci = fcmh_get_pri(d);
+ 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
+-		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
++		if (dce->dce_expire > now.tv_sec || force)
+ 			break;
+ 		fci->fcid_count--;
+ 		OPSTAT_INCR("dircache-trim");
+@@ -315,7 +319,7 @@
+ 
+ void
+ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
+-    int nents, void *base, size_t size, int eof)
++    int nents, void *base, size_t size, int eof, int32_t lease)
+ {
+ 	int i, rc;
+ 	off_t adj;
+@@ -331,7 +335,7 @@
+ 
+ 	DIRCACHE_WRLOCK(d);
+ 
+-	dircache_trim(d);
++	dircache_trim(d, 0);
+ 
+ 	fci = fcmh_get_pri(d);
+ 	/*
+@@ -379,7 +383,7 @@
+ 		dce->dce_namelen = dirent->pfd_namelen;
+ 		dce->dce_flag = DIRCACHE_F_SHORT;
+ 		dce->dce_name = &dce->dce_short[0];
+-		dce->dce_age = now.tv_sec;
++		dce->dce_expire = now.tv_sec + lease - BMAP_TIMEO_INC;
+ 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
+ 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
+ 		    dce->dce_namelen);
+@@ -430,7 +434,7 @@
+ 		}
+ 		FCMH_LOCK(f);
+ 		OPSTAT_INCR("msl.readdir-fcmh");
+-		slc_fcmh_setattr_locked(f, &e->sstb);
++		slc_fcmh_setattr_locked(f, &e->sstb, lease);
+ 
+ #if 0
+ 		/*
+@@ -450,7 +454,6 @@
+ 	p->dcp_nents = nents;
+ 	p->dcp_base = base;
+ 	p->dcp_size = size;
+-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+ 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
+ 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
+ 	DIRCACHE_ULOCK(d);
+@@ -469,7 +472,7 @@
+ 		return;
+ 
+ 	DIRCACHE_WRLOCK(d);
+-	dircache_trim(d);
++	dircache_trim(d, 0);
+ 
+ 	len = strlen(name);
+ 	tmpdce.dce_name = (char *) name;
+@@ -492,7 +495,7 @@
+  * Add a name after a successful lookup.
+  */
+ void
+-dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
++dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t lease)
+ {
+ 	int len;
+ 	struct timeval now;
+@@ -506,9 +509,9 @@
+ 	fci = fcmh_get_pri(d);
+ 
+ 	DIRCACHE_WRLOCK(d);
+-	dircache_trim(d);
++	dircache_trim(d, 0);
+ 
+-	if (fci->fcid_count >= msl_max_namecache_per_directory) {
++	if (!lease || fci->fcid_count >= msl_max_namecache_per_directory) {
+ 		OPSTAT_INCR("dircache-limit");
+ 		DIRCACHE_ULOCK(d);
+ 		return;
+@@ -535,7 +538,7 @@
+ 	/* fuse treats zero node ID as ENOENT */
+ 	psc_assert(ino);
+ 	dce->dce_ino = ino;
+-	dce->dce_age = now.tv_sec;
++	dce->dce_expire = now.tv_sec + lease - BMAP_TIMEO_INC;
+ 	dce->dce_pino = fcmh_2_fid(d);
+ 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
+ 	    dce->dce_namelen);
+@@ -576,7 +579,7 @@
+ 
+ 	fci = fcmh_get_pri(d);
+ 	DIRCACHE_WRLOCK(d);
+-	dircache_trim(d);
++	dircache_trim(d, 0);
+ 
+ 	len = strlen(name);
+ 	tmpdce.dce_name = (char *) name;
+diff -dru -x .git stable/slash2/mount_slash/dircache.h today/slash2/mount_slash/dircache.h
+--- stable/slash2/mount_slash/dircache.h	2018-01-09 12:17:22.792176465 -0500
++++ today/slash2/mount_slash/dircache.h	2018-01-09 12:19:42.079389466 -0500
+@@ -67,7 +67,8 @@
+ #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
+ #define DIRCACHE_NAMECACHE	2048		/* initial number of name cache enties in pool */
+ 
+-#define DIRCACHEPG_SOFT_TIMEO	30		/* expiration regardless if read or not */
++#define DIRCACHEPG_DEF_TIMEOUT	30		/* default expiration regardless if read or not */
++#define DIRCACHEPG_MIN_TIMEOUT	5		/* minimum expiration regardless if read or not */
+ 
+ /*
+  * This consitutes a block of 'struct dirent' members (dircache_ent)
+@@ -80,7 +81,7 @@
+ 	size_t			 dcp_size;	/* length of page (# dirents in page) */
+ 	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
+ 	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
+-	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
++	struct pfl_timespec	 dcp_expire;	/* when will the page expire */
+ 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
+ 	void			*dcp_base;	/* pscfs_dirents */
+ 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
+@@ -120,7 +121,7 @@
+  * Determine if a page of dirents should be evicted.
+  */
+ #define DIRCACHEPG_EXPIRED(d, p, expire)				\
+-	(timespeccmp((expire), &(p)->dcp_local_tm, >) ||		\
++	(timespeccmp(&(p)->dcp_expire, (expire), <) ||			\
+ 	  (p)->dcp_dirgen != fcmh_2_gen(d))
+ 
+ #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
+@@ -143,7 +144,7 @@
+ 	uint64_t		 dce_pino;
+ 	uint64_t		 dce_ino;
+ 	uint32_t		 dce_namelen;
+-	long			 dce_age;
++	long			 dce_expire;
+ 	int			 dce_flag;
+ 	char			 dce_short[SL_SHORT_NAME];
+ 	char			*dce_name;	/* NOT null-terminated */
+@@ -158,7 +159,7 @@
+ void	dircache_init(struct fidc_membh *);
+ void	dircache_purge(struct fidc_membh *);
+ void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, 
+-	    int, void *, size_t, int);
++	    int, void *, size_t, int, int32_t);
+ void	dircache_walk_async(struct fidc_membh *, void (*)(
+ 	    struct dircache_page *, struct dircache_ent *, void *),
+ 	    void *, struct psc_compl *);
+@@ -166,10 +167,12 @@
+ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
+ 	    struct dircache_ent *, void *), void *);
+ 
++void	dircache_trim(struct fidc_membh *, int);
++
+ int	dircache_ent_cmp(const void *, const void *);
+ 
+ void	dircache_lookup(struct fidc_membh *, const char *, uint64_t *);
+-void	dircache_insert(struct fidc_membh *, const char *, uint64_t);
++void	dircache_insert(struct fidc_membh *, const char *, uint64_t, int32_t);
+ void	dircache_delete(struct fidc_membh *, const char *);
+ 
+ extern struct psc_hashtbl msl_namecache_hashtbl;
+diff -dru -x .git stable/slash2/mount_slash/fidc_cli.c today/slash2/mount_slash/fidc_cli.c
+--- stable/slash2/mount_slash/fidc_cli.c	2018-01-09 12:17:22.793176417 -0500
++++ today/slash2/mount_slash/fidc_cli.c	2018-01-09 12:19:42.080389417 -0500
+@@ -40,6 +40,7 @@
+ #include "pfl/str.h"
+ #include "pfl/time.h"
+ 
++#include "bmap_cli.h"
+ #include "cache_params.h"
+ #include "dircache.h"
+ #include "fid.h"
+@@ -48,6 +49,33 @@
+ #include "mount_slash.h"
+ #include "rpc_cli.h"
+ 
++extern struct psc_waitq		 msl_bmap_waitq;
++extern psc_atomic32_t		 msl_bmap_stale;
++
++void
++slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
++{
++	struct bmap *b;
++
++	return;
++
++	/*
++	 * Invalidate bmap lease so that we can renew it with
++	 * the correct lease.
++	 */
++	pfl_rwlock_rdlock(&f->fcmh_rwlock);
++	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
++		BMAP_LOCK(b);
++		if (b->bcm_flags & BMAPF_TOFREE) {
++			BMAP_ULOCK(b);
++			continue;
++		}    
++		b->bcm_flags |= BMAPF_LEASEEXPIRE;
++		BMAP_ULOCK(b);
++	}
++	pfl_rwlock_unlock(&f->fcmh_rwlock);
++}
++
+ /*
+  * Update the high-level app stat(2)-like attribute buffer for a FID
+  * cache member.
+@@ -64,8 +92,9 @@
+  */
+ void
+ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
+-    int flags)
++    int flags, int32_t lease)
+ {
++	struct timeval now;
+ 	struct fcmh_cli_info *fci;
+ 
+ 	if (flags & FCMH_SETATTRF_HAVELOCK)
+@@ -76,17 +105,28 @@
+ 	if (fcmh_2_gen(f) == FGEN_ANY)
+ 		fcmh_2_gen(f) = sstb->sst_gen;
+ 
+-	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f) &&
+-	    fcmh_2_gen(f) > sstb->sst_gen) {
+-		/*
+- 		 * We bump it locally for a directory to avoid
+- 		 * race with readdir operations.
+- 		 */
+-		OPSTAT_INCR("msl.generation-backwards");
+-		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
+-		    "gen %"PRIu64" from old gen %"PRIu64,
+-		    fcmh_2_gen(f), sstb->sst_gen);
+-		goto out;
++	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f)) {
++		if (fcmh_2_gen(f) > sstb->sst_gen) {
++			/*
++ 			 * We bump it locally for a directory to avoid
++ 			 * race with readdir operations.
++ 			 */
++			OPSTAT_INCR("msl.generation-backwards");
++			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
++			    "gen %"PRIu64" from old gen %"PRIu64,
++			    fcmh_2_gen(f), sstb->sst_gen);
++			goto out;
++		}
++		if (fcmh_2_gen(f) < sstb->sst_gen) {
++#if 0
++			f->fcmh_flags |= FCMH_CLI_NEW_GENERATION;
++#endif
++			slc_fcmh_invalidate_bmap(f, 0);
++			OPSTAT_INCR("msl.generation-forwards");
++			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
++			    "gen %"PRIu64" from old gen %"PRIu64,
++			    fcmh_2_gen(f), sstb->sst_gen);
++		}
+ 	}
+ 	/*
+  	 * Make sure that our generation number always goes up.
+@@ -139,7 +179,8 @@
+ 		dircache_init(f);
+ 
+ 	fci = fcmh_2_fci(f);
+-	PFL_GETTIMEVAL(&fci->fci_age);
++	PFL_GETTIMEVAL(&now);
++	fci->fci_expire = now.tv_sec + lease;
+ 
+ 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
+ 
+@@ -252,16 +293,7 @@
+ void
+ slc_fcmh_dtor(struct fidc_membh *f)
+ {
+-	if (f->fcmh_flags & FCMHF_INIT_DIRCACHE) {
+-		/*
+-		 * We must lock here or other threads with HOLDs on ents
+-		 * can race with us.
+-		 */
+-		DIRCACHE_WRLOCK(f);
+-		dircache_purge(f);
+-		DIRCACHE_ULOCK(f);
+-	}
+-
++	dircache_purge(f);
+ 	DEBUG_FCMH(PLL_DEBUG, f, "dtor");
+ }
+ 
+@@ -295,6 +327,6 @@
+ struct sl_fcmh_ops sl_fcmh_ops = {
+ 	slc_fcmh_ctor,		/* sfop_ctor */
+ 	slc_fcmh_dtor,		/* sfop_dtor */
+-	msl_stat,		/* sfop_getattr */
++	slc_fcmh_getattr,	/* sfop_getattr */
+ 	NULL			/* sfop_modify */
+ };
+diff -dru -x .git stable/slash2/mount_slash/fidc_cli.h today/slash2/mount_slash/fidc_cli.h
+--- stable/slash2/mount_slash/fidc_cli.h	2018-01-09 12:17:22.794176369 -0500
++++ today/slash2/mount_slash/fidc_cli.h	2018-01-09 12:19:42.081389368 -0500
+@@ -70,8 +70,7 @@
+  */
+ struct fcmh_cli_info {
+ 	struct sl_resm			*fci_resm;
+-	struct timeval			 fci_age;	/* attr update time */
+-
++	long			 	 fci_expire;	/* attr expire time */
+ 	uint64_t                         fci_pino;	/* silly rename fields */
+ 	int                         	 fci_nopen;
+ 	char                            *fci_name;
+@@ -90,7 +89,7 @@
+ #define fcid_dircache_rwlock	u.d.dircache_rwlock
+ 	} u;
+ 	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
+-	struct timespec			 fci_etime;	/* attr expire time */
++	struct timespec			 fci_ftime;	/* attr flush time */
+ };
+ 
+ #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)
+@@ -121,6 +120,7 @@
+ #define FCMH_CLI_DIRTY_QUEUE		(_FCMH_FLGSHFT << 4)	/* on dirty queue */
+ #define FCMH_CLI_XATTR_INFO		(_FCMH_FLGSHFT << 5)
+ #define FCMH_CLI_SILLY_RENAME		(_FCMH_FLGSHFT << 6)
++#define FCMH_CLI_NEW_GENERATION		(_FCMH_FLGSHFT << 7)
+ 
+ #define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
+ 
+@@ -128,10 +128,10 @@
+ #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
+ #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
+ 
+-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
++void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
+ 
+-#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
+-#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
++#define slc_fcmh_setattr(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), 0, lease)
++#define slc_fcmh_setattr_locked(f, sstb, lease)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, lease)
+ 
+ int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
+ 	    const struct pscfs_creds *, int);
+@@ -155,4 +155,6 @@
+ void	msl_fcmh_stash_inode(struct fidc_membh *, struct srt_inode *);
+ void	msl_fcmh_stash_xattrsize(struct fidc_membh *, uint32_t);
+ 
++void	slc_fcmh_invalidate_bmap(struct fidc_membh *, int);
++
+ #endif /* _FIDC_CLI_H_ */
+diff -dru -x .git stable/slash2/mount_slash/io.c today/slash2/mount_slash/io.c
+--- stable/slash2/mount_slash/io.c	2018-01-09 12:17:22.797176222 -0500
++++ today/slash2/mount_slash/io.c	2018-01-09 12:19:42.083389272 -0500
+@@ -3,7 +3,7 @@
+  * %GPL_START_LICENSE%
+  * ---------------------------------------------------------------------
+  * Copyright 2015-2016, Google, Inc.
+- * Copyright 2008-2016, Pittsburgh Supercomputing Center
++ * Copyright 2008-2018, Pittsburgh Supercomputing Center
+  * All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+@@ -76,12 +76,13 @@
+ /* Flushing fs threads wait here for I/O completion. */
+ struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
+ 
+-struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
+-struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
++struct timespec		 msl_bmap_timeo_inc = { BMAP_TIMEO_INC, 0 };
+ 
+ int                      msl_predio_pipe_size = 256;
+ int                      msl_predio_max_pages = 64;
+ 
++int			 msl_attributes_flush_timeout = 30;
++
+ struct pfl_opstats_grad	 slc_iosyscall_iostats_rd;
+ struct pfl_opstats_grad	 slc_iosyscall_iostats_wr;
+ struct pfl_opstats_grad	 slc_iorpc_iostats_rd;
+@@ -2036,11 +2037,15 @@
+ 		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
+ 		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
+ 	}
++	/*
++ 	 * XXX maintain order of timeout queue.
++ 	 */
+ 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+ 		fci = fcmh_2_fci(f);
+-		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
+-		fci->fci_etime.tv_nsec = ts.tv_nsec;
++		fci->fci_ftime.tv_sec = ts.tv_sec + msl_attributes_flush_timeout;
+ 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
++
++		/* feed work for msattrflushthr_main() */
+ 		lc_addtail(&msl_attrtimeoutq, fci);
+ 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+ 	}
+@@ -2095,7 +2100,6 @@
+ 		PFL_GOTOERR(out3, rc = EISDIR);
+ 	}
+ 
+-	FCMH_LOCK(f);
+ 	/*
+ 	 * All I/O's block here for pending truncate requests.
+ 	 *
+@@ -2103,9 +2107,30 @@
+ 	 * until we are done setting up the I/O to block intervening
+ 	 * truncates.
+ 	 */
++	FCMH_LOCK(f);
+ 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+-	fsz = fcmh_2_fsz(f);
++	FCMH_ULOCK(f);
+ 
++	/*
++ 	 * Update attributes first before I/O.
++ 	 */
++	rc = msl_stat(f, pfr, NULL);
++	if (rc)
++		PFL_GOTOERR(out3, rc);
++
++	/*
++	 * The flag can be set at various paths (lookup, getattr, and
++	 * the above), as long as we invalidate bmaps before I/O, we
++	 * are fine.
++	 */
++	FCMH_LOCK(f);
++	if (f->fcmh_flags & FCMH_CLI_NEW_GENERATION) {
++		f->fcmh_flags &= ~FCMH_CLI_NEW_GENERATION;
++		slc_fcmh_invalidate_bmap(f, 1);
++		OPSTAT_INCR("msl.invalidate-fcmh-bmap");
++	}
++
++	fsz = fcmh_2_fsz(f);
+ 	if (rw == SL_READ) {
+ 		/* Catch read ops which extend beyond EOF. */
+ 		if (size + (uint64_t)off > fsz)
+diff -dru -x .git stable/slash2/mount_slash/main.c today/slash2/mount_slash/main.c
+--- stable/slash2/mount_slash/main.c	2018-01-09 12:17:22.799176126 -0500
++++ today/slash2/mount_slash/main.c	2018-01-09 12:19:42.086389127 -0500
+@@ -3,7 +3,7 @@
+  * %GPL_START_LICENSE%
+  * ---------------------------------------------------------------------
+  * Copyright 2015-2016, Google, Inc.
+- * Copyright 2007-2016, Pittsburgh Supercomputing Center
++ * Copyright 2007-2017, Pittsburgh Supercomputing Center
+  * All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+@@ -160,9 +160,9 @@
+  * Before that, O_DIRECT and the FUSE direct_io path were not fully
+  * integrated.
+  */
+-int				 msl_acl;
+ int				 msl_force_dio;
+ int				 msl_map_enable;
++int				 msl_acl_enabled;
+ int				 msl_root_squash;
+ int				 msl_bmap_reassign;
+ int				 msl_repl_enable = 1;
+@@ -172,8 +172,6 @@
+ int				 msl_statfs_pref_ios_only;
+ int				 msl_max_namecache_per_directory = 65536; 
+ 
+-int				 msl_attributes_timeout = FCMH_ATTR_TIMEO;
+-
+ struct resprof_cli_info		 msl_statfs_aggr_rpci;
+ int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
+ int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
+@@ -183,10 +181,6 @@
+ struct psc_thread		*slcconnthr;
+ 
+ 
+-#ifdef DO_DEBUG
+-struct sl_fidgen		 debug_fg;	
+-#endif
+-
+ /*
+  * I/O requests that have failed due to timeouts are placed here for
+  * retry.
+@@ -238,7 +232,8 @@
+ 		return (0);
+ 
+ #ifdef SLOPT_POSIX_ACLS
+-	if (msl_acl)
++	/* checkout file ../mk/pre.mk on how to enable this */
++	if (msl_acl_enabled)
+ 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
+ 	else
+ #endif
+@@ -413,9 +408,11 @@
+ 	struct fidc_membh *c = NULL, *p = NULL;
+ 	struct slrpc_cservice *csvc = NULL;
+ 	struct pscrpc_request *rq = NULL;
+-	struct srm_create_rep *mp = NULL;
+ 	struct msl_fhent *mfh = NULL;
++
+ 	struct srm_create_req *mq;
++	struct srm_create_rep *mp = NULL;
++
+ 	struct fcmh_cli_info *fci = NULL;
+ 	struct bmap_cli_info *bci;
+ 	struct pscfs_creds pcr;
+@@ -478,14 +475,14 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
+ 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+ 	msl_invalidate_readdir(p);
+-	dircache_insert(p, name, fcmh_2_fid(c));
++	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
+ 
+ #if 0
+ 	if (oflags & O_APPEND) {
+@@ -510,7 +507,7 @@
+ 
+ 	FCMH_LOCK(c);
+ 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
+-	    FCMH_SETATTRF_CLOBBER);
++	    FCMH_SETATTRF_CLOBBER, mp->lease);
+ 	msl_internalize_stat(&c->fcmh_sstb, &stb);
+ 
+ 	fci = fcmh_2_fci(c);
+@@ -570,18 +567,10 @@
+ 
+ 	bmap_op_done(b);
+ 
+-#ifdef DO_DEBUG
+-	if (strcmp(name, "prslerr.c") == 0) {
+-		debug_fg = c->fcmh_fg;
+-		psclog_max("CREATE: fid="SLPRI_FID", name = %s", 
+-		    debug_fg.fg_fid, name);
+-	}
+-#endif
+-
+  out:
+ 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
+-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+-	    pscfs_attr_timeout, mfh, rflags, rc);
++	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
++	    (double)mp->lease, mfh, rflags, rc);
+ 
+ 	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+ 	//psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
+@@ -608,8 +597,6 @@
+ 	int rc = 0;
+ 
+ 	*mfhp = NULL;
+-
+-
+ 	if (!msl_progallowed(pfr))
+ 		PFL_GOTOERR(out, rc = EPERM);
+ 
+@@ -709,7 +696,15 @@
+ }
+ 
+ int
+-msl_stat(struct fidc_membh *f, void *arg)
++slc_fcmh_getattr(struct fidc_membh *f, void *arg)
++{
++	int rc;
++	rc = msl_stat(f, arg, NULL);
++	return (rc);
++}
++
++int
++msl_stat(struct fidc_membh *f, void *arg, int32_t *lease)
+ {
+ 	struct slrpc_cservice *csvc = NULL;
+ 	struct pscrpc_request *rq = NULL;
+@@ -730,6 +725,8 @@
+ 		f->fcmh_sstb.sst_size = 2;
+ 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
+ 		f->fcmh_sstb.sst_blocks = 4;
++		if (lease)
++			*lease = 60;
+ 		return (0);
+ 	}
+ 
+@@ -740,11 +737,12 @@
+ 
+ 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
+ 		PFL_GETTIMEVAL(&now);
+-		now.tv_sec -= msl_attributes_timeout;
+-		if (now.tv_sec < fci->fci_age.tv_sec) {
++		if (now.tv_sec < fci->fci_expire) {
+ 			DEBUG_FCMH(PLL_DIAG, f,
+ 			    "attrs retrieved from local cache");
+ 			FCMH_ULOCK(f);
++			if (lease)
++				*lease = fci->fci_expire - now.tv_sec;
+ 			OPSTAT_INCR("attr-cached");
+ 			return (0);
+ 		}
+@@ -773,7 +771,9 @@
+ 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
+ 		rc = EBADF;
+ 	if (!rc) {
+-		slc_fcmh_setattr_locked(f, &mp->attr);
++		if (lease)
++			*lease = mp->lease;
++		slc_fcmh_setattr_locked(f, &mp->attr, mp->lease);
+ 		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
+ 	}
+ 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+@@ -788,14 +788,15 @@
+ 	return (rc);
+ }
+ 
++
+ void
+ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
+ {
+ 	struct pscfs_creds pcr;
+-	struct fidc_membh *f;
++	struct fidc_membh *f = NULL;
+ 	struct stat stb;
+ 	int rc;
+-
++	int32_t lease = 0;
+ 
+ 	/*
+ 	 * Lookup and possibly create a new fidcache handle for inum.
+@@ -812,7 +813,7 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	rc = msl_stat(f, pfr);
++	rc = msl_stat(f, pfr, &lease);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+@@ -823,11 +824,10 @@
+ 	msl_internalize_stat(&f->fcmh_sstb, &stb);
+ 
+  out:
++	pscfs_reply_getattr(pfr, &stb, (double)lease, rc);
+ 	if (f)
+ 		fcmh_op_done(f);
+-	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
+-	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d",
+-	    rc);
++	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d", rc);
+ }
+ 
+ void
+@@ -842,6 +842,7 @@
+ 	struct pscfs_creds pcr;
+ 	struct stat stb;
+ 	int rc = 0;
++	int32_t lease = 0;
+ 
+ 	if (strlen(newname) == 0)
+ 		PFL_GOTOERR(out, rc = ENOENT);
+@@ -901,20 +902,21 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
++	lease = mp->lease;
+ 	FCMH_LOCK(c);
+-	slc_fcmh_setattr_locked(c, &mp->cattr);
++	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
+ 	msl_internalize_stat(&c->fcmh_sstb, &stb);
+ 	FCMH_ULOCK(c);
+ 
+ 	msl_invalidate_readdir(p);
+-	dircache_insert(p, newname, fcmh_2_fid(c));
++	dircache_insert(p, newname, fcmh_2_fid(c), mp->lease);
+ 
+  out:
+ 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
+-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+-	    pscfs_attr_timeout, rc);
++	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
++	    (double)lease, rc);
+ 
+ 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
+ 	    "pfid="SLPRI_FID" name='%s' rc=%d",
+@@ -941,6 +943,7 @@
+ 	struct pscfs_creds pcr;
+ 	struct stat stb;
+ 	int rc;
++	int32_t lease = 0;
+ 
+ 	if (strlen(name) == 0)
+ 		PFL_GOTOERR(out, rc = ENOENT);
+@@ -968,6 +971,7 @@
+ 	if (p->fcmh_sstb.sst_mode & S_ISGID)
+ 		mode |= S_ISGID;
+ 
++
+  retry1:
+ 
+ 	MSL_RMC_NEWREQ(p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
+@@ -995,24 +999,25 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
+ 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+ 	msl_invalidate_readdir(p);
+-	dircache_insert(p, name, fcmh_2_fid(c));
++	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
+ 
+ 	FCMH_LOCK(c);
+-	slc_fcmh_setattr_locked(c, &mp->cattr);
++	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
+ 	msl_internalize_stat(&mp->cattr, &stb);
+ 	FCMH_ULOCK(c);
++	lease = mp->lease;
+ 
+  out:
+ 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
+-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+-	    pscfs_attr_timeout, rc);
++	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
++	    (double)lease, rc);
+ 
+ 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
+ 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
+@@ -1030,7 +1035,7 @@
+ __static int
+ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
+     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
+-    struct fidc_membh **fp)
++    struct fidc_membh **fp, int32_t *lease)
+ {
+ 	slfid_t pfid = fcmh_2_fid(p);
+ 	struct slrpc_cservice *csvc = NULL;
+@@ -1058,7 +1063,7 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
++	dircache_insert(p, name, mp->attr.sst_fg.fg_fid, mp->lease);
+ 
+ 	/*
+ 	 * Add the inode to the cache first, otherwise pscfs may come to
+@@ -1073,13 +1078,17 @@
+ 		*fgp = mp->attr.sst_fg;
+ 
+ 	FCMH_LOCK(f);
+-	slc_fcmh_setattr_locked(f, &mp->attr);
++	slc_fcmh_setattr_locked(f, &mp->attr, mp->lease);
+ 	msl_fcmh_stash_xattrsize(f, mp->xattrsize);
+ 
+ 	if (sstb)
+ 		*sstb = f->fcmh_sstb;
+ 
+  out:
++	/* Even a negative lookup have a lease */
++	if (lease && mp)
++		*lease = mp->lease;
++
+ 	psclogs_diag(SLCSS_FSOP, "LOOKUP: pfid="SLPRI_FID" name='%s' "
+ 	    "cfid="SLPRI_FID" rc=%d",
+ 	    pfid, name, f ? f->fcmh_sstb.sst_fid : FID_ANY, rc);
+@@ -1126,7 +1135,7 @@
+ msl_lookup_fidcache(struct pscfs_req *pfr,
+     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
+     const char *name, struct sl_fidgen *fgp, struct srt_stat *sstb,
+-    struct fidc_membh **fp)
++    struct fidc_membh **fp, int32_t *lease)
+ {
+ 	pscfs_inum_t inum;
+ 	struct fidc_membh *p = NULL, *c = NULL;
+@@ -1210,8 +1219,7 @@
+ 		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
+ 			PFL_GETTIMEVAL(&now);
+ 			fci = fcmh_2_fci(c);
+-			now.tv_sec -= msl_attributes_timeout;
+-			if (now.tv_sec < fci->fci_age.tv_sec) {
++			if (now.tv_sec <= fci->fci_expire) {
+ 				if (sstb)
+ 					*sstb = c->fcmh_sstb;
+ 				goto out;
+@@ -1223,7 +1231,7 @@
+ 
+  rpc:
+ 
+-	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
++	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c, lease);
+  out:
+ 
+ 	if (rc == 0 && fp) {
+@@ -1375,7 +1383,7 @@
+ 
+ 	msl_invalidate_readdir(f);
+ 	dircache_delete(f, name);
+-	dircache_insert(f, newname, fcmh_2_fid(c));
++	dircache_insert(f, newname, fcmh_2_fid(c), mp->lease);
+ 	newname = NULL;
+ 
+  out:
+@@ -1430,7 +1438,7 @@
+ 			FCMH_ULOCK(p);
+ 
+ 			rc = msl_lookup_fidcache(pfr, &pcr, pinum, name,
+-			    NULL, &sstb, NULL);
++			    NULL, &sstb, NULL, NULL);
+ 			if (rc)
+ 				PFL_GOTOERR(out, rc);
+ 
+@@ -1512,14 +1520,14 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
+ 	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
+ 		OPSTAT_INCR("msl.delete-skipped");
+ 	else {
+ 		FCMH_LOCK(c);
+ 		if (mp->valid) {
+-			slc_fcmh_setattr_locked(c, &mp->cattr);
++			slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
+ 		} else {
+ 			c->fcmh_flags |= FCMH_DELETED;
+ 			OPSTAT_INCR("msl.delete-marked");
+@@ -1626,24 +1634,24 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
+ 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+ 	msl_invalidate_readdir(p);
+-	dircache_insert(p, name, fcmh_2_fid(c));
++	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
+ 
+ 	FCMH_LOCK(c);
+-	slc_fcmh_setattr_locked(c, &mp->cattr);
++	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
+ 	msl_internalize_stat(&mp->cattr, &stb);
+ 	FCMH_ULOCK(c);
+ 
+  out:
+ 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
+-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+-	    pscfs_attr_timeout, rc);
++	    mp ? mp->cattr.sst_gen : 0, (double)mp->lease, &stb,
++	    (double)mp->lease, rc);
+ 
+ 	psclogs_diag(SLCSS_FSOP, "MKNOD: pfid="SLPRI_FID" "
+ 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
+@@ -1663,7 +1671,7 @@
+  */
+ int
+ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
+-    int eof, int nents, int size, void *base)
++    int eof, int nents, int size, void *base, int32_t lease)
+ {
+ 	/*
+  	 * Stop name cache changes while we populating it.
+@@ -1696,7 +1704,7 @@
+ 	d->fcmh_flags |= FCMH_BUSY;
+ 	FCMH_ULOCK(d);
+ 
+-	dircache_reg_ents(d, p, nents, base, size, eof);
++	dircache_reg_ents(d, p, nents, base, size, eof, lease);
+ 
+ 	FCMH_LOCK(d);
+ 	d->fcmh_flags &= ~FCMH_BUSY;
+@@ -1753,8 +1761,22 @@
+ 		if (rc)
+ 			PFL_GOTOERR(out, rc);
+ 	}
+-	/* XXX: crash if I comment out the following line */
+-	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size, dentbuf);
++	if (!mp->lease) {
++		OPSTAT_INCR("msl.readdir-lease-skip");
++		goto out;
++	}
++	/*
++	 * XXX: crash if I comment out the following line, need closer look.
++	 *
++	 * Anyway, if we fail to register individual entries, the readdir
++	 * operation itself is still a success.
++	 */
++	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size, 
++		dentbuf, mp->lease);
++	if (rc) {
++		rc = 0;
++		OPSTAT_INCR("msl.readdir-register-err");
++	}
+ 
+  out:
+ 	DIRCACHE_WRLOCK(d);
+@@ -1769,8 +1791,14 @@
+ 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
+ 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
+ 
+-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
++	PFL_GETPTIMESPEC(&p->dcp_expire);
+ 
++	if (!rc) {
++		if (mp->lease)
++			p->dcp_expire.tv_sec += mp->lease;
++		else
++			p->dcp_expire.tv_sec += DIRCACHEPG_MIN_TIMEOUT;
++	}
+ 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
+ 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
+ 		OPSTAT_INCR("msl.dircache-wakeup");
+@@ -1822,7 +1850,7 @@
+ 	p = dircache_new_page(d, off, block);
+ 	if (p == NULL) {
+ 		DIRCACHE_ULOCK(d);
+-		return (-ESRCH);
++		return (-ENOMEM);
+ 	}
+ 
+ 	DIRCACHE_ULOCK(d);
+@@ -1880,7 +1908,7 @@
+  out2:
+ 	DIRCACHE_WRLOCK(d);
+ 	p->dcp_refcnt--;
+-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
++	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
+ 	wake = p->dcp_flags & DIRCACHEPGF_WAIT;
+ 	dircache_free_page(d, p);
+ 	if (wake) {
+@@ -1937,7 +1965,6 @@
+ 	raoff = 0;
+ 	issue = 1;
+ 	PFL_GETPTIMESPEC(&now);
+-	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
+ 
+ 	/*
+ 	 * XXX Large directories will page in lots of buffers so this
+@@ -2026,6 +2053,13 @@
+ 			 */
+ 			fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
+ 			raoff = p->dcp_nextoff;
++			/*
++ 			 * 01/07/2018: Hit this a couple of times when
++ 			 * debugging an issue by removing and deleting
++ 			 * the same directory. Restart MDS fixes it.
++ 			 * So there must be an issue on MDS side in
++ 			 * terms of cleaning up old files/directories.
++ 			 */
+ 			psc_assert(raoff);
+ 
+ 			issue = 0;
+@@ -2040,10 +2074,9 @@
+ 		 */
+ 		hit = 0;
+ 		rc = msl_readdir_issue(d, off, size, 1);
+-		if (rc && !slc_rpc_should_retry(pfr, &rc)) {
+-			DIRCACHE_ULOCK(d);
++		if (rc && !slc_rpc_should_retry(pfr, &rc))
+ 			PFL_GOTOERR(out, rc);
+-		}
++
+ 		DIRCACHE_WRLOCK(d);
+ 		goto restart;
+ 	}
+@@ -2070,6 +2103,7 @@
+ 	struct srt_stat sstb;
+ 	struct sl_fidgen fg;
+ 	struct stat stb;
++	int32_t lease = 0;
+ 	int rc;
+ 
+ 	memset(&sstb, 0, sizeof(sstb));
+@@ -2080,7 +2114,8 @@
+ 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
+ 
+ 	slc_getfscreds(pfr, &pcr, 1);
+-	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &c);
++	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, 
++	    &sstb, &c, &lease);
+ 	if (rc == ENOENT)
+ 		sstb.sst_fid = 0;
+ 	msl_internalize_stat(&sstb, &stb);
+@@ -2089,7 +2124,7 @@
+ 
+  out:
+ 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
+-	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
++	    (double)lease, &stb, (double)lease, rc);
+ 	if (c)
+ 		fcmh_op_done(c);
+ 	if (p)
+@@ -2179,11 +2214,6 @@
+ 
+ 	f = mfh->mfh_fcmh;
+ 
+-#ifdef DO_DEBUG
+-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
+-		DEBUG_FCMH(PLL_MAX, f, "flush");
+-#endif
+-
+   restart:
+ 	DYNARRAY_FOREACH(b, i, &a)
+ 		/*
+@@ -2232,7 +2262,7 @@
+  */
+ int
+ msl_setattr(struct fidc_membh *f, int32_t to_set,
+-    const struct srt_stat *sstb, int setattrflags)
++    const struct srt_stat *sstb, int setattrflags, int32_t *lease)
+ {
+ 	struct slrpc_cservice *csvc = NULL;
+ 	struct pscrpc_request *rq = NULL;
+@@ -2242,12 +2272,6 @@
+ 
+ 	FCMH_BUSY_ENSURE(f);
+ 
+-#ifdef DO_DEBUG
+-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
+-		DEBUG_FCMH(PLL_MAX, f, "setattr, size = %lu, set_size = %d", 
+-			sstb->sst_size, to_set & PSCFS_SETATTRF_DATASIZE);
+-#endif
+-
+ again:
+ 
+ 	/*
+@@ -2297,8 +2321,10 @@
+ 	}
+ 
+ 	if (!rc)
+-		slc_fcmh_setattrf(f, &mp->attr, setattrflags);
++		slc_fcmh_setattrf(f, &mp->attr, setattrflags, mp->lease);
+  out:
++	if (lease && mp)
++		*lease = mp->lease;
+ 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
+ 	    "attr flush; set=%#x rc=%d", to_set, rc);
+ 	pscrpc_req_finished(rq);
+@@ -2348,7 +2374,7 @@
+ 	}
+ 
+ 	FCMH_ULOCK(f);
+-	rc = msl_setattr(f, to_set, &attr, 0);
++	rc = msl_setattr(f, to_set, &attr, 0, NULL);
+ 	FCMH_LOCK(f);
+ 
+ 	if (rc && slc_rpc_should_retry(pfr, &rc)) {
+@@ -2478,8 +2504,8 @@
+ 	FCMH_LOCK(f);
+ 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
+ 		OPSTAT_INCR("msl.release_dirty_attrs");
+-		PFL_GETTIMESPEC(&fci->fci_etime);
+-		fci->fci_etime.tv_sec--;
++		PFL_GETTIMESPEC(&fci->fci_ftime);
++		fci->fci_ftime.tv_sec--;
+ 		psc_waitq_wakeone(&msl_flush_attrq);
+ 	}
+ 
+@@ -2577,7 +2603,7 @@
+ 
+ 		if (sticky) {
+ 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
+-			    oldname, &srcfg, &srcsstb, &child);
++			    oldname, &srcfg, &srcsstb, &child, NULL);
+ 			if (rc)
+ 				PFL_GOTOERR(out, rc);
+ 			if (srcsstb.sst_uid != pcr.pcr_uid)
+@@ -2612,7 +2638,7 @@
+ 				/* XXX race */
+ 				rc = msl_lookup_fidcache(pfr, &pcr,
+ 				    npinum, newname, &dstfg, &dstsstb,
+-				    NULL);
++				    NULL, NULL);
+ 				if (rc == 0 && dstsstb.sst_uid != pcr.pcr_uid)
+ 					rc = EACCES;
+ 				else
+@@ -2626,7 +2652,7 @@
+ 	if (pcr.pcr_uid) {
+ 		if (srcfg.fg_fid == FID_ANY) {
+ 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
+-			    oldname, &srcfg, &srcsstb, &child);
++			    oldname, &srcfg, &srcsstb, &child, NULL);
+ 			if (rc)
+ 				PFL_GOTOERR(out, rc);
+ 		}
+@@ -2673,16 +2699,16 @@
+ 		PFL_GOTOERR(out, rc);
+ 
+ 	/* refresh old parent attributes */
+-	slc_fcmh_setattr(op, &mp->srr_opattr);
++	slc_fcmh_setattr(op, &mp->srr_opattr, mp->lease);
+ 
+ 	if (np != op)
+ 		/* refresh new parent attributes */
+-		slc_fcmh_setattr(np, &mp->srr_npattr);
++		slc_fcmh_setattr(np, &mp->srr_npattr, mp->lease);
+ 
+ 	/* refresh moved file's attributes */
+ 	if (mp->srr_cattr.sst_fid != FID_ANY &&
+ 	    msl_fcmh_load_fg(&mp->srr_cattr.sst_fg, &ch, pfr) == 0) {
+-		slc_fcmh_setattr(ch, &mp->srr_cattr);
++		slc_fcmh_setattr(ch, &mp->srr_cattr, mp->lease);
+ 		fcmh_op_done(ch);
+ 	}
+ 
+@@ -2710,7 +2736,7 @@
+ 			ch->fcmh_flags |= FCMH_DELETED;
+ 			OPSTAT_INCR("msl.clobber");
+ 		}
+-		slc_fcmh_setattr_locked(ch, &mp->srr_clattr);
++		slc_fcmh_setattr_locked(ch, &mp->srr_clattr, mp->lease);
+ 		fcmh_op_done(ch);
+ 	}
+ 
+@@ -2724,7 +2750,7 @@
+ 	dircache_delete(op, oldname); 
+ 	if (child) {
+ 		msl_invalidate_readdir(np);
+-		dircache_insert(np, newname, fcmh_2_fid(child)); 
++		dircache_insert(np, newname, fcmh_2_fid(child), mp->lease); 
+ 	}
+ 
+  out:
+@@ -2838,6 +2864,7 @@
+ 	struct iovec iov;
+ 	struct stat stb;
+ 	int rc;
++	int32_t lease = 0;
+ 
+ 	if (strlen(buf) == 0 || strlen(name) == 0)
+ 		PFL_GOTOERR(out, rc = ENOENT);
+@@ -2891,24 +2918,25 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+-	slc_fcmh_setattr(p, &mp->pattr);
++	slc_fcmh_setattr(p, &mp->pattr, mp->lease);
+ 
+ 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
+ 	if (rc)
+ 		PFL_GOTOERR(out, rc);
+ 
+ 	FCMH_LOCK(c);
+-	slc_fcmh_setattr_locked(c, &mp->cattr);
++	slc_fcmh_setattr_locked(c, &mp->cattr, mp->lease);
+ 	msl_internalize_stat(&mp->cattr, &stb);
+ 	FCMH_ULOCK(c);
+ 
+ 	msl_invalidate_readdir(p);
+-	dircache_insert(p, name, fcmh_2_fid(c));
++	dircache_insert(p, name, fcmh_2_fid(c), mp->lease);
++	lease = mp->lease;
+ 
+  out:
+ 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
+-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+-	    pscfs_attr_timeout, rc);
++	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
++	    (double)lease, rc);
+ 
+ 	psclogs_diag(SLCSS_FSOP, "SYMLINK: pfid="SLPRI_FID" "
+ 	    "cfid="SLPRI_FID" name='%s' rc=%d",
+@@ -2972,6 +3000,7 @@
+ 	struct pscfs_creds pcr;
+ 	struct srt_stat sstb;
+ 	struct timespec ts;
++	int32_t lease = 0;
+ 
+ 	memset(&mdie, 0, sizeof(mdie));
+ 
+@@ -3227,7 +3256,7 @@
+ 		setattrflags |= FCMH_SETATTRF_CLOBBER;
+ 
+  retry:
+-	rc = msl_setattr(c, to_set, &sstb, setattrflags);
++	rc = msl_setattr(c, to_set, &sstb, setattrflags, &lease);
+ 	if (rc && slc_rpc_should_retry(pfr, &rc))
+ 		goto retry;
+ 
+@@ -3272,7 +3301,7 @@
+ 
+ 	}
+ 
+-	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
++	pscfs_reply_setattr(pfr, stb, (double)lease, rc);
+ 
+ 	if (c) {
+ 
+@@ -3511,12 +3540,6 @@
+ 
+ 	f = mfh->mfh_fcmh;
+ 
+-#ifdef DO_DEBUG
+-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
+-		DEBUG_FCMH(PLL_MAX, f, "write start: pfr=%p sz=%zu "
+-		    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
+-#endif
+-
+ 	DEBUG_FCMH(PLL_DIAG, f, "write start: pfr=%p sz=%zu "
+ 	    "off=%"PSCPRIdOFFT" buf=%p", pfr, size, off, buf);
+ 
+@@ -3531,12 +3554,6 @@
+ 
+ 	f = mfh->mfh_fcmh;
+ 
+-#ifdef DO_DEBUG
+-	if (debug_fg.fg_fid == f->fcmh_fg.fg_fid)
+-		DEBUG_FCMH(PLL_MAX, f, "read start: pfr=%p sz=%zu "
+-		    "off=%"PSCPRIdOFFT, pfr, size, off);
+-#endif
+-
+ 	DEBUG_FCMH(PLL_DIAG, f, "read start: pfr=%p sz=%zu "
+ 	    "off=%"PSCPRIdOFFT, pfr, size, off);
+ 
+@@ -3554,7 +3571,7 @@
+ 	struct pscfs_creds pcr;
+ 	struct iovec iov;
+ 	char *buf = NULL;
+-	int rc;
++	int rc, level = PLL_DIAG;
+ 
+ 	if (size > LNET_MTU)
+ 		PFL_GOTOERR(out, rc = EINVAL);
+@@ -3575,9 +3592,8 @@
+ 		struct timeval now;
+ 
+ 		PFL_GETTIMEVAL(&now);
+-		now.tv_sec -= msl_attributes_timeout;
+ 		fci = fcmh_2_fci(f);
+-		if (now.tv_sec >= fci->fci_age.tv_sec) {
++		if (now.tv_sec >= fci->fci_expire) {
+ 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
+ 		/* 05/08/2017: suspect crash site */
+ 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
+@@ -3645,11 +3661,19 @@
+ 	if (f)
+ 		fcmh_op_done(f);
+ 
+-	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
+-
+ 	pscrpc_req_finished(rq);
+ 	if (csvc)
+ 		sl_csvc_decref(csvc);
++
++	if (rc == ENOSYS) {
++		rc = ENODATA;
++		level = PLL_ERROR;
++		OPSTAT_INCR("msl.listxattr-enosys");
++	}
++	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
++	psclogs(SLCSS_FSOP, level, "LISTXATTR: fid="SLPRI_FID" "
++	    "rc=%d", inum, rc);
++
+ 	PSCFREE(buf);
+ }
+ 
+@@ -3716,7 +3740,7 @@
+ {
+ 	struct fidc_membh *f = NULL;
+ 	struct pscfs_creds pcr;
+-	int rc;
++	int rc, level = PLL_DIAG;
+ 
+ 	if (strlen(name) >= SL_NAME_MAX)
+ 		PFL_GOTOERR(out, rc = EINVAL);
+@@ -3743,8 +3767,13 @@
+ 	if (f)
+ 		fcmh_op_done(f);
+ 
++	if (rc == ENOSYS) {
++		rc = ENODATA;
++		level = PLL_ERROR;
++		OPSTAT_INCR("msl.setxattr-enosys");
++	}
+ 	pscfs_reply_setxattr(pfr, rc);
+-	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
++	psclogs(SLCSS_FSOP, level, "SETXATTR: fid="SLPRI_FID" "
+ 	    "name='%s' rc=%d", inum, name, rc);
+ }
+ 
+@@ -3759,18 +3788,16 @@
+ 	struct srm_getxattr_req *mq;
+ 	struct fcmh_cli_info *fci;
+ 	struct iovec iov;
++	struct timeval now;
+ 
+ 	if (strlen(name) >= sizeof(mq->name))
+ 		PFL_GOTOERR(out, rc = EINVAL);
+ 
+ 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
+-		struct timeval now;
+-
+ 		PFL_GETTIMEVAL(&now);
+-		now.tv_sec -= msl_attributes_timeout;
+ 		fci = fcmh_2_fci(f);
+ 		locked = FCMH_RLOCK(f);
+-		if (now.tv_sec < fci->fci_age.tv_sec &&
++		if (now.tv_sec <= fci->fci_expire &&
+ 		    fci->fci_xattrsize == 0)
+ 			rc = ENODATA; // ENOATTR
+ 		FCMH_URLOCK(f, locked);
+@@ -3859,14 +3886,15 @@
+  out:
+ 	if (f)
+ 		fcmh_op_done(f);
++
+ 	if (rc == ENOSYS) {
+ 		rc = ENODATA;
+ 		level = PLL_ERROR;
+ 		OPSTAT_INCR("msl.getxattr-enosys");
+ 	}
+-	pscfs_reply_getxattr(pfr, buf, retsz, rc); 
++	pscfs_reply_getxattr(pfr, buf, retsz, rc);
+ 	psclogs(SLCSS_FSOP, level, "GETXATTR: fid="SLPRI_FID" "
+-	    "name='%s' rc=%d", inum, name, rc); 
++	    "name='%s' rc=%d", inum, name, rc);
+ 
+ 	PSCFREE(buf);
+ }
+@@ -3908,7 +3936,7 @@
+ {
+ 	struct fidc_membh *f = NULL;
+ 	struct pscfs_creds pcr;
+-	int rc;
++	int rc, level = PLL_DIAG;
+ 
+ 	if (strlen(name) >= SL_NAME_MAX)
+ 		PFL_GOTOERR(out, rc = EINVAL);
+@@ -3927,8 +3955,13 @@
+ 	if (f)
+ 		fcmh_op_done(f);
+ 
++	if (rc == ENOSYS) {
++		rc = ENODATA;
++		level = PLL_ERROR;
++		OPSTAT_INCR("msl.removexattr-enosys");
++	}
+ 	pscfs_reply_removexattr(pfr, rc);
+-	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
++	psclogs(SLCSS_FSOP, level, "REMOVEXATTR: fid="SLPRI_FID" "
+ 	    "name='%s' rc=%d", inum, name, rc);
+ }
+ 
+@@ -3942,48 +3975,56 @@
+ void
+ msattrflushthr_main(struct psc_thread *thr)
+ {
+-	struct timespec ts, nexttimeo;
+-	struct fcmh_cli_info *fci;
++	int skip, didwork;
+ 	struct fidc_membh *f;
++	struct fcmh_cli_info *fci;
++	struct timespec ts, nexttimeo;
+ 
++	nexttimeo.tv_nsec = 0;
+ 	while (pscthr_run(thr)) {
+-		nexttimeo.tv_sec = msl_attributes_timeout;
+-		nexttimeo.tv_nsec = 0;
+-
+ 		LIST_CACHE_LOCK(&msl_attrtimeoutq);
+ 		if (lc_peekheadwait(&msl_attrtimeoutq) == NULL) {
+ 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
+ 			break;
+ 		}
++		skip = 0;
++		didwork = 0;
++		nexttimeo.tv_sec = 300;
+ 		PFL_GETTIMESPEC(&ts);
+ 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
+ 			f = fci_2_fcmh(fci);
+-			if (!FCMH_TRYLOCK(f))
++			if (!FCMH_TRYLOCK(f)) {
++				skip = 1;
+ 				continue;
++			}
+ 
+ 			if (f->fcmh_flags & FCMH_BUSY) {
++				skip = 1;
+ 				FCMH_ULOCK(f);
+ 				continue;
+ 			}
+-
+-			if (timespeccmp(&fci->fci_etime, &ts, >)) {
+-				timespecsub(&fci->fci_etime, &ts,
+-				    &nexttimeo);
++			if (timespeccmp(&fci->fci_ftime, &ts, >)) {
++				nexttimeo.tv_sec = 
++				    fci->fci_ftime.tv_sec - ts.tv_sec;
+ 				FCMH_ULOCK(f);
+-				continue;
++				break;
+ 			}
++			FCMH_ULOCK(f);
+ 
+ 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
+-
+-			FCMH_ULOCK(f);
+ 			msl_flush_ioattrs(NULL, f);
++			didwork = 1;
+ 			break;
+ 		}
+-		if (fci == NULL) {
+-			OPSTAT_INCR("msl.flush-attr-wait");
+-			psc_waitq_waitrel_ts(&msl_flush_attrq,
+-			    &msl_attrtimeoutq.plc_lock, &nexttimeo);
+-		}
++		if (didwork)
++			continue;
++
++		if (skip)
++			nexttimeo.tv_sec = 1;
++		
++		OPSTAT_INCR("msl.flush-attr-wait");
++		psc_waitq_waitrel_ts(&msl_flush_attrq,
++		    &msl_attrtimeoutq.plc_lock, &nexttimeo);
+ 	}
+ }
+ 
+@@ -4250,9 +4291,6 @@
+ 			sl_csvc_decref(csvc);
+ 	}
+ 
+-	pscfs_attr_timeout = (double)PSCFS_ATTR_TIMEOUT; 
+-	pscfs_entry_timeout = (double)PSCFS_ENTRY_TIMEOUT;
+-
+ 	/* Catch future breakage after two-day's debugging */
+ 	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
+ 
+@@ -4297,7 +4335,7 @@
+ 		int		 type;
+ 		void		*ptr;
+ 	} *io, opts[] = {
+-		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
++		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl_enabled },
+ 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
+ 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
+ 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
+@@ -4321,7 +4359,7 @@
+ 	} else
+ 		optlen = strlen(opt);
+ 
+-	for (io = opts; io->name; io++)
++	for (io = opts; io->name; io++) {
+ 		if (strncmp(opt, io->name, optlen) == 0) {
+ 			switch (io->type) {
+ 			case LOOKUP_TYPE_BOOL:
+@@ -4348,8 +4386,19 @@
+ 			default:
+ 				psc_fatalx("invalid type");
+ 			}
++
++#ifndef SLOPT_POSIX_ACLS
++			/*
++			 * Ignore acl option if the code is not even 
++			 * compiled in.
++			 */
++			msl_acl_enabled = 0;
++#endif
+ 			return (1);
+ 		}
++	}
++
++
+ 	return (0);
+ }
+ 
+diff -dru -x .git stable/slash2/mount_slash/mount_slash.h today/slash2/mount_slash/mount_slash.h
+--- stable/slash2/mount_slash/mount_slash.h	2018-01-09 12:17:22.802175978 -0500
++++ today/slash2/mount_slash/mount_slash.h	2018-01-09 12:19:42.088389029 -0500
+@@ -308,7 +308,8 @@
+ void	 mfh_incref(struct msl_fhent *);
+ 
+ void	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
+-int	 msl_stat(struct fidc_membh *, void *);
++int	 msl_stat(struct fidc_membh *, void *, int32_t *);
++int	 slc_fcmh_getattr(struct fidc_membh *, void *);
+ 
+ int	 msl_read_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
+ int	 msl_dio_cleanup(struct pscrpc_request *, int, struct pscrpc_async_args *);
+@@ -390,7 +391,7 @@
+ extern struct psc_poolmgr	*msl_biorq_pool;
+ extern struct psc_poolmgr	*msl_mfh_pool;
+ 
+-extern int			 msl_acl;
++extern int			 msl_acl_enabled;
+ extern int			 msl_enable_namecache;
+ extern int			 msl_enable_sillyrename;
+ extern int			 msl_force_dio;
+diff -dru -x .git stable/slash2/mount_slash/pgcache.h today/slash2/mount_slash/pgcache.h
+--- stable/slash2/mount_slash/pgcache.h	2018-01-09 12:17:22.805175832 -0500
++++ today/slash2/mount_slash/pgcache.h	2018-01-09 12:19:42.092388833 -0500
+@@ -340,6 +340,7 @@
+ 	pll_init(&bmpc->bmpc_biorqs_exp, struct bmpc_ioreq,
+ 	    biorq_exp_lentry, NULL);
+ 
++	RB_INIT(&bmpc->bmpc_tree);
+ 	RB_INIT(&bmpc->bmpc_biorqs);
+ 
+ 	lc_addtail(&bmpcLru, bmpc);
+diff -dru -x .git stable/slash2/mount_slash/rcm.c today/slash2/mount_slash/rcm.c
+--- stable/slash2/mount_slash/rcm.c	2018-01-09 12:17:22.808175688 -0500
++++ today/slash2/mount_slash/rcm.c	2018-01-09 12:19:42.094388735 -0500
+@@ -43,6 +43,8 @@
+ #include "slconn.h"
+ #include "slerr.h"
+ 
++extern struct psc_waitq		 msl_flush_attrq;
++
+ struct msctl_replstq *
+ mrsq_lookup(int id)
+ {
+@@ -280,6 +282,8 @@
+ 	struct bmapc_memb *b = NULL;
+ 	struct fidc_membh *f = NULL;
+ 	struct bmap_cli_info *bci;
++	struct bmap_pagecache *bmpc;
++
+ 
+ 	SL_RSX_ALLOCREP(rq, mq, mp);
+ 
+@@ -290,6 +294,13 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++	if (fcmh_isdir(f)) {
++		dircache_trim(f, 1);
++		OPSTAT_INCR("msl.bmapdio-dir");
++		PFL_GOTOERR(out, mp->rc = 0);
++	}
++
++	OPSTAT_INCR("msl.bmapdio-reg");
+ 	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
+ 	    mq->bno, mq->seq);
+ 
+@@ -309,6 +320,8 @@
+ 
+ 	/* All new read and write I/O's will get BIORQ_DIO. */
+ 	b->bcm_flags |= BMAPF_DIO;
++	bmpc = bmap_2_bmpc(b);
++	bmpc_expire_biorqs(bmpc);
+ 	BMAP_ULOCK(b);
+ 
+ 	msl_bmap_cache_rls(b);
+@@ -322,6 +335,77 @@
+ }
+ 
+ /*
++ * Handle a BMAPDIO request for CLI from MDS.
++ * @rq: request.
++ */
++int
++msrcm_handle_file_cb(struct pscrpc_request *rq)
++{
++	struct srm_filecb_req *mq; 
++	struct srm_filecb_rep *mp; 
++	struct timeval now;
++	int i;
++	struct bmap *b;
++	struct psc_dynarray a = DYNARRAY_INIT;
++
++	struct fcmh_cli_info *fci;
++	struct fidc_membh *f = NULL;
++
++	SL_RSX_ALLOCREP(rq, mq, mp);
++
++	mp->rc = sl_fcmh_peek_fg(&mq->fg, &f);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
++	/*
++	 * XXX Need to notify FUSE with invalidate_entry call.
++	 */ 	
++	OPSTAT_INCR("msl.file-callback");
++	fci = fcmh_get_pri(f);
++	FCMH_LOCK(f);
++	/*
++ 	 * Expire attribues now and flush dirty attributes.
++ 	 */
++	PFL_GETTIMEVAL(&now);
++	fci->fci_expire = now.tv_sec;
++	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
++		OPSTAT_INCR("msl.callback-flush-attrs");
++		lc_move2head(&msl_attrtimeoutq, f);
++		psc_waitq_wakeone(&msl_flush_attrq);
++	}
++	if (fcmh_isdir(f)) {
++		if (psc_listhd_empty(&fci->fcid_entlist))
++			OPSTAT_INCR("msl.callback-invalidate-empty");
++		else {
++			OPSTAT_INCR("msl.callback-invalidte-dentry");
++			dircache_trim(f, 1);
++		}
++		dircache_purge(f);
++		goto out;
++	}
++	/*
++	 * Use two loops to avoid a potential deadlock.
++	 */
++	pfl_rwlock_rdlock(&f->fcmh_rwlock);
++	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
++		bmap_op_start_type(b, BMAP_OPCNT_WORK);
++		psc_dynarray_add(&a, b);
++	}
++	pfl_rwlock_unlock(&f->fcmh_rwlock);
++	DYNARRAY_FOREACH(b, i, &a) {
++		msl_bmap_cache_rls(b);
++		bmap_op_done_type(b, BMAP_OPCNT_WORK);
++	}
++	psc_dynarray_free(&a);
++
++ out:
++	if (f)
++		fcmh_op_done(f);
++	return (0);
++}
++
++
++/*
+  * Handle a request for CLI from MDS.
+  * @rq: request.
+  */
+@@ -355,6 +439,9 @@
+ 	case SRMT_BMAPDIO:
+ 		rc = msrcm_handle_bmapdio(rq);
+ 		break;
++	case SRMT_FILECB:
++		rc = msrcm_handle_file_cb(rq);
++		break;
+ 
+ 	default:
+ 		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
+diff -dru -x .git stable/slash2/share/bmap.c today/slash2/share/bmap.c
+--- stable/slash2/share/bmap.c	2018-01-09 12:17:22.834174420 -0500
++++ today/slash2/share/bmap.c	2018-01-09 12:19:42.114387760 -0500
+@@ -75,6 +75,10 @@
+ 	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+ 	pfl_rwlock_unlock(&f->fcmh_rwlock);
+ 
++	/*
++	 * XXX, we are dealing with bmap, and yet we
++	 * drop fcmh lock here.  Not good.
++	 */
+ 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
+ 	psc_pool_return(bmap_pool, b);
+ }
+@@ -141,7 +145,7 @@
+ 			goto restart;
+ 		}
+ 
+-		if (b->bcm_flags & BMAPF_TOFREE) {
++		if (b->bcm_flags & (BMAPF_TOFREE | BMAPF_STALE)) {
+ 			/*
+ 			 * This bmap is going away; wait for it so we
+ 			 * can reload it back.
+@@ -239,6 +243,9 @@
+ 		rc = ENOENT;
+ 		goto out;
+ 	}
++	if (flags & BMAPGETF_DIRECTORY)
++		goto out;
++
+ 	if (flags & BMAPGETF_NONBLOCK) {
+ 		if (b->bcm_flags & BMAPF_LOADING)
+ 			goto out;
+@@ -319,7 +326,7 @@
+ 	 	/* client only: call msl_bmap_modeset() */
+ 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
+ 		BMAP_LOCK(b);
+-		if (rc == -ENOENT) {
++		if (rc == ENOENT) {
+ 			b->bcm_flags &= ~BMAPF_LOADED;
+ 			OPSTAT_INCR("bmap-reload");
+ 			goto retrieve;
+diff -dru -x .git stable/slash2/share/fidc_common.c today/slash2/share/fidc_common.c
+--- stable/slash2/share/fidc_common.c	2018-01-09 12:17:22.839174175 -0500
++++ today/slash2/share/fidc_common.c	2018-01-09 12:19:42.119387518 -0500
+@@ -323,7 +323,8 @@
+ 
+ 	if (flags & FIDC_LOOKUP_LOAD) {
+ 		psc_assert(sl_fcmh_ops.sfop_getattr);
+-		rc = sl_fcmh_ops.sfop_getattr(f, arg);	/* msl_stat() */
++		/* call slc_fcmh_getattr() */
++		rc = sl_fcmh_ops.sfop_getattr(f, arg);
+ 	}
+ 
+  finish:
+diff -dru -x .git stable/slash2/slashd/bmap_mds.c today/slash2/slashd/bmap_mds.c
+--- stable/slash2/slashd/bmap_mds.c	2018-01-09 12:17:22.853173495 -0500
++++ today/slash2/slashd/bmap_mds.c	2018-01-09 12:19:42.130386981 -0500
+@@ -514,7 +514,6 @@
+ 	int seq = 0;
+ 
+ 	_dump_bmap_flags_common(&flags, &seq);
+-	PFL_PRFLAG(BMAPF_CRC_UP, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_REPLMODWR, &flags, &seq);
+ 	PFL_PRFLAG(BMAPF_IOSASSIGNED, &flags, &seq);
+ 	if (flags)
+diff -dru -x .git stable/slash2/slashd/bmap_mds.h today/slash2/slashd/bmap_mds.h
+--- stable/slash2/slashd/bmap_mds.h	2018-01-09 12:17:22.854173446 -0500
++++ today/slash2/slashd/bmap_mds.h	2018-01-09 12:19:42.131386932 -0500
+@@ -90,7 +90,7 @@
+ 
+ /* MDS-specific bcm_flags, _BMAPF_SHIFT	 = (1 <<  9) */
+ 
+-#define BMAPF_CRC_UP		(_BMAPF_SHIFT << 0)	/* CRC update in progress */
++#define BMAPF_DIRECTORY		(_BMAPF_SHIFT << 0)	/* create a bmap for directory */
+ #define BMAPF_REPLMODWR		(_BMAPF_SHIFT << 1)	/* res state changes have been written */
+ #define BMAPF_IOSASSIGNED	(_BMAPF_SHIFT << 2)	/* write request bound an IOS to this bmap */
+ 
+@@ -143,8 +143,6 @@
+ #define BTE_DEL			(1 << 1)
+ #define BTE_REATTACH		(1 << 2)
+ 
+-#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
+-
+ struct bmap_mds_lease {
+ 	uint64_t		  bml_seq;
+ 	int32_t		  	  bml_refcnt;
+@@ -154,6 +152,10 @@
+ 	time_t			  bml_start;
+ 	time_t			  bml_expire;
+ 	struct bmap_mds_info	 *bml_bmi;
++	/*
++	 * Either add a reference count or use pscrpc_get_connection()
++	 * or pscrpc_getpridforpeer() to find out export on the fly.
++	 */
+ 	struct pscrpc_export	 *bml_exp;
+ 	struct psc_listentry	  bml_bmi_lentry;
+ 	struct psc_listentry	  bml_timeo_lentry;
+@@ -164,13 +166,14 @@
+ #define BML_READ		(1 <<  0)		/* lease is for read activity */
+ #define BML_WRITE		(1 <<  1)		/* lease is for write activity */
+ #define BML_DIO			(1 <<  2)
+-#define BML_DIOCB		(1 <<  3)
++#define BML_DIOCB		(1 <<  3)		/* DIO callback in progress */
+ #define BML_TIMEOQ		(1 <<  4)
+ #define BML_BMI			(1 <<  5)		/* linked in bmap_mds_info */
+ #define BML_RECOVER		(1 <<  6)
+ #define BML_CHAIN		(1 <<  7)
+ #define BML_FREEING		(1 <<  8)		/* being freed, don't reuse */
+-#define BML_RECOVERFAIL		(1 <<  9)
++#define BML_DIRECTORY		(1 <<  9)
++#define BML_RECOVERFAIL		(1 <<  10)
+ 
+ #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmi)
+ 
+@@ -215,6 +218,11 @@
+ struct bmap_mds_lease *
+ 	 mds_bmap_getbml(struct bmap *, uint64_t, uint64_t, uint32_t);
+ 
++struct bmap_mds_lease *
++	 mds_bml_new(struct bmap *, struct pscrpc_export *, int, 
++	     lnet_process_id_t *);
++int mds_bmap_bml_add(struct bmap_mds_lease *, enum rw, sl_ios_id_t);
++
+ void	 mds_bmap_setcurseq(uint64_t, uint64_t);
+ void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
+ 
+diff -dru -x .git stable/slash2/slashd/coh.c today/slash2/slashd/coh.c
+--- stable/slash2/slashd/coh.c	2018-01-09 12:17:22.857173299 -0500
++++ today/slash2/slashd/coh.c	2018-01-09 12:19:42.133386835 -0500
+@@ -56,22 +56,6 @@
+ {
+ }
+ 
+-void
+-slm_coh_bml_release(struct bmap_mds_lease *bml)
+-{
+-	struct bmap_mds_info *bmi;
+-	struct bmap *b;
+-
+-	bmi = bml->bml_bmi;
+-	b = bmi_2_bmap(bmi);
+-
+-	BMAP_LOCK(b);
+-	bmi->bmi_diocb--;
+-	bml->bml_flags &= ~BML_DIOCB;
+-
+-	mds_bmap_bml_release(bml);
+-}
+-
+ int
+ slm_rcm_bmapdio_cb(struct pscrpc_request *rq,
+     __unusedx struct pscrpc_async_args *a)
+@@ -93,15 +77,21 @@
+ 	 * timeout, which ever comes first.
+ 	 */ 
+ 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
+-	if (rc && rc != -ENOENT)
++	if (rc && rc != -ENOENT) {
++		OPSTAT_INCR("bmap-dio-cb-err");
+ 		goto out;
++	}
+ 
+ 	bmi = bml->bml_bmi;
+ 	b = bmi_2_bmap(bmi);
+ 
+ 	BMAP_LOCK(b);
+ 	bml->bml_flags |= BML_DIO;
+-	BMAP_ULOCK(b);
++	bmi->bmi_diocb--;
++	bml->bml_flags &= ~BML_DIOCB;
++
++	OPSTAT_INCR("bmap-dio-cb-ok");
++	mds_bmap_bml_release(bml);
+ 
+  out:
+ 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, bml_2_bmap(bml),
+@@ -109,8 +99,6 @@
+ 	    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
+ 	    buf), mq->seq, rc);
+ 
+-	slm_coh_bml_release(bml);
+-
+ 	sl_csvc_decref(csvc);
+ 
+ 	return (0);
+@@ -123,7 +111,7 @@
+  * Note: @bml is unlocked upon return.
+  */
+ int
+-mdscoh_req(struct bmap_mds_lease *bml)
++slm_bmap_coherent_callback(struct bmap_mds_lease *bml)
+ {
+ 	struct slrpc_cservice *csvc = NULL;
+ 	struct pscrpc_request *rq = NULL;
+@@ -160,8 +148,9 @@
+ 	mq->dio = 1;
+ 
+ 	/* Take a reference for the asynchronous RPC. */
+-	bmi->bmi_diocb++;
+ 	bml->bml_refcnt++;
++
++	bmi->bmi_diocb++;
+ 	bml->bml_flags |= BML_DIOCB;
+ 
+ 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
+@@ -171,9 +160,8 @@
+ 	if (rc == 0)
+ 		return (0);
+ 
+-	bml->bml_flags &= ~BML_DIOCB;
+-
+ 	bmi->bmi_diocb--;
++	bml->bml_flags &= ~BML_DIOCB;
+ 
+  out:
+ 	pscrpc_req_finished(rq);
+diff -dru -x .git stable/slash2/slashd/ctl_mds.c today/slash2/slashd/ctl_mds.c
+--- stable/slash2/slashd/ctl_mds.c	2018-01-09 12:17:22.858173251 -0500
++++ today/slash2/slashd/ctl_mds.c	2018-01-09 12:19:42.134386787 -0500
+@@ -528,6 +528,32 @@
+ }
+ 
+ void
++slmctlparam_max_lease_get(char *val)
++{
++	snprintf(val, PCP_VALUE_MAX, "%d", slm_lease_timeout);
++}
++
++int
++slmctlparam_max_lease_set(const char *val)
++{
++	unsigned long l;
++	char *endp;
++	int rc = 0;
++
++	l = strtol(val, &endp, 0);
++	if (endp == val || *endp)
++		rc = -1;
++	else {
++		if (l >= BMAP_TIMEO_MIN && l <= BMAP_TIMEO_MAX)
++			slm_lease_timeout = l;
++		else
++			rc = -1;
++	}
++
++	return (rc);
++}
++
++void
+ slmctlthr_spawn(const char *fn)
+ {
+ 	pfl_journal_register_ctlops(slmctlops);
+@@ -617,6 +643,9 @@
+ 	psc_ctlparam_register_var("sys.upsch_batch_size",
+ 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
+ 
++	psc_ctlparam_register_simple("sys.max_lease_time",
++	    slmctlparam_max_lease_get, slmctlparam_max_lease_set);
++
+ 	psc_ctlparam_register_simple("sys.upsch_batch_inflight",
+ 	    slrcp_batch_get_max_inflight, slrcp_batch_set_max_inflight);
+ 
+diff -dru -x .git stable/slash2/slashd/fidc_mds.c today/slash2/slashd/fidc_mds.c
+--- stable/slash2/slashd/fidc_mds.c	2018-01-09 12:17:22.860173153 -0500
++++ today/slash2/slashd/fidc_mds.c	2018-01-09 12:19:42.136386690 -0500
+@@ -93,9 +93,13 @@
+ 		mds_unreserve_slot(1);
+ 
+ 	if (!rc) {
+-		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
+-
++		/*
++ 		 * 01/04/2018: Hit this assert again, but gdb
++ 		 * show they are identical.  So let us move
++ 		 * into lock.
++ 		 */
+ 		FCMH_LOCK(f);
++		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
+ 		f->fcmh_sstb = sstb_out;
+ 		FCMH_ULOCK(f);
+ 	}
+@@ -122,6 +126,7 @@
+ 	}
+ 	fmi = fcmh_2_fmi(f);
+ 	memset(fmi, 0, sizeof(*fmi));
++	INIT_PSCLIST_HEAD(&fmi->fmi_callbacks);
+ 
+ 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
+ 	    &f->fcmh_sstb, &fcmh_2_mfid(f));
+diff -dru -x .git stable/slash2/slashd/fidc_mds.h today/slash2/slashd/fidc_mds.h
+--- stable/slash2/slashd/fidc_mds.h	2018-01-09 12:17:22.861173104 -0500
++++ today/slash2/slashd/fidc_mds.h	2018-01-09 12:19:42.137386641 -0500
+@@ -33,6 +33,30 @@
+ #include "slashd.h"
+ #include "up_sched_res.h"
+ 
++extern struct psc_poolmaster	 slm_callback_poolmaster;
++extern struct psc_poolmgr	*slm_callback_pool;
++
++struct fcmh_mds_callback {
++	/*
++ 	 * The time period during which the MDS assumes that
++ 	 * the client is still accessing the file.
++ 	 */
++	int32_t			  fmc_expire;
++	lnet_process_id_t	  fmc_nidpid;
++	struct pscrpc_export	 *fmc_exp;
++	struct fcmh_mds_info	 *fmc_fmi;
++	struct psc_listentry	  fmc_lentry;
++	struct psc_listentry      fmc_timeo_lentry;
++};
++
++/*
++ * List of fcmh callbacks.
++ */
++struct fcmh_timeo_table {
++	psc_spinlock_t		 ftt_lock;
++	struct psc_lockedlist	 ftt_callbacks;
++};
++
+ /**
+  * fcmh_mds_info - MDS-specific fcmh data.
+  * @fmi_mfid - backing object MIO FID.  This is used to access the
+@@ -45,6 +69,7 @@
+ 	struct slash_inode_handle fmi_inodeh;
+ 	mio_fid_t		  fmi_mfid;		/* backing object inum */
+ 	struct mio_fh		  fmi_mfh;		/* file handle */
++	struct psclist_head	  fmi_callbacks;
+ 	union {
+ 		struct {
+ 			/*
+diff -dru -x .git stable/slash2/slashd/inode.c today/slash2/slashd/inode.c
+--- stable/slash2/slashd/inode.c	2018-01-09 12:17:22.864172957 -0500
++++ today/slash2/slashd/inode.c	2018-01-09 12:19:42.139386543 -0500
+@@ -113,6 +113,13 @@
+ 		if (mds_inode_update_interrupted(vfsid, ih, &rc))
+ 			;
+ 		else if (vers && vers < INO_VERSION)
++			/*
++			 * Instead of updating different versions of 
++			 * inode format, it is probably safer to 
++			 * support multiple formats at the same 
++			 * time unless you want to drop old format
++			 * completely.
++			 */
+ 			rc = mds_inode_update(vfsid, ih, vers);
+ 		else {
+ 			DEBUG_INOH(PLL_WARN, ih, buf, 
+@@ -245,6 +252,11 @@
+ 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+ 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
+ 	    SL_EXTRAS_START_OFF, inoh_2_mfh(ih));
++
++	/*
++	 * No need to check od_crc if rc == 0. In fact, this will cause 
++	 * problem if od_crc is not initialized.
++	 */
+ 	if (rc == 0 && od_crc == 0 &&
+ 	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
+ 		rc = 0;
+diff -dru -x .git stable/slash2/slashd/main_mds.c today/slash2/slashd/main_mds.c
+--- stable/slash2/slashd/main_mds.c	2018-01-09 12:17:22.870172666 -0500
++++ today/slash2/slashd/main_mds.c	2018-01-09 12:19:42.144386300 -0500
+@@ -88,6 +88,9 @@
+ struct psc_poolmaster	 slm_bml_poolmaster;
+ struct psc_poolmgr	*slm_bml_pool;
+ 
++struct psc_poolmaster	 slm_callback_poolmaster;
++struct psc_poolmgr	*slm_callback_pool;
++
+ struct psc_poolmaster	 slm_repl_status_poolmaster;
+ 
+ int
+@@ -585,6 +588,19 @@
+ 	    2048, 0, NULL, "bmplease");
+ 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
+ 
++
++	/*
++ 	 * Initialize file callback data structures.
++ 	 */
++	psc_poolmaster_init(&slm_callback_poolmaster,
++	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, MDS_FIDCACHE_SIZE,
++	    MDS_FIDCACHE_SIZE, 0, NULL, "callback");
++	slm_callback_pool = psc_poolmaster_getmgr(&slm_callback_poolmaster);
++
++	INIT_SPINLOCK(&slm_fcmh_callbacks.ftt_lock);
++	pll_init(&slm_fcmh_callbacks.ftt_callbacks, struct fcmh_mds_callback,
++	    fmc_timeo_lentry, &slm_fcmh_callbacks.ftt_lock);
++
+ 	sl_nbrqset = pscrpc_prep_set();
+ 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,
+ 	    "slmnbrqthr");
+diff -dru -x .git stable/slash2/slashd/mds_bmap_timeo.c today/slash2/slashd/mds_bmap_timeo.c
+--- stable/slash2/slashd/mds_bmap_timeo.c	2018-01-09 12:17:22.874172471 -0500
++++ today/slash2/slashd/mds_bmap_timeo.c	2018-01-09 12:19:42.148386104 -0500
+@@ -33,6 +33,7 @@
+ 
+ #include "bmap.h"
+ #include "bmap_mds.h"
++#include "fidc_mds.h"
+ #include "journal_mds.h"
+ 
+ struct bmap_timeo_table	 slm_bmap_leases;
+@@ -241,7 +242,7 @@
+ 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
+ 		if (!bml) {
+ 			freelock(&slm_bmap_leases.btt_lock);
+-			nsecs = BMAP_TIMEO_MAX;
++			nsecs = slm_lease_timeout;
+ 			goto out;
+ 		}
+ 		b = bml_2_bmap(bml);
+@@ -298,8 +299,63 @@
+ }
+ 
+ void
++slmcbtimeothr_begin(struct psc_thread *thr)
++{
++	int nsecs;
++	char wait[16];
++	struct fidc_membh *f;
++	struct fcmh_mds_info *fmi;
++	struct fcmh_mds_callback *cb;
++
++	while (pscthr_run(thr)) {
++
++		nsecs = 0;
++		spinlock(&slm_fcmh_callbacks.ftt_lock);
++		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
++		if (!cb) {
++			freelock(&slm_fcmh_callbacks.ftt_lock);
++			nsecs = slm_lease_timeout;
++			goto out;
++		}
++		fmi = cb->fmc_fmi;
++		f = fmi_2_fcmh(fmi);
++		if (!FCMH_TRYLOCK(f)) {
++			freelock(&slm_fcmh_callbacks.ftt_lock);
++			nsecs = 1;
++			goto out;
++		}
++		nsecs = cb->fmc_expire - time(NULL);
++		if (nsecs > 0) {
++			FCMH_ULOCK(f);
++			freelock(&slm_fcmh_callbacks.ftt_lock);
++			goto out;
++		}
++		psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
++		pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
++		psc_pool_return(slm_callback_pool, cb);
++
++		fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
++
++		freelock(&slm_fcmh_callbacks.ftt_lock);
++
++ out:
++		psclog_debug("nsecs=%d", nsecs);
++
++		if (nsecs > 0) {
++			snprintf(wait, 16, "sleep %d", nsecs);
++			thr->pscthr_waitq = wait;
++			sleep((uint32_t)nsecs);
++			thr->pscthr_waitq = NULL;
++		}
++	}
++}
++
++
++void
+ slmbmaptimeothr_spawn(void)
+ {
+ 	pscthr_init(SLMTHRT_BMAPTIMEO, slmbmaptimeothr_begin, 0,
+ 	    "slmbmaptimeothr");
++	pscthr_init(SLMTHRT_CALLBACK, slmcbtimeothr_begin, 0,
++	    "slmcbtimeothr");
+ }
+diff -dru -x .git stable/slash2/slashd/mds.c today/slash2/slashd/mds.c
+--- stable/slash2/slashd/mds.c	2018-01-09 12:17:22.872172569 -0500
++++ today/slash2/slashd/mds.c	2018-01-09 12:19:42.146386202 -0500
+@@ -61,6 +61,13 @@
+ int			slm_max_ios = SL_MAX_REPLICAS;
+ 
+ /*
++ * Longer timeout values reduce RPC cost, but need more memory to
++ * keep track of them.
++ */
++int			slm_lease_timeout = BMAP_TIMEO_MAX;
++int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
++
++/*
+  * Knobs that allow us to turn off some features easily if
+  * they turn out to be unstable.
+  */
+@@ -187,7 +194,7 @@
+ 				if (bml->bml_flags & BML_DIOCB)
+ 					goto next;
+ 
+-				mdscoh_req(bml);
++				slm_bmap_coherent_callback(bml);
+ 
+  next:
+ 				bml = bml->bml_chain;
+@@ -216,7 +223,11 @@
+ 		 * Looks like we somehow end up with two write leases on
+ 		 * the same bmap, but likely with different IOSes, hence
+ 		 * the following assert triggers.  The bml_start value
+-		 * between the two lease exceeds 60000.
++		 * between the two leases exceeds 60000.
++		 *
++		 * Here we use the memory address to assert that different
++		 * leases share the same IOS.
++		 *
+ 		 */
+ 		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+ 	} else {
+@@ -751,10 +762,13 @@
+ 
+ /*
+  * Find the first lease of a given client based on its {nid, pid} pair.
++ * 
+  * Also walk the chain of duplicate leases to count the number of read
+  * and write leases.  Note that only the first lease of a client is
+  * linked on the bmi->bmi_leases list, the rest is linked on a private
+  * chain and tagged with BML_CHAIN flag.
++ *
++ * Return the first lease of a client on the bmap lease list.
+  */
+ static __inline struct bmap_mds_lease *
+ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
+@@ -923,7 +937,7 @@
+  * @rw: read/write access for bmap.
+  * @prefios: client preferred I/O system.
+  */
+-__static int
++int
+ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
+     sl_ios_id_t prefios)
+ {
+@@ -940,7 +954,7 @@
+ 	bmap_wait_locked(b, b->bcm_flags & BMAPF_IOSASSIGNED);
+ 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
+ 
+-	rc = mds_bmap_directio(b, rw, bml->bml_flags & BML_DIO,
++	rc = mds_bmap_directio(b, rw, bml->bml_flags & (BML_DIO|BML_DIRECTORY),
+ 	    &bml->bml_cli_nidpid);
+ 	if (rc && (bml->bml_flags & BML_RECOVER))
+ 		rc = 0;
+@@ -1222,6 +1236,11 @@
+ 			/*
+  			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
+  			 * bmi_seq = -1, and bml_flags = 101000010.
++ 			 *
++ 			 * Looks like this is because we assign BMAPSEQ_ANY at
++ 			 * reattach time.  The flags above shows this is during
++ 			 * recovery.
++ 			 *
+  			 */
+ 			if (bia->bia_seq !=  bmi->bmi_seq) {
+ 				psclog_warnx("Mismatch seqno: %ld vs. %ld, "
+@@ -1332,7 +1351,7 @@
+ 	return (0);
+ }
+ 
+-static struct bmap_mds_lease *
++struct bmap_mds_lease *
+ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
+     lnet_process_id_t *cnp)
+ {
+@@ -1351,7 +1370,7 @@
+ 
+ 	bml->bml_flags = flags;
+ 	bml->bml_start = time(NULL);
+-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
++	bml->bml_expire = bml->bml_start + slm_lease_timeout;
+ 	bml->bml_bmi = bmap_2_bmi(b);
+ 
+ 	bml->bml_exp = e;
+@@ -1429,7 +1448,11 @@
+ 	 * susceptible to gross changes in the system time.
+ 	 */
+ 	bml->bml_start = bia->bia_start;
+-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
++	bml->bml_expire = bml->bml_start + slm_lease_timeout;
++
++	/*
++	 * (gdb) p ((struct pfl_opstat *)pfl_opstats.pda_items[7]).opst_name
++	 */
+ 	if (bml->bml_expire <= time(NULL))
+ 		OPSTAT_INCR("bmap-restart-expired");
+ 
+@@ -1472,20 +1495,20 @@
+ slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
+ {
+ 	struct bmap_mds_info *bmi;
+-	int i, locked;
++	int i;
+ 
++	BMAP_LOCK_ENSURE(b);
+ 	bmi = bmap_2_bmi(b);
+-	locked = BMAP_RLOCK(b);
+ 	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
+ 	sbd->sbd_bmapno = b->bcm_bmapno;
+ 	if (b->bcm_flags & BMAPF_DIO || slm_force_dio)
+ 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
+-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
++	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
+ 		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
+ 			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
+ 			break;
+ 		}
+-	BMAP_URLOCK(b, locked);
++	}
+ }
+ 
+ /*
+@@ -1556,13 +1579,12 @@
+ 	}
+ 
+ 	slm_fill_bmapdesc(sbd, b);
+-
+ 	/*
+ 	 * SLASH2 monotonic coherency sequence number assigned to this
+ 	 * lease.
+ 	 */
+ 	sbd->sbd_seq = bml->bml_seq;
+-	sbd->sbd_key = BMAPSEQ_ANY;
++	sbd->sbd_expire = slm_lease_timeout;
+ 
+ 	/*
+ 	 * Store the nid/pid of the client interface in the bmapdesc to
+@@ -1645,6 +1667,9 @@
+ 	if (rc)
+ 		PFL_GOTOERR(out1, rc);
+ 
++	obml->bml_start = time(NULL);
++	obml->bml_expire = obml->bml_start + slm_lease_timeout;
++
+ 	/*
+ 	 * Deal with the lease renewal and repl_add before modifying the
+ 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
+@@ -1667,9 +1692,9 @@
+ 	/* Do some post setup on the modified lease. */
+ 	slm_fill_bmapdesc(sbd_out, b);
+ 	sbd_out->sbd_seq = obml->bml_seq;
++	sbd_out->sbd_expire = slm_lease_timeout;
+ 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
+ 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
+-	sbd_out->sbd_key = BMAPSEQ_ANY;
+ 	sbd_out->sbd_ios = obml->bml_ios;
+ 
+  out1:
+@@ -1729,6 +1754,7 @@
+ 	 */
+ 	slm_fill_bmapdesc(sbd_out, b);
+ 	sbd_out->sbd_seq = bml->bml_seq;
++	sbd_out->sbd_expire = slm_lease_timeout;
+ 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
+ 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
+ 
+@@ -1737,10 +1763,8 @@
+ 
+ 		psc_assert(bmi->bmi_wr_ion);
+ 
+-		sbd_out->sbd_key = BMAPSEQ_ANY;
+ 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+ 	} else {
+-		sbd_out->sbd_key = BMAPSEQ_ANY;
+ 		sbd_out->sbd_ios = IOS_ID_ANY;
+ 	}
+ 
+@@ -1941,6 +1965,10 @@
+ 
+ 	FCMH_ULOCK(f);
+ 
++	/*
++ 	 * Disable it for now until I have a proper fix for the
++ 	 * crash in the following loop.
++ 	 */
+ 	if (slm_lease_skip)
+ 		goto skip;
+ 
+diff -dru -x .git stable/slash2/slashd/repl_mds.c today/slash2/slashd/repl_mds.c
+--- stable/slash2/slashd/repl_mds.c	2018-01-09 12:17:22.885171935 -0500
++++ today/slash2/slashd/repl_mds.c	2018-01-09 12:19:42.157385666 -0500
+@@ -181,6 +181,12 @@
+ 		DEBUG_INOH(PLL_DEBUG, ih, buf, "is rep[%u](=%u) == %u ?",
+ 		    j, repl[j].bs_id, ios);
+ 
++		/*
++ 		 * XXX: If the ID is zero here and we are adding, we should be able
++ 		 * to add the slot right there. Otherwise, we can run out of slots
++ 		 * if constantly add and remove an IOS.  Thankfully, no one tries
++ 		 * this as of today.
++ 		 */
+ 		if (repl[j].bs_id == ios) {
+ 			/*
+  			 * Luckily, this code is only called by mds_repl_delrq() 
+diff -dru -x .git stable/slash2/slashd/rmc.c today/slash2/slashd/rmc.c
+--- stable/slash2/slashd/rmc.c	2018-01-09 12:17:22.890171690 -0500
++++ today/slash2/slashd/rmc.c	2018-01-09 12:19:42.160385519 -0500
+@@ -83,6 +83,7 @@
+ struct timespec		slm_min_space_lastcheck;
+ int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
+ 	
++struct fcmh_timeo_table slm_fcmh_callbacks;
+ 
+ static void
+ slm_root_attributes(struct srt_stat *attr)
+@@ -209,6 +210,123 @@
+ 	return (0);
+ }
+ 
++/*
++ * Register our intention to access the file. If there are other clients 
++ * interested in the same file, let them know.
++ *
++ * Note that a client doesn't ask for a callback explicitly. This way, we 
++ * only incur overhead when more than one client is access the same file 
++ * around the same time window.
++ */
++int
++slm_fcmh_coherent_callback(struct fidc_membh *f, 
++    struct pscrpc_export *exp, int32_t *leasep)
++{
++	int32_t lease;
++	int rc, count, found;
++	lnet_nid_t nid;
++	lnet_pid_t pid;
++	struct psc_listentry *tmp;
++	struct fcmh_mds_info *fmi;
++	struct srm_filecb_req *mq;
++	struct srm_filecb_rep *mp;
++	struct fcmh_mds_callback *cb, *found_cb;
++	struct pscrpc_request *rq = NULL;
++	struct slrpc_cservice *csvc = NULL;
++
++	pid = exp->exp_connection->c_peer.pid;
++	nid = exp->exp_connection->c_peer.nid;
++
++	rc = 0;
++	found = 0;
++	count = 0;
++
++#if 0
++	/*
++ 	 * This could help finish the on-going operation without a RPC again.
++ 	 */
++	lease = 1;
++#else
++	lease = 0;
++#endif
++
++	fmi = fcmh_2_fmi(f);
++	FCMH_LOCK(f);
++	psclist_for_each(tmp, &fmi->fmi_callbacks) {
++		count++;
++		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
++		if (cb->fmc_nidpid.nid == nid &&
++		    cb->fmc_nidpid.pid == pid) {
++			psc_assert(!found);
++			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
++			found = 1;
++			found_cb = cb;
++		}
++	}
++	if (!count) {
++		lease = slm_callback_timeout;
++		OPSTAT_INCR("slm-new-callback");
++	}
++	if (count == 1 && found) {
++		lease = slm_callback_timeout;
++		OPSTAT_INCR("slm-renew-callback");
++	}
++	/*
++ 	 * If the number of users goes from 1 to 2, send callbacks.
++ 	 */
++	if (count == 1 && !found) {
++		csvc = slm_getclcsvc(cb->fmc_exp);
++		/*
++ 		 * Hit this when a client dies. Need more investigation.
++ 		 */
++		if (!csvc) {
++			OPSTAT_INCR("slm-callback-skip");
++			goto next;
++		}
++		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
++		if (rc)
++			goto next;
++		mq->fg = f->fcmh_fg;
++		rq->rq_async_args.pointer_arg[0] = csvc;
++		rc = SL_NBRQSET_ADD(csvc, rq);
++		if (rc)
++			goto next;
++		rq = NULL;
++		OPSTAT_INCR("slm-invoke-callback");
++	}
++
++ next:
++
++	if (!found) {
++		cb = psc_pool_get(slm_callback_pool);
++		cb->fmc_nidpid.nid = nid;
++		cb->fmc_nidpid.pid = pid;
++		cb->fmc_exp = exp;
++		cb->fmc_fmi = fcmh_2_fmi(f);
++		INIT_PSC_LISTENTRY(&cb->fmc_lentry);
++		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
++		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
++		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
++	} else
++		cb = found_cb;
++	/*
++ 	 * At this point, cb can be either a new callback or the one
++ 	 * found on the list.  In either case, we update its
++ 	 * expiration time, and add it to the end of the list.
++ 	 *
++ 	 * XXX we do this even if the lease time is zero.
++ 	 */
++	cb->fmc_expire = time(NULL) + slm_lease_timeout;
++	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
++	FCMH_ULOCK(f);
++
++	if (leasep)
++		*leasep = lease;
++	if (rq)
++		pscrpc_req_finished(rq);
++
++	return (rc);
++}
+ int
+ slm_rmc_handle_getattr(struct pscrpc_request *rq)
+ {
+@@ -238,7 +356,10 @@
+ 	mp->xattrsize = mdsio_hasxattrs(vfsid, &rootcreds,
+ 	    fcmh_2_mfid(f));
+ 
+-	FCMH_LOCK(f);
++	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
+ 	mp->attr = f->fcmh_sstb;
+ 
+  out:
+@@ -294,7 +415,6 @@
+ 
+ 	mp->sbd = mq->sbd;
+ 	mp->sbd.sbd_seq = bml->bml_seq;
+-	mp->sbd.sbd_key = BMAPSEQ_ANY;
+ 
+ 	psc_assert(bmi->bmi_wr_ion);
+ 	mp->sbd.sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+@@ -414,6 +534,12 @@
+ 		goto out;
+ 	}
+ 
++#if 0
++	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++#endif
++
+ 	/*
+  	 * If we don't wait for a truncation to complete on an IOS, a
+  	 * later write beyond the truncation point could race with it 
+@@ -487,7 +613,7 @@
+ int
+ slm_rmc_handle_lookup(struct pscrpc_request *rq)
+ {
+-	struct fidc_membh *p = NULL;
++	struct fidc_membh *p = NULL, *c = NULL;
+ 	struct srm_lookup_req *mq;
+ 	struct srm_lookup_rep *mp;
+ 	int vfsid;
+@@ -500,6 +626,7 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++
+ 	mq->name[sizeof(mq->name) - 1] = '\0';
+ 	psclog_diag("lookup: pfid="SLPRI_FID" name=%s", fcmh_2_mfid(p),
+ 	    mq->name);
+@@ -568,16 +695,28 @@
+ 				mp->attr.sst_fg.fg_fid = fid;
+ 		}
+ 	}
++	/*
++ 	 * We don't have an OPEN RPC, so we give a callback implicitly.
++ 	 */
++	mp->rc = -slm_fcmh_get(&mp->attr.sst_fg, &c);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
++	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
+ 
+  out:
++	if (c)
++		fcmh_op_done(c);
+ 	if (p)
+ 		fcmh_op_done(p);
+ 	return (0);
+ }
+ 
+ int
+-slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
+-    int opflags, struct fidc_membh **dp)
++slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq, 
++    struct srm_mkdir_rep *mp, int opflags, struct fidc_membh **dp)
+ {
+ 	struct fidc_membh *p = NULL, *c = NULL;
+ 	slfid_t fid = 0;
+@@ -601,12 +740,22 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
+ 	mds_reserve_slot(1);
+ 	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mfid(p), mq->name,
+ 	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
+ 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
+ 	mds_unreserve_slot(1);
+ 
++	/*
++ 	 * XXX Register a callback with the new directory, so that I
++ 	 * can send a delete callback to the client if need be.
++ 	 */
++	mp->lease = slm_callback_timeout;
++
+  out:
+ 	if (p)
+ 		mdsio_fcmh_refreshattr(p, &mp->pattr);
+@@ -653,7 +802,7 @@
+ 	if (mp->rc)
+ 		return (0);
+ 
+-	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
++	return (slm_mkdir(vfsid, rq, mq, mp, 0, NULL));
+ }
+ 
+ int
+@@ -754,6 +903,7 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++
+ 	DEBUG_FCMH(level, p, "create op start for %s", mq->name);
+ 
+ 	mp->cattr.sst_ctim = mq->time;
+@@ -796,6 +946,10 @@
+ 	/* obtain lease for first bmap as optimization */
+ 	mp->flags = mq->flags;
+ 
++	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
+ #if 0
+ 	mp->rc2 = ENOENT;
+ #else
+@@ -961,6 +1115,10 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
+ 	iov[0].iov_base = PSCALLOC(mq->size);
+ 
+ 	/*
+@@ -1626,6 +1784,10 @@
+ 	if (mp->rc)
+ 		PFL_GOTOERR(out, mp->rc);
+ 
++	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
++	if (mp->rc)
++		PFL_GOTOERR(out, mp->rc);
++
+ 	mds_reserve_slot(1);
+ 	if (isfile)
+ 		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mfid(p), &oldfg,
+diff -dru -x .git stable/slash2/slashd/rmi.c today/slash2/slashd/rmi.c
+--- stable/slash2/slashd/rmi.c	2018-01-09 12:17:22.892171592 -0500
++++ today/slash2/slashd/rmi.c	2018-01-09 12:19:42.162385422 -0500
+@@ -240,7 +240,7 @@
+ 	sstb = mq->sstb;
+ 	mq->sstb.sst_uid = 0;
+ 	mq->sstb.sst_gid = 0;
+-	rc = slm_mkdir(vfsid, mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
++	rc = slm_mkdir(vfsid, rq, mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
+ 	if (rc)
+ 		return (rc);
+ 	if (mp->rc && mp->rc != -EEXIST)
+diff -dru -x .git stable/slash2/slashd/rpc_mds.h today/slash2/slashd/rpc_mds.h
+--- stable/slash2/slashd/rpc_mds.h	2018-01-09 12:17:22.897171351 -0500
++++ today/slash2/slashd/rpc_mds.h	2018-01-09 12:19:42.164385325 -0500
+@@ -84,8 +84,8 @@
+ 	    struct sl_fidgen *, char *, char *, uint32_t,
+ 	    const struct slash_creds *, struct srt_stat *, int32_t);
+ 
+-int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *,
+-	    int, struct fidc_membh **);
++int	slm_mkdir(int, struct pscrpc_request *, struct srm_mkdir_req *, 
++	    struct srm_mkdir_rep *, int, struct fidc_membh **);
+ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
+ 	    struct srm_symlink_rep *, int);
+ 
+diff -dru -x .git stable/slash2/slashd/slashd.h today/slash2/slashd/slashd.h
+--- stable/slash2/slashd/slashd.h	2018-01-09 12:17:22.900171204 -0500
++++ today/slash2/slashd/slashd.h	2018-01-09 12:19:42.167385178 -0500
+@@ -47,6 +47,13 @@
+ 
+ struct slm_sth;
+ struct bmap_mds_lease;
++extern int slm_lease_timeout;
++extern int slm_callback_timeout;
++
++#define CALLBACK_TIMEO_MAX             240     /* default callback timeout */
++#define CALLBACK_TIMEO_MIN             40      /* minimum callback timeout */
++
++extern struct fcmh_timeo_table slm_fcmh_callbacks;
+ 
+ extern sqlite3	*db_handle;
+ 
+@@ -75,6 +82,7 @@
+ 	SLMTHRT_PAGER,			/* read SQL table */
+ 	SLMTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
+ 	SLMTHRT_WORKER,			/* miscellaneous work */
++	SLMTHRT_CALLBACK,		/* coherent callback */
+ 	SLMTHRT_ZFS_KSTAT		/* ZFS stats */
+ };
+ 
+@@ -315,8 +323,8 @@
+ 
+ int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
+ 
+-int	mdscoh_req(struct bmap_mds_lease *);
+ void	slm_coh_delete_file(struct fidc_membh *);
++int	slm_bmap_coherent_callback(struct bmap_mds_lease *);
+ 
+ void	slm_mdfs_scan(void);
+ int	slm_wkcb_wr_brepl(void *);
+diff -dru -x .git stable/slash2/TODO today/slash2/TODO
+--- stable/slash2/TODO	2018-01-09 12:17:22.717180121 -0500
++++ today/slash2/TODO	2018-01-09 12:19:42.005393072 -0500
+@@ -6050,3 +6050,174 @@
+ 
+ * FUSE readdirplus
+ 
++11/21/2017
++----------
++
++Two weird crashes in the client:
++
++[zhihui@r139 ~]$ uname -a
++Linux r139.pvt.bridges.psc.edu 3.10.0-514.26.2.el7.x86_64 #1 SMP Tue Jul 4 15:04:05 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
++[zhihui@r139 ~]$ 
++
++[6503197.589289] mount_wokfs[28349]: segfault at 100000008 ip 00007f572fd1c7fa sp 00007f5563ffbb80 error 4 in libc-2.17.so[7f572fca1000+1b7000]
++[zhihui@r139 ~]$ 
++
++
++(gdb) bt
++#0  0x00007f572fd1c7fa in malloc_consolidate () from /lib64/libc.so.6
++#1  0x00007f572fd1e385 in _int_malloc () from /lib64/libc.so.6
++#2  0x00007f572fd20fbc in malloc () from /lib64/libc.so.6
++#3  0x00007f572c521d11 in do_malloc.constprop.4 () from /lib64/libgcrypt.so.11
++#4  0x00007f572c522af6 in _gcry_malloc () from /lib64/libgcrypt.so.11
++#5  0x00007f572c536ed5 in _gcry_md_copy () from /lib64/libgcrypt.so.11
++#6  0x00007f572ce1f937 in authbuf_sign (rq=0x7f550c005c80, msgtype=4711)
++    at /opt/packages/slash2/cli/p/slash2/share/authbuf_sign.c:94
++#7  0x00007f572cee318e in msl_read_rpc_launch (r=0x7f551800d410, bmpces=0x7f5563ffe360, startpage=0, npages=1)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:1422
++#8  0x00007f572cee7482 in msl_launch_read_rpcs (r=0x7f551800d410) at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:1540
++#9  0x00007f572cee853a in msl_pages_fetch (r=0x7f551800d410) at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:1585
++#10 0x00007f572cef30ea in msl_io (pfr=0x18b0b70, mfh=0x7f57183b1db0, buf=0x0, size=22278, off=254245742, rw=SL_READ)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:2255
++#11 0x00007f572cf49a5e in mslfsop_read (pfr=0x18b0b70, size=22278, off=254245742, data=0x7f57183b1db0)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/main.c:3502
++#12 0x0000000000434e07 in pscfs_fuse_handle_read (req=0x7f555c00fa20, inum=4503600937722203, size=22278, off=254245742, 
++    fi=0x7f5563ffeb40) at /opt/packages/slash2/cli/p/pfl/fuse.c:1064
++#13 0x00007f57308a876e in do_read (req=<optimized out>, nodeid=<optimized out>, inarg=<optimized out>) at fuse_lowlevel.c:1251
++#14 0x00007f57308a8fd6 in fuse_ll_process_buf (data=0x187e420, buf=buf@entry=0x7f5563ffece0, ch=<optimized out>)
++    at fuse_lowlevel.c:2462
++#15 0x00007f57308a93c6 in fuse_ll_process (data=<optimized out>, buf=<optimized out>, len=<optimized out>, ch=<optimized out>)
++    at fuse_lowlevel.c:2484
++#16 0x000000000042cd32 in pscfs_fuse_listener_loop (thr=0x18b7030) at /opt/packages/slash2/cli/p/pfl/fuse.c:395
++#17 0x00000000004aa55d in _pscthr_begin (arg=0x7fff5bfe9360) at /opt/packages/slash2/cli/p/pfl/thread.c:302
++#18 0x00007f5730069dc5 in start_thread () from /lib64/libpthread.so.0
++#19 0x00007f572fd9876d in clone () from /lib64/libc.so.6
++(gdb) 
++
++
++
++[zhihui@r358 ~]$ uname -a
++Linux r358.pvt.bridges.psc.edu 3.10.0-514.26.2.el7.x86_64 #1 SMP Tue Jul 4 15:04:05 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
++
++*** Error in `mount_wokfs': double free or corruption (fasttop): 0x00007efebc03b4d0 ***
++======= Backtrace: =========
++/lib64/libc.so.6(+0x7c503)[0x7f006bed3503]
++mount_wokfs(_psc_free+0x17e)[0x4487ef]
++/opt/packages/slash2/psc/lib/wokfs/slash2client.so(msl_complete_fsrq+0x10c4)[0x7f00690866db]
++/opt/packages/slash2/psc/lib/wokfs/slash2client.so(msl_io+0x45f5)[0x7f00690a9199]
++/opt/packages/slash2/psc/lib/wokfs/slash2client.so(mslfsop_read+0x45b)[0x7f00690ffa5e]
++mount_wokfs(pscfs_fuse_handle_read+0x511)[0x434e07]
++/opt/packages/fuse/lib/libfuse.so.2(+0x1576e)[0x7f006ca5e76e]
++/opt/packages/fuse/lib/libfuse.so.2(+0x15fd6)[0x7f006ca5efd6]
++/opt/packages/fuse/lib/libfuse.so.2(+0x163c6)[0x7f006ca5f3c6]
++mount_wokfs(pscfs_fuse_listener_loop+0x1325)[0x42cd32]
++mount_wokfs(_pscthr_begin+0x9aa)[0x4aa55d]
++/lib64/libpthread.so.0(+0x7dc5)[0x7f006c21fdc5]
++/lib64/libc.so.6(clone+0x6d)[0x7f006bf4e76d]
++
++
++
++Program terminated with signal 6, Aborted.
++#0  0x00007f006be8c1d7 in raise () from /lib64/libc.so.6
++Missing separate debuginfos, use: debuginfo-install glibc-2.17-157.el7_3.5.x86_64 keyutils-libs-1.5.8-3.el7.x86_64 krb5-libs-1.14.1-27.el7_3.x86_64 libacl-2.2.51-12.el7.x86_64 libattr-2.4.46-12.el7.x86_64 libcom_err-1.42.9-9.el7.x86_64 libgcc-4.8.5-11.el7.x86_64 libgcrypt-1.5.3-13.el7_3.1.x86_64 libgpg-error-1.12-3.el7.x86_64 libselinux-2.5-6.el7.x86_64 numactl-libs-2.0.9-6.el7_2.x86_64 openssl-libs-1.0.1e-60.el7_3.1.x86_64 pcre-8.32-15.el7_2.1.x86_64 zlib-1.2.7-17.el7.x86_64
++(gdb) bt
++#0  0x00007f006be8c1d7 in raise () from /lib64/libc.so.6
++#1  0x00007f006be8d8c8 in abort () from /lib64/libc.so.6
++#2  0x00007f006becbf07 in __libc_message () from /lib64/libc.so.6
++#3  0x00007f006bed3503 in _int_free () from /lib64/libc.so.6
++#4  0x00000000004487ef in _psc_free (p=0x7efebc03b4d0, flags=0) at /opt/packages/slash2/cli/p/pfl/alloc.c:481
++#5  0x00007f00690866db in msl_complete_fsrq (q=0x7f00543b5110, len=0, r0=0x0)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:703
++#6  0x00007f00690a9199 in msl_io (pfr=0xaf4590, mfh=0x7efe98066120, buf=0x0, size=131072, off=805264352, rw=SL_READ)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/io.c:2277
++#7  0x00007f00690ffa5e in mslfsop_read (pfr=0xaf4590, size=131072, off=805264352, data=0x7efe98066120)
++    at /opt/packages/slash2/cli/p/slash2/mount_slash/main.c:3502
++#8  0x0000000000434e07 in pscfs_fuse_handle_read (req=0x7efebc04e8a0, inum=4503600937770686, size=131072, off=805264352, 
++    fi=0x7efeddff6b40) at /opt/packages/slash2/cli/p/pfl/fuse.c:1064
++#9  0x00007f006ca5e76e in do_read (req=<optimized out>, nodeid=<optimized out>, inarg=<optimized out>) at fuse_lowlevel.c:1251
++#10 0x00007f006ca5efd6 in fuse_ll_process_buf (data=0xac1420, buf=buf@entry=0x7efeddff6ce0, ch=<optimized out>)
++    at fuse_lowlevel.c:2462
++#11 0x00007f006ca5f3c6 in fuse_ll_process (data=<optimized out>, buf=<optimized out>, len=<optimized out>, ch=<optimized out>)
++    at fuse_lowlevel.c:2484
++#12 0x000000000042cd32 in pscfs_fuse_listener_loop (thr=0xaf8740) at /opt/packages/slash2/cli/p/pfl/fuse.c:395
++#13 0x00000000004aa55d in _pscthr_begin (arg=0x7fff0b74d4a0) at /opt/packages/slash2/cli/p/pfl/thread.c:302
++#14 0x00007f006c21fdc5 in start_thread () from /lib64/libpthread.so.0
++#15 0x00007f006bf4e76d in clone () from /lib64/libc.so.6
++(gdb) 
++
++
++11/28/2017
++----------
++
++Complaints about data consistency across nodes:
++
++In my reproduction attempt, reads FAILED for 25 second and then the new data was available.  
++I'm not entirely surprised about a propagation delay, but I would have expected to be able 
++to read old data or block (due to lock taken by writing client) in the interim and for the 
++delay to be far shorter.
++
++Please do investigate as a bug and advise as to the outcome.  If we don't expect data written 
++from one client to be promptly available from another, that could contraindicate Slash2 for 
++use in jobs that spans nodes and rely on consistency with the shared filesystem.
++
++11/30/2017
++----------
++
++I think a key issue is that permissions changed with 'chmod' do not get reflected in the ACL 
++settings on pghbio. For example:
++
++[milnes@br006 cure]$ getfacl congma
++# file: congma
++# owner: milnes
++# group: ms4s84p
++user::rwx
++user:congma:rwx
++group::---
++mask::rwx
++other::---
++
++[milnes@br006 cure]$ ls -ld congma/
++drwx------+ 7 milnes ms4s84p 7 May 10Â!   2017 congma/
++
++[milnes@br006 cure]$ chmod g+rx congma/
++
++[milnes@br006 cure]$ ls -ld congma
++drwxr-x---+ 7 milnes ms4s84p 7 May 10  2017 congma
++
++[milnes@br006 cure]$ getfacl congma
++# file: congma
++# owner: milnes
++# group: ms4s84p
++user::rwx
++user:congma:rwx
++group::---
++mask::rwx
++other::---
++
++So, I have to do an extra step and explicitly set group permissions via setfacl:
++
++[milnes@br006 cure]$ setfacl -m g::rx congma
++[milnes@br006 cure]$ getfacl congma
++# file: congma
++# owner: milnes
++# group: ms4s84p
++user::rwx
++user:congma:rwx
++group::r-x
++mask::rwx
++other::---
++
++Likewise, if I remove permissions with chmod, it does not get updated in the ACLs.
++
++Phil
++
++12/24/2017
++----------
++
++Potential signal 7 issues:
++
++	- double check all new RPC added to pghbio
++
++01/02/2017
++----------
++
++Don't cache DIO bmap - the file generation in it might be stable!
+Only in stable: slash2-build.sh
+Only in stable: slash2-merge.sh
+Only in stable: slash2-readme.txt
+Only in stable: slash2-test.txt
+diff -dru -x .git stable/wokfs/mount_wokfs/main.c today/wokfs/mount_wokfs/main.c
+--- stable/wokfs/mount_wokfs/main.c	2018-01-09 12:17:23.285152444 -0500
++++ today/wokfs/mount_wokfs/main.c	2018-01-09 12:19:43.841303616 -0500
+@@ -232,9 +232,6 @@
+ 	pfl_workq_init(128, 1024, 1024);
+ 	pfl_wkthr_spawn(PFL_THRT_WORKER, 4, 0, "wkthr%d");
+ 
+-	pscfs_entry_timeout = 8.;
+-	pscfs_attr_timeout = 8.;
+-
+ 	/*
+ 	 * Here, $p = (directory this daemon binary resides in).
+ 	 * Now we add the following to $PATH:
