@@ -3718,7 +3718,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct pscfs_creds pcr;
 	int rc;
 
-	if (strlen(name) >= SL_NAME_MAX)
+	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	/*
@@ -3760,7 +3760,7 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 	struct fcmh_cli_info *fci;
 	struct iovec iov;
 
-	if (strlen(name) >= sizeof(mq->name))
+	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
@@ -3910,7 +3910,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct pscfs_creds pcr;
 	int rc;
 
-	if (strlen(name) >= SL_NAME_MAX)
+	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	rc = msl_load_fcmh(pfr, inum, &f);
