@@ -826,6 +826,8 @@ struct srm_getattr_rep {
 	struct srt_stat		attr;
 	 uint32_t		xattrsize;
 	 int32_t		rc;
+	 int32_t		lease;	
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getattr2_rep {
@@ -1017,6 +1019,8 @@ struct srm_unlink_rep {
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		valid;		/* child attr valid */
 	 int32_t		rc;
+	 int32_t		lease;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_listxattr_req {

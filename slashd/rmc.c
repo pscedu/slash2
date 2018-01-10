@@ -364,6 +364,8 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
 
+	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
+
  out:
 	if (f)
 		fcmh_op_done(f);
@@ -599,6 +601,8 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mdsio_fcmh_refreshattr(c, &mp->cattr);
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+
  out:
 	if (c)
 		fcmh_op_done(c);
@@ -611,6 +615,7 @@ int
 slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL;
+	struct fidc_membh *c = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int vfsid;
@@ -692,7 +697,14 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		}
 	}
 
+	mp->rc = -slm_fcmh_get(&mp->attr.sst_fg, &c);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
+
  out:
+	if (c)
+		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
 	return (0);
@@ -724,7 +736,7 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -811,6 +823,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
  out:
 	if (p)
 		fcmh_op_done(p);
@@ -918,6 +931,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	
 	slm_fcmh_endow(vfsid, p, c);
 
 	/* obtain lease for first bmap as optimization */
@@ -1134,7 +1151,11 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	} else {
 		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, iov, nitems(iov));
+		if (mp->rc)
+			PFL_GOTOERR(out, mp->rc);
 	}
+
+	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
 
  out:
 	if (f)
@@ -1308,6 +1329,11 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	} else
 		mp->srr_clattr.sst_fid = FID_ANY;
 
+	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->lease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = slm_fcmh_coherent_callback(np, rq->rq_export, &mp->lease);
  out:
 	if (op)
 		fcmh_op_done(op);
@@ -1761,6 +1787,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mp->rc = -mdsio_rmdir(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
+
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
 
  out:
 	if (mp->rc == 0) {
