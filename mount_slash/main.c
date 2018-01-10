@@ -2040,10 +2040,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 */
 		hit = 0;
 		rc = msl_readdir_issue(d, off, size, 1);
-		if (rc && !slc_rpc_should_retry(pfr, &rc)) {
-			DIRCACHE_ULOCK(d);
+		if (rc && !slc_rpc_should_retry(pfr, &rc))
 			PFL_GOTOERR(out, rc);
-		}
 		DIRCACHE_WRLOCK(d);
 		goto restart;
 	}
