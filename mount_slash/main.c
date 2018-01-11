@@ -543,8 +543,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * Instead, wait for the application to perform some actual I/O
 	 * to retrieve bmap lease on-demand.
 	 */
-	if (mp->rc2)
+	if (mp->rc2) {
+		OPSTAT_INCR("bmap-preload-err");
 		PFL_GOTOERR(out, mp->rc2);
+	}
+	OPSTAT_INCR("bmap-preload-ok");
 
 	/*
 	 * Instantiate a bmap and load it with the piggybacked lease
