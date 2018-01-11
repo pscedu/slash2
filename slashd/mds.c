@@ -60,7 +60,7 @@
  * keep track of them.
  */
 int			slm_lease_timeout = 240;
-int			slm_callback_timeout = 240;
+int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
 
 #define	SLM_CBARG_SLOT_CSVC	0
 

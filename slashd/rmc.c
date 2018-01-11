@@ -320,7 +320,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 *
  	 * XXX we do this even if the lease time is zero.
  	 */
-	cb->fmc_expire = time(NULL) + slm_lease_timeout;
+	cb->fmc_expire = time(NULL) + slm_callback_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
 
