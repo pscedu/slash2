@@ -421,6 +421,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	struct bmap *b;
+	int32_t lease = 0;
 
 	psc_assert(oflags & O_CREAT);
 
@@ -478,7 +479,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, msl_attributes_timeout);
+	lease = mp->lease;
+	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -583,8 +585,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, mfh, rflags, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, mfh, rflags, rc);
 
 	psclogs(rc ? PLL_WARN : PLL_DIAG, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
 	//psclogs(PLL_WARN, SLCSS_FSOP, "CREATE: pfid="SLPRI_FID" "
@@ -796,6 +798,9 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	struct stat stb;
+	long  timeout = 0;
+	struct timeval now;
+	struct fcmh_cli_info *fci;
 	int rc;
 
 
@@ -824,10 +829,14 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	FCMH_LOCK(f);
 	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
+	PFL_GETTIMEVAL(&now);
+	fci = fcmh_2_fci(f);
+	timeout = fci->fci_expire > now.tv_sec ? fci->fci_expire - now.tv_sec : 0;
+
  out:
 	if (f)
 		fcmh_op_done(f);
-	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
+	pscfs_reply_getattr(pfr, &stb, (double)timeout, rc);
 	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d",
 	    rc);
 }
