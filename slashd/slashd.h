@@ -50,7 +50,7 @@ struct bmap_mds_lease;
 extern int slm_lease_timeout;
 extern int slm_callback_timeout;
 
-#define CALLBACK_TIMEO_MAX             240     /* default callback timeout */
+#define CALLBACK_TIMEO_MAX             240     /* max/default callback timeout */
 #define CALLBACK_TIMEO_MIN             40      /* minimum callback timeout */
 
 extern sqlite3	*db_handle;
