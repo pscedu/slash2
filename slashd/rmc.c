@@ -241,18 +241,12 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	found = 0;
 	count = 0;
 
+#if 1
 	if (leasep)
-		*leasep = 1;
+		*leasep = 30;
 	return (0);
 
-#if 0
-	/*
- 	 * This could help finish the on-going operation without a RPC again.
- 	 */
-	lease = 1;
 #else
-	lease = 0;
-#endif
 
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
@@ -328,6 +322,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		*leasep = lease;
 	if (rq)
 		pscrpc_req_finished(rq);
+
+#endif
 
 	return (rc);
 }
