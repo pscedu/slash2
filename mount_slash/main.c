@@ -1422,6 +1422,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	uint64_t inum;
 	int rc;
 	struct fcmh_cli_info *fci;
+	int32_t lease = 0;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1536,7 +1537,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	else {
 		FCMH_LOCK(c);
 		if (mp->valid) {
-			slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
+			lease = mp->lease;
+			slc_fcmh_setattr_locked(c, &mp->cattr, lease);
 		} else {
 			c->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.delete-marked");

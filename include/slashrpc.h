@@ -1019,7 +1019,7 @@ struct srm_unlink_rep {
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		valid;		/* child attr valid */
 	 int32_t		rc;
-	 int32_t		lease;
+	 int32_t		lease;		/* if valid is set */
 	 int32_t		_pad;
 } __packed;
 
