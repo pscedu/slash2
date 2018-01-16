@@ -43,6 +43,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
+extern struct psc_waitq                 msl_flush_attrq;
+
 struct msctl_replstq *
 mrsq_lookup(int id)
 {
@@ -265,6 +267,76 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
  out:
 	if (c)
 		fcmh_op_done(c);
+	return (0);
+}
+
+/*
+ * Handle a BMAPDIO request for CLI from MDS.
+ * @rq: request.
+ */
+int
+msrcm_handle_file_cb(struct pscrpc_request *rq)
+{
+	struct srm_filecb_req *mq; 
+	struct srm_filecb_rep *mp; 
+	struct timeval now;
+	int i;
+	struct bmap *b;
+	struct psc_dynarray a = DYNARRAY_INIT;
+
+	struct fcmh_cli_info *fci;
+	struct fidc_membh *f = NULL;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	mp->rc = sl_fcmh_peek_fg(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	/*
+	 * XXX Need to notify FUSE with invalidate_entry call.
+	 */ 	
+	OPSTAT_INCR("msl.file-callback");
+	fci = fcmh_get_pri(f);
+	FCMH_LOCK(f);
+	/*
+ 	 * Expire attribues now and flush dirty attributes.
+ 	 */
+	PFL_GETTIMEVAL(&now);
+	fci->fci_expire = now.tv_sec;
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
+		OPSTAT_INCR("msl.callback-flush-attrs");
+		lc_move2head(&msl_attrtimeoutq, f);
+		psc_waitq_wakeone(&msl_flush_attrq);
+	}
+	if (fcmh_isdir(f)) {
+		if (psc_listhd_empty(&fci->fcid_entlist))
+			OPSTAT_INCR("msl.callback-invalidate-empty");
+		else {
+			OPSTAT_INCR("msl.callback-invalidte-dentry");
+			dircache_trim(f, 1);
+		}
+		dircache_purge(f);
+		goto out;
+	}
+	/*
+	 * Use two loops to avoid a potential deadlock.
+	 */
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+		psc_dynarray_add(&a, b);
+	}
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
+	DYNARRAY_FOREACH(b, i, &a) {
+		msl_bmap_cache_rls(b);
+		bmap_op_done_type(b, BMAP_OPCNT_WORK);
+	}
+	psc_dynarray_free(&a);
+
+out:
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
