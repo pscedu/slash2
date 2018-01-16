@@ -955,6 +955,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
+	int32_t lease = 0;
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1009,7 +1010,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, msl_attributes_timeout);
+	lease = mp->lease;
+	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -1025,8 +1027,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "MKDIR: pfid="SLPRI_FID" "
 	    "cfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
