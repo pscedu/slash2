@@ -241,7 +241,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	found = 0;
 	count = 0;
 
-#if 1
+#if 0
 	if (leasep)
 		*leasep = 30;
 	return (0);
@@ -597,7 +597,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mdsio_fcmh_refreshattr(c, &mp->cattr);
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->clease);
 
  out:
 	if (c)
@@ -732,7 +735,7 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -750,8 +753,10 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	 * Set new subdir's new files' default replication policy from
 	 * parent dir.
 	 */
-	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
+	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0) {
+		mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->clease);
 		slm_fcmh_endow(vfsid, p, c);
+	}
 
 	if (dp) {
 		if (mp->rc == -EEXIST &&
@@ -795,6 +800,7 @@ int
 slm_rmc_handle_mknod(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL;
+	struct fidc_membh *c = NULL;
 	struct srm_mknod_req *mq;
 	struct srm_mknod_rep *mp;
 	struct slash_creds cr;
@@ -819,10 +825,19 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	mp->rc = -slm_fcmh_get(&mp->cattr.sst_fg, &c);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->clease);
  out:
 	if (p)
 		fcmh_op_done(p);
+	if (c)
+		fcmh_op_done(c);
 	return (0);
 }
 
