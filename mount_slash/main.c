@@ -730,6 +730,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 	 * /$mountpoint/.slfidns/<fid>
 	 */
 	if (FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS) {
+		PFL_GETTIMEVAL(&now);
+		fci->fci_expire += now.tv_sec;
 		f->fcmh_sstb.sst_mode = S_IFDIR | 0111;
 		f->fcmh_sstb.sst_nlink = 2;
 		f->fcmh_sstb.sst_size = 2;
