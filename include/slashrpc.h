@@ -834,7 +834,9 @@ struct srm_getattr2_rep {
 	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		rc;
-	 int32_t		lease;
+	 int32_t		_pad;
+	 int32_t		clease;
+	 int32_t		please;
 } __packed;
 
 struct srm_io_req {

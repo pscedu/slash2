@@ -914,11 +914,12 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	lease = mp->lease;
+	lease = mp->please;
 	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
+	lease = mp->clease;
+	slc_fcmh_setattr_locked(c, &mp->cattr, lease); 
 	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
@@ -1010,7 +1011,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	lease = mp->lease;
+	lease = mp->please;
 	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
@@ -1021,7 +1022,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	dircache_insert(p, name, fcmh_2_fid(c));
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
+	lease = mp->clease;
+	slc_fcmh_setattr_locked(c, &mp->cattr, lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
@@ -1594,6 +1596,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
+	int32_t lease = 0;
 
 	if (!S_ISFIFO(mode) && !S_ISSOCK(mode))
 		PFL_GOTOERR(out, rc = ENOTSUP);
@@ -1645,7 +1648,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, msl_attributes_timeout);
+	lease = mp->please;
+	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
@@ -1655,7 +1659,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	dircache_insert(p, name, fcmh_2_fid(c));
 
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
+	lease = mp->clease;
+	slc_fcmh_setattr_locked(c, &mp->cattr, lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
