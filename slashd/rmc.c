@@ -357,11 +357,10 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	mp->xattrsize = mdsio_hasxattrs(vfsid, &rootcreds,
 	    fcmh_2_mfid(f));
 
-	FCMH_LOCK(f);
-	mp->attr = f->fcmh_sstb;
-
 	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
 
+	FCMH_LOCK(f);
+	mp->attr = f->fcmh_sstb;
  out:
 	if (f)
 		fcmh_op_done(f);
