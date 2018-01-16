@@ -725,6 +725,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	struct timeval now;
 	int rc = 0;
 
+	fci = fcmh_2_fci(f);
 	/*
 	 * Special case to handle accesses to
 	 * /$mountpoint/.slfidns/<fid>
@@ -739,8 +740,6 @@ msl_stat(struct fidc_membh *f, void *arg)
 		f->fcmh_sstb.sst_blocks = 4;
 		return (0);
 	}
-
-	fci = fcmh_2_fci(f);
 
 	FCMH_LOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_GETTING_ATTRS);
@@ -855,6 +854,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc = 0;
+	int32_t lease = 0;
 
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -914,7 +914,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, msl_attributes_timeout);
+	lease = mp->lease;
+	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
@@ -926,8 +927,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
-	    pscfs_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, (double)lease, &stb,
+	    (double)lease, rc);
 
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, "LINK: cfid="SLPRI_FID" "
 	    "pfid="SLPRI_FID" name='%s' rc=%d",
