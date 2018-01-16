@@ -1055,6 +1055,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc;
+	int32_t lease = 0;
 
  retry:
 	MSL_RMC_NEWREQ(p, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
@@ -1085,11 +1086,12 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	lease = mp->lease;
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
 	FCMH_LOCK(f);
-	slc_fcmh_setattr_locked(f, &mp->attr, msl_attributes_timeout);
+	slc_fcmh_setattr_locked(f, &mp->attr, lease);
 	msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 
 	if (sstb)
