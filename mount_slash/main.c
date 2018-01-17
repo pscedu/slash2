@@ -613,8 +613,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	int rc = 0;
 
 	*mfhp = NULL;
-
-
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
@@ -724,11 +722,11 @@ msl_stat(struct fidc_membh *f, void *arg)
 	struct fcmh_cli_info *fci;
 	struct timeval now;
 	int rc = 0;
+	int32_t lease = 0;
 
 	fci = fcmh_2_fci(f);
 	/*
-	 * Special case to handle accesses to
-	 * /$mountpoint/.slfidns/<fid>
+	 * Special case to handle /$mountpoint/.slfidns/<fid>
 	 */
 	if (FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS) {
 		PFL_GETTIMEVAL(&now);
@@ -778,7 +776,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
 		rc = EBADF;
 	if (!rc) {
-		slc_fcmh_setattr_locked(f, &mp->attr, msl_attributes_timeout);
+		lease = mp->lease;
+		slc_fcmh_setattr_locked(f, &mp->attr, lease);
 		msl_fcmh_stash_xattrsize(f, mp->xattrsize);
 	}
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
