@@ -213,7 +213,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	if (width > 16)
 		printf("%16"PRIx64" ", scb->scb_addr);
 	printf("%016"SLPRIxFID" %6d "
-	    "%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c "
 	    "%5u %18s %7"PRIu64"\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAPF_RD		? 'R' : '-',
@@ -222,6 +222,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAPF_LOADING	? 'l' : '-',
 	    scb->scb_flags & BMAPF_DIO		? 'D' : '-',
 	    scb->scb_flags & BMAPF_TOFREE	? 'F' : '-',
+	    scb->scb_flags & BMAPF_DISCARD	? 'X' : '-',
 	    scb->scb_flags & BMAPF_MODECHNG	? 'G' : '-',
 	    scb->scb_flags & BMAPF_WAITERS	? 'w' : '-',
 	    scb->scb_flags & BMAPF_BUSY		? 'B' : '-',

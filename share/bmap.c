@@ -141,7 +141,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
-		if (b->bcm_flags & BMAPF_TOFREE) {
+		if ((b->bcm_flags & BMAPF_TOFREE) ||
+		    (b->bcm_flags & BMAPF_DISCARD)) {
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
@@ -320,7 +321,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
 		if (rc == -ENOENT) {
-			b->bcm_flags &= ~(BMAPF_LOADED | BMAPF_MODECHNG);
+			b->bcm_flags &= ~(BMAPF_LOADED|BMAPF_MODECHNG);
 			OPSTAT_INCR("bmap-reload");
 			goto retrieve;
 		}

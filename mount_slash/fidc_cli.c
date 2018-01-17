@@ -40,6 +40,7 @@
 #include "pfl/str.h"
 #include "pfl/time.h"
 
+#include "bmap_cli.h"
 #include "cache_params.h"
 #include "dircache.h"
 #include "fid.h"
@@ -47,6 +48,41 @@
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
+
+
+extern struct psc_waitq		 msl_bmap_waitq;
+
+void
+slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
+{
+	int wake = 0;
+	struct bmap *b;
+	struct bmap_cli_info *bci;
+
+	/*
+	 * Invalidate bmap lease so that we can renew it with 
+	 * the correct lease.
+	 */
+	pfl_rwlock_rdlock(&f->fcmh_rwlock);
+	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+		BMAP_LOCK(b);
+		if (b->bcm_flags & BMAPF_TOFREE) {
+			BMAP_ULOCK(b);
+			continue;
+		}
+		wake = 1;
+		bci = bmap_2_bci(b);
+		b->bcm_flags |= BMAPF_DISCARD;
+		lc_move2head(&msl_bmaptimeoutq, bci);
+		BMAP_ULOCK(b);
+		msl_bmap_cache_rls(b);
+	}
+	pfl_rwlock_unlock(&f->fcmh_rwlock);
+
+	if (wake)
+		psc_waitq_wakeall(&msl_bmap_waitq);
+}
+
 
 /*
  * Update the high-level app stat(2)-like attribute buffer for a FID
@@ -77,18 +113,27 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	if (fcmh_2_gen(f) == FGEN_ANY)
 		fcmh_2_gen(f) = sstb->sst_gen;
 
-	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f) &&
-	    fcmh_2_gen(f) > sstb->sst_gen) {
+	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f)) {
+		if (fcmh_2_gen(f) > sstb->sst_gen) {
 		/*
- 		 * We bump it locally for a directory to avoid
- 		 * race with readdir operations.
- 		 */
+		 * We bump it locally for a directory to avoid
+		 * race with readdir operations.
+		 */
 		OPSTAT_INCR("msl.generation-backwards");
 		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
-		    "gen %"PRIu64" from old gen %"PRIu64,
-		    fcmh_2_gen(f), sstb->sst_gen);
-		goto out;
+			"gen %"PRIu64" from old gen %"PRIu64,
+			fcmh_2_gen(f), sstb->sst_gen);
+			goto out;
+		}
+		if (fcmh_2_gen(f) < sstb->sst_gen) {
+			slc_fcmh_invalidate_bmap(f, 0);
+			OPSTAT_INCR("msl.generation-forwards");
+			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
+				"gen %"PRIu64" from old gen %"PRIu64,
+				fcmh_2_gen(f), sstb->sst_gen);
+		}
 	}
+
 	/*
  	 * Make sure that our generation number always goes up.
  	 * Currently, the MDS does not bump it at least for unlink.

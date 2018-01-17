@@ -341,6 +341,8 @@ void	 msl_readahead_svc_destroy(void);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
+void	 msl_bmap_cache_rls(struct bmap *);
+
 struct pscfs_creds *
 	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *, int);
 

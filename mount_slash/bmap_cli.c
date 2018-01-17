@@ -1068,6 +1068,10 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+			if (b->bcm_flags & BMAPF_DISCARD) {
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			/*
 			 * Do not extend if we don't have any data.
@@ -1178,7 +1182,8 @@ msbreleasethr_main(struct psc_thread *thr)
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
-			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
+			    (b->bcm_flags & BMAPF_DISCARD) ||
+			    (b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 				expire++;
 				b->bcm_flags |= BMAPF_TOFREE;
 				BMAP_ULOCK(b);
@@ -1427,6 +1432,7 @@ dump_bmap_flags(uint32_t flags)
 
 struct bmap_ops sl_bmap_ops = {
 	msl_bmap_init,			/* bmo_init_privatef() */
+	msl_bmap_reap,			/* bmo_reapf() */
 	msl_bmap_retrieve,		/* bmo_retrievef() */
 	msl_bmap_modeset,		/* bmo_mode_chngf() */
 	msl_bmap_final_cleanup		/* bmo_final_cleanupf() */
