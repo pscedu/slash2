@@ -241,7 +241,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	found = 0;
 	count = 0;
 
-#if 0
+#if 1
 	if (leasep)
 		*leasep = 30;
 	return (0);
