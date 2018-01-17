@@ -287,6 +287,8 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f = NULL;
 
+	OPSTAT_INCR("msl.file-callback");
+
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = sl_fcmh_peek_fg(&mq->fg, &f);
@@ -296,7 +298,6 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	/*
 	 * XXX Need to notify FUSE with invalidate_entry call.
 	 */ 	
-	OPSTAT_INCR("msl.file-callback");
 	fci = fcmh_get_pri(f);
 	FCMH_LOCK(f);
 	/*
@@ -427,7 +428,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
 	case SRMT_BMAPDIO:
 		rc = msrcm_handle_bmapdio(rq);
 		break;
-
+	case SRMT_FILECB:
+		rc = msrcm_handle_file_cb(rq);
+		break;
 	default:
 		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
