@@ -688,6 +688,7 @@ slvr_remove(struct slvr *s)
 
 	bii = slvr_2_bii(s);
 
+	/* (gdb) p *((struct bmap *)bii - 1) */
 	BII_LOCK(bii);
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
