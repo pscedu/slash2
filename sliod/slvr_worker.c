@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2017, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -236,6 +236,8 @@ sliupdthr_main(struct psc_thread *thr)
 			if (rc < 0) {
 				if (errno != ENOENT)
 					OPSTAT_INCR("fstat-file-err");
+
+				/* 01/18/2018: hit EBADF here */
 				psclog_error("fstat failed, fid="SLPRI_FID, 
 				    fcmh_2_fid(f));
 				FCMH_ULOCK(f);	
