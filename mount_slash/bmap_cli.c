@@ -168,6 +168,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
 	if (b->bcm_flags & BMAPF_WR)
+		/* XXX hit this on 01/18/2018 */
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
 	if (msl_force_dio)
