@@ -396,7 +396,7 @@ RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
 	void	(*bmo_init_privatef)(struct bmap *);
-	int	(*bmo_reapf)(void);
+	int	(*bmo_reapf)(void);			/* not used for now */
 	int	(*bmo_retrievef)(struct bmap *, int);
 	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);
 	void	(*bmo_final_cleanupf)(struct bmap *);

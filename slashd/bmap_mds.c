@@ -543,6 +543,7 @@ dump_bml_flags(uint32_t flags)
 
 struct bmap_ops sl_bmap_ops = {
 	mds_bmap_init,			/* bmo_init_privatef() */
+	NULL,				/* bmo_reapf() */
 	mds_bmap_read,			/* bmo_retrievef() */
 	NULL,				/* bmo_mode_chngf() */
 	mds_bmap_destroy		/* bmo_final_cleanupf() */
