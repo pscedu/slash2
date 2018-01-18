@@ -801,6 +801,8 @@ slvr_remove_all(struct fidc_membh *f)
 __static void
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
+	int wakeup = 0;
+
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
 	if (s->slvr_refcnt) {
@@ -811,6 +813,8 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		s->slvr_flags &= ~SLVRF_LRU;
 		lc_remove(&sli_lruslvrs, s);
 	}
+
+#if 0
 	if (s->slvr_flags & SLVRF_DATAERR) {
 		/*
 		 * This is safe because we hold the sliver lock
@@ -822,8 +826,10 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		slvr_remove(s);
 		return;
 	}
-
 	psc_assert(s->slvr_flags & SLVRF_DATARDY);
+
+#endif
+
 
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -833,7 +839,11 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * trylock().
 	 */
 	s->slvr_flags |= SLVRF_LRU;
-	lc_add(&sli_lruslvrs, s);
+	if (s->slvr_flags & SLVRF_DATAERR) {
+		wakeup = 1;
+		lc_addhead(&sli_lruslvrs, s);
+	} else
+		lc_addtail(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
 	/*
@@ -843,7 +853,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 * We reap proactively instead of on demand to avoid ENOMEM
  	 * situation, which we don't handle gracefully right now.
  	 */
-	if (slvr_pool->ppm_nfree < MIN_FREE_SLABS) {
+	if (wakeup || slvr_pool->ppm_nfree < MIN_FREE_SLABS) {
 		OPSTAT_INCR("slvr-wakeone");
 		psc_waitq_wakeone(&sli_slvr_waitq);
 	}
