@@ -234,14 +234,15 @@ sliupdthr_main(struct psc_thread *thr)
 			 */
 			rc = fstat(fcmh_2_fd(f), &stb);
 			if (rc < 0) {
-				if (errno != ENOENT)
+				if (errno == EBADF)
+					OPSTAT_INCR("fstat-file-bad");
+				else if (errno == ENOENT)
+					OPSTAT_INCR("fstat-file-eno");
+				else
 					OPSTAT_INCR("fstat-file-err");
-
-				/* 01/18/2018: hit EBADF here */
-				psclog_error("fstat failed, fid="SLPRI_FID, 
-				    fcmh_2_fid(f));
-				FCMH_ULOCK(f);	
-				continue;
+				psclog_error("fstat: ref = %d, fd = %d, fid="SLPRI_FID, 
+					f->fcmh_refcnt, fcmh_2_fd(f), fcmh_2_fid(f));
+				goto next;
 			}
 			fii->fii_nwrites  = 0;
 			/*
@@ -253,6 +254,7 @@ sliupdthr_main(struct psc_thread *thr)
 				recp->sli_recs[recp->sli_count].nblks = stb.st_blocks;
 				recp->sli_count++;
 			}
+ next:
 			lc_remove(&sli_fcmh_update, fii);
 			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
 			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
