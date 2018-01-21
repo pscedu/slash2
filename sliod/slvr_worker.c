@@ -240,7 +240,7 @@ sliupdthr_main(struct psc_thread *thr)
 					OPSTAT_INCR("fstat-file-eno");
 				else
 					OPSTAT_INCR("fstat-file-err");
-				psclog_error("fstat: ref = %d, fd = %d, fid="SLPRI_FID, 
+				psclog_diag("fstat: ref = %d, fd = %d, fid="SLPRI_FID, 
 					f->fcmh_refcnt, fcmh_2_fd(f), fcmh_2_fid(f));
 				goto next;
 			}
