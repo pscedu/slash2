@@ -6050,3 +6050,26 @@ Look into FUSE max readahead setting.
 
 * FUSE readdirplus
 
+01/22/2018
+----------
+
+A signal 7 stack:
+
+(gdb) bt
+#0  0x000000000040c6f0 in pthread_getspecific@plt ()
+#1  0x00000000004a81cd in pscthr_get_canfail () at /opt/packages/slash2/cli/p/pfl/thread.c:175
+#2  0x00000000004aef09 in pscthr_get_callerinfo () at /opt/packages/slash2/cli/p/pfl/thread.c:545
+#3  0x00000000004b1e6b in _pfl_callerinfo_get (fn=0x4bf1b0 "/opt/packages/slash2/cli/p/pfl/waitq.c", 
+    func=0x4bf380 <__func__.6882> "_psc_waitq_waitabs", lineno=128, subsys=0) at /opt/packages/slash2/cli/p/pfl/pfl.h:124
+#4  0x00000000004b272f in _psc_waitq_waitabs (q=0x7febac3cd670, type=PFL_LOCKPRIMT_SPIN, lockp=0x0, abstime=0x7feb1affae10)
+    at /opt/packages/slash2/cli/p/pfl/waitq.c:128
+#5  0x00007febb2987baf in pscrpcthr_main (thr=0x7febac519250) at /opt/packages/slash2/cli/p/pfl/service.c:734
+#6  0x00000000004a9094 in _pscthr_begin (arg=0x7febc062a110) at /opt/packages/slash2/cli/p/pfl/thread.c:302
+#7  0x00007febc1c5edc5 in start_thread () from /lib64/libpthread.so.0
+#8  0x00007febc198d76d in clone () from /lib64/libc.so.6
+(gdb) up
+#1  0x00000000004a81cd in pscthr_get_canfail () at /opt/packages/slash2/cli/p/pfl/thread.c:175
+175		return (pthread_getspecific(psc_thrkey));
+(gdb) p psc_thrkey
+$3 = 0
+
