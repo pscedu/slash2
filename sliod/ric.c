@@ -645,6 +645,10 @@ sli_ric_handler(struct pscrpc_request *rq)
 	char buf[PSCRPC_NIDSTR_SIZE];
 
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
+		/*
+		 * 01/22/2018: At 45116, rq->rq_export is NULL, triggers
+ 		 * signal 11, Segmentation fault.
+ 		 */
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
 			rc = -PFLERR_NOTCONN;
