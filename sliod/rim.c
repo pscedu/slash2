@@ -156,9 +156,11 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		DEBUG_FCMH(PLL_ERROR, f, "truncate rc=%d", mp->rc);
 		OPSTAT_INCR("ptrunc-failure");
 	} else {
+		/* (gdb) p *((struct pfl_opstat *)pfl_opstats.pda_items[546]) */
 		OPSTAT_INCR("ptrunc-success");
 	}
 
+	FCMH_LOCK(f);
 	sli_enqueue_update(f);
 	fcmh_op_done(f);
 
