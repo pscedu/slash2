@@ -450,7 +450,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_nents = nents;
 	p->dcp_base = base;
 	p->dcp_size = size;
-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	PFL_GETTIMEVAL(&now);
+	p->dcp_local_tm = now.tv_sec;
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 	DIRCACHE_ULOCK(d);

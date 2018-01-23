@@ -1751,6 +1751,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
 	char buf[PSCRPC_NIDSTR_SIZE];
+	struct timeval now;
 	int rc, async;
 	size_t len;
 
@@ -1793,7 +1794,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
-	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	PFL_GETTIMEVAL(&now);
+	p->dcp_local_tm = now.tv_sec;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
@@ -1924,7 +1926,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
-	struct pfl_timespec now;
+	struct timeval now;
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
@@ -1960,7 +1962,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	raoff = 0;
 	issue = 1;
-	PFL_GETPTIMESPEC(&now);
+	PFL_GETTIMEVAL(&now);
 	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
 
 	/*
@@ -1986,7 +1988,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 			break;
 		}
-		if (DIRCACHEPG_EXPIRED(d, p, &now)) {
+		if (DIRCACHEPG_EXPIRED(d, p, now.tv_sec)) {
 			OPSTAT_INCR("msl.dircache-exp1");
 			dircache_free_page(d, p);
 			continue;
