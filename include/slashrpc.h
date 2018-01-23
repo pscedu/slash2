@@ -961,7 +961,9 @@ struct srm_rename_rep {
 	struct srt_stat		srr_cattr;	/* child node */
 	struct srt_stat		srr_clattr;	/* clobbered node */
 	 int32_t		rc;
-	 int32_t		lease;
+	 int32_t		olease;
+	 int32_t		nlease;
+	 int32_t		clease;
 } __packed;
 
 struct srm_replrq_req {

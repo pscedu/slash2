@@ -1284,10 +1284,18 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->olease);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
 	if (SAMEFG(&mq->opfg, &mq->npfg)) {
 		np = op;
+		mp->nlease = mp->olease;
 	} else {
 		mp->rc = -slm_fcmh_get(&mq->npfg, &np);
+		if (mp->rc)
+			PFL_GOTOERR(out, mp->rc);
+		mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->nlease);
 		if (mp->rc)
 			PFL_GOTOERR(out, mp->rc);
 	}
@@ -1339,11 +1347,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	} else
 		mp->srr_clattr.sst_fid = FID_ANY;
 
-	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->lease);
+	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->clease);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(np, rq->rq_export, &mp->lease);
  out:
 	if (op)
 		fcmh_op_done(op);
