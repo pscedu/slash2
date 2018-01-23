@@ -353,6 +353,12 @@ slctlparam_version_get(char *val)
 }
 
 void
+slctlparam_rpc_version_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", SL_RPC_VERSION);
+}
+
+void
 slctlparam_uptime_get(char *val)
 {
 	struct timespec tv, delta;

@@ -45,6 +45,7 @@ int slctlparam_resources(int, struct psc_ctlmsghdr *,
 
 void slctlparam_uptime_get(char *);
 void slctlparam_version_get(char *);
+void slctlparam_rpc_version_get(char *);
 void slctlparam_logrotate_get(char *);
 int  slctlparam_logrotate_set(const char *);
 
