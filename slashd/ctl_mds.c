@@ -569,8 +569,12 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
+
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
+	psc_ctlparam_register_simple("sys.rpc_version",
+	    slctlparam_rpc_version_get, NULL);
+
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
 
