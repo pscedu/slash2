@@ -2702,11 +2702,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		PFL_GOTOERR(out, rc);
 
 	/* refresh old parent attributes */
-	slc_fcmh_setattr(op, &mp->srr_opattr, msl_attributes_timeout);
+	slc_fcmh_setattr(op, &mp->srr_opattr, mp->olease);
 
 	if (np != op)
 		/* refresh new parent attributes */
-		slc_fcmh_setattr(np, &mp->srr_npattr, msl_attributes_timeout);
+		slc_fcmh_setattr(np, &mp->srr_npattr, mp->nlease);
 
 	/* refresh moved file's attributes */
 	if (mp->srr_cattr.sst_fid != FID_ANY &&
@@ -2739,7 +2739,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
 		}
-		slc_fcmh_setattr_locked(ch, &mp->srr_clattr, msl_attributes_timeout);
+		slc_fcmh_setattr_locked(ch, &mp->srr_clattr, mp->clease);
 		fcmh_op_done(ch);
 	}
 
