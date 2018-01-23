@@ -1977,6 +1977,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 		if (p->dcp_rc) {
 			rc = p->dcp_rc;
+			OPSTAT_INCR("msl.dircache-err");
 			dircache_free_page(d, p);
 			if (rc != -EAGAIN && 
 			    !slc_rpc_should_retry(pfr, &rc)) {
@@ -1986,6 +1987,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			break;
 		}
 		if (DIRCACHEPG_EXPIRED(d, p, &now)) {
+			OPSTAT_INCR("msl.dircache-exp1");
+			dircache_free_page(d, p);
+			continue;
+		}
+		if (now.tv_sec >= fci->fci_expire) {
+			OPSTAT_INCR("msl.dircache-exp2");
 			dircache_free_page(d, p);
 			continue;
 		}
