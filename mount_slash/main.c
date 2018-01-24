@@ -1933,11 +1933,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	off_t raoff, poff, thisoff;
 	size_t len, tlen;
 
-	if (off < 0 || size > 1024 * 1024)
-		PFL_GOTOERR(out, rc = EINVAL);
-
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
+
+	if (off < 0 || size > 1024 * 1024)
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	if (!fcmh_isdir(d)) {
 		DEBUG_FCMH(PLL_ERROR, d, "readdir on a non-dir");
