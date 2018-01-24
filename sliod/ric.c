@@ -186,6 +186,7 @@ sli_enqueue_update(struct fidc_membh *f)
 		f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 	} else {
+		/* XXX don't move if we have accumulate many writes */
 		OPSTAT_INCR("fcmh-update-requeue");
 		lc_move2tail(&sli_fcmh_update, fii);
 	}
