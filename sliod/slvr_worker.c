@@ -190,6 +190,9 @@ sliupdthr_main(struct psc_thread *thr)
 	struct timeval now;
 	struct pscrpc_request *rq;
 	struct sli_update *recp = NULL;
+	struct psc_dynarray a = DYNARRAY_INIT;
+
+	psc_dynarray_ensurelen(&a, MAX_FILE_UPDATES);
 
 	while (pscthr_run(thr)) {
 
@@ -255,14 +258,29 @@ sliupdthr_main(struct psc_thread *thr)
 				recp->sli_count++;
 			}
  next:
-			lc_remove(&sli_fcmh_update, fii);
-			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
-			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
+			psc_dynarray_add(&a, fii);
+			FCMH_ULOCK(f);
 
 			if (recp->sli_count >= MAX_FILE_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&sli_fcmh_update);
+
+		/*
+		 * Use a separate loop to avoid deadlock involved with
+		 * update list lock, fcmh hash bucket lock, and fcmh 
+		 * lock among three threads. Two fcmh end up on the
+		 * same hash list.
+		 */
+		DYNARRAY_FOREACH(fii, i, &a) {
+			f = fii_2_fcmh(fii);
+			FCMH_LOCK(f);
+			lc_remove(&sli_fcmh_update, fii);
+			f->fcmh_flags &= ~FCMH_IOD_UPDATEFILE;
+			fcmh_op_done_type(f, FCMH_OPCNT_UPDATE);
+		}
+		psc_dynarray_reset(&a);
+
 		if (!recp->sli_count) {
 			if (delta)
 				sleep(delta);
@@ -303,4 +321,5 @@ sliupdthr_main(struct psc_thread *thr)
 
 		sleep(SLI_UPDATE_FILE_DELAY);
 	}
+	psc_dynarray_free(&a);
 }
