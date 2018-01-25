@@ -327,6 +327,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			 *       pfl_opstats.pda_items[4]).opst_name
 			 *
 			 */
+			b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 			OPSTAT_INCR("bmap-reload");
 			goto retrieve;
 		}
