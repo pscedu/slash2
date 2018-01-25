@@ -434,7 +434,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	 * failed.
 	 */
 
-	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 	sl_csvc_decref(csvc);
 
@@ -469,6 +469,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct timespec ts;
 	long secs;
 	int rc;
+	int waitflag = BMAPF_LEASEEXTREQ | BMAPF_MODECHNG | BMAPF_LOADING;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -479,13 +480,13 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	BMAP_LOCK_ENSURE(b);
 
 	/* already waiting for LEASEEXT reply */
-	if (b->bcm_flags & BMAPF_LEASEEXTREQ) {
+	if (b->bcm_flags & waitflag) {
 		if (!blocking) {
 			BMAP_ULOCK(b);
 			return (0);
 		}
 		DEBUG_BMAP(PLL_DIAG, b, "blocking on lease renewal");
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_LEASEEXTREQ);
+		bmap_wait_locked(b, b->bcm_flags & waitflag);
 	}
 
 	/* if we aren't in the expiry window, bail */
@@ -498,7 +499,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		BMAP_ULOCK(b);
 		return (0);
 	}
-	b->bcm_flags |= BMAPF_LEASEEXTREQ;
+	b->bcm_flags |= BMAPF_LEASEEXTREQ | BMAPF_LOADING;
 	BMAP_ULOCK(b);
 
 	sbd = bmap_2_sbd(b);
@@ -522,7 +523,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			BMAP_LOCK(b);
-			b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+			b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
@@ -548,7 +549,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
 		msl_bmap_reap_init(b);
 	}
-	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
+	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
 	bmap_wake_locked(b);
