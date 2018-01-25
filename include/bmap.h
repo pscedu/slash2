@@ -137,7 +137,7 @@ struct bmap {
 #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
 #define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
 #define BMAPF_DISCARD		(1 <<  6)	/* discard bmap asap */
-#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (i.e., READ -> WRITE) */
 #define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
 #define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
 #define _BMAPF_SHIFT		(1 <<  10)
