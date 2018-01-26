@@ -6073,3 +6073,7 @@ A signal 7 stack:
 (gdb) p psc_thrkey
 $3 = 0
 
+01/26/2018
+----------
+
+With 10+ iozone -a in the background, ls -al saw ?? attributes and self build returns 2.
