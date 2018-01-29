@@ -563,7 +563,10 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	INIT_PSC_LISTENTRY(&dce->dce_entry);
 	psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
+
+	psc_hashent_init(&msl_namecache_hashtbl, dce);
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
+
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
 	DIRCACHE_ULOCK(d);
