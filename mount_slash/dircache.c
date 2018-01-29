@@ -200,6 +200,7 @@ dircache_purge(struct fidc_membh *d)
 		dircache_free_page(d, p);
 
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
+		fci->fcid_count--;
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
@@ -208,6 +209,7 @@ dircache_purge(struct fidc_membh *d)
 			PSCFREE(dce->dce_name);
 		psc_pool_return(dircache_ent_pool, dce);
 	}
+	psc_assert(!fci->fcid_count);
 }
 
 /*
