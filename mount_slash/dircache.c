@@ -549,6 +549,11 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 	if (tmpdce) {
 		fci->fcid_count--;
 		OPSTAT_INCR("msl.dircache-update");
+		/*
+		 * 01/28/2018: Hit a crash here because tmpdce is
+		 * apparently on a different list. Rename race with
+		 * lookup?
+		 */
 		psclist_del(&tmpdce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
 		if (!(tmpdce->dce_flag & DIRCACHE_F_SHORT))

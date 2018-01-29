@@ -159,6 +159,9 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	}
 
 	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
+	/*
+ 	 * 01/29/2018: saf = 0x8000008031d400, signal 7 crash
+ 	 */
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
 	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
 	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
