@@ -744,6 +744,10 @@ slvr_remove_all(struct fidc_membh *f)
 		 * race. More invetigation is needed.
 		 */
 		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
+		/*
+		 * 01/29/2018: hit crash here because pda_pos is a huge
+		 * negative value.
+		 */
 		psc_dynarray_add(&a, b);
 
 		bii = bmap_2_bii(b);
