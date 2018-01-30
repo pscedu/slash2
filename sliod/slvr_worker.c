@@ -293,7 +293,7 @@ sliupdthr_main(struct psc_thread *thr)
 		 * 01/30/2018:
 		 *
 		 * At 45127, we crash in pscrpc_prep_req_pool() because
-		 * csvc->csvc_import is somehow NULL.
+		 * csvc->csvc_import is somehow NULL. csvc_lasterrno = -110.
 		 */
 		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
 		if (rc)
