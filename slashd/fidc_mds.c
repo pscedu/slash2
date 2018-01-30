@@ -93,9 +93,12 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 		mds_unreserve_slot(1);
 
 	if (!rc) {
-		/* move assert inside lock, see if it helps */
 		FCMH_LOCK(f);
-		psc_assert(sstb_out.sst_fid == fcmh_2_fid(f));
+		if (sstb_out.sst_fid != fcmh_2_fid(f)) {
+			psclog_errorx("SLPRI_FID versus SLRPI_FID",
+			    sstb_out.sst_fid, fcmh_2_fid(f));
+			psc_fatal("setattr: fid mismatch");
+		}
 		f->fcmh_sstb = sstb_out;
 		FCMH_ULOCK(f);
 	}
