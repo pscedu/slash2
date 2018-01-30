@@ -744,11 +744,6 @@ slvr_remove_all(struct fidc_membh *f)
 		 * race. More invetigation is needed.
 		 */
 		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
-		/*
-		 * 01/29/2018: hit crash here because pda_pos is a huge
-		 * negative value.
-		 */
-		psc_dynarray_add(&a, b);
 
 		bii = bmap_2_bii(b);
 		while ((s = SPLAY_ROOT(&bii->bii_slvrs))) {
@@ -769,6 +764,8 @@ slvr_remove_all(struct fidc_membh *f)
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
 				pfl_rwlock_unlock(&f->fcmh_rwlock);
+				bmap_op_done_type(b, BMAP_OPCNT_SLVR);
+				OPSTAT_INCR("slvr-remove-restart");
 				pscthr_yield();
 				goto restart;
 			}
@@ -785,6 +782,7 @@ slvr_remove_all(struct fidc_membh *f)
 
 			BII_LOCK(bii);
 		}
+		psc_dynarray_add(&a, b);
 		BMAP_ULOCK(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
