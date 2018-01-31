@@ -95,7 +95,7 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 	if (!rc) {
 		FCMH_LOCK(f);
 		if (sstb_out.sst_fid != fcmh_2_fid(f)) {
-			psclog_errorx("SLPRI_FID versus SLRPI_FID",
+			psclog_errorx("FIDs: "SLPRI_FID" versus "SLPRI_FID,
 			    sstb_out.sst_fid, fcmh_2_fid(f));
 			psc_fatal("setattr: fid mismatch");
 		}
