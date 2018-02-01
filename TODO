@@ -6077,3 +6077,8 @@ $3 = 0
 ----------
 
 With 10+ iozone -a in the background, ls -al saw ?? attributes and self build returns 2.
+
+02/01/2018
+----------
+
+Make the slash2 log file as text file so that I can grep.
