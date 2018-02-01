@@ -72,6 +72,9 @@ Things to change:
 	* Right now, the state of bmap take 3 bits.  We can make it 4 bits so that (1)
 	  allow future growth (2) easier to implement and debug.
 
+
+	* Need to track per-bmap disk usage for future quota enforcement as well as du.
+
 Obstacle:
 
 	* This is a on-disk format change.
