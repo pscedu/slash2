@@ -615,6 +615,25 @@ msctlparam_prefios_set(const char *val)
 	return (0);
 }
 
+void
+msctlparam_map_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d", msl_map_enable);
+}
+
+int
+msctlparam_map_set(const char *val)
+{
+	int newval;
+
+	newval = strtol(val, NULL, 0);
+	if (newval != 0 && newval != 1)
+		return (1);
+	if (!msl_has_mapfile && newval == 1)
+		return (1);
+	msl_map_enable = newval;
+	return (0);
+}
 
 void
 slctlparam_max_pages_get(char *val)
@@ -1071,8 +1090,9 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
-	psc_ctlparam_register_var("sys.map_enable",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_map_enable);
+
+	psc_ctlparam_register_simple("sys.map_enable",
+	    msctlparam_map_get, msctlparam_map_set);
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
