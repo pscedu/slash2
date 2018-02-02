@@ -6083,6 +6083,42 @@ With 10+ iozone -a in the background, ls -al saw ?? attributes and self build re
 
 Make the slash2 log file as text file so that I can grep.
 
+The following patch solve the problem, but mount client hangs:
+
+diff --git a/pfl/log.c b/pfl/log.c
+index a37bfd3..2955882 100644
+--- a/pfl/log.c
++++ b/pfl/log.c
+@@ -228,7 +228,9 @@ psc_log_init(void)
+ 	char *p;
+ 
+ 	p = getenv("PSC_LOG_FILE");
+-	if (p && psc_log_setfn(p, "w"))
++	if (!p)
++		return;
++	if (psc_log_setfn(p, "w"))
+ 		errx(1, "%s", p);
+ 
+ 	p = getenv("PSC_LOG_FORMAT");
+diff --git a/wokfs/wokctl/wokctl.c b/wokfs/wokctl/wokctl.c
+index 4351ec7..19f32b8 100644
+--- a/wokfs/wokctl/wokctl.c
++++ b/wokfs/wokctl/wokctl.c
+@@ -188,6 +188,14 @@ struct psc_ctlopt opts[] = {
+ int
+ main(int argc, char *argv[])
+ {
++	int i;
++	unsetenv("PSC_LOG_FILE");
++
++	fprintf(stderr, "wokctl arguments: ");
++	for (i = 0; i < argc; i++)
++		fprintf(stderr, "%s ", argv[i]);
++	fprintf(stderr, "\n");
++	
+ 	pfl_init();
+ 	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts, nitems(opts));
+ 	exit(0);
 
 02/02/2018
 ----------
