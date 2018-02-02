@@ -609,7 +609,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 {
 	struct fidc_membh *c = NULL;
 	struct pscfs_creds pcr;
-	struct fcmh_cli_info *fci;
+	struct fcmh_cli_info *fci = NULL;
 	int rc = 0;
 
 	*mfhp = NULL;
@@ -682,7 +682,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
 	    "OPEN: fid="SLPRI_FID" dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
 	    c ? fcmh_2_fid(c) : FID_ANY , (oflags & O_DIRECTORY) ? "yes" : "no", 
-	    rc, fci->fci_nopen, oflags, *rflags);
+	    rc, fci ? fci->fci_nopen : -1, oflags, *rflags);
 
 	if (c) 
 		fcmh_op_done(c);
