@@ -6082,3 +6082,28 @@ With 10+ iozone -a in the background, ls -al saw ?? attributes and self build re
 ----------
 
 Make the slash2 log file as text file so that I can grep.
+
+
+02/02/2018
+----------
+
+Investigate smoke test state:
+
+bash-4.2# ./smoketest /zzh-slash2/zhihui
+smoketest: seed = 123456, workdir = /zzh-slash2/zhihui/35923
+Running test 1: Basic file/directory creations and deletions...
+Running test 2: Create a file with the name that has just been renamed...
+Running test 3: Random 8-byte writes at random offsets to simulate FUSE I/O...
+
+Running test 4: A non-owner changes the owner/group of a file to 65535:65535...
+Fail to chown file test-chmod.dat, errno = 1 at line 299!
+Running test 5: Test basic link support...
+Fail to create file test-link.dat, errno = 13 at line 324!
+Running test 6: Test basic truncate support...
+Fail to create file test-truncate.dat, errno = 13 at line 372!
+Running test 7: Test basic open support...
+Fail to create file test-open.dat, errno = 13 at line 426!
+Running test 8: Test basic large file I/O...
+Error opening file large-file-test.dat for writing at line 523.
+Total number of tests = 8, number of successes = 3
+
