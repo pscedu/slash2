@@ -2524,7 +2524,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			psclogs_info(SLCSS_INFO,
 			    "file closed fid="SLPRI_FID" "
 			    "uid=%u gid=%u "
-			    "euid=%u owner=%u fgrp=%u "
+			    "euid=%u egid=%u "
+			    "owner=%u fgrp=%u "
 			    "fsize=%"PRId64" "
 			    "oatime="PFLPRI_PTIMESPEC" "
 			    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
@@ -2534,6 +2535,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    mfh->mfh_accessing_uid,
 			    mfh->mfh_accessing_gid,
 			    mfh->mfh_accessing_euid,
+			    mfh->mfh_accessing_egid,
 			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 			    f->fcmh_sstb.sst_size,
 			    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),

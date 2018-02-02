@@ -363,8 +363,9 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	mfh->mfh_sid = getsid(mfh->mfh_pid);
 	mfh->mfh_accessing_uid = slc_getfscreds(pfr, &pcr, 0)->pcr_uid;
-	mfh->mfh_accessing_gid = slc_getfscreds(pfr, &pcr, 0)->pcr_gid;
+	mfh->mfh_accessing_gid = pcr.pcr_gid;
 	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr, 1)->pcr_uid;
+	mfh->mfh_accessing_egid = pcr.pcr_gid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 

@@ -603,6 +603,8 @@ dircache_delete(struct fidc_membh *d, const char *name)
 		OPSTAT_INCR("msl.dircache-delete-hash");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);
+		if (!(dce->dce_flag & DIRCACHE_F_SHORT))
+			PSCFREE(dce->dce_name);
 		psc_pool_return(dircache_ent_pool, dce);
 	} else
 		OPSTAT_INCR("msl.dircache-delete-noop");
