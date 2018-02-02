@@ -2755,6 +2755,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	msl_invalidate_readdir(op);
 	dircache_delete(op, oldname); 
+	/*
+ 	 * XXX child is NULL for a simple rename in the same directory!
+ 	 */
 	if (child) {
 		msl_invalidate_readdir(np);
 		dircache_insert(np, newname, fcmh_2_fid(child)); 
