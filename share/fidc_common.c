@@ -228,7 +228,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 			psc_pool_return(sl_fcmh_pool, fnew);
 			fnew = NULL;
 		}
-		psc_assert(fid == fcmh_2_fid(f));
+		if (fid != fcmh_2_fid(f)) {
+			psclog_errorx("FIDs: "SLPRI_FID" vs "SLPRI_FID,
+			    fid, fcmh_2_fid(f));
+			psc_fatal("fidc_lookup: fid mismatch");
+		}
 
 		if (flags & FIDC_LOOKUP_EXCL) {
 			FCMH_ULOCK(f);
