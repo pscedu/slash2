@@ -229,6 +229,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 					OPSTAT_INCR("reclaim-close");
 				}
 				OPSTAT_INCR("slvr-remove-reclaim");
+				FCMH_ULOCK(f);
 				slvr_remove_all(f);
 			}
 			fcmh_op_done(f);
