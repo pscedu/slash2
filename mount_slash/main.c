@@ -1751,7 +1751,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
 	void *dentbuf = av->pointer_arg[MSL_READDIR_CBARG_DENTBUF];
 	char buf[PSCRPC_NIDSTR_SIZE];
-	struct timeval now;
 	int rc, async;
 	size_t len;
 
@@ -1794,9 +1793,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	async = p->dcp_flags & DIRCACHEPGF_ASYNC;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
-
-	PFL_GETTIMEVAL(&now);
-	p->dcp_local_tm = now.tv_sec;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;

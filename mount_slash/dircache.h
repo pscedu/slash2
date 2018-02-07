@@ -80,7 +80,7 @@ struct dircache_page {
 	size_t			 dcp_size;	/* length of page (# dirents in page) */
 	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
 	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
-	long			 dcp_local_tm;	/* local clock when populated */
+	long			 dcp_expire;	/* expiration time */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	void			*dcp_base;	/* pscfs_dirents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
@@ -120,7 +120,7 @@ struct dircache_page {
  * Determine if a page of dirents should be evicted.
  */
 #define DIRCACHEPG_EXPIRED(d, p, expire)				\
-	((expire) > (p)->dcp_local_tm ||				\
+	((expire) > (p)->dcp_expire ||					\
 	 (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
