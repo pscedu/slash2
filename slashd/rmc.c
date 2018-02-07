@@ -222,7 +222,7 @@ int
 slm_fcmh_coherent_callback(struct fidc_membh *f, 
     struct pscrpc_export *exp, int32_t *leasep)
 {
-	int32_t lease;
+	int32_t lease = 0;
 	int rc, count, found;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
@@ -240,6 +240,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	rc = 0;
 	found = 0;
 	count = 0;
+
 
 #if 0
 	if (leasep)
@@ -317,6 +318,12 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	cb->fmc_expire = time(NULL) + slm_callback_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
+
+	/*
+ 	 * Allow directory and its contents to be cached briefly.
+ 	 */
+	if (fcmh_isdir(f) && lease < 5)
+		lease = 5;
 
 	if (leasep)
 		*leasep = lease;
