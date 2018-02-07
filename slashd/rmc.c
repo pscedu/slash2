@@ -321,6 +321,10 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 
 	/*
  	 * Allow directory and its contents to be cached briefly.
+ 	 * Some directories like root are naturally shared by
+ 	 * many clients. If a client dies or goes away, its call
+ 	 * back won't be cleared for a while. This makes sure we
+ 	 * make progress regardless.
  	 */
 	if (fcmh_isdir(f) && lease < 5)
 		lease = 5;
