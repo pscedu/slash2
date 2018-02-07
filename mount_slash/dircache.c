@@ -317,7 +317,7 @@ dircache_trim(struct fidc_membh *d, int force)
 
 void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int nents, void *base, size_t size, int eof)
+    int nents, void *base, size_t size, int eof, int32_t lease)
 {
 	int i, rc;
 	off_t adj;
@@ -381,7 +381,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
-		dce->dce_age = now.tv_sec;
+		dce->dce_age = now.tv_sec + lease;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
@@ -432,7 +432,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		}
 		FCMH_LOCK(f);
 		OPSTAT_INCR("msl.readdir-fcmh");
-		slc_fcmh_setattr_locked(f, &e->sstb, msl_attributes_timeout);
+		slc_fcmh_setattr_locked(f, &e->sstb, lease);
 
 #if 0
 		/*
@@ -453,7 +453,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_base = base;
 	p->dcp_size = size;
 	PFL_GETTIMEVAL(&now);
-	p->dcp_local_tm = now.tv_sec;
+	p->dcp_local_tm = now.tv_sec + lease;
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 	DIRCACHE_ULOCK(d);

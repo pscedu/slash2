@@ -730,7 +730,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	 */
 	if (FID_GET_INUM(fcmh_2_fid(f)) == SLFID_NS) {
 		PFL_GETTIMEVAL(&now);
-		fci->fci_expire += now.tv_sec;
+		fci->fci_expire = now.tv_sec + 120;
 		f->fcmh_sstb.sst_mode = S_IFDIR | 0111;
 		f->fcmh_sstb.sst_nlink = 2;
 		f->fcmh_sstb.sst_size = 2;
@@ -1687,7 +1687,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
  */
 int
 msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
-    int eof, int nents, int size, void *base)
+    int eof, int nents, int size, void *base, int32_t lease)
 {
 	/*
  	 * Stop name cache changes while we populating it.
@@ -1720,7 +1720,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 	d->fcmh_flags |= FCMH_BUSY;
 	FCMH_ULOCK(d);
 
-	dircache_reg_ents(d, p, nents, base, size, eof);
+	dircache_reg_ents(d, p, nents, base, size, eof, lease);
 
 	FCMH_LOCK(d);
 	d->fcmh_flags &= ~FCMH_BUSY;
@@ -1779,7 +1779,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			PFL_GOTOERR(out, rc);
 	}
 	/* XXX: crash if I comment out the following line */
-	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, mp->size, dentbuf);
+	rc = msl_readdir_finish(d, p, mp->eof, mp->nents, 
+	    mp->size, dentbuf, mp->lease);
 
  out:
 	DIRCACHE_WRLOCK(d);
@@ -1963,7 +1964,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	raoff = 0;
 	issue = 1;
 	PFL_GETTIMEVAL(&now);
-	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
 
 	/*
 	 * XXX Large directories will page in lots of buffers so this
