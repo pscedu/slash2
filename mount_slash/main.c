@@ -2117,8 +2117,10 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			PFL_GETTIMEVAL(&now);
 			fci = fcmh_2_fci(c);
 			lease = now.tv_sec - fci->fci_expire;
-			if (lease < 0)
+			if (lease < 0) {
+				OPSTAT_INCR("msl.lookup-zero-lease");
 				lease = 0;
+			}
 		} else 
 			lease = pscfs_attr_timeout;
 	}
