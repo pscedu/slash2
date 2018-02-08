@@ -1591,8 +1591,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_mknod_rep *mp = NULL;
-	struct srm_mknod_req *mq = NULL;
+	struct srm_mknod_rep *mp;
+	struct srm_mknod_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
 	int rc;
