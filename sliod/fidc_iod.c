@@ -152,6 +152,7 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 
 		DEBUG_FCMH(PLL_DIAG, f, "reopening new backing file");
 		OPSTAT_INCR("slvr-remove-reopen");
+		FCMH_ULOCK(f);
 		slvr_remove_all(f);
 
 		/*
@@ -159,7 +160,7 @@ sli_fcmh_reopen(struct fidc_membh *f, slfgen_t fgen)
 		 * ended up fcmh_op_done() our fcmh so ensure it is
 		 * locked upon finishing.
 		 */
-		FCMH_RLOCK(f);
+		FCMH_LOCK(f);
 
 		/*
 		 * Need to reopen the backing file and possibly remove
