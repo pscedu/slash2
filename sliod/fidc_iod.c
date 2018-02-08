@@ -273,5 +273,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 	sli_fcmh_ctor,		/* sfop_ctor */
 	sli_fcmh_dtor,		/* sfop_dtor */
 	NULL,			/* sfop_getattr */
-	sli_fcmh_reopen		/* sfop_modify */
+	sli_fcmh_reopen		/* sfop_reopen */
 };
