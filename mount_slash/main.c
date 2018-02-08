@@ -2092,7 +2092,10 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srt_stat sstb;
 	struct sl_fidgen fg;
 	struct stat stb;
+	struct fcmh_cli_info *fci;
 	int rc;
+	struct timeval now;
+	int32_t lease;
 
 	memset(&sstb, 0, sizeof(sstb));
 
@@ -2109,9 +2112,20 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
+	if (!rc) {
+		if (c) {
+			PFL_GETTIMEVAL(&now);
+			fci = fcmh_2_fci(c);
+			lease = now.tv_sec - fci->fci_expire;
+			if (lease < 0)
+				lease = 0;
+		} else 
+			lease = pscfs_attr_timeout;
+	}
+
  out:
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
-	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
+	    pscfs_entry_timeout, &stb, lease, rc);
 	if (c)
 		fcmh_op_done(c);
 	if (p)
