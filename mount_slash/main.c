@@ -3156,6 +3156,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		struct bmap *b;
 
 		if (!stb->st_size) {
+
+			/*
+			 * XXX we appear to have issues with race at sliod site
+			 * where reclaim/reopen race with I/O on a file with the
+			 * same generation number. Must audit the code carefully.
+			 *
+			 * While the deadlock issues are fixed now, we should look
+			 * deeper for the root causes.
+			 */
 			DEBUG_FCMH(PLL_DIAG, c, "full truncate, free bmaps");
 			OPSTAT_INCR("msl.truncate-full");
 			bmap_free_all_locked(c);
