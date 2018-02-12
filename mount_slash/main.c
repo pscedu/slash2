@@ -224,18 +224,25 @@ fcmh_checkcreds(struct fidc_membh *f,
     int accmode)
 {
 	int rc, locked;
-
 	/*
  	 * Allow tools like puppet that runs as root to take a peek
  	 * at the root directory.
  	 */
-	if (msl_root_squash && pcrp->pcr_uid == 0 && 
-	    (fcmh_2_fid(f) != SLFID_ROOT || accmode & W_OK))
+	if (pcrp->pcr_uid == 0) {
+		/* root can do anything without root squash */
+		if (!msl_root_squash)
+			return (0);
+	    	if (fcmh_2_fid(f) == SLFID_ROOT && !(accmode & W_OK))
+			return (0);
+		/*
+ 		 * I can't track the parent reliably (getattr does not
+ 		 * return parent information). So I have to allow the
+ 		 * root to walk the name space if it knows the hierarchy.
+ 		 */
+	    	if (!(accmode & W_OK))
+			return (0);
 		return (EACCES);
-
-	/* root can do anything without root squash */
-	if (pcrp->pcr_uid == 0)
-		return (0);
+	}
 
 #ifdef SLOPT_POSIX_ACLS
 	if (msl_acl)
@@ -621,6 +628,10 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr, 1);
+	if (msl_root_squash && pcr.pcr_uid == 0 && inum != SLFID_ROOT) {
+		rc = EACCES;
+		PFL_GOTOERR(out, rc);
+	}
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
@@ -1950,6 +1961,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rc = fcmh_checkcreds(d, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	if (pcr.pcr_uid == 0 && msl_root_squash &&
+	    fcmh_2_fid(d) != SLFID_ROOT) {
+		rc = EACCES;
+		PFL_GOTOERR(out, rc);
+	}
 
 	DIRCACHE_WRLOCK(d);
 
