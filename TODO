@@ -6161,3 +6161,19 @@ strace output?
 > [root@vm072 vm072.mount_wokfs]# ls -l /pghbio/
 > ls: /pghbio/mapfile_testing: Permission denied
 > drwxr-x---  4 kar     pscstaff 22 Jan 22 20:56 mapfile_testing
+
+
+02/12/2018
+----------
+
+[zhihui@r517 ~]$ msctl-pylon2 -sP
+mem-pool     flag    #free     #use    total    %use    min    max thrsh     #shrnx #em #wa
+===========================================================================================
+asyncrq       A--       64        0       64      0%     64  <inf>    80          0   0   0
+biorq         A--     1024        0     1024      0%   1024  <inf>    80   24286918   0   0
+bmap          A--      784      161      945  17.04%     64  <inf>    80      54733   0   0
+bmpce         A--        0   652619   652619    100%    512 4194304    80     142009   0   0
+bwc           A--       80        0       80      0%     64  <inf>    80    1937880   0   0
+csvc          A--        1       65       66  98.48%     64  <inf>    80          0   0   0
+dircachent    A--     2047        1     2048   0.05%   2048  <inf>    80          0   0   0
+
