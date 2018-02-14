@@ -4056,10 +4056,26 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
+	int idle, last, timeout, didwork;
+
+	idle = 0;
 	while (pscthr_run(thr)) {
-		msl_pgcache_reap();
+
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+
+		if (msl_bmpce_gen != last) {
+			idle = 0;
+			last = msl_bmpce_gen;
+		} else
+			idle++;
+		didwork = msl_pgcache_reap();
+		timeout = 30;
+		/*
+ 		 * Try to reclaim 1G worth of pages in about 30 minutes.
+ 		 */
+		if (didwork && idle > 10)
+			timeout = 1;
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, timeout);
 	}
 }
 
