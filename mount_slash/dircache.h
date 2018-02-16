@@ -145,7 +145,7 @@ struct dircache_ent {
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;
-	long			 dce_age;
+	long			 dce_expire;
 	int			 dce_flag;
 	char			 dce_short[SL_MAX_SHORT_NAME];
 	char			*dce_name;	/* NOT null-terminated */
@@ -171,7 +171,7 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 int	dircache_ent_cmp(const void *, const void *);
 
 void	dircache_lookup(struct fidc_membh *, const char *, uint64_t *);
-void	dircache_insert(struct fidc_membh *, const char *, uint64_t);
+void	dircache_insert(struct fidc_membh *, const char *, uint64_t, int32_t);
 void	dircache_delete(struct fidc_membh *, const char *);
 void	dircache_trim(struct fidc_membh *, int);
 

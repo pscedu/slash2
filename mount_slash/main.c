@@ -494,7 +494,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), lease);
 
 #if 0
 	if (oflags & O_APPEND) {
@@ -934,7 +934,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	FCMH_ULOCK(c);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, newname, fcmh_2_fid(c));
+	dircache_insert(p, newname, fcmh_2_fid(c), lease);
 
  out:
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
@@ -1029,7 +1029,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), lease);
 
 	FCMH_LOCK(c);
 	lease = mp->clease;
@@ -1087,7 +1087,7 @@ msl_lookup_rpc(struct pscfs_req *pfr, struct fidc_membh *p,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	dircache_insert(p, name, mp->attr.sst_fg.fg_fid);
+	dircache_insert(p, name, mp->attr.sst_fg.fg_fid, lease);
 
 	/*
 	 * Add the inode to the cache first, otherwise pscfs may come to
@@ -1370,6 +1370,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	struct fcmh_cli_info *fci;
 	struct timeval tv;
 	struct psc_thread *me;
+	int32_t lease = 10;
 
 	MSL_RMC_NEWREQ(f, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
@@ -1404,7 +1405,7 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 
 	msl_invalidate_readdir(f);
 	dircache_delete(f, name);
-	dircache_insert(f, newname, fcmh_2_fid(c));
+	dircache_insert(f, newname, fcmh_2_fid(c), lease);
 	newname = NULL;
 
  out:
@@ -1667,7 +1668,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), lease);
 
 	FCMH_LOCK(c);
 	lease = mp->clease;
@@ -2588,6 +2589,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct pscfs_creds pcr;
 	struct iovec iov[2];
 	int sticky, rc;
+	int32_t lease = 0;
 
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
@@ -2783,7 +2785,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
  	 */
 	if (child) {
 		msl_invalidate_readdir(np);
-		dircache_insert(np, newname, fcmh_2_fid(child)); 
+		dircache_insert(np, newname, fcmh_2_fid(child), lease); 
 	}
 
  out:
@@ -2890,13 +2892,14 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 {
 	struct fidc_membh *c = NULL, *p = NULL;
 	struct slrpc_cservice *csvc = NULL;
+	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_symlink_req *mq;
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	struct stat stb;
 	int rc;
+	int32_t lease;
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -2950,19 +2953,22 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_fcmh_setattr(p, &mp->pattr, msl_attributes_timeout);
+	lease = mp->please;
+	slc_fcmh_setattr(p, &mp->pattr, lease);
 
 	rc = msl_fcmh_get_fg(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	lease = mp->clease;
 	FCMH_LOCK(c);
-	slc_fcmh_setattr_locked(c, &mp->cattr, msl_attributes_timeout);
+	slc_fcmh_setattr_locked(c, &mp->cattr, lease);
 	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
+	lease = mp->please;
 	msl_invalidate_readdir(p);
-	dircache_insert(p, name, fcmh_2_fid(c));
+	dircache_insert(p, name, fcmh_2_fid(c), lease);
 
  out:
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
