@@ -121,7 +121,7 @@ struct dircache_page {
  */
 #define DIRCACHEPG_EXPIRED(d, p, expire)				\
 	((expire) > (p)->dcp_expire ||					\
-	 (p)->dcp_dirgen != fcmh_2_gen(d))
+	  (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d gen %"PRId64" "	\
@@ -129,10 +129,12 @@ struct dircache_page {
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
 	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
-#define	SL_SHORT_NAME		32
+#define	SL_MAX_SHORT_NAME	32
 
 #define	DIRCACHE_F_NONE 	0x00
 #define	DIRCACHE_F_SHORT	0x01
+#define	DIRCACHE_F_LIST		0x02		/* debug */
+#define	DIRCACHE_F_HASH		0x04		/* debug */
 
 struct dircache_ent {
 	uint64_t		 dce_key;	/* hash table key */
@@ -145,7 +147,7 @@ struct dircache_ent {
 	uint32_t		 dce_namelen;
 	long			 dce_age;
 	int			 dce_flag;
-	char			 dce_short[SL_SHORT_NAME];
+	char			 dce_short[SL_MAX_SHORT_NAME];
 	char			*dce_name;	/* NOT null-terminated */
 };
 

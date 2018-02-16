@@ -167,9 +167,7 @@ int
 msl_pgcache_reap(void)
 {
 	void *p;
-	int i, rc, nfree, didwork;
-
-	didwork = bmpce_reaper(bmpce_pool);
+	int i, rc, nfree, didwork = 0;
 
 	/* (gdb) p bmpce_pool.ppm_u.ppmu_explist.pexl_pll.pll_nitems */
 	nfree = bmpce_pool->ppm_nfree; 

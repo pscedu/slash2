@@ -4062,13 +4062,18 @@ msreapthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
-
+		/*
+ 		 * Background reaping to make pages available before use.
+ 		 */
+		didwork = bmpce_reaper(bmpce_pool);
 		if (msl_bmpce_gen != last) {
 			idle = 0;
 			last = msl_bmpce_gen;
-		} else
+		} else {
 			idle++;
-		didwork = msl_pgcache_reap();
+			if (msl_pgcache_reap())
+				didwork = 1;
+		}
 		timeout = 30;
 		/*
  		 * Try to reclaim 1G worth of pages in about 30 minutes.
