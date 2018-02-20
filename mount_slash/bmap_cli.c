@@ -283,7 +283,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	fci = fcmh_2_fci(f);
 
  retry:
-	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
@@ -506,7 +506,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
  retry:
-	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
@@ -653,7 +653,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
  retry:
-	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -812,7 +812,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 	BMAP_ULOCK(b);
 
 	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
-	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc);
+	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -981,7 +981,7 @@ msl_bmap_release(struct sl_resm *resm)
 	rmci = resm2rmci(resm);
 
 	csvc = (resm == msl_rmc_resm) ?
-	    slc_getmcsvc(resm) : slc_geticsvc(resm);
+	    slc_getmcsvc(resm, 0) : slc_geticsvc(resm, 0);
 	if (csvc == NULL) {
 		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
 		if (rc == 0)
@@ -1299,7 +1299,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		m = libsl_ios2resm(bmap_2_ios(b));
 		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
-		*csvcp = slc_geticsvc(m);
+		*csvcp = slc_geticsvc(m, 0);
 		if (*csvcp) {
 			if (pm)
 				*pm = m;

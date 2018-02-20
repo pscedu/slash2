@@ -71,7 +71,7 @@ struct slrpc_cservice;
  * This is the _only_ API that frees the request. It is
  * used by the client side RPC retry logic.
  */
-#define MSL_RMC_NEWREQ(f, csvc, op, rq, mq, mp, rc)			\
+#define MSL_RMC_NEWREQ(f, csvc, op, rq, mq, mp, rc, timeout)		\
 	do {								\
 		struct sl_resm *_resm;					\
 									\
@@ -84,7 +84,7 @@ struct slrpc_cservice;
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-		(rc) = slc_rmc_getcsvc(_resm, &(csvc));			\
+		(rc) = slc_rmc_getcsvc(_resm, &(csvc), (timeout));	\
 		if (rc)							\
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp));	\
@@ -95,31 +95,31 @@ struct slrpc_cservice;
 	} while (0)
 
 /* obtain csvc to an IOS */
-#define slc_geticsvcxf(resm, fl, exp)					\
+#define slc_geticsvcxf(resm, fl, exp, timeout)				\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
-	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw())
+	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw(), (timeout))
 
 /* obtain csvc to an MDS */
-#define slc_getmcsvcxf(resm, fl, exp)					\
+#define slc_getmcsvcxf(resm, fl, exp, timeout)				\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
-	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_MDS, msl_getmw())
+	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_MDS, msl_getmw(), (timeout))
 
-#define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
-#define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
-#define slc_geticsvcf(resm, fl)		slc_geticsvcxf((resm), (fl), NULL)
-#define slc_geticsvc_nb(resm)		slc_geticsvcxf((resm), CSVCF_NONBLOCK, NULL)
+#define slc_geticsvc(resm, timeout)		slc_geticsvcxf((resm), 0, NULL, (timeout))
+#define slc_geticsvcx(resm, exp, timeout)	slc_geticsvcxf((resm), 0, (exp), (timeout))
+#define slc_geticsvcf(resm, fl, timeout)	slc_geticsvcxf((resm), (fl), NULL, (timeout))
+#define slc_geticsvc_nb(resm, timeout)		slc_geticsvcxf((resm), CSVCF_NONBLOCK, NULL, (timeout))
 
-#define slc_getmcsvcx(resm, exp)	slc_getmcsvcxf((resm), 0, (exp))
-#define slc_getmcsvc(resm)		slc_getmcsvcxf((resm), 0, NULL)
-#define slc_getmcsvcf(resm, fl)		slc_getmcsvcxf((resm), (fl), NULL)
-#define slc_getmcsvc_nb(resm)		slc_getmcsvcxf((resm), CSVCF_NONBLOCK, NULL)
+#define slc_getmcsvcx(resm, exp, timeout)	slc_getmcsvcxf((resm), 0, (exp), (timeout))
+#define slc_getmcsvc(resm, timeout)		slc_getmcsvcxf((resm), 0, NULL, (timeout))
+#define slc_getmcsvcf(resm, fl, timeout)	slc_getmcsvcxf((resm), (fl), NULL, (timeout))
+#define slc_getmcsvc_nb(resm, timeout)		slc_getmcsvcxf((resm), CSVCF_NONBLOCK, NULL, (timeout))
 
 void	slc_rpc_initsvc(void);
 int	slc_rpc_should_retry(struct pscfs_req *, int *);
 
-int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **);
+int	slc_rmc_getcsvc(struct sl_resm *, struct slrpc_cservice **, int);
 int	slc_rmc_setmds(const char *);
 
 int	slc_rci_handler(struct pscrpc_request *);

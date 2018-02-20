@@ -162,9 +162,9 @@ struct sl_expcli_ops {
 #define CSVC_CALLERINFO			PFL_CALLERINFO()
 
 #define sl_csvc_get(csvcp, flg, exp, nids,				\
-	    pq, pp, mag, vers, ctype, mw)				\
+	    pq, pp, mag, vers, ctype, mw, timeout)			\
 	_sl_csvc_get(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nids),	\
-	    (pq), (pp), (mag), (vers), (ctype), (mw))
+	    (pq), (pp), (mag), (vers), (ctype), (mw), (timeout))
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 0)
 #define sl_csvc_decref_locked(csvc)	_sl_csvc_decref(CSVC_CALLERINFO, (csvc), 1)
@@ -344,7 +344,7 @@ struct slrpc_cservice *
 	_sl_csvc_get(const struct pfl_callerinfo *,
 	    struct slrpc_cservice **, int, struct pscrpc_export *,
 	    struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
-	    uint32_t, enum slconn_type, struct pfl_multiwait *);
+	    uint32_t, enum slconn_type, struct pfl_multiwait *, int);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slrpc_cservice *, int);
 void	 sl_csvc_incref(struct slrpc_cservice *);

@@ -1102,7 +1102,7 @@ mds_send_batch_update(uint64_t batchno)
 		iov.iov_len = total;
 		iov.iov_base = u;
 
-		csvc = slm_getmcsvc_wait(resm);
+		csvc = slm_getmcsvc_wait(resm, 0);
 		if (csvc == NULL) {
 			sp->sp_fails++;
 			continue;
@@ -1497,7 +1497,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		si = rpmi->rpmi_info;
 		m = psc_dynarray_getpos(&res->res_members, 0);
 
-		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 
 		RPMI_LOCK(rpmi);
 
@@ -1581,7 +1581,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		psc_assert(total);
 
 		rq = NULL;
-		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 		if (csvc == NULL)
 			PFL_GOTOERR(out, rc = SLERR_ION_OFFLINE);
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq, mp);

@@ -360,7 +360,7 @@ sli_aio_replreply_setup(struct pscrpc_request *rq, struct slvr *s,
 
 	/* Ref taken here must persist until reply is attempted. */
 	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(
-	    rq->rq_peer.nid), rq->rq_export);
+	    rq->rq_peer.nid), rq->rq_export, 0);
 
 	a->aiocbr_flags = SLI_AIOCBSF_REPL;
 	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
@@ -379,7 +379,7 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
 	struct srm_io_rep *mp;
 	int i;
 
-	csvc = sli_getclcsvc(rq->rq_export);
+	csvc = sli_getclcsvc(rq->rq_export, 0);
 	if (csvc == NULL)
 		return (NULL);
 

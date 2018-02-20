@@ -255,7 +255,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	bsr->bsr_res = dst_res;
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, NULL);
+	    CSVCF_NORECON, NULL, 0);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 
@@ -450,7 +450,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	av.space[IN_OFF] = off;
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, NULL);
+	    CSVCF_NORECON, NULL, 0);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(dst_resm));
 	av.pointer_arg[IP_CSVC] = csvc;
@@ -587,7 +587,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	m = res_getmemb(r);
 	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
-	    NULL);
+	    NULL, 0);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = resm_getcsvcerr(m));
 
@@ -695,7 +695,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 		 */
 		m = res_getmemb(src_res);
 		csvc = slm_geticsvc(m, NULL,
-		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+		    CSVCF_NONBLOCK | CSVCF_NORECON, NULL, 0);
 		if (csvc == NULL)
 			continue;
 		sl_csvc_decref(csvc);
@@ -1188,7 +1188,7 @@ slmpagerthr_main(struct psc_thread *thr)
 			if (!RES_ISFS(r))
 				continue;
 			csvc = slm_geticsvc(m, NULL, 
-			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL, 0);
 			if (!csvc) {
 				OPSTAT_INCR("upsch-page-skip");
 				continue;

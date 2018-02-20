@@ -333,7 +333,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 
 	/* Acquire connection to replication source & issue READ. */
 	src_resm = psc_dynarray_getpos(&w->srw_src_res->res_members, 0);
-	csvc = sli_geticsvc(src_resm);
+	csvc = sli_geticsvc(src_resm, 0);
 
 	/*
  	 * We just take the work off the sli_replwkq_pending. Now we

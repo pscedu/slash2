@@ -416,7 +416,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slc_getmcsvcxf(_resm, 0, rq->rq_export));
+	    slc_getmcsvcxf(_resm, 0, rq->rq_export, 0));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 

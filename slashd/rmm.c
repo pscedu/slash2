@@ -254,7 +254,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slm_getmcsvcx(_resm, rq->rq_export));
+	    slm_getmcsvcx(_resm, rq->rq_export, 0));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 
@@ -323,7 +323,7 @@ slm_rmm_forward_namespace(int op, struct sl_fidgen *fg,
 		resm = psc_dynarray_getpos(&res->res_members, 0);
 		break;
 	}
-	csvc = slm_getmcsvc_wait(resm);
+	csvc = slm_getmcsvc_wait(resm, 0);
 	if (csvc == NULL) {
 		psclog_info("unable to connect to site %d", siteid);
 		return (-EIO);

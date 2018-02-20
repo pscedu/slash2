@@ -2069,7 +2069,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	csvc = slm_getclcsvc(rq->rq_export);
+	csvc = slm_getclcsvc(rq->rq_export, 0);
 	if (csvc == NULL) {
 		mp->rc = -EHOSTDOWN;
 		goto out;
@@ -2287,7 +2287,7 @@ mexpc_allocpri(struct pscrpc_export *exp)
 	struct sl_exp_cli *expc;
 
 	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
-	return (slm_getclcsvc(exp));
+	return (slm_getclcsvc(exp, 0));
 }
 
 struct sl_expcli_ops sl_expcli_ops = {

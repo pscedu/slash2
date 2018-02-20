@@ -546,9 +546,9 @@ slictl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 	m = res_getmemb(r);
 	if (set) {
 		if (r->res_type == SLREST_MDS)
-			csvc = sli_geticsvcf(m, CSVCF_NONBLOCK);
+			csvc = sli_geticsvcf(m, CSVCF_NONBLOCK, 0);
 		else
-			csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK);
+			csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK, 0);
 		if (strcmp(pcp->pcp_value, "0") == 0 && csvc)
 			sl_csvc_disconnect(csvc);
 		if (csvc)
@@ -556,9 +556,9 @@ slictl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 		return (1);
 	}
 	if (r->res_type == SLREST_MDS)
-		csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = sli_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	else
-		csvc = sli_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = sli_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
 	if (csvc)
 		sl_csvc_decref(csvc);

@@ -146,7 +146,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	}
 	psc_assert(bml->bml_exp);
 
-	csvc = slm_getclcsvc(bml->bml_exp);
+	csvc = slm_getclcsvc(bml->bml_exp, 0);
 	if (csvc == NULL)
 		PFL_GOTOERR(out, rc = -PFLERR_NOTCONN);
 

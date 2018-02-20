@@ -417,7 +417,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
-		*csvcp = slc_geticsvc_nb(m);
+		*csvcp = slc_geticsvc_nb(m, 0);
 		if (*csvcp) {
 			if (pm)
 				*pm = m;
@@ -861,7 +861,7 @@ msl_read_attempt_retry(struct msl_fsrqinfo *fsrqi, int rc0,
 	if (!slc_rpc_should_retry(pfr, &rc0))
 		return (0);
 
-	csvc = slc_geticsvc(m);
+	csvc = slc_geticsvc(m, 0);
 	if (!csvc) {
 		rc0 = m->resm_csvc->csvc_lasterrno;
 		goto restart;

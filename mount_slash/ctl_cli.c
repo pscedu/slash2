@@ -204,10 +204,10 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
  again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
 		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_ADDRQ, rq, mq,
-		    mp, rc);
+		    mp, rc, 0);
 	else
 		MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_DELRQ, rq, mq,
-		    mp, rc);
+		    mp, rc, 0);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mrq->mrq_fid, strerror(rc));
@@ -319,7 +319,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
  issue:
 
 	/* handled by slm_rmc_handle_getreplst() of the MDS */
-	MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc, 0);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    fg.fg_fid, strerror(rc));
@@ -493,7 +493,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mfa->mfa_fid, strerror(rc)));
 
-	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_FATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_FATTR, rq, mq, mp, rc, 0);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mfa->mfa_fid, strerror(rc));
@@ -559,8 +559,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, strerror(rc)));
 
-	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp,
-	    rc);
+	MSL_RMC_NEWREQ(f, csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp, rc, 0);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, strerror(rc));
@@ -828,9 +827,9 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 	m = res_getmemb(r);
 	if (set) {
 		if (r->res_type == SLREST_MDS)
-			csvc = slc_getmcsvc_nb(m);
+			csvc = slc_getmcsvc_nb(m, 0);
 		else
-			csvc = slc_geticsvc_nb(m);
+			csvc = slc_geticsvc_nb(m, 0);
 		if (strcmp(pcp->pcp_value, "0") == 0 && csvc)
 			sl_csvc_disconnect(csvc);
 		if (csvc)
@@ -838,9 +837,9 @@ mslctl_resfield_connected(int fd, struct psc_ctlmsghdr *mh,
 		return (1);
 	}
 	if (r->res_type == SLREST_MDS)
-		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	else
-		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	snprintf(nbuf, sizeof(nbuf), "%d", csvc ? 1 : 0);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -863,9 +862,9 @@ mslctl_resfield_mtime(int fd, struct psc_ctlmsghdr *mh,
 
 	m = res_getmemb(r);
 	if (r->res_type == SLREST_MDS)
-		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slc_getmcsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	else
-		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON);
+		csvc = slc_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
 	snprintf(nbuf, sizeof(nbuf), "%"PSCPRI_TIMET,
 	    csvc ? csvc->csvc_mtime.tv_sec : (time_t)0);
 	if (csvc)

@@ -92,30 +92,30 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 void	slmbchrqthr_spawn(void);
 
 /* aliases for connection management */
-#define slm_getmcsvc(resm, exp, fl, mw)					\
+#define slm_getmcsvc(resm, exp, fl, mw, timeout)			\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,	\
-	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, (mw))
+	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, (mw), (timeout))
 
-#define slm_geticsvc(resm, exp, fl, mw)					\
+#define slm_geticsvc(resm, exp, fl, mw, timeout)			\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
-	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (mw))
+	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (mw), (timeout))
 
-#define slm_getclcsvc(x)	_slm_getclcsvc(PFL_CALLERINFO(), (x))
+#define slm_getclcsvc(x, timeout)	_slm_getclcsvc(PFL_CALLERINFO(), (x), (timeout))
 
-#define slm_getmcsvcx(m, x)	slm_getmcsvc((m), (x), 0, NULL)
-#define slm_getmcsvcf(m, fl)	slm_getmcsvc((m), NULL, (fl), NULL)
-#define slm_getmcsvc_wait(m)	slm_getmcsvc((m), NULL, 0, NULL)
+#define slm_getmcsvcx(m, x, timeout)	slm_getmcsvc((m), (x), 0, NULL, (timeout))
+#define slm_getmcsvcf(m, fl, timeout)	slm_getmcsvc((m), NULL, (fl), NULL, (timeout))
+#define slm_getmcsvc_wait(m, timeout)	slm_getmcsvc((m), NULL, 0, NULL, (timeout))
 
-#define slm_geticsvcx(m, x)	slm_geticsvc((m), (x), 0, NULL)
-#define slm_geticsvcf(m, fl)	slm_geticsvc((m), NULL, (fl), NULL)
-#define slm_geticsvc_nb(m, mw)	slm_geticsvc((m), NULL, CSVCF_NONBLOCK, (mw))
+#define slm_geticsvcx(m, x, timeout)	slm_geticsvc((m), (x), 0, NULL, (timeout))
+#define slm_geticsvcf(m, fl, timeout)	slm_geticsvc((m), NULL, (fl), NULL, (timeout))
+#define slm_geticsvc_nb(m, mw, timeout)	slm_geticsvc((m), NULL, CSVCF_NONBLOCK, (mw), (timeout))
 
 #define _pfl_callerinfo pci
 static __inline struct slrpc_cservice *
 _slm_getclcsvc(const struct pfl_callerinfo *pci,
-    struct pscrpc_export *exp)
+    struct pscrpc_export *exp, int timeout)
 {
 	struct sl_exp_cli *expc;
 
@@ -124,7 +124,7 @@ _slm_getclcsvc(const struct pfl_callerinfo *pci,
 		return (NULL);
 	return (sl_csvc_get(&expc->expc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    SLCONNT_CLI, NULL));
+	    SLCONNT_CLI, NULL, timeout));
 }
 #undef _pfl_callerinfo
 

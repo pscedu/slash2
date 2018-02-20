@@ -51,7 +51,7 @@ int
 sli_rmi_getcsvc(struct slrpc_cservice **csvcp)
 {
 	for (;;) {
-		*csvcp = sli_getmcsvc(rmi_resm);
+		*csvcp = sli_getmcsvc(rmi_resm, 0);
 		if (*csvcp)
 			break;
 
@@ -79,7 +79,7 @@ sli_rmi_setmds(const char *name)
 	} else
 		rmi_resm = libsl_nid2resm(nid);
 
-	sli_getmcsvc_nb(rmi_resm);
+	sli_getmcsvc_nb(rmi_resm, 0);
 	slconnthr_watch(sliconnthr, rmi_resm->resm_csvc, 
 	    CSVCF_PING, NULL, NULL);
 
@@ -89,7 +89,7 @@ sli_rmi_setmds(const char *name)
 		if (resm == nodeResm || resm == rmi_resm ||
 		    (RES_ISCLUSTER(r)))
 			continue;
-		sli_geticsvc_nb(resm);
+		sli_geticsvc_nb(resm, 0);
 	}
 	CONF_ULOCK();
 }

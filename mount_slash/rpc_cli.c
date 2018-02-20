@@ -304,7 +304,7 @@ slc_rmc_setmds(const char *name)
 	} else
 		msl_rmc_resm = libsl_nid2resm(nid);
 
-	slc_getmcsvc_nb(msl_rmc_resm);
+	slc_getmcsvc_nb(msl_rmc_resm, 0);
 	slconnthr_watch(slcconnthr, msl_rmc_resm->resm_csvc, 0, NULL, NULL);
 
 	return (0);
@@ -397,9 +397,9 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 }
 
 int
-slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp)
+slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout)
 {
-	*csvcp = slc_getmcsvc(resm);
+	*csvcp = slc_getmcsvc(resm, timeout);
 	if (*csvcp)
 		return (0);
 	return (resm->resm_csvc->csvc_lasterrno);

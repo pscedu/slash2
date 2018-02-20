@@ -281,7 +281,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    sli_getmcsvcx(_resm, rq->rq_export));
+	    sli_getmcsvcx(_resm, rq->rq_export, 0));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 
@@ -299,7 +299,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 	case SRMT_BATCH_RQ:
 		m = libsl_nid2resm(rq->rq_export->exp_connection->
 		    c_peer.nid);
-		csvc = sli_getmcsvcx(m, rq->rq_export);
+		csvc = sli_getmcsvcx(m, rq->rq_export, 0);
 		rc = slrpc_batch_handle_request(csvc, rq,
 		    sli_rim_batch_req_handlers);
 		if (rc)

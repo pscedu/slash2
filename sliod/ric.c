@@ -670,7 +670,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		if (sli_selftest_result) {
 			struct slrpc_cservice *csvc;
 
-			csvc = sli_getclcsvc(rq->rq_export);
+			csvc = sli_getclcsvc(rq->rq_export, 0);
 			if (csvc)
 				sli_rci_ctl_health_send(csvc);
 		}
@@ -705,7 +705,7 @@ iexpc_allocpri(struct pscrpc_export *exp)
 	struct sl_exp_cli *expc;
 
 	expc = exp->exp_private = PSCALLOC(sizeof(*expc));
-	return (sli_getclcsvc(exp));
+	return (sli_getclcsvc(exp, 0));
 }
 
 struct sl_expcli_ops sl_expcli_ops = {

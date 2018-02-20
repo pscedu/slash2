@@ -309,7 +309,7 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 	}
 
 	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
-	    NULL);
+	    NULL, 0);
 	if (!csvc) {
 		OPSTAT_INCR("sliod-offline");
 		/* This sliod hasn't established a connection to us. */
@@ -1976,7 +1976,7 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 			 * Segment fault (11) from here.  We just can't
 			 * trust bml_exp.
 			 */
-			csvc = slm_getclcsvc(bml->bml_exp);
+			csvc = slm_getclcsvc(bml->bml_exp, 0);
 			if (csvc == NULL) {
 				psclog_warnx("Unable to get csvc: %p",
 				    bml->bml_exp);
