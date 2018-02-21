@@ -88,6 +88,14 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 
 /*
+ * If slash2 is in trouble, df will hang. Let us be a good citizen and
+ * don't hold df hostage for too long.
+ */
+#define	MSL_STATFS_ROOT_TIMEOUT	5
+static struct timeval msl_statfs_root_last_failure;
+static int msl_statfs_root_last_errno;
+
+/*
  * Cap max_write at 1048576, which is the same as LNET_MTU, because our flush
  * mechanism assumes that each request can be flushed within ONE RPC.
  */
@@ -213,6 +221,19 @@ msl_get_pref_ios(void)
 void
 sl_resource_put(__unusedx struct sl_resource *res)
 {
+}
+
+long
+timeval_diff(struct timeval *tv1, struct timeval *tv2)
+{
+	long result;
+
+	if (tv1->tv_usec < tv2->tv_usec) {
+		tv1->tv_usec += 1000000;
+		tv1->tv_sec -= 1;
+	}
+	result = (tv1->tv_sec - tv2->tv_sec) * 1000000 + (tv1->tv_usec - tv2->tv_usec);
+	return (result);
 }
 
 /*
@@ -618,29 +639,40 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	struct pscfs_creds pcr;
 	struct fcmh_cli_info *fci = NULL;
 	int rc = 0;
+	struct timeval now;
 
 	*mfhp = NULL;
+
+	if (inum == SLFID_ROOT) {
+		PFL_GETTIMEVAL(&now);
+		if (timeval_diff(&now, &msl_statfs_root_last_failure) <
+		    1000000) {
+			rc = msl_statfs_root_last_errno;
+			PFL_GOTOERR(out2, rc);
+		}		
+	}
+
 	if (!msl_progallowed(pfr))
-		PFL_GOTOERR(out, rc = EPERM);
+		PFL_GOTOERR(out1, rc = EPERM);
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	slc_getfscreds(pfr, &pcr, 1);
 	if (msl_root_squash && pcr.pcr_uid == 0 && inum != SLFID_ROOT) {
 		rc = EACCES;
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 	}
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
-			PFL_GOTOERR(out, rc);
+			PFL_GOTOERR(out1, rc);
 	}
 	if (oflags & (O_WRONLY | O_RDWR)) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, W_OK);
 		if (rc)
-			PFL_GOTOERR(out, rc);
+			PFL_GOTOERR(out1, rc);
 	}
 
 	/* Perform rudimentary directory sanity checks. */
@@ -648,10 +680,10 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		/* pscfs shouldn't ever pass us WR with a dir */
 		psc_assert((oflags & (O_WRONLY | O_RDWR)) == 0);
 		if (!(oflags & O_DIRECTORY))
-			PFL_GOTOERR(out, rc = EISDIR);
+			PFL_GOTOERR(out1, rc = EISDIR);
 	} else {
 		if (oflags & O_DIRECTORY)
-			PFL_GOTOERR(out, rc = ENOTDIR);
+			PFL_GOTOERR(out1, rc = ENOTDIR);
 	}
 
 	*mfhp = msl_fhent_new(pfr, c);
@@ -689,7 +721,17 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	fci->fci_nopen++;
 	fcmh_op_start_type(c, FCMH_OPCNT_OPEN);
 
- out:
+
+ out1:
+
+#if 0
+	if (rc && inum == SLFID_ROOT) {
+		PFL_GETTIMEVAL(&msl_statfs_root_last_failure);
+		msl_statfs_root_last_errno = rc;
+	}
+#endif
+
+ out2:
 	psclogs(rc ? PLL_INFO : PLL_DIAG, SLCSS_FSOP, ""
 	    "OPEN: fid="SLPRI_FID" dir=%s rc=%d nopen = %d oflags=%#o rflags=%#o",
 	    c ? fcmh_2_fid(c) : FID_ANY , (oflags & O_DIRECTORY) ? "yes" : "no", 
@@ -732,7 +774,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	struct srm_getattr_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct timeval now;
-	int rc = 0;
+	int rc = 0, timeout;
 	int32_t lease = 0;
 
 	fci = fcmh_2_fci(f);
@@ -770,15 +812,35 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_ULOCK(f);
 
 	do {
-		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp, rc, 0);
+		timeout = 0;
+		if (fcmh_2_fid(f) == SLFID_ROOT) {
+			PFL_GETTIMEVAL(&now);
+			if (timeval_diff(&now, &msl_statfs_root_last_failure) <
+			    1000000) {
+				rc = msl_statfs_root_last_errno;
+				goto out;
+			}
+			timeout = MSL_STATFS_ROOT_TIMEOUT;
+		}
+
+		MSL_RMC_NEWREQ(f, csvc, SRMT_GETATTR, rq, mq, mp, rc, timeout);
 		if (!rc) {
 			mq->fg = f->fcmh_fg;
 			mq->iosid = msl_pref_ios;
 
+			rq->rq_timeout = timeout;
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
+		}
+		if (fcmh_2_fid(f) == SLFID_ROOT) {
+			if (rc)  {
+				PFL_GETTIMEVAL(&msl_statfs_root_last_failure);
+				msl_statfs_root_last_errno = rc;
+			}
+			break;
 		}
 	} while (rc && slc_rpc_should_retry(pfr, &rc));
 
+ out:
 	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
@@ -2821,7 +2883,8 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct timespec expire;
 	struct statvfs sfb;
 	sl_ios_id_t iosid;
-	int rc = 0;
+	int rc = 0, timeout;
+	struct timeval now;
 
 	PFL_GETTIMESPEC(&expire);
 	expire.tv_sec -= MSL_STATFS_EXPIRE_S;
@@ -2841,29 +2904,33 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (timespeccmp(&rpci->rpci_sfb_time, &expire, >)) {
 		memcpy(&sfb, &rpci->rpci_sfb, sizeof(sfb));
 		RPCI_ULOCK(rpci);
-		PFL_GOTOERR(out, 0);
+		OPSTAT_INCR("msl.statfs-cache-hit");
+		PFL_GOTOERR(out2, 0);
 	}
 	rpci->rpci_flags |= RPCIF_STATFS_FETCHING;
 	RPCI_ULOCK(rpci);
 
- retry1:
-	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc, 0);
+	PFL_GETTIMEVAL(&now);
+	timeout = MSL_STATFS_ROOT_TIMEOUT;
+	if (timeval_diff(&now, &msl_statfs_root_last_failure) < 1000000) {
+		rc = msl_statfs_root_last_errno;
+		goto out2;
+	}
+	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc, timeout);
 	if (rc)
-		goto retry2;
+		goto out1;
 
+	rq->rq_timeout = timeout;
 	mq->fid = inum;
 	mq->iosid = iosid;
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
- retry2:
-	if (rc && slc_rpc_should_retry(pfr, &rc))
-		goto retry1;
+
 	rc = abs(rc);
 	if (rc == 0)
-		rc = -mp->rc;
+		/* XXX fix MDS side to return a negative value */
+		rc = abs(mp->rc);
 	if (rc)
-		PFL_GOTOERR(out, rc);
+		PFL_GOTOERR(out1, rc);
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
 
@@ -2871,7 +2938,13 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	memcpy(&rpci->rpci_sfb, &sfb, sizeof(sfb));
 	rpci->rpci_sfb_time = expire;
 
- out:
+ out1:
+	if (rc) {
+		PFL_GETTIMEVAL(&msl_statfs_root_last_failure);
+		msl_statfs_root_last_errno = rc;
+	}
+
+ out2:
 	RPCI_LOCK(rpci);
 	rpci->rpci_flags &= ~RPCIF_STATFS_FETCHING;
 	RPCI_WAKE(rpci);

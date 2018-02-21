@@ -274,7 +274,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 * If the number of users goes from 1 to 2, send callbacks.
  	 */
 	if (count == 1 && !found) {
-		csvc = slm_getclcsvc(cb->fmc_exp);
+		csvc = slm_getclcsvc(cb->fmc_exp, 0);
 		/*
  		 * Hit this when a client dies. Need more investigation.
  		 */

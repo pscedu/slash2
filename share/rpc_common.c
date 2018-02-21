@@ -264,7 +264,7 @@ __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
     struct slrpc_cservice *csvc, int flags,
     __unusedx struct pfl_multiwait *mw, 
-    uint32_t *stkversp, uint64_t *uptimep)
+    uint32_t *stkversp, uint64_t *uptimep, int timeout)
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
@@ -273,6 +273,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
 	struct timespec tv1, tv2;
+	struct timespec start, end, diff;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -325,9 +326,21 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		return (EWOULDBLOCK);
 	}
 
+	if (timeout)
+		rq->rq_timeout = timeout;
+
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &start);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &end);
+	timespecsub(&end, &start, &diff);
+	if (rc && diff.tv_sec < 1)
+		rc = EHOSTDOWN;
+
+	/* we could get -ETIMEDOUT without MDS invloved */
+	rc = abs(rc);
 	if (rc == 0)
-		rc = -mp->rc;
+		/* XXX MDS side should return a negative value */
+		rc = abs(mp->rc);
 
 	if (!rc) {
 		*stkversp = mp->stkvers;
@@ -858,9 +871,18 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 
-		psc_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
-		CSVC_LOCK(csvc);
+		rc = psc_waitq_waitrel_s(&csvc->csvc_waitq, &csvc->csvc_lock, timeout);
 
+		CSVC_LOCK(csvc);
+		if (rc) {
+ 	 		psc_assert(rc == ETIMEDOUT);
+			OPSTAT_INCR("csvc-wait-timeout");
+			success = 0;
+			csvc->csvc_lasterrno = rc;
+			goto out2;
+		}
+
+		OPSTAT_INCR("csvc-wait-recheck");
 		goto recheck;
 	}
 
@@ -869,7 +891,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		goto out2;
 	}
 
-	if (csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV > now.tv_sec) {
+	if (!timeout && csvc->csvc_mtime.tv_sec + CSVC_CONN_INTV > now.tv_sec) {
 		if (flags & CSVCF_NONBLOCK) {
 			success = 0;	
 			goto out2;
@@ -901,7 +923,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	    DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
 		if (LNET_NIDNET(nr->resmnid_nid) == LNET_NIDNET(pp->nid)) {
 			rc = slrpc_issue_connect( pp->nid, nr->resmnid_nid,
-			    csvc, flags, mw, stkversp, uptimep);
+			    csvc, flags, mw, stkversp, uptimep, timeout);
 			if (rc == 0 || rc == EWOULDBLOCK)
 				goto proc_conn;
 		}
