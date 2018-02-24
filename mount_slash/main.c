@@ -647,6 +647,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		PFL_GETTIMEVAL(&now);
 		if (timeval_diff(&now, &msl_statfs_root_last_failure) <
 		    1000000) {
+			OPSTAT_INCR("msl.open-root-reject");
 			rc = msl_statfs_root_last_errno;
 			PFL_GOTOERR(out2, rc);
 		}		
@@ -817,6 +818,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 			PFL_GETTIMEVAL(&now);
 			if (timeval_diff(&now, &msl_statfs_root_last_failure) <
 			    1000000) {
+				OPSTAT_INCR("msl.stat-root-reject");
 				rc = msl_statfs_root_last_errno;
 				goto out;
 			}
@@ -828,11 +830,13 @@ msl_stat(struct fidc_membh *f, void *arg)
 			mq->fg = f->fcmh_fg;
 			mq->iosid = msl_pref_ios;
 
-			rq->rq_timeout = timeout;
+			if (timeout)
+				rq->rq_timeout = timeout;
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		}
 		if (fcmh_2_fid(f) == SLFID_ROOT) {
 			if (rc)  {
+				OPSTAT_INCR("msl.stat-root-fail");
 				PFL_GETTIMEVAL(&msl_statfs_root_last_failure);
 				msl_statfs_root_last_errno = rc;
 			}
@@ -2913,6 +2917,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	PFL_GETTIMEVAL(&now);
 	timeout = MSL_STATFS_ROOT_TIMEOUT;
 	if (timeval_diff(&now, &msl_statfs_root_last_failure) < 1000000) {
+		OPSTAT_INCR("msl.statfs-reject");
 		rc = msl_statfs_root_last_errno;
 		goto out2;
 	}
@@ -2940,6 +2945,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 
  out1:
 	if (rc) {
+		OPSTAT_INCR("msl.statfs-fail");
 		PFL_GETTIMEVAL(&msl_statfs_root_last_failure);
 		msl_statfs_root_last_errno = rc;
 	}

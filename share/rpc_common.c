@@ -264,7 +264,7 @@ __static int
 slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
     struct slrpc_cservice *csvc, int flags,
     __unusedx struct pfl_multiwait *mw, 
-    uint32_t *stkversp, uint64_t *uptimep, int timeout)
+    uint32_t *stkversp, uint64_t *uptimep, __unusedx int timeout)
 {
 	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_import *imp, *oimp = NULL;
@@ -273,7 +273,6 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
 	struct timespec tv1, tv2;
-	struct timespec start, end, diff;
 	int rc;
 
 	c = pscrpc_get_connection(server_id, local, NULL);
@@ -326,15 +325,7 @@ slrpc_issue_connect(lnet_nid_t local, lnet_nid_t server,
 		return (EWOULDBLOCK);
 	}
 
-	if (timeout)
-		rq->rq_timeout = timeout;
-
-	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &start);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &end);
-	timespecsub(&end, &start, &diff);
-	if (rc && diff.tv_sec < 1)
-		rc = EHOSTDOWN;
 
 	/* we could get -ETIMEDOUT without MDS invloved */
 	rc = abs(rc);
@@ -871,16 +862,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 
-		rc = psc_waitq_waitrel_s(&csvc->csvc_waitq, &csvc->csvc_lock, timeout);
-
+		psc_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
 		CSVC_LOCK(csvc);
-		if (rc) {
- 	 		psc_assert(rc == ETIMEDOUT);
-			OPSTAT_INCR("csvc-wait-timeout");
-			success = 0;
-			csvc->csvc_lasterrno = rc;
-			goto out2;
-		}
 
 		OPSTAT_INCR("csvc-wait-recheck");
 		goto recheck;
@@ -1365,8 +1348,10 @@ slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
 		rc = slrpc_bulk_check(rq, saf->saf_bulkhash, iov, n);
 
  out:
-	if (rc == -ETIMEDOUT)
+	if (rc == -ETIMEDOUT) {
+		OPSTAT_INCR("rpc.bulk-timeout");
 		rc = -PFLERR_TIMEDOUT;
+	}
 	return (rc);
 }
 
