@@ -1121,6 +1121,7 @@ msctlthr_spawn(void)
 
 #ifdef Linux
 	psc_ctlparam_register("sys.rss", psc_ctlparam_get_rss);
+	psc_ctlparam_register("sys.vsz", psc_ctlparam_get_vsz);
 #endif
 
 	psc_ctlparam_register_var("sys.statfs_pref_ios_only",
