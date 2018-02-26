@@ -160,7 +160,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		iovs = PSCALLOC(sizeof(struct iovec) * psc_dynarray_len(a));
 		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
-				iovs[i].iov_base = e->bmpce_base;
+				iovs[i].iov_base = e->bmpce_entry->page_buf;
 				iovs[i].iov_len = BMPC_BUFSZ;
 			}
 		}

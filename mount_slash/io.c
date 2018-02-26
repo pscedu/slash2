@@ -1347,7 +1347,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 		BMPCE_ULOCK(e);
 
-		iovs[i].iov_base = e->bmpce_base;
+		iovs[i].iov_base = e->bmpce_entry->page_buf;
 		iovs[i].iov_len  = BMPC_BUFSZ;
 
 		if (!i)
@@ -1697,7 +1697,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		 * Set the starting buffer pointer into our cache
 		 * vector.
 		 */
-		dest = e->bmpce_base;
+		dest = e->bmpce_entry->page_buf;
 		if (!i && toff > e->bmpce_off) {
 			/*
 			 * The first cache buffer pointer may need a
@@ -1793,7 +1793,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
 
 		BMPCE_LOCK(e);
-		src = e->bmpce_base;
+		src = e->bmpce_entry->page_buf;
 		if (!i && toff > e->bmpce_off) {
 			psc_assert(toff - e->bmpce_off < BMPC_BUFSZ);
 			src += toff - e->bmpce_off;

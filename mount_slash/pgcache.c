@@ -63,7 +63,8 @@ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
 struct psc_listcache	 free_page_buffers;
-int			 page_buffers_count;	/* total, including free */
+
+int			 page_buffer_total;
 
 struct psc_listcache	 bmpcLru;
 
@@ -73,50 +74,60 @@ void
 msl_pgcache_init(void)
 {
 	int i;
-	void *p;
+	struct bmap_page_entry *entry;
 
 	lc_reginit(&free_page_buffers, struct bmap_page_entry,
 	    page_lentry, "pagebuffers");
 
-	for (i = 0; i < bmpce_pool->ppm_min; i++) {
-		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
-		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+	/*
+ 	 * Note that ppm_max can change after we start.
+ 	 */
+	entry = PSCALLOC(sizeof(struct bmap_page_entry) * bmpce_pool->ppm_max); 
+	for (i = 0; i < bmpce_pool->ppm_max; i++) {
+		psc_assert(entry);
+		entry->page_flag = 0;
+		page_buffer_total++;
+		entry->page_buf = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+		    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 
-		if (p == MAP_FAILED)
+		if (entry->page_buf == MAP_FAILED)
 			psc_fatalx("Please raise vm.max_map_count limit");
 
-		OPSTAT_INCR("mmap-success");
-		page_buffers_count++;
-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&free_page_buffers, p);
+		INIT_PSC_LISTENTRY(&entry->page_lentry);
+		lc_add(&free_page_buffers, entry);
+		entry++;
 	}
 }
 
-void *
+struct bmap_page_entry *
 msl_pgcache_get(int wait)
 {
-	void *p;
 	struct timespec ts;
+	struct bmap_page_entry *entry;
 	static int warned = 0, failed = 0;
 
-	p = lc_getnb(&free_page_buffers);
-	if (p)
-		return p;
+	entry = lc_getnb(&free_page_buffers);
+	if (entry)
+		goto out;
  again:
 
 	LIST_CACHE_LOCK(&free_page_buffers);
-	if (page_buffers_count < bmpce_pool->ppm_max) {
-		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
-		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
-		if (p != MAP_FAILED) {
+	if (page_buffer_total < bmpce_pool->ppm_max) {
+		entry = PSCALLOC(sizeof(struct bmap_page_entry)); 
+		entry->page_buf = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+		    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+		if (entry->page_buf != MAP_FAILED) {
 			warned = 0;
-			OPSTAT_INCR("mmap-success");
-			page_buffers_count++;
+			page_buffer_total++;
+			OPSTAT_INCR("mmap-grow-ok");
+			INIT_PSC_LISTENTRY(&entry->page_lentry);
 			LIST_CACHE_ULOCK(&free_page_buffers);
-			return (p);
+			entry->page_flag = PAGE_CANFREE;
+			return (entry);
 		}
 		failed = 1;
-		OPSTAT_INCR("mmap-failure");
+		PSCFREE(entry); 
+		OPSTAT_INCR("mmap-grow-err");
 	}
 	LIST_CACHE_ULOCK(&free_page_buffers);
 
@@ -131,34 +142,45 @@ msl_pgcache_get(int wait)
 		 */
 		ts.tv_nsec = 0;
 		ts.tv_sec = time(NULL) + 30;
-		p = lc_gettimed(&free_page_buffers, &ts);
-		if (!p) {
+		entry = lc_gettimed(&free_page_buffers, &ts);
+		if (!entry) {
 			OPSTAT_INCR("pagecache-get-retry");
 			goto again;
 		}
 	} else
-		p = lc_getnb(&free_page_buffers);
-	return (p);
+		entry = lc_getnb(&free_page_buffers);
+
+ out:
+	if (entry)
+		entry->page_flag |= PAGE_MADVISE;
+
+	return (entry);
 }
 
 void
-msl_pgcache_put(void *p)
+msl_pgcache_put(struct bmap_page_entry *entry)
 {
 	int rc;
 	/*
  	 * Do not assume that the max value has not changed.
  	 */
 	LIST_CACHE_LOCK(&free_page_buffers);
-	if (page_buffers_count > bmpce_pool->ppm_max) {
-		rc = munmap(p, BMPC_BUFSZ);
-		if (rc)
-			OPSTAT_INCR("munmap-drop-failure");
+	if (page_buffer_total <= bmpce_pool->ppm_max) {
+		if (entry->page_flag & PAGE_CANFREE)
+			lc_addhead(&free_page_buffers, entry);
 		else
-			OPSTAT_INCR("munmap-drop-success");
-		page_buffers_count--;
+			lc_addtail(&free_page_buffers, entry);
 	} else {
-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&free_page_buffers, p);
+		if (entry->page_flag & PAGE_CANFREE) {
+			rc = munmap(entry->page_buf, BMPC_BUFSZ);
+			if (!rc)
+				OPSTAT_INCR("munmap-success");
+			else
+				OPSTAT_INCR("munmap-failure");
+			PSCFREE(entry);
+			page_buffer_total--;
+		} else
+			lc_add(&free_page_buffers, entry);
 	}
 	LIST_CACHE_ULOCK(&free_page_buffers);
 }
@@ -166,32 +188,45 @@ msl_pgcache_put(void *p)
 int
 msl_pgcache_reap(void)
 {
-	void *p;
-	int i, rc, nfree, didwork = 0;
+	struct bmap_page_entry *entry, *tmp;
+	int rc, nfree, didwork = 0;
 
 	/* (gdb) p bmpce_pool.ppm_u.ppmu_explist.pexl_pll.pll_nitems */
 	nfree = bmpce_pool->ppm_nfree; 
+	if (bmpce_pool->ppm_nfree > bmpce_pool->ppm_min)
+		didwork = 1;
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
-	if (lc_nitems(&free_page_buffers) <= bmpce_pool->ppm_total)
+	/* I tried the other way, but RSS wouldn't go down as much */
+	if (bmpce_pool->ppm_nfree != bmpce_pool->ppm_total)
 		return (didwork);
-
-	didwork = 1;
-	nfree = lc_nitems(&free_page_buffers) - bmpce_pool->ppm_total;
-	for (i = 0; i < nfree; i++) {
-		p = lc_getnb(&free_page_buffers);
-		if (!p)
-			break;
-		rc = munmap(p, BMPC_BUFSZ);
-		if (rc)
-			OPSTAT_INCR("munmap-reap-failure");
-		else
-			OPSTAT_INCR("munmap-reap-success");
-	}
+	/*
+ 	 * Do not assume that the max value has not changed.
+ 	 */
 	LIST_CACHE_LOCK(&free_page_buffers);
-	page_buffers_count -= i;
+	LIST_CACHE_FOREACH_SAFE(entry, tmp, &free_page_buffers) {
+		if (entry->page_flag & PAGE_CANFREE) {
+			lc_remove(&free_page_buffers, entry);
+			rc = munmap(entry->page_buf, BMPC_BUFSZ);
+			if (!rc)
+				OPSTAT_INCR("munmap-success-reap");
+			else
+				OPSTAT_INCR("munmap-failure-reap");
+			PSCFREE(entry);
+			page_buffer_total--;
+			continue;
+		}
+		if (!(entry->page_flag & PAGE_MADVISE))
+			continue;
+		rc = madvise(entry->page_buf, BMPC_BUFSZ, MADV_DONTNEED);
+		if (!rc)
+			OPSTAT_INCR("madvise-success-reap");
+		else
+			OPSTAT_INCR("madvise-failure-reap");
+		entry->page_flag &= ~PAGE_MADVISE;
+	}
 	LIST_CACHE_ULOCK(&free_page_buffers);
-	return (didwork);
+	return (1);
 }
 
 /*
@@ -236,7 +271,7 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 	struct bmap_pagecache_entry q, *e, *e2 = NULL;
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache *bmpc;
-	void *page = NULL;
+	struct bmap_page_entry *entry = NULL;
 	struct timespec tm;
 
 	bmpc = bmap_2_bmpc(b);
@@ -288,14 +323,14 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 					rc = EAGAIN;
 					goto out;
 				}
-				page = msl_pgcache_get(0);
-				if (page == NULL) {
+				entry = msl_pgcache_get(0);
+				if (entry == NULL) {
 					rc = EAGAIN;
 					goto out;
 				}
 			} else {
 				e2 = psc_pool_get(bmpce_pool);
-				page = msl_pgcache_get(1);
+				entry = msl_pgcache_get(1);
 			}
 			wrlock = 1;
 			pfl_rwlock_wrlock(&bci->bci_rwlock);
@@ -312,10 +347,10 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 			e->bmpce_waitq = wq;
 			e->bmpce_flags = flags;
 			e->bmpce_bmap = b;
-			e->bmpce_base = page;
+			e->bmpce_entry = entry;
 
 			e2 = NULL;
-			page = NULL;
+			entry = NULL;
 
 			PSC_RB_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
@@ -332,8 +367,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
 
 	if (e2) {
 		OPSTAT_INCR("msl.bmpce-gratuitous");
-		if (page)
-			msl_pgcache_put(page);
+		if (entry)
+			msl_pgcache_put(entry);
 		psc_pool_return(bmpce_pool, e2);
 	}
 
@@ -369,7 +404,7 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 	pfl_rwlock_unlock(&bci->bci_rwlock);
 
-	msl_pgcache_put(e->bmpce_base);
+	msl_pgcache_put(e->bmpce_entry);
 	psc_pool_return(bmpce_pool, e);
 }
 

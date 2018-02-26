@@ -68,17 +68,20 @@ struct bmap_pagecache_entry {
 	uint32_t		 bmpce_start;	/* region where data are valid */
 	 int16_t		 bmpce_pins;	/* page contents are read-only */
 	psc_spinlock_t		 bmpce_lock;
-	void			*bmpce_base;	/* statically allocated pg contents */
+	struct bmap_page_entry	*bmpce_entry;	/* statically allocated pg contents */
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
 	struct psc_lockedlist	 bmpce_pndgaios;
 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
 };
+
+#define	PAGE_CANFREE		0x01
+#define	PAGE_MADVISE		0x02
+
 struct bmap_page_entry {
-	union {
-		struct psc_listentry	 page_lentry;
-		char			 page_buf[BMPC_BUFSZ];
-	};
+	struct psc_listentry	 page_lentry;
+	int			 page_flag;
+	void			*page_buf;
 };
 
 /* bmpce_flags */
@@ -127,7 +130,7 @@ struct bmap_page_entry {
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
 	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
-	    "off=%#09x base=%p ref=%u : " fmt,				\
+	    "off=%#09x entry=%p ref=%u : " fmt,				\
 	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
 	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
 	    (pg)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
@@ -141,7 +144,7 @@ struct bmap_page_entry {
 	    (pg)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
-	    (pg)->bmpce_off, (pg)->bmpce_base,				\
+	    (pg)->bmpce_off, (pg)->bmpce_entry,				\
 	    (pg)->bmpce_ref, ## __VA_ARGS__)
 
 static __inline int

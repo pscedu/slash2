@@ -568,7 +568,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		bmpce = bwc->bwc_bmpces[i];
 
-		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
+		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_entry->page_buf +
 		    (i ? 0 : r->biorq_off - bmpce->bmpce_off);
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
