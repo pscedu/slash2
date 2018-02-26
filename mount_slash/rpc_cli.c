@@ -399,10 +399,40 @@ slc_rpc_should_retry(struct pscfs_req *pfr, int *rc)
 int
 slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout)
 {
-	*csvcp = slc_getmcsvc(resm, timeout);
+	int rc;
+
+	if (!timeout)
+		*csvcp = slc_getmcsvc(resm, timeout);
+	else
+		*csvcp = slc_getmcsvc_nb(resm, timeout);
 	if (*csvcp)
 		return (0);
-	return (resm->resm_csvc->csvc_lasterrno);
+
+	if (!timeout)
+		return (resm->resm_csvc->csvc_lasterrno);
+
+	CSVC_LOCK(resm->resm_csvc);
+	if (resm->resm_csvc->csvc_flags & CSVCF_CONNECTING) {
+		rc = psc_waitq_waitrel_s(&resm->resm_csvc->csvc_waitq, 
+		    &resm->resm_csvc->csvc_lock, timeout);
+		CSVC_LOCK(resm->resm_csvc);
+		if (rc) {
+			psc_assert(rc == ETIMEDOUT);
+			OPSTAT_INCR("csvc-wait-timeout");
+		} else
+			rc = resm->resm_csvc->csvc_lasterrno;
+	} else
+		rc = resm->resm_csvc->csvc_lasterrno;
+	CSVC_ULOCK(resm->resm_csvc);
+	/*
+ 	 * We must fill csvcp if we return a success.
+ 	 */
+	if (!rc) {
+		*csvcp = slc_getmcsvc_nb(resm, timeout);
+		if (*csvcp == NULL)
+			rc = ETIMEDOUT;
+	}
+	return (rc);
 }
 
 void

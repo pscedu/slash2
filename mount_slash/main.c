@@ -2922,6 +2922,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		goto out2;
 	}
 	MSL_RMC_NEWREQ(NULL, csvc, SRMT_STATFS, rq, mq, mp, rc, timeout);
+	rc = abs(rc);
 	if (rc)
 		goto out1;
 
