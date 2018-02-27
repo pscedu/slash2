@@ -5492,6 +5492,13 @@ Right now, the test fails with cp (errno = 1), I suspect name cache issue.
 	worker[1] Trying to dump core for [mysqld.2 - pid: 27495, winpid: 27495]
 	rpl.rpl_semi_sync_group_commit_deadlock 'mix' [ fail ]  timeout after 900 seconds
 
+	02/27/2018:
+
+	
+	Could not execute 'check-warnings' for testcase 'rpl.rpl_semi_sync_deadlock' (res: 1):
+	mysqltest: Could not open connection 'default' after 500 attempts: 2002 Can't connect to local MySQL server through socket '/tmp/mysql.sock' (2)
+
+
 01/13/2017
 ----------
 
