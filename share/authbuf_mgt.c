@@ -68,7 +68,7 @@ authbuf_readkeyfile(void)
 	int alg, fd;
 	ssize_t rc;
 
-	psc_assert(gcry_md_get_algo_dlen(GCRY_MD_SHA256) ==
+	psc_assert(gcry_md_get_algo_dlen(GCRY_MD_CRC32_RFC1510) ==
 	    AUTHBUF_ALGLEN);
 
 	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_AUTHBUFKEY);
@@ -85,7 +85,7 @@ authbuf_readkeyfile(void)
 		    sl_authbuf_keysize, rc);
 	close(fd);
 
-	alg = GCRY_MD_SHA256;
+	alg = GCRY_MD_CRC32_RFC1510;
 	gerr = gcry_md_open(&sl_authbuf_hd, alg, 0);
 	if (gerr)
 		psc_fatalx("gcry_md_open: %d", gerr);

@@ -36,7 +36,7 @@
 struct stat;
 struct pscrpc_request;
 
-#define AUTHBUF_ALGLEN		32
+#define AUTHBUF_ALGLEN		4
 #define AUTHBUF_MINKEYSIZE	1024
 #define AUTHBUF_MAXKEYSIZE	(128 * 1024)
 
