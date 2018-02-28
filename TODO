@@ -5496,11 +5496,30 @@ Right now, the test fails with cp (errno = 1), I suspect name cache issue.
 
 	
 	Could not execute 'check-warnings' for testcase 'rpl.rpl_semi_sync_deadlock' (res: 1):
-	mysqltest: Could not open connection 'default' after 500 attempts: 2002 Can't connect to local MySQL server through socket '/tmp/mysql.sock' (2)
+	mysqltest: Could not open connection 'default' after 500 attempts: 2002 Can't connect to \
+	local MySQL server through socket '/tmp/mysql.sock' (2)
 
+
+	02/28/2018
+	----------
 
 	$ tar xvf ~/mysql-boost-5.7.17.tar.gz
 	$ cmake -DWITH_BOOST=boost/boost_1_59_0
+
+	rpl.rpl_sequential 'mix'                 [ fail ]
+        Test ended at 2018-02-28 16:20:22
+
+	CURRENT_TEST: rpl.rpl_sequential
+	mysqltest: In included file ./include/wait_condition.inc at line 49:
+	included from ./include/wait_condition_or_abort.inc at line 25:
+	included from ./extra/rpl_tests/rpl_parallel_load.test at line 188:
+	included from /zzh-slash2/zhihui/mysql-5.7.17/mysql-test/suite/rpl/t/rpl_sequential.test at line 21:
+	At line 49: Query 'SELECT count(*)+sleep(1) = 5 FROM test0.benchmark' didn't return a result set
+
+	Only  518  of 5001 completed.
+	mysql-test-run: *** ERROR: Not all tests completed
+	zhihui@zebes: /zzh-slash2/zhihui/mysql-5.7.17/mysql-test$
+
 
 01/13/2017
 ----------
