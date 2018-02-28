@@ -6184,3 +6184,7 @@ bwc           A--       80        0       80      0%     64  <inf>    80    1937
 csvc          A--        1       65       66  98.48%     64  <inf>    80          0   0   0
 dircachent    A--     2047        1     2048   0.05%   2048  <inf>    80          0   0   0
 
+02/28/2018
+----------
+
+Make handling of 501 and 511 errors more robust.
