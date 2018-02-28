@@ -2957,6 +2957,11 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
 
+	/*
+	 * XXX there is still a missing code path somewhere
+	 * that causes Numerical out of range issue.
+	 */
+	rc = abs(rc);
 	pscfs_reply_statfs(pfr, &sfb, rc);
 
 	if (iosid != MSL_STATFS_AGGR_IOSID)
