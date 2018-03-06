@@ -2138,9 +2138,12 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 
 		/* queue work for slmrcmthr_main() */
 		lc_add(&slm_replst_workq, rsw);
+		csvc = NULL;
 	}
 
  out:
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (0);
 }
 
