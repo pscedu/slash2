@@ -15,7 +15,7 @@
 int
 main(int argc, char **argv)
 {
-	long size, length;
+	long size, length, trunc = 0;
 	int i, fd, ret, total = 0;
 	struct stat stbuf;
 	char ch, *buf, *filename;
@@ -55,6 +55,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 
 	ret = lseek(fd, size - 1234, SEEK_SET);
@@ -118,6 +119,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 	printf("File %s has been truncated successfully at line %d.\n", filename, __LINE__);
 
@@ -152,6 +154,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 	printf("File %s has been truncated successfully at line %d.\n", filename, __LINE__);
 
@@ -174,6 +177,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 
 	ret = stat(filename, &stbuf);
@@ -192,6 +196,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 
 	ret = stat(filename, &stbuf);
@@ -259,6 +264,7 @@ main(int argc, char **argv)
 			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 			exit (0);
 		}
+		trunc++;
 		total++;
 
 		fd = open(filename, O_RDWR, 0600);
@@ -297,6 +303,7 @@ main(int argc, char **argv)
 			printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 			exit (0);
 		}
+		trunc++;
 		total++;
 
 		fd = open(filename, O_RDWR, 0600);
@@ -367,6 +374,7 @@ main(int argc, char **argv)
 		printf("Truncate fails with errno = %d at line %d\n", errno, __LINE__);
 		exit (0);
 	}
+	trunc++;
 	total++;
 
 	ret = lseek(fd, length - 54301, SEEK_SET);
@@ -414,6 +422,6 @@ main(int argc, char **argv)
 		t2.tv_sec--;
         }
 
-	printf("\nAll %d tests has passed successfully in %ld seconds!\n", 
-		total, t2.tv_sec - t1.tv_sec);
+	printf("\nAll %d tests has passed successfully in %ld seconds (%d truncates)!\n", 
+		total, t2.tv_sec - t1.tv_sec, trunc);
 }
