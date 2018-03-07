@@ -292,6 +292,9 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
  	 * Hmm, bmap_wait_locked() might drop lock temporarily.
  	 *
  	 * This issue should be fixed once I get rid of SQLite.
+ 	 *
+ 	 * 03/07/2018: Since BREPLST_REPL_SCHED is only set here, we must
+ 	 * somehow visit the same bmap more than once.
  	 */
 	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
 		DEBUG_BMAP(PLL_FATAL, b,
