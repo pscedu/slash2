@@ -181,18 +181,19 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		 */
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
-		    "rc=%d",
+		    "rc=%d, off=%d",
 		    src_resm ? src_resm->resm_name : NULL,
 		    dst_resm ? dst_resm->resm_name : NULL,
-		    rc);
+		    rc, bsr->bsr_off);
 
 		OPSTAT_INCR("repl-failure");
 		OPSTAT2_ADD("repl-failure-aggr", bsr->bsr_amt);
 	}
 
-	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
+	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off)) {
+		OPSTAT_INCR("repl-revert");
 		mds_bmap_write_logrepls(b);
-	else {
+	} else {
 		if (!rc) {
 			OPSTAT_INCR("repl-drop");
 			OPSTAT2_ADD("repl-drop-aggr", bsr->bsr_amt);
