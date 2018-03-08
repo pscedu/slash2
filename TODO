@@ -5506,6 +5506,8 @@ Right now, the test fails with cp (errno = 1), I suspect name cache issue.
 	$ tar xvf ~/mysql-boost-5.7.17.tar.gz
 	$ cmake -DWITH_BOOST=boost/boost_1_59_0 .
 	$ make
+	$ cd mysql-test/
+	$ time ./mysql-test-run --big-test --skip-test=federated
 
 	rpl.rpl_sequential 'mix'                 [ fail ]
         Test ended at 2018-02-28 16:20:22
