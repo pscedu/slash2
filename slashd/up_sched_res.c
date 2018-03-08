@@ -191,7 +191,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off)) {
-		OPSTAT_INCR("repl-revert");
+		OPSTAT_INCR("repl-apply");
 		mds_bmap_write_logrepls(b);
 	} else {
 		if (!rc) {
@@ -296,10 +296,18 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
  	 *
  	 * 03/07/2018: Since BREPLST_REPL_SCHED is only set here, we must
  	 * somehow visit the same bmap more than once.
+ 	 *
+ 	 * A bmap can be enqueued for new work as soon as it is taken off 
+ 	 * the list.  Since we drop bmap lock in mds_repl_bmap_apply(),
+ 	 * it is possible for a race to happen (SLM_NUPSCHED_THREADS = 4).
  	 */
-	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
+ 	if (rc == BREPLST_REPL_SCHED) {
+		OPSTAT_INCR("repl-already-sched");
+		return (1);
+	}
+	if (rc == BREPLST_VALID)
 		DEBUG_BMAP(PLL_FATAL, b,
-		    "invalid bmap replica state [off %d]: %d", off, rc);
+		    "bmap replica state [off %d]: is already valid", off);
 
 	/*
 	 * If it was still QUEUED, which means we marked it SCHED, then
@@ -780,6 +788,9 @@ upd_proc_bmap(struct slm_update_data *upd)
 	 * for an update.
 	 */
 	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
+		/*
+ 	 	 * This assumes that the IOS ID table is compact.
+ 	 	 */
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		if (dst_res == NULL) {
