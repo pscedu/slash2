@@ -233,6 +233,11 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	/* pfl_odt_close(ptrunc); */
 	/* pfl_odt_close(bml); */
 
+	/*
+	 * According to Google, sqlite3_close_v2 is not support in
+	 * SQLite until 3.7.15. Use sqlite3 --version to check the
+	 * version.
+	 */
 	sqlite3_close_v2(db_handle);
 
 	mdsio_exit();
