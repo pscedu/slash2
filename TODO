@@ -6213,3 +6213,29 @@ dircachent    A--     2047        1     2048   0.05%   2048  <inf>    80        
 ----------
 
 Make handling of 501 and 511 errors more robust.
+
+03/12/2018
+----------
+
+[zhihui@mds run]$ /usr/local/psc/sbin/slmctl -S slashd.mds.sock -s repl 
+resource                         ingress-pending  egress-pending    ingress-aggr     egress-aggr
+================================================================================================
+sbb1s0@PSC                                     0            5.5G               0          789.8G 
+sbb1s1@PSC                                     0            4.1G               0          687.3G 
+sbb1s2@PSC                                     0            4.3G               0          835.4G 
+sbb1s3@PSC                                     0            6.3G               0          746.4G 
+sbb1s4@PSC                                     0            4.1G               0          805.1G 
+sbb1s5@PSC                                     0            4.3G               0          796.3G 
+sbb1s6@PSC                                     0            6.0G               0          843.8G 
+sbb1s7@PSC                                     0            4.1G               0          791.6G 
+sbb2s0@PSC                                  8.8G               0          796.4G            3.9G
+sbb2s1@PSC                                  9.1G               0          796.4G            4.0G
+sbb2s2@PSC                                  7.5G               0          796.4G            5.4G
+sbb2s3@PSC                                  5.2G               0          796.4G            4.6G
+sbb2s4@PSC                                  3.5G               0          796.4G            5.8G
+sbb2s5@PSC                                  3.2G               0          796.4G            4.2G
+sbb2s6@PSC                                990.0M               0          796.2G            5.6G
+sbb2s7@PSC                                810.0M          270.0M          791.6G           37.2G 
+
+                                        we should get rid of pending number if we can't replicate
+
