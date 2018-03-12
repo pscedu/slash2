@@ -6239,3 +6239,4 @@ sbb2s7@PSC                                810.0M          270.0M          791.6G
 
                                         we should get rid of pending number if we can't replicate
 
+Also, make repl-add no-op if the target is already VALID.
