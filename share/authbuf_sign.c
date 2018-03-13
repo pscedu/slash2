@@ -137,6 +137,13 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	gcry_md_hd_t hd;
 	uint32_t i;
 	int rc = 0;
+	lnet_process_id_t src_prid;
+	lnet_process_id_t dst_prid;
+
+	char src_buf[PSCRPC_NIDSTR_SIZE];
+	char dst_buf[PSCRPC_NIDSTR_SIZE];
+	char self_buf[PSCRPC_NIDSTR_SIZE];
+	char peer_buf[PSCRPC_NIDSTR_SIZE];
 
 	if (msgtype == PSCRPC_MSG_REQUEST)
 		m = rq->rq_reqmsg;
@@ -171,13 +178,6 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	if ((sl_conn_debug == 2) ||
 	    (rc == SLERR_AUTHBUF_BADPEER && sl_conn_debug == 1)) {
 
-		lnet_process_id_t src_prid;
-		lnet_process_id_t dst_prid;
-		char src_buf[PSCRPC_NIDSTR_SIZE];
-		char dst_buf[PSCRPC_NIDSTR_SIZE];
-		char self_buf[PSCRPC_NIDSTR_SIZE];
-		char peer_buf[PSCRPC_NIDSTR_SIZE];
-
 		src_prid.nid = saf->saf_secret.sas_src_nid;
 		src_prid.pid = saf->saf_secret.sas_src_pid;
 
@@ -210,8 +210,9 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	if (memcmp(gcry_md_read(hd, 0), saf->saf_hash, AUTHBUF_ALGLEN)) {
-		psc_fatalx("authbuf did not hash correctly -- "
-		    "ensure key files are synced");
+		pscrpc_id2str(peer_prid, peer_buf);
+		psclog_warnx("authbuf did not hash correctly -- "
+		    "ensure key files are synced, peer = %s", peer_buf);
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
 	gcry_md_close(hd);
