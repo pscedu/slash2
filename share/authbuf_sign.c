@@ -172,8 +172,10 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
 	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
 	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
-	    saf->saf_secret.sas_dst_pid != self_prid.pid)
+	    saf->saf_secret.sas_dst_pid != self_prid.pid) {
+		OPSTAT_INCR("rpc-bad-peer");
 		rc = SLERR_AUTHBUF_BADPEER;
+	}
 
 	if ((sl_conn_debug == 2) ||
 	    (rc == SLERR_AUTHBUF_BADPEER && sl_conn_debug == 1)) {
@@ -210,6 +212,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype, int flags)
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	if (memcmp(gcry_md_read(hd, 0), saf->saf_hash, AUTHBUF_ALGLEN)) {
+		OPSTAT_INCR("rpc-hash-err");
 		pscrpc_id2str(peer_prid, peer_buf);
 		psclog_warnx("authbuf did not hash correctly -- "
 		    "ensure key files are synced, peer = %s", peer_buf);
