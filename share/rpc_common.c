@@ -229,6 +229,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	csvc->csvc_lasterrno = rc;
 	psc_waitq_wakeall(&csvc->csvc_waitq);
 	sl_csvc_decref_locked(csvc);
+	if (rc == SLERR_AUTHBUF_BADHASH)
+		psc_fatalx("RPC hash incorrect, check software version");
 	return (0);
 }
 
