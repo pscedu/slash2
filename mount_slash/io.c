@@ -2292,6 +2292,21 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		slc_fsreply_write(f, pfr, 0, rc);
 }
 
+void msreadahead_cancel(struct fidc_membh *f)
+{
+	struct readaheadrq *rarq, *tmp;
+
+	LIST_CACHE_LOCK(&msl_readaheadq);
+	LIST_CACHE_FOREACH_SAFE(rarq, tmp, &msl_readaheadq) {
+		if (rarq->rarq_fg.fg_fid != fcmh_2_fid(f))
+			continue;
+		OPSTAT_INCR("msl.read-ahead-drop");
+		lc_remove(&msl_readaheadq, rarq);
+		psc_pool_return(slc_readaheadrq_pool, rarq);
+	}
+	LIST_CACHE_ULOCK(&msl_readaheadq);
+}
+
 void
 msreadaheadthr_main(struct psc_thread *thr)
 {
