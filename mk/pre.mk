@@ -1,8 +1,7 @@
 # $Id$
 # %GPL_START_LICENSE%
 # ---------------------------------------------------------------------
-# Copyright 2015-2016, Google, Inc.
-# Copyright 2015-2018, Pittsburgh Supercomputing Center
+# Copyright (c) 2015, Pittsburgh Supercomputing Center (PSC).
 # All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify

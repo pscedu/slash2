@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
  * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
