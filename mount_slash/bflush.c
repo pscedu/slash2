@@ -445,7 +445,10 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		 * one RPC.  So the callback handler won't race with us.
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
+
+		psc_assert(r->biorq_flags & BIORQ_ONTREE);
 		r->biorq_flags &= ~BIORQ_ONTREE;
+
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 	}
 	BMAP_ULOCK(b);
@@ -760,6 +763,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 
 		if ((b->bcm_flags & BMAPF_SCHED) ||
+		    (b->bcm_flags & BMAPF_DISCARD) ||
 		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 			BMAP_ULOCK(b);
 			continue;
