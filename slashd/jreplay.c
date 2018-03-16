@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2016, Pittsburgh Supercomputing Center
+ * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -173,7 +172,7 @@ mds_replay_bmap(void *jent, int op)
  * in the bmap, this has to be a read-modify-write process.
  */
 static int
-mds_replay_update(__unusedx struct psc_journal_enthdr *pje)
+mds_replay_update(struct psc_journal_enthdr *pje)
 {
 	return (0);
 }
