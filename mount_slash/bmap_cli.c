@@ -1429,6 +1429,7 @@ dump_bmap_flags(uint32_t flags)
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");
+	fflush(stdout);
 }
 #endif
 
