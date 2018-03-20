@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2016, Pittsburgh Supercomputing Center
+ * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2290,6 +2290,21 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		slc_fsreply_read(f, pfr, NULL, 0, rc);
 	else
 		slc_fsreply_write(f, pfr, 0, rc);
+}
+
+void msreadahead_cancel(struct fidc_membh *f)
+{
+	struct readaheadrq *rarq, *tmp;
+
+	LIST_CACHE_LOCK(&msl_readaheadq);
+	LIST_CACHE_FOREACH_SAFE(rarq, tmp, &msl_readaheadq) {
+		if (rarq->rarq_fg.fg_fid != fcmh_2_fid(f))
+			continue;
+		OPSTAT_INCR("msl.read-ahead-drop");
+		lc_remove(&msl_readaheadq, rarq);
+		psc_pool_return(slc_readaheadrq_pool, rarq);
+	}
+	LIST_CACHE_ULOCK(&msl_readaheadq);
 }
 
 void
