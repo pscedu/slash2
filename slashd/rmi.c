@@ -239,7 +239,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	sstb = mq->sstb;
 	mq->sstb.sst_uid = 0;
 	mq->sstb.sst_gid = 0;
-	rc = slm_mkdir(vfsid, mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
+	rc = slm_mkdir(vfsid, rq, mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
 	if (rc)
 		return (rc);
 	if (mp->rc && mp->rc != -EEXIST)

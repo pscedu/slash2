@@ -46,7 +46,7 @@ struct statvfs;
  * can have different versions. However, to avoid hassle in terms 
  * of maintainence and administration. Let us use one version.
  */
-#define	SL_RPC_VERSION		2
+#define	SL_RPC_VERSION		3
 
 /* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
@@ -195,6 +195,8 @@ enum {
 	SRMT_BATCH_RP,				/* 50: async batch reply */
 	SRMT_CTL,				/* 51: generic control */
 
+	SRMT_FILECB,				/* 52: file callback */
+
 	SRMT_TOTAL
 };
 
@@ -240,6 +242,14 @@ struct srt_ctlsetopt {
 	 int32_t		_pad;
 	uint64_t		opv;		/* value */
 };
+
+struct srm_filecb_req {
+	struct sl_fidgen	fg;		/* file */
+	uint32_t		flags;		/* semantics */
+	 int32_t		_pad;
+} __packed;
+
+#define srm_filecb_rep		srm_generic_rep
 
 #define SRMCTL_OPT_HEALTH	0
 
@@ -797,7 +807,7 @@ struct srm_create_rep {
 	struct srt_stat		cattr;		/* attrs of new file */
 	struct srt_stat		pattr;		/* parent dir attributes */
 	 int32_t		rc;		/* 0 for success or slerrno */
-	 int32_t		_pad;
+	int32_t			lease;
 
 	/* parameters for fetching first bmap */
 	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
@@ -808,13 +818,15 @@ struct srm_create_rep {
 struct srm_getattr_req {
 	struct sl_fidgen	fg;
 	sl_ios_id_t		iosid;
-	 int32_t		_pad;
+	 int32_t		lease;
 } __packed;
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
 	 uint32_t		xattrsize;
 	 int32_t		rc;
+	 int32_t		lease;	
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getattr2_rep {
@@ -822,6 +834,8 @@ struct srm_getattr2_rep {
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		rc;
 	 int32_t		_pad;
+	 int32_t		clease;
+	 int32_t		please;
 } __packed;
 
 struct srm_io_req {
@@ -909,7 +923,8 @@ struct srm_readdir_rep {
 	uint32_t		eof:1;		/* flag: directory read EOF */
 	uint32_t		nents:31;	/* #dirents returned */
 	 int32_t		rc;
-	unsigned char		ents[824];
+	 int32_t		lease;
+	unsigned char		ents[820];
 /* XXX ents should be in a portable format, not fuse_dirent */
 /* XXX ents is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
 } __packed;
@@ -945,7 +960,9 @@ struct srm_rename_rep {
 	struct srt_stat		srr_cattr;	/* child node */
 	struct srt_stat		srr_clattr;	/* clobbered node */
 	 int32_t		rc;
-	 int32_t		_pad;
+	 int32_t		olease;
+	 int32_t		nlease;
+	 int32_t		clease;
 } __packed;
 
 struct srm_replrq_req {
@@ -989,7 +1006,7 @@ struct srm_symlink_req {
 	struct sl_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		linklen;	/* NUL not transmitted */
-	 int32_t		_pad;
+	 int32_t		lease;	
 /* link path name is in bulk */
 } __packed;
 
@@ -1005,6 +1022,8 @@ struct srm_unlink_rep {
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		valid;		/* child attr valid */
 	 int32_t		rc;
+	 int32_t		lease;		/* if valid is set */
+	 int32_t		_pad;
 } __packed;
 
 struct srm_listxattr_req {

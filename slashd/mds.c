@@ -53,6 +53,14 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+
+/*
+ * Longer timeout values reduce RPC cost, but need more memory to
+ * keep track of them.
+ */
+int			slm_lease_timeout = BMAP_TIMEO_MAX;
+int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
+
 #define	SLM_CBARG_SLOT_CSVC	0
 
 struct pfl_odt		*slm_bia_odt;
@@ -1350,7 +1358,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1428,7 +1436,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 	if (bml->bml_expire <= time(NULL))
 		OPSTAT_INCR("bmap-restart-expired");
 
