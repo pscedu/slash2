@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -631,12 +630,8 @@ slictlthr_spawn(const char *fn)
 
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
-
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
-	psc_ctlparam_register_simple("sys.rpc_version",
-	    slctlparam_rpc_version_get, NULL);
-
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
 

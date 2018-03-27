@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -47,11 +46,6 @@ struct srt_stat;
 
 struct slm_sth;
 struct bmap_mds_lease;
-extern int slm_lease_timeout;
-extern int slm_callback_timeout;
-
-#define CALLBACK_TIMEO_MAX             240     /* max/default callback timeout */
-#define CALLBACK_TIMEO_MIN             40      /* minimum callback timeout */
 
 extern sqlite3	*db_handle;
 
@@ -365,7 +359,6 @@ extern int	mds_read_file(void *, void *, uint64_t, size_t *, off_t);
 extern int	mds_write_file(void *, void *, uint64_t, size_t *, off_t);
 extern int	mds_release_file(void *);
 
-extern struct fcmh_timeo_table	slm_fcmh_callbacks;
 
 /*
  * List of fault point that will be auto-registered on startup.

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2016, Pittsburgh Supercomputing Center
+ * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -89,9 +88,6 @@ struct psc_poolmaster	 slm_bml_poolmaster;
 struct psc_poolmgr	*slm_bml_pool;
 
 struct psc_poolmaster	 slm_repl_status_poolmaster;
-
-struct psc_poolmaster	 slm_callback_poolmaster;
-struct psc_poolmgr	*slm_callback_pool;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -587,19 +583,6 @@ main(int argc, char *argv[])
 	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 2048,
 	    2048, 0, NULL, "bmplease");
 	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
-
-
-	/*
- 	 * Initialize file callback data structures.
- 	 */
-	psc_poolmaster_init(&slm_callback_poolmaster,
-	    struct fcmh_mds_callback, fmc_lentry, PPMF_AUTO, MDS_FIDCACHE_SIZE,
-	    MDS_FIDCACHE_SIZE, 0, NULL, "callback");
-	slm_callback_pool = psc_poolmaster_getmgr(&slm_callback_poolmaster);
-
-	INIT_SPINLOCK(&slm_fcmh_callbacks.ftt_lock);
-	pll_init(&slm_fcmh_callbacks.ftt_callbacks, struct fcmh_mds_callback,
-	    fmc_timeo_lentry, &slm_fcmh_callbacks.ftt_lock);
 
 	sl_nbrqset = pscrpc_prep_set();
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, 8,

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2007-2016, Pittsburgh Supercomputing Center
+ * Copyright 2007-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -125,7 +124,6 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	}
 	fmi = fcmh_2_fmi(f);
 	memset(fmi, 0, sizeof(*fmi));
-	INIT_PSCLIST_HEAD(&fmi->fmi_callbacks);
 
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
 	    &f->fcmh_sstb, &fcmh_2_mfid(f));

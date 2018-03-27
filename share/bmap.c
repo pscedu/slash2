@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2016, Pittsburgh Supercomputing Center
+ * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -71,9 +70,12 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
-	pfl_rwlock_wrlock(&f->fcmh_rwlock);
-	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-	pfl_rwlock_unlock(&f->fcmh_rwlock);
+	if (!(b->bcm_flags & BMAPF_DISCARD)) {
+		pfl_rwlock_wrlock(&f->fcmh_rwlock);
+		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
+	} else
+		OPSTAT_INCR("bmap-discard");
 
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_pool_return(bmap_pool, b);
@@ -141,8 +143,11 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 			goto restart;
 		}
 
+		/* (gdb) p ((struct bmap_cli_info *) (b+1))->bci_bmpc.bmpc_tree */
+
 		if ((b->bcm_flags & BMAPF_TOFREE) ||
 		    (b->bcm_flags & BMAPF_DISCARD)) {
+
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
@@ -321,12 +326,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
 		if (rc == -ENOENT) {
-			b->bcm_flags &= ~(BMAPF_LOADED|BMAPF_MODECHNG);
-			/* 
-			 * (gdb) p ((struct pfl_opstat *) \
-			 *       pfl_opstats.pda_items[4]).opst_name
-			 *
-			 */
+			b->bcm_flags &= ~BMAPF_LOADED;
 			b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 			OPSTAT_INCR("bmap-reload");
 			goto retrieve;

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -137,7 +136,7 @@ struct bmap {
 #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
 #define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
 #define BMAPF_DISCARD		(1 <<  6)	/* discard bmap asap */
-#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (i.e., READ -> WRITE) */
+#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
 #define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
 #define _BMAPF_SHIFT		(1 <<  10)
@@ -396,7 +395,6 @@ RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
 	void	(*bmo_init_privatef)(struct bmap *);
-	int	(*bmo_reapf)(void);			/* not used for now */
 	int	(*bmo_retrievef)(struct bmap *, int);
 	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);
 	void	(*bmo_final_cleanupf)(struct bmap *);

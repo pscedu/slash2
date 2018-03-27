@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2009-2016, Pittsburgh Supercomputing Center
+ * Copyright 2009-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -350,12 +349,6 @@ void
 slctlparam_version_get(char *val)
 {
 	snprintf(val, PCP_VALUE_MAX, "%d", sl_stk_version);
-}
-
-void
-slctlparam_rpc_version_get(char *val)
-{
-	snprintf(val, PCP_VALUE_MAX, "%d", SL_RPC_VERSION);
 }
 
 void

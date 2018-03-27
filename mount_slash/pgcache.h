@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2009-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -326,6 +325,8 @@ extern struct psc_listcache	 msl_idle_pages;
 extern struct psc_listcache	 msl_readahead_pages;
 
 extern struct psc_listcache	 bmpcLru;
+
+void   bmpc_biorqs_destroy_locked(struct bmap *);
 
 static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)

@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -342,8 +341,6 @@ void	 msl_readahead_svc_destroy(void);
 void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
-void	 msl_bmap_cache_rls(struct bmap *);
-
 struct pscfs_creds *
 	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *, int);
 
@@ -360,6 +357,10 @@ void	 parse_mapfile(void);
 
 void	 bmap_flushq_wake(int);
 void	 bmap_flush_resched(struct bmpc_ioreq *, int);
+
+void	 msreadahead_cancel(struct fidc_membh *);
+void	 slc_fcmh_invalidate_bmap(struct fidc_membh *, int);
+
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)

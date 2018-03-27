@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -168,7 +167,6 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
 	if (b->bcm_flags & BMAPF_WR)
-		/* XXX hit this on 01/18/2018 */
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
 	if (msl_force_dio)
@@ -395,6 +393,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	int rc;
 
@@ -419,7 +418,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	if (!rc) {
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-		msl_bmap_reap_init(b);
+		lc_move2tail(&msl_bmaptimeoutq, bci);
 		OPSTAT_INCR("msl.bmap-extend-cb-ok");
 	} else {
 		msl_bmap_cache_rls(b);
@@ -545,10 +544,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	}
 
 	BMAP_LOCK(b);
-	if (!rc) {
-		msl_bmap_stash_lease(b, &mp->sbd, "extend");
-		msl_bmap_reap_init(b);
-	}
+	if (!rc)
+		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
@@ -577,7 +574,6 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	/* ignore all errors for this background operation */
 	if (!rc) {
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
-		msl_bmap_reap_init(b);
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
@@ -710,7 +706,6 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
-		msl_bmap_reap_init(b);
 		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
@@ -755,10 +750,8 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-	if (!rc) {
+	if (!rc)
 		msl_bmap_stash_lease(b, &mp->sbd, "reassign");
-		msl_bmap_reap_init(b);
-	}
 
 	b->bcm_flags &= ~BMAPF_REASSIGNREQ;
 	bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
@@ -917,6 +910,8 @@ msl_bmap_reap_init(struct bmap *b)
 
 		if (!r)
 			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
+		psc_assert(b->bcm_flags & BMAPF_WR);
+
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAPF_DIO;
 	}
@@ -1070,6 +1065,7 @@ msbwatchthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
+
 			if (b->bcm_flags & BMAPF_DISCARD) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1435,7 +1431,6 @@ dump_bmap_flags(uint32_t flags)
 
 struct bmap_ops sl_bmap_ops = {
 	msl_bmap_init,			/* bmo_init_privatef() */
-	NULL,				/* bmo_reapf() */
 	msl_bmap_retrieve,		/* bmo_retrievef() */
 	msl_bmap_modeset,		/* bmo_mode_chngf() */
 	msl_bmap_final_cleanup		/* bmo_final_cleanupf() */

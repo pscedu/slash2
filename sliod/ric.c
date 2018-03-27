@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2008-2016, Pittsburgh Supercomputing Center
+ * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -186,7 +185,6 @@ sli_enqueue_update(struct fidc_membh *f)
 		f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
 		fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
 	} else {
-		/* XXX don't move if we have accumulate many writes */
 		OPSTAT_INCR("fcmh-update-requeue");
 		lc_move2tail(&sli_fcmh_update, fii);
 	}
@@ -646,10 +644,6 @@ sli_ric_handler(struct pscrpc_request *rq)
 	char buf[PSCRPC_NIDSTR_SIZE];
 
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
-		/*
-		 * 01/22/2018: At 45116, rq->rq_export is NULL, triggers
- 		 * signal 11, Segmentation fault.
- 		 */
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
 			rc = -PFLERR_NOTCONN;

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2007-2016, Pittsburgh Supercomputing Center
+ * Copyright 2007-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -83,7 +82,6 @@ int			slm_min_space_lastcode;
 struct timespec		slm_min_space_lastcheck;
 int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 	
-struct fcmh_timeo_table	slm_fcmh_callbacks;
 
 static void
 slm_root_attributes(struct srt_stat *attr)
@@ -210,135 +208,6 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
- * Register our intention to access the file. If there are other clients 
- * interested in the same file, let them know.
- *
- * Note that a client doesn't ask for a callback explicitly. This way, we 
- * only incur overhead when more than one client is access the same file 
- * around the same time window.
- */
-int
-slm_fcmh_coherent_callback(struct fidc_membh *f, 
-    struct pscrpc_export *exp, int32_t *leasep)
-{
-	int32_t lease = 0;
-	int rc, count, found;
-	lnet_nid_t nid;
-	lnet_pid_t pid;
-	struct psc_listentry *tmp;
-	struct fcmh_mds_info *fmi;
-	struct srm_filecb_req *mq;
-	struct srm_filecb_rep *mp;
-	struct fcmh_mds_callback *cb, *found_cb;
-	struct pscrpc_request *rq = NULL;
-	struct slrpc_cservice *csvc = NULL;
-
-	pid = exp->exp_connection->c_peer.pid;
-	nid = exp->exp_connection->c_peer.nid;
-
-	rc = 0;
-	found = 0;
-	count = 0;
-
-
-#if 0
-	if (leasep)
-		*leasep = 30;
-	return (0);
-
-#else
-
-	fmi = fcmh_2_fmi(f);
-	FCMH_LOCK(f);
-	psclist_for_each(tmp, &fmi->fmi_callbacks) {
-		count++;
-		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
-		if (cb->fmc_nidpid.nid == nid &&
-		    cb->fmc_nidpid.pid == pid) {
-			psc_assert(!found);
-			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
-			found = 1;
-			found_cb = cb;
-		}
-	}
-	if (!count) {
-		lease = slm_callback_timeout;
-		OPSTAT_INCR("slm-new-callback");
-	}
-	if (count == 1 && found) {
-		lease = slm_callback_timeout;
-		OPSTAT_INCR("slm-renew-callback");
-	}
-	/*
- 	 * If the number of users goes from 1 to 2, send callbacks.
- 	 */
-	if (count == 1 && !found) {
-		csvc = slm_getclcsvc(cb->fmc_exp, 0);
-		/*
- 		 * Hit this when a client dies. Need more investigation.
- 		 */
-		if (!csvc) {
-			OPSTAT_INCR("slm-callback-skip");
-			goto next;
-		}
-		rc = SL_RSX_NEWREQ(csvc, SRMT_FILECB, rq, mq, mp);
-		if (rc)
-			goto next;
-		mq->fg = f->fcmh_fg;
-		rq->rq_async_args.pointer_arg[0] = csvc;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc)
-			goto next;
-		rq = NULL;
-		OPSTAT_INCR("slm-invoke-callback");
-	}
-
- next:
-
-	if (!found) {
-		cb = psc_pool_get(slm_callback_pool);
-		cb->fmc_nidpid.nid = nid;
-		cb->fmc_nidpid.pid = pid;
-		cb->fmc_exp = exp;
-		cb->fmc_fmi = fcmh_2_fmi(f);
-		INIT_PSC_LISTENTRY(&cb->fmc_lentry);
-		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
-		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
-		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
-	} else
-		cb = found_cb;
-	/*
- 	 * At this point, cb can be either a new callback or the one
- 	 * found on the list.  In either case, we update its
- 	 * expiration time, and add it to the end of the list.
- 	 *
- 	 * XXX we do this even if the lease time is zero.
- 	 */
-	cb->fmc_expire = time(NULL) + slm_callback_timeout;
-	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
-	FCMH_ULOCK(f);
-
-	/*
- 	 * Allow directory and its contents to be cached briefly.
- 	 * Some directories like root are naturally shared by
- 	 * many clients. If a client dies or goes away, its call
- 	 * back won't be cleared for a while. This makes sure we
- 	 * make progress regardless.
- 	 */
-	if (fcmh_isdir(f) && lease < 5)
-		lease = 5;
-
-	if (leasep)
-		*leasep = lease;
-	if (rq)
-		pscrpc_req_finished(rq);
-
-#endif
-
-	return (rc);
-}
-
 int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
@@ -368,10 +237,9 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	mp->xattrsize = mdsio_hasxattrs(vfsid, &rootcreds,
 	    fcmh_2_mfid(f));
 
-	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
-
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
+
  out:
 	if (f)
 		fcmh_op_done(f);
@@ -607,11 +475,6 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mdsio_fcmh_refreshattr(c, &mp->cattr);
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->clease);
-
  out:
 	if (c)
 		fcmh_op_done(c);
@@ -624,7 +487,6 @@ int
 slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL;
-	struct fidc_membh *c = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int vfsid;
@@ -706,22 +568,15 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		}
 	}
 
-	mp->rc = -slm_fcmh_get(&mp->attr.sst_fg, &c);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
-
  out:
-	if (c)
-		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
 	return (0);
 }
 
 int
-slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq, 
-    struct srm_mkdir_rep *mp, int opflags, struct fidc_membh **dp)
+slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
+    int opflags, struct fidc_membh **dp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	slfid_t fid = 0;
@@ -745,10 +600,6 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
 	mds_reserve_slot(1);
 	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mfid(p), mq->name,
 	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
@@ -763,10 +614,8 @@ slm_mkdir(int vfsid, struct pscrpc_request *rq, struct srm_mkdir_req *mq,
 	 * Set new subdir's new files' default replication policy from
 	 * parent dir.
 	 */
-	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0) {
-		mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->clease);
+	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
 		slm_fcmh_endow(vfsid, p, c);
-	}
 
 	if (dp) {
 		if (mp->rc == -EEXIST &&
@@ -803,14 +652,13 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	return (slm_mkdir(vfsid, rq, mq, mp, 0, NULL));
+	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
 }
 
 int
 slm_rmc_handle_mknod(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL;
-	struct fidc_membh *c = NULL;
 	struct srm_mknod_req *mq;
 	struct srm_mknod_rep *mp;
 	struct slash_creds cr;
@@ -835,19 +683,9 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->please);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	mp->rc = -slm_fcmh_get(&mp->cattr.sst_fg, &c);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->clease);
  out:
 	if (p)
 		fcmh_op_done(p);
-	if (c)
-		fcmh_op_done(c);
 	return (0);
 }
 
@@ -952,10 +790,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(c, rq->rq_export, &mp->lease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-	
 	slm_fcmh_endow(vfsid, p, c);
 
 	/* obtain lease for first bmap as optimization */
@@ -1172,11 +1006,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	} else {
 		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, iov, nitems(iov));
-		if (mp->rc)
-			PFL_GOTOERR(out, mp->rc);
 	}
-
-	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, &mp->lease);
 
  out:
 	if (f)
@@ -1295,18 +1125,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->olease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
 	if (SAMEFG(&mq->opfg, &mq->npfg)) {
 		np = op;
-		mp->nlease = mp->olease;
 	} else {
 		mp->rc = -slm_fcmh_get(&mq->npfg, &np);
-		if (mp->rc)
-			PFL_GOTOERR(out, mp->rc);
-		mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->nlease);
 		if (mp->rc)
 			PFL_GOTOERR(out, mp->rc);
 	}
@@ -1357,10 +1179,6 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		fcmh_op_done(c);
 	} else
 		mp->srr_clattr.sst_fid = FID_ANY;
-
-	mp->rc = slm_fcmh_coherent_callback(op, rq->rq_export, &mp->clease);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
 
  out:
 	if (op)
@@ -1815,8 +1633,6 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mp->rc = -mdsio_rmdir(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
-
-	mp->rc = slm_fcmh_coherent_callback(p, rq->rq_export, &mp->lease);
 
  out:
 	if (mp->rc == 0) {

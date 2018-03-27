@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -143,8 +142,7 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
-#define BMAP_TIMEO_MAX		240	/* Max/default bmap lease timeout */
-#define BMAP_TIMEO_MIN		40	/* Min bmap lease timeout */
+#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;

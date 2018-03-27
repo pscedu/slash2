@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2009-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,7 +44,6 @@ int slctlparam_resources(int, struct psc_ctlmsghdr *,
 
 void slctlparam_uptime_get(char *);
 void slctlparam_version_get(char *);
-void slctlparam_rpc_version_get(char *);
 void slctlparam_logrotate_get(char *);
 int  slctlparam_logrotate_set(const char *);
 

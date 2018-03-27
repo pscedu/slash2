@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -218,8 +217,7 @@ struct fidc_membh {
 #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
 #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
 #define FCMH_OPCNT_UPDATE		12	/* IOD: update file */
-#define FCMH_OPCNT_CALLBACK		13
-#define FCMH_OPCNT_MAXTYPE		14
+#define FCMH_OPCNT_MAXTYPE		13
 
 void	fidc_init(int);
 void	fidc_destroy(void);

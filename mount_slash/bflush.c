@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2008-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -303,7 +302,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 /*
  * Called in error contexts where the biorq must be rescheduled by
  * putting it back to the new request queue.  Typically this is from a
- * write RPC cb.
+ * write RPC callback.
  */
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
@@ -325,10 +324,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BIORQ_LOCK(r);
 
-	if (rc == -EAGAIN)
-		goto requeue;
-
-	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
+	if ((b->bcm_flags & BMAPF_DISCARD) ||
+	    rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
 	    ((r->biorq_flags & BIORQ_EXPIRE) && 
 	     (r->biorq_retries >= msl_max_retries * 32))) {
 
@@ -337,12 +334,22 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 			bci->bci_flush_rc = rc;
 		BMAP_ULOCK(r->biorq_bmap);
 
-		OPSTAT_INCR("msl.bmap-flush-maxretry");
+		if (b->bcm_flags & BMAPF_DISCARD)
+			OPSTAT_INCR("msl.bmap-flush-discard");
+	     	else if (rc == -ENOSPC)
+			OPSTAT_INCR("msl.bmap-flush-enospc");
+		else
+			OPSTAT_INCR("msl.bmap-flush-maxretry");
 		msl_bmpces_fail(r, rc);
 		msl_biorq_release(r);
 		return;
 	}
 
+	/*
+ 	 * We might BMAP_ULOCK so don't clear it earlier.
+ 	 */
+	if (rc == -EAGAIN)
+		goto requeue;
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
@@ -445,10 +452,11 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		 * one RPC.  So the callback handler won't race with us.
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
-
+	
 		psc_assert(r->biorq_flags & BIORQ_ONTREE);
 		r->biorq_flags &= ~BIORQ_ONTREE;
 
+		/* XXX not using rwlock here */
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
 	}
 	BMAP_ULOCK(b);
@@ -763,11 +771,17 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
 
 		if ((b->bcm_flags & BMAPF_SCHED) ||
-		    (b->bcm_flags & BMAPF_DISCARD) ||
 		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
 			BMAP_ULOCK(b);
 			continue;
 		}
+		if (b->bcm_flags & BMAPF_DISCARD) {
+			b->bcm_flags |= BMAPF_SCHED;
+			psc_dynarray_add(bmaps, b);
+			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+			goto add;
+		}
+
 		m = libsl_ios2resm(bmap_2_ios(b));
 		rc = msl_resm_throttle_yield(m);
 		if (!rc && bmap_flushable(b)) {
@@ -775,8 +789,8 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 			psc_dynarray_add(bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 		}
+ add:
 		BMAP_ULOCK(b);
-
 		if (psc_dynarray_len(bmaps) >= msl_ios_max_inflight_rpcs)
 			break;
 	}
@@ -787,6 +801,12 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
+		if (b->bcm_flags & BMAPF_DISCARD) {
+			OPSTAT_INCR("msl.bmap-flush-discard");
+			bmpc_biorqs_destroy_locked(b);
+			goto next;
+		}
+
 		if (!bmap_flushable(b)) {
 			OPSTAT_INCR("msl.bmap-flush-bail");
 			goto next;
@@ -807,9 +827,9 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 			if (!rc)
 				didwork = 1;
 		}
+		BMAP_LOCK(b);
 		psc_dynarray_reset(reqs);
 
-		BMAP_LOCK(b);
  next:
 		b->bcm_flags &= ~BMAPF_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);

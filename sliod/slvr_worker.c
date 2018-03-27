@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -289,12 +288,6 @@ sliupdthr_main(struct psc_thread *thr)
 			goto again; 
 		}
 
-		/*
-		 * 01/30/2018:
-		 *
-		 * At 45127, we crash in pscrpc_prep_req_pool() because
-		 * csvc->csvc_import is somehow NULL. csvc_lasterrno = -110.
-		 */
 		rc = SL_RSX_NEWREQ(csvc, SRMT_UPDATEFILE, rq, mq, mp);
 		if (rc)
 			goto out;

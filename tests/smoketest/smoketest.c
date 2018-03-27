@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2010-2016, Pittsburgh Supercomputing Center
+ * Copyright 2010-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -144,44 +143,6 @@ test_rename(void)
 	}
 	return (0);
 
-}
-
-/* written to verify a dircache bug fix */
-int
-test_longname(void)
-{
-	int fd, rc;
-	char buf[1234];
-
-	char *tmpname1 = ".xfc.bbbbbbbb.new-12345566777777777777.xxxxx.xxxxx.---------bbbbbbbbbbbbbbbbbbbbbb.4356";
-	char *tmpname2 = "......111111111111111111.00000000000000000000000.ghghghghghhghhgh";
-
-	fd = open(tmpname1, O_CREAT|O_RDWR, S_IRWXU);
-	if (fd < 0) {
-		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
-		return (1);
-	}
-	rc = write(fd, buf, 1234);
-	if (rc != 1234) {
-		printf("Fail to write file %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
-		return (1);
-	}
-	rc = close(fd);
-	if (rc < 0) {
-		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
-		return (1);
-	}
-	rc = rename(tmpname1, tmpname2);
-	if (rc) {
-		printf("Fail to rename file %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
-		return (1);
-	}
-	rc = unlink(tmpname2);
-	if (rc) {
-		printf("Fail to remove file %s, errno = %d at line %d!\n", tmpname2, errno, __LINE__);
-		return (1);
-	}
-	return (0);
 }
 
 /*
@@ -641,10 +602,6 @@ struct test_desc test_list[] = {
 	{
 		"Create a file with the name that has just been renamed",
 		test_rename
-	},
-	{
-		"Test using a very long name to create/rename/unlink a file",
-		test_longname
 	},
 	{
 		"Random 8-byte writes at random offsets to simulate FUSE I/O",

@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2007-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -69,8 +68,8 @@ struct fcmh_cli_info_dir {
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
+	struct timeval			 fci_age;	/* attr update time */
 
-	long				 fci_expire;	/* attr expire time */
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
@@ -127,13 +126,10 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 
-#define slc_fcmh_setattr(f, sstb, timeout) \
-	slc_fcmh_setattrf((f), (sstb), 0, (timeout))
-
-#define slc_fcmh_setattr_locked(f, sstb, timeout) \
-	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, (timeout))
+#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
+#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
 
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -53,14 +52,6 @@
 #include "up_sched_res.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
-
-
-/*
- * Longer timeout values reduce RPC cost, but need more memory to
- * keep track of them.
- */
-int			slm_lease_timeout = BMAP_TIMEO_MAX;
-int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
 
 #define	SLM_CBARG_SLOT_CSVC	0
 
@@ -1359,7 +1350,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + slm_lease_timeout;
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1437,7 +1428,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + slm_lease_timeout;
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
 	if (bml->bml_expire <= time(NULL))
 		OPSTAT_INCR("bmap-restart-expired");
 

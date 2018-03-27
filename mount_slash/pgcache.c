@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2009-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -564,6 +563,36 @@ bmpc_biorqs_flush(struct bmap *b)
 		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
 		BMAP_LOCK(b);
 	}
+}
+
+void
+bmpc_biorqs_destroy_locked(struct bmap *b)
+{
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmpc_ioreq *r;
+	struct bmap_pagecache *bmpc;
+	int i;
+
+	BMAP_LOCK_ENSURE(b);
+
+	/*
+ 	 * To avoid double release of a ioreq.  This logic is protected by
+ 	 * BMAPF_SCHED and BMAP_LOCK.
+ 	 */
+	bmpc = bmap_2_bmpc(b);
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs)
+		psc_dynarray_add(&a, r);
+
+	BMAP_ULOCK(b);
+
+	msl_bmap_cache_rls(b);
+	DYNARRAY_FOREACH(r, i, &a) {
+		/* p ((struct pfl_opstat *)pfl_opstats.pda_items[68]).opst_name */
+		OPSTAT_INCR("msl.biorq-discard-destroy");
+		msl_biorq_release(r);
+	}
+	BMAP_LOCK(b);
+	psc_dynarray_free(&a);
 }
 
 #define	PAGE_RECLAIM_BATCH	1

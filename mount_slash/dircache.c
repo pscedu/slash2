@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2010-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -297,7 +296,7 @@ dircache_ent_cmp(const void *a, const void *b)
 }
 
 void
-dircache_trim(struct fidc_membh *d, int force)
+dircache_trim(struct fidc_membh *d)
 {
 	struct psc_hashbkt *b;
 	struct timeval now;
@@ -307,7 +306,7 @@ dircache_trim(struct fidc_membh *d, int force)
 	PFL_GETTIMEVAL(&now);
 	fci = fcmh_get_pri(d);
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
-		if (!force && dce->dce_expire > now.tv_sec)
+		if (dce->dce_age + DCACHE_ENTRY_LIFETIME > now.tv_sec)
 			break;
 		fci->fcid_count--;
 		psc_assert(fci->fcid_count >= 0);
@@ -328,7 +327,7 @@ dircache_trim(struct fidc_membh *d, int force)
 
 void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    int nents, void *base, size_t size, int eof, int32_t lease)
+    int nents, void *base, size_t size, int eof)
 {
 	int i, rc;
 	off_t adj;
@@ -344,7 +343,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	DIRCACHE_WRLOCK(d);
 
-	dircache_trim(d, 0);
+	dircache_trim(d);
 
 	fci = fcmh_get_pri(d);
 	/*
@@ -392,7 +391,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_flag = DIRCACHE_F_SHORT;
 		dce->dce_name = &dce->dce_short[0];
-		dce->dce_expire = now.tv_sec + lease;
+		dce->dce_age = now.tv_sec;
 		strncpy(dce->dce_name, dirent->pfd_name, dce->dce_namelen);
 		dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 		    dce->dce_namelen);
@@ -447,7 +446,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		}
 		FCMH_LOCK(f);
 		OPSTAT_INCR("msl.readdir-fcmh");
-		slc_fcmh_setattr_locked(f, &e->sstb, lease);
+		slc_fcmh_setattr_locked(f, &e->sstb);
 
 #if 0
 		/*
@@ -467,8 +466,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_nents = nents;
 	p->dcp_base = base;
 	p->dcp_size = size;
-	PFL_GETTIMEVAL(&now);
-	p->dcp_expire = now.tv_sec + lease;
+	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_flags |= eof ? DIRCACHEPGF_EOF : 0;
 	p->dcp_nextoff = dirent ? (off_t)dirent->pfd_off : p->dcp_off;
 	DIRCACHE_ULOCK(d);
@@ -487,7 +485,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 		return;
 
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d, 0);
+	dircache_trim(d);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;
@@ -513,7 +511,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
  * Add a name after a successful lookup.
  */
 void
-dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t lease)
+dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 {
 	int len;
 	struct timeval now;
@@ -527,7 +525,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	fci = fcmh_get_pri(d);
 
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d, 0);
+	dircache_trim(d);
 
 	if (fci->fcid_count >= msl_max_namecache_per_directory) {
 		OPSTAT_INCR("dircache-limit");
@@ -555,7 +553,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	/* fuse treats zero node ID as ENOENT */
 	psc_assert(ino);
 	dce->dce_ino = ino;
-	dce->dce_expire = now.tv_sec + lease;
+	dce->dce_age = now.tv_sec;
 	dce->dce_pino = fcmh_2_fid(d);
 	dce->dce_key = dircache_hash(dce->dce_pino, dce->dce_name, 
 	    dce->dce_namelen);
@@ -605,7 +603,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 
 	fci = fcmh_get_pri(d);
 	DIRCACHE_WRLOCK(d);
-	dircache_trim(d, 0);
+	dircache_trim(d);
 
 	len = strlen(name);
 	tmpdce.dce_name = (char *) name;

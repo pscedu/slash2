@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2017, Pittsburgh Supercomputing Center
+ * Copyright 2006-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -543,7 +542,6 @@ dump_bml_flags(uint32_t flags)
 
 struct bmap_ops sl_bmap_ops = {
 	mds_bmap_init,			/* bmo_init_privatef() */
-	NULL,				/* bmo_reapf() */
 	mds_bmap_read,			/* bmo_retrievef() */
 	NULL,				/* bmo_mode_chngf() */
 	mds_bmap_destroy		/* bmo_final_cleanupf() */

@@ -2,8 +2,7 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright 2009-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -222,7 +221,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAPF_LOADING	? 'l' : '-',
 	    scb->scb_flags & BMAPF_DIO		? 'D' : '-',
 	    scb->scb_flags & BMAPF_TOFREE	? 'F' : '-',
-	    scb->scb_flags & BMAPF_DISCARD	? 'X' : '-',
+	    scb->scb_flags & BMAPF_DISCARD      ? 'X' : '-',
 	    scb->scb_flags & BMAPF_MODECHNG	? 'G' : '-',
 	    scb->scb_flags & BMAPF_WAITERS	? 'w' : '-',
 	    scb->scb_flags & BMAPF_BUSY		? 'B' : '-',

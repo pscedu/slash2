@@ -2,7 +2,6 @@
 /*
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
- * Copyright 2015-2016, Google, Inc.
  * Copyright 2007-2018, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
@@ -1053,11 +1052,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("sys.resources", slctlparam_resources);
 	psc_ctlparam_register_simple("sys.uptime",
 	    slctlparam_uptime_get, NULL);
-
 	psc_ctlparam_register_simple("sys.version",
 	    slctlparam_version_get, NULL);
-	psc_ctlparam_register_simple("sys.rpc_version",
-	    slctlparam_rpc_version_get, NULL);
 
 	psc_ctlparam_register_var("sys.attr_timeout", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_attributes_timeout);
