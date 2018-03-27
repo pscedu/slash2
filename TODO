@@ -5492,6 +5492,38 @@ Right now, the test fails with cp (errno = 1), I suspect name cache issue.
 	worker[1] Trying to dump core for [mysqld.2 - pid: 27495, winpid: 27495]
 	rpl.rpl_semi_sync_group_commit_deadlock 'mix' [ fail ]  timeout after 900 seconds
 
+	02/27/2018:
+
+	
+	Could not execute 'check-warnings' for testcase 'rpl.rpl_semi_sync_deadlock' (res: 1):
+	mysqltest: Could not open connection 'default' after 500 attempts: 2002 Can't connect to \
+	local MySQL server through socket '/tmp/mysql.sock' (2)
+
+
+	02/28/2018
+	----------
+
+	$ tar xvf ~/mysql-boost-5.7.17.tar.gz
+	$ cmake -DWITH_BOOST=boost/boost_1_59_0 .
+	$ make
+	$ cd mysql-test/
+	$ time ./mysql-test-run --big-test --skip-test=federated
+
+	rpl.rpl_sequential 'mix'                 [ fail ]
+        Test ended at 2018-02-28 16:20:22
+
+	CURRENT_TEST: rpl.rpl_sequential
+	mysqltest: In included file ./include/wait_condition.inc at line 49:
+	included from ./include/wait_condition_or_abort.inc at line 25:
+	included from ./extra/rpl_tests/rpl_parallel_load.test at line 188:
+	included from /zzh-slash2/zhihui/mysql-5.7.17/mysql-test/suite/rpl/t/rpl_sequential.test at line 21:
+	At line 49: Query 'SELECT count(*)+sleep(1) = 5 FROM test0.benchmark' didn't return a result set
+
+	Only  518  of 5001 completed.
+	mysql-test-run: *** ERROR: Not all tests completed
+	zhihui@zebes: /zzh-slash2/zhihui/mysql-5.7.17/mysql-test$
+
+
 01/13/2017
 ----------
 
@@ -6050,3 +6082,166 @@ Look into FUSE max readahead setting.
 
 * FUSE readdirplus
 
+01/22/2018
+----------
+
+A signal 7 stack:
+
+(gdb) bt
+#0  0x000000000040c6f0 in pthread_getspecific@plt ()
+#1  0x00000000004a81cd in pscthr_get_canfail () at /opt/packages/slash2/cli/p/pfl/thread.c:175
+#2  0x00000000004aef09 in pscthr_get_callerinfo () at /opt/packages/slash2/cli/p/pfl/thread.c:545
+#3  0x00000000004b1e6b in _pfl_callerinfo_get (fn=0x4bf1b0 "/opt/packages/slash2/cli/p/pfl/waitq.c", 
+    func=0x4bf380 <__func__.6882> "_psc_waitq_waitabs", lineno=128, subsys=0) at /opt/packages/slash2/cli/p/pfl/pfl.h:124
+#4  0x00000000004b272f in _psc_waitq_waitabs (q=0x7febac3cd670, type=PFL_LOCKPRIMT_SPIN, lockp=0x0, abstime=0x7feb1affae10)
+    at /opt/packages/slash2/cli/p/pfl/waitq.c:128
+#5  0x00007febb2987baf in pscrpcthr_main (thr=0x7febac519250) at /opt/packages/slash2/cli/p/pfl/service.c:734
+#6  0x00000000004a9094 in _pscthr_begin (arg=0x7febc062a110) at /opt/packages/slash2/cli/p/pfl/thread.c:302
+#7  0x00007febc1c5edc5 in start_thread () from /lib64/libpthread.so.0
+#8  0x00007febc198d76d in clone () from /lib64/libc.so.6
+(gdb) up
+#1  0x00000000004a81cd in pscthr_get_canfail () at /opt/packages/slash2/cli/p/pfl/thread.c:175
+175		return (pthread_getspecific(psc_thrkey));
+(gdb) p psc_thrkey
+$3 = 0
+
+01/26/2018
+----------
+
+With 10+ iozone -a in the background, ls -al saw ?? attributes and self build returns 2.
+
+02/01/2018
+----------
+
+Make the slash2 log file as text file so that I can grep.
+
+The following patch solve the problem, but mount client hangs:
+
+diff --git a/pfl/log.c b/pfl/log.c
+index a37bfd3..2955882 100644
+--- a/pfl/log.c
++++ b/pfl/log.c
+@@ -228,7 +228,9 @@ psc_log_init(void)
+ 	char *p;
+ 
+ 	p = getenv("PSC_LOG_FILE");
+-	if (p && psc_log_setfn(p, "w"))
++	if (!p)
++		return;
++	if (psc_log_setfn(p, "w"))
+ 		errx(1, "%s", p);
+ 
+ 	p = getenv("PSC_LOG_FORMAT");
+diff --git a/wokfs/wokctl/wokctl.c b/wokfs/wokctl/wokctl.c
+index 4351ec7..19f32b8 100644
+--- a/wokfs/wokctl/wokctl.c
++++ b/wokfs/wokctl/wokctl.c
+@@ -188,6 +188,14 @@ struct psc_ctlopt opts[] = {
+ int
+ main(int argc, char *argv[])
+ {
++	int i;
++	unsetenv("PSC_LOG_FILE");
++
++	fprintf(stderr, "wokctl arguments: ");
++	for (i = 0; i < argc; i++)
++		fprintf(stderr, "%s ", argv[i]);
++	fprintf(stderr, "\n");
++	
+ 	pfl_init();
+ 	psc_ctlcli_main(PATH_CTLSOCK, argc, argv, opts, nitems(opts));
+ 	exit(0);
+
+02/02/2018
+----------
+
+Investigate smoke test state:
+
+bash-4.2# ./smoketest /zzh-slash2/zhihui
+smoketest: seed = 123456, workdir = /zzh-slash2/zhihui/35923
+Running test 1: Basic file/directory creations and deletions...
+Running test 2: Create a file with the name that has just been renamed...
+Running test 3: Random 8-byte writes at random offsets to simulate FUSE I/O...
+
+Running test 4: A non-owner changes the owner/group of a file to 65535:65535...
+Fail to chown file test-chmod.dat, errno = 1 at line 299!
+Running test 5: Test basic link support...
+Fail to create file test-link.dat, errno = 13 at line 324!
+Running test 6: Test basic truncate support...
+Fail to create file test-truncate.dat, errno = 13 at line 372!
+Running test 7: Test basic open support...
+Fail to create file test-open.dat, errno = 13 at line 426!
+Running test 8: Test basic large file I/O...
+Error opening file large-file-test.dat for writing at line 523.
+Total number of tests = 8, number of successes = 3
+
+
+02/08/2018
+----------
+
+On Thu, Feb 08, 2018 at 04:37:43PM -0500, Jason F Sommerfield wrote:
+
+> When doing an ls, I get errors that I can't view directories and them an
+> presented with the directories--which seems inconsistent.  Presumably I
+> should get the error and not be able to see them or not get an error and
+> be able to see them.
+
+Technically it is not showing which specific operation is causing an error.  I
+have a feeling it is a noncritical operation, set as getxattr.  Could you post
+strace output?
+
+> [root@vm072 vm072.mount_wokfs]# ls -l /pghbio/
+> ls: /pghbio/mapfile_testing: Permission denied
+> drwxr-x---  4 kar     pscstaff 22 Jan 22 20:56 mapfile_testing
+
+
+02/12/2018
+----------
+
+[zhihui@r517 ~]$ msctl-pylon2 -sP
+mem-pool     flag    #free     #use    total    %use    min    max thrsh     #shrnx #em #wa
+===========================================================================================
+asyncrq       A--       64        0       64      0%     64  <inf>    80          0   0   0
+biorq         A--     1024        0     1024      0%   1024  <inf>    80   24286918   0   0
+bmap          A--      784      161      945  17.04%     64  <inf>    80      54733   0   0
+bmpce         A--        0   652619   652619    100%    512 4194304    80     142009   0   0
+bwc           A--       80        0       80      0%     64  <inf>    80    1937880   0   0
+csvc          A--        1       65       66  98.48%     64  <inf>    80          0   0   0
+dircachent    A--     2047        1     2048   0.05%   2048  <inf>    80          0   0   0
+
+02/28/2018
+----------
+
+Make handling of 501 and 511 errors more robust.
+
+03/12/2018
+----------
+
+[zhihui@mds run]$ /usr/local/psc/sbin/slmctl -S slashd.mds.sock -s repl 
+resource                         ingress-pending  egress-pending    ingress-aggr     egress-aggr
+================================================================================================
+sbb1s0@PSC                                     0            5.5G               0          789.8G 
+sbb1s1@PSC                                     0            4.1G               0          687.3G 
+sbb1s2@PSC                                     0            4.3G               0          835.4G 
+sbb1s3@PSC                                     0            6.3G               0          746.4G 
+sbb1s4@PSC                                     0            4.1G               0          805.1G 
+sbb1s5@PSC                                     0            4.3G               0          796.3G 
+sbb1s6@PSC                                     0            6.0G               0          843.8G 
+sbb1s7@PSC                                     0            4.1G               0          791.6G 
+sbb2s0@PSC                                  8.8G               0          796.4G            3.9G
+sbb2s1@PSC                                  9.1G               0          796.4G            4.0G
+sbb2s2@PSC                                  7.5G               0          796.4G            5.4G
+sbb2s3@PSC                                  5.2G               0          796.4G            4.6G
+sbb2s4@PSC                                  3.5G               0          796.4G            5.8G
+sbb2s5@PSC                                  3.2G               0          796.4G            4.2G
+sbb2s6@PSC                                990.0M               0          796.2G            5.6G
+sbb2s7@PSC                                810.0M          270.0M          791.6G           37.2G 
+
+                                        we should get rid of pending number if we can't replicate
+
+Also, make repl-add no-op if the target is already VALID.
+
+03/20/2018
+----------
+
+Track per IOS number of outstanding leases (read and write), and total leases.
