@@ -1,0 +1,822 @@
+diff --git a/slash2/include/bmap.h b/slash2/include/bmap.h
+index 4b2d4a9..28c57e4 100644
+--- a/slash2/include/bmap.h
++++ b/slash2/include/bmap.h
+@@ -136,10 +136,11 @@ struct bmap {
+ #define BMAPF_LOADING		(1 <<  3)	/* retrieval RPC is inflight */
+ #define BMAPF_DIO		(1 <<  4)	/* direct I/O; no client caching allowed */
+ #define BMAPF_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+-#define BMAPF_MODECHNG		(1 <<  6)	/* op mode changing (e.g. READ -> WRITE) */
+-#define BMAPF_WAITERS		(1 <<  7)	/* has bcm_fcmh waiters */
+-#define BMAPF_BUSY		(1 <<  8)	/* temporary processing lock */
+-#define _BMAPF_SHIFT		(1 <<  9)
++#define BMAPF_DISCARD		(1 <<  6)	/* discard bmap asap */
++#define BMAPF_MODECHNG		(1 <<  7)	/* op mode changing (e.g. READ -> WRITE) */
++#define BMAPF_WAITERS		(1 <<  8)	/* has bcm_fcmh waiters */
++#define BMAPF_BUSY		(1 <<  9)	/* temporary processing lock */
++#define _BMAPF_SHIFT		(1 <<  10)
+ 
+ #define BMAP_RW_MASK		(BMAPF_RD | BMAPF_WR)
+ 
+diff --git a/slash2/include/fidcache.h b/slash2/include/fidcache.h
+index 71c578f..b78ecb5 100644
+--- a/slash2/include/fidcache.h
++++ b/slash2/include/fidcache.h
+@@ -218,7 +218,8 @@ struct fidc_membh {
+ #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
+ #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
+ #define FCMH_OPCNT_UPDATE		12	/* IOD: update file */
+-#define FCMH_OPCNT_MAXTYPE		13
++#define FCMH_OPCNT_TRUNC		13	/* CLI: truncate file */
++#define FCMH_OPCNT_MAXTYPE		14
+ 
+ void	fidc_init(int);
+ void	fidc_destroy(void);
+diff --git a/slash2/include/slashrpc.h b/slash2/include/slashrpc.h
+index 75f4ca8..81adb19 100644
+--- a/slash2/include/slashrpc.h
++++ b/slash2/include/slashrpc.h
+@@ -196,6 +196,8 @@ enum {
+ 	SRMT_BATCH_RP,				/* 50: async batch reply */
+ 	SRMT_CTL,				/* 51: generic control */
+ 
++	SRMT_PTRUNC_REPLY,			/* 52: generic control */
++
+ 	SRMT_TOTAL
+ };
+ 
+@@ -550,6 +552,17 @@ struct srm_delete_req {
+ 
+ #define srm_delete_rep		srm_generic_rep
+ 
++struct srm_ptrunc_req {
++	struct sl_fidgen	fg;
++	uint32_t		rc;
++	 int32_t		_pad;
++} __packed;
++
++#define srm_ptrunc_rep		srm_generic_rep
++
++#define srm_delete_rep		srm_generic_rep
++
++
+ struct srt_update_rec {
+ 	struct sl_fidgen	fg;
+ 	uint64_t		nblks;
+diff --git a/slash2/mount_slash/bflush.c b/slash2/mount_slash/bflush.c
+index 3c0828c..446cef7 100644
+--- a/slash2/mount_slash/bflush.c
++++ b/slash2/mount_slash/bflush.c
+@@ -445,7 +445,10 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
+ 		 * one RPC.  So the callback handler won't race with us.
+ 		 */
+ 		r->biorq_last_sliod = bmap_2_ios(b);
++	
++		psc_assert(r->biorq_flags & BIORQ_ONTREE);
+ 		r->biorq_flags &= ~BIORQ_ONTREE;
++
+ 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+ 	}
+ 	BMAP_ULOCK(b);
+@@ -760,6 +763,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
+ 		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+ 
+ 		if ((b->bcm_flags & BMAPF_SCHED) ||
++		    (b->bcm_flags & BMAPF_DISCARD) ||
+ 		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
+ 			BMAP_ULOCK(b);
+ 			continue;
+diff --git a/slash2/mount_slash/bmap_cli.c b/slash2/mount_slash/bmap_cli.c
+index 599c0f9..4128504 100644
+--- a/slash2/mount_slash/bmap_cli.c
++++ b/slash2/mount_slash/bmap_cli.c
+@@ -1067,6 +1067,11 @@ msbwatchthr_main(struct psc_thread *thr)
+ 				continue;
+ 			}
+ 
++			if (b->bcm_flags & BMAPF_DISCARD) {
++				BMAP_ULOCK(b);
++				continue;
++			}
++
+ 			/*
+ 			 * Do not extend if we don't have any data.
+ 			 *
+@@ -1176,7 +1181,8 @@ msbreleasethr_main(struct psc_thread *thr)
+ 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+ 
+ 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
+-			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
++			    (b->bcm_flags & BMAPF_DISCARD) ||
++			    (b->bcm_flags & BMAPF_LEASEEXPIRE)) {
+ 				expire++;
+ 				b->bcm_flags |= BMAPF_TOFREE;
+ 				BMAP_ULOCK(b);
+diff --git a/slash2/mount_slash/fidc_cli.c b/slash2/mount_slash/fidc_cli.c
+index 146174d..2e1046b 100644
+--- a/slash2/mount_slash/fidc_cli.c
++++ b/slash2/mount_slash/fidc_cli.c
+@@ -40,6 +40,7 @@
+ #include "pfl/str.h"
+ #include "pfl/time.h"
+ 
++#include "bmap_cli.h"
+ #include "cache_params.h"
+ #include "dircache.h"
+ #include "fid.h"
+@@ -48,6 +49,58 @@
+ #include "mount_slash.h"
+ #include "rpc_cli.h"
+ 
++extern struct psc_waitq		msl_bmap_waitq;
++
++void
++slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
++{
++	int i, wake = 0;
++	struct bmap *b;
++	struct psc_dynarray a = DYNARRAY_INIT;
++	struct bmap_cli_info *bci;
++
++	/*
++	 * Invalidate bmap lease so that we can renew it with 
++	 * the correct lease.
++	 */
++ restart:
++
++	pfl_rwlock_rdlock(&f->fcmh_rwlock);
++	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
++		if (!BMAP_TRYLOCK(b)) {
++			pfl_rwlock_unlock(&f->fcmh_rwlock);
++			goto restart;
++		}
++		if (b->bcm_flags & BMAPF_TOFREE) {
++			BMAP_ULOCK(b);
++			continue;
++		}
++		if (b->bcm_flags & BMAPF_DISCARD) {
++			BMAP_ULOCK(b);
++			continue;
++		}
++		b->bcm_flags |= BMAPF_DISCARD;
++		BMAP_ULOCK(b);
++		psc_dynarray_add(&a, b);
++	}
++	pfl_rwlock_unlock(&f->fcmh_rwlock);
++
++	DYNARRAY_FOREACH(b, i, &a) {
++		OPSTAT_INCR("msl.bmap-destroy-biorqs");
++		msl_bmap_cache_rls(b);
++		BMAP_LOCK(b);
++		bmap_op_start_type(b, BMAP_OPCNT_WORK);
++		bmpc_biorqs_destroy_locked(b);
++		bci = bmap_2_bci(b);
++		lc_move2head(&msl_bmaptimeoutq, bci);
++		bmap_op_done_type(b, BMAP_OPCNT_WORK);
++	}
++
++	psc_dynarray_free(&a);
++
++	if (wake)
++		psc_waitq_wakeall(&msl_bmap_waitq);
++}
+ /*
+  * Update the high-level app stat(2)-like attribute buffer for a FID
+  * cache member.
+@@ -61,7 +114,7 @@
+  *     (2) This function should only be used by a client.
+  *
+  * The current thinking is to store remote attributes in sstb.
+- */
++ */ 
+ void
+ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
+     int flags)
+@@ -76,18 +129,29 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
+ 	if (fcmh_2_gen(f) == FGEN_ANY)
+ 		fcmh_2_gen(f) = sstb->sst_gen;
+ 
+-	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f) &&
+-	    fcmh_2_gen(f) > sstb->sst_gen) {
+-		/*
+- 		 * We bump it locally for a directory to avoid
+- 		 * race with readdir operations.
+- 		 */
+-		OPSTAT_INCR("msl.generation-backwards");
+-		DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
+-		    "gen %"PRIu64" from old gen %"PRIu64,
+-		    fcmh_2_gen(f), sstb->sst_gen);
+-		goto out;
++	if ((FID_GET_INUM(fcmh_2_fid(f))) != SLFID_ROOT && fcmh_isreg(f)) {
++		if (fcmh_2_gen(f) > sstb->sst_gen) {
++			/*
++			 * We bump it locally for a directory to avoid
++			 * race with readdir operations.
++			 */
++			OPSTAT_INCR("msl.generation-backwards");
++			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
++				"gen %"PRIu64" from old gen %"PRIu64,
++				fcmh_2_gen(f), sstb->sst_gen);
++			goto out;
++		}
++		if (fcmh_2_gen(f) < sstb->sst_gen) {
++#if 0
++			slc_fcmh_invalidate_bmap(f, 0);
++#endif
++			OPSTAT_INCR("msl.generation-forwards");
++			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
++				"gen %"PRIu64" from old gen %"PRIu64,
++				fcmh_2_gen(f), sstb->sst_gen);
++		}
+ 	}
++
+ 	/*
+  	 * Make sure that our generation number always goes up.
+  	 * Currently, the MDS does not bump it at least for unlink.
+diff --git a/slash2/mount_slash/io.c b/slash2/mount_slash/io.c
+index 57fc788..c643c44 100644
+--- a/slash2/mount_slash/io.c
++++ b/slash2/mount_slash/io.c
+@@ -2292,6 +2292,21 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
+ 		slc_fsreply_write(f, pfr, 0, rc);
+ }
+ 
++void msreadahead_cancel(struct fidc_membh *f)
++{
++	struct readaheadrq *rarq, *tmp;
++
++	LIST_CACHE_LOCK(&msl_readaheadq);
++	LIST_CACHE_FOREACH_SAFE(rarq, tmp, &msl_readaheadq) {
++		if (rarq->rarq_fg.fg_gen != fcmh_2_gen(f))
++			continue;
++		OPSTAT_INCR("msl.read-ahead-drop");
++		lc_remove(&msl_readaheadq, rarq);
++		psc_pool_return(slc_readaheadrq_pool, rarq);
++	}
++	LIST_CACHE_ULOCK(&msl_readaheadq);
++}
++
+ void
+ msreadaheadthr_main(struct psc_thread *thr)
+ {
+diff --git a/slash2/mount_slash/main.c b/slash2/mount_slash/main.c
+index a20a4dd..2bf62a9 100644
+--- a/slash2/mount_slash/main.c
++++ b/slash2/mount_slash/main.c
+@@ -2379,6 +2379,10 @@ again:
+ 	} else if (rc == SLERR_BMAP_PTRUNC_STARTED) {
+ 		OPSTAT_INCR("ptrunc-queue");
+ 		rc = 0;
++		FCMH_LOCK(f);
++		f->fcmh_flags |= FCMH_CLI_TRUNC;
++		fcmh_op_start_type(f, FCMH_OPCNT_TRUNC);
++		FCMH_ULOCK(f); 
+ 	}
+ 
+ 	if (!rc)
+@@ -2408,6 +2412,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
+ 
+ 	FCMH_LOCK(f);
+ 	FCMH_WAIT_BUSY(f, 0);
++	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+ 
+ 	/*
+ 	 * Perhaps this checking should only be done on the mfh, with
+@@ -3070,7 +3075,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+     struct stat *stb, int to_set, void *data)
+ {
+ 	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
+-	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
++	int i, rc = 0, force = 0, getting_attrs = 0;
+ 	struct msl_dc_inv_entry_data mdie;
+ 	struct msl_fhent *mfh = data;
+ 	struct fidc_membh *c = NULL;
+@@ -3090,6 +3095,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 
+ 	FCMH_LOCK(c);
+ 	FCMH_WAIT_BUSY(c, 0);
++	fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
+ 
+ 	/*
+ 	 * pscfs_reply_setattr() needs a fresh statbuf to refresh the
+@@ -3199,15 +3205,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 		}
+ 	}
+ 
+-	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+-		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
+-		/*
+-		 * Mark as busy against I/O on this and higher bmaps and
+-		 * concurrent truncation requests util the MDS has
+-		 * received new CRCs for the freshly truncated region.
+-		 */
+-		c->fcmh_flags |= FCMH_CLI_TRUNC;
+-		unset_trunc = 1;
++	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
++		flush_size = 1;
++		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) {
++			to_set |= PSCFS_SETATTRF_DATASIZE;
++			force = 1;
++			stb->st_size = c->fcmh_sstb.sst_size;
++		}
+ 	}
+ 
+ 	/*
+@@ -3221,15 +3225,21 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 		if (!stb->st_size) {
+ 			DEBUG_FCMH(PLL_DIAG, c, "full truncate, free bmaps");
+ 			OPSTAT_INCR("msl.truncate-full");
++#if 0
+ 			bmap_free_all_locked(c);
++			slc_fcmh_invalidate_bmap(c, 0);
++#endif
++			msreadahead_cancel(c);
++
+ 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
+ 			/*
+ 			 * No-op.  Don't send truncate request if the
+ 			 * sizes match.
+ 			 */
+-			FCMH_ULOCK(c);
+-			OPSTAT_INCR("msl.truncate-noop");
+-			goto out;
++			if (!force) {
++				OPSTAT_INCR("msl.truncate-size-noop");
++				to_set &= ~PSCFS_SETATTRF_DATASIZE;
++			}
+ 		} else {
+ 			/*
+ 			 * A tricky case to handle: we might be called when 
+@@ -3286,9 +3296,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 				msl_bmap_cache_rls(b);
+ 				bmap_biorq_waitempty(b);
+ 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
++				OPSTAT_INCR("msl.truncate-expire-bmap-done");
+ 			}
+ 			psc_dynarray_free(&a);
+ 			FCMH_LOCK(c);
++
++			msreadahead_cancel(c);
+ 		}
+ 	}
+ 
+@@ -3318,13 +3331,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 			    c->fcmh_sstb.sst_mtime_ns, stb);
+ 		}
+ 	}
+-	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
+-		flush_size = 1;
+-		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) {
+-			to_set |= PSCFS_SETATTRF_DATASIZE;
+-			stb->st_size = c->fcmh_sstb.sst_size;
+-		}
+-	}
+ 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
+ 	FCMH_ULOCK(c);
+ 
+@@ -3332,6 +3338,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+ 	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
+ 		setattrflags |= FCMH_SETATTRF_CLOBBER;
+ 
++	if (to_set == 0) {
++		FCMH_ULOCK(c);
++		goto out;
++	}
++
+  retry:
+ 	rc = msl_setattr(c, to_set, &sstb, setattrflags);
+ 	if (rc && slc_rpc_should_retry(pfr, &rc))
+@@ -3340,11 +3351,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+  out:
+ 	if (c) {
+ 		FCMH_LOCK(c);
+-		FCMH_UNBUSY(c, 0);
+-		if (unset_trunc) {
+-			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
+-			fcmh_wake_locked(c);
++		if (!rc && !stb->st_size) {
++			OPSTAT_INCR("msl.truncate-all");
++			slc_fcmh_invalidate_bmap(c, 0);
+ 		}
++		FCMH_UNBUSY(c, 0);
++
+ 		if (rc && getting_attrs)
+ 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+ 		msl_internalize_stat(&c->fcmh_sstb, stb);
+diff --git a/slash2/mount_slash/mount_slash.h b/slash2/mount_slash/mount_slash.h
+index c2e88db..3009192 100644
+--- a/slash2/mount_slash/mount_slash.h
++++ b/slash2/mount_slash/mount_slash.h
+@@ -359,6 +359,10 @@ void	 parse_mapfile(void);
+ void	 bmap_flushq_wake(int);
+ void	 bmap_flush_resched(struct bmpc_ioreq *, int);
+ 
++void	 msreadahead_cancel(struct fidc_membh *);
++void	 slc_fcmh_invalidate_bmap(struct fidc_membh *, int);
++
++
+ /* bmap flush modes (bmap_flushq_wake) */
+ #define BMAPFLSH_RPCWAIT	(1 << 0)
+ #define BMAPFLSH_EXPIRE		(1 << 1)
+diff --git a/slash2/mount_slash/pgcache.c b/slash2/mount_slash/pgcache.c
+index 59faede..5e95840 100644
+--- a/slash2/mount_slash/pgcache.c
++++ b/slash2/mount_slash/pgcache.c
+@@ -566,6 +566,41 @@ bmpc_biorqs_flush(struct bmap *b)
+ 	}
+ }
+ 
++void
++bmpc_biorqs_destroy_locked(struct bmap *b)
++{
++	struct psc_dynarray a = DYNARRAY_INIT;
++	struct bmap_pagecache *bmpc;
++	struct bmpc_ioreq *r;
++	int i;
++
++	BMAP_LOCK_ENSURE(b);
++
++	bmpc = bmap_2_bmpc(b);
++	while ((r = RB_ROOT(&bmpc->bmpc_biorqs)) != NULL) {
++		psc_dynarray_add(&a, r);
++		/*
++		 * Avoid another thread from reaching here and
++		 * destroying the same biorq again.
++		 */
++		BIORQ_LOCK(r);
++		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
++		r->biorq_flags &= ~BIORQ_ONTREE;
++		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
++		BIORQ_ULOCK(r);
++	}
++	BMAP_ULOCK(b);
++
++	DYNARRAY_FOREACH(r, i, &a) {
++		OPSTAT_INCR("msl.biorq-destroy-batch");
++		msl_biorq_release(r);
++	}
++
++	psc_dynarray_free(&a);
++
++	BMAP_LOCK(b);
++}
++
+ #define	PAGE_RECLAIM_BATCH	1
+ 
+ /* Called from psc_pool_reap() and msl_pgcache_reap() */
+diff --git a/slash2/mount_slash/pgcache.h b/slash2/mount_slash/pgcache.h
+index a524952..dabad07 100644
+--- a/slash2/mount_slash/pgcache.h
++++ b/slash2/mount_slash/pgcache.h
+@@ -327,6 +327,8 @@ extern struct psc_listcache	 msl_readahead_pages;
+ 
+ extern struct psc_listcache	 bmpcLru;
+ 
++void   bmpc_biorqs_destroy_locked(struct bmap *);
++
+ static __inline void
+ bmpc_init(struct bmap_pagecache *bmpc)
+ {
+diff --git a/slash2/mount_slash/rcm.c b/slash2/mount_slash/rcm.c
+index 4c1d3f7..012c23b 100644
+--- a/slash2/mount_slash/rcm.c
++++ b/slash2/mount_slash/rcm.c
+@@ -321,6 +321,34 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
+ 	return (0);
+ }
+ 
++int
++msrcm_handle_ptrunc_reply(struct pscrpc_request *rq)
++{
++	struct srm_ptrunc_req *mq;
++	struct srm_ptrunc_rep *mp;
++	struct fidc_membh *f = NULL;
++
++	SL_RSX_ALLOCREP(rq, mq, mp);
++
++	mp->rc = -sl_fcmh_peek_fid(mq->fg.fg_fid, &f);
++	if (mp->rc) {
++		OPSTAT_INCR("msl.ptrunc-reply-err");
++		goto out;
++	}
++
++	FCMH_LOCK(f);
++	if (f->fcmh_flags & FCMH_CLI_TRUNC) {
++		OPSTAT_INCR("msl.ptrunc-reply-clear");
++		f->fcmh_flags &= ~FCMH_CLI_TRUNC;
++		fcmh_op_done_type(f, FCMH_OPCNT_TRUNC);
++	} else
++		OPSTAT_INCR("msl.ptrunc-reply-noop");
++ out:
++	if (f)
++		fcmh_op_done(f);
++	return (0);
++}
++
+ /*
+  * Handle a request for CLI from MDS.
+  * @rq: request.
+@@ -355,6 +383,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
+ 	case SRMT_BMAPDIO:
+ 		rc = msrcm_handle_bmapdio(rq);
+ 		break;
++	case SRMT_PTRUNC_REPLY:
++		rc = msrcm_handle_ptrunc_reply(rq);
++		break;
+ 
+ 	default:
+ 		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
+diff --git a/slash2/share/bmap.c b/slash2/share/bmap.c
+index 474b589..0054352 100644
+--- a/slash2/share/bmap.c
++++ b/slash2/share/bmap.c
+@@ -141,7 +141,11 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
+ 			goto restart;
+ 		}
+ 
+-		if (b->bcm_flags & BMAPF_TOFREE) {
++		/* (gdb) p ((struct bmap_cli_info *) (b+1))->bci_bmpc.bmpc_tree */
++
++		if ((b->bcm_flags & BMAPF_TOFREE) ||
++		    (b->bcm_flags & BMAPF_DISCARD)) {
++
+ 			/*
+ 			 * This bmap is going away; wait for it so we
+ 			 * can reload it back.
+diff --git a/slash2/share/ctlcli_common.c b/slash2/share/ctlcli_common.c
+index e9cdab2..5dc0c13 100644
+--- a/slash2/share/ctlcli_common.c
++++ b/slash2/share/ctlcli_common.c
+@@ -213,7 +213,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+ 	if (width > 16)
+ 		printf("%16"PRIx64" ", scb->scb_addr);
+ 	printf("%016"SLPRIxFID" %6d "
+-	    "%c%c%c%c%c%c%c%c%c "
++	    "%c%c%c%c%c%c%c%c%c%c "
+ 	    "%5u %18s %7"PRIu64"\n",
+ 	    scb->scb_fg.fg_fid, scb->scb_bno,
+ 	    scb->scb_flags & BMAPF_RD		? 'R' : '-',
+@@ -222,6 +222,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+ 	    scb->scb_flags & BMAPF_LOADING	? 'l' : '-',
+ 	    scb->scb_flags & BMAPF_DIO		? 'D' : '-',
+ 	    scb->scb_flags & BMAPF_TOFREE	? 'F' : '-',
++	    scb->scb_flags & BMAPF_DISCARD      ? 'X' : '-',
+ 	    scb->scb_flags & BMAPF_MODECHNG	? 'G' : '-',
+ 	    scb->scb_flags & BMAPF_WAITERS	? 'w' : '-',
+ 	    scb->scb_flags & BMAPF_BUSY		? 'B' : '-',
+diff --git a/slash2/slashd/fidc_mds.h b/slash2/slashd/fidc_mds.h
+index 167d714..0711067 100644
+--- a/slash2/slashd/fidc_mds.h
++++ b/slash2/slashd/fidc_mds.h
+@@ -56,6 +56,7 @@ struct fcmh_mds_info {
+ 		struct {
+ 			int	  fmif_ptrunc_nios;
+ 			uint64_t  fmif_ptrunc_size;	/* new truncate(2) size */
++			struct slrpc_cservice *fmif_ptrunc_csvc;
+ 		} f;
+ 	} u;
+ #define fmi_dino_mfid		u.d.fmid_dino_mfid
+@@ -63,6 +64,7 @@ struct fcmh_mds_info {
+ 
+ #define fmi_ptrunc_nios		u.f.fmif_ptrunc_nios
+ #define fmi_ptrunc_size		u.f.fmif_ptrunc_size
++#define fmi_ptrunc_csvc		u.f.fmif_ptrunc_csvc
+ };
+ 
+ /* mds-specific fcmh_flags */
+diff --git a/slash2/slashd/mds.c b/slash2/slashd/mds.c
+index 52cde28..4bf26fa 100644
+--- a/slash2/slashd/mds.c
++++ b/slash2/slashd/mds.c
+@@ -67,8 +67,6 @@ int			slm_max_ios = SL_MAX_REPLICAS;
+ int			slm_ptrunc_enabled = 1;
+ int			slm_preclaim_enabled = 1;
+ 
+-__static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
+-
+ int
+ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
+ {
+@@ -1910,12 +1908,13 @@ slm_bmap_release_cb(__unusedx struct pscrpc_request *rq,
+ int	slm_lease_skip = 1;
+ 
+ int
+-slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
++slm_ptrunc_prepare(struct slrpc_cservice *csvc,
++    struct fidc_membh *f, struct srt_stat *sstb, int to_set)
+ {
+ 	int rc;
+ 	struct srm_bmap_release_req *mq;
+ 	struct srm_bmap_release_rep *mp;
+-	struct slrpc_cservice *csvc;
++	struct slrpc_cservice *tmpcsvc;
+ 	struct bmap_mds_lease *bml;
+ 	struct pscrpc_request *rq;
+ 	struct fcmh_mds_info *fmi;
+@@ -1931,6 +1930,7 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
+ 	OPSTAT_INCR("msl.ptrunc-start");
+ 	fmi = fcmh_2_fmi(f);
+ 	fmi->fmi_ptrunc_size = sstb->sst_size;
++	fmi->fmi_ptrunc_csvc = csvc;
+ 
+ 	DEBUG_FCMH(PLL_MAX, f, "prepare ptrunc");
+ 	/*
+@@ -1968,17 +1968,17 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
+ 			 * Segment fault (11) from here.  We just can't
+ 			 * trust bml_exp.
+ 			 */
+-			csvc = slm_getclcsvc(bml->bml_exp, 0);
+-			if (csvc == NULL) {
++			tmpcsvc = slm_getclcsvc(bml->bml_exp, 0);
++			if (tmpcsvc == NULL) {
+ 				psclog_warnx("Unable to get csvc: %p",
+ 				    bml->bml_exp);
+ 				BMAP_LOCK(b);
+ 				continue;
+ 			}
+-			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
++			rc = SL_RSX_NEWREQ(tmpcsvc, SRMT_RELEASEBMAP, rq,
+ 			    mq, mp);
+ 			if (rc) {
+-				sl_csvc_decref(csvc);
++				sl_csvc_decref(tmpcsvc);
+ 				BMAP_LOCK(b);
+ 				continue;
+ 			}
+@@ -1986,12 +1986,12 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
+ 			mq->sbd[0].sbd_fg.fg_gen = fcmh_2_gen(f);
+ 			mq->sbd[0].sbd_bmapno = b->bcm_bmapno;
+ 			mq->nbmaps = 1;
+-			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
++			rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = tmpcsvc;
+ 			rq->rq_interpret_reply = slm_bmap_release_cb;
+ 			rc = SL_NBRQSET_ADD(csvc, rq);
+ 			if (rc) {
+ 				pscrpc_req_finished(rq);
+-				sl_csvc_decref(csvc);
++				sl_csvc_decref(tmpcsvc);
+ 			}
+ 
+ 			BMAP_LOCK(b);
+@@ -2025,6 +2025,8 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
+ 		f->fcmh_sstb.sst_size = size;
+ 		DEBUG_FCMH(PLL_MAX, f, "ptrunc aborted, rc = %d", rc);
+ 		FCMH_ULOCK(f);
++		sl_csvc_decref(fmi->fmi_ptrunc_csvc);
++		fmi->fmi_ptrunc_csvc = NULL;
+ 	}
+ 
+ 	return (rc);
+diff --git a/slash2/slashd/rmc.c b/slash2/slashd/rmc.c
+index f074613..5963566 100644
+--- a/slash2/slashd/rmc.c
++++ b/slash2/slashd/rmc.c
+@@ -1197,9 +1197,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
+ 	struct fidc_membh *f = NULL;
+ 	struct srm_setattr_req *mq;
+ 	struct srm_setattr_rep *mp;
++	struct slrpc_cservice *csvc;
+ 	uint32_t i;
+ 	int vfsid;
+ 
++	csvc = slm_getclcsvc(rq->rq_export, 0);
++	if (csvc == NULL) {
++		mp->rc = -EHOSTDOWN;
++		goto out;
++	}
+ 	SL_RSX_ALLOCREP(rq, mq, mp);
+ 	mp->rc = slfid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
+ 	if (mp->rc)
+@@ -1219,8 +1225,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
+ 	 * Disallow new settattr while a ptruncate is still in progress.
+ 	 */
+ 	if ((f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
+-	    (to_set & PSCFS_SETATTRF_DATASIZE))
++	    (to_set & PSCFS_SETATTRF_DATASIZE)) {
++		OPSTAT_INCR("truncate-disallow");
+ 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_IN_PTRUNC);
++	}
+ 
+ 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+ 
+@@ -1293,13 +1301,16 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
+  	 * might need to do the truncation below.
+  	 */
+ 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
+-		mp->rc = slm_ptrunc_prepare(f, &mq->attr, to_set | tadj);
++		mp->rc = slm_ptrunc_prepare(csvc, f, &mq->attr, to_set | tadj);
+ 		if (!mp->rc)
+ 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
++		csvc = NULL;
+ 		FCMH_LOCK(f);
+ 	}
+ 
+  out:
++	if (csvc)
++		sl_csvc_decref(csvc);
+ 
+ 	if (f) {
+ 		FCMH_LOCK_ENSURE(f);
+diff --git a/slash2/slashd/slashd.h b/slash2/slashd/slashd.h
+index 24451af..ffa0e50 100644
+--- a/slash2/slashd/slashd.h
++++ b/slash2/slashd/slashd.h
+@@ -253,7 +253,9 @@ struct slm_wkdata_wr_brepl {
+ };
+ 
+ struct slm_wkdata_ptrunc {
+-	struct fidc_membh	*f;
++	struct sl_fidgen	 fg;
++	struct slrpc_cservice *  csvc;
++	int			 rc;
+ };
+ 
+ struct slm_wkdata_upsch_purge {
+@@ -313,7 +315,8 @@ slfid_t	slm_get_curr_slashfid(void);
+ void	slm_set_curr_slashfid(slfid_t);
+ int	slm_get_next_slashfid(slfid_t *);
+ 
+-int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
++int	slm_ptrunc_prepare(struct slrpc_cservice *csvcp,
++            struct fidc_membh *, struct srt_stat *, int);
+ 
+ int	mdscoh_req(struct bmap_mds_lease *);
+ void	slm_coh_delete_file(struct fidc_membh *);
+diff --git a/slash2/slashd/up_sched_res.c b/slash2/slashd/up_sched_res.c
+index 8282393..78af3ff 100644
+--- a/slash2/slashd/up_sched_res.c
++++ b/slash2/slashd/up_sched_res.c
+@@ -360,12 +360,58 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
+ 	return (0);
+ }
+ 
++int
++slm_ptrunc_notify_cb(struct pscrpc_request *rq,
++    struct pscrpc_async_args *args)
++{
++	int rc;
++	struct srm_ptrunc_rep *mp;
++	struct slrpc_cservice *csvc = args->pointer_arg[0];
++
++	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
++	if (rc)
++		OPSTAT_INCR("msl.ptrunc-notify-cb-err");
++	else
++		OPSTAT_INCR("msl.ptrunc-notify-cb-ok");
++	sl_csvc_decref(csvc);
++	return (0);
++}
++
++int
++slm_ptrunc_notify(void *p)
++{
++	int rc;
++	struct srm_ptrunc_req *mq;
++	struct srm_ptrunc_rep *mp;
++	struct pscrpc_request *rq;
++	struct slm_wkdata_ptrunc *wk = p;
++	
++	rc = SL_RSX_NEWREQ(wk->csvc, SRMT_PTRUNC_REPLY, rq, mq, mp);
++	if (rc)
++		PFL_GOTOERR(out, rc);
++	mq->fg = wk->fg;
++	mq->rc = wk->rc;
++	rq->rq_async_args.pointer_arg[0] = wk->csvc;
++	rq->rq_interpret_reply = slm_ptrunc_notify_cb;
++	rc = SL_NBRQSET_ADD(wk->csvc, rq);
++
++ out:
++	if (rc) {
++		OPSTAT_INCR("msl.ptrunc-notify-cb-send-err");
++		pscrpc_req_finished(rq);
++		sl_csvc_decref(wk->csvc);
++	} else
++		OPSTAT_INCR("msl.ptrunc-notify-cb-send-ok");
++	return (0);
++}
++
+ void
+ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
+     struct bmap *b, int rc, int off)
+ {
+ 	struct fidc_membh *f;
+ 	struct fcmh_mds_info *fmi;
++	struct slm_wkdata_ptrunc *wk;
+ 	int ret, tract[NBREPLST], retifset[NBREPLST];
+ 
+ 	psc_assert(b);
+@@ -379,6 +425,14 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
+ 	fmi = fcmh_2_fmi(f);
+ 	fmi->fmi_ptrunc_nios--;
+ 	if (!fmi->fmi_ptrunc_nios) {
++
++		wk = pfl_workq_getitem(slm_ptrunc_notify, struct slm_wkdata_ptrunc);
++		wk->fg = f->fcmh_fg;
++		wk->rc = rc;
++		wk->csvc = fmi->fmi_ptrunc_csvc;
++		fmi->fmi_ptrunc_csvc = NULL;
++		pfl_workq_putitem(wk);
++
+ 		OPSTAT_INCR("msl.ptrunc-done");
+ 		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
+ 	}
