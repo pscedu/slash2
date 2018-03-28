@@ -38,6 +38,7 @@
 #include "pfl/rsx.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
+#include "pfl/treeutil.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -54,34 +55,49 @@ extern struct psc_waitq		 msl_bmap_waitq;
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
-	int wake = 0;
+	int i;
 	struct bmap *b;
-	struct bmap_cli_info *bci;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
 	/*
 	 * Invalidate bmap lease so that we can renew it with 
 	 * the correct lease.
 	 */
+ restart:
+
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		BMAP_LOCK(b);
+		if (!BMAP_TRYLOCK(b)) {
+			pfl_rwlock_unlock(&f->fcmh_rwlock);
+			goto restart;
+		}
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
 			continue;
 		}
-		wake = 1;
-		bci = bmap_2_bci(b);
+		if (b->bcm_flags & BMAPF_DISCARD) {
+			BMAP_ULOCK(b);
+			continue;
+		}
 		b->bcm_flags |= BMAPF_DISCARD;
-		lc_move2head(&msl_bmaptimeoutq, bci);
 		BMAP_ULOCK(b);
-		msl_bmap_cache_rls(b);
+		psc_dynarray_add(&a, b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
-	if (wake)
-		psc_waitq_wakeall(&msl_bmap_waitq);
-}
+	DYNARRAY_FOREACH(b, i, &a) {
 
+		/* 
+		 * Hide the bmap from lookup to avoid waiting. This also hides
+		 * the bmap from slctlrep_getbmap() as well. So be careful.
+		 */
+		OPSTAT_INCR("msl.stash-bmap");
+		pfl_rwlock_wrlock(&f->fcmh_rwlock);
+		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
+	}
+	psc_dynarray_free(&a);
+}
 
 /*
  * Update the high-level app stat(2)-like attribute buffer for a FID
