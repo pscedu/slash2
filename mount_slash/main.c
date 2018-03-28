@@ -3113,7 +3113,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
 	int flush_mtime = 0, flush_size = 0, setattrflags = 0;
-	int i, rc = 0, unset_trunc = 0, getting_attrs = 0;
+	int i, rc = 0, force = 0, unset_trunc = 0, getting_attrs = 0, invalid = 0;
 	struct msl_dc_inv_entry_data mdie;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
@@ -3133,6 +3133,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	FCMH_WAIT_BUSY(c, 0);
+	fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 
 	/*
 	 * pscfs_reply_setattr() needs a fresh statbuf to refresh the
@@ -3242,8 +3243,16 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
+	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
+		flush_size = 1;
+		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) {
+			force = 1;
+			to_set |= PSCFS_SETATTRF_DATASIZE;
+			stb->st_size = c->fcmh_sstb.sst_size;
+		}
+	}
+
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 		/*
 		 * Mark as busy against I/O on this and higher bmaps and
 		 * concurrent truncation requests util the MDS has
@@ -3262,27 +3271,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		struct bmap *b;
 
 		if (!stb->st_size) {
-
-			/*
-			 * XXX we appear to have issues with race at sliod site
-			 * where reclaim/reopen race with I/O on a file with the
-			 * same generation number. Must audit the code carefully.
-			 *
-			 * While the deadlock issues are fixed now, we should look
-			 * deeper for the root causes.
-			 */
+			invalid = 1;
 			DEBUG_FCMH(PLL_DIAG, c, "full truncate, free bmaps");
 			OPSTAT_INCR("msl.truncate-full");
-			bmap_free_all_locked(c);
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
 			/*
 			 * No-op.  Don't send truncate request if the
 			 * sizes match.
 			 */
-			FCMH_ULOCK(c);
-			OPSTAT_INCR("msl.truncate-noop");
-			goto out;
-		} else {
+			if (!force) {
+				OPSTAT_INCR("msl.truncate-size-noop");
+				to_set &= ~PSCFS_SETATTRF_DATASIZE;
+			}
+		} else if (stb->st_size < (ssize_t)fcmh_2_fsz(c)) {
 			/*
 			 * A tricky case to handle: we might be called when 
 			 * a previous partial truncation is not fully completed 
@@ -3338,10 +3339,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				msl_bmap_cache_rls(b);
 				bmap_biorq_waitempty(b);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
+				OPSTAT_INCR("msl.truncate-expire-bmap-done");
 			}
 			psc_dynarray_free(&a);
 			FCMH_LOCK(c);
-		}
+		} else
+			OPSTAT_INCR("msl.truncate-extend");
 	}
 
 	/* We're obtaining the attributes now. */
@@ -3370,19 +3373,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			    c->fcmh_sstb.sst_mtime_ns, stb);
 		}
 	}
-	if (c->fcmh_flags & FCMH_CLI_DIRTY_DSIZE) {
-		flush_size = 1;
-		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) {
-			to_set |= PSCFS_SETATTRF_DATASIZE;
-			stb->st_size = c->fcmh_sstb.sst_size;
-		}
-	}
 	c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	FCMH_ULOCK(c);
 
 	sl_externalize_stat(stb, &sstb);
 	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE))
 		setattrflags |= FCMH_SETATTRF_CLOBBER;
+
+	if (to_set == 0) {
+		FCMH_ULOCK(c);
+		goto out;
+	}
 
  retry:
 	rc = msl_setattr(c, to_set, &sstb, setattrflags);
@@ -3393,10 +3394,24 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (c) {
 		FCMH_LOCK(c);
 		FCMH_UNBUSY(c, 0);
+
+		/*
+ 		 * For partial truncation, the generation number does not
+ 		 * change, we could keep the bmap beyond the truncation
+ 		 * point. But why not just start from scratch in case MDS
+ 		 * wants to assign a new IOS? Keep it simple.
+ 		 */
+		if (!rc && invalid) {
+			OPSTAT_INCR("msl.truncate-all");
+			msreadahead_cancel(c);
+			slc_fcmh_invalidate_bmap(c, 0);
+		}
+
 		if (unset_trunc) {
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
 		}
+
 		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 		msl_internalize_stat(&c->fcmh_sstb, stb);
@@ -3474,7 +3489,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	psclogs_diag(SLCSS_FSOP, "SETATTR: fid="SLPRI_FID" to_set=%#x "
 	    "rc=%d", inum, to_set, rc);
 }
-
 void
 mslfsop_fsync(struct pscfs_req *pfr, int datasync_only, void *data)
 {
