@@ -79,7 +79,7 @@ struct dircache_page {
 	size_t			 dcp_size;	/* length of page (# dirents in page) */
 	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
 	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
-	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
+	long			 dcp_expire;	/* expiration time */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	void			*dcp_base;	/* pscfs_dirents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
@@ -119,7 +119,7 @@ struct dircache_page {
  * Determine if a page of dirents should be evicted.
  */
 #define DIRCACHEPG_EXPIRED(d, p, expire)				\
-	(timespeccmp((expire), &(p)->dcp_local_tm, >) ||		\
+	((expire) > (p)->dcp_expire ||					\
 	  (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
@@ -144,7 +144,7 @@ struct dircache_ent {
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;
-	long			 dce_age;
+	long			 dce_expire;
 	int			 dce_flag;
 	char			 dce_short[SL_MAX_SHORT_NAME];
 	char			*dce_name;	/* NOT null-terminated */
@@ -159,7 +159,7 @@ void	dircache_mgr_init(void);
 void	dircache_init(struct fidc_membh *);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, 
-	    int, void *, size_t, int);
+	    int, void *, size_t, int, int32_t);
 void	dircache_walk_async(struct fidc_membh *, void (*)(
 	    struct dircache_page *, struct dircache_ent *, void *),
 	    void *, struct psc_compl *);
@@ -170,8 +170,9 @@ void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 int	dircache_ent_cmp(const void *, const void *);
 
 void	dircache_lookup(struct fidc_membh *, const char *, uint64_t *);
-void	dircache_insert(struct fidc_membh *, const char *, uint64_t);
+void	dircache_insert(struct fidc_membh *, const char *, uint64_t, int32_t);
 void	dircache_delete(struct fidc_membh *, const char *);
+void	dircache_trim(struct fidc_membh *, int);
 
 extern struct psc_hashtbl msl_namecache_hashtbl;
 

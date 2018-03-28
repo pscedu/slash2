@@ -38,7 +38,6 @@
 #include "pfl/rsx.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
-#include "pfl/treeutil.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -49,54 +48,40 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
-extern struct psc_waitq		msl_bmap_waitq;
+
+extern struct psc_waitq		 msl_bmap_waitq;
 
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
-	int i;
+	int wake = 0;
 	struct bmap *b;
-	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_cli_info *bci;
 
 	/*
 	 * Invalidate bmap lease so that we can renew it with 
 	 * the correct lease.
 	 */
- restart:
-
 	pfl_rwlock_rdlock(&f->fcmh_rwlock);
 	RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
-		if (!BMAP_TRYLOCK(b)) {
-			pfl_rwlock_unlock(&f->fcmh_rwlock);
-			goto restart;
-		}
+		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAPF_TOFREE) {
 			BMAP_ULOCK(b);
 			continue;
 		}
-		if (b->bcm_flags & BMAPF_DISCARD) {
-			BMAP_ULOCK(b);
-			continue;
-		}
+		wake = 1;
+		bci = bmap_2_bci(b);
 		b->bcm_flags |= BMAPF_DISCARD;
+		lc_move2head(&msl_bmaptimeoutq, bci);
 		BMAP_ULOCK(b);
-		psc_dynarray_add(&a, b);
+		msl_bmap_cache_rls(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
 
-	DYNARRAY_FOREACH(b, i, &a) {
-
-		/* 
-		 * Hide the bmap from lookup to avoid waiting. This also hides
-		 * the bmap from slctlrep_getbmap() as well. So be careful.
-		 */
-		OPSTAT_INCR("msl.stash-bmap");
-		pfl_rwlock_wrlock(&f->fcmh_rwlock);
-		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-		pfl_rwlock_unlock(&f->fcmh_rwlock);
-	}
-	psc_dynarray_free(&a);
+	if (wake)
+		psc_waitq_wakeall(&msl_bmap_waitq);
 }
+
 
 /*
  * Update the high-level app stat(2)-like attribute buffer for a FID
@@ -111,11 +96,12 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
  *     (2) This function should only be used by a client.
  *
  * The current thinking is to store remote attributes in sstb.
- */ 
+ */
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
-    int flags)
+    int flags, int32_t timeout)
 {
+	struct timeval now;
 	struct fcmh_cli_info *fci;
 
 	if (flags & FCMH_SETATTRF_HAVELOCK)
@@ -139,9 +125,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 			goto out;
 		}
 		if (fcmh_2_gen(f) < sstb->sst_gen) {
-#if 0
 			slc_fcmh_invalidate_bmap(f, 0);
-#endif
 			OPSTAT_INCR("msl.generation-forwards");
 			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 				"gen %"PRIu64" from old gen %"PRIu64,
@@ -200,7 +184,8 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 		dircache_init(f);
 
 	fci = fcmh_2_fci(f);
-	PFL_GETTIMEVAL(&fci->fci_age);
+	PFL_GETTIMEVAL(&now);
+	fci->fci_expire = now.tv_sec + timeout;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
@@ -350,7 +335,6 @@ dump_fcmh_flags(int flags)
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
-	fflush(stdout);
 }
 #endif
 

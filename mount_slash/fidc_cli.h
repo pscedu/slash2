@@ -35,6 +35,7 @@ struct fidc_membh;
 
 struct fcmh_cli_info_file {
 	struct srt_inode	 inode;
+	uint32_t		 xattrsize;
 	int			 idxmap[SL_MAX_REPLICAS];
 	int			 mapstircnt;
 };
@@ -68,15 +69,15 @@ struct fcmh_cli_info_dir {
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
-	struct timeval			 fci_age;	/* attr update time */
 
+	long				 fci_expire;	/* attr expire time */
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
-	uint32_t		 	 fci_xattrsize;
 
 	union {
 		struct fcmh_cli_info_file f;
+#define fci_xattrsize		u.f.xattrsize
 #define fci_inode		u.f.inode
 #define fcif_idxmap		u.f.idxmap
 #define fcif_mapstircnt		u.f.mapstircnt
@@ -126,10 +127,13 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
 
-#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
-#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
+#define slc_fcmh_setattr(f, sstb, timeout) \
+	slc_fcmh_setattrf((f), (sstb), 0, (timeout))
+
+#define slc_fcmh_setattr_locked(f, sstb, timeout) \
+	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, (timeout))
 
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);
