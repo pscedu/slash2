@@ -1,0 +1,390 @@
+diff --git a/pfl/fuse.c b/pfl/fuse.c
+index 2585c0e..4f4dae0 100644
+--- a/pfl/fuse.c
++++ b/pfl/fuse.c
+@@ -150,6 +150,7 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
+ 
+ 	thr = pfr->pfr_thread;
+ 	pfr->pfr_interrupted = 1;
++	OPSTAT_INCR("msl.fuse-intr");
+ 	psclog_diag("op interrupted, thread = %p, pfr = %p, name = %s", 
+ 		thr, pfr, pfr->pfr_opname);
+ }
+diff --git a/pfl/rpcclient.c b/pfl/rpcclient.c
+index 009f786..d457502 100644
+--- a/pfl/rpcclient.c
++++ b/pfl/rpcclient.c
+@@ -344,6 +344,7 @@ interrupted_request(void *data)
+ 	DEBUG_REQ(PLL_DIAG, req, buf, "request interrupted");
+ 	spinlock(&req->rq_lock);
+ 	req->rq_intr = 1;
++	OPSTAT_INCR("pfl.rpc_intr");
+ 	freelock(&req->rq_lock);
+ }
+ 
+diff --git a/pfl/thread.c b/pfl/thread.c
+index 8abea85..b8512f6 100644
+--- a/pfl/thread.c
++++ b/pfl/thread.c
+@@ -63,7 +63,7 @@ struct psc_lockedlist		 psc_threads =
+  * The following does not affect ZFS-fuse threads.
+  */
+ #define	PTHREAD_GUARD_SIZE	 4096
+-#define	PTHREAD_STACK_SIZE	 6*1024*1024
++#define	PTHREAD_STACK_SIZE	 8*1024*1024
+ 
+ __static pthread_attr_t		 pthread_attr;
+ __static psc_spinlock_t	  	 pthread_lock;
+diff --git a/slash2/mount_slash/bflush.c b/slash2/mount_slash/bflush.c
+index b7c3228..3c0828c 100644
+--- a/slash2/mount_slash/bflush.c
++++ b/slash2/mount_slash/bflush.c
+@@ -568,7 +568,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
+ 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
+ 		bmpce = bwc->bwc_bmpces[i];
+ 
+-		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
++		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_entry->page_buf +
+ 		    (i ? 0 : r->biorq_off - bmpce->bmpce_off);
+ 
+ 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
+diff --git a/slash2/mount_slash/io.c b/slash2/mount_slash/io.c
+index 2b8aef8..57fc788 100644
+--- a/slash2/mount_slash/io.c
++++ b/slash2/mount_slash/io.c
+@@ -1347,7 +1347,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, struct psc_dynarray *bmpces,
+ 		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
+ 		BMPCE_ULOCK(e);
+ 
+-		iovs[i].iov_base = e->bmpce_base;
++		iovs[i].iov_base = e->bmpce_entry->page_buf;
+ 		iovs[i].iov_len  = BMPC_BUFSZ;
+ 
+ 		if (!i)
+@@ -1697,7 +1697,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
+ 		 * Set the starting buffer pointer into our cache
+ 		 * vector.
+ 		 */
+-		dest = e->bmpce_base;
++		dest = e->bmpce_entry->page_buf;
+ 		if (!i && toff > e->bmpce_off) {
+ 			/*
+ 			 * The first cache buffer pointer may need a
+@@ -1793,7 +1793,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, struct msl_fsrqinfo *q)
+ 		e = psc_dynarray_getpos(&r->biorq_pages, i);
+ 
+ 		BMPCE_LOCK(e);
+-		src = e->bmpce_base;
++		src = e->bmpce_entry->page_buf;
+ 		if (!i && toff > e->bmpce_off) {
+ 			psc_assert(toff - e->bmpce_off < BMPC_BUFSZ);
+ 			src += toff - e->bmpce_off;
+diff --git a/slash2/mount_slash/pgcache.c b/slash2/mount_slash/pgcache.c
+index b4fe7c2..a9f1271 100644
+--- a/slash2/mount_slash/pgcache.c
++++ b/slash2/mount_slash/pgcache.c
+@@ -63,7 +63,7 @@ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
+ RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
+ 
+ struct psc_listcache	 free_page_buffers;
+-int			 page_buffers_count;	/* total, including free */
++int			 page_buffers_count;	/* populated */
+ 
+ struct psc_listcache	 bmpcLru;
+ 
+@@ -73,47 +73,55 @@ void
+ msl_pgcache_init(void)
+ {
+ 	int i;
+-	void *p;
++	struct bmap_page_entry *entry;
+ 
+ 	lc_reginit(&free_page_buffers, struct bmap_page_entry,
+ 	    page_lentry, "pagebuffers");
+ 
+-	for (i = 0; i < bmpce_pool->ppm_min; i++) {
+-		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+-		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
++	entry = PSCALLOC(sizeof(struct bmap_page_entry) * bmpce_pool->ppm_max); 
++	for (i = 0; i < bmpce_pool->ppm_max; i++) {
++		psc_assert(entry);
++		entry->page_buf = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
++		    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+ 
+-		if (p == MAP_FAILED)
++		if (entry->page_buf == MAP_FAILED)
+ 			psc_fatalx("Please raise vm.max_map_count limit");
+ 
+-		OPSTAT_INCR("mmap-success");
++		psc_assert(!((unsigned long)entry->page_buf & 0x01));
++		OPSTAT_INCR("mmap-success-init");
+ 		page_buffers_count++;
+-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+-		lc_add(&free_page_buffers, p);
++		INIT_PSC_LISTENTRY(&entry->page_lentry);
++		lc_add(&free_page_buffers, entry);
++		entry++;
+ 	}
+ }
+ 
+-void *
++struct bmap_page_entry *
+ msl_pgcache_get(int wait)
+ {
+-	void *p;
+ 	struct timespec ts;
++	struct bmap_page_entry *entry;
+ 	static int warned = 0, failed = 0;
+ 
+-	p = lc_getnb(&free_page_buffers);
+-	if (p)
+-		return p;
++	entry = lc_getnb(&free_page_buffers);
++	if (entry)
++		goto out;
+  again:
+ 
+ 	LIST_CACHE_LOCK(&free_page_buffers);
+ 	if (page_buffers_count < bmpce_pool->ppm_max) {
+-		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
+-		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+-		if (p != MAP_FAILED) {
++		entry = PSCALLOC(sizeof(struct bmap_page_entry)); 
++		entry->page_buf = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
++		    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
++		if (entry->page_buf != MAP_FAILED) {
+ 			warned = 0;
+-			OPSTAT_INCR("mmap-success");
++			psc_assert(!((unsigned long)entry->page_buf & 0x01));
++			OPSTAT_INCR("mmap-success-grow");
+ 			page_buffers_count++;
++			INIT_PSC_LISTENTRY(&entry->page_lentry);
++			lc_add(&free_page_buffers, entry);
+ 			LIST_CACHE_ULOCK(&free_page_buffers);
+-			return (p);
++			return (entry);
+ 		}
+ 		failed = 1;
+ 		OPSTAT_INCR("mmap-failure");
+@@ -131,65 +139,75 @@ msl_pgcache_get(int wait)
+ 		 */
+ 		ts.tv_nsec = 0;
+ 		ts.tv_sec = time(NULL) + 30;
+-		p = lc_gettimed(&free_page_buffers, &ts);
+-		if (!p) {
++		entry = lc_gettimed(&free_page_buffers, &ts);
++		if (!entry) {
+ 			OPSTAT_INCR("pagecache-get-retry");
+ 			goto again;
+ 		}
+ 	} else
+-		p = lc_getnb(&free_page_buffers);
+-	return (p);
++		entry = lc_getnb(&free_page_buffers);
++
++ out:
++	if (entry) {
++		entry->page_buf = (void *)((unsigned long) entry->page_buf & ~0x01);
++#if 0
++		bzero(entry->page_buf, BMPC_BUFSZ);
++#endif
++	}
++	return (entry);
+ }
+ 
+ void
+-msl_pgcache_put(void *p)
++msl_pgcache_put(struct bmap_page_entry *entry)
+ {
+ 	int rc;
+ 	/*
+  	 * Do not assume that the max value has not changed.
+  	 */
+ 	LIST_CACHE_LOCK(&free_page_buffers);
+-	if (page_buffers_count > bmpce_pool->ppm_max) {
+-		rc = munmap(p, BMPC_BUFSZ);
+-		if (rc)
+-			OPSTAT_INCR("munmap-drop-failure");
+-		else
+-			OPSTAT_INCR("munmap-drop-success");
+-		page_buffers_count--;
+-	} else {
+-		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+-		lc_add(&free_page_buffers, p);
++	if (page_buffers_count > bmpce_pool->ppm_total) {
++		psc_assert(!((unsigned long)entry->page_buf & 0x01));
++		rc = madvise(entry->page_buf, BMPC_BUFSZ, MADV_DONTNEED);
++		if (!rc) {
++			entry->page_buf = (void *)((unsigned long) entry->page_buf | 0x01);
++			page_buffers_count--;
++			OPSTAT_INCR("madvise-success");
++		} else
++			OPSTAT_INCR("madvise-failure");
+ 	}
++
++	lc_add(&free_page_buffers, entry);
+ 	LIST_CACHE_ULOCK(&free_page_buffers);
+ }
+ 
+ int
+ msl_pgcache_reap(void)
+ {
+-	void *p;
+-	int i, rc, nfree, didwork = 0;
++	struct bmap_page_entry *entry;
++	int rc, nfree, didwork = 0;
+ 
+ 	/* (gdb) p bmpce_pool.ppm_u.ppmu_explist.pexl_pll.pll_nitems */
+ 	nfree = bmpce_pool->ppm_nfree; 
+ 	psc_pool_try_shrink(bmpce_pool, nfree);
+ 
+-	if (lc_nitems(&free_page_buffers) <= bmpce_pool->ppm_total)
++	if (page_buffers_count <= bmpce_pool->ppm_total)
+ 		return (didwork);
+ 
+ 	didwork = 1;
+-	nfree = lc_nitems(&free_page_buffers) - bmpce_pool->ppm_total;
+-	for (i = 0; i < nfree; i++) {
+-		p = lc_getnb(&free_page_buffers);
+-		if (!p)
+-			break;
+-		rc = munmap(p, BMPC_BUFSZ);
+-		if (rc)
+-			OPSTAT_INCR("munmap-reap-failure");
+-		else
+-			OPSTAT_INCR("munmap-reap-success");
+-	}
+ 	LIST_CACHE_LOCK(&free_page_buffers);
+-	page_buffers_count -= i;
++	LIST_CACHE_FOREACH(entry, &free_page_buffers) {
++		if ((unsigned long)entry->page_buf & 0x01)
++			continue;
++		rc = madvise(entry->page_buf, BMPC_BUFSZ, MADV_DONTNEED);
++		if (!rc) {
++			entry->page_buf = (void *)((unsigned long) entry->page_buf | 0x01);
++			page_buffers_count--;
++			OPSTAT_INCR("madvise-success-reap");
++			if (page_buffers_count <= bmpce_pool->ppm_total)
++				break;
++		} else
++			OPSTAT_INCR("madvise-failure-reap");
++	}
+ 	LIST_CACHE_ULOCK(&free_page_buffers);
+ 	return (didwork);
+ }
+@@ -236,7 +254,7 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+ 	struct bmap_pagecache_entry q, *e, *e2 = NULL;
+ 	struct bmap_cli_info *bci = bmap_2_bci(b);
+ 	struct bmap_pagecache *bmpc;
+-	void *page = NULL;
++	struct bmap_page_entry *entry = NULL;
+ 	struct timespec tm;
+ 
+ 	bmpc = bmap_2_bmpc(b);
+@@ -288,14 +306,14 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+ 					rc = EAGAIN;
+ 					goto out;
+ 				}
+-				page = msl_pgcache_get(0);
+-				if (page == NULL) {
++				entry = msl_pgcache_get(0);
++				if (entry == NULL) {
+ 					rc = EAGAIN;
+ 					goto out;
+ 				}
+ 			} else {
+ 				e2 = psc_pool_get(bmpce_pool);
+-				page = msl_pgcache_get(1);
++				entry = msl_pgcache_get(1);
+ 			}
+ 			wrlock = 1;
+ 			pfl_rwlock_wrlock(&bci->bci_rwlock);
+@@ -312,10 +330,10 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+ 			e->bmpce_waitq = wq;
+ 			e->bmpce_flags = flags;
+ 			e->bmpce_bmap = b;
+-			e->bmpce_base = page;
++			e->bmpce_entry = entry;
+ 
+ 			e2 = NULL;
+-			page = NULL;
++			entry = NULL;
+ 
+ 			PSC_RB_XINSERT(bmap_pagecachetree,
+ 			    &bmpc->bmpc_tree, e);
+@@ -332,8 +350,8 @@ bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
+ 
+ 	if (e2) {
+ 		OPSTAT_INCR("msl.bmpce-gratuitous");
+-		if (page)
+-			msl_pgcache_put(page);
++		if (entry)
++			msl_pgcache_put(entry);
+ 		psc_pool_return(bmpce_pool, e2);
+ 	}
+ 
+@@ -369,7 +387,7 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
+ 	PSC_RB_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+ 	pfl_rwlock_unlock(&bci->bci_rwlock);
+ 
+-	msl_pgcache_put(e->bmpce_base);
++	msl_pgcache_put(e->bmpce_entry);
+ 	psc_pool_return(bmpce_pool, e);
+ }
+ 
+diff --git a/slash2/mount_slash/pgcache.h b/slash2/mount_slash/pgcache.h
+index 0b44675..5b37007 100644
+--- a/slash2/mount_slash/pgcache.h
++++ b/slash2/mount_slash/pgcache.h
+@@ -68,17 +68,15 @@ struct bmap_pagecache_entry {
+ 	uint32_t		 bmpce_start;	/* region where data are valid */
+ 	 int16_t		 bmpce_pins;	/* page contents are read-only */
+ 	psc_spinlock_t		 bmpce_lock;
+-	void			*bmpce_base;	/* statically allocated pg contents */
++	struct bmap_page_entry	*bmpce_entry;	/* statically allocated pg contents */
+ 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
+ 	struct psc_lockedlist	 bmpce_pndgaios;
+ 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
+ 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
+ };
+ struct bmap_page_entry {
+-	union {
+-		struct psc_listentry	 page_lentry;
+-		char			 page_buf[BMPC_BUFSZ];
+-	};
++	struct psc_listentry	 page_lentry;
++	void			*page_buf;
+ };
+ 
+ /* bmpce_flags */
+@@ -127,7 +125,7 @@ struct bmap_page_entry {
+ 	psclogs((level), SLSS_BMAP,					\
+ 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
+ 	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
+-	    "off=%#09x base=%p ref=%u : " fmt,				\
++	    "off=%#09x entry=%p ref=%u : " fmt,				\
+ 	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
+ 	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
+ 	    (pg)->bmpce_flags & BMPCEF_DATARDY		? "d" : "",	\
+@@ -141,7 +139,7 @@ struct bmap_page_entry {
+ 	    (pg)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
+ 	    (pg)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
+ 	    (pg)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
+-	    (pg)->bmpce_off, (pg)->bmpce_base,				\
++	    (pg)->bmpce_off, (pg)->bmpce_entry,				\
+ 	    (pg)->bmpce_ref, ## __VA_ARGS__)
+ 
+ static __inline int
+diff --git a/slash2/mount_slash/rci.c b/slash2/mount_slash/rci.c
+index 1466733..fc73bfc 100644
+--- a/slash2/mount_slash/rci.c
++++ b/slash2/mount_slash/rci.c
+@@ -160,7 +160,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
+ 		iovs = PSCALLOC(sizeof(struct iovec) * psc_dynarray_len(a));
+ 		DYNARRAY_FOREACH(e, i, a) {
+ 			if (!mq->rc) {
+-				iovs[i].iov_base = e->bmpce_base;
++				iovs[i].iov_base = e->bmpce_entry->page_buf;
+ 				iovs[i].iov_len = BMPC_BUFSZ;
+ 			}
+ 		}
