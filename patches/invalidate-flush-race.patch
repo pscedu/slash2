@@ -1,0 +1,221 @@
+diff --git a/slash2/mount_slash/bflush.c b/slash2/mount_slash/bflush.c
+index 2086a53..de5a8ee 100644
+--- a/slash2/mount_slash/bflush.c
++++ b/slash2/mount_slash/bflush.c
+@@ -302,7 +302,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
+ /*
+  * Called in error contexts where the biorq must be rescheduled by
+  * putting it back to the new request queue.  Typically this is from a
+- * write RPC cb.
++ * write RPC callback.
+  */
+ void
+ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
+@@ -324,10 +324,8 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
+ 
+ 	BIORQ_LOCK(r);
+ 
+-	if (rc == -EAGAIN)
+-		goto requeue;
+-
+-	if (rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
++	if ((b->bcm_flags & BMAPF_DISCARD) ||
++	    rc == -ENOSPC || r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES ||
+ 	    ((r->biorq_flags & BIORQ_EXPIRE) && 
+ 	     (r->biorq_retries >= msl_max_retries * 32))) {
+ 
+@@ -336,12 +334,22 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
+ 			bci->bci_flush_rc = rc;
+ 		BMAP_ULOCK(r->biorq_bmap);
+ 
+-		OPSTAT_INCR("msl.bmap-flush-maxretry");
++		if (b->bcm_flags & BMAPF_DISCARD)
++			OPSTAT_INCR("msl.bmap-flush-discard");
++	     	else if (rc == -ENOSPC)
++			OPSTAT_INCR("msl.bmap-flush-enospc");
++		else
++			OPSTAT_INCR("msl.bmap-flush-maxretry");
+ 		msl_bmpces_fail(r, rc);
+ 		msl_biorq_release(r);
+ 		return;
+ 	}
+ 
++	/*
++ 	 * We might BMAP_ULOCK so don't clear it earlier.
++ 	 */
++	if (rc == -EAGAIN)
++		goto requeue;
+ 
+ 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
+ 	    r->biorq_last_sliod == IOS_ID_ANY)
+@@ -762,11 +770,17 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
+ 		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+ 
+ 		if ((b->bcm_flags & BMAPF_SCHED) ||
+-		    (b->bcm_flags & BMAPF_DISCARD) ||
+ 		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {
+ 			BMAP_ULOCK(b);
+ 			continue;
+ 		}
++		if (b->bcm_flags & BMAPF_DISCARD) {
++			b->bcm_flags |= BMAPF_SCHED;
++			psc_dynarray_add(bmaps, b);
++			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
++			goto add;
++		}
++
+ 		m = libsl_ios2resm(bmap_2_ios(b));
+ 		rc = msl_resm_throttle_yield(m);
+ 		if (!rc && bmap_flushable(b)) {
+@@ -774,8 +788,8 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
+ 			psc_dynarray_add(bmaps, b);
+ 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+ 		}
++ add:
+ 		BMAP_ULOCK(b);
+-
+ 		if (psc_dynarray_len(bmaps) >= msl_ios_max_inflight_rpcs)
+ 			break;
+ 	}
+@@ -786,6 +800,12 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
+ 		bmpc = bmap_2_bmpc(b);
+ 
+ 		BMAP_LOCK(b);
++		if (b->bcm_flags & BMAPF_DISCARD) {
++			OPSTAT_INCR("msl.bmap-flush-discard");
++			bmpc_biorqs_destroy_locked(b);
++			goto next;
++		}
++
+ 		if (!bmap_flushable(b)) {
+ 			OPSTAT_INCR("msl.bmap-flush-bail");
+ 			goto next;
+@@ -806,9 +826,9 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
+ 			if (!rc)
+ 				didwork = 1;
+ 		}
++		BMAP_LOCK(b);
+ 		psc_dynarray_reset(reqs);
+ 
+-		BMAP_LOCK(b);
+  next:
+ 		b->bcm_flags &= ~BMAPF_SCHED;
+ 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
+diff --git a/slash2/mount_slash/fidc_cli.c b/slash2/mount_slash/fidc_cli.c
+index 57228ff..c7f80c3 100644
+--- a/slash2/mount_slash/fidc_cli.c
++++ b/slash2/mount_slash/fidc_cli.c
+@@ -38,6 +38,7 @@
+ #include "pfl/rsx.h"
+ #include "pfl/str.h"
+ #include "pfl/time.h"
++#include "pfl/treeutil.h"
+ 
+ #include "bmap_cli.h"
+ #include "cache_params.h"
+@@ -53,10 +54,9 @@ extern struct psc_waitq		msl_bmap_waitq;
+ void
+ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
+ {
+-	int i, wake = 0;
++	int i;
+ 	struct bmap *b;
+ 	struct psc_dynarray a = DYNARRAY_INIT;
+-	struct bmap_cli_info *bci;
+ 
+ 	/*
+ 	 * Invalidate bmap lease so that we can renew it with 
+@@ -85,21 +85,15 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
+ 	pfl_rwlock_unlock(&f->fcmh_rwlock);
+ 
+ 	DYNARRAY_FOREACH(b, i, &a) {
+-		OPSTAT_INCR("msl.bmap-destroy-biorqs");
+-		msl_bmap_cache_rls(b);
+-		BMAP_LOCK(b);
+-		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+-		bmpc_biorqs_destroy_locked(b);
+-		bci = bmap_2_bci(b);
+-		lc_move2head(&msl_bmaptimeoutq, bci);
+-		bmap_op_done_type(b, BMAP_OPCNT_WORK);
+-	}
+ 
++		/* hide it from lookup to avoid waiting */
++		pfl_rwlock_rdlock(&f->fcmh_rwlock);
++		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
++		pfl_rwlock_unlock(&f->fcmh_rwlock);
++	}
+ 	psc_dynarray_free(&a);
+-
+-	if (wake)
+-		psc_waitq_wakeall(&msl_bmap_waitq);
+ }
++
+ /*
+  * Update the high-level app stat(2)-like attribute buffer for a FID
+  * cache member.
+diff --git a/slash2/mount_slash/pgcache.c b/slash2/mount_slash/pgcache.c
+index f12dbc7..7c06317 100644
+--- a/slash2/mount_slash/pgcache.c
++++ b/slash2/mount_slash/pgcache.c
+@@ -569,36 +569,26 @@ void
+ bmpc_biorqs_destroy_locked(struct bmap *b)
+ {
+ 	struct psc_dynarray a = DYNARRAY_INIT;
+-	struct bmap_pagecache *bmpc;
+ 	struct bmpc_ioreq *r;
++	struct bmap_pagecache *bmpc;
+ 	int i;
+ 
+ 	BMAP_LOCK_ENSURE(b);
+ 
+ 	bmpc = bmap_2_bmpc(b);
+-	while ((r = RB_ROOT(&bmpc->bmpc_biorqs)) != NULL) {
++	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs)
+ 		psc_dynarray_add(&a, r);
+-		/*
+-		 * Avoid another thread from reaching here and
+-		 * destroying the same biorq again.
+-		 */
+-		BIORQ_LOCK(r);
+-		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
+-		r->biorq_flags &= ~BIORQ_ONTREE;
+-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+-		BIORQ_ULOCK(r);
+-	}
++
+ 	BMAP_ULOCK(b);
+ 
++	msl_bmap_cache_rls(b);
+ 	DYNARRAY_FOREACH(r, i, &a) {
+ 		/* p ((struct pfl_opstat *)pfl_opstats.pda_items[68]).opst_name */
+-		OPSTAT_INCR("msl.biorq-destroy-batch");
++		OPSTAT_INCR("msl.biorq-discard-destroy");
+ 		msl_biorq_release(r);
+ 	}
+-
+-	psc_dynarray_free(&a);
+-
+ 	BMAP_LOCK(b);
++	psc_dynarray_free(&a);
+ }
+ 
+ #define	PAGE_RECLAIM_BATCH	1
+diff --git a/slash2/share/bmap.c b/slash2/share/bmap.c
+index 2ac7abb..a5841e7 100644
+--- a/slash2/share/bmap.c
++++ b/slash2/share/bmap.c
+@@ -70,9 +70,11 @@ bmap_remove(struct bmap *b)
+ 
+ 	DEBUG_BMAP(PLL_DIAG, b, "removing");
+ 
+-	pfl_rwlock_wrlock(&f->fcmh_rwlock);
+-	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+-	pfl_rwlock_unlock(&f->fcmh_rwlock);
++	if (!(b->bcm_flags & BMAPF_DISCARD)) {
++		pfl_rwlock_wrlock(&f->fcmh_rwlock);
++		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
++		pfl_rwlock_unlock(&f->fcmh_rwlock);
++	}
+ 
+ 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
+ 	psc_pool_return(bmap_pool, b);
