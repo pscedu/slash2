@@ -35,7 +35,6 @@ struct fidc_membh;
 
 struct fcmh_cli_info_file {
 	struct srt_inode	 inode;
-	uint32_t		 xattrsize;
 	int			 idxmap[SL_MAX_REPLICAS];
 	int			 mapstircnt;
 };
@@ -74,10 +73,10 @@ struct fcmh_cli_info {
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
+	uint32_t		 	 fci_xattrsize;
 
 	union {
 		struct fcmh_cli_info_file f;
-#define fci_xattrsize		u.f.xattrsize
 #define fci_inode		u.f.inode
 #define fcif_idxmap		u.f.idxmap
 #define fcif_mapstircnt		u.f.mapstircnt
