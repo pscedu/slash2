@@ -73,7 +73,7 @@ struct fcmh_cli_info {
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
-	uint32_t		 	 fci_xattrsize;
+	uint32_t		 	 fci_xattrsize; /* for dir and regular file */
 
 	union {
 		struct fcmh_cli_info_file f;
