@@ -209,6 +209,24 @@ slm_rmc_handle_ping(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+slm_rcm_coherent_cb(struct pscrpc_request *rq,
+    __unusedx struct pscrpc_async_args *a)
+{
+	int rc;
+	struct slrpc_cservice *csvc =
+	    rq->rq_async_args.pointer_arg[0];
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_filecb_rep, rc);
+	if (!rc)
+		OPSTAT_INCR("slm-coherent-cb-ok");
+	else
+		OPSTAT_INCR("slm-coherent-cb-err");
+	sl_csvc_decref(csvc);
+
+	return (0);
+}
+
 /*
  * Register our intention to access the file. If there are other clients 
  * interested in the same file, let them know.
@@ -285,6 +303,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		if (rc)
 			goto next;
 		mq->fg = f->fcmh_fg;
+		rq->rq_interpret_reply = slm_rcm_coherent_cb;
 		rq->rq_async_args.pointer_arg[0] = csvc;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc)
