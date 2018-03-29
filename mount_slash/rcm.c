@@ -42,6 +42,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
+extern struct psc_waitq                 msl_flush_attrq;
+
 struct msctl_replstq *
 mrsq_lookup(int id)
 {
@@ -272,6 +274,85 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
  * @rq: request.
  */
 int
+msrcm_handle_file_cb(struct pscrpc_request *rq)
+{
+	struct srm_filecb_req *mq; 
+	struct srm_filecb_rep *mp; 
+	struct timeval now;
+
+	struct fcmh_cli_info *fci;
+	struct fidc_membh *f = NULL;
+
+	OPSTAT_INCR("msl.file-callback");
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	mp->rc = sl_fcmh_peek_fg(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	/*
+	 * XXX Need to notify FUSE with invalidate_entry call.
+	 */ 	
+	fci = fcmh_get_pri(f);
+	FCMH_LOCK(f);
+	/*
+ 	 * Expire attribues now and flush dirty attributes.
+ 	 */
+	PFL_GETTIMEVAL(&now);
+	fci->fci_expire = now.tv_sec;
+	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
+		OPSTAT_INCR("msl.callback-flush-attrs");
+		lc_move2head(&msl_attrtimeoutq, f);
+		psc_waitq_wakeone(&msl_flush_attrq);
+	}
+	if (fcmh_isdir(f)) {
+		DIRCACHE_WRLOCK(f);
+		dircache_purge(f);
+		DIRCACHE_ULOCK(f);
+		goto out;
+	}
+
+#if 0
+
+	/*
+ 	 * Callback only protect metadata, file data are protected
+ 	 * by leases...
+ 	 */
+	{
+		int i;
+		struct bmap *b;
+		struct psc_dynarray a = DYNARRAY_INIT;
+		/*
+		 * Use two loops to avoid a potential deadlock.
+		 */
+		pfl_rwlock_rdlock(&f->fcmh_rwlock);
+		RB_FOREACH(b, bmaptree, &f->fcmh_bmaptree) {
+			bmap_op_start_type(b, BMAP_OPCNT_WORK);
+			psc_dynarray_add(&a, b);
+		}
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
+		DYNARRAY_FOREACH(b, i, &a) {
+			msl_bmap_cache_rls(b);
+			bmap_op_done_type(b, BMAP_OPCNT_WORK);
+		}
+		psc_dynarray_free(&a);
+	
+	}
+
+#endif
+
+out:
+	if (f)
+		fcmh_op_done(f);
+	return (0);
+}
+
+/*
+ * Handle a BMAPDIO request for CLI from MDS.
+ * @rq: request.
+ */
+int
 msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
 	struct srm_bmap_dio_req *mq;
@@ -353,6 +434,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_BMAPDIO:
 		rc = msrcm_handle_bmapdio(rq);
+		break;
+	case SRMT_FILECB:
+		rc = msrcm_handle_file_cb(rq);
 		break;
 	default:
 		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
