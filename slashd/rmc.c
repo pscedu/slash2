@@ -294,6 +294,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		csvc = slm_getclcsvc(cb->fmc_exp, 0);
 		/*
  		 * Hit this when a client dies. Need more investigation.
+ 		 * It is probably because we don't hold a reference to
+ 		 * exp.
  		 */
 		if (!csvc) {
 			OPSTAT_INCR("slm-callback-skip");
