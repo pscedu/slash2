@@ -1093,6 +1093,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
+		
+			/*
+ 			 * Investigate: what is we get a DIO bmap?
+ 			 */
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
 			BMAP_LOCK(b);

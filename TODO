@@ -6245,3 +6245,19 @@ Also, make repl-add no-op if the target is already VALID.
 ----------
 
 Track per IOS number of outstanding leases (read and write), and total leases.
+
+04/02/2018
+----------
+
+Looking into some /arc issues (MDS is illusion2):
+
+	- read afs backup log sometimes returns empty although IOS does have data.  Maybe
+	  delay and retry does not return error code correctly.
+
+	- dd hangs because a lot of biorq not completed, after we stop srubbing on an IOS,
+          it finished.
+
+
+	- double check disable write logic on MDS and IOS sides.
+
+In general, the I/O path should be more robust.
