@@ -2037,6 +2037,11 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+
+		/*
+ 		 * XXX If we are not allowed to cache attributes,
+ 		 * flush it immediately.
+ 		 */
 		fci = fcmh_2_fci(f);
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 		lc_addtail(&msl_attrtimeoutq, fci);
