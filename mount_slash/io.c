@@ -2018,7 +2018,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	struct fcmh_cli_info *fci;
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
-	struct timespec ts;
+	struct timespec ts;	
 
 	mfh = q->mfsrq_mfh;
 	f = mfh->mfh_fcmh;
@@ -2038,8 +2038,6 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
-		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);

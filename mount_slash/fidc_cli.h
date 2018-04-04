@@ -88,7 +88,6 @@ struct fcmh_cli_info {
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
-	struct timespec			 fci_etime;	/* attr expire time */
 };
 
 #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)
@@ -111,7 +110,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 	return (fcmh - 1);
 }
 
-/* Client-specific fcmh_flags */
+/* Client-specific fcmh_flags: _FCMH_FLGSHFT = (1 <<  9) */
 #define FCMHF_INIT_DIRCACHE		(_FCMH_FLGSHFT << 0)	/* dircache initialized */
 #define FCMH_CLI_TRUNC			(_FCMH_FLGSHFT << 1)	/* truncate in progress */
 #define FCMH_CLI_DIRTY_DSIZE		(_FCMH_FLGSHFT << 2)	/* has dirty datesize */

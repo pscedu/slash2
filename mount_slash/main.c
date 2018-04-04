@@ -2585,6 +2585,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
+	struct timeval now;
 
 	f = mfh->mfh_fcmh;
 	fci = fcmh_2_fci(f);
@@ -2597,9 +2598,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	 */
 	FCMH_LOCK(f);
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
-		OPSTAT_INCR("msl.release_dirty_attrs");
-		PFL_GETTIMESPEC(&fci->fci_etime);
-		fci->fci_etime.tv_sec--;
+		PFL_GETTIMEVAL(&now);
+		fci->fci_expire = now.tv_sec;
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 
@@ -4115,6 +4115,7 @@ msattrflushthr_main(struct psc_thread *thr)
 	struct timespec ts, nexttimeo;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
+	struct timeval now;
 
 	while (pscthr_run(thr)) {
 		nexttimeo.tv_sec = msl_attributes_timeout;
@@ -4125,7 +4126,7 @@ msattrflushthr_main(struct psc_thread *thr)
 			LIST_CACHE_ULOCK(&msl_attrtimeoutq);
 			break;
 		}
-		PFL_GETTIMESPEC(&ts);
+		PFL_GETTIMEVAL(&now);
 		LIST_CACHE_FOREACH(fci, &msl_attrtimeoutq) {
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
@@ -4136,9 +4137,8 @@ msattrflushthr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			if (timespeccmp(&fci->fci_etime, &ts, >)) {
-				timespecsub(&fci->fci_etime, &ts,
-				    &nexttimeo);
+			if (now.tv_sec < fci->fci_expire) {
+				nexttimeo.tv_sec = fci->fci_expire - now.tv_sec;
 				FCMH_ULOCK(f);
 				continue;
 			}

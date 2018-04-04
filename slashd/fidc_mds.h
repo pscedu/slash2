@@ -43,7 +43,7 @@ struct fcmh_mds_callback {
 	int32_t			  fmc_expire;
 	lnet_process_id_t	  fmc_nidpid;
 	struct pscrpc_export	 *fmc_exp;
-	struct fcmh_mds_info	 *fmc_fmi;
+	struct fidc_membh	 *fmc_fcmh; 
 	struct psc_listentry	  fmc_lentry;
 	struct psc_listentry      fmc_timeo_lentry;
 };
@@ -54,7 +54,7 @@ struct fcmh_mds_callback {
  */
 struct fcmh_timeo_table {
 	psc_spinlock_t		 ftt_lock;
-	struct psc_lockedlist	ftt_callbacks;
+	struct psc_lockedlist	 ftt_callbacks;
 };
 
 /**
