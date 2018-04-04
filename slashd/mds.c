@@ -376,6 +376,13 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	int i, nr, begin;
 	struct sl_resource *pios, *r;
 
+	/*
+	 * 04/04/2018:
+	 *
+	 * When piosid is IOS_ID_ANY, this will return an empty list.
+	 * As a result, creating a new file will be rejected with
+	 * EHOSTDOWN.
+	 */
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return;

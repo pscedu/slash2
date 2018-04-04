@@ -6257,4 +6257,7 @@ Looking into some /arc issues (MDS is illusion2):
 	- dd hangs because a lot of biorq not completed, after we stop srubbing on an IOS,
           it finished.
 
+
+	- double check disable write logic on MDS and IOS sides.
+
 In general, the I/O path should be more robust.
