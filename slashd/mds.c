@@ -201,6 +201,9 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 			} while (tmp != bml);
 		}
 	}
+	/*
+	 * XXX if the file is shared, force DIO as well.
+	 */
 	if (!rc && (want_dio || force_dio)) {
 		OPSTAT_INCR("bmap-dio-set");
 		b->bcm_flags |= BMAPF_DIO;
