@@ -31,8 +31,10 @@
 #include "pfl/waitq.h"
 
 #include "bmap.h"
+#include "fidc_mds.h"
 #include "bmap_mds.h"
 #include "journal_mds.h"
+#include "slashd.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
 
@@ -235,7 +237,16 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
+	struct fidc_membh *f;
+	struct fcmh_mds_callback *cb;
+
 	while (pscthr_run(thr)) {
+
+		spinlock(&slm_fcmh_callbacks.ftt_lock);
+		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
+		f = cb->fmc_fcmh; 
+		freelock(&slm_fcmh_callbacks.ftt_lock);
+
 		spinlock(&slm_bmap_leases.btt_lock);
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {

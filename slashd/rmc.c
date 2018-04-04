@@ -322,7 +322,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb->fmc_nidpid.nid = nid;
 		cb->fmc_nidpid.pid = pid;
 		cb->fmc_exp = exp;
-		cb->fmc_fmi = fcmh_2_fmi(f);
+		cb->fmc_fcmh = f;
 		INIT_PSC_LISTENTRY(&cb->fmc_lentry);
 		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
