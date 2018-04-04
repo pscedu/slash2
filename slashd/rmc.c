@@ -311,6 +311,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		if (rc)
 			goto next;
 		rq = NULL;
+		f->fcmh_flags |= FCMH_MDS_SHARED;
 		OPSTAT_INCR("slm-invoke-callback");
 	}
 
