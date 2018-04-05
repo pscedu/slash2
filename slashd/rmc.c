@@ -84,8 +84,6 @@ int			slm_min_space_reserve_pct = MIN_SPACE_RESERVE_PCT;
 	
 struct fcmh_timeo_table	slm_fcmh_callbacks;
 
-int			slm_callback_inuse;
-
 static void
 slm_root_attributes(struct srt_stat *attr)
 {
@@ -316,7 +314,6 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		rq = NULL;
 		f->fcmh_flags |= FCMH_MDS_SHARED;
 		OPSTAT_INCR("slm-invoke-callback");
-		slm_callback_inuse = 1;
 	}
 
  next:

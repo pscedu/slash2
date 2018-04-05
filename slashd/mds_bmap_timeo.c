@@ -37,7 +37,6 @@
 #include "slashd.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
-extern int		 slm_callback_inuse;
 
 void
 mds_bmap_timeotbl_init(void)
@@ -244,10 +243,10 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	struct fcmh_mds_callback *cb, *tmp;
 
 	while (pscthr_run(thr)) {
-
-		if (slm_callback_inuse)
-			goto release_bmaps;
-
+		/*
+		 * We walk the callback list to expire callback even if
+		 * there is NO sharing of files among clients.
+		 */
 		spinlock(&slm_fcmh_callbacks.ftt_lock);
 		PFL_GETTIMEVAL(&now);
 		PLL_FOREACH_SAFE(cb, tmp, &slm_fcmh_callbacks.ftt_callbacks) {
@@ -261,12 +260,11 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			fmi = fcmh_2_fmi(f);
 			psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
+			fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
 		}
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
 		f = cb->fmc_fcmh; 
 		freelock(&slm_fcmh_callbacks.ftt_lock);
-
- release_bmaps:
 
 		spinlock(&slm_bmap_leases.btt_lock);
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
