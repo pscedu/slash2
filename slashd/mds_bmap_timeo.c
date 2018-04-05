@@ -263,8 +263,6 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
 			OPSTAT_DECR("slm-callbacks");
 		}
-		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
-		f = cb->fmc_fcmh; 
 		freelock(&slm_fcmh_callbacks.ftt_lock);
 
 		spinlock(&slm_bmap_leases.btt_lock);
