@@ -238,11 +238,16 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	int rc, nsecs = 0;
 
 	struct fidc_membh *f;
-	struct fcmh_mds_callback *cb;
+	struct fcmh_mds_callback *cb, *tmp;
 
 	while (pscthr_run(thr)) {
 
 		spinlock(&slm_fcmh_callbacks.ftt_lock);
+		PLL_FOREACH_SAFE(cb, tmp, &slm_fcmh_callbacks.ftt_callbacks) {
+			f = cb->fmc_fcmh; 
+			if (!FCMH_TRYLOCK(f))
+				continue;
+		}
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
 		f = cb->fmc_fcmh; 
 		freelock(&slm_fcmh_callbacks.ftt_lock);
