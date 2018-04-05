@@ -239,7 +239,7 @@ int
 slm_fcmh_coherent_callback(struct fidc_membh *f, 
     struct pscrpc_export *exp, int32_t *leasep)
 {
-	int32_t lease = 0;
+	int32_t lease;
 	int rc, count, found;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
@@ -267,6 +267,8 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 
 #else
 
+	/* default is no cache - once only */
+	lease = 0;
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
 	psclist_for_each(tmp, &fmi->fmi_callbacks) {
@@ -312,7 +314,6 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		if (rc)
 			goto next;
 		rq = NULL;
-		f->fcmh_flags |= FCMH_MDS_SHARED;
 		OPSTAT_INCR("slm-invoke-callback");
 	}
 
@@ -328,6 +329,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
+		OPSTAT_INCR("slm-callbacks");
 	} else
 		cb = found_cb;
 	/*

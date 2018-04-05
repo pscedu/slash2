@@ -92,7 +92,6 @@ struct fcmh_mds_info {
 
 /* mds-specific fcmh_flags */
 #define FCMH_MDS_IN_PTRUNC	(_FCMH_FLGSHFT << 0)
-#define FCMH_MDS_SHARED		(_FCMH_FLGSHFT << 1)
 
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
