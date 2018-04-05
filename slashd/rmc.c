@@ -252,6 +252,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	struct fcmh_mds_callback *cb, *found_cb;
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc = NULL;
+	struct timeval now;
 
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
@@ -337,9 +338,12 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
  	 * found on the list.  In either case, we update its
  	 * expiration time, and add it to the end of the list.
  	 *
- 	 * XXX we do this even if the lease time is zero.
+ 	 * The assumption here is that if a client does not report
+ 	 * back to MDS within the callback timeout period, its leases
+ 	 * and local caches must have expired.
  	 */
-	cb->fmc_expire = time(NULL) + slm_callback_timeout;
+	PFL_GETTIMEVAL(&now);
+	cb->fmc_expire = now.tv_sec + slm_callback_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 	FCMH_ULOCK(f);
 

@@ -237,8 +237,10 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	struct bmap *b;
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
+	struct timeval now;
 
 	struct fidc_membh *f;
+	struct fcmh_mds_info *fmi;
 	struct fcmh_mds_callback *cb, *tmp;
 
 	while (pscthr_run(thr)) {
@@ -247,10 +249,18 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			goto release_bmaps;
 
 		spinlock(&slm_fcmh_callbacks.ftt_lock);
+		PFL_GETTIMEVAL(&now);
 		PLL_FOREACH_SAFE(cb, tmp, &slm_fcmh_callbacks.ftt_callbacks) {
 			f = cb->fmc_fcmh; 
 			if (!FCMH_TRYLOCK(f))
 				continue;
+			if (cb->fmc_expire < now.tv_sec) {
+				FCMH_ULOCK(f);
+				break;
+			}
+			fmi = fcmh_2_fmi(f);
+			psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
+			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 		}
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
 		f = cb->fmc_fcmh; 
