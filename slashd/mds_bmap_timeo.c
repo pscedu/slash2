@@ -37,6 +37,7 @@
 #include "slashd.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
+extern int		 slm_callback_inuse;
 
 void
 mds_bmap_timeotbl_init(void)
@@ -242,6 +243,9 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 
+		if (slm_callback_inuse)
+			goto release_bmaps;
+
 		spinlock(&slm_fcmh_callbacks.ftt_lock);
 		PLL_FOREACH_SAFE(cb, tmp, &slm_fcmh_callbacks.ftt_callbacks) {
 			f = cb->fmc_fcmh; 
@@ -251,6 +255,8 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 		cb = pll_peekhead(&slm_fcmh_callbacks.ftt_callbacks);
 		f = cb->fmc_fcmh; 
 		freelock(&slm_fcmh_callbacks.ftt_lock);
+
+ release_bmaps:
 
 		spinlock(&slm_bmap_leases.btt_lock);
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
