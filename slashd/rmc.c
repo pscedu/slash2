@@ -240,7 +240,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
     struct pscrpc_export *exp, int32_t *leasep)
 {
 	int32_t lease;
-	int rc, count, found;
+	int rc = 0, count = 0, found = 0;
 	lnet_nid_t nid;
 	lnet_pid_t pid;
 	struct psc_listentry *tmp;
@@ -255,20 +255,9 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	pid = exp->exp_connection->c_peer.pid;
 	nid = exp->exp_connection->c_peer.nid;
 
-	rc = 0;
-	found = 0;
-	count = 0;
-
-
-#if 0
-	if (leasep)
-		*leasep = 30;
-	return (0);
-
-#else
-
 	/* default is no cache - once only */
 	lease = 0;
+
 	fmi = fcmh_2_fmi(f);
 	FCMH_LOCK(f);
 	psclist_for_each(tmp, &fmi->fmi_callbacks) {
@@ -360,8 +349,6 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		*leasep = lease;
 	if (rq)
 		pscrpc_req_finished(rq);
-
-#endif
 
 	return (rc);
 }
