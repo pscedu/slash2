@@ -318,7 +318,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		INIT_PSC_LISTENTRY(&cb->fmc_timeo_lentry);
 		fcmh_op_start_type(f, FCMH_OPCNT_CALLBACK);
 		psclist_add(&cb->fmc_lentry, &fmi->fmi_callbacks);
-		OPSTAT_INCR("slm-callbacks");
+		OPSTAT_INCR("slm-callbacks-alloc");
 	} else
 		cb = found_cb;
 	/*

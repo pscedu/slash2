@@ -261,7 +261,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
-			OPSTAT_DECR("slm-callbacks");
+			OPSTAT_INCR("slm-callbacks-free");
 		}
 		freelock(&slm_fcmh_callbacks.ftt_lock);
 
