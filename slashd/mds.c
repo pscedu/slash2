@@ -1579,6 +1579,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 		bml->bml_flags |= BML_FREEING;
 		goto out;
 	}
+	if (b->bcm_flags & BMAPF_DIO) {
+		OPSTAT_INCR("bmap-dio-lease-2");
+		bml->bml_flags |= BML_DIO;
+	}
 
 	slm_fill_bmapdesc(sbd, b);
 
@@ -1746,7 +1750,14 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		bml->bml_flags |= BML_FREEING;
 		goto out;
 	}
-
+	/*
+	 * DIO information will be informed to the client with
+	 * slm_fill_bmapdesc(). BML_DIO is for MDS internal use.
+	 */
+	if (b->bcm_flags & BMAPF_DIO) {
+		OPSTAT_INCR("bmap-dio-lease-1");
+		bml->bml_flags |= BML_DIO;
+	}
 	/* 
 	 * Do some post setup on the new lease. This is probably a 
 	 * good idea because the bmap replication table can change
