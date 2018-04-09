@@ -153,10 +153,9 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 
 	BMAP_LOCK_ENSURE(b);
 
-	if (b->bcm_flags & BMAPF_DIO)
-		return (0);
-
 	fmi = fcmh_2_fmi(f);
+
+	b->bcm_flags &= ~BMAPF_DIO;
 
 	/*
 	 * We enter into DIO mode in three cases:
@@ -209,11 +208,11 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	 * XXX if the file is shared, force DIO as well.
 	 */
 	if (!rc && (want_dio || force_dio)) {
-		OPSTAT_INCR("bmap-dio-set");
+		OPSTAT_INCR("bmap-dio-set-1");
 		b->bcm_flags |= BMAPF_DIO;
 	}
 	if (fmi->fmi_cb_count > 1 && !(b->bcm_flags & BMAPF_DIO)) {
-		OPSTAT_INCR("bmap-share-dio-set");
+		OPSTAT_INCR("bmap-dio-set-2");
 		b->bcm_flags |= BMAPF_DIO;
 	}
 	return (rc);
