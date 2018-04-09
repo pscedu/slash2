@@ -69,6 +69,7 @@ struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
 	mio_fid_t		  fmi_mfid;		/* backing object inum */
 	struct mio_fh		  fmi_mfh;		/* file handle */
+	int			  fmi_cb_count;
 	struct psclist_head	  fmi_callbacks;
 	union {
 		struct {
@@ -92,6 +93,7 @@ struct fcmh_mds_info {
 
 /* mds-specific fcmh_flags */
 #define FCMH_MDS_IN_PTRUNC	(_FCMH_FLGSHFT << 0)
+#define FCMH_MDS_IN_CALLBACK	(_FCMH_FLGSHFT << 1)
 
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
