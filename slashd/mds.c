@@ -1791,6 +1791,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
 
+	if (!rc)
+		OPSTAT_INCR("bmap-renew-ok");
+	else
+		OPSTAT_INCR("bmap-renew-err");
+
 	if (b)
 		bmap_op_done(b);
 	return (rc);
