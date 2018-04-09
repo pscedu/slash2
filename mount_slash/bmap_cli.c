@@ -169,6 +169,17 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	if (b->bcm_flags & BMAPF_WR)
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
+	/*
+ 	 * If we renew a lease repeatedly, we can get of DIO if
+ 	 * other parties have lost interest.
+ 	 */
+	if (!(sbd->sbd_flags & SRM_LEASEBMAPF_DIO)) {
+		if (b->bcm_flags & BMAPF_DIO) {
+			OPSTAT_INCR("bmap-clear-dio");
+			b->bcm_flags &= ~BMAPF_DIO;
+		}
+	}
+
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
 
