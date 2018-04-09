@@ -586,7 +586,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
  out:
 	if (f)
 		fcmh_op_done(f);
-	if (mp->rc)
+	if (!mp->rc)
 		OPSTAT_INCR("getbmap-lease-ok");
 	else
 		OPSTAT_INCR("getbmap-lease-err");
