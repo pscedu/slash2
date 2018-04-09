@@ -147,12 +147,16 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_mds_lease *bml, *tmp;
+	struct fidc_membh *f = b->bcm_fcmh;
+	struct fcmh_mds_info *fmi;
 	int rc = 0, force_dio = 0;
 
 	BMAP_LOCK_ENSURE(b);
 
 	if (b->bcm_flags & BMAPF_DIO)
 		return (0);
+
+	fmi = fcmh_2_fmi(f);
 
 	/*
 	 * We enter into DIO mode in three cases:
@@ -206,6 +210,10 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 	 */
 	if (!rc && (want_dio || force_dio)) {
 		OPSTAT_INCR("bmap-dio-set");
+		b->bcm_flags |= BMAPF_DIO;
+	}
+	if (fmi->fmi_cb_count > 1 && !(b->bcm_flags & BMAPF_DIO)) {
+		OPSTAT_INCR("bmap-share-dio-set");
 		b->bcm_flags |= BMAPF_DIO;
 	}
 	return (rc);
