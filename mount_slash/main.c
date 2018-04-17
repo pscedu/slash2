@@ -4652,8 +4652,14 @@ pscfs_module_load(struct pscfs *m)
 	m->pf_filehandle_thaw		= msl_filehandle_thaw;
 
 	DYNARRAY_FOREACH(opt, i, &m->pf_opts)
+		/*
+		 * If you put unrecognized option here (e.g., read-only),
+		 * wokfs will fail to load slash2 client module. Also
+		 * make sure that the shared library has +x bit set.
+		 */
 		if (!msl_opt_lookup(opt)) {
-			warnx("invalid option: %s", opt);
+			warnx("Fail to load module due to invalid option: %s", 
+			       opt);
 			return (EINVAL);
 		}
 
