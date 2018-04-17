@@ -4112,7 +4112,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 void
 msattrflushthr_main(struct psc_thread *thr)
 {
-	struct timespec ts, nexttimeo;
+	struct timespec nexttimeo;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 	struct timeval now;
