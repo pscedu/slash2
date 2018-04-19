@@ -135,11 +135,13 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
  	 * the reserve. We check percentage first because file
  	 * system does not do well when near full.
  	 */
+	spinlock(&sli_ssfb_lock);
 	percentage = sli_statvfs_buf.f_bfree * 100 /
 	    sli_statvfs_buf.f_blocks;
 
 	if (percentage < sli_min_space_reserve_pct) {
 		OPSTAT_INCR("space-reserve-pct");
+		freelock(&sli_ssfb_lock);
 		return (0);
 	}
 
@@ -147,8 +149,10 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	    < (unsigned long) sli_min_space_reserve_gb * 
 	       1024 * 1024 * 1024) {
 		OPSTAT_INCR("space-reserve-abs");
+		freelock(&sli_ssfb_lock);
 		return (0);
 	}
+	freelock(&sli_ssfb_lock);
 
 	return (1);
 }

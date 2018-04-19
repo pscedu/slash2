@@ -125,17 +125,21 @@ void
 slistatfsthr_main(struct psc_thread *thr)
 {
 	char type[LINE_MAX];
+	struct statvfs tmpbuf;
 	int rc;
 
 	pfl_getfstype(slcfg_local->cfg_fsroot, type, sizeof(type));
 
 	while (pscthr_run(thr)) {
-		rc = statvfs(slcfg_local->cfg_fsroot, &sli_statvfs_buf);
+		/* use tmp buffer to reduce lock hold time */
+		rc = statvfs(slcfg_local->cfg_fsroot, &tmpbuf);
 		if (rc == -1)
 			psclog_error("statvfs %s", slcfg_local->cfg_fsroot);
 
 		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
+			memcpy(&sli_statvfs_buf, &tmpbuf, 
+			    sizeof(struct statvfs));
 			sl_externalize_statfs(&sli_statvfs_buf,
 			    &sli_ssfb);
 			strlcpy(sli_ssfb.sf_type, type,
