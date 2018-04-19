@@ -103,6 +103,11 @@ mds_bmap_timeotbl_journal_seqno(void)
 	sjbsq.sjbsq_low_wm = slm_bmap_leases.btt_minseq;
 	sjbsq.sjbsq_high_wm = slm_bmap_leases.btt_maxseq;
 
+	/*
+ 	 * At this point, we still got the global slm_bmap_leases.btt_lock.
+ 	 * If the log buffer is exhausted, we could end up in a deadlock.
+	 * As a workaround I increased BMAP_SEQLOG_FACTOR from 100 to 10000.
+ 	 */
 	log++;
 	if (log % BMAP_SEQLOG_FACTOR)
 		return;

@@ -69,7 +69,7 @@ struct bmap_core_state {
 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
 };
 
-#define BMAP_SEQLOG_FACTOR	100
+#define BMAP_SEQLOG_FACTOR	10000
 
 /**
  * bmap_extra_state - Additional fields needed by MDS.
