@@ -207,6 +207,8 @@ slihealththr_main(struct psc_thread *thr)
 			rc = !sli_has_enough_space(NULL, 0, 0, 0);
 		if (!rc)
 			rc = sli_disable_write;
+
+		/* Only report when there is a health status change */
 		if (sli_selftest_result != rc) {
 
 			/* The result is sent to MDS by slconnthr_main() */
