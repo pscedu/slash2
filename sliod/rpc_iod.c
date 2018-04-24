@@ -130,7 +130,7 @@ sli_rci_ctl_health_send(struct slrpc_cservice *csvc)
 	struct srm_ctl_req *mq;
 	int rc;
 
-	/* handled by slc_rci_handle_ctl() by MDS */
+	/* handled by slc_rci_handle_ctl() by a client */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CTL, rq, mq, mp);
 	if (rc) {
 		sl_csvc_decref(csvc);
