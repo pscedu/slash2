@@ -57,9 +57,11 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 
 			m = libsl_try_nid2resm(rq->rq_peer.nid);
 			rpci = res2rpci(m->resm_res);
-			rpci->rpci_flags &= ~RPCIF_AVOID;
 			switch (c->opv) {
-			case 2: /* degraded: avoid */
+			case 0:
+				rpci->rpci_flags &= ~RPCIF_AVOID;
+				break;
+			case 1:
 				rpci->rpci_flags |= RPCIF_AVOID;
 				break;
 			}
