@@ -374,7 +374,7 @@ slrpc_issue_ping(struct slrpc_cservice *csvc, int st_rc)
 	struct srm_ping_rep *mp;
 	int rc;
 
-	/* handled by slm_rmi_handle_ping() */
+	/* handled by slm_rmi_handle_ping() by MDS */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
