@@ -30,7 +30,7 @@ that an IOS should reserve. Their default values are:
 sys.min_space_reserve_gb                                32
 sys.min_space_reserve_pct                               5
 
-You can disable writes to a particular IOS with one of the following commands:
+You can completely disable writes to a particular IOS with one of the following commands:
 
 # slictl -p sys.min_space_reserve_pct=100
 # slictl -p sys.disable_write=1
@@ -44,6 +44,11 @@ resource                    flag  capacity    used  remain utilization  type
 lemon@PSC                   -X--      7.0T    1.3G    6.6T       0.02%  ext4             
 lime@PSC                    ----      1.3T    1.4G    1.3T       0.11%  ext4             
 polybius@PSC                ----         -       -       -           -          
+
+
+The following are some additional comments about this issue:
+
+(1) Disable writes from the MDS side:
 
 After write is disabled for an IOS, write will still go to that IOS if
 the IOS already has data for a particular block of a given file.
@@ -60,3 +65,12 @@ polybius@PSC                ----         -       -       -           -
 
 If so, any write to a block of a file already on the IOS will be rejected with 
 EAGAIN.
+
+(2) Disable fshealthtest script
+
+If the script says -u 90, you cannot raise the limit to 95% without modifying
+the script and restart I/O servers.  To overcome this, you can do the following:
+
+bash-4.2# slictl -p sys.self_test_enable=0
+bash-4.2# slictl -p sys.min_space_reserve_pct=95
+
