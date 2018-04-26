@@ -72,5 +72,5 @@ If the script says -u 90, you cannot raise the limit to 95% without modifying
 the script and restart I/O servers.  To overcome this, you can do the following:
 
 bash-4.2# slictl -p sys.self_test_enable=0
-bash-4.2# slictl -p sys.min_space_reserve_pct=95
+bash-4.2# slictl -p sys.min_space_reserve_pct=5
 
