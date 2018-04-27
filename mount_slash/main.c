@@ -3404,6 +3404,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (!rc && invalid) {
 			OPSTAT_INCR("msl.truncate-all");
 			msreadahead_cancel(c);
+			/*
+ 			 * This call might be redundant because the msl_setattr()
+ 			 * above should detect a generation number bump and call
+ 			 * invalidation there.  Fortunately, the second call will
+ 			 * most likely have nothing to do.
+ 			 */
 			slc_fcmh_invalidate_bmap(c, 0);
 		}
 
