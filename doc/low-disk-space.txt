@@ -1,0 +1,76 @@
+04/25/2018
+----------
+
+There are two ways to control disk space usage on an IOS in slash2. Both ways work
+by sending a ping RPC to the MDS.  If both ways are used, then the most restrictive
+limit will apply.
+
+(1) Use fshealthtest script
+
+We can use argument -u to the script to specify that the maximum disk space usage in percentage.
+
+In /local/psc/pylon2.s2/slcfg, we have
+
+        resource stor003s0 { type = standalone_fs; id = 0x1600; nids = 10.4.108.52; \
+	self_test = "fshealthtest -u 93 %r"; fsroot = /stor003_pool0/slio; slab_cache_size = 8g; }
+
+        resource stor003s1 { type = standalone_fs; id = 0x1601; nids = 10.4.108.56; \
+	self_test = "fshealthtest -u 93 %r"; fsroot = /stor003_pool1/slio; slab_cache_size = 8g; }
+
+This means that we allow the disk space usage to go as high as 93%.
+
+This fshealthtest script also writes a small file into the pool and verify its 
+md5sum is good.  So it is more than just usage.
+
+(2) Use slictl -p sys command:
+
+There are two slictl tunables at an IOS to control the minimum amount of space
+that an IOS should reserve. Their default values are:
+
+sys.min_space_reserve_gb                                32
+sys.min_space_reserve_pct                               5
+
+You can completely disable writes to a particular IOS with one of the following commands:
+
+# slictl -p sys.min_space_reserve_pct=100
+# slictl -p sys.disable_write=1
+
+After the above commands, we can see at the MDS side that the IOS has write
+disabled (the X symbol):
+
+bash-4.2# ./slmctl -ss
+resource                    flag  capacity    used  remain utilization  type             
+============================================================================
+lemon@PSC                   -X--      7.0T    1.3G    6.6T       0.02%  ext4             
+lime@PSC                    ----      1.3T    1.4G    1.3T       0.11%  ext4             
+polybius@PSC                ----         -       -       -           -          
+
+
+The following are some additional comments about this issue:
+
+(1) Disable writes from the MDS side:
+
+After write is disabled for an IOS, write will still go to that IOS if
+the IOS already has data for a particular block of a given file.
+
+Incidentally, write can also be disabled from the MDS side as follows:
+
+bash-4.2# ./slmctl -p sys.resources.PSC.lemon.disable_write=1
+bash-4.2# ./slmctl -ss
+resource                    flag  capacity    used  remain utilization  type             
+============================================================================
+lemon@PSC                   WX--      7.0T    1.3G    6.6T       0.02%  ext4             
+lime@PSC                    ----      1.3T    1.4G    1.3T       0.11%  ext4             
+polybius@PSC                ----         -       -       -           -             
+
+If so, any write to a block of a file already on the IOS will be rejected with 
+EAGAIN.
+
+(2) Disable fshealthtest script
+
+If the script says -u 90, you cannot raise the limit to 95% without modifying
+the script and restart I/O servers.  To overcome this, you can do the following:
+
+bash-4.2# slictl -p sys.self_test_enable=0
+bash-4.2# slictl -p sys.min_space_reserve_pct=5
+

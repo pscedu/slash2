@@ -52,6 +52,10 @@
 
 extern struct psc_waitq		 msl_bmap_waitq;
 
+/*
+ * If we fully truncate a file and then write to it in a loop, this 
+ * will trigger get bmap RPC repeatedly.
+ */
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
