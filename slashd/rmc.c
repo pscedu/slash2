@@ -559,6 +559,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		goto out;
 	}
+	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, NULL);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	/*
  	 * If we don't wait for a truncation to complete on an IOS, a
