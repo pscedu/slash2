@@ -269,6 +269,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
+	int ret;
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct bmap_cli_info *bci = bmap_2_bci(b);
@@ -338,7 +339,8 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(&diowait_duration, nretries))
+		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		if (ret)
 			goto retry;
 	}
 
@@ -621,6 +623,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
+	int ret;
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct slrpc_cservice *csvc = NULL;
@@ -698,7 +701,8 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(&diowait_duration, nretries))
+		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		if (ret)
 			goto retry;
 	}
 
