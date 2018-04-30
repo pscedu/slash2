@@ -137,6 +137,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
 
+	OPSTAT_INCR("coherent-request");
 	BMAP_LOCK_ENSURE(b);
 
 	if (bml->bml_flags & BML_RECOVER) {
