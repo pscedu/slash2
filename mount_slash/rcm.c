@@ -270,7 +270,7 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 }
 
 /*
- * Handle a BMAPDIO request for CLI from MDS.
+ * Handle a SRMT_FILECB request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -303,7 +303,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	fci->fci_expire = now.tv_sec;
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.callback-flush-attrs");
-		lc_move2head(&msl_attrtimeoutq, f);
+		lc_move2head(&msl_attrtimeoutq, fci);
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 	if (fcmh_isdir(f)) {
