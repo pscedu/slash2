@@ -334,14 +334,15 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		rc = mp->rc;
  out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		OPSTAT_INCR("bmap-retrieve-diowait");
 
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
+		OPSTAT_INCR("bmap-retrieve-diowait");
 		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		OPSTAT_INCR("bmap-retrieve-diowait-done");
 		if (ret)
 			goto retry;
 	}
@@ -696,14 +697,15 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rc = mp->rc;
  out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		OPSTAT_INCR("bmap-modeset-diowait");
 
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
+		OPSTAT_INCR("bmap-modeset-diowait");
 		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		OPSTAT_INCR("bmap-modeset-diowait-done");
 		if (ret)
 			goto retry;
 	}
