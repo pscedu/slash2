@@ -559,6 +559,10 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		goto out;
 	}
+	/*
+	 * Without this, a client constantly asking for a non-DIO
+	 * lease will starve out another cient.
+	 */
 	mp->rc = slm_fcmh_coherent_callback(f, rq->rq_export, NULL);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
