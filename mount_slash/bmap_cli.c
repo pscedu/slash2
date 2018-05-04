@@ -492,6 +492,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		pfr = pft->pft_pfr;
 	}
 
+	OPSTAT_INCR("msl.bmap-extend");
 	BMAP_LOCK_ENSURE(b);
 
 	/* already waiting for LEASEEXT reply */
@@ -560,8 +561,11 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	}
 
 	BMAP_LOCK(b);
-	if (!rc)
-		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	if (!rc) {
+		OPSTAT_INCR("msl.bmap-extend-ok");
+		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	} else
+		OPSTAT_INCR("msl.bmap-extend-err");
 	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
