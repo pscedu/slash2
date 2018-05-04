@@ -174,13 +174,13 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
  	 * other parties have lost interest.
  	 */
 	if (!(sbd->sbd_flags & SRM_LEASEBMAPF_DIO)) {
-		OPSTAT_INCR("bmap-non-DIO");
+		OPSTAT_INCR("bmap-non-dio");
 		if (b->bcm_flags & BMAPF_DIO) {
 			OPSTAT_INCR("bmap-clear-dio");
 			b->bcm_flags &= ~BMAPF_DIO;
 		}
 	} else
-		OPSTAT_INCR("bmap-DIO");
+		OPSTAT_INCR("bmap-dio");
 
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
