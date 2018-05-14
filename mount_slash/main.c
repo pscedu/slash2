@@ -3281,7 +3281,16 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 */
 			if (!force) {
 				OPSTAT_INCR("msl.truncate-size-noop");
+#if 0
+				/*
+				 * scp a small file can end up with
+				 * zero length.  It turns out that
+				 * the st_size is a cached copy and
+				 * the MDS never knows about it.
+				 * So let us get rid of this optimization.
+				 */ 	
 				to_set &= ~PSCFS_SETATTRF_DATASIZE;
+#endif
 			}
 		} else if (stb->st_size < (ssize_t)fcmh_2_fsz(c)) {
 			/*
