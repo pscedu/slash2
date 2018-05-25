@@ -211,6 +211,8 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 		OPSTAT_INCR("bmap-dio-set-1");
 		b->bcm_flags |= BMAPF_DIO;
 	}
+	psclog_max("%d, fid="SLPRI_FID ", callback = %d", 
+		__LINE__, fcmh_2_fid(f), fmi->fmi_cb_count);
 	if (fmi->fmi_cb_count > 1 && !(b->bcm_flags & BMAPF_DIO)) {
 		OPSTAT_INCR("bmap-dio-set-2");
 		b->bcm_flags |= BMAPF_DIO;
@@ -1732,6 +1734,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	OPSTAT_INCR("lease-renew");
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
+	if (rc)
+		goto out;
+
+	rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
 	if (rc)
 		goto out;
 
