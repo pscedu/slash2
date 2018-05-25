@@ -1737,7 +1737,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc)
 		goto out;
 
-	rc = slm_fcmh_coherent_callback(p, rq->rq_export, NULL);
+	rc = slm_fcmh_coherent_callback(f, exp, NULL);
 	if (rc)
 		goto out;
 
