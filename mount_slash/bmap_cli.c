@@ -48,7 +48,8 @@
 #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
 #define BMAP_DIOWAIT_MAX_TRIES	32
 
-const struct timespec slc_bmap_diowait_max = { 60, 0 };
+#define BMAP_DIOWAIT_MAX_SEC	10
+const struct timespec slc_bmap_diowait_max = { BMAP_DIOWAIT_MAX_SEC, 0 };
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
