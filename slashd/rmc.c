@@ -334,9 +334,11 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	PFL_GETTIMEVAL(&now);
 	cb->fmc_expire = now.tv_sec + slm_callback_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
+
+	psclog_max("%d: fid="SLPRI_FID "callback = %p, count = %d, expire = %d", 
+		__LINE__, fcmh_2_fid(f), cb, fmi->fmi_cb_count, cb->fmc_expire);
+
 	FCMH_ULOCK(f);
-	psclog_max("%d: fid="SLPRI_FID "callback = %d", 
-		__LINE__, fcmh_2_fid(f), fmi->fmi_cb_count);
 
 	/*
  	 * Allow directory and its contents to be cached briefly.

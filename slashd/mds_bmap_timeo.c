@@ -265,8 +265,8 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			fmi = fcmh_2_fmi(f);
 			psc_assert(fmi->fmi_cb_count > 0);
 			fmi->fmi_cb_count--;
-			psclog_max("%d, fid="SLPRI_FID ", callback = %d", 
-				__LINE__, fcmh_2_fid(f), fmi->fmi_cb_count);
+			psclog_max("%d, fid="SLPRI_FID ", callback = %p, count = %d", 
+				__LINE__, fcmh_2_fid(f), cb, fmi->fmi_cb_count);
 			psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
