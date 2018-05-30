@@ -335,8 +335,10 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 	cb->fmc_expire = now.tv_sec + slm_callback_timeout;
 	pll_addtail(&slm_fcmh_callbacks.ftt_callbacks, cb);
 
+#if 0
 	psclog_max("fid="SLPRI_FID ", callback = %p, count = %d, expire = %d", 
 	    fcmh_2_fid(f), cb, fmi->fmi_cb_count, cb->fmc_expire);
+#endif
 
 	FCMH_ULOCK(f);
 
