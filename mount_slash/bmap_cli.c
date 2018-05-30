@@ -352,8 +352,6 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
-	if (rc == -SLERR_BMAP_DIOWAIT)
-		rc = ETIMEDOUT;
 
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
 		rc = EAGAIN;
@@ -378,6 +376,11 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		goto retry;
+	}
+
+	if (rc == -SLERR_BMAP_DIOWAIT) {
+		OPSTAT_INCR("msl.bmap-dio-wait");
+		rc = ETIMEDOUT;
 	}
 
 	if (!rc) {
