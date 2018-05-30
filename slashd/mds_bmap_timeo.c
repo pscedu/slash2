@@ -258,7 +258,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 			f = cb->fmc_fcmh; 
 			if (!FCMH_TRYLOCK(f))
 				continue;
-			if (cb->fmc_expire < now.tv_sec) {
+			if (cb->fmc_expire > now.tv_sec) {
 				FCMH_ULOCK(f);
 				break;
 			}
