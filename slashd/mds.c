@@ -212,10 +212,8 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 		b->bcm_flags |= BMAPF_DIO;
 	}
 
-#if 0
-	psclog_max("fid="SLPRI_FID ", callback = %d", 
+	psclog_diag("fid="SLPRI_FID ", callback = %d", 
 	    fcmh_2_fid(f), fmi->fmi_cb_count);
-#endif
 
 	if (fmi->fmi_cb_count > 1 && !(b->bcm_flags & BMAPF_DIO)) {
 		OPSTAT_INCR("bmap-dio-set-2");
