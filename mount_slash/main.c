@@ -2992,6 +2992,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	int rc;
 	int32_t lease;
 
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
+
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(buf) >= SL_PATH_MAX ||
@@ -3910,6 +3913,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	int rc;
+
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
 
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = EINVAL);
