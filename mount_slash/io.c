@@ -2088,6 +2088,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 
+	if (msl_read_only && rw == SL_WRITE)
+		PFL_GOTOERR(out3, rc = EROFS);
+
 	/* XXX EBADF if fd is not open for writing */
 
 	if (fcmh_isdir(f)) {

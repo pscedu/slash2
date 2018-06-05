@@ -932,6 +932,9 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	int rc = 0;
 	int32_t lease = 0;
 
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
+
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(newname) > SL_NAME_MAX)
@@ -1033,6 +1036,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 	int32_t lease = 0;
+
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
