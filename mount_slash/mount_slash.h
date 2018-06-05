@@ -410,6 +410,7 @@ extern int			 msl_predio_pipe_size;
 
 extern int			 msl_max_retries;
 extern int			 msl_root_squash;
+extern int			 msl_read_only;
 extern int			 msl_repl_enable;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;

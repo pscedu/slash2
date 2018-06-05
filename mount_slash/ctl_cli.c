@@ -1103,8 +1103,12 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.predio_pipe_size",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_predio_pipe_size);
 
+	psc_ctlparam_register_var("sys.read_only", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_read_only);
+
 	psc_ctlparam_register_var("sys.repl_enable", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_repl_enable);
+
 	psc_ctlparam_register_var("sys.root_squash", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_root_squash);
 
