@@ -1509,6 +1509,8 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	struct fcmh_cli_info *fci;
 	int32_t lease = 0;
 
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
