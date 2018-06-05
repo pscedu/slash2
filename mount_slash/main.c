@@ -453,6 +453,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	psc_assert(oflags & O_CREAT);
 
+	if (msl_read_only)
+		PFL_GOTOERR(out, rc = EROFS);
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 	if (strlen(name) == 0)
