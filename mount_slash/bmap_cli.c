@@ -1246,10 +1246,12 @@ msbreleasethr_main(struct psc_thread *thr)
 				/*
  				 * 06/06/2018: trigger asserts here. Perhaps
  				 * the bmap is not fully set up or could not
- 				 * be renewed.
+ 				 * be renewed. So I changed assert to skip.
  				 */
-				/* Setup a msg to an ION. */
-				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
+				if (bmap_2_ios(b) == IOS_ID_ANY) {
+					OPSTAT_INCR("msl.bmap-release-write-skip");
+					goto skip;
+				}
 
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
@@ -1270,6 +1272,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			rmci->rmci_bmaprls.nbmaps++;
 			psc_dynarray_add_ifdne(&rels, resm);
 
+ skip:
 			DEBUG_BMAP(PLL_DEBUG, b, "release");
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
