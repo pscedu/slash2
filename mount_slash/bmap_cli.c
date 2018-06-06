@@ -1243,6 +1243,11 @@ msbreleasethr_main(struct psc_thread *thr)
 			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
+				/*
+ 				 * 06/06/2018: trigger asserts here. Perhaps
+ 				 * the bmap is not fully set up or could not
+ 				 * be renewed.
+ 				 */
 				/* Setup a msg to an ION. */
 				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
 
