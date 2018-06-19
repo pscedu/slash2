@@ -739,7 +739,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCEF_READAHEAD, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_ACCESSED, &flags, &seq);
 	PFL_PRFLAG(BMPCEF_IDLE, &flags, &seq);
-	PFL_PRFLAG(BMPCEF_REAPED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

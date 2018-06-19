@@ -869,7 +869,7 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	printf("%016"SLPRIxFID" %6d %3d "
 	    "%4d %7x %7x "
-	    "%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c "
 	    "%3d %3d "
 	    "%8"PRIx64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
@@ -883,7 +883,6 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    mpce->mpce_flags & BMPCEF_READAHEAD	? 'r' : '-',
 	    mpce->mpce_flags & BMPCEF_ACCESSED	? 'a' : '-',
 	    mpce->mpce_flags & BMPCEF_IDLE	? 'i' : '-',
-	    mpce->mpce_flags & BMPCEF_REAPED	? 'X' : '-',
 	    mpce->mpce_nwaiters, mpce->mpce_npndgaios,
 	    mpce->mpce_laccess.tv_sec);
 }
