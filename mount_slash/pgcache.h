@@ -95,7 +95,6 @@ struct bmap_page_entry {
 #define BMPCEF_ACCESSED		(1 <<  8)	/* bmpce was used before reap (readahead) */
 #define BMPCEF_IDLE		(1 <<  9)	/* on idle_pages listcache */
 #define BMPCEF_REAPED		(1 << 10)	/* reaper has removed us from LRU listcache */
-#define BMPCEF_READALC		(1 << 11)	/* on readahead_pages listcache */
 
 #define BMPCE_LOCK(e)		spinlock(&(e)->bmpce_lock)
 #define BMPCE_ULOCK(e)		freelock(&(e)->bmpce_lock)
@@ -128,7 +127,7 @@ struct bmap_page_entry {
 #define DEBUG_BMPCE(level, pg, fmt, ...)				\
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fcmh=%p fid="SLPRI_FID" "				\
-	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s "				\
+	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s "				\
 	    "off=%#09x entry=%p ref=%u : " fmt,				\
 	    (pg), (pg)->bmpce_bmap->bcm_fcmh,				\
 	    fcmh_2_fid((pg)->bmpce_bmap->bcm_fcmh), (pg)->bmpce_flags,	\
@@ -142,7 +141,6 @@ struct bmap_page_entry {
 	    (pg)->bmpce_flags & BMPCEF_ACCESSED		? "a" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_IDLE		? "i" : "",	\
 	    (pg)->bmpce_flags & BMPCEF_REAPED		? "X" : "",	\
-	    (pg)->bmpce_flags & BMPCEF_READALC		? "R" : "",	\
 	    (pg)->bmpce_off, (pg)->bmpce_entry,				\
 	    (pg)->bmpce_ref, ## __VA_ARGS__)
 
