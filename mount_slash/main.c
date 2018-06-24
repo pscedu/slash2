@@ -808,6 +808,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 			return (0);
 		}
 		OPSTAT_INCR("attr-timeout");
+		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 	}
 
 	/* Attrs have expired or do not exist. */
@@ -1311,14 +1312,17 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			goto rpc;
 		}
 		OPSTAT_INCR("msl.dircache-lookup-hit-ok");
+		FCMH_LOCK(c);
 		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
 			PFL_GETTIMEVAL(&now);
 			fci = fcmh_2_fci(c);
 			if (now.tv_sec < fci->fci_expire) {
 				if (sstb)
 					*sstb = c->fcmh_sstb;
+				FCMH_ULOCK(c);
 				goto out;
 			}
+			c->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 		}
 		fcmh_op_done(c);
 		c = NULL;
@@ -2454,6 +2458,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 
 	FCMH_LOCK(f);
 	FCMH_WAIT_BUSY(f, 0);
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
 
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
