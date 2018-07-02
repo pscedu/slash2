@@ -116,7 +116,7 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
  *     (2) This function should only be used by a client.
  *
  * The current thinking is to store remote attributes in sstb.
- */
+ */ 
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
     int flags, int32_t timeout)
