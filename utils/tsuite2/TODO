@@ -1,5 +1,0 @@
-- pull and compile slash2 before starting (wrapper scipt)
-- add more intense tests
-- finish web UI
-- collect resource usage (of tests and slash2)
-  * implement BSD support with *ctl -s rusage
