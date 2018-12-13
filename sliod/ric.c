@@ -211,9 +211,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
+	off_t off, raoff;
 	uint64_t seqno;
+	size_t rasize;
 	ssize_t rv;
-	off_t off, raoff, rasize;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 

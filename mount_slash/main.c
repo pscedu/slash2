@@ -1683,7 +1683,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_mknod_rep *mp;
+	struct srm_mknod_rep *mp = NULL;
 	struct srm_mknod_req *mq;
 	struct pscfs_creds pcr;
 	struct stat stb;
@@ -2190,9 +2190,9 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct sl_fidgen fg;
 	struct stat stb;
 	struct fcmh_cli_info *fci;
-	int rc;
 	struct timeval now;
-	int32_t lease;
+	int32_t lease = pscfs_attr_timeout;
+	int rc;
 
 	memset(&sstb, 0, sizeof(sstb));
 
@@ -2218,8 +2218,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 				OPSTAT_INCR("msl.lookup-zero-lease");
 				lease = 0;
 			}
-		} else 
-			lease = pscfs_attr_timeout;
+		}
 	}
 
  out:
@@ -4251,24 +4250,6 @@ msattrflushthr_spawn(void)
 		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
-}
-
-void
-unmount(const char *mp)
-{
-	char buf[BUFSIZ];
-	int rc;
-
-	/* XXX do not let this hang */
-	rc = snprintf(buf, sizeof(buf),
-	    "umount '%s' || umount -f '%s' || umount -l '%s'",
-	    mp, mp, mp);
-	if (rc == -1)
-		psc_fatal("snprintf: umount %s", mp);
-	if (rc >= (int)sizeof(buf))
-		psc_fatalx("snprintf: umount %s: too long", mp);
-	if (system(buf) == -1)
-		psclog_warn("system(%s)", buf);
 }
 
 /*

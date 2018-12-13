@@ -1165,7 +1165,7 @@ slvr_cache_init(void)
 
 	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
 		psc_fatalx("invalid slab_cache_size setting; "
-		    "minimum allowed is %zu", SLAB_MIN_CACHE);
+		    "minimum allowed is %"PSCPRIdOFFT, SLAB_MIN_CACHE);
 
 	nbuf = slcfg_local->cfg_slab_cache_size / SLASH_SLVR_SIZE;
 
@@ -1181,8 +1181,8 @@ slvr_cache_init(void)
 		slab_lentry, "slabbuffers"); 
 
 	for (i = 0; i < nbuf; i++) {
-		p = mmap(NULL, SLASH_SLVR_SIZE, PROT_READ|PROT_WRITE,
-			MAP_ANONYMOUS|MAP_SHARED, -1, 0); 
+		p = mmap(NULL, SLASH_SLVR_SIZE, PROT_READ | PROT_WRITE,
+		    MAP_ANONYMOUS | MAP_SHARED, -1, 0); 
 
 		if (p == MAP_FAILED)
 			psc_fatalx("Please raise vm.max_map_count limit");
