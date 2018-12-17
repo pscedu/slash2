@@ -172,7 +172,7 @@ mds_replay_bmap(void *jent, int op)
  * in the bmap, this has to be a read-modify-write process.
  */
 static int
-mds_replay_update(struct psc_journal_enthdr *pje)
+mds_replay_update(__unusedx struct psc_journal_enthdr *pje)
 {
 	return (0);
 }
@@ -200,8 +200,9 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 /*
  * Replay an inode update.
  *
- * Note that the replica table can be stored for a directory for inheritance purposes,
- * and it is named according to /deployment_s2md/.slmd/fidns/a/b/c/d/$fid.ino. 
+ * Note that the replica table can be stored for a directory for
+ * inheritance purposes, and it is named according to
+ * /deployment_s2md/.slmd/fidns/a/b/c/d/$fid.ino. 
  * See slm_fcmh_ctor() for details.
  */
 static int
