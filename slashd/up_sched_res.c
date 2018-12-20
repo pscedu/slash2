@@ -374,7 +374,7 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 	struct fcmh_mds_info *fmi;
 	int ret, tract[NBREPLST], retifset[NBREPLST];
 
-	psc_assert(b);
+	pfl_assert(b);
 	f = b->bcm_fcmh;
 
 	/*
@@ -1268,8 +1268,8 @@ upd_init(struct slm_update_data *upd)
 void
 upd_destroy(struct slm_update_data *upd)
 {
-	psc_assert(psclist_disjoint(&upd->upd_lentry));
-	psc_assert(!(upd->upd_flags & UPDF_BUSY));
+	pfl_assert(psclist_disjoint(&upd->upd_lentry));
+	pfl_assert(!(upd->upd_flags & UPDF_BUSY));
 	memset(upd, 0, sizeof(*upd));
 }
 

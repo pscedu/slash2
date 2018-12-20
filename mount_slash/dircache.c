@@ -139,8 +139,8 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	DIRCACHE_WR_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
-	psc_assert(!p->dcp_refcnt);
-	psc_assert(!(p->dcp_flags & DIRCACHEPGF_FREEING));
+	pfl_assert(!p->dcp_refcnt);
+	pfl_assert(!(p->dcp_flags & DIRCACHEPGF_FREEING));
 
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
@@ -201,9 +201,9 @@ dircache_purge(struct fidc_membh *d)
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
 
 		fci->fcid_count--;
-		psc_assert(fci->fcid_count >= 0);
-		psc_assert(dce->dce_flag & DIRCACHE_F_LIST);
-		psc_assert(dce->dce_flag & DIRCACHE_F_HASH);
+		pfl_assert(fci->fcid_count >= 0);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_LIST);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_HASH);
 
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		b = psc_hashent_getbucket(&msl_namecache_hashtbl, dce);
@@ -214,7 +214,7 @@ dircache_purge(struct fidc_membh *d)
 		dce->dce_flag = 0;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
-	psc_assert(!fci->fcid_count);
+	pfl_assert(!fci->fcid_count);
 }
 
 /*
@@ -308,9 +308,9 @@ dircache_trim(struct fidc_membh *d, int force)
 		if (!force && dce->dce_expire > now.tv_sec)
 			break;
 		fci->fcid_count--;
-		psc_assert(fci->fcid_count >= 0);
-		psc_assert(dce->dce_flag & DIRCACHE_F_LIST);
-		psc_assert(dce->dce_flag & DIRCACHE_F_HASH);
+		pfl_assert(fci->fcid_count >= 0);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_LIST);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_HASH);
 		OPSTAT_INCR("dircache-trim");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 
@@ -384,7 +384,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 			continue;
 		}
 
-		psc_assert(dirent->pfd_ino);
+		pfl_assert(dirent->pfd_ino);
 		dce->dce_ino = dirent->pfd_ino;
 		dce->dce_pino = fcmh_2_fid(d);
 		dce->dce_namelen = dirent->pfd_namelen;
@@ -423,7 +423,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
  cache_fcmh:
 
 		fgp = &e->sstb.sst_fg;
-		psc_assert(fgp->fg_fid == dirent->pfd_ino);
+		pfl_assert(fgp->fg_fid == dirent->pfd_ino);
 
 		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 		/*
@@ -455,7 +455,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		 * however, since namecache is synchronized with
 		 * unlink, we just did extra work here.
 		 */
-		psc_assert((f->fcmh_flags & FCMH_DELETED) == 0);
+		pfl_assert((f->fcmh_flags & FCMH_DELETED) == 0);
 #endif
 
 		msl_fcmh_stash_xattrsize(f, e->xattrsize);
@@ -498,8 +498,8 @@ dircache_lookup(struct fidc_membh *d, const char *name, uint64_t *ino)
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
-		psc_assert(dce->dce_flag & DIRCACHE_F_LIST);
-		psc_assert(dce->dce_flag & DIRCACHE_F_HASH);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_LIST);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_HASH);
 		*ino = dce->dce_ino;
 	}
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
@@ -551,7 +551,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 	strncpy(dce->dce_name, name, dce->dce_namelen);
 
 	/* fuse treats zero node ID as ENOENT */
-	psc_assert(ino);
+	pfl_assert(ino);
 	dce->dce_ino = ino;
 	dce->dce_expire = now.tv_sec + lease;
 	dce->dce_pino = fcmh_2_fid(d);
@@ -565,9 +565,9 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino, int32_t le
 
 	if (tmpdce) {
 		fci->fcid_count--;
-		psc_assert(fci->fcid_count >= 0);
-		psc_assert(tmpdce->dce_flag & DIRCACHE_F_LIST);
-		psc_assert(tmpdce->dce_flag & DIRCACHE_F_HASH);
+		pfl_assert(fci->fcid_count >= 0);
+		pfl_assert(tmpdce->dce_flag & DIRCACHE_F_LIST);
+		pfl_assert(tmpdce->dce_flag & DIRCACHE_F_HASH);
 		OPSTAT_INCR("msl.dircache-update");
 		psclist_del(&tmpdce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, tmpdce);
@@ -617,9 +617,9 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	if (dce) {
 		/* (gdb) p fci->u.d.count */
 		fci->fcid_count--;
-		psc_assert(fci->fcid_count >= 0);
-		psc_assert(dce->dce_flag & DIRCACHE_F_LIST);
-		psc_assert(dce->dce_flag & DIRCACHE_F_HASH);
+		pfl_assert(fci->fcid_count >= 0);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_LIST);
+		pfl_assert(dce->dce_flag & DIRCACHE_F_HASH);
 		OPSTAT_INCR("msl.dircache-delete-hash");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
 		psc_hashbkt_del_item(&msl_namecache_hashtbl, b, dce);

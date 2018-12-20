@@ -118,7 +118,7 @@ libsl_try_ios2resm(sl_ios_id_t id)
 	r = libsl_id2res(id);
 	if (r == NULL)
 		return (NULL);
-	psc_assert(RES_ISFS(r));
+	pfl_assert(RES_ISFS(r));
 	return (res_getmemb(r));
 }
 
@@ -128,7 +128,7 @@ libsl_ios2resm(sl_ios_id_t id)
 	struct sl_resm *m;
 
 	m = libsl_try_ios2resm(id);
-	psc_assert(m);
+	pfl_assert(m);
 	return (m);
 }
 

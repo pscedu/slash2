@@ -185,7 +185,7 @@ struct sl_expcli_ops {
 			EXPORT_LOCK(exp);				\
 			if ((exp)->exp_hldropf == NULL) {		\
 				_csvc = getcsvc;			\
-				psc_assert(_csvc);			\
+				pfl_assert(_csvc);			\
 				exp->exp_hldropf = sl_exp_hldrop_resm;	\
 			}						\
 			EXPORT_ULOCK(exp);				\

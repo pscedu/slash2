@@ -233,7 +233,7 @@ bmi_2_bmap(struct bmap_mds_info *bmi)
 {
 	struct bmap *b;
 
-	psc_assert(bmi);
+	pfl_assert(bmi);
 	b = (void *)bmi;
 	return (b - 1);
 }

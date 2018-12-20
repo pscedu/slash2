@@ -128,7 +128,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	DIR *dir;
 
 	rc = snprintf(scratchbuf, sizeof(scratchbuf), "/%s", zpoolname);
-	psc_assert(rc < (int)sizeof(scratchbuf) && rc >= 0);
+	pfl_assert(rc < (int)sizeof(scratchbuf) && rc >= 0);
 
 	/*
 	 * ZFS fuse can create the mount point automatically if it does
@@ -430,7 +430,7 @@ main(int argc, char *argv[])
 
 	rc = pfl_asprintf(&path_env, "%s:%s:%s", ZFS_BIN_PATH,
 	    ZPOOL_PATH, getenv("PATH"));
-	psc_assert(rc != -1);
+	pfl_assert(rc != -1);
 	setenv("PATH", path_env, 1);
 
 	sfn = SL_PATH_SLMCTLSOCK;
@@ -534,7 +534,7 @@ main(int argc, char *argv[])
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++) {
 		/* nodeSite->site_id is nodeResm->resm_res->res_site */
 		if (nodeSite->site_id == zfs_mounts[vfsid].zm_siteid) {
-			psc_assert(!found);
+			pfl_assert(!found);
 			found = 1;
 			current_vfsid = vfsid;
 			psclog_info("file system %s (id=%d) "

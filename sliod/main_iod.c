@@ -375,7 +375,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(SLITHRT_UPDATE, sliupdthr_main, 0, "sliupdthr");
 
-	psc_assert(globalConfig.gconf_fsuuid);
+	pfl_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
 
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, 8, "slinbrqthr");

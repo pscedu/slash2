@@ -66,7 +66,7 @@ authbuf_readkeyfile(void)
 	int alg, fd;
 	ssize_t rc;
 
-	psc_assert(gcry_md_get_algo_dlen(GCRY_MD_CRC32_RFC1510) ==
+	pfl_assert(gcry_md_get_algo_dlen(GCRY_MD_CRC32_RFC1510) ==
 	    AUTHBUF_ALGLEN);
 
 	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_AUTHBUFKEY);

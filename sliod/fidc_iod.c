@@ -215,7 +215,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	INIT_PSC_LISTENTRY(&fii->fii_lentry);
 	INIT_PSC_LISTENTRY(&fii->fii_lentry2);
 
-	psc_assert(f->fcmh_flags & FCMH_INITING);
+	pfl_assert(f->fcmh_flags & FCMH_INITING);
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
 		    "with FGEN_ANY");

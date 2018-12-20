@@ -100,7 +100,7 @@ bci_2_bmap(struct bmap_cli_info *bci)
 {
 	struct bmap *b;
 
-	psc_assert(bci);
+	pfl_assert(bci);
 	b = (void *)bci;
 	return (b - 1);
 }

@@ -135,7 +135,7 @@ bii_2_bmap(struct bmap_iod_info *bii)
 {
 	struct bmap *b;
 
-	psc_assert(bii);
+	pfl_assert(bii);
 	b = (void *)bii;
 	return (b - 1);
 }

@@ -45,7 +45,7 @@ usage(void)
 		int _j;							\
 									\
 		_j = SL_REPL_GET_BMAP_IOS_STAT((buf), (n));		\
-		psc_assert(_j == (state));				\
+		pfl_assert(_j == (state));				\
 	} while (0)
 
 int

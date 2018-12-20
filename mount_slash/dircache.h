@@ -97,7 +97,7 @@ struct dircache_page {
 #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_RDLOCK(d)	pfl_rwlock_rdlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_ULOCK(d)	pfl_rwlock_unlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_WR_ENSURE(d)	psc_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
+#define DIRCACHE_WR_ENSURE(d)	pfl_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
 
 #define DIRCACHE_WAKE(d)						\
 	do {								\

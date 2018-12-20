@@ -193,7 +193,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	 * Signify that the bmap is newly initialized and therefore may
 	 * not contain certain structures.
 	 */
-	psc_assert(bmaprw == BMAPF_RD || bmaprw == BMAPF_WR);
+	pfl_assert(bmaprw == BMAPF_RD || bmaprw == BMAPF_WR);
 	b->bcm_flags = bmaprw;
 
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
@@ -312,14 +312,14 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 */
 	if (!(bmaprw & b->bcm_flags) && sl_bmap_ops.bmo_mode_chngf) {
 
-		psc_assert(!(b->bcm_flags & BMAPF_MODECHNG));
+		pfl_assert(!(b->bcm_flags & BMAPF_MODECHNG));
 		b->bcm_flags |= BMAPF_MODECHNG;
 
 		DEBUG_BMAP(PLL_DIAG, b, "mode change (rw=%d)", rw);
 
 		BMAP_ULOCK(b);
 
-		psc_assert(rw == SL_WRITE || rw == SL_READ);
+		pfl_assert(rw == SL_WRITE || rw == SL_READ);
 
 	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
@@ -366,7 +366,7 @@ int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
     sl_ios_id_t ios_id)
 {
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
+	pfl_assert(rw == SL_READ || rw == SL_WRITE);
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
 		if (sbd->sbd_ios != ios_id &&

@@ -91,7 +91,7 @@ sli_slab_alloc(void)
 
 	if (use_slab_buffers) {
 		p = lc_getnb(&slab_buffers);
-		psc_assert(p);
+		pfl_assert(p);
 	} else
 		p = PSCALLOC(SLASH_SLVR_SIZE);
 
@@ -112,7 +112,7 @@ sli_slab_free(void *p)
 void
 sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 {
-	psc_assert(psclist_disjoint(&a->aiocbr_lentry));
+	pfl_assert(psclist_disjoint(&a->aiocbr_lentry));
 
 	if (a->aiocbr_csvc)
 		sl_csvc_decref(a->aiocbr_csvc);
@@ -129,7 +129,7 @@ slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-		psc_assert(s->slvr_flags &
+		pfl_assert(s->slvr_flags &
 		    (SLVRF_DATARDY | SLVRF_DATAERR));
 		if (s->slvr_flags & SLVRF_DATAERR)
 			rc = s->slvr_err;
@@ -149,7 +149,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct slvr *s = NULL;
 	int rc;
 
-	psc_assert(a->aiocbr_nslvrs == 1);
+	pfl_assert(a->aiocbr_nslvrs == 1);
 
 	if (!a->aiocbr_csvc)
 		goto out;
@@ -282,9 +282,9 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	rc = iocb->iocb_rc;
 
 	SLVR_LOCK(s);
-	psc_assert(iocb == s->slvr_iocb);
-	psc_assert(s->slvr_flags & SLVRF_FAULTING);
-	psc_assert(!(s->slvr_flags & (SLVRF_DATARDY | SLVRF_DATAERR)));
+	pfl_assert(iocb == s->slvr_iocb);
+	pfl_assert(s->slvr_flags & SLVRF_FAULTING);
+	pfl_assert(!(s->slvr_flags & (SLVRF_DATARDY | SLVRF_DATAERR)));
 
 	/* Prevent additions from new requests. */
 	s->slvr_flags &= ~SLVRF_FAULTING;
@@ -392,7 +392,7 @@ sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
 		a->aiocbr_slvrs[i] = slvrs[i];
 
 	a->aiocbr_nslvrs = nslvrs;
-	psc_assert(niovs == a->aiocbr_nslvrs);
+	pfl_assert(niovs == a->aiocbr_nslvrs);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	memcpy(&a->aiocbr_sbd, &mq->sbd, sizeof(mq->sbd));
@@ -516,7 +516,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		OPSTAT_INCR("fsio-write");
 
 		sblk = off / SLASH_SLVR_BLKSZ;
-		psc_assert((off % SLASH_SLVR_BLKSZ) == 0);
+		pfl_assert((off % SLASH_SLVR_BLKSZ) == 0);
 		foff = slvr_2_fileoff(s, sblk);
 		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
@@ -681,8 +681,8 @@ slvr_remove(struct slvr *s)
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
-	psc_assert(s->slvr_refcnt == 0);
-	psc_assert(!(s->slvr_flags & SLVRF_LRU));
+	pfl_assert(s->slvr_refcnt == 0);
+	pfl_assert(!(s->slvr_flags & SLVRF_LRU));
 
 	bii = slvr_2_bii(s);
 
@@ -804,7 +804,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	int wakeup = 0;
 
 	SLVR_LOCK_ENSURE(s);
-	psc_assert(s->slvr_slab);
+	pfl_assert(s->slvr_slab);
 	if (s->slvr_refcnt) {
 		SLVR_ULOCK(s);
 		return;
@@ -826,7 +826,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		slvr_remove(s);
 		return;
 	}
-	psc_assert(s->slvr_flags & SLVRF_DATARDY);
+	pfl_assert(s->slvr_flags & SLVRF_DATARDY);
 
 #endif
 
@@ -884,7 +884,7 @@ void
 slvr_rio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_refcnt > 0);
+	pfl_assert(s->slvr_refcnt > 0);
 
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
@@ -898,7 +898,7 @@ void
 slvr_wio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_refcnt > 0);
+	pfl_assert(s->slvr_refcnt > 0);
 
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
@@ -996,7 +996,7 @@ slab_cache_reap(struct psc_poolmgr *m)
 	int i, haswork, nitems = 0;
 
 	thr = pscthr_get();
-	psc_assert(m == slvr_pool);
+	pfl_assert(m == slvr_pool);
 
 	psc_dynarray_ensurelen(&a, SLAB_RECLAIM_BATCH);
 
@@ -1022,7 +1022,7 @@ again:
 			SLVR_ULOCK(s);
 			continue;
 		}
-		psc_assert(s->slvr_flags & SLVRF_LRU);
+		pfl_assert(s->slvr_flags & SLVRF_LRU);
 		s->slvr_flags |= SLVRF_FREEING;
 		s->slvr_flags &= ~SLVRF_LRU;
 		lc_remove(&sli_lruslvrs, s);
@@ -1066,7 +1066,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 
 	for (;;) {
 		sigwait(&signal_set, &signo);
-		psc_assert(signo == SIGIO);
+		pfl_assert(signo == SIGIO);
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
@@ -1075,7 +1075,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				continue;
 			if (iocb->iocb_rc == EINPROGRESS)
 				continue;
-			psc_assert(iocb->iocb_rc != ECANCELED);
+			pfl_assert(iocb->iocb_rc != ECANCELED);
 
 			pfl_fault_here_rc(&iocb->iocb_rc, EIO,
 			    "sliod/aio_fail");
@@ -1160,7 +1160,7 @@ slvr_cache_init(void)
 	void *p;
 	int i, nbuf;
 
-	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
+	pfl_assert(SLASH_SLVR_SIZE <= LNET_MTU);
 
 	if (slcfg_local->cfg_slab_cache_size < SLAB_MIN_CACHE)
 		psc_fatalx("invalid slab_cache_size setting; "

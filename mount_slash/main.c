@@ -450,7 +450,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct bmap *b;
 	int32_t lease = 0;
 
-	psc_assert(oflags & O_CREAT);
+	pfl_assert(oflags & O_CREAT);
 
 	if (msl_read_only)
 		PFL_GOTOERR(out, rc = EROFS);
@@ -680,7 +680,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	/* Perform rudimentary directory sanity checks. */
 	if (fcmh_isdir(c)) {
 		/* pscfs shouldn't ever pass us WR with a dir */
-		psc_assert((oflags & (O_WRONLY | O_RDWR)) == 0);
+		pfl_assert((oflags & (O_WRONLY | O_RDWR)) == 0);
 		if (!(oflags & O_DIRECTORY))
 			PFL_GOTOERR(out1, rc = EISDIR);
 	} else {
@@ -1372,14 +1372,14 @@ msl_remove_sillyname(struct fidc_membh *f)
  	 * in an atomic way.
 	 */
 	fci = fcmh_2_fci(f);
-	psc_assert(fci->fci_nopen > 0);
+	pfl_assert(fci->fci_nopen > 0);
 	fci->fci_nopen--;
 	if (fci->fci_nopen || !(f->fcmh_flags & FCMH_CLI_SILLY_RENAME)) {
 		FCMH_ULOCK(f);
 		return;
 	}
-	psc_assert(fci->fci_pino);
-	psc_assert(fci->fci_name);
+	pfl_assert(fci->fci_pino);
+	pfl_assert(fci->fci_name);
 
 	pino = fci->fci_pino;
 	sillyname = fci->fci_name;
@@ -1882,7 +1882,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	p->dcp_rc = rc;
 	p->dcp_refcnt--;
 	async = p->dcp_flags & DIRCACHEPGF_ASYNC;
-	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
+	pfl_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
@@ -2022,7 +2022,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	size_t len, tlen;
 
 	d = mfh->mfh_fcmh;
-	psc_assert(d);
+	pfl_assert(d);
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -2146,7 +2146,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			 */
 			fcmh_op_start_type(d, FCMH_OPCNT_READAHEAD);
 			raoff = p->dcp_nextoff;
-			psc_assert(raoff);
+			pfl_assert(raoff);
 
 			issue = 0;
 			break;
@@ -2475,7 +2475,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
 	if (!to_set) {
-		psc_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
+		pfl_assert((f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) == 0);
 		FCMH_UNBUSY(f, 0);
 		FCMH_ULOCK(f);
 		return (0);
@@ -2505,7 +2505,7 @@ msl_flush_ioattrs(struct pscfs_req *pfr, struct fidc_membh *f)
 		if (rc)
 			DEBUG_FCMH(PLL_ERROR, f, "setattr: rc=%d", rc);
 
-		psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+		pfl_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 		f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 		FCMH_UNBUSY(f, 0);
 
@@ -2554,7 +2554,7 @@ void
 mfh_decref(struct msl_fhent *mfh)
 {
 	MFH_LOCK_ENSURE(mfh);
-	psc_assert(mfh->mfh_refcnt > 0);
+	pfl_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(msl_mfh_pool, mfh);
@@ -3146,7 +3146,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		PFL_GOTOERR(out, rc);
 
 	if (mfh)
-		psc_assert(c == mfh->mfh_fcmh);
+		pfl_assert(c == mfh->mfh_fcmh);
 
 	FCMH_LOCK(c);
 	FCMH_WAIT_BUSY(c, 0);
@@ -3459,7 +3459,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			} else if (!(c->fcmh_flags &
 			    FCMH_CLI_DIRTY_ATTRS)) {
 				fci = fcmh_2_fci(c);
-				psc_assert(c->fcmh_flags &
+				pfl_assert(c->fcmh_flags &
 				    FCMH_CLI_DIRTY_QUEUE);
 				c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 				lc_remove(&msl_attrtimeoutq, fci);
@@ -4462,7 +4462,7 @@ msl_init(void)
 	pscfs_entry_timeout = (double)PSCFS_ENTRY_TIMEOUT;
 
 	/* Catch future breakage after two-day's debugging */
-	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
+	pfl_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
 
 	time(&now);
 	psclogs_info(SLCSS_INFO, "SLASH2 client version %d "
@@ -4611,7 +4611,7 @@ msl_filehandle_thaw(struct pflfs_filehandle *pfh)
 	*mfh = mff->mff_mfh;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
-	psc_assert(!sl_fcmh_load_fg(&mff->mff_fg, &f));
+	pfl_assert(!sl_fcmh_load_fg(&mff->mff_fg, &f));
 	mfh->mfh_fcmh = f;
 	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
 	fcmh_op_done(f);

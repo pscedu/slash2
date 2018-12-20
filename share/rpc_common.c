@@ -526,15 +526,15 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
  	 * 10/12/1027: Similar crash coming from usocklnd_tear_peer_conn().
  	 */
 	rc = --csvc->csvc_refcnt;
-	psc_assert(rc >= 0);
+	pfl_assert(rc >= 0);
 	psclog_diag("after drop ref csvc = %p, refcnt = %d", 
 	    csvc, csvc->csvc_refcnt);
 	if (rc > 0) {
 		CSVC_ULOCK(csvc);
 		return;
 	}
-	psc_assert(!(csvc->csvc_flags & CSVCF_WATCH));
-	psc_assert(!(csvc->csvc_flags & CSVCF_TOFREE));
+	pfl_assert(!(csvc->csvc_flags & CSVCF_WATCH));
+	pfl_assert(!(csvc->csvc_flags & CSVCF_TOFREE));
 	csvc->csvc_flags |= CSVCF_TOFREE;
 
 	/*
@@ -649,7 +649,7 @@ slrpc_getpeernid(struct pscrpc_export *exp,
 			peernid = nr->resmnid_nid;
 		}
 	}
-	psc_assert(peernid != LNET_NID_ANY);
+	pfl_assert(peernid != LNET_NID_ANY);
 	return (peernid);
 }
 
@@ -796,7 +796,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	    new ? "create" : "reuse",  csvc, csvc->csvc_refcnt);
 
 	CSVC_LOCK(csvc);
-	psc_assert(csvc->csvc_peertype == peertype);
+	pfl_assert(csvc->csvc_peertype == peertype);
 
 	switch (peertype) {
 	case SLCONNT_CLI:
@@ -1248,7 +1248,7 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 		 * connection from the client that has already 
 		 * been established. See comments in _sl_csvc_get().
 		 */
-		psc_assert(csvc);
+		pfl_assert(csvc);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}
 	p = exp->exp_private;

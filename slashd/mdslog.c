@@ -190,8 +190,8 @@ mds_record_update_prog(void)
 	);
 	rc = mds_write_file(nsupd_prg.prg_handle, nsupd_prg.prg_buf,
 	    i * UP_ENTSZ, &size, 0);
-	psc_assert(rc == 0);
-	psc_assert(size == i * UP_ENTSZ);
+	pfl_assert(rc == 0);
+	pfl_assert(size == i * UP_ENTSZ);
 }
 
 static void
@@ -221,7 +221,7 @@ mds_record_reclaim_prog(void)
 			rp->rpe_id = res->res_id;
 		}
 		RPMI_ULOCK(rpmi);
-		psc_assert(rp->rpe_id == res->res_id);
+		pfl_assert(rp->rpe_id == res->res_id);
 
 		rp->rpe_xid = si->si_xid;
 		rp->rpe_batchno = si->si_batchno;
@@ -232,8 +232,8 @@ mds_record_reclaim_prog(void)
 	lastindex++;
 	rc = mds_write_file(reclaim_prg.prg_handle,
 	    reclaim_prg.prg_buf, lastindex * RP_ENTSZ, &size, 0);
-	psc_assert(rc == 0);
-	psc_assert(size == (size_t)lastindex * RP_ENTSZ);
+	pfl_assert(rc == 0);
+	pfl_assert(size == (size_t)lastindex * RP_ENTSZ);
 }
 
 /*
@@ -242,7 +242,7 @@ mds_record_reclaim_prog(void)
 void
 mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 {
-	psc_assert(op == PJRNL_TXG_GET || op == PJRNL_TXG_PUT);
+	pfl_assert(op == PJRNL_TXG_GET || op == PJRNL_TXG_PUT);
 }
 
 int
@@ -351,12 +351,12 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 
 	rc = mds_open_logfile(reclaim_prg.cur_batchno, 0, 0,
 	    &reclaim_prg.log_handle);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	rc = mdsio_getattr(current_vfsid, 0, reclaim_prg.log_handle,
 	    &rootcreds, &sstb);
 
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	reclaim_prg.log_offset = 0;
 	/*
@@ -401,7 +401,7 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 			reclaim_prg.log_offset += R_ENTSZ;
 		}
 		PSCFREE(reclaimbuf);
-		psc_assert(reclaim_prg.log_offset ==
+		pfl_assert(reclaim_prg.log_offset ==
 		    (off_t)sstb.sst_size);
 	} else {
 		/* starting new logfile: write a magic header */
@@ -455,7 +455,7 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 		    "current reclaim XID=%"PRId64,
 		    reclaim_prg.cur_batchno, reclaim_prg.cur_xid);
 	}
-	psc_assert(reclaim_prg.log_offset <= SLM_RECLAIM_BATCH_NENTS *
+	pfl_assert(reclaim_prg.log_offset <= SLM_RECLAIM_BATCH_NENTS *
 	    (off_t)R_ENTSZ);
 
 	psclog_diag("reclaim_prg.cur_xid=%"PRIu64" batchno=%"PRIu64" "
@@ -491,7 +491,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	uint16_t type;
 	size_t size;
 
-	psc_assert(pje->pje_magic == PJE_MAGIC);
+	pfl_assert(pje->pje_magic == PJE_MAGIC);
 
 	/*
 	 * The following can only be executed by the singleton distill
@@ -502,7 +502,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		return (0);
 
 	sjnm = PJE_DATA(pje);
-	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
+	pfl_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/*
 	 * Note that we distill reclaim before update.  This is the same
@@ -514,7 +514,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	if (!(sjnm->sjnm_flag & SJ_NAMESPACE_RECLAIM))
 		goto check_update;
 
-	psc_assert(
+	pfl_assert(
 	    sjnm->sjnm_op == NS_OP_RECLAIM ||
 	    sjnm->sjnm_op == NS_OP_SETATTR ||
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
@@ -669,10 +669,10 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 	size_t siz;
 
 	if (op == NS_OP_SETATTR)
-		psc_assert(mask);
+		pfl_assert(mask);
 
 	if (op == NS_OP_CREATE || op == NS_OP_MKDIR)
-		psc_assert(sstb->sst_fid);
+		pfl_assert(sstb->sst_fid);
 
 	sjnm = pjournal_get_buf(slm_journal, sizeof(*sjnm));
 	memset(sjnm, 0, sizeof(*sjnm));
@@ -718,7 +718,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
-			psc_assert(sstb->sst_gen >= 1);
+			pfl_assert(sstb->sst_gen >= 1);
 			sjnm->sjnm_target_gen--;
 		}
 	}
@@ -732,7 +732,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		memcpy(sjnm->sjnm_name + sjnm->sjnm_namelen, newname,
 		    sjnm->sjnm_namelen2);
 	}
-	psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
+	pfl_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
 	    sizeof(sjnm->sjnm_name));
 
 	pjournal_add_entry(slm_journal, txg, MDS_LOG_NAMESPACE, distill,
@@ -857,7 +857,7 @@ mds_reclaim_lwm(int batchno)
 		}
 		RPMI_ULOCK(rpmi);
 	}
-	psc_assert(value != UINT64_MAX);
+	pfl_assert(value != UINT64_MAX);
 	return (value);
 }
 
@@ -917,7 +917,7 @@ mds_update_lwm(int batchno)
 		}
 		RPMI_ULOCK(rpmi);
 	);
-	psc_assert(value != UINT64_MAX);
+	pfl_assert(value != UINT64_MAX);
 	return (value);
 }
 
@@ -1026,7 +1026,7 @@ mds_send_batch_update(uint64_t batchno)
 	if (size == 0)
 		return (didwork);
 
-	psc_assert(size % U_ENTSZ == 0);
+	pfl_assert(size % U_ENTSZ == 0);
 	count = (int)size / (int)U_ENTSZ;
 
 	/* Find the xid associated with the last log entry. */
@@ -1095,7 +1095,7 @@ mds_send_batch_update(uint64_t batchno)
 			u = PSC_AGP(u, UPDATE_ENTRY_LEN(u));
 		} while (total);
 
-		psc_assert(total);
+		pfl_assert(total);
 
 		iov.iov_len = total;
 		iov.iov_base = u;
@@ -1166,7 +1166,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 		pjournal_update_txg(slm_journal, txg);
 		return;
 	}
-	psc_assert(start_txg == txg);
+	pfl_assert(start_txg == txg);
 
 	/*
 	 * During the replay, actually as soon as ZFS starts, its group
@@ -1259,19 +1259,19 @@ mds_open_cursor(void)
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], SL_FN_CURSOR, &mf,
 	    &rootcreds, NULL);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
 	    NULL, NULL, NULL, &mds_cursor_handle, NULL, NULL, 0);
-	psc_assert(!rc && mds_cursor_handle);
+	pfl_assert(!rc && mds_cursor_handle);
 
 	rc = mdsio_read(current_vfsid, &rootcreds, &mds_cursor,
 	    sizeof(struct psc_journal_cursor), &nb, 0, mds_cursor_handle);
-	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
+	pfl_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 
-	psc_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
-	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
-	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
+	pfl_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
+	pfl_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
+	pfl_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 #if 0
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
@@ -1289,7 +1289,7 @@ mds_open_cursor(void)
 #if 0
 	/* backward compatibility */
 	if (mount_index == 1) {
-		psc_assert(current_vfsid == 0);
+		pfl_assert(current_vfsid == 0);
 		zfs_mounts[current_vfsid].fsid = FID_GET_SITEID(mds_cursor.pjc_fid);
 	}
 #endif
@@ -1436,7 +1436,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 		return (0);
 	}
 	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	if (sstb.sst_size == 0) {
 		mds_release_file(handle);
@@ -1449,7 +1449,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 
 	rc = mds_read_file(handle, reclaim_prg.log_buf, sstb.sst_size,
 	    &size, 0);
-	psc_assert(rc == 0 && sstb.sst_size == size);
+	pfl_assert(rc == 0 && sstb.sst_size == size);
 	mds_release_file(handle);
 
 	if (size == R_ENTSZ) {
@@ -1576,7 +1576,7 @@ mds_send_batch_reclaim(uint64_t *pbatchno)
 			    "(%"PRId64":%"PRId64")",
 			    batchno, si->si_xid, rarg.xid);
 
-		psc_assert(total);
+		pfl_assert(total);
 
 		rq = NULL;
 		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK | CSVCF_NORECON, 0);
@@ -1732,7 +1732,7 @@ mdslogfill_ino_repls(struct fidc_membh *f,
 	ih = fcmh_2_inoh(f);
 
 	if (!fcmh_isdir(f))
-		psc_assert(fcmh_2_nrepls(f));
+		pfl_assert(fcmh_2_nrepls(f));
 
 	sjir->sjir_fid = fcmh_2_fid(f);
 	sjir->sjir_nrepls = fcmh_2_nrepls(f);
@@ -1835,8 +1835,8 @@ mds_journal_init(uint64_t fsuuid)
 
 	OPSTAT_INCR("reclaim-cursor");
 
-	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
-	psc_assert(U_ENTSZ == 512);
+	pfl_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
+	pfl_assert(U_ENTSZ == 512);
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
@@ -1900,7 +1900,7 @@ mds_journal_init(uint64_t fsuuid)
 
 	xmkfn(fn, "%s", SL_FN_RECLAIMPROG);
 	rc = mds_open_file(fn, O_RDWR, &reclaim_prg.prg_handle);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	/*
 	 * Allocate maximum amount of memory to avoid dealing with
@@ -1910,7 +1910,7 @@ mds_journal_init(uint64_t fsuuid)
 	reclaim_prg.prg_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY * RP_ENTSZ);
 	rc = mds_read_file(reclaim_prg.prg_handle, reclaim_prg.prg_buf,
 	    MAX_RECLAIM_PROG_ENTRY * RP_ENTSZ, &size, 0);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	/* Find out the highest reclaim batchno and xid */
 
@@ -1950,8 +1950,8 @@ mds_journal_init(uint64_t fsuuid)
 	if (stale) {
 		rc = mds_write_file(reclaim_prg.prg_handle, rbase, size,
 		    &size, 0);
-		psc_assert(rc == 0);
-		psc_assert(size == count * RP_ENTSZ);
+		pfl_assert(rc == 0);
+		pfl_assert(size == count * RP_ENTSZ);
 		psclog_warnx("%d stale entry(s) have been zeroed from the "
 		    "reclaim progress file", stale);
 	}
@@ -1961,7 +1961,7 @@ mds_journal_init(uint64_t fsuuid)
 	while (batchno < UINT64_MAX) {
 		rc = mds_open_logfile(batchno, 0, 1, &handle);
 		if (rc) {
-			psc_assert(rc == ENOENT);
+			pfl_assert(rc == ENOENT);
 			if (batchno > lwm) {
 				batchno--;
 				rc = mds_open_logfile(batchno, 0, 1,
@@ -1977,7 +1977,7 @@ mds_journal_init(uint64_t fsuuid)
 		    "batchno=%"PRId64": %s", batchno, sl_strerror(rc));
 
 	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	reclaim_prg.cur_batchno = batchno;
 	OPSTAT_INCR("reclaim-batchno");
@@ -1987,7 +1987,7 @@ mds_journal_init(uint64_t fsuuid)
 
 		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size,
 		    &size, 0);
-		psc_assert(rc == 0 && size == sstb.sst_size);
+		pfl_assert(rc == 0 && size == sstb.sst_size);
 
 		max = SLM_RECLAIM_BATCH_NENTS;
 		r = reclaimbuf;
@@ -2002,7 +2002,7 @@ mds_journal_init(uint64_t fsuuid)
 		max = SLM_RECLAIM_BATCH_NENTS - 1;
 		r++;
 
-		psc_assert(size % R_ENTSZ == 0);
+		pfl_assert(size % R_ENTSZ == 0);
 
 		total = size / R_ENTSZ;
 		psclog_info("scanning the last reclaim log, batchno=%"PRId64,
@@ -2061,13 +2061,13 @@ mds_journal_init(uint64_t fsuuid)
 
 	xmkfn(fn, "%s", SL_FN_UPDATEPROG);
 	rc = mds_open_file(fn, O_RDWR, &nsupd_prg.prg_handle);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	ubase = nsupd_prg.prg_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY *
 	    UP_ENTSZ);
 	rc = mds_read_file(nsupd_prg.prg_handle, ubase,
 	    MAX_UPDATE_PROG_ENTRY * UP_ENTSZ, &size, 0);
-	psc_assert(rc == 0);
+	pfl_assert(rc == 0);
 
 	/* Find out the highest update batchno and xid */
 	batchno = UINT64_MAX;
@@ -2110,8 +2110,8 @@ mds_journal_init(uint64_t fsuuid)
 	    SLM_UPDATE_BATCH_NENTS * U_ENTSZ, &size, 0);
 	mds_release_file(handle);
 
-	psc_assert(rc == 0);
-	psc_assert(size % U_ENTSZ == 0);
+	pfl_assert(rc == 0);
+	pfl_assert(size % U_ENTSZ == 0);
 
 	total = size / U_ENTSZ;
 	u = nsupd_prg.log_buf;

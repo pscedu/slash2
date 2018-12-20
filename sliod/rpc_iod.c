@@ -227,7 +227,7 @@ sli_rpc_mds_pack_statfs(struct pscrpc_msg *m, int idx)
 		struct srt_bwqueued	bwq;
 	} *data;
 
-	psc_assert(idx > 0 && (uint32_t)idx < m->bufcount);
+	pfl_assert(idx > 0 && (uint32_t)idx < m->bufcount);
 	data = pscrpc_msg_buf(m, idx, sizeof(*data));
 	if (data == NULL) {
 		psclog_errorx("unable to pack statfs");

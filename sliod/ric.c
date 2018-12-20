@@ -84,7 +84,7 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 		tsize -= tsz;
 		rc = slvr_fsbytes_wio(slvrs[i], sblk, tsz);
 		if (rc) {
-			psc_assert(rc != -SLERR_AIOWAIT);
+			pfl_assert(rc != -SLERR_AIOWAIT);
 			psclog_warnx("write error rc=%d", rc);
 			break;
 		}
@@ -93,7 +93,7 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
 		sblk = 0;
 	}
 	if (!rc)
-		psc_assert(!tsize);
+		pfl_assert(!tsize);
 
 	return (rc);
 }
@@ -430,12 +430,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * Avoid more complicated errors within LNET by ensuring
 		 * that len is non-zero.
 		 */
-		psc_assert(iovs[i].iov_len > 0);
+		pfl_assert(iovs[i].iov_len > 0);
 	}
 	bmap_op_done(bmap);
 	bmap = NULL;
 
-	psc_assert(!tsize);
+	pfl_assert(!tsize);
 
 	if (needaio) {
 		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,

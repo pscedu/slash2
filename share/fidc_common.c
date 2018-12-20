@@ -63,10 +63,10 @@ unsigned long		fcmh_start_type[FCMH_OPCNT_MAXTYPE + 1];
 void
 fcmh_destroy(struct fidc_membh *f)
 {
-	psc_assert(RB_EMPTY(&f->fcmh_bmaptree));
-	psc_assert(f->fcmh_refcnt == 0);
-	psc_assert(psc_hashent_disjoint(&sl_fcmh_hashtbl, f));
-	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
+	pfl_assert(RB_EMPTY(&f->fcmh_bmaptree));
+	pfl_assert(f->fcmh_refcnt == 0);
+	pfl_assert(psc_hashent_disjoint(&sl_fcmh_hashtbl, f));
+	pfl_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 
 	psc_waitq_destroy(&f->fcmh_waitq);
 
@@ -104,7 +104,7 @@ fidc_reap(int max, int flags)
 		if (!FCMH_TRYLOCK(f))
 			continue;
 
-		psc_assert(!f->fcmh_refcnt);
+		pfl_assert(!f->fcmh_refcnt);
 
 		if (flags & SL_FIDC_REAPF_EXPIRED &&
 		    timespeccmp(&crtime, &f->fcmh_etime, <)) {
@@ -112,7 +112,7 @@ fidc_reap(int max, int flags)
 			continue;
 		}
 
-		psc_assert(f->fcmh_flags & FCMH_IDLE);
+		pfl_assert(f->fcmh_flags & FCMH_IDLE);
 		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
 		f->fcmh_flags |= FCMH_TOFREE;
@@ -324,7 +324,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 		goto finish;
 
 	if (flags & FIDC_LOOKUP_LOAD) {
-		psc_assert(sl_fcmh_ops.sfop_getattr);
+		pfl_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(f, arg);	/* msl_stat() */
 	}
 
@@ -408,7 +408,7 @@ fcmh_op_start_type(struct fidc_membh *f, int type)
 #endif
 
 	locked = FCMH_RLOCK(f);
-	psc_assert(f->fcmh_refcnt >= 0);
+	pfl_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "took ref (type=%d)", type);
@@ -436,10 +436,10 @@ fcmh_op_done_type(struct fidc_membh *f, int type)
 		FCMH_LOCK(f);
 
 	rc = f->fcmh_refcnt--;
-	psc_assert(rc > 0);
+	pfl_assert(rc > 0);
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	if (rc == 1) {
-		psc_assert(!FCMH_HAS_BUSY(f));
+		pfl_assert(!FCMH_HAS_BUSY(f));
 
 		/*
 		 * If we fail to initialize a fcmh, free it now.
@@ -464,7 +464,7 @@ fcmh_op_done_type(struct fidc_membh *f, int type)
 			return;
 		}
 
-		psc_assert(!(f->fcmh_flags & FCMH_IDLE));
+		pfl_assert(!(f->fcmh_flags & FCMH_IDLE));
 		f->fcmh_flags |= FCMH_IDLE;
 		lc_add(&sl_fcmh_idle, f);
 		PFL_GETTIMESPEC(&f->fcmh_etime);

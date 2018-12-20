@@ -69,7 +69,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 * It should be either 1 or 2 (when aio replies early),
 		 * but just be paranoid in case peer will resend.
 		 */
-		psc_assert(s->slvr_refcnt > 0);
+		pfl_assert(s->slvr_refcnt > 0);
 		s->slvr_refcnt--;
 		s->slvr_flags &= ~SLVRF_FAULTING;
 
@@ -287,7 +287,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	}
 
 	rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_WRITE, 0);
-	psc_assert(!rc);
+	pfl_assert(!rc);
 	BMAP_ULOCK(b);
 
 	iov.iov_base = s->slvr_slab;
@@ -328,7 +328,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	    slvridx++)
 		if (w->srw_slvr[slvridx] == s)
 			break;
-	psc_assert(slvridx < (int)nitems(w->srw_slvr));
+	pfl_assert(slvridx < (int)nitems(w->srw_slvr));
 
 	if (rc == -SLERR_AIOWAIT)
 		OPSTAT_INCR("issue-replread-aio");
@@ -374,7 +374,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
 	psc_atomic32_inc(&w->srw_refcnt);
 	PFLOG_REPLWK(PLL_DEBUG, w, "incref");
 
-	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
+	pfl_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
 
 	BMAP_LOCK(w->srw_bcm);
 	w->srw_slvr[slvridx] = s =

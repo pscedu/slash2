@@ -45,7 +45,7 @@ bmap_2_mfh(struct bmap *b)
 
 	fmi = fcmh_2_fmi(b->bcm_fcmh);
 	fh = fmi->fmi_mfh.fh;
-	psc_assert(fh);
+	pfl_assert(fh);
 	return (fh);
 }
 
@@ -143,7 +143,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	idx = mds_repl_ios_lookup(current_vfsid,
 	    fcmh_2_inoh(a->b->bcm_fcmh),
 	    sqlite3_column_int(sth->sth_sth, 1));
-	psc_assert(idx >= 0);
+	pfl_assert(idx >= 0);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
@@ -384,7 +384,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		 */
 		BMAP_LOCK_ENSURE(b);
 		b->bcm_flags |= BMAPF_REPLMODWR;
-		psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
+		pfl_assert(slm_opstate == SLM_OPSTATE_NORMAL);
 		wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
 		    struct slm_wkdata_wr_brepl);
 		wk->b = b;
@@ -418,9 +418,9 @@ mds_bmap_destroy(struct bmap *b)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-	psc_assert(bmi->bmi_writers == 0);
-	psc_assert(bmi->bmi_readers == 0);
-	psc_assert(pll_empty(&bmi->bmi_leases));
+	pfl_assert(bmi->bmi_writers == 0);
+	pfl_assert(bmi->bmi_readers == 0);
+	pfl_assert(pll_empty(&bmi->bmi_leases));
 	upd_destroy(&bmi->bmi_upd);
 }
 

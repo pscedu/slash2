@@ -64,7 +64,7 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 {
 	struct fidc_membh *fcmh;
 
-	psc_assert(fii);
+	pfl_assert(fii);
 	fcmh = (void *)fii;
 	return (fcmh - 1);
 }

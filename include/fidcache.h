@@ -143,7 +143,7 @@ struct fidc_membh {
 	do {								\
 		pthread_t _pthr = pthread_self();			\
 		FCMH_LOCK_ENSURE((f));					\
-		psc_assert(!FCMH_HAS_BUSY((f)));			\
+		pfl_assert(!FCMH_HAS_BUSY((f)));			\
 		fcmh_wait_locked((f), (f)->fcmh_flags & FCMH_BUSY);	\
 		(f)->fcmh_flags |= FCMH_BUSY;				\
 		(f)->fcmh_owner = _pthr;				\
@@ -160,7 +160,7 @@ struct fidc_membh {
 			FCMH_LOCK((f));					\
 		else							\
 			FCMH_LOCK_ENSURE((f));				\
-		psc_assert(FCMH_HAS_BUSY(f));				\
+		pfl_assert(FCMH_HAS_BUSY(f));				\
 		(f)->fcmh_owner = 0;					\
 		(f)->fcmh_flags &= ~FCMH_BUSY;				\
 		DEBUG_FCMH(PLL_DIAG, (f), "clear BUSY");		\
@@ -174,7 +174,7 @@ struct fidc_membh {
 	 (f)->fcmh_owner == pthread_self())
 
 #define FCMH_BUSY_ENSURE(f)						\
-	psc_assert(FCMH_HAS_BUSY(f))
+	pfl_assert(FCMH_HAS_BUSY(f))
 
 #ifdef _SLASH_MDS
 # define DEBUG_FCMH_BLKSIZE_LABEL "msz"
@@ -284,7 +284,7 @@ extern struct psc_waitq		 sl_freap_waitq;
 static __inline void *
 fcmh_get_pri(struct fidc_membh *f)
 {
-	psc_assert(f);
+	pfl_assert(f);
 	return (f + 1);
 }
 
@@ -293,7 +293,7 @@ fcmh_from_pri(void *p)
 {
 	struct fidc_membh *f = p;
 
-	psc_assert(f);
+	pfl_assert(f);
 	return (f - 1);
 }
 
@@ -302,7 +302,7 @@ fcmh_from_pri_const(const void *p)
 {
 	const struct fidc_membh *f = p;
 
-	psc_assert(f);
+	pfl_assert(f);
 	return (f - 1);
 }
 

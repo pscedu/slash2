@@ -136,8 +136,8 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 	/*
  	 * Use to catch any unhandled anomaly.
  	 */
-	psc_assert(!(bq->bq_flags & BATCHF_FREEING));
-	psc_assert((bq->bq_flags & BATCHF_INFL) || 
+	pfl_assert(!(bq->bq_flags & BATCHF_FREEING));
+	pfl_assert((bq->bq_flags & BATCHF_INFL) || 
 		   (bq->bq_flags & BATCHF_REPLY));
 	bq->bq_flags |= BATCHF_FREEING;
 	freelock(&bq->bq_lock);
@@ -169,7 +169,7 @@ slrpc_batch_req_done(struct slrpc_batch_req *bq, int rc)
 		PSCFREE(scratch);
 	}
 	res = bq->bq_res;
-	psc_assert(psc_atomic32_read(&res->res_batchcnt) >= 1);
+	pfl_assert(psc_atomic32_read(&res->res_batchcnt) >= 1);
 	psc_atomic32_dec(&res->res_batchcnt);
 
 	psc_dynarray_free(&bq->bq_scratch);
@@ -270,7 +270,7 @@ slrpc_batch_req_send(struct slrpc_batch_req *bq)
 	struct iovec iov;
 	struct slrpc_batch_rep_handler *h = bq->bq_handler;
 
-	psc_assert(!(bq->bq_flags & BATCHF_INFL));
+	pfl_assert(!(bq->bq_flags & BATCHF_INFL));
 	bq->bq_flags |= BATCHF_INFL;
 	bq->bq_flags &= ~BATCHF_DELAY;
 	freelock(&bq->bq_lock);
@@ -401,7 +401,7 @@ slrpc_batch_rep_decref(struct slrpc_batch_rep *bp, int rc)
 
 	PFLOG_BATCH_REP(PLL_DIAG, bp, "decref");
 	bp->bp_refcnt--;
-	psc_assert(bp->bp_refcnt >= 0);
+	pfl_assert(bp->bp_refcnt >= 0);
 	if (bp->bp_refcnt) {
 		freelock(&bp->bp_lock);
 		return;
@@ -433,7 +433,7 @@ slrpc_batch_handle_req_workcb(void *arg)
 	bp = wk->bp;
 	h = bp->bp_handler;
 	n = bp->bp_reqlen / h->bqh_qlen;
-	psc_assert(n);
+	pfl_assert(n);
 	psclog_diag("work cb: wk = %p, bp = %p, bid = %"PRId64", count = %d", 
 	    wk, bp, bp->bp_bid, n); 
 	for (q = bp->bp_reqbuf, p = bp->bp_repbuf, i = 0; i < n;
@@ -588,7 +588,7 @@ slrpc_batch_handle_reply(struct pscrpc_request *rq)
  			 * mq is actually a batch request reply here.
  			 * See slrpc_batch_rep_send().
  			 */
-			psc_assert((mq->opc == bq->bq_opc));	
+			pfl_assert((mq->opc == bq->bq_opc));	
 			if (!mp->rc) {
 				iov.iov_base = bq->bq_repbuf;
 				iov.iov_len = bq->bq_replen = mq->len;
@@ -672,7 +672,7 @@ slrpc_batch_req_add(struct sl_resource *dst_res,
 	if (size > SLRPC_BATCH_MAX_COUNT)
 		size = SLRPC_BATCH_MAX_COUNT;
 
-	psc_assert(handler->bph_qlen == len);
+	pfl_assert(handler->bph_qlen == len);
 
 retry: 
 
@@ -777,7 +777,7 @@ retry:
 	 * of the same size.
 	 */
 	bq->bq_cnt++;
-	psc_assert(bq->bq_cnt <= bq->bq_size);
+	pfl_assert(bq->bq_cnt <= bq->bq_size);
 	if (bq->bq_cnt == bq->bq_size)
 		psc_waitq_wakeone(&slrpc_expire_waitq);
 	freelock(&bq->bq_lock);

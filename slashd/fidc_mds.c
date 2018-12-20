@@ -179,12 +179,12 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			    MDSIO_OPENCRF_NOLINK, 0644, fn,
 			    &fcmh_2_dino_mfid(f), NULL,
 			    &fcmh_2_dino_mfh(f), NULL, NULL, 0);
-			psc_assert(rc == 0);
+			pfl_assert(rc == 0);
 
 			INOH_LOCK(ih);
 
 			rc = mds_inode_write(vfsid, ih, NULL, NULL);
-			psc_assert(rc == 0);
+			pfl_assert(rc == 0);
 
 			memset(&inox, 0, sizeof(inox));
 			ih->inoh_extras = &inox;
@@ -193,7 +193,7 @@ slm_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 			INOH_ULOCK(ih);
 
-			psc_assert(rc == 0);
+			pfl_assert(rc == 0);
 
 			/*
  			 * We are going to open this file again shortly by
@@ -256,21 +256,21 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
 		if (fcmh_2_mfh(f)) {
-			psc_assert(fcmh_2_mfh(f));
+			pfl_assert(fcmh_2_mfh(f));
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fcmh_2_mfh(f));
-			psc_assert(rc == 0);
+			pfl_assert(rc == 0);
 		}
 	}
 
 	if (fcmh_isdir(f)) {
 		if (fcmh_2_dino_mfh(f)) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
-			psc_assert(fcmh_2_dino_mfh(f));
+			pfl_assert(fcmh_2_dino_mfh(f));
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fcmh_2_dino_mfh(f));
-			psc_assert(rc == 0);
+			pfl_assert(rc == 0);
 		}
 	}
 

@@ -118,7 +118,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq,
 		struct srt_bwqueued	bwq;
 	} *data;
 
-	psc_assert(idx >= 0);
+	pfl_assert(idx >= 0);
 	data = pscrpc_msg_buf(m, idx, sizeof(*data));
 	if (data == NULL) {
 		DEBUG_REQ(PLL_ERROR, rq, buf, "unable to import statfs");

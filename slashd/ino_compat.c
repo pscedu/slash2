@@ -137,7 +137,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psc_assert(ih->inoh_extras == NULL);
+	pfl_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	/* convert old structures into new into temp file */
@@ -229,7 +229,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 
 	exists = 1;
 
-	psc_assert(ih->inoh_extras == NULL);
+	pfl_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	inoh_2_mfh(ih) = h;

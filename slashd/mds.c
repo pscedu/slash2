@@ -229,7 +229,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 
 	rmmi = resm2rmmi(resm);
 
-	psc_assert(bml->bml_bmi->bmi_assign);
+	pfl_assert(bml->bml_bmi->bmi_assign);
 
 	if (bml->bml_bmi->bmi_wr_ion) {
 		/*
@@ -238,7 +238,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 		 * the following assert triggers.  The bml_start value
 		 * between the two lease exceeds 60000.
 		 */
-		psc_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
+		pfl_assert(bml->bml_bmi->bmi_wr_ion == rmmi);
 	} else {
 		psc_atomic32_inc(&rmmi->rmmi_refcnt);
 		bml->bml_bmi->bmi_wr_ion = rmmi;
@@ -583,7 +583,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	ih = fcmh_2_inoh(f);
 	nrepls = ih->inoh_ino.ino_nrepls;
 
-	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
+	pfl_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 
 	FCMH_LOCK(f);
 	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih, bia->bia_ios);
@@ -666,9 +666,9 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	struct sl_resource *r;
 	struct fidc_membh *f = b->bcm_fcmh;
 
-	psc_assert(!bmi->bmi_wr_ion);
-	psc_assert(!bmi->bmi_assign);
-	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+	pfl_assert(!bmi->bmi_wr_ion);
+	pfl_assert(!bmi->bmi_assign);
+	pfl_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
 	if (rc) {
@@ -740,7 +740,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	OPSTAT_INCR("bmap-update");
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
+	pfl_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	dio = b->bcm_flags & BMAPF_DIO;
 	BMAP_ULOCK(b);
 
@@ -755,7 +755,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	/*
  	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
  	 */
-	psc_assert(bia->bia_seq == bmi->bmi_seq);
+	pfl_assert(bia->bia_seq == bmi->bmi_seq);
 	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bia->bia_lastcli = bml->bml_cli_nidpid;
 	bia->bia_flags = dio ? BIAF_DIO : 0;
@@ -797,7 +797,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 		    tmp->bml_cli_nidpid.pid != cnp->pid)
 			continue;
 		/* Only one lease per client is allowed on the list. */
-		psc_assert(!bml);
+		pfl_assert(!bml);
 		bml = tmp;
 	}
 
@@ -871,12 +871,12 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		bml->bml_flags |= BML_FREEING;
 		goto out;
 	}
-	psc_assert(bmi->bmi_wr_ion);
+	pfl_assert(bmi->bmi_wr_ion);
 
 	mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease, &rlease);
 
 	/* Account for the read lease which is to be converted. */
-	psc_assert(rlease);
+	pfl_assert(rlease);
 	if (!wlease) {
 		/*
 		 * Only bump bmi_writers if no other write lease is
@@ -959,7 +959,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	struct bmap_mds_lease *obml;
 	int rlease, wlease, rc = 0;
 
-	psc_assert(bml->bml_cli_nidpid.nid &&
+	pfl_assert(bml->bml_cli_nidpid.nid &&
 		   bml->bml_cli_nidpid.pid &&
 		   bml->bml_cli_nidpid.nid != LNET_NID_ANY &&
 		   bml->bml_cli_nidpid.pid != LNET_PID_ANY);
@@ -996,7 +996,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 		tmp->bml_chain = bml;
 		bml->bml_chain = obml;
-		psc_assert(psclist_disjoint(&bml->bml_bmi_lentry));
+		pfl_assert(psclist_disjoint(&bml->bml_bmi_lentry));
 	} else {
 		/* First on the list. */
 		bml->bml_chain = bml;
@@ -1039,9 +1039,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		}
 
 		if (bml->bml_flags & BML_RECOVER) {
-			psc_assert(bmi->bmi_writers == 1);
-			psc_assert(!bmi->bmi_readers);
-			psc_assert(bml->bml_ios &&
+			pfl_assert(bmi->bmi_writers == 1);
+			pfl_assert(!bmi->bmi_readers);
+			pfl_assert(bml->bml_ios &&
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
 			mds_bmap_ios_restart(bml);
@@ -1055,13 +1055,13 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			 * the case of extending a bmap lease. If so,
 			 * we can probably get rid of reassign RPC.
 			 */
-			psc_assert(!bmi->bmi_wr_ion);
+			pfl_assert(!bmi->bmi_wr_ion);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ios_assign(bml, prefios);
 
 		} else {
 			/* Possible duplicate and/or multiple writer. */
-			psc_assert(bmi->bmi_wr_ion);
+			pfl_assert(bmi->bmi_wr_ion);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ios_update(bml);
 		}
@@ -1106,33 +1106,33 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 	 * positive.   Also note that the find() function returns the
 	 * head of the chain of duplicate leases.
 	 */
-	psc_assert(obml);
-	psc_assert((wlease + rlease) > 0);
-	psc_assert(!(obml->bml_flags & BML_CHAIN));
-	psc_assert(psclist_conjoint(&obml->bml_bmi_lentry,
+	pfl_assert(obml);
+	pfl_assert((wlease + rlease) > 0);
+	pfl_assert(!(obml->bml_flags & BML_CHAIN));
+	pfl_assert(psclist_conjoint(&obml->bml_bmi_lentry,
 	    psc_lentry_hd(&obml->bml_bmi_lentry)));
 
 	/* Find the bml's preceding entry. */
 	tail = obml;
 	while (tail->bml_chain != bml)
 		tail = tail->bml_chain;
-	psc_assert(tail->bml_chain == bml);
+	pfl_assert(tail->bml_chain == bml);
 
 	/* Manage the bml list and bml_bmi_lentry. */
 	if (bml->bml_flags & BML_CHAIN) {
-		psc_assert(psclist_disjoint(&bml->bml_bmi_lentry));
-		psc_assert((wlease + rlease) > 1);
+		pfl_assert(psclist_disjoint(&bml->bml_bmi_lentry));
+		pfl_assert((wlease + rlease) > 1);
 		tail->bml_chain = bml->bml_chain;
 
 	} else {
-		psc_assert(obml == bml);
-		psc_assert(!(bml->bml_flags & BML_CHAIN));
+		pfl_assert(obml == bml);
+		pfl_assert(!(bml->bml_flags & BML_CHAIN));
 		pll_remove(&bmi->bmi_leases, bml);
 		PFLOG_BML(PLL_DIAG, bml, "removed");
 
 		if ((wlease + rlease) > 1) {
-			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
-			psc_assert(psclist_disjoint(
+			pfl_assert(bml->bml_chain->bml_flags & BML_CHAIN);
+			pfl_assert(psclist_disjoint(
 			    &bml->bml_chain->bml_bmi_lentry));
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
@@ -1141,12 +1141,12 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 
 			tail->bml_chain = bml->bml_chain;
 		} else
-			psc_assert(bml == bml->bml_chain);
+			pfl_assert(bml == bml->bml_chain);
 	}
 
 	if (bml->bml_flags & BML_WRITE) {
 		if (wlease == 1) {
-			psc_assert(bmi->bmi_writers > 0);
+			pfl_assert(bmi->bmi_writers > 0);
 			bmi->bmi_writers--;
 
 			DEBUG_BMAP(PLL_DIAG, bmi_2_bmap(bmi),
@@ -1157,9 +1157,9 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 				bmi->bmi_readers++;
 		}
 	} else {
-		psc_assert(bml->bml_flags & BML_READ);
+		pfl_assert(bml->bml_flags & BML_READ);
 		if (!wlease && (rlease == 1)) {
-			psc_assert(bmi->bmi_readers > 0);
+			pfl_assert(bmi->bmi_readers > 0);
 			bmi->bmi_readers--;
 		}
 	}
@@ -1183,7 +1183,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
-	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+	pfl_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 	DEBUG_BMAP(PLL_DIAG, b, "bml=%p fl=%d seq=%"PRId64, bml,
 	    bml->bml_flags, bml->bml_seq);
@@ -1203,7 +1203,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	b->bcm_flags |= BMAPF_IOSASSIGNED;
 
 	bml->bml_refcnt--;
-	psc_assert(bml->bml_refcnt >= 0);
+	pfl_assert(bml->bml_refcnt >= 0);
 	if (bml->bml_refcnt > 0 || !(bml->bml_flags & BML_FREEING)) {
 		b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 		bmap_wake_locked(b);
@@ -1245,7 +1245,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 
-			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+			pfl_assert(bia->bia_bmapno == b->bcm_bmapno);
 			/*
  			 * Hit crash with bmapno of 13577, bia_bmapno = 336169404,
  			 * bmi_seq = -1, and bml_flags = 101000010.
@@ -1467,7 +1467,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	bmap_2_bmi(b)->bmi_assign = item;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
-	psc_assert(!rc);
+	pfl_assert(!rc);
 	/*
  	 * Leave it to the slmbmaptimeothr_begin() thread to free me.
  	 */
@@ -1605,7 +1605,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	bmi = bmap_2_bmi(b);
 
 	if (rw == SL_WRITE) {
-		psc_assert(bmi->bmi_wr_ion);
+		pfl_assert(bmi->bmi_wr_ion);
 		sbd->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else
 		sbd->sbd_ios = IOS_ID_ANY;
@@ -1665,12 +1665,12 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		 */
 		PFL_GOTOERR(out1, rc = -EAGAIN);
 	}
-	psc_assert(bmi->bmi_wr_ion);
-	psc_assert(!(b->bcm_flags & BMAPF_DIO));
+	pfl_assert(bmi->bmi_wr_ion);
+	pfl_assert(!(b->bcm_flags & BMAPF_DIO));
 	BMAP_ULOCK(b);
 
 	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
-	psc_assert(bia->bia_seq == bmi->bmi_seq);
+	pfl_assert(bia->bia_seq == bmi->bmi_seq);
 
 	rc = slm_resm_select(b, pios, prev_ios, nprev_ios, &resm);
 	if (rc)
@@ -1708,7 +1708,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		PSCFREE(bia);
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
+	pfl_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	b->bcm_flags &= ~BMAPF_IOSASSIGNED;
 	bmap_wake_locked(b);
 
@@ -1777,7 +1777,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rw == BML_WRITE) {
 		struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-		psc_assert(bmi->bmi_wr_ion);
+		pfl_assert(bmi->bmi_wr_ion);
 
 		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
@@ -1971,7 +1971,7 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 	uint64_t size;
 
 	fmi = fcmh_2_fmi(f);
-	psc_assert(sstb->sst_size);
+	pfl_assert(sstb->sst_size);
 
 	FCMH_LOCK_ENSURE(f);
 	f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
@@ -2103,7 +2103,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			pscthr_yield();
 	} while (rc == SQLITE_BUSY);
 	/* saw SQLITE_MISUSE  = 21  */
-	psc_assert(rc == SQLITE_OK);
+	pfl_assert(rc == SQLITE_OK);
 
 	n = sqlite3_bind_parameter_count(sth);
 	va_start(ap, fmt);
@@ -2159,7 +2159,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		default:
 			psc_fatalx("type");
 		}
-		psc_assert(rc == SQLITE_OK);
+		pfl_assert(rc == SQLITE_OK);
 	}
 	va_end(ap);
 

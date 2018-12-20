@@ -163,11 +163,11 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 
 	if (!sbd->sbd_seq)
 		psc_fatalx("Zero bmap lease number (%s)", action);
-	psc_assert(sbd->sbd_fg.fg_fid);
-	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+	pfl_assert(sbd->sbd_fg.fg_fid);
+	pfl_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
 	if (b->bcm_flags & BMAPF_WR)
-		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
+		pfl_assert(sbd->sbd_ios != IOS_ID_ANY);
 
 	/*
  	 * If we renew a lease repeatedly, we can get of DIO if
@@ -420,7 +420,7 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	int rc;
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
+	pfl_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 
 	/*
  	 * To get the original request:
@@ -525,7 +525,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	BMAP_ULOCK(b);
 
 	sbd = bmap_2_sbd(b);
-	psc_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
+	pfl_assert(sbd->sbd_fg.fg_fid == fcmh_2_fid(b->bcm_fcmh));
 
  retry:
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc, 0);
@@ -600,7 +600,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 	/* ignore all errors for this background operation */
 	if (!rc) {
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
-		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
+		pfl_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
@@ -659,7 +659,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
 
-	psc_assert(b->bcm_flags & BMAPF_MODECHNG);
+	pfl_assert(b->bcm_flags & BMAPF_MODECHNG);
 	if (b->bcm_flags & BMAPF_WR) {
 		/*
 		 * Write enabled bmaps are allowed to read with no
@@ -673,7 +673,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	}
 
 	/* Add write mode to this bmap. */
-	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
+	pfl_assert(rw == SL_WRITE && (b->bcm_flags & BMAPF_RD));
 
  retry:
 	rc = slc_rmc_getcsvc(fci->fci_resm, &csvc, 0);
@@ -735,7 +735,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 
 		BMAP_LOCK(b);
 		msl_bmap_stash_lease(b, &mp->sbd, "modechange");
-		psc_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
+		pfl_assert((b->bcm_flags & BMAP_RW_MASK) == BMAPF_RD);
 		b->bcm_flags = (b->bcm_flags & ~BMAPF_RD) | BMAPF_WR;
 		r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 		if (r->res_type == SLREST_ARCHIVAL_FS) {
@@ -776,7 +776,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	int rc;
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
+	pfl_assert(b->bcm_flags & BMAPF_REASSIGNREQ);
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc)
@@ -833,7 +833,7 @@ msl_bmap_lease_reassign(struct bmap *b)
 
 	BMAP_ULOCK(b);
 
-	psc_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
+	pfl_assert(fcmh_2_fci(b->bcm_fcmh)->fci_resm == msl_rmc_resm);
 	rc = slc_rmc_getcsvc(fcmh_2_fci(b->bcm_fcmh)->fci_resm, &csvc, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -897,7 +897,7 @@ msl_bmap_cache_rls(struct bmap *b)
 		psclog_diag("Mark page free %p at %d\n", e, __LINE__);
 		e->bmpce_flags |= BMPCEF_TOFREE;
 
-		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		pfl_assert(e->bmpce_flags & BMPCEF_LRU);
 		pll_remove(&bmpc->bmpc_lru, e);
 		e->bmpce_flags &= ~BMPCEF_LRU;
 		BMPCE_ULOCK(e);
@@ -939,7 +939,7 @@ msl_bmap_reap_init(struct bmap *b)
 
 		if (!r)
 			psc_fatalx("Invalid IOS %x", sbd->sbd_ios);
-		psc_assert(b->bcm_flags & BMAPF_WR);
+		pfl_assert(b->bcm_flags & BMAPF_WR);
 
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAPF_DIO;
@@ -1013,7 +1013,7 @@ msl_bmap_release(struct sl_resm *resm)
 		PFL_GOTOERR(out, rc);
 	}
 
-	psc_assert(rmci->rmci_bmaprls.nbmaps);
+	pfl_assert(rmci->rmci_bmaprls.nbmaps);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1086,8 +1086,8 @@ msbwatchthr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+			pfl_assert(b->bcm_flags & BMAPF_TIMEOQ);
+			pfl_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (timespeccmp(&ts, &bci->bci_etime, <) &&
 			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
@@ -1197,8 +1197,8 @@ msbreleasethr_main(struct psc_thread *thr)
 				continue;
 			}
 
-			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+			pfl_assert(b->bcm_flags & BMAPF_TIMEOQ);
+			pfl_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
@@ -1210,7 +1210,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			 * A bmap should be taken off the flush queue
 			 * after all its biorq are finished.
 			 */
-			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+			pfl_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
 			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
 			    (b->bcm_flags & BMAPF_DISCARD) ||
@@ -1325,7 +1325,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		*pm = NULL;
 	*csvcp = NULL;
 
-	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+	pfl_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	if (exclusive) {
 		/*
@@ -1334,7 +1334,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 		 */
 		locked = BMAP_RLOCK(b);
 		m = libsl_ios2resm(bmap_2_ios(b));
-		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
+		pfl_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
 		*csvcp = slc_geticsvc(m, 0);
 		if (*csvcp) {
@@ -1420,8 +1420,8 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmap_wait_locked(b, atomic_read(&b->bcm_opcnt) > 2);
 	OPSTAT_INCR("msl.bmap-wait-empty-done");
 
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+	pfl_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	pfl_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
 	BMAP_ULOCK(b);
 }
 
@@ -1433,17 +1433,17 @@ msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
+	pfl_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
-	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	pfl_assert(RB_EMPTY(&bmpc->bmpc_tree));
+	pfl_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+	pfl_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 
 	/*
 	 * Assert that this bmap can no longer be scheduled by the 
 	 * write back cache thread.
 	 */
-	psc_assert(psclist_disjoint(&b->bcm_lentry));
+	pfl_assert(psclist_disjoint(&b->bcm_lentry));
 
 	lc_remove(&bmpcLru, bmpc);
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");

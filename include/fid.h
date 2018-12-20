@@ -143,9 +143,9 @@ struct sl_fidgen {
 
 #define COPYFG(dst, src)						\
 	do {								\
-		psc_assert(sizeof(*(dst)) ==				\
+		pfl_assert(sizeof(*(dst)) ==				\
 		    sizeof(struct sl_fidgen));				\
-		psc_assert(sizeof(*(src)) ==				\
+		pfl_assert(sizeof(*(src)) ==				\
 		    sizeof(struct sl_fidgen));				\
 		memcpy((dst), (src), sizeof(*(dst)));			\
 	} while (0)

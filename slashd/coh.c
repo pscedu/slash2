@@ -140,10 +140,10 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	BMAP_LOCK_ENSURE(b);
 
 	if (bml->bml_flags & BML_RECOVER) {
-		psc_assert(!bml->bml_exp);
+		pfl_assert(!bml->bml_exp);
 		PFL_GOTOERR(out, rc = -PFLERR_NOTCONN);
 	}
-	psc_assert(bml->bml_exp);
+	pfl_assert(bml->bml_exp);
 
 	csvc = slm_getclcsvc(bml->bml_exp, 0);
 	if (csvc == NULL)

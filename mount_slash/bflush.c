@@ -435,7 +435,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		PFL_GOTOERR(out, rc);
 	}
 
-	psc_assert(bwc->bwc_soff == r->biorq_off);
+	pfl_assert(bwc->bwc_soff == r->biorq_off);
 
 	BMAP_LOCK(b);
 	bmpc = bmap_2_bmpc(b);
@@ -444,7 +444,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
  		 * 04/26/2017: Crash here with bcm_bmapno = 3783215504, 
  		 * bcm_flags = 32751, rc=32751, from bmap_flush_resched().
  		 */
-		psc_assert(b == r->biorq_bmap);
+		pfl_assert(b == r->biorq_bmap);
 		/*
 		 * No need to lock because we have already replied to
 		 * the user space.  Furthermore, we flush each biorq in
@@ -452,7 +452,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		 */
 		r->biorq_last_sliod = bmap_2_ios(b);
 	
-		psc_assert(r->biorq_flags & BIORQ_ONTREE);
+		pfl_assert(r->biorq_flags & BIORQ_ONTREE);
 		r->biorq_flags &= ~BIORQ_ONTREE;
 
 		/* XXX not using rwlock here */
@@ -494,7 +494,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	off_t off, loff;
 	int i, j;
 
-	psc_assert(!bwc->bwc_nbmpces);
+	pfl_assert(!bwc->bwc_nbmpces);
 
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
 		if (!end)
@@ -504,8 +504,8 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 			 * biorq offsets may not decrease and holes are
 			 * not allowed.
 			 */
-			psc_assert(r->biorq_off >= loff);
-			psc_assert(r->biorq_off <= biorq_voff_get(end));
+			pfl_assert(r->biorq_off >= loff);
+			pfl_assert(r->biorq_off <= biorq_voff_get(end));
 			if (biorq_voff_get(r) > biorq_voff_get(end))
 				end = r;
 		}
@@ -538,16 +538,16 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 			    bmpce_off >= bmpce->bmpce_off)
 				continue;
 
-			psc_assert(bmpce->bmpce_off - BMPC_BUFSZ ==
+			pfl_assert(bmpce->bmpce_off - BMPC_BUFSZ ==
 			    bwc->bwc_bmpces[bwc->bwc_nbmpces - 1]->bmpce_off);
 			bwc->bwc_bmpces[bwc->bwc_nbmpces++] = bmpce;
 			DEBUG_BMPCE(PLL_DIAG, bmpce, "added");
 		}
-		psc_assert(!reqsz);
+		pfl_assert(!reqsz);
 	}
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
 
-	psc_assert(bwc->bwc_size ==
+	pfl_assert(bwc->bwc_size ==
 	    (end->biorq_off - r->biorq_off) + end->biorq_len);
 }
 
@@ -570,10 +570,10 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	psclog_diag("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz,
 	    psc_dynarray_len(&bwc->bwc_biorqs), bwc->bwc_nbmpces);
 
-	psc_assert(!bwc->bwc_niovs);
+	pfl_assert(!bwc->bwc_niovs);
 
 	r = psc_dynarray_getpos(&bwc->bwc_biorqs, 0);
-	psc_assert(bwc->bwc_soff == r->biorq_off);
+	pfl_assert(bwc->bwc_soff == r->biorq_off);
 
 	for (i = 0; i < bwc->bwc_nbmpces; i++) {
 		bmpce = bwc->bwc_bmpces[i];
@@ -591,8 +591,8 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	}
 	psc_atomic32_setmax(&slc_write_coalesce_max, bwc->bwc_niovs);
 
-	psc_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
-	psc_assert(!tot_reqsz);
+	pfl_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
+	pfl_assert(!tot_reqsz);
 }
 
 /*
@@ -647,7 +647,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	struct bmpc_ioreq *curr, *last = NULL;
 	int32_t sz = 0;
 
-	psc_assert(psc_dynarray_len(biorqs) > *indexp);
+	pfl_assert(psc_dynarray_len(biorqs) > *indexp);
 
 	bwc = bwc_alloc();
 
@@ -672,7 +672,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		if (idx)
 			/* Assert 'lowest to highest' ordering. */
-			psc_assert(curr->biorq_off >= last->biorq_off);
+			pfl_assert(curr->biorq_off >= last->biorq_off);
 		else {
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
@@ -767,7 +767,7 @@ bmap_flush(struct psc_dynarray *reqs, struct psc_dynarray *bmaps)
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		psc_assert(b->bcm_flags & BMAPF_FLUSHQ);
+		pfl_assert(b->bcm_flags & BMAPF_FLUSHQ);
 
 		if ((b->bcm_flags & BMAPF_SCHED) ||
 		    (b->bcm_flags & BMAPF_REASSIGNREQ)) {

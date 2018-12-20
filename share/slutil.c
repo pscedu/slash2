@@ -157,7 +157,7 @@ checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
 	int n;
 
 #if PFL_DEBUG > 0
-	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
+	pfl_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
 
 	if (sstb->sst_uid == pcrp->pcr_uid)

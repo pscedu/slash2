@@ -104,7 +104,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 {
 	struct fidc_membh *fcmh;
 
-	psc_assert(fci);
+	pfl_assert(fci);
 	fcmh = (void *)fci;
 	return (fcmh - 1);
 }

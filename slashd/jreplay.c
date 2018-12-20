@@ -238,7 +238,7 @@ mds_replay_ino(void *jent, int op)
 			for (j = 0; j < SL_MAX_REPLICAS; j++)
 				if (sjir->sjir_repls[j])
 					break;
-			psc_assert(j != SL_MAX_REPLICAS);
+			pfl_assert(j != SL_MAX_REPLICAS);
 		}
 
 		/*
@@ -259,7 +259,7 @@ mds_replay_ino(void *jent, int op)
 				    sjir->sjir_nrepls);
 		}
 
-		psc_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
+		pfl_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
 
 		if (sjir->sjir_nrepls > SL_DEF_REPLICAS) {
 			mds_inox_ensure_loaded(ih);
@@ -509,7 +509,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		break;
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
-		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
+		pfl_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_replay_namespace(sjnm);
 
 		/*

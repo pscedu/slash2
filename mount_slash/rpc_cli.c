@@ -66,7 +66,7 @@ msl_resm_throttle_wake(struct sl_resm *m, int rc)
 		}
 	}
 
-	psc_assert(rpci->rpci_infl_rpcs > 0);
+	pfl_assert(rpci->rpci_infl_rpcs > 0);
 	rpci->rpci_infl_rpcs--;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
@@ -105,9 +105,9 @@ msl_resm_get_credit(struct sl_resm *m, int secs)
 	struct msflush_thread * mflt;
 
 	thr = pscthr_get();
-	psc_assert(secs > 0);
+	pfl_assert(secs > 0);
 
-	psc_assert(thr->pscthr_type == MSTHRT_FLUSH);
+	pfl_assert(thr->pscthr_type == MSTHRT_FLUSH);
 	mflt = msflushthr(thr);
 
 	if (m->resm_type == SLREST_MDS) {
@@ -148,7 +148,7 @@ msl_resm_put_credit(struct sl_resm *m)
 	struct resprof_cli_info *rpci;
 
 	thr = pscthr_get();
-	psc_assert(thr->pscthr_type == MSTHRT_FLUSH);
+	pfl_assert(thr->pscthr_type == MSTHRT_FLUSH);
 	mflt = msflushthr(thr);
 	/*
 	 * XXX use resm multiwait?
@@ -158,7 +158,7 @@ msl_resm_put_credit(struct sl_resm *m)
 
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
-	psc_assert(rpci->rpci_infl_credits >= mflt->mflt_credits);
+	pfl_assert(rpci->rpci_infl_credits >= mflt->mflt_credits);
 	rpci->rpci_infl_credits =- mflt->mflt_credits;
 	mflt->mflt_credits = 0;
 	RPCI_WAKE(rpci);
@@ -191,7 +191,7 @@ msl_resm_throttle_wait(struct sl_resm *m)
 	 */
 	RPCI_LOCK(rpci);
 	if (mflt && mflt->mflt_credits) {
-		psc_assert(rpci->rpci_infl_credits > 0);
+		pfl_assert(rpci->rpci_infl_credits > 0);
 		mflt->mflt_credits--;
 		rpci->rpci_infl_credits--;
 		OPSTAT_INCR("msl.throttle-credit");
@@ -415,7 +415,7 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout
 		    &resm->resm_csvc->csvc_lock, timeout);
 		CSVC_LOCK(resm->resm_csvc);
 		if (rc) {
-			psc_assert(rc == ETIMEDOUT);
+			pfl_assert(rc == ETIMEDOUT);
 			OPSTAT_INCR("csvc-wait-timeout");
 		} else
 			rc = resm->resm_csvc->csvc_lasterrno;

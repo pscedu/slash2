@@ -82,7 +82,7 @@ msl_pgcache_init(void)
  	 */
 	entry = PSCALLOC(sizeof(struct bmap_page_entry) * bmpce_pool->ppm_max); 
 	for (i = 0; i < bmpce_pool->ppm_max; i++) {
-		psc_assert(entry);
+		pfl_assert(entry);
 		entry->page_flag = 0;
 		page_buffer_total++;
 		entry->page_buf = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
@@ -388,8 +388,8 @@ bmpce_free(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc)
 
 	BMPCE_LOCK_ENSURE(e);
 
-	psc_assert(e->bmpce_ref == 0);
-	psc_assert(e->bmpce_flags & BMPCEF_TOFREE);
+	pfl_assert(e->bmpce_ref == 0);
+	pfl_assert(e->bmpce_flags & BMPCEF_TOFREE);
 
 	DEBUG_BMPCE(PLL_DIAG, e, "destroying");
 
@@ -414,8 +414,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	msl_bmpce_gen++;
 	LOCK_ENSURE(&e->bmpce_lock);
 
-	psc_assert(bmpc == bmap_2_bmpc(b));
-	psc_assert(e->bmpce_ref > 0);
+	pfl_assert(bmpc == bmap_2_bmpc(b));
+	pfl_assert(e->bmpce_ref > 0);
 	e->bmpce_ref--;
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
 	if (e->bmpce_ref > 0) {
@@ -424,7 +424,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 	}
 
 	/* sanity checks */
-	psc_assert(pll_empty(&e->bmpce_pndgaios));
+	pfl_assert(pll_empty(&e->bmpce_pndgaios));
 
 	/*
  	 * This has the side effect of putting the page
@@ -652,7 +652,7 @@ bmpce_reaper(struct psc_poolmgr *m)
 		PLL_ULOCK(&bmpc->bmpc_lru);
 		DYNARRAY_FOREACH(e, i, &a) {
 			BMPCE_LOCK(e);
-			psc_assert(e->bmpce_flags & BMPCEF_LRU);
+			pfl_assert(e->bmpce_flags & BMPCEF_LRU);
 			pll_remove(&bmpc->bmpc_lru, e);
 			e->bmpce_flags &= ~BMPCEF_LRU;
 			bmpce_free(e, bmpc);

@@ -240,7 +240,7 @@ rmmi2resm(struct resm_mds_info *rmmi)
 {
 	struct sl_resm *m;
 
-	psc_assert(rmmi);
+	pfl_assert(rmmi);
 	m = (void *)rmmi;
 	return (m - 1);
 }

@@ -137,7 +137,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	repl = ih->inoh_ino.ino_repls;
 	locked = INOH_RLOCK(ih);
 
-	psc_assert(nr <= SL_MAX_REPLICAS);
+	pfl_assert(nr <= SL_MAX_REPLICAS);
 
 	res = libsl_id2res(ios);
 	if (res == NULL)
@@ -261,7 +261,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	if (flag == IOSV_LOOKUPF_ADD) {
 
 		/* paranoid */
-		psc_assert(i == nr);
+		pfl_assert(i == nr);
 
 		if (nr == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, buf, "too many replicas");
@@ -323,7 +323,7 @@ mds_brepls_check(uint8_t *repls, int nr)
 {
 	int val, off, i;
 
-	psc_assert(nr > 0 && nr <= SL_MAX_REPLICAS);
+	pfl_assert(nr > 0 && nr <= SL_MAX_REPLICAS);
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(repls, off);
 		switch (val) {
@@ -380,13 +380,13 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
 
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
-		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
+		pfl_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 	}
 
 	if (scircuit)
 		*scircuit = 0;
 	else
-		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
+		pfl_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
 	/* retrieve IOS status given a bit offset into the map */
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
@@ -1046,7 +1046,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		else {
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
-			psc_assert(!rc);
+			pfl_assert(!rc);
 
 			/* schedule a call to slm_upsch_trypreclaim() */
 			if (flags & FLAG_REPLICA_STATE_DIRTY)
@@ -1072,7 +1072,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	do {								\
 		(bwd)->bwd_inflight += (amt);				\
 		(bwd)->bwd_assigned += (amt);				\
-		psc_assert((bwd)->bwd_assigned >= 0);			\
+		pfl_assert((bwd)->bwd_assigned >= 0);			\
 	} while (0)
 
 #define SIGN(x)	((x) >= 0 ? 1 : -1)
@@ -1102,7 +1102,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	is = res2rpmi_ios(src->resm_res);
 	id = res2rpmi_ios(dst->resm_res);
 
-	psc_assert(amt);
+	pfl_assert(amt);
 
 	/* reserve */
 	if (amt > 0) {
@@ -1128,8 +1128,8 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	if (amt < 0) {
 		is->si_repl_egress_pending += amt;
 		id->si_repl_ingress_pending += amt;
-		psc_assert(is->si_repl_egress_pending >= 0);
-		psc_assert(id->si_repl_ingress_pending >= 0);
+		pfl_assert(is->si_repl_egress_pending >= 0);
+		pfl_assert(id->si_repl_ingress_pending >= 0);
 		if (!rc) {
 			is->si_repl_egress_aggr += -amt;
 			id->si_repl_ingress_aggr += -amt;

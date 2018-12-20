@@ -180,14 +180,14 @@ fmi_2_fcmh_const(const struct fcmh_mds_info *fmi)
 static __inline struct fcmh_mds_info *
 inoh_2_fmi(struct slash_inode_handle *ih)
 {
-	psc_assert(ih);
+	pfl_assert(ih);
 	return (PSC_AGP(ih, -offsetof(struct fcmh_mds_info, fmi_inodeh)));
 }
 
 static __inline const struct fcmh_mds_info *
 inoh_2_fmi_const(const struct slash_inode_handle *ih)
 {
-	psc_assert(ih);
+	pfl_assert(ih);
 	return (PSC_AGP(ih, -offsetof(struct fcmh_mds_info, fmi_inodeh)));
 }
 

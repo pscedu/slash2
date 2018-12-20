@@ -71,7 +71,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 			return;
 	}
 
-	psc_assert(m->bufcount > 1);
+	pfl_assert(m->bufcount > 1);
 
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 

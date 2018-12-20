@@ -262,7 +262,7 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 				break;
 			}
 			fmi = fcmh_2_fmi(f);
-			psc_assert(fmi->fmi_cb_count > 0);
+			pfl_assert(fmi->fmi_cb_count > 0);
 			fmi->fmi_cb_count--;
 
 			psclog_diag("fid="SLPRI_FID ", callback = %p, expire = %d, count = %d", 

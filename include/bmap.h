@@ -233,8 +233,8 @@ struct bmap {
 
 #define BMAP_BUSY_ENSURE(b)						\
 	do {								\
-		psc_assert((b)->bcm_flags & BMAPF_BUSY);		\
-		psc_assert((b)->bcm_owner == pthread_self());		\
+		pfl_assert((b)->bcm_flags & BMAPF_BUSY);		\
+		pfl_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
 
 /*
@@ -252,7 +252,7 @@ struct bmap {
 		(void)BMAP_RLOCK(b);					\
 		DEBUG_BMAP(PLL_DEBUG, (b),				\
 		    "drop reference (type=%u)", (type));		\
-		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
+		pfl_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
 		    _DEBUG_BMAP_FMT "released reference (type=%u)",	\
@@ -404,14 +404,14 @@ extern struct bmap_ops sl_bmap_ops;
 static __inline void *
 bmap_get_pri(struct bmap *b)
 {
-	psc_assert(b);
+	pfl_assert(b);
 	return (b + 1);
 }
 
 static __inline const void *
 bmap_get_pri_const(const struct bmap *b)
 {
-	psc_assert(b);
+	pfl_assert(b);
 	return (b + 1);
 }
 

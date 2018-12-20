@@ -60,8 +60,8 @@ mds_inode_read(struct slash_inode_handle *ih)
 	if (rc)
 		return (-rc);
 
-	psc_assert(f->fcmh_flags & FCMH_INITING);
-	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
+	pfl_assert(f->fcmh_flags & FCMH_INITING);
+	pfl_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
 
 	memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
 
@@ -189,7 +189,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	INOH_LOCK_ENSURE(ih);
 
-	psc_assert(ih->inoh_extras);
+	pfl_assert(ih->inoh_extras);
 
 	INOH_ULOCK(ih);
 
@@ -282,7 +282,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 	if (ih->inoh_extras == NULL)
 		rc = mds_inox_load_locked(ih);
 	INOH_URLOCK(ih, locked);
-	psc_assert(rc <= 0);
+	pfl_assert(rc <= 0);
 	return (rc);
 }
 
@@ -311,7 +311,7 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
  out:
 	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p, rc = %d", logf, rc);
 	INOH_URLOCK(ih, locked);
-	psc_assert(rc <= 0);
+	pfl_assert(rc <= 0);
 	return (rc);
 }
 

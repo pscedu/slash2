@@ -264,7 +264,7 @@ slm_fcmh_coherent_callback(struct fidc_membh *f,
 		cb = psc_lentry_obj(tmp, struct fcmh_mds_callback, fmc_lentry);
 		if (cb->fmc_nidpid.nid == nid &&
 		    cb->fmc_nidpid.pid == pid) {
-			psc_assert(!found);
+			pfl_assert(!found);
 			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
 			found = 1;
 			found_cb = cb;
@@ -445,7 +445,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->sbd.sbd_seq = bml->bml_seq;
 	mp->sbd.sbd_key = BMAPSEQ_ANY;
 
-	psc_assert(bmi->bmi_wr_ion);
+	pfl_assert(bmi->bmi_wr_ion);
 	mp->sbd.sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 
  out:

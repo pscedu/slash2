@@ -417,7 +417,7 @@ restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
 			case SLREST_STANDALONE_FS:
 			case SLREST_ARCHIVAL_FS:
 			case SLREST_MDS:
-				psc_assert(!currentResm);
+				pfl_assert(!currentResm);
 				currentResm = PSCALLOC(
 				    sizeof(struct sl_resm) +
 				    cfg_resm_pri_sz);
@@ -599,7 +599,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	in_addr_t ip;
 	int rc, retry = 0;
 
-	psc_assert(m);
+	pfl_assert(m);
 
 	if (init == 0) {
 		init = 1;
@@ -944,15 +944,15 @@ void
 slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
 {
 	if (r->res_type == SLREST_CLUSTER_NOSHARE_LFS)
-		psc_assert(peer->res_type == SLREST_STANDALONE_FS);
+		pfl_assert(peer->res_type == SLREST_STANDALONE_FS);
 
 	else if (r->res_type == SLREST_PARALLEL_LFS)
-		psc_assert(peer->res_type == SLREST_PARALLEL_COMPNT);
+		pfl_assert(peer->res_type == SLREST_PARALLEL_COMPNT);
 
 	else
 		psc_fatalx("invalid resource type");
 
-	psc_assert(psc_dynarray_len(&peer->res_members) == 1);
+	pfl_assert(psc_dynarray_len(&peer->res_members) == 1);
 
 	psc_dynarray_add(&r->res_members,
 	    psc_dynarray_getpos(&peer->res_members, 0));

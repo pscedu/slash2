@@ -290,7 +290,7 @@ sli_bml_process_release(struct bmap_iod_rls *brls)
 
 	if (pll_empty(&bii->bii_rls)) {
 		bmap_op_start_type(b, BMAP_OPCNT_RELEASER);
-		psc_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
+		pfl_assert(!(b->bcm_flags & BMAPF_RELEASEQ));
 		b->bcm_flags |= BMAPF_RELEASEQ;
 		/* 
 		 * XXX rename sli_bmaplease_releaseq versus sli_bmap_releaseq.
@@ -349,8 +349,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
-			psc_assert(b->bcm_flags & BMAPF_RELEASEQ);
-			psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
+			pfl_assert(b->bcm_flags & BMAPF_RELEASEQ);
+			pfl_assert(!(b->bcm_flags & BMAPF_TOFREE));
 
 			/*
 			 * XXX this logic can be rewritten to avoid
@@ -458,9 +458,9 @@ iod_bmap_finalcleanup(struct bmap *b)
 
 	bii = bmap_2_bii(b);
 
-	psc_assert(pll_empty(&bii->bii_rls));
-	psc_assert(SPLAY_EMPTY(&bii->bii_slvrs));
-	psc_assert(psclist_disjoint(&bii->bii_lentry));
+	pfl_assert(pll_empty(&bii->bii_rls));
+	pfl_assert(SPLAY_EMPTY(&bii->bii_slvrs));
+	pfl_assert(psclist_disjoint(&bii->bii_lentry));
 }
 
 /*

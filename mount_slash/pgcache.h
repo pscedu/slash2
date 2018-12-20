@@ -279,8 +279,8 @@ static __inline void
 bmpce_usecheck(struct bmap_pagecache_entry *bmpce, __unusedx int op,
     uint32_t off)
 {
-	psc_assert(bmpce->bmpce_ref > 0);
-	psc_assert(bmpce->bmpce_off == off);
+	pfl_assert(bmpce->bmpce_ref > 0);
+	pfl_assert(bmpce->bmpce_off == off);
 }
 
 #define biorq_getaligned_off(r, nbmpce)					\

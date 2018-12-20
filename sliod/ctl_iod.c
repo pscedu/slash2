@@ -180,7 +180,7 @@ sli_import(FTSENT *f, void *arg)
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
 
-	psc_assert(strncmp(fn, sfop->sfop_fn,
+	pfl_assert(strncmp(fn, sfop->sfop_fn,
 	    strlen(sfop->sfop_fn)) == 0);
 
 	rc = sli_rmi_getcsvc(&csvc);

@@ -173,8 +173,8 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 	if ((FID_GET_INUM(fcmh_2_fid(f))) == SLFID_ROOT)
 		flags |= FCMH_SETATTRF_CLOBBER;
 
-	psc_assert(sstb->sst_gen != FGEN_ANY);
-	psc_assert(f->fcmh_fg.fg_fid == sstb->sst_fid);
+	pfl_assert(sstb->sst_gen != FGEN_ANY);
+	pfl_assert(f->fcmh_fg.fg_fid == sstb->sst_fid);
 
 	/*
 	 * The default behavior is to save st_size and st_mtim since we
@@ -279,7 +279,7 @@ slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	siteid = FID_GET_SITEID(fcmh_2_fid(f));
 
-	psc_assert(f->fcmh_flags & FCMH_INITING);
+	pfl_assert(f->fcmh_flags & FCMH_INITING);
 
 	/*
 	 * ESTALE can happen with msctl working on a file in a different

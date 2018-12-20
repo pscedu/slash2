@@ -81,7 +81,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	h = t->odt_hdr;
 
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
-	psc_assert(!pad);
+	pfl_assert(!pad);
 
 	slm_odt_zerobuf_ensurelen(pad);
 
@@ -102,7 +102,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 
 	rc = mdsio_pwritev(current_vfsid, &rootcreds, iov, nio, &nb,
 	    off, t->odt_mfh, NULL, NULL);
-	psc_assert(!rc && nb == expect);
+	pfl_assert(!rc && nb == expect);
 }
 
 void
@@ -120,7 +120,7 @@ slm_odt_read(struct pfl_odt *t, int64_t item,
 
 	h = t->odt_hdr;
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
-	psc_assert(!pad);
+	pfl_assert(!pad);
 
 	slm_odt_zerobuf_ensurelen(pad);
 
@@ -141,7 +141,7 @@ slm_odt_read(struct pfl_odt *t, int64_t item,
 
 	rc = mdsio_preadv(current_vfsid, &rootcreds, iov, nio, &nb, off,
 	    t->odt_mfh);
-	psc_assert(!rc && nb == expect);
+	pfl_assert(!rc && nb == expect);
 }
 
 void
@@ -167,7 +167,7 @@ slm_odt_resize(struct pfl_odt *t)
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
 	    0, t->odt_mfh, NULL, NULL);
-	psc_assert(!rc && nb == sizeof(*h));
+	pfl_assert(!rc && nb == sizeof(*h));
 }
 
 void
