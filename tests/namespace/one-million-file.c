@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Create a large amount of files while crashing the MDS from time to time.
  * Filenames are made unique by permutation.

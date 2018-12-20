@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef _SUBSYS_MDS_H_
 #define _SUBSYS_MDS_H_
 

@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef _SUBSYS_CLI_H_
 #define _SUBSYS_CLI_H_
 
