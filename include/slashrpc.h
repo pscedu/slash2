@@ -348,7 +348,7 @@ struct srt_stat {
 		    sizeof(*(dst)) - _n);				\
 	} while (0)
 
-#define BW_UNITSZ		1024*1024		/* denomination of bw */
+#define BW_UNITSZ		(1024 * 1024)	/* denomination of bw */
 
 struct srt_bwqueued {
 	 int32_t		 sbq_ingress;
