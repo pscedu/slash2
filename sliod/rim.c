@@ -74,9 +74,6 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	struct fidc_membh *f;
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
-	/*
- 	 * Works on ext4 on Linux 4.4.0-1.el7.x86_64.netboot.
- 	 */
 	OPSTAT_INCR("preclaim-attempt");
 	p->rc = sli_fcmh_get(&q->fg, &f);
 	if (p->rc)
@@ -107,6 +104,7 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	(void)q;
 	(void)p;
 	(void)f;
+	(void)rc;
 	p->rc = -PFLERR_NOTSUP;
 	return (0);
 #endif
