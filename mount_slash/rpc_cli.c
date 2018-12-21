@@ -159,7 +159,7 @@ msl_resm_put_credit(struct sl_resm *m)
 	rpci = res2rpci(m->resm_res);
 	RPCI_LOCK(rpci);
 	pfl_assert(rpci->rpci_infl_credits >= mflt->mflt_credits);
-	rpci->rpci_infl_credits =- mflt->mflt_credits;
+	rpci->rpci_infl_credits -= mflt->mflt_credits;
 	mflt->mflt_credits = 0;
 	RPCI_WAKE(rpci);
 	RPCI_ULOCK(rpci);
