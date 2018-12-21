@@ -123,7 +123,7 @@ struct msctlmsg_bmpce {
 
 struct msctl_replstq {
 	struct psc_listentry		 mrsq_lentry;
-	struct psc_waitq		 mrsq_waitq;
+	struct pfl_waitq		 mrsq_waitq;
 	int				 mrsq_id;
 	int				 mrsq_fd;
 	struct pfl_mutex		*mrsq_fdlock;

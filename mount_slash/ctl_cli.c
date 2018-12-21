@@ -330,7 +330,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	memset(&mrsq, 0, sizeof(mrsq));
 	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);
 	INIT_SPINLOCK(&mrsq.mrsq_lock);
-	psc_waitq_init(&mrsq.mrsq_waitq, "msrq");
+	pfl_waitq_init(&mrsq.mrsq_waitq, "msrq");
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fdlock = fdlock;
@@ -360,7 +360,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 * Don't wait forever. Otherwise, we will tie up all control threads.
 	 */
 	spinlock(&mrsq.mrsq_lock);
-	rc = psc_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 60);
+	rc = pfl_waitq_waitrel_s(&mrsq.mrsq_waitq, &mrsq.mrsq_lock, 60);
 	spinlock(&mrsq.mrsq_lock);
 	if (!mrsq.mrsq_rc) {
 		OPSTAT_INCR("getreplst-timeouts");
@@ -375,7 +375,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
  out:
 	if (added) {
 		pll_remove(&msctl_replsts, &mrsq);
-		psc_waitq_destroy(&mrsq.mrsq_waitq);
+		pfl_waitq_destroy(&mrsq.mrsq_waitq);
 	}
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -763,7 +763,7 @@ msctlmsg_bmpce_send(int fd, struct psc_ctlmsghdr *mh,
 	mpce->mpce_off = e->bmpce_off;
 	mpce->mpce_start = e->bmpce_start;
 	mpce->mpce_nwaiters =e->bmpce_waitq ?
-	    psc_waitq_nwaiters(e->bmpce_waitq) : 0;
+	    pfl_waitq_nwaiters(e->bmpce_waitq) : 0;
 	mpce->mpce_npndgaios = pll_nitems(&e->bmpce_pndgaios);
 	return (psc_ctlmsg_sendv(fd, mh, mpce, NULL));
 }

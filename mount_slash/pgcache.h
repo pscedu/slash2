@@ -67,7 +67,7 @@ struct bmap_pagecache_entry {
 	 int16_t		 bmpce_pins;	/* page contents are read-only */
 	psc_spinlock_t		 bmpce_lock;
 	struct bmap_page_entry	*bmpce_entry;	/* statically allocated pg contents */
-	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
+	struct pfl_waitq	*bmpce_waitq;	/* others block here on I/O */
 	struct psc_lockedlist	 bmpce_pndgaios;
 	RB_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU */
@@ -101,12 +101,12 @@ struct bmap_page_entry {
 #define BMPCE_URLOCK(e, lk)	ureqlock(&(e)->bmpce_lock, (lk))
 #define BMPCE_LOCK_ENSURE(e)	LOCK_ENSURE(&(e)->bmpce_lock)
 
-#define BMPCE_WAIT(e)		psc_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
+#define BMPCE_WAIT(e)		pfl_waitq_wait((e)->bmpce_waitq, &(e)->bmpce_lock)
 
 #define BMPCE_WAKE(e)							\
 	do {								\
 		if ((e)->bmpce_waitq) {					\
-			psc_waitq_wakeall((e)->bmpce_waitq);		\
+			pfl_waitq_wakeall((e)->bmpce_waitq);		\
 			DEBUG_BMPCE(PLL_DEBUG, (e), "wakeup");		\
 		} else							\
 			DEBUG_BMPCE(PLL_DIAG, (e), "NULL bmpce_waitq");	\
@@ -301,7 +301,7 @@ struct bmpc_ioreq *
 	    char *, uint32_t, uint32_t, int);
 
 int      bmpce_lookup(struct bmpc_ioreq *,
-             struct bmap *, int, uint32_t, struct psc_waitq *);
+             struct bmap *, int, uint32_t, struct pfl_waitq *);
 
 void	 bmpce_init(struct bmap_pagecache_entry *);
 void     bmpce_release_locked(struct bmap_pagecache_entry *,

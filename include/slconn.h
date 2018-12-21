@@ -110,7 +110,7 @@ struct slrpc_cservice {
 	struct psclist_head	 csvc_lentry;
 
 	psc_spinlock_t		 csvc_lock;
-	struct psc_waitq	 csvc_waitq;
+	struct pfl_waitq	 csvc_waitq;
 
 #define csvc_flags	csvc_params.scp_flags
 #define csvc_magic	csvc_params.scp_magic

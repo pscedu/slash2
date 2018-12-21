@@ -192,7 +192,7 @@ struct bmap {
 		BMAP_LOCK_ENSURE(b);					\
 		while (cond) {						\
 			(b)->bcm_flags |= BMAPF_WAITERS;		\
-			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
+			pfl_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
 			    &(b)->bcm_lock);				\
 			BMAP_LOCK(b);					\
 		}							\
@@ -202,7 +202,7 @@ struct bmap {
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		if ((b)->bcm_flags & BMAPF_WAITERS) {			\
-			psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
+			pfl_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
 			(b)->bcm_flags &= ~BMAPF_WAITERS;		\
 		}							\
 	} while (0)

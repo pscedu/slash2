@@ -225,7 +225,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	}
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_lasterrno = rc;
-	psc_waitq_wakeall(&csvc->csvc_waitq);
+	pfl_waitq_wakeall(&csvc->csvc_waitq);
 	sl_csvc_decref_locked(csvc);
 	if (rc == SLERR_AUTHBUF_BADHASH)
 		psc_fatalx("RPC hash incorrect, check software version");
@@ -480,7 +480,7 @@ _sl_csvc_waitrelv(struct slrpc_cservice *csvc, long s, long ns)
 	ts.tv_nsec = ns;
 
 	spinlock(&csvc->csvc_lock);
-	psc_waitq_waitrel_ts(&csvc->csvc_waitq, &csvc->csvc_lock, &ts);
+	pfl_waitq_waitrel_ts(&csvc->csvc_waitq, &csvc->csvc_lock, &ts);
 }
 
 /*
@@ -609,7 +609,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl, void (*hldropf)(void *),
 	memset(csvc, 0, sizeof(*csvc));
 
 	INIT_SPINLOCK(&csvc->csvc_lock);
-	psc_waitq_init(&csvc->csvc_waitq, "csvc");
+	pfl_waitq_init(&csvc->csvc_waitq, "csvc");
 
 	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);
 	csvc->csvc_rqptl = rqptl;
@@ -862,7 +862,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 
-		psc_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
+		pfl_waitq_wait(&csvc->csvc_waitq, &csvc->csvc_lock);
 		CSVC_LOCK(csvc);
 
 		OPSTAT_INCR("csvc-wait-recheck");
@@ -927,7 +927,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	csvc->csvc_lasterrno = rc;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_flags &= ~CSVCF_CONNECTING;
-	psc_waitq_wakeall(&csvc->csvc_waitq);
+	pfl_waitq_wakeall(&csvc->csvc_waitq);
 	if (rc) {
 		if (csvc->csvc_import)
 			csvc->csvc_import->imp_failed = 1;

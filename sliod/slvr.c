@@ -65,7 +65,7 @@ struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be r
 struct psc_listcache	 sli_fcmh_dirty;
 struct psc_listcache	 sli_fcmh_update;
 
-extern struct psc_waitq	 sli_slvr_waitq;
+extern struct pfl_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
@@ -855,7 +855,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 */
 	if (wakeup || slvr_pool->ppm_nfree < MIN_FREE_SLABS) {
 		OPSTAT_INCR("slvr-wakeone");
-		psc_waitq_wakeone(&sli_slvr_waitq);
+		pfl_waitq_wakeone(&sli_slvr_waitq);
 	}
 }
 

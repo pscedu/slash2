@@ -310,7 +310,7 @@ sli_repl_try_work(struct sli_repl_workrq *w,
 			 * There is no other work to do.  Wait for a
 			 * slot to open or for other work to arrive.
 			 */
-			psc_waitq_waitrel_us(
+			pfl_waitq_waitrel_us(
 			    &sli_replwkq_pending.plc_wq_empty,
 			    &sli_replwkq_pending.plc_lock, 10);
 		else {

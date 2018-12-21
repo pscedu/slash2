@@ -64,7 +64,7 @@ int				 msl_max_nretries = 256;
 
 #define MIN_COALESCE_RPC_SZ	 LNET_MTU
 
-struct psc_waitq		 slc_bflush_waitq = PSC_WAITQ_INIT("bflush");
+struct pfl_waitq		 slc_bflush_waitq = PFL_WAITQ_INIT("bflush");
 psc_spinlock_t			 slc_bflush_lock = SPINLOCK_INIT;
 int				 slc_bflush_tmout_flags;
 
@@ -142,7 +142,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		FCMH_LOCK(f);
 		goto retry;
 	}
-	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+	pfl_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
 }
 
 
@@ -189,15 +189,15 @@ bmap_flushq_wake(int reason)
 	if (slc_bflush_tmout_flags & BMAPFLSH_RPCWAIT) {
 		wake = 1;
 		if (reason == BMAPFLSH_EXPIRE)
-			psc_waitq_wakeall(&slc_bflush_waitq);
+			pfl_waitq_wakeall(&slc_bflush_waitq);
 		else
-			psc_waitq_wakeone(&slc_bflush_waitq);
+			pfl_waitq_wakeone(&slc_bflush_waitq);
 	}
 
 	if (reason == BMAPFLSH_EXPIRE)
-		psc_waitq_wakeall(&msl_bmapflushq.plc_wq_empty);
+		pfl_waitq_wakeall(&msl_bmapflushq.plc_wq_empty);
 	else
-		psc_waitq_wakeone(&msl_bmapflushq.plc_wq_empty);
+		pfl_waitq_wakeone(&msl_bmapflushq.plc_wq_empty);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 	(void)wake;
@@ -871,7 +871,7 @@ msflushthr_main(struct psc_thread *thr)
 
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel_ts(&slc_bflush_waitq,
+		pfl_waitq_waitrel_ts(&slc_bflush_waitq,
 		    &slc_bflush_lock, &msl_bflush_timeout);
 		spinlock(&slc_bflush_lock);
 		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
@@ -913,7 +913,7 @@ msbmapthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	psc_waitq_init(&slc_bflush_waitq, "bmap-flush");
+	pfl_waitq_init(&slc_bflush_waitq, "bmap-flush");
 
 	lc_reginit(&msl_bmapflushq, struct bmap,
 	    bcm_lentry, "bmapflushq");

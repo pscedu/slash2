@@ -263,7 +263,7 @@ bmpce_init(struct bmap_pagecache_entry *e)
 
 int
 bmpce_lookup(struct bmpc_ioreq *r, struct bmap *b, int flags,
-    uint32_t off, struct psc_waitq *wq)
+    uint32_t off, struct pfl_waitq *wq)
 {
 	int rc = 0, wrlock = 0;
 	struct bmap_pagecache_entry q, *e, *e2 = NULL;
@@ -456,7 +456,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e, struct bmap_pagecache *bmpc
 			bmpce_reaper(bmpce_pool);
 #else
 			/* call msreapthr_main() */
-			psc_waitq_wakeone(&sl_freap_waitq);
+			pfl_waitq_wakeone(&sl_freap_waitq);
 #endif
 		}
 		return;
@@ -559,7 +559,7 @@ bmpc_biorqs_flush(struct bmap *b)
 		BMAP_ULOCK(b);
 		f = b->bcm_fcmh;
 		FCMH_LOCK(f);
-		psc_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
+		pfl_waitq_waitrel_us(&f->fcmh_waitq, &f->fcmh_lock, 100);
 		BMAP_LOCK(b);
 	}
 }

@@ -228,7 +228,7 @@ struct resprof_cli_info {
 	struct psc_spinlock		 rpci_lock;
 	struct statvfs			 rpci_sfb;
 	struct timespec			 rpci_sfb_time;
-	struct psc_waitq		 rpci_waitq;
+	struct pfl_waitq		 rpci_waitq;
 	int				 rpci_flags;
 	int				 rpci_timeouts;
 	int				 rpci_saw_error;
@@ -243,11 +243,11 @@ struct resprof_cli_info {
 
 #define RPCI_LOCK(rpci)			spinlock(&(rpci)->rpci_lock)
 #define RPCI_ULOCK(rpci)		freelock(&(rpci)->rpci_lock)
-#define RPCI_WAIT(rpci)			psc_waitq_wait(&(rpci)->rpci_waitq, \
+#define RPCI_WAIT(rpci)			pfl_waitq_wait(&(rpci)->rpci_waitq, \
 					    &(rpci)->rpci_lock)
-#define RPCI_WAITABS(rpci, ts)		psc_waitq_waitabs(&(rpci)->rpci_waitq, \
+#define RPCI_WAITABS(rpci, ts)		pfl_waitq_waitabs(&(rpci)->rpci_waitq, \
 					    &(rpci)->rpci_lock, &(ts))
-#define RPCI_WAKE(rpci)			psc_waitq_wakeall(&(rpci)->rpci_waitq)
+#define RPCI_WAKE(rpci)			pfl_waitq_wakeall(&(rpci)->rpci_waitq)
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)
@@ -419,7 +419,7 @@ extern int			 msl_attributes_timeout;
 void				 msl_pgcache_init(void);
 int				 msl_pgcache_reap(void);
 
-extern struct psc_waitq		 sl_freap_waitq;
+extern struct pfl_waitq		 sl_freap_waitq;
 int				 bmpce_reaper(struct psc_poolmgr *);
 extern int			 msl_bmpce_gen;
 

@@ -51,7 +51,7 @@ static struct psc_poolmgr	*slrpc_batch_rep_pool;
 static struct psc_listcache	 slrpc_batch_req_delayed;	/* to be filled/expired */
 static struct psc_listcache	 slrpc_batch_req_waitrep;	/* wait reply from peer */
 
-static struct psc_waitq		 slrpc_expire_waitq = PSC_WAITQ_INIT("expire");
+static struct pfl_waitq		 slrpc_expire_waitq = PFL_WAITQ_INIT("expire");
 
 static int			 slrpc_batch_max_inflight = 2;
 
@@ -779,7 +779,7 @@ retry:
 	bq->bq_cnt++;
 	pfl_assert(bq->bq_cnt <= bq->bq_size);
 	if (bq->bq_cnt == bq->bq_size)
-		psc_waitq_wakeone(&slrpc_expire_waitq);
+		pfl_waitq_wakeone(&slrpc_expire_waitq);
 	freelock(&bq->bq_lock);
 
 	if (newbq) {
@@ -854,7 +854,7 @@ slrpc_batch_thr_main(struct psc_thread *thr)
 			OPSTAT_INCR("batch-send-wait");
 			stall.tv_sec = 1; 
 			stall.tv_usec = 0; 
-			psc_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
+			pfl_waitq_waitrel_tv(&slrpc_expire_waitq, NULL, &stall);
 			continue;
 		} 
 		lc_peekheadwait(&slrpc_batch_req_delayed);

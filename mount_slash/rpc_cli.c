@@ -411,7 +411,7 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout
 
 	CSVC_LOCK(resm->resm_csvc);
 	if (resm->resm_csvc->csvc_flags & CSVCF_CONNECTING) {
-		rc = psc_waitq_waitrel_s(&resm->resm_csvc->csvc_waitq, 
+		rc = pfl_waitq_waitrel_s(&resm->resm_csvc->csvc_waitq, 
 		    &resm->resm_csvc->csvc_lock, timeout);
 		CSVC_LOCK(resm->resm_csvc);
 		if (rc) {

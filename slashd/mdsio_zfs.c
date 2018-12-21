@@ -179,7 +179,7 @@ slm_zfs_cursor_start(void)
 {
 	spinlock(&slm_cursor_lock);
 	if (!slm_cursor_update_needed++ && !slm_cursor_update_inprog)
-		psc_waitq_wakeall(&slm_cursor_waitq);
+		pfl_waitq_wakeall(&slm_cursor_waitq);
 	freelock(&slm_cursor_lock);
 }
 
@@ -194,7 +194,7 @@ slm_zfs_cursor_end(void)
 	spinlock(&slm_cursor_lock);
 	pfl_assert(slm_cursor_update_needed > 0);
 	if (--slm_cursor_update_needed && !slm_cursor_update_inprog)
-		psc_waitq_wakeall(&slm_cursor_waitq);
+		pfl_waitq_wakeall(&slm_cursor_waitq);
 	freelock(&slm_cursor_lock);
 }
 

@@ -25,7 +25,7 @@ struct slm_progress {
 	uint64_t		 cur_batchno;
 	uint64_t		 cur_xid;		/* journal xid of update */
 	uint64_t		 sync_xid;		/* on disk */
-	struct psc_waitq	 waitq;
+	struct pfl_waitq	 waitq;
 	psc_spinlock_t		 lock;
 
 	void			*prg_handle;

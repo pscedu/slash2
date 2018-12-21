@@ -37,14 +37,14 @@ struct bmap_iod_info;
 struct slvr;
 
 extern psc_spinlock_t            sli_release_bmap_lock;
-extern struct psc_waitq          sli_release_bmap_waitq;
+extern struct pfl_waitq          sli_release_bmap_waitq;
 
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)
 
 struct bmap_iod_minseq {
 	psc_spinlock_t		 bim_lock;
 	struct timespec		 bim_age;
-	struct psc_waitq	 bim_waitq;
+	struct pfl_waitq	 bim_waitq;
 	uint64_t		 bim_minseq;
 	int			 bim_flags;
 };

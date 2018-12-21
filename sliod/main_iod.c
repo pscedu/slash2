@@ -159,7 +159,7 @@ slistatfsthr_main(struct psc_thread *thr)
 void
 slihealththr_main(struct psc_thread *thr)
 {
-	struct psc_waitq dummy = PSC_WAITQ_INIT("health");
+	struct pfl_waitq dummy = PFL_WAITQ_INIT("health");
 	struct slrpc_cservice *csvc;
 	struct timespec ts;
 	char cmdbuf[BUFSIZ];
@@ -178,7 +178,7 @@ slihealththr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		PFL_GETTIMESPEC(&ts);
 		ts.tv_sec += 60;
-		psc_waitq_waitabs(&dummy, NULL, &ts);
+		pfl_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
 
 		rc = 0;

@@ -41,7 +41,7 @@
 #include "slconn.h"
 #include "slerr.h"
 
-extern struct psc_waitq                 msl_flush_attrq;
+extern struct pfl_waitq                 msl_flush_attrq;
 
 struct msctl_replstq *
 mrsq_lookup(int id)
@@ -68,7 +68,7 @@ mrsq_release(struct msctl_replstq *mrsq, int rc)
 	}
 	/* only wake up in case of error or EOF */
 	mrsq->mrsq_rc = rc;
-	psc_waitq_wakeall(&mrsq->mrsq_waitq);
+	pfl_waitq_wakeall(&mrsq->mrsq_waitq);
 	freelock(&mrsq->mrsq_lock);
 }
 
@@ -303,7 +303,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		OPSTAT_INCR("msl.callback-flush-attrs");
 		lc_move2head(&msl_attrtimeoutq, fci);
-		psc_waitq_wakeone(&msl_flush_attrq);
+		pfl_waitq_wakeone(&msl_flush_attrq);
 	}
 	if (fcmh_isdir(f)) {
 		DIRCACHE_WRLOCK(f);

@@ -70,7 +70,7 @@ struct fidc_membh {
 	int			 fcmh_lineno;
 	struct pfl_hashentry	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;	/* idle or free list */
-	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
+	struct pfl_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
 	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
 	struct pfl_rwlock	 fcmh_rwlock;
@@ -119,7 +119,7 @@ struct fidc_membh {
 	do {								\
 		FCMH_LOCK_ENSURE(f);					\
 		while (cond) {						\
-			psc_waitq_wait(&(f)->fcmh_waitq,		\
+			pfl_waitq_wait(&(f)->fcmh_waitq,		\
 			    &(f)->fcmh_lock);				\
 			FCMH_LOCK(f);					\
 		}							\
@@ -128,15 +128,15 @@ struct fidc_membh {
 #define fcmh_wait_nocond_locked(f)					\
 	do {								\
 		FCMH_LOCK_ENSURE(f);					\
-		psc_waitq_wait(&(f)->fcmh_waitq, &(f)->fcmh_lock);	\
+		pfl_waitq_wait(&(f)->fcmh_waitq, &(f)->fcmh_lock);	\
 		FCMH_LOCK(f);						\
 	} while (0)
 
 #define fcmh_wake_locked(f)						\
 	do {								\
 		FCMH_LOCK_ENSURE(f);					\
-		if (psc_waitq_nwaiters(&(f)->fcmh_waitq))		\
-			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
+		if (pfl_waitq_nwaiters(&(f)->fcmh_waitq))		\
+			pfl_waitq_wakeall(&(f)->fcmh_waitq);		\
 	} while (0)
 
 #define FCMH_WAIT_BUSY(f, unlock)					\
@@ -279,7 +279,7 @@ extern struct psc_hashtbl	 sl_fcmh_hashtbl;
 extern struct psc_listcache	 sl_fcmh_idle;
 extern struct psc_poolmgr	*sl_fcmh_pool;
 extern struct psc_thread	*sl_freapthr;
-extern struct psc_waitq		 sl_freap_waitq;
+extern struct pfl_waitq		 sl_freap_waitq;
 
 static __inline void *
 fcmh_get_pri(struct fidc_membh *f)

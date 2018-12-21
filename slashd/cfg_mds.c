@@ -39,7 +39,7 @@ slcfg_init_res(struct sl_resource *r)
 
 	rpmi = res2rpmi(r);
 	psc_mutex_init(&rpmi->rpmi_mutex);
-	psc_waitq_init(&rpmi->rpmi_waitq, "rpmi");
+	pfl_waitq_init(&rpmi->rpmi_waitq, "rpmi");
 
 	if (r->res_type == SLREST_MDS) {
 		rpmi->rpmi_info = sp = PSCALLOC(sizeof(*sp));

@@ -126,7 +126,7 @@ static int msl_statfs_root_last_errno;
  *
  */
 struct psc_hashtbl		 msl_namecache_hashtbl;
-struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT("flush-attr");
+struct pfl_waitq		 msl_flush_attrq = PFL_WAITQ_INIT("flush-attr");
 
 struct psc_listcache		 msl_attrtimeoutq;
 
@@ -2614,7 +2614,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 	if (f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE) {
 		PFL_GETTIMEVAL(&now);
 		fci->fci_expire = now.tv_sec;
-		psc_waitq_wakeone(&msl_flush_attrq);
+		pfl_waitq_wakeone(&msl_flush_attrq);
 	}
 
 	if (fcmh_isdir(f)) {
@@ -4186,7 +4186,7 @@ msattrflushthr_main(struct psc_thread *thr)
 		}
 		if (fci == NULL) {
 			OPSTAT_INCR("msl.flush-attr-wait");
-			psc_waitq_waitrel_ts(&msl_flush_attrq,
+			pfl_waitq_waitrel_ts(&msl_flush_attrq,
 			    &msl_attrtimeoutq.plc_lock, &nexttimeo);
 		}
 	}
@@ -4219,7 +4219,7 @@ msreapthr_main(struct psc_thread *thr)
  		 */
 		if (didwork && idle > 10)
 			timeout = 1;
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, timeout);
+		pfl_waitq_waitrel_s(&sl_freap_waitq, NULL, timeout);
 	}
 }
 

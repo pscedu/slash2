@@ -110,7 +110,7 @@ struct psc_journal_cursor	 mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-struct psc_waitq		 slm_cursor_waitq = PSC_WAITQ_INIT("cursor");
+struct pfl_waitq		 slm_cursor_waitq = PFL_WAITQ_INIT("cursor");
 psc_spinlock_t			 slm_cursor_lock = SPINLOCK_INIT;
 int				 slm_cursor_update_inprog;
 int				 slm_cursor_update_needed;
@@ -448,7 +448,7 @@ mds_write_logentry(uint64_t xid, uint64_t fid, uint64_t gen)
 		freelock(&mds_distill_lock);
 
 		spinlock(&reclaim_prg.lock);
-		psc_waitq_wakeall(&reclaim_prg.waitq);
+		pfl_waitq_wakeall(&reclaim_prg.waitq);
 		freelock(&reclaim_prg.lock);
 
 		psclog_info("Next batchno=%"PRId64", "
@@ -618,7 +618,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		freelock(&mds_distill_lock);
 
 		spinlock(&nsupd_prg.lock);
-		psc_waitq_wakeall(&nsupd_prg.waitq);
+		pfl_waitq_wakeall(&nsupd_prg.waitq);
 		freelock(&nsupd_prg.lock);
 	}
 
@@ -1220,7 +1220,7 @@ slmjcursorthr_main(struct psc_thread *thr)
 		spinlock(&slm_cursor_lock);
 		if (!slm_cursor_update_needed) {
 			slm_cursor_update_inprog = 0;
-			psc_waitq_wait(&slm_cursor_waitq,
+			pfl_waitq_wait(&slm_cursor_waitq,
 			    &slm_cursor_lock);
 			spinlock(&slm_cursor_lock);
 		}
@@ -1317,7 +1317,7 @@ mds_open_cursor(void)
 
 struct reclaim_arg {
 	struct psc_spinlock	lock;
-	struct psc_waitq	wq;
+	struct pfl_waitq	wq;
 	uint64_t		xid;
 	int			count;
 	int			ndone;
@@ -1681,7 +1681,7 @@ slmjreclaimthr_main(struct psc_thread *thr)
 		} while (didwork && mds_reclaim_hwm(1) >= batchno);
 
 		spinlock(&reclaim_prg.lock);
-		psc_waitq_waitrel_s(&reclaim_prg.waitq,
+		pfl_waitq_waitrel_s(&reclaim_prg.waitq,
 		    &reclaim_prg.lock, SL_RECLAIM_MAX_AGE);
 	}
 }
@@ -1716,7 +1716,7 @@ slmjnsthr_main(struct psc_thread *thr)
 		} while (didwork && mds_update_hwm(1) >= batchno);
 
 		spinlock(&nsupd_prg.lock);
-		psc_waitq_waitrel_s(&nsupd_prg.waitq, &nsupd_prg.lock,
+		pfl_waitq_waitrel_s(&nsupd_prg.waitq, &nsupd_prg.lock,
 		    SL_UPDATE_MAX_AGE);
 	}
 }
@@ -1892,8 +1892,8 @@ mds_journal_init(uint64_t fsuuid)
 	 */
 	pscthr_init(SLMTHRT_CURSOR, slmjcursorthr_main, 0, "slmjcursorthr");
 
-	psc_waitq_init(&nsupd_prg.waitq,"suspd");
-	psc_waitq_init(&reclaim_prg.waitq, "reclaim");
+	pfl_waitq_init(&nsupd_prg.waitq,"suspd");
+	pfl_waitq_init(&reclaim_prg.waitq, "reclaim");
 
 	INIT_SPINLOCK(&nsupd_prg.lock);
 	INIT_SPINLOCK(&reclaim_prg.lock);

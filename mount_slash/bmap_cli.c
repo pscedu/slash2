@@ -69,14 +69,14 @@ int slc_bmap_max_cache = BMAP_CACHE_MAX;
  */
 int				 msl_bmap_low;
 psc_spinlock_t                   msl_bmap_lock = SPINLOCK_INIT;
-struct psc_waitq		 msl_bmap_waitq = PSC_WAITQ_INIT("bwait");
+struct pfl_waitq		 msl_bmap_waitq = PFL_WAITQ_INIT("bwait");
 
 int
 msl_bmap_reap(__unusedx struct psc_poolmgr *m)
 {
 	spinlock(&msl_bmap_lock);
 	msl_bmap_low = 1;
-	psc_waitq_wakeall(&msl_bmap_waitq);
+	pfl_waitq_wakeall(&msl_bmap_waitq);
 	freelock(&msl_bmap_lock);
 
 	pscthr_yield();
@@ -1144,7 +1144,7 @@ msbwatchthr_main(struct psc_thread *thr)
 		timespecadd(&ts, &msl_bmap_timeo_inc, &nto);
 		if (!exiting) {
 			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+			pfl_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
 			    &msl_bmaptimeoutq.plc_lock, &nto);
 		}
 	}
@@ -1290,7 +1290,7 @@ msbreleasethr_main(struct psc_thread *thr)
 		if (!exiting) {
 			spinlock(&msl_bmap_lock);
 			msl_bmap_low = 0;
-			psc_waitq_waitabs(&msl_bmap_waitq, 
+			pfl_waitq_waitabs(&msl_bmap_waitq, 
 			    &msl_bmap_lock, &nto);
 		}
 	}

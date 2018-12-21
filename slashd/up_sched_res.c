@@ -74,9 +74,9 @@
 #define IP_BMAP		3
 
 psc_spinlock_t           slm_upsch_lock;
-struct psc_waitq	 slm_upsch_waitq;
+struct pfl_waitq	 slm_upsch_waitq;
 
-struct psc_waitq	 slm_pager_workq = PSC_WAITQ_INIT("pager");
+struct pfl_waitq	 slm_pager_workq = PFL_WAITQ_INIT("pager");
 
 /* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
@@ -1223,7 +1223,7 @@ slmpagerthr_main(struct psc_thread *thr)
 		}
 		spinlock(&slm_upsch_lock);
 		stall.tv_sec = slm_upsch_page_interval;
-		psc_waitq_waitrel_tv(&slm_pager_workq, &slm_upsch_lock, &stall);
+		pfl_waitq_waitrel_tv(&slm_pager_workq, &slm_upsch_lock, &stall);
 	}
 	psc_dynarray_free(&da);
 }
@@ -1232,7 +1232,7 @@ void
 slm_upsch_init(void)
 {
 	INIT_SPINLOCK(&slm_upsch_lock);
-	psc_waitq_init(&slm_upsch_waitq, "upsch");
+	pfl_waitq_init(&slm_upsch_waitq, "upsch");
 	lc_reginit(&slm_upsch_queue, struct slm_update_data,
 	    upd_lentry, "upschq");
 }

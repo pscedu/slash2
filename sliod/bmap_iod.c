@@ -50,7 +50,7 @@ void
 bim_init(void)
 {
 	INIT_SPINLOCK(&sli_bminseq.bim_lock);
-	psc_waitq_init(&sli_bminseq.bim_waitq, "bim");
+	pfl_waitq_init(&sli_bminseq.bim_waitq, "bim");
 	sli_bminseq.bim_minseq = 0;
 }
 
@@ -124,7 +124,7 @@ bim_getcurseq(void)
 	spinlock(&sli_bminseq.bim_lock);
 	while (sli_bminseq.bim_flags & BIM_RETRIEVE_SEQ) {
 		OPSTAT_INCR("bmapseqno-wait");
-		psc_waitq_wait(&sli_bminseq.bim_waitq,
+		pfl_waitq_wait(&sli_bminseq.bim_waitq,
 		    &sli_bminseq.bim_lock);
 		spinlock(&sli_bminseq.bim_lock);
 	}
@@ -142,14 +142,14 @@ sliseqnothr_main(struct psc_thread *thr)
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmapminseq_req *mq;
 	struct srm_getbmapminseq_rep *mp;
-        struct psc_waitq dummy = PSC_WAITQ_INIT("seqno");
+        struct pfl_waitq dummy = PFL_WAITQ_INIT("seqno");
         struct timespec ts; 
 
 	while (pscthr_run(thr)) {
 
 		PFL_GETTIMESPEC(&ts);
 		ts.tv_sec += BIM_MINAGE;
-		psc_waitq_waitabs(&dummy, NULL, &ts);
+		pfl_waitq_waitabs(&dummy, NULL, &ts);
 
 		spinlock(&sli_bminseq.bim_lock);
 		sli_bminseq.bim_flags |= BIM_RETRIEVE_SEQ;
@@ -186,7 +186,7 @@ sliseqnothr_main(struct psc_thread *thr)
 		}
 		spinlock(&sli_bminseq.bim_lock);
 		sli_bminseq.bim_flags &= ~BIM_RETRIEVE_SEQ;
-		psc_waitq_wakeall(&sli_bminseq.bim_waitq);
+		pfl_waitq_wakeall(&sli_bminseq.bim_waitq);
 		freelock(&sli_bminseq.bim_lock);
 	}
 }

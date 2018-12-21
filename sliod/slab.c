@@ -42,7 +42,7 @@
 extern struct psc_poolmgr	*slvr_pool;
 
 struct timespec		 sli_slvr_timeout = { 30, 0L };
-struct psc_waitq	 sli_slvr_waitq = PSC_WAITQ_INIT("slvr");
+struct pfl_waitq	 sli_slvr_waitq = PFL_WAITQ_INIT("slvr");
 psc_spinlock_t		 sli_slvr_lock = SPINLOCK_INIT;
 
 void
@@ -52,7 +52,7 @@ slibreapthr_main(struct psc_thread *thr)
 
 		slab_cache_reap(slvr_pool);
 		spinlock(&sli_slvr_lock);
-		psc_waitq_waitrel_ts(&sli_slvr_waitq,
+		pfl_waitq_waitrel_ts(&sli_slvr_waitq,
 		    &sli_slvr_lock, &sli_slvr_timeout);
 	}
 }

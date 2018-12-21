@@ -72,7 +72,7 @@ __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 __static void	msl_update_attributes(struct msl_fsrqinfo *);
 
 /* Flushing fs threads wait here for I/O completion. */
-struct psc_waitq	 msl_fhent_aio_waitq = PSC_WAITQ_INIT("aio");
+struct pfl_waitq	 msl_fhent_aio_waitq = PFL_WAITQ_INIT("aio");
 
 struct timespec		 msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		 msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
@@ -1043,7 +1043,7 @@ msl_dio_cleanup(struct pscrpc_request *rq, int rc,
 	q = r->biorq_fsrqi;
 	if (r->biorq_flags & BIORQ_AIOWAKE) {
 		MFH_LOCK(q->mfsrq_mfh);
-		psc_waitq_wakeall(&msl_fhent_aio_waitq);
+		pfl_waitq_wakeall(&msl_fhent_aio_waitq);
 		MFH_ULOCK(q->mfsrq_mfh);
 	}
 
@@ -1195,7 +1195,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		while (r->biorq_ref > 1) {
 			BIORQ_ULOCK(r);
 			DEBUG_BIORQ(PLL_DIAG, r, "aiowait sleep");
-			psc_waitq_wait(&msl_fhent_aio_waitq,
+			pfl_waitq_wait(&msl_fhent_aio_waitq,
 			    &q->mfsrq_mfh->mfh_lock);
 			BIORQ_LOCK(r);
 			MFH_LOCK(q->mfsrq_mfh);

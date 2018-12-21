@@ -48,7 +48,7 @@ struct psc_poolmgr	 *sl_fcmh_pool;
 struct psc_listcache	  sl_fcmh_idle;		/* identity untouched, but reapable */
 struct psc_hashtbl	  sl_fcmh_hashtbl;
 struct psc_thread	 *sl_freapthr;
-struct psc_waitq	  sl_freap_waitq = PSC_WAITQ_INIT("fcmh-reap");;
+struct pfl_waitq	  sl_freap_waitq = PFL_WAITQ_INIT("fcmh-reap");;
 
 #if PFL_DEBUG > 0
 psc_spinlock_t		fcmh_ref_lock = SPINLOCK_INIT;
@@ -66,9 +66,9 @@ fcmh_destroy(struct fidc_membh *f)
 	pfl_assert(RB_EMPTY(&f->fcmh_bmaptree));
 	pfl_assert(f->fcmh_refcnt == 0);
 	pfl_assert(psc_hashent_disjoint(&sl_fcmh_hashtbl, f));
-	pfl_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
+	pfl_assert(!pfl_waitq_nwaiters(&f->fcmh_waitq));
 
-	psc_waitq_destroy(&f->fcmh_waitq);
+	pfl_waitq_destroy(&f->fcmh_waitq);
 
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), and sli_fcmh_dtor() */
 	sl_fcmh_ops.sfop_dtor(f);
@@ -293,7 +293,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	RB_INIT(&f->fcmh_bmaptree);
 	INIT_SPINLOCK(&f->fcmh_lock);
 	psc_hashent_init(&sl_fcmh_hashtbl, f);
-	psc_waitq_init(&f->fcmh_waitq, "fcmh");
+	pfl_waitq_init(&f->fcmh_waitq, "fcmh");
 	pfl_rwlock_init(&f->fcmh_rwlock);
 
 	f->fcmh_fg.fg_fid = fid;
@@ -333,7 +333,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 	f->fcmh_flags &= ~FCMH_INITING;
 	if (f->fcmh_flags & FCMH_WAITING) {
 		f->fcmh_flags &= ~FCMH_WAITING;
-		psc_waitq_wakeall(&f->fcmh_waitq);
+		pfl_waitq_wakeall(&f->fcmh_waitq);
 	}
 
 	if (rc) {
@@ -481,7 +481,7 @@ sl_freapthr_main(struct psc_thread *thr)
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED))
 			;
 		thr->pscthr_waitq = "sleep 10";
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
+		pfl_waitq_waitrel_s(&sl_freap_waitq, NULL, 10);
 		thr->pscthr_waitq = NULL;
 	}
 }

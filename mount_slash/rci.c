@@ -128,7 +128,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			 * this wait should only require a few ms at the
 			 * most.
 			 */
-			psc_waitq_waitrel_ts(&lc->plc_wq_empty,
+			pfl_waitq_waitrel_ts(&lc->plc_wq_empty,
 			    &lc->plc_lock, &ts);
 		} else {
 			LIST_CACHE_ULOCK(lc);

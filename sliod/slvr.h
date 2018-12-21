@@ -92,7 +92,7 @@ struct slvr {
 #define SLVR_WAKEUP(s)							\
 	do {								\
 		SLVR_LOCK_ENSURE(s);					\
-		psc_waitq_wakeall(&slvr_2_fcmh(s)->fcmh_waitq);		\
+		pfl_waitq_wakeall(&slvr_2_fcmh(s)->fcmh_waitq);		\
 	} while (0)
 
 #define SLVR_WAIT(s, cond)						\
@@ -100,7 +100,7 @@ struct slvr {
 		SLVR_LOCK_ENSURE(s);					\
 		DEBUG_SLVR(PLL_DIAG, (s), "SLVR_WAIT");			\
 		while (cond) {						\
-			psc_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
+			pfl_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
 			    &(s)->slvr_lock);				\
 			SLVR_LOCK(s);					\
 		}							\

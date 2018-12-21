@@ -102,14 +102,14 @@ struct dircache_page {
 #define DIRCACHE_WAKE(d)						\
 	do {								\
 		DIRCACHE_WR_ENSURE(d);					\
-		psc_waitq_wakeall(&(d)->fcmh_waitq);			\
+		pfl_waitq_wakeall(&(d)->fcmh_waitq);			\
 		DIRCACHE_ULOCK(d);					\
 	} while (0)
 
 #define DIRCACHE_WAIT(d)						\
 	do {								\
 		DIRCACHE_WR_ENSURE(d);					\
-		psc_waitq_waitf(&(d)->fcmh_waitq, PFL_LOCKPRIMT_RWLOCK,	\
+		pfl_waitq_waitf(&(d)->fcmh_waitq, PFL_LOCKPRIMT_RWLOCK,	\
 		    fcmh_2_dc_rwlock(d));				\
 		DIRCACHE_WRLOCK(d);					\
 	} while (0)

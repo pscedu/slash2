@@ -204,7 +204,7 @@ extern mdsio_fid_t		mds_metadir_inum[];
 extern mdsio_fid_t		mds_fidnsdir_inum[];
 extern mdsio_fid_t		mds_tmpdir_inum[];
 
-extern struct psc_waitq		slm_cursor_waitq;
+extern struct pfl_waitq		slm_cursor_waitq;
 extern struct psc_spinlock	slm_cursor_lock;
 extern int			slm_cursor_update_inprog;
 extern int			slm_cursor_update_needed;
