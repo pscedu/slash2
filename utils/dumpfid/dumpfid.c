@@ -562,15 +562,14 @@ main(int argc, char *argv[])
 	for (i = 1; i < df_nprocs; i++)
 		if (wait(&status) == -1)
 			err(1, "wait");
-	exit(0);
-
-//	PLL_FOREACH(h, &hosts) {
-//		it = thrv[i++] = pscthr_init(0, thrmain, NULL,
-//		    sizeof(*t), "thr-%s", h->h_hostname);
-//		t = it->pscthr_private;
-//		t->t_host = h;
-//		pscthr_setready(it);
+	
 #if 0
+	PLL_FOREACH(h, &hosts) {
+		it = thrv[i++] = pscthr_init(0, thrmain, NULL,
+		    sizeof(*t), "thr-%s", h->h_hostname);
+		t = it->pscthr_private;
+		t->t_host = h;
+		pscthr_setready(it);
 		switch (fork()) {
 		case -1:
 			break;
@@ -583,4 +582,5 @@ main(int argc, char *argv[])
 		}
 #endif
 //	}
+	exit(0);
 }

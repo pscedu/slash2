@@ -55,7 +55,8 @@
 uint64_t	sli_current_reclaim_xid;
 uint64_t	sli_current_reclaim_batchno;
 
-struct slrpc_batch_req_handler sli_rim_batch_req_handlers[SRMT_TOTAL];
+struct slrpc_batch_req_handler 
+		sli_rim_batch_req_handlers[SRMT_TOTAL];
 
 /*
  * Handle a piece of PRECLAIM (partial reclaim) work.  If our backend
@@ -68,10 +69,10 @@ int
 sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
     void *req, void *rep)
 {
-	int rc;
 	struct srt_preclaim_req *q = req;
 	struct srt_preclaim_rep *p = rep;
 	struct fidc_membh *f;
+	int rc;
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
 	OPSTAT_INCR("preclaim-attempt");
@@ -98,7 +99,6 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	}
 
 	fcmh_op_done(f);
-	return (0);
 #else
 	OPSTAT_INCR("preclaim-notsupport");
 	(void)q;
@@ -106,8 +106,8 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 	(void)f;
 	(void)rc;
 	p->rc = -PFLERR_NOTSUP;
-	return (0);
 #endif
+	return (0);
 }
 
 /*

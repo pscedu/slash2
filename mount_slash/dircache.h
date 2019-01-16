@@ -166,8 +166,6 @@ int	dircache_ent_cmp(const void *, const void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
-int	dircache_ent_cmp(const void *, const void *);
-
 void	dircache_lookup(struct fidc_membh *, const char *, uint64_t *);
 void	dircache_insert(struct fidc_membh *, const char *, uint64_t, int32_t);
 void	dircache_delete(struct fidc_membh *, const char *);

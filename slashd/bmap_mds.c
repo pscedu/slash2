@@ -35,8 +35,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-extern int debug_ondisk_inode;
-
 static __inline void *
 bmap_2_mfh(struct bmap *b)
 {

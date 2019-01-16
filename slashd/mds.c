@@ -73,8 +73,6 @@ int			slm_max_ios = SL_MAX_REPLICAS;
 int			slm_ptrunc_enabled = 1;
 int			slm_preclaim_enabled = 1;
 
-__static int slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
-
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {

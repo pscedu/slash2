@@ -33,10 +33,7 @@
 #include "slconfig.h"
 #include "yconf.h"
 
-extern char		  cfg_filename[];
-extern int		  cfg_lineno;
-
-extern char		 *yylval;
+extern char		  *yylval;
 
 extern struct sl_site	  *currentSite;
 extern struct sl_resource *currentRes;

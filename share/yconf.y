@@ -98,7 +98,6 @@ int		 slcfg_str2flags(const char *);
 void		 slcfg_store_tok_val(const char *, char *);
 
 int		 yylex(void);
-int		 yyparse(void);
 
 #define SYMBOL(str, strtype, name, vtype, max, memb, handler)		\
 	{ name, strtype, vtype, max, sizeof(((str *)NULL)->memb),	\

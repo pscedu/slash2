@@ -26,6 +26,7 @@
 #include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
+#include "pfl/qsort_r.h"
 #include "pfl/random.h"
 #include "pfl/rpc.h"
 
@@ -59,8 +60,6 @@ enum {
 	MSL_BMLGET_CBARG_BMAP,
 	MSL_BMLGET_CBARG_CSVC
 };
-
-void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
